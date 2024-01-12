@@ -1,0 +1,77 @@
+// /* Import the rest of Bulma */
+@import 'bulma/bulma';
+
+.button {
+  &.is-wide {
+    min-width: 140px;
+  }
+  &.is-wider {
+    min-width: 170px;
+  }
+  &.is-widest {
+    min-width: 220px;
+  }
+  &.is-small {
+    padding-top: 3px;
+    padding-bottom: 3px;
+  }
+}
+.menu {
+  font-family: $title-family;
+  .menu-list a {
+    display: flex;
+    align-items: center;
+  }
+}
+
+/* Extra bulma classes */
+.has-radius {
+  border-radius: $radius;
+}
+
+.has-radius-small {
+  border-radius: $radius-small;
+}
+
+
+.has-limited-width {
+  width: 650px;
+  max-width: 100%;
+}
+.has-limited-width-small {
+  width: 560px;
+  max-width: 100%;
+}
+.has-limited-width-smaller {
+  width: 460px;
+  max-width: 100%;
+}
+.has-limited-width-smallest {
+  width: 320px;
+  max-width: 100%;
+}
+
+.has-overflow-scroll {
+  overflow-y: auto;
+  height: 100%;
+}
+
+::-webkit-scrollbar-track-piece {
+  border-radius: 6px;
+  background: rgba(0,0,0,.1);
+}
+::-webkit-scrollbar-thumb {
+  border-radius: 6px;
+  background: $secondary;
+}
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+
+@include touch {
+  .has-navbar-fixed-top-mobile {
+    padding-top: $navbar-height;
+  }
+}
