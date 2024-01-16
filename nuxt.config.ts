@@ -10,24 +10,22 @@ export default defineNuxtConfig({
       'Space Grotesk': [400] 
     },
   },
-  ssr: false,
-  vite: {
-    // esbuild: {
-    //   target: "esnext",
-    // },
-    // build: {
-    //   target: "esnext",
-    // },
-    // optimizeDeps: {
-    //   include: ["@solana/web3.js", "buffer"],
-    //   esbuildOptions: {
-    //     target: "esnext",
-    //   },
-    // },
-    // define: {
-    //   "process.env.BROWSER": true,
-    // },
-
+  vite: {    
+    esbuild: {
+      target: "esnext",
+    },
+    build: {
+      target: "esnext",
+    },
+    optimizeDeps: {
+      include: ["@project-serum/anchor", "@solana/web3.js", "buffer"],
+      esbuildOptions: {
+        target: "esnext",
+      },
+    },
+    define: {
+      "process.env.BROWSER": true,
+    },
     css: {
       preprocessorOptions: {
         scss: {

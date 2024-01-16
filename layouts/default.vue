@@ -20,6 +20,6 @@
 <style lang="scss" scoped>
 #content {
   min-height: 100vh;
-  max-width: 1580px;
+  max-width: 1400px;
 }
 </style>

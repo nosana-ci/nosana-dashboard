@@ -75,3 +75,24 @@
     padding-top: $navbar-height;
   }
 }
+
+:root {
+  /* Buttons. */
+  --swv-button-background-color: black !important;
+  --swv-button-outline-color: black !important;
+  --swv-button-hover-background-color: #353535 !important;
+}
+
+.swv-button {
+  font-family: inherit !important;
+
+}
+
+.swv-dropdown-list {
+  font-family: inherit !important;
+}
+
+
+.swv-modal-wrapper {
+    font-family: inherit !important;
+}

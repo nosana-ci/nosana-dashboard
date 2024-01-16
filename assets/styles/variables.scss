@@ -38,4 +38,16 @@ $menu-list-link-padding: 0.5em 1em;
 
 $box-shadow: none;
 
+$tabs-border-bottom-width: 4px;
+$tabs-link-active-color: $primary;
+$tabs-link-active-border-bottom-color: $primary;
+$tabs-link-color: $grey;
+
+$input-background-color: $white-ter;
+$input-border-color: $white-ter;
+$input-shadow: none;
+$input-focus-box-shadow-color: rgba($secondary, 0.25);
+$label-weight: 400;
+$label-color: $grey;
+
 @import 'bulma/sass/utilities/mixins';
