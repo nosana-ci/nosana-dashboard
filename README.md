@@ -2,6 +2,8 @@
 
 Nuxt 3 site for the [Nosana Dashboard](https://app.nosana.com).
 
+![Nosana Dashboard](/static/img/screenshot.jpg)
+
 ## Build Setup
 
 Make sure to install the dependencies:
