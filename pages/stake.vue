@@ -13,36 +13,11 @@
     <div class="columns">
       <div class="column is-6">
         <div class="box has-background-white-ter">
+          <StakingForm />
+        </div>
+        <div class="box has-background-white-ter">
           <div class="box">
-            <div class="tabs is-fullwidth is-size-5">
-              <ul>
-                <li class="is-active"><a class="is-justify-content-flex-start">STAKE</a></li>
-                <li><a class="is-justify-content-flex-start">UNSTAKE</a></li>
-              </ul>
-            </div>
-            <div class="field column is-8">
-              <div>
-                <label class="label">Add NOS:</label>
-                <div class="control is-flex">
-                  <input v-model="amount" class="input" required min="1" step="0.1" type="number" placeholder="0">
-                  <span class="mt-2 ml-2 has-text-grey">NOS</span>
-                </div>
-              </div>
-            </div>
-            <ClientOnly>
-              <wallet-modal-provider v-if="!connected" :dark="$colorMode.value === 'dark'">
-                <template #default="modalScope">
-                  <button class="button is-fullwidth is-primary is-large" @click="modalScope.openModal()">
-                    Connect Wallet
-                  </button>
-                </template>
-              </wallet-modal-provider>
-              <button v-else class="button is-fullwidth is-primary is-large" @click="topup">
-                Stake NOS
-              </button>
-            </ClientOnly>
-          </div>
-          <div class="box">
+            <h2 class="is-size-4">TOP 5 STAKERS</h2>
           </div>
         </div>
       </div>
@@ -61,52 +36,5 @@
 </template>
 
 <script lang="ts" setup>
-import type { TokenAmount } from "@solana/web3.js";
-import { WalletMultiButton, WalletModalProvider, useWallet } from "solana-wallets-vue";
-const { connected, publicKey, wallet } = useWallet();
-const { nosana } = useSDK();
-const balance: Ref<TokenAmount | undefined> = ref(undefined);
-const amount: Ref<number> = ref(0);
-const activeStake: Ref<any> = ref(null);
-console.log('publicKey', publicKey.value?.toString())
-console.log('wallet', wallet.value)
-
-const getStake = async () => {
-  if (publicKey) {
-    try {
-      // @ts-ignore
-      activeStake.value = await nosana.value.stake.get(publicKey.value);
-      console.log('stake', activeStake.value);
-    } catch (e) {
-      console.error('cant get balance', e);
-    }
-  }
-}
-
-const getBalance = async () => {
-  if (publicKey) {
-    try {
-      // @ts-ignore
-      activeStake.value = await nosana.value.stake.get(publicKey.value);
-      console.log('stake', activeStake.value);
-    } catch (e) {
-      console.error('cant get balance', e);
-    }
-  }
-}
-
-if (connected) {
-  await getStake()
-  await getBalance();
-}
-
-const topup = async () => {
-  try {
-    // @ts-ignore
-    const topup = await nosana.value.stake.topup(amount.value * 1e6);
-    console.log('topup', topup);
-  } catch (e) {
-    console.error('cant get balance', e);
-  }
-}
+import { WalletMultiButton } from "solana-wallets-vue";
 </script>
