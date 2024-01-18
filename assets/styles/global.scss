@@ -91,7 +91,7 @@
 
 .swv-button {
   font-family: inherit !important;
-
+  font-weight: 400 !important;
 }
 
 .swv-dropdown-list {
@@ -111,7 +111,13 @@
 }
 .dark-mode {
   body {
-    background-color: $scheme-invert-bis;
+    background-color: $body-background-color-dark;
+  }
+  .navbar {
+    background: $black;
+    &.has-shadow {
+      box-shadow: 0 2px 0 0 $grey-dark;
+    }
   }
   .light-only {
     display: none;
@@ -124,6 +130,9 @@
   }
   .has-background-white {
     background-color: $black !important;
+  }
+  .sidebar {
+    background-color: $black-bis !important;
   }
   .has-background-black {
     background-color: $white !important;
@@ -145,6 +154,16 @@
     &.is-primary {
       background-color: $primary-invert;
       color: $primary;
+      &.is-outlined {
+        background-color: transparent;
+        border-color: $primary-invert;
+        color: $primary-invert;
+        &:hover {
+          background-color: $primary-invert;
+          border-color: $primary-invert;
+          color: $primary;
+        }
+      }
     }
   }
   .input {
@@ -169,7 +188,7 @@
   }
 
   .footer {
-    background-color: $scheme-invert-bis;
+    background-color: $body-background-color-dark;
     color: white;
   }
 
