@@ -67,7 +67,7 @@
       <div class="column is-4">
         <div class="box">
           <label class="label">xNOS Score:</label>
-          <div class="is-size-1 has-text-black">
+          <div class="is-size-2 has-text-black">
             <CustomCountUp v-if="xNOS !== null" :end-val="xNOS">
             </CustomCountUp>
             <span v-else>-</span>
@@ -77,7 +77,7 @@
       <div class="column is-4">
         <div class="box">
           <label class="label">Multiplier</label>
-          <div class="is-size-1 has-text-black">
+          <div class="is-size-2 has-text-black">
             <CustomCountUp :end-val="multiplier" :decimal-places="2">
               <template #prefix>
                 <span>x</span>
@@ -89,7 +89,7 @@
       <div class="column is-4">
         <div class="box">
           <label class="label">APY</label>
-          <div class="is-size-1 has-text-black">
+          <div class="is-size-2 has-text-black">
             <CustomCountUp v-if="APY !== null" :end-val="APY * 100" :decimal-places="1">
               <template #suffix>
                 <span>%</span>
@@ -125,7 +125,7 @@ const amount: Ref<number | null> = ref(null);
 const unstakeDays: Ref<number> = ref(14);
 const stakedNos: Ref<number | null> = ref(null);
 const tab: Ref<string> = ref('stake');
-const expectedRewards: Ref<number | null> = ref(1);
+const expectedRewards: Ref<number | null> = ref(100);
 const pendingRewards: Ref<number | null> = ref(0);
 
 const multiplier: ComputedRef<number> = computed(() => {

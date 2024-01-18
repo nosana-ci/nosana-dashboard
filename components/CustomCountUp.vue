@@ -31,3 +31,10 @@ watch(() => props.endVal, (newValue: Props['endVal']) => {
   countUp?.update(newValue)
 });
 </script>
+
+<style lang="scss">
+.countup-wrap {
+  overflow: hidden;
+  width: 100%;
+}
+</style>
