@@ -1,4 +1,7 @@
 import { Client } from '@nosana/sdk';
+import { useWallet, useAnchorWallet } from "solana-wallets-vue";
+const wallet = useAnchorWallet();
+// TODO config env
 const network = 'devnet';
 
 const nosana = computed(() => {
@@ -16,6 +19,13 @@ const nosana = computed(() => {
         network === 'devnet'
           ? 'devr1BGQndEW5k5zfvG5FsLyZv1Ap73vNgAHcQ9sUVP'
           : 'nosXBVoaCTtYdLvKY6Csb4AC8JCdQKKAaWYtx2ZMoo7',
+      pool_address:
+        network === 'devnet'
+          ? 'miF9saGY5WS747oia48WR3CMFZMAGG8xt6ajB7rdV3e'
+          : 'mineHEHiHxWS8pVkNc5kFkrvv5a9xMVgRY9wfXtkMsS',
+      pools_address: 'nosPdZrfDzND1LAR28FLMDEATUPK53K8xbRBXAirevD',
+      // @ts-ignore
+      wallet: wallet.value
     },
   });
 });

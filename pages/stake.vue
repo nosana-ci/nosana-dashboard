@@ -24,7 +24,7 @@
               <div>
                 <label class="label">Add NOS:</label>
                 <div class="control is-flex">
-                  <input class="input" required min="1" step="0.1" type="number" placeholder="0">
+                  <input v-model="amount" class="input" required min="1" step="0.1" type="number" placeholder="0">
                   <span class="mt-2 ml-2 has-text-grey">NOS</span>
                 </div>
               </div>
@@ -37,13 +37,12 @@
                   </button>
                 </template>
               </wallet-modal-provider>
-              <button v-else class="button is-fullwidth is-primary is-large">
+              <button v-else class="button is-fullwidth is-primary is-large" @click="topup">
                 Stake NOS
               </button>
             </ClientOnly>
           </div>
           <div class="box">
-            <button @click="getBalance">Get balance</button>
           </div>
         </div>
       </div>
@@ -64,22 +63,50 @@
 <script lang="ts" setup>
 import type { TokenAmount } from "@solana/web3.js";
 import { WalletMultiButton, WalletModalProvider, useWallet } from "solana-wallets-vue";
-const { connected } = useWallet();
-
+const { connected, publicKey, wallet } = useWallet();
 const { nosana } = useSDK();
 const balance: Ref<TokenAmount | undefined> = ref(undefined);
-const { publicKey } = useWallet();
+const amount: Ref<number> = ref(0);
+const activeStake: Ref<any> = ref(null);
 console.log('publicKey', publicKey.value?.toString())
+console.log('wallet', wallet.value)
+
+const getStake = async () => {
+  if (publicKey) {
+    try {
+      // @ts-ignore
+      activeStake.value = await nosana.value.stake.get(publicKey.value);
+      console.log('stake', activeStake.value);
+    } catch (e) {
+      console.error('cant get balance', e);
+    }
+  }
+}
 
 const getBalance = async () => {
   if (publicKey) {
     try {
       // @ts-ignore
-      balance.value = await nosana.value.solana.getNosBalance(publicKey.value);
-      console.log('balance', balance.value);
+      activeStake.value = await nosana.value.stake.get(publicKey.value);
+      console.log('stake', activeStake.value);
     } catch (e) {
       console.error('cant get balance', e);
     }
+  }
+}
+
+if (connected) {
+  await getStake()
+  await getBalance();
+}
+
+const topup = async () => {
+  try {
+    // @ts-ignore
+    const topup = await nosana.value.stake.topup(amount.value * 1e6);
+    console.log('topup', topup);
+  } catch (e) {
+    console.error('cant get balance', e);
   }
 }
 </script>
