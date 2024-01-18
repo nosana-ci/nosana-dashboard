@@ -1,4 +1,6 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+import { viteCommonjs } from '@originjs/vite-plugin-commonjs'
+
 export default defineNuxtConfig({
   devtools: { enabled: true },
   css: ["~/assets/styles/global.scss"],
@@ -38,6 +40,9 @@ export default defineNuxtConfig({
     },
   },
   vite: {    
+    plugins: [
+      viteCommonjs()
+    ],
     esbuild: {
       target: "esnext",
     },

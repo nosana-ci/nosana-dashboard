@@ -32,7 +32,7 @@
             <button class="button is-fullwidth is-primary is-large">Connect Wallet</button>
           </div>
           <div class="box">
-            test
+            <button @click="getBalance">Get balance</button>
           </div>
         </div>
       </div>
@@ -51,5 +51,24 @@
 </template>
 
 <script lang="ts" setup>
+import type { TokenAmount } from "@solana/web3.js";
 import { WalletMultiButton } from "solana-wallets-vue";
+import { useWallet } from "solana-wallets-vue";
+
+const { nosana } = useSDK();
+const balance: Ref<TokenAmount | undefined> = ref(undefined);
+const { publicKey } = useWallet();
+console.log('publicKey', publicKey.value?.toString())
+
+const getBalance = async () => {
+  if (publicKey) {
+    try {
+      // @ts-ignore
+      balance.value = await nosana.value.solana.getNosBalance(publicKey.value);
+      console.log('balance', balance.value);
+    } catch (e) {
+      console.error('cant get balance', e);
+    }
+  }
+}
 </script>
