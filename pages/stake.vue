@@ -6,7 +6,7 @@
         <h3 class="subtitle">Stake NOS and receive rewards</h3>
       </div>
       <ClientOnly>
-        <wallet-multi-button></wallet-multi-button>
+        <wallet-multi-button :dark="$colorMode.value === 'dark'"></wallet-multi-button>
       </ClientOnly>
     </div>
 

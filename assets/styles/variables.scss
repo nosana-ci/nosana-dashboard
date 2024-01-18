@@ -10,6 +10,9 @@ $custom-colors: (
   'secondary': $secondary,
 );
 
+$link: $secondary;
+$link-hover: darken($link, 10%);
+
 $title-family: 'Space Grotesk', sans-serif;
 $subtitle-family: 'Space Grotesk', sans-serif;
 
@@ -34,6 +37,7 @@ $size-7:	0.75rem;
 
 $menu-item-radius: $radius-large;
 $menu-item-active-background-color: $primary;
+$menu-item-active-color: white;
 $menu-list-link-padding: 0.5em 1em;
 
 $box-shadow: none;

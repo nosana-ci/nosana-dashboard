@@ -82,6 +82,12 @@
   --swv-button-outline-color: black !important;
   --swv-button-hover-background-color: #353535 !important;
 }
+.dark-mode {
+  --swv-button-background-color: white !important;
+  --swv-button-outline-color: white !important;
+  --swv-button-hover-background-color: #cbcbcb !important;
+  --swv-button-text-color: black !important;
+}
 
 .swv-button {
   font-family: inherit !important;
@@ -92,7 +98,94 @@
   font-family: inherit !important;
 }
 
-
 .swv-modal-wrapper {
     font-family: inherit !important;
+}
+
+
+
+.light-mode {
+  .dark-only {
+    display: none;
+   }
+}
+.dark-mode {
+  body {
+    background-color: $scheme-invert-bis;
+  }
+  .light-only {
+    display: none;
+  }
+  .has-text-white {
+    color: $black;
+  }
+  .has-text-black {
+    color: $white;
+  }
+  .has-background-white {
+    background-color: $black !important;
+  }
+  .has-background-black {
+    background-color: $white !important;
+  }
+  .has-background-white-ter {
+    background-color: $black-ter !important;
+  }
+  .has-background-white-bis {
+    background-color: $black-bis !important;
+  }
+  .title {
+    color: white;
+  }
+  .box {
+    background-color: $scheme-invert;
+    color: white;
+  }
+  .button{ 
+    &.is-primary {
+      background-color: $primary-invert;
+      color: $primary;
+    }
+  }
+  .input {
+    background-color: $black-ter;
+    border-color: $black-ter;
+    color: white;
+    &::placeholder {
+      color: $grey;
+    }    
+  }
+  .menu-list {
+    a {
+      color: $grey-lighter;
+      &:hover {
+        background-color: $black-ter;
+      }
+      &.is-active {
+        background-color: white;
+        color: black;
+      }
+    }
+  }
+
+  .footer {
+    background-color: $scheme-invert-bis;
+    color: white;
+  }
+
+  .tabs {
+    li.is-active a {
+      border-bottom-color: $primary-invert;
+      color: $primary-invert;
+    }
+    a {
+      border-bottom-color: $grey-dark;
+      color: $grey-dark;
+      &:hover {
+        border-bottom-color: $grey;
+        color: $grey;
+      }
+    }
+
+  }
 }

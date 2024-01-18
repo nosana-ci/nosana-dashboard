@@ -29,7 +29,7 @@ export default defineNuxtConfig({
       ]
     }
   },
-  modules: ['@nuxtjs/google-fonts', '@vueuse/nuxt'],
+  modules: ['@nuxtjs/google-fonts', '@vueuse/nuxt', '@nuxtjs/color-mode'],
   googleFonts: {
     preload: true,
     families: {
@@ -45,7 +45,7 @@ export default defineNuxtConfig({
       target: "esnext",
     },
     optimizeDeps: {
-      include: ["@project-serum/anchor", "@solana/web3.js", "buffer"],
+      include: ["@solana/web3.js", "buffer"],
       esbuildOptions: {
         target: "esnext",
       },
