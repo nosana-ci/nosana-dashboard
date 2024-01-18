@@ -55,6 +55,10 @@
   overflow-y: auto;
   height: 100%;
 }
+.is-disabled {
+  pointer-events: none;
+  cursor: not-allowed;
+} 
 
 ::-webkit-scrollbar-track-piece {
   border-radius: 6px;
