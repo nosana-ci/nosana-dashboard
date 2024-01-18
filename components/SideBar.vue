@@ -2,7 +2,8 @@
   <aside class="column has-background-white sidebar has-overflow-scroll" :class="{ 'is-hidden-touch': !showMenu }">
     <div class="mb-6 is-hidden-touch">
       <nuxt-link to="/">
-        <logo width="160px" :animated="true" />
+        <logo width="160px" :animated="true" class="light-only" />
+        <logo width="160px" :white="true" class="dark-only" :animated="true" />
       </nuxt-link>
     </div>
     <div class="menu">
@@ -102,11 +103,13 @@
         </li>
       </ul>
     </div>
+    <ColorModeSwitcher class="mt-auto has-text-right" />
   </aside>
   <nav class="navbar is-hidden-desktop is-fixed-top has-shadow">
     <div class="navbar-brand">
       <nuxt-link to="/" class="navbar-item" @click="showMenu = false">
-        <logo width="135px" :animated="true" />
+        <logo width="135px" :animated="true" class="light-only" />
+        <logo width="135px" :white="true" class="dark-only" :animated="true" />
       </nuxt-link>
 
       <a role="button" class="navbar-burger" :class="{ 'is-active': showMenu }" @click="showMenu = !showMenu">
@@ -128,6 +131,8 @@ const showMenu = ref(false);
   width: 100%;
   max-width: 280px;
   height: 100vh;
+  display: flex;
+  flex-direction: column;
   position: sticky;
   padding: 30px;
   top: 0;

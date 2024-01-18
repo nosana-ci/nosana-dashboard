@@ -6,7 +6,7 @@
         <h3 class="subtitle">Stake NOS and receive rewards</h3>
       </div>
       <ClientOnly>
-        <wallet-multi-button></wallet-multi-button>
+        <wallet-multi-button :dark="$colorMode.value === 'dark'"></wallet-multi-button>
       </ClientOnly>
     </div>
 
@@ -29,7 +29,18 @@
                 </div>
               </div>
             </div>
-            <button class="button is-fullwidth is-primary is-large">Connect Wallet</button>
+            <ClientOnly>
+              <wallet-modal-provider v-if="!connected" :dark="$colorMode.value === 'dark'">
+                <template #default="modalScope">
+                  <button class="button is-fullwidth is-primary is-large" @click="modalScope.openModal()">
+                    Connect Wallet
+                  </button>
+                </template>
+              </wallet-modal-provider>
+              <button v-else class="button is-fullwidth is-primary is-large">
+                Stake NOS
+              </button>
+            </ClientOnly>
           </div>
           <div class="box">
             <button @click="getBalance">Get balance</button>
@@ -52,8 +63,8 @@
 
 <script lang="ts" setup>
 import type { TokenAmount } from "@solana/web3.js";
-import { WalletMultiButton } from "solana-wallets-vue";
-import { useWallet } from "solana-wallets-vue";
+import { WalletMultiButton, WalletModalProvider, useWallet } from "solana-wallets-vue";
+const { connected } = useWallet();
 
 const { nosana } = useSDK();
 const balance: Ref<TokenAmount | undefined> = ref(undefined);
