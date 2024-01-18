@@ -29,7 +29,18 @@
                 </div>
               </div>
             </div>
-            <button class="button is-fullwidth is-primary is-large">Connect Wallet</button>
+            <ClientOnly>
+              <wallet-modal-provider v-if="!connected" :dark="$colorMode.value === 'dark'">
+                <template #default="modalScope">
+                  <button class="button is-fullwidth is-primary is-large" @click="modalScope.openModal()">
+                    Connect Wallet
+                  </button>
+                </template>
+              </wallet-modal-provider>
+              <button v-else class="button is-fullwidth is-primary is-large">
+                Stake NOS
+              </button>
+            </ClientOnly>
           </div>
           <div class="box">
             test
@@ -51,5 +62,6 @@
 </template>
 
 <script lang="ts" setup>
-import { WalletMultiButton } from "solana-wallets-vue";
+import { WalletMultiButton, WalletModalProvider, useWallet } from "solana-wallets-vue";
+const { connected } = useWallet();
 </script>
