@@ -13,11 +13,11 @@
     <div class="columns">
       <div class="column is-6">
         <div class="box has-background-white-ter">
+          <StakingForm />
+        </div>
+        <div class="box has-background-white-ter">
           <div class="box">
-            <StakingForm />
-          </div>
-          <div class="box">
-            test
+            <h2 class="is-size-4">TOP 5 STAKERS</h2>
           </div>
         </div>
       </div>

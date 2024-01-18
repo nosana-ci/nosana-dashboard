@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@solana/wallet-adapter-wallets": "^0.19.25",
-    "solana-wallets-vue": "^0.6.0"
+    "solana-wallets-vue": "^0.6.0",
+    "vue-countup-v3": "^1.4.1"
   }
 }
