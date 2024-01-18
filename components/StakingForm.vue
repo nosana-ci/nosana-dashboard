@@ -1,5 +1,5 @@
 <template>
-  <form @submit.prevent="stake">
+  <form @submit.prevent="showStakeModal = true">
     <div class="box">
       <div class="tabs is-fullwidth is-size-5">
         <ul>
@@ -113,6 +113,26 @@
       </button>
     </ClientOnly>
   </form>
+  <div class="modal" :class="{ 'is-active': showStakeModal }">
+    <div class="modal-background" @click="showStakeModal = false"></div>
+    <div class="modal-content">
+      <div class="box">
+        <h2 class="is-size-4 mb-5 has-text-weight-semibold">ARE YOU SURE YOU WANT TO STAKE?</h2>
+        <p class="block is-size-5">
+          Are you aware your tokens will only be linearly released based on your unstake period AFTER you unstake?
+        </p>
+        <p class="block is-size-5">
+          For more information about Nosana staking click <a href="https://docs.nosana.io/protocols/staking.html"
+            target="_blank"><u>here</u></a>
+        </p>
+        <p class="block buttons is-right">
+          <a class="button is-text mr-3 is-large" @click="showStakeModal = false">Cancel</a>
+          <a class="button is-primary is-wide is-large" @click="stake">Stake</a>
+        </p>
+      </div>
+    </div>
+    <button class="modal-close is-large" @click="showStakeModal = false" aria-label="close"></button>
+  </div>
 </template>
 
 <script lang="ts" setup>
@@ -120,6 +140,7 @@ import { WalletModalProvider, useWallet } from "solana-wallets-vue";
 const { connected } = useWallet();
 const SECONDS_PER_DAY = 24 * 60 * 60;
 
+const showStakeModal: Ref<boolean> = ref(false);
 const balance: Ref<number | null> = ref(null);
 const amount: Ref<number | null> = ref(null);
 const unstakeDays: Ref<number> = ref(14);
@@ -157,6 +178,7 @@ useIntervalFn(() => {
 }, 1000)
 
 const stake = () => {
+  showStakeModal.value = false;
   alert('stake');
 }
 </script>
