@@ -35,7 +35,7 @@
         <label class="label">Unstake period of:</label>
         <div class="control columns is-variable is-5 mb-5 is-multiline">
           <div class="is-flex is-align-items-center column is-narrow">
-            <input v-model="unstakeDays" required class="input has-text-centered" type="number" :min="14" step="0.1"
+            <input v-model="unstakeDays" required class="input has-text-centered" type="number" :min="unstakeDays" step="1"
               :max="365" placeholder="0">
             <span class="ml-2 has-text-grey">Days</span>
           </div>
@@ -47,7 +47,7 @@
         <div class="box">
           <label class="label">Expected daily NOS rewards:</label>
           <div class="is-size-1 has-text-black">
-            <CustomCountUp v-if="expectedRewards !== null" :end-val="expectedRewards"></CustomCountUp>
+            <CustomCountUp v-if="expectedRewards !== null" :end-val="(expectedRewards as number)"></CustomCountUp>
             <span v-else>-</span>
           </div>
         </div>
@@ -90,7 +90,7 @@
         <div class="box">
           <label class="label">APY</label>
           <div class="is-size-2 has-text-black">
-            <CustomCountUp v-if="APY !== null" :end-val="APY * 100" :decimal-places="1">
+            <CustomCountUp v-if="APY !== null" :end-val="APY" :decimal-places="1">
               <template #suffix>
                 <span>%</span>
               </template>
@@ -120,20 +120,26 @@
 
 <script lang="ts" setup>
 import { WalletModalProvider, useWallet } from "solana-wallets-vue";
+import * as BN from 'bn.js';
+
 const { connected, publicKey } = useWallet();
 const { nosana } = useSDK();
 const SECONDS_PER_DAY = 24 * 60 * 60;
 
 const activeStake: Ref<any> = ref(null);
+const rewardsInfo: Ref<any> = ref(null);
+const poolInfo: Ref<any> = ref(null);
+const stakingTotals: Ref<any> = ref(null);
 const loading: Ref<Boolean> = ref(false);
 const balance: Ref<number | null> = ref(null);
 const amount: Ref<number | null> = ref(null);
 const unstakeDays: Ref<number> = ref(14);
 const stakedNos: Ref<number | null> = ref(null);
+const rate: Ref<number | null> = ref(null);
+const stakeTotals: Ref<any> = ref(null);
 const tab: Ref<string> = ref('stake');
-const expectedRewards: Ref<number | null> = ref(100);
-const pendingRewards: Ref<number | null> = ref(0);
 
+// Calculate all staking numbers
 const multiplier: ComputedRef<number> = computed(() => {
   let unstakeTime;
   unstakeTime = unstakeDays.value * SECONDS_PER_DAY;
@@ -144,18 +150,76 @@ const multiplier: ComputedRef<number> = computed(() => {
 
 const xNOS: ComputedRef<number | null> = computed(() => {
   const formAmount = amount.value ? amount.value : 0;
-    return activeStake.value ?
-      (formAmount + (activeStake.value.amount.toNumber()/1e6)) * multiplier.value :
-        formAmount * multiplier.value
+  return activeStake.value ?
+    (formAmount + (activeStake.value.amount.toNumber()/1e6)) * multiplier.value :
+      formAmount * multiplier.value
 })
 
 const APY: ComputedRef<number | null> = computed(() => {
-  if (expectedRewards.value && amount.value) {
-    return (expectedRewards.value * 365) / (amount.value)
+  if (expectedRewards.value) {
+    const apy = (
+      (expectedRewards.value * 365) / ((activeStake.value && activeStake.value.amount
+        ? (activeStake.value.amount / 1e6) : 0) + (amount.value ? amount.value : 0)) * 100)
+    return apy;
   }
   return null;
 })
 
+const expectedRewards: ComputedRef<number | null> = computed(() => {
+  if (!stakeTotals.value) { return null; }
+  if (poolInfo.value) {
+    let totalXnos = parseFloat(stakeTotals.value.xnos);
+    if (activeStake.value && activeStake.value.amount) {
+      totalXnos -= activeStake.value.amount;
+    }
+    return ((xNOS.value! * 1e6) / (totalXnos + (xNOS.value! * 1e6))) * ((poolInfo.value.emission.toNumber() / 1e6) * 60 * 60 * 24);
+  } else {
+    return null;
+  }
+})
+
+const getStakeTotals = async () => {
+  try {
+    // TODO: url in config
+    const response = await fetch('https://backend.k8s.prd.nos.ci/stake/totals');
+    stakeTotals.value = await response.json();
+  } catch (error) {
+    console.error(error);
+  }
+};
+
+const calculateRewards = () => {
+  if (poolInfo.value && rewardsInfo.value) {
+    rate.value = rewardsInfo.value.global.rate;
+    const now = new Date().getTime();
+    const secondsBetween = (now / 1000) - parseInt(poolInfo.value.startTime);
+    const fees =
+      new BN(
+        Math.max(secondsBetween, 0) * parseInt(poolInfo.value.emission) -
+        parseInt(poolInfo.value.claimedTokens)
+      );
+    const newTotalXnos = rewardsInfo.value.global.totalXnos.add(fees);
+    if (poolInfo.value.poolBalance > 0) {
+      rate.value = new BN(rewardsInfo.value.global.totalReflection / newTotalXnos);
+    }
+  }
+}
+
+const pendingRewards: ComputedRef<number | null> = computed(() => {
+  let reward = 0;
+  if (rewardsInfo.value && rewardsInfo.value.account && rate.value) {
+    reward = (rewardsInfo.value.account.reflection / rate.value) -
+    rewardsInfo.value.account.xnos;
+  }
+  return +(reward / 1e6).toFixed(4);
+})
+
+useIntervalFn(() => {
+  calculateRewards();
+}, 1000)
+
+
+// Staking methods
 const submit = () => {
   if (activeStake.value) {
     topup()
@@ -164,19 +228,12 @@ const submit = () => {
   }
 }
 
-useIntervalFn(() => {
-  if (pendingRewards.value !== null) {
-    pendingRewards.value += 0.0043;
-  }
-}, 1000)
-
 const getStake = async () => {
   if (publicKey) {
     loading.value = true;
     try {
-      // @ts-ignore
       activeStake.value = await nosana.value.stake.get(publicKey.value);
-      console.log('stake', activeStake.value);
+      unstakeDays.value = activeStake.value.duration / 60 / 60 / 24;
     } catch (e) {
       console.error('cant get stake', e);
     }
@@ -190,7 +247,6 @@ const getBalance = async () => {
       // @ts-ignore
       const nos = await nosana.value.solana.getNosBalance(publicKey.value)
       balance.value = Number(nos?.uiAmount);
-      console.log('balance', balance.value);
     } catch (e) {
       console.error('cant get balance', e);
     }
@@ -198,7 +254,6 @@ const getBalance = async () => {
 }
 
 const topup = async () => {
-  console.log('topup', amount.value);
   if (amount.value) {
     loading.value = true;
     try {
@@ -212,7 +267,6 @@ const topup = async () => {
 }
 
 const stake = async () => {
-  console.log('stake', amount.value);
   if (amount.value && publicKey.value && unstakeDays.value) {
     try {
       const stake = await nosana.value.stake.create(publicKey.value, amount.value * 1e6, unstakeDays.value);
@@ -225,8 +279,10 @@ const stake = async () => {
 
 const getRewardsAndPoolInfo = async () => {
   try {
-    const info = await nosana.value.stake.getRewardsAndPoolInfo();
-    console.log('info', info);
+    rewardsInfo.value = await nosana.value.stake.getRewardsInfo();
+    poolInfo.value = await nosana.value.stake.getPoolInfo();
+    console.log('poolInfo', poolInfo.value);
+    console.log('rewardsInfo', rewardsInfo.value);
   } catch (e) {
     console.error('cant fetch rewards info', e);
   }
@@ -234,8 +290,10 @@ const getRewardsAndPoolInfo = async () => {
 
 onMounted(() => {
   if (connected) {
+    getStakeTotals()
     getBalance()
     getStake()
+    getRewardsAndPoolInfo()
   }
 });
 </script>

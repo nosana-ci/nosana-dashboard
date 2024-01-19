@@ -28,8 +28,9 @@ const nosana = computed(() => {
       pool_address:
         network === 'devnet'
           ? 'miF9saGY5WS747oia48WR3CMFZMAGG8xt6ajB7rdV3e'
-          : 'mineHEHiHxWS8pVkNc5kFkrvv5a9xMVgRY9wfXtkMsS',
+          : '6CJ9UPNnXzcwuLSE9ebTz4FPbBw1VXJkPxDgTi9ybHBj',
       pools_address: 'nosPdZrfDzND1LAR28FLMDEATUPK53K8xbRBXAirevD',
+      rewards_address: 'nosRB8DUV67oLNrL45bo2pFLrmsWPiewe2Lk2DRNYCp',
       // @ts-ignore
       wallet: wallet && wallet.value ? wallet.value : null,
     },
