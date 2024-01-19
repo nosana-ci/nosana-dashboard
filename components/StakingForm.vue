@@ -35,8 +35,8 @@
         <label class="label">Unstake period of:</label>
         <div class="control columns is-variable is-5 mb-5 is-multiline">
           <div class="is-flex is-align-items-center column is-narrow">
-            <input v-model="unstakeDays" required class="input has-text-centered" type="number" :min="unstakeDays" step="1"
-              :max="365" placeholder="0">
+            <input v-model="unstakeDays" required class="input has-text-centered" type="number" :min="unstakeDays"
+              step="1" :max="365" placeholder="0">
             <span class="ml-2 has-text-grey">Days</span>
           </div>
         </div>
@@ -151,8 +151,8 @@ const multiplier: ComputedRef<number> = computed(() => {
 const xNOS: ComputedRef<number | null> = computed(() => {
   const formAmount = amount.value ? amount.value : 0;
   return activeStake.value ?
-    (formAmount + (activeStake.value.amount.toNumber()/1e6)) * multiplier.value :
-      formAmount * multiplier.value
+    (formAmount + (activeStake.value.amount.toNumber() / 1e6)) * multiplier.value :
+    formAmount * multiplier.value
 })
 
 const APY: ComputedRef<number | null> = computed(() => {
@@ -209,7 +209,7 @@ const pendingRewards: ComputedRef<number | null> = computed(() => {
   let reward = 0;
   if (rewardsInfo.value && rewardsInfo.value.account && rate.value) {
     reward = (rewardsInfo.value.account.reflection / rate.value) -
-    rewardsInfo.value.account.xnos;
+      rewardsInfo.value.account.xnos;
   }
   return +(reward / 1e6).toFixed(4);
 })

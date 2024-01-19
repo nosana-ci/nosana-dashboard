@@ -10,8 +10,8 @@
       </ClientOnly>
     </div>
 
-    <div class="columns">
-      <div class="column is-6">
+    <div class="columns is-multiline">
+      <div class="column is-12 is-6-widescreen">
         <div class="box has-background-white-ter">
           <StakingForm />
         </div>
@@ -21,7 +21,7 @@
           </div>
         </div>
       </div>
-      <div class="column is-6">
+      <div class="column is-12 is-6-widescreen">
         <div class="box has-background-white-ter">
           <div class="box">
             test
