@@ -143,10 +143,10 @@ const multiplier: ComputedRef<number> = computed(() => {
 })
 
 const xNOS: ComputedRef<number | null> = computed(() => {
-  if (amount.value) {
-    return amount.value * multiplier.value
-  }
-  return null;
+  const formAmount = amount.value ? amount.value : 0;
+    return activeStake.value ?
+      (formAmount + (activeStake.value.amount.toNumber()/1e6)) * multiplier.value :
+        formAmount * multiplier.value
 })
 
 const APY: ComputedRef<number | null> = computed(() => {
