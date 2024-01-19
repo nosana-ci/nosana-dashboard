@@ -3,7 +3,7 @@
     <div class="is-flex is-justify-content-space-between mb-5">
       <div>
         <h2 class="title">Earn by staking</h2>
-        <h3 class="subtitle">Stake NOS and receive rewards</h3>
+        <h3 class="subtitle mb-2">Stake NOS and receive rewards</h3>
       </div>
       <ClientOnly>
         <wallet-multi-button :dark="$colorMode.value === 'dark'"></wallet-multi-button>

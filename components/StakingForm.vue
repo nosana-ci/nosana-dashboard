@@ -9,11 +9,11 @@
               class="is-justify-content-flex-start" :class="{ 'is-disabled': !stakedNos }">UNSTAKE</a></li>
         </ul>
       </div>
-      <div class="field">
+      <div class="field" v-if="!activeStake">
         <label class="label">Add NOS:</label>
         <div class="control columns is-variable is-5 mb-5 is-multiline">
           <div class="is-flex is-align-items-center column" style="min-width: 200px">
-            <input class="input" v-model="amount" required min="1" :max="balance" step="0.1" type="number"
+            <input class="input is-medium" v-model="amount" required min="1" :max="balance" step="0.1" type="number"
               placeholder="0">
             <span class="ml-2 has-text-grey">NOS</span>
           </div>
@@ -31,21 +31,75 @@
           </div>
         </div>
       </div>
-      <div class="field">
+      <div class="field" v-if="!activeStake">
         <label class="label">Unstake period of:</label>
         <div class="control columns is-variable is-5 mb-5 is-multiline">
           <div class="is-flex is-align-items-center column is-narrow">
-            <input v-model="unstakeDays" required class="input has-text-centered" type="number" :min="unstakeDays" step="1"
+            <input v-model="unstakeDays" required class="input has-text-centered is-medium" type="number" :min="unstakeDays" step="1"
               :max="365" placeholder="0">
             <span class="ml-2 has-text-grey">Days</span>
           </div>
         </div>
       </div>
+      <!-- Your stake block -->
+      <div v-if="activeStake">
+        <p class="has-text-black is-uppercase mb-4">Your stake</p>
+        <div class="columns is-multiline">
+          <div class="column is-4 mb-">
+            <label class="label is-size-6 mb-0">NOS Staked</label>
+            <div class="has-text-black is-size-3">
+              {{ (activeStake.amount/1e6).toFixed() }}
+            </div>
+          </div>
+          <div class="column is-4">
+            <label class="label mb-0">Multiplier</label>
+            <div class="has-text-black is-size-3">
+              <CustomCountUp :end-val="multiplier" :decimal-places="2">
+                <template #prefix>
+                  <span>x</span>
+                </template>
+              </CustomCountUp>
+            </div>
+          </div>
+          <div class="column is-4">
+            <label class="label mb-0">xNOS</label>
+            <div class="has-text-black is-size-3">
+              <CustomCountUp v-if="xNOS !== null" :end-val="xNOS">
+              </CustomCountUp>
+            </div>
+          </div>
+          <div class="column is-4">
+            <label class="label mb-0">Unstake period of</label>
+            <div class="has-text-black">
+              <span class="is-size-3">{{ activeStake.duration / 60 / 60 / 24 }}</span> days
+            </div>
+          </div>
+          <div class="column is-4">
+            <label class="label mb-0">APY</label>
+            <div class="has-text-black is-size-3">
+              <CustomCountUp v-if="APY !== null" :end-val="APY" :decimal-places="1">
+                <template #suffix>
+                  <span>%</span>
+                </template>
+              </CustomCountUp>
+            </div>
+          </div>
+          <div class="column is-4">
+            <label class="label mb-0">Daily NOS rewards</label>
+            <div class="has-text-black is-size-3">
+              <CustomCountUp v-if="expectedRewards !== null" :end-val="(expectedRewards as number)"></CustomCountUp>
+            </div>
+          </div>
+        </div>
+        <button class="button is-fullwidth is-primary is-large" @click="null">
+          Increase Stake
+        </button>
+      </div>
     </div>
-    <div class="columns">
+    <div class="columns" v-if="!activeStake">
       <div class="column is-6">
         <div class="box">
-          <label class="label">Expected daily NOS rewards:</label>
+          <label class="label">Expected daily NOS rewards</label>
           <div class="is-size-1 has-text-black">
             <CustomCountUp v-if="expectedRewards !== null" :end-val="(expectedRewards as number)"></CustomCountUp>
             <span v-else>-</span>
@@ -54,7 +108,7 @@
       </div>
       <div class="column is-6">
         <div class="box">
-          <label class="label">Pending NOS rewards:</label>
+          <label class="label">Pending NOS rewards</label>
           <div class="is-size-1 has-text-black">
             <CustomCountUp v-if="pendingRewards !== null" :end-val="pendingRewards" :decimal-places="4" :duration="1.5">
             </CustomCountUp>
@@ -63,10 +117,10 @@
         </div>
       </div>
     </div>
-    <div class="columns">
+    <div class="columns" v-if="!activeStake">
       <div class="column is-4">
         <div class="box">
-          <label class="label">xNOS Score:</label>
+          <label class="label">xNOS Score</label>
           <div class="is-size-2 has-text-black">
             <CustomCountUp v-if="xNOS !== null" :end-val="xNOS">
             </CustomCountUp>
@@ -108,10 +162,7 @@
           </a>
         </template>
       </wallet-modal-provider>
-      <button v-else-if="activeStake" class="button is-fullwidth is-primary is-large" type="submit">
-        Increase Stake
-      </button>
-      <button v-else class="button is-fullwidth is-primary is-large" type="submit">
+      <button v-else-if="!activeStake" class="button is-fullwidth is-primary is-large" type="submit">
         Stake NOS
       </button>
     </ClientOnly>
@@ -288,8 +339,19 @@ const getRewardsAndPoolInfo = async () => {
   }
 }
 
+watch(connected, () => {
+  if (connected.value) {
+    getStakeTotals()
+    getBalance()
+    getStake()
+    getRewardsAndPoolInfo()
+  } else {
+    activeStake.value = null;
+  }
+});
+
 onMounted(() => {
-  if (connected) {
+  if (connected.value) {
     getStakeTotals()
     getBalance()
     getStake()

@@ -1,10 +1,9 @@
 import { Client } from '@nosana/sdk';
-import { useWallet, useAnchorWallet, type AnchorWallet } from "solana-wallets-vue";
-// const { connected } = useWallet();
+import { useAnchorWallet } from "solana-wallets-vue";
 let wallet: any;
 
 // TODO config env
-const network = 'devnet';
+const network = 'mainnet';
 
 const nosana = computed(() => {
   try {
