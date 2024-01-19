@@ -3,7 +3,7 @@ import { useAnchorWallet } from "solana-wallets-vue";
 let wallet: any;
 
 // TODO config env
-const network = 'mainnet';
+const network = 'devnet';
 
 const nosana = computed(() => {
   try {
