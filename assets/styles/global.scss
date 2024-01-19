@@ -127,10 +127,13 @@
     display: none;
   }
   .has-text-white {
-    color: $black;
+    color: $black !important;
   }
   .has-text-black {
-    color: $white;
+    color: $white !important;
+  }
+  a.has-text-black:hover {
+    color: $grey-light !important;
   }
   .has-background-white {
     background-color: $black !important;

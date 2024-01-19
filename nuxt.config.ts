@@ -1,6 +1,8 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+
 export default defineNuxtConfig({
   devtools: { enabled: true },
+  ssr: false,
   css: ["~/assets/styles/global.scss"],
   dir: {
     public: 'static',
@@ -37,7 +39,7 @@ export default defineNuxtConfig({
       'Space Grotesk': [400] 
     },
   },
-  vite: {    
+  vite: {
     esbuild: {
       target: "esnext",
     },

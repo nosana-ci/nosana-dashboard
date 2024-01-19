@@ -9,6 +9,9 @@ $secondary: #10E80C;
 $custom-colors: (
   'secondary': $secondary,
 );
+$text: #999999;
+$text-dark: #666666;
+$body-size: 14px !default;
 
 $link: $secondary;
 $link-hover: darken($link, 10%);
@@ -17,7 +20,7 @@ $title-family: 'Space Grotesk', sans-serif;
 $subtitle-family: 'Space Grotesk', sans-serif;
 
 $body-background-color: $white-bis;
-$body-background-color-dark: #010c04;
+$body-background-color-dark: #051306;
 
 $navbar-height: 3.5rem;
 
@@ -39,9 +42,11 @@ $size-7:	0.75rem;
 $menu-item-radius: $radius-large;
 $menu-item-active-background-color: $primary;
 $menu-item-active-color: white;
-$menu-list-link-padding: 0.5em 1em;
+$menu-list-link-padding: 0.65em 1em;
+$menu-item-color: $text-dark;
 
 $box-shadow: none;
+$box-padding: 1.6rem;
 
 $tabs-border-bottom-width: 4px;
 $tabs-link-active-color: $primary;
