@@ -9,7 +9,7 @@
               class="is-justify-content-flex-start" :class="{ 'is-disabled': !activeStake }">UNSTAKE</a></li>
         </ul>
       </div>
-      <div v-if="errorStake">
+      <div v-if="errorStake" class="has-text-danger">
         Error fetching data <a @click="refreshStake">retry</a>
         <p>{{ errorStake }}</p>
       </div>
@@ -96,9 +96,6 @@
             </div>
           </div>
         </div>
-        <button class="button is-fullwidth is-primary is-large" @click="null">
-          Increase Stake
-        </button>
       </div>
     </div>
     <div v-if="activeStake" class="box has-text-centered">
@@ -181,7 +178,10 @@
           </a>
         </template>
       </wallet-modal-provider>
-      <button :disabled="errorStake ? true : undefined" v-else-if="!activeStake" :class="{ 'is-loading': loadingStake }"
+      <button v-else-if="activeStake" class="button is-fullwidth is-primary is-large" type="submit">
+        Increase Stake
+      </button>
+      <button :disabled="errorStake ? true : undefined" v-else :class="{ 'is-loading': loadingStake }"
         class="button is-fullwidth is-primary is-large" type="submit">
         Stake NOS
       </button>
@@ -223,7 +223,6 @@ const rewardsInfo: Ref<any> = ref(null);
 const poolInfo: Ref<any> = ref(null);
 const loading: Ref<Boolean> = ref(false);
 const showStakeModal: Ref<boolean> = ref(false);
-const balance: Ref<number | null> = ref(null);
 const amount: Ref<number | null> = ref(null);
 const unstakeDays: Ref<number> = ref(14);
 const rate: Ref<number | null> = ref(null);
@@ -249,6 +248,20 @@ const { data: activeStake, pending: loadingStake, error: errorStake, refresh: re
     watch: [publicKey],
     lazy: true
   });
+
+const { data: balance, pending: loadingBalance, error: errorBalance, refresh: refreshBalance } =
+  await useAsyncData('getBalance',
+    async () => {
+      errorStake.value = null;
+      if (publicKey.value) {
+        const nos = await nosana.value.solana.getNosBalance(publicKey.value)
+        return Number(nos?.uiAmount);
+      }
+    }, {
+    watch: [publicKey],
+    lazy: true
+  });
+
 
 const multiplier: ComputedRef<number> = computed(() => {
   let unstakeTime;
@@ -334,18 +347,6 @@ const submit = () => {
   }
 }
 
-const getBalance = async () => {
-  if (publicKey.value) {
-    try {
-      // @ts-ignore
-      const nos = await nosana.value.solana.getNosBalance(publicKey.value)
-      balance.value = Number(nos?.uiAmount);
-    } catch (e) {
-      console.error('cant get balance', e);
-    }
-  }
-}
-
 const topup = async () => {
   if (amount.value) {
     loading.value = true;
@@ -382,19 +383,6 @@ const getRewardsAndPoolInfo = async () => {
   }
 }
 
-watch(connected, () => {
-  if (connected.value) {
-    getBalance()
-  } else {
-    balance.value = null;
-  }
-});
-
-onMounted(() => {
-  getStakeTotals();
-  getRewardsAndPoolInfo();
-  if (connected.value) {
-    getBalance();
-  }
-});
+getStakeTotals();
+getRewardsAndPoolInfo();
 </script>
