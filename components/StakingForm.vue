@@ -347,6 +347,7 @@ watch(connected, () => {
     getRewardsAndPoolInfo()
   } else {
     activeStake.value = null;
+    balance.value = null;
   }
 });
 
