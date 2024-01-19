@@ -101,6 +101,14 @@
         </button>
       </div>
     </div>
+    <div v-if="activeStake" class="box has-text-centered">
+      <label class="label is-uppercase has-text-black is-size-3">Your Pending NOS rewards</label>
+      <div class="is-size-1 has-text-black">
+        <CustomCountUp v-if="pendingRewards !== null" :end-val="pendingRewards" :decimal-places="4" :duration="1.5">
+        </CustomCountUp>
+        <span v-else>-</span>
+      </div>
+    </div>
     <div class="columns" v-if="!activeStake">
       <div class="column is-6">
         <div class="box">
@@ -173,10 +181,7 @@
           </a>
         </template>
       </wallet-modal-provider>
-      <button v-if="activeStake" class="button is-fullwidth is-primary is-large" type="submit">
-        Increase Stake {{ activeStake.amount / 1e6 }}
-      </button>
-      <button :disabled="errorStake ? true : undefined" v-else :class="{ 'is-loading': loadingStake }"
+      <button :disabled="errorStake ? true : undefined" v-else-if="!activeStake" :class="{ 'is-loading': loadingStake }"
         class="button is-fullwidth is-primary is-large" type="submit">
         Stake NOS
       </button>
