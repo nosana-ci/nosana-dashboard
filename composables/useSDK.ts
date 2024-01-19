@@ -1,6 +1,5 @@
 import { Client, type ClientConfig } from '@nosana/sdk';
-import { useWallet, useAnchorWallet, type AnchorWallet } from "solana-wallets-vue";
-// const { connected } = useWallet();
+import { useAnchorWallet, type AnchorWallet } from "solana-wallets-vue";
 let wallet: Ref<AnchorWallet | undefined>;
 
 // TODO config env
