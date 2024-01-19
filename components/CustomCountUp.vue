@@ -35,6 +35,5 @@ watch(() => props.endVal, (newValue: Props['endVal']) => {
 <style lang="scss">
 .countup-wrap {
   overflow: hidden;
-  width: 100%;
 }
 </style>
