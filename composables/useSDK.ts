@@ -1,7 +1,7 @@
-import { Client } from '@nosana/sdk';
+import { Client, type ClientConfig } from '@nosana/sdk';
 import { useWallet, useAnchorWallet, type AnchorWallet } from "solana-wallets-vue";
 // const { connected } = useWallet();
-let wallet: any;
+let wallet: Ref<AnchorWallet | undefined>;
 
 // TODO config env
 const network = 'devnet';
@@ -11,7 +11,7 @@ const nosana = computed(() => {
     wallet = useAnchorWallet();
   } catch (error) {}
 
-  return new Client({
+  const config: Partial<ClientConfig> = {
     solana: {
       network:
         network === 'devnet'
@@ -31,11 +31,15 @@ const nosana = computed(() => {
           : '6CJ9UPNnXzcwuLSE9ebTz4FPbBw1VXJkPxDgTi9ybHBj',
       pools_address: 'nosPdZrfDzND1LAR28FLMDEATUPK53K8xbRBXAirevD',
       rewards_address: 'nosRB8DUV67oLNrL45bo2pFLrmsWPiewe2Lk2DRNYCp',
-      // @ts-ignore
-      wallet: wallet && wallet.value ? wallet.value : null,
     },
-  });
+  };
+  if (wallet && wallet.value) {
+    config.solana!.wallet = wallet.value;
+  }
+
+  return new Client(config);
 });
+
 export const useSDK = () => {
   return { nosana, network };
 };

@@ -59,9 +59,15 @@
       </div>
       <div class="column is-6">
         <div class="box">
-          <label class="label">Pending NOS rewards:</label>
+          <!-- <label class="label">Pending NOS rewards:</label>
           <div class="is-size-1 has-text-black">
             <CustomCountUp v-if="pendingRewards !== null" :end-val="pendingRewards" :decimal-places="4" :duration="1.5">
+            </CustomCountUp>
+            <span v-else>-</span>
+          </div> -->
+          <label class="label">Staked NOS:</label>
+          <div class="is-size-1 has-text-black">
+            <CustomCountUp v-if="amount !== null" :end-val="amount">
             </CustomCountUp>
             <span v-else>-</span>
           </div>
@@ -156,7 +162,6 @@ const SECONDS_PER_DAY = 24 * 60 * 60;
 
 const rewardsInfo: Ref<any> = ref(null);
 const poolInfo: Ref<any> = ref(null);
-const stakingTotals: Ref<any> = ref(null);
 const loading: Ref<Boolean> = ref(false);
 const showStakeModal: Ref<boolean> = ref(false);
 const balance: Ref<number | null> = ref(null);
@@ -166,7 +171,6 @@ const rate: Ref<number | null> = ref(null);
 const stakeTotals: Ref<any> = ref(null);
 const tab: Ref<string> = ref('stake');
 
-// Calculate all staking numbers
 const { data: activeStake, pending: loadingStake, error: errorStake, refresh: refreshStake } =
   await useAsyncData('getStake',
     async () => {
@@ -213,16 +217,12 @@ const APY: ComputedRef<number | null> = computed(() => {
 })
 
 const expectedRewards: ComputedRef<number | null> = computed(() => {
-  if (!stakeTotals.value) { return null; }
-  if (poolInfo.value) {
-    let totalXnos = parseFloat(stakeTotals.value.xnos);
-    if (activeStake.value && activeStake.value.amount) {
-      totalXnos -= activeStake.value.amount;
-    }
-    return ((xNOS.value! * 1e6) / (totalXnos + (xNOS.value! * 1e6))) * ((poolInfo.value.emission.toNumber() / 1e6) * 60 * 60 * 24);
-  } else {
-    return null;
+  if (!stakeTotals.value || !poolInfo.value) { return null; }
+  let totalXnos = parseFloat(stakeTotals.value.xnos);
+  if (activeStake.value && activeStake.value.amount) {
+    totalXnos -= activeStake.value.amount;
   }
+  return ((xNOS.value! * 1e6) / (totalXnos + (xNOS.value! * 1e6))) * ((poolInfo.value.emission.toNumber() / 1e6) * 60 * 60 * 24);
 })
 
 const getStakeTotals = async () => {
@@ -324,10 +324,10 @@ const getRewardsAndPoolInfo = async () => {
 }
 
 onMounted(() => {
+  getStakeTotals();
+  getRewardsAndPoolInfo();
   if (connected) {
-    getStakeTotals()
-    getBalance()
-    getRewardsAndPoolInfo()
+    getBalance();
   }
 });
 </script>
