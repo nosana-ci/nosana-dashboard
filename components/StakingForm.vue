@@ -4,7 +4,7 @@
       <div class="tabs is-fullwidth is-size-5">
         <ul>
           <li
-            :class="{'is-active': tab === 'stake', 'is-inactive' : activeStake && activeStake.stakeEndDate } "
+            :class="{'is-active': tab === 'stake', 'is-inactive' : activeStake && stakeEndDate } "
           >
             <a @click="!activeStake || !stakeEndDate ? tab = 'stake' : null" class="is-justify-content-flex-start">STAKE</a>
           </li>
@@ -83,7 +83,7 @@
             <div class="column is-4">
               <label class="label mb-0">Unstake period of</label>
               <div class="has-text-black">
-                <span class="is-size-3">{{ activeStake.duration / 60 / 60 / 24 }}</span> days
+                <span class="is-size-3">{{ unstakeDays }}</span> days
               </div>
             </div>
             <div class="column is-4">
@@ -111,36 +111,152 @@
         </div>
       </div>
       <div v-else-if="tab === 'unstake'">
-        <div v-if="activeStake">
-            <div class="has-text-centered has-limited-width-small is-horizontal-centered mb-6">
-              <h3 class="has-text-centered title pt-3 is-4 has-text-weight-semibold">
-                Unstake your tokens here.
-              </h3>
-              <p>
-                Be aware that after you unstake,
-                you will have to wait until your unstake period ends to claim your tokens<br><br>
-                If you were to unstake now, you can claim your tokens on:
-              </p>
-              <h3 class="title is-5 mt-4">
-                {{
-                // current date + unstakedays 
-                new Intl.DateTimeFormat('en-US', { day: 'numeric', month: 'long', year: 'numeric' })
-                  .format(new Date().setDate(new Date().getDate() + parseInt(activeStake.duration / 60 / 60 / 24))) }}
-              </h3>
-            </div>
-            <form @submit.prevent="unstake">
-              <button
-                type="submit"
-                class="button is-fullwidth is-primary is-large is-outlined"
-                :class="{ 'is-loading': loading }"
-              >
-                Unstake NOS
-              </button>
-            </form>
+        <div v-if="activeStake && !stakeEndDate">
+          <div class="has-text-centered has-limited-width-small is-horizontal-centered mb-6">
+            <h3 class="has-text-centered title pt-3 is-4 has-text-weight-semibold">
+              Unstake your tokens here.
+            </h3>
+            <p>
+              Be aware that after you unstake,
+              you will have to wait until your unstake period ends to claim your tokens<br><br>
+              If you were to unstake now, you can claim your tokens on:
+            </p>
+            <h3 class="title is-5 mt-4">
+              {{
+              // current date + unstakedays 
+              new Intl.DateTimeFormat('en-US', { day: 'numeric', month: 'long', year: 'numeric' })
+                .format(new Date().setDate(new Date().getDate() + unstakeDays)) }}
+            </h3>
           </div>
+          <form @submit.prevent="unstake">
+            <button
+              type="submit"
+              class="button is-fullwidth is-primary is-large is-outlined"
+              :class="{ 'is-loading': loading }"
+            >
+              Unstake NOS
+            </button>
+          </form>
+        </div>
+        <div v-else-if="activeStake && stakeEndDate">
+          <div class="unstaked">
+            <h3 class="has-text-centered title is-4 has-text-weight-semibold">
+              You have unstaked your tokens
+            </h3>
+            <span v-if="countdownFinished">
+              Claim your tokens!<br>
+            </span>
+            <div class="has-text-centered is-block mb-1">
+              <h5 class="mb-0" style="line-height: 1rem;">
+                Unstaked at:
+              </h5>
+              <span class="is-size-7">{{ activeStake.timeUnstake }}</span><br>
+
+              <div class="has-background-light box mt-5">
+                <h5 v-if="!countdownFinished" class="mb-3">
+                  All tokens will be released in
+                </h5>
+                <client-only>
+                  <vue-countdown :time="stakeEndDate * 1000 - Date.now()" v-slot="{ days, hours, minutes, seconds }">
+                    <div class="columns is-mobile is-multiline">
+                        <div class="column is-3-desktop is-6-touch">
+                          <div class="has-background-white has-radius title mb-0 py-4 px-2">
+                            {{ days }}d
+                          </div>
+                        </div>
+                        <div class="column is-3-desktop is-6-touch">
+                          <div class="has-background-white has-radius title mb-0 py-4 px-2">
+                            {{ hours }}h
+                          </div>
+                        </div>
+                        <div class="column is-3-desktop is-6-touch">
+                          <div class="has-background-white has-radius title mb-0 py-4 px-2">
+                            {{ minutes }}m
+                          </div>
+                        </div>
+                        <div class="column is-3-desktop is-6-touch">
+                          <div class="has-background-white has-radius title mb-0 py-4 px-2">
+                            {{ seconds }}s
+                          </div>
+                        </div>
+                      </div>
+                  </vue-countdown>
+                  <!-- <countdown :end-time="stakeEndDate.toString()">
+                    <span
+                      slot="process"
+                      slot-scope="{ timeObj }"
+                    >
+                      <div class="columns is-mobile is-multiline">
+                        <div class="column is-3-desktop is-6-touch">
+                          <div class="has-background-grey-light has-radius title mb-0 py-4 px-2">
+                            {{ timeObj.d }}d
+                          </div>
+                        </div>
+                        <div class="column is-3-desktop is-6-touch">
+                          <div class="has-background-grey-light has-radius title mb-0 py-4 px-2">
+                            {{ timeObj.h }}h
+                          </div>
+                        </div>
+                        <div class="column is-3-desktop is-6-touch">
+                          <div class="has-background-grey-light has-radius title mb-0 py-4 px-2">
+                            {{ timeObj.m }}m
+                          </div>
+                        </div>
+                        <div class="column is-3-desktop is-6-touch">
+                          <div class="has-background-grey-light has-radius title mb-0 py-4 px-2">
+                            {{ timeObj.s }}s
+                          </div>
+                        </div>
+                      </div>
+
+                    </span>
+                    <span slot="finish">
+                      <h1 class="title">Claim back your tokens:</h1>
+                      <button
+                        class="button is-accent mt-2"
+                        :class="{'is-loading': loading}"
+                        @click.stop="close"
+                      >
+                        Claim <span v-if="vaultBalance">&nbsp;{{ Math.floor(vaultBalance) }}&nbsp;</span> NOS
+                      </button>
+                    </span>
+                  </countdown> -->
+                </client-only>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="!countdownFinished" class="mt-5 has-text-centered">
+            <div class="box has-background-light">
+              <p>Withdrawable tokens</p>
+              <h2 class="title is-2 has-text-success mb-0 mt-1">
+                <CustomCountUp
+                  :end-val="withdrawAvailable"
+                  :decimal-places="4"
+                  :duration="1.5"
+                />
+              </h2>
+              <p>NOS</p>
+            </div>
+            <button
+              class="button is-fullwidth is-primary"
+              :class="{'is-loading': loading}"
+              @click.prevent="restake"
+            >
+              Restake<span v-if="vaultBalance">&nbsp;{{ Math.floor(vaultBalance) }}&nbsp;</span> NOS
+            </button>
+            <button
+              class="button is-fullwidth is-primary is-outlined mt-2"
+              :class="{'is-loading': loading}"
+              @click.prevent="withdraw"
+            >
+              Withdraw released tokens
+            </button>
+          </div>
+        </div>
       </div>
     </div>
-    <div v-if="activeStake" class="box has-text-centered">
+    <div v-if="activeStake && !stakeEndDate" class="box has-text-centered">
       <label class="label is-uppercase has-text-black is-size-3">Your Pending NOS rewards</label>
       <div class="is-size-1 has-text-black">
         <CustomCountUp v-if="pendingRewards !== null" :end-val="pendingRewards" :decimal-places="4" :duration="1.5">
@@ -260,6 +376,7 @@
 
 <script lang="ts" setup>
 import { WalletModalProvider, useWallet } from "solana-wallets-vue";
+import VueCountdown from '@chenfengyuan/vue-countdown';
 import * as BN from 'bn.js';
 
 const { connected, publicKey } = useWallet();
@@ -275,6 +392,8 @@ const unstakeDays: Ref<number> = ref(14);
 const rate: Ref<number | null> = ref(null);
 const stakeTotals: Ref<any> = ref(null);
 const tab: Ref<string> = ref('stake');
+const vaultBalance: Ref<number | null | undefined> = ref(null);
+const withdrawAvailable: Ref<number> = ref(0);
 
 const { data: activeStake, pending: loadingStake, error: errorStake, refresh: refreshStake } =
   await useAsyncData('getStake',
@@ -284,6 +403,7 @@ const { data: activeStake, pending: loadingStake, error: errorStake, refresh: re
         try {
           const stakeData = await nosana.value.stake.get(publicKey.value);
           unstakeDays.value = stakeData.duration / 60 / 60 / 24;
+          tab.value = stakeData && parseInt(stakeData.timeUnstake) > 0 ? 'unstake' : 'stake';
           return stakeData;
         } catch (error: any) {
           if (!error.message.includes('Account does not exist')) {
@@ -302,6 +422,7 @@ const { data: balance, pending: loadingBalance, error: errorBalance, refresh: re
       errorStake.value = null;
       if (publicKey.value) {
         const nos = await nosana.value.solana.getNosBalance(publicKey.value)
+        vaultBalance.value = await nosana.value.stake.getStakeVaultBalance();
         return Number(nos?.uiAmount);
       }
     }, {
@@ -355,8 +476,16 @@ const getStakeTotals = async () => {
 };
 
 const stakeEndDate: ComputedRef<any> = computed(() => {
-  console.log('time_unstkae', activeStake.value.time_unstake);
-  return activeStake.value && activeStake.value.time_unstake ? activeStake.value.time_unstake : null;
+  return activeStake.value && parseInt(activeStake.value.timeUnstake) > 0 ? BN(activeStake.value.timeUnstake).toNumber() + (unstakeDays.value * 24 * 60 * 60) : null;
+});
+
+const countdownFinished = computed({
+  get() {
+    return stakeEndDate.value ? (Date.now() > stakeEndDate.value * 1000) : false;
+  },
+  set(value) {
+    countdownFinished.value = value;
+  }
 });
 
 const calculateRewards = () => {
@@ -376,6 +505,21 @@ const calculateRewards = () => {
   }
 }
 
+const calculateWithdrawable = () => {
+  if (activeStake.value && stakeEndDate && vaultBalance.value) {
+    const now = new Date().getTime();
+    // @ts-ignore
+    const emission = parseFloat(parseInt(activeStake.value.amount) / parseInt(activeStake.value.duration));
+    const secondsBetween = now / 1000 - parseInt(activeStake.value.timeUnstake);
+
+    const tokensReleased = emission * secondsBetween;
+    const withdrawn = (parseInt(activeStake.value.amount) - (vaultBalance.value * 1e6));
+    const available = Math.min(tokensReleased - withdrawn, vaultBalance.value * 1e6);
+
+    withdrawAvailable.value = +(available / 1e6);
+  }
+}
+
 const pendingRewards: ComputedRef<number | null> = computed(() => {
   let reward = 0;
   if (rewardsInfo.value && rewardsInfo.value.account && rate.value) {
@@ -387,6 +531,7 @@ const pendingRewards: ComputedRef<number | null> = computed(() => {
 
 useIntervalFn(() => {
   calculateRewards();
+  calculateWithdrawable();
 }, 1000)
 
 
@@ -458,13 +603,55 @@ const claimAndRestakeRewards = async () => {
 const unstake = async () => {
   loading.value = true;
   try {
-    const claim = await nosana.value.stake.unstake();
+    const unstake = await nosana.value.stake.unstake();
     await refreshStake();
     await refreshBalance();
     await getRewardsAndPoolInfo();
-    console.log('unstake', claim);
+    console.log('unstake', unstake);
   } catch (e) {
     console.error('cant unstake', e);
+  }
+  loading.value = false;
+}
+
+const restake = async () => {
+  loading.value = true;
+  try {
+    const restake = await nosana.value.stake.restake();
+    await refreshStake();
+    await refreshBalance();
+    await getRewardsAndPoolInfo();
+    console.log('restake', restake);
+  } catch (e) {
+    console.error('cant restake', e);
+  }
+  loading.value = false;
+}
+
+const withdraw = async () => {
+  loading.value = true;
+  try {
+    const withdraw = await nosana.value.stake.withdraw();
+    await refreshStake();
+    await refreshBalance();
+    await getRewardsAndPoolInfo();
+    console.log('withdraw', withdraw);
+  } catch (e) {
+    console.error('cant withdraw', e);
+  }
+  loading.value = false;
+}
+
+const close = async () => {
+  loading.value = true;
+  try {
+    const withdraw = await nosana.value.stake.withdraw();
+    await refreshStake();
+    await refreshBalance();
+    await getRewardsAndPoolInfo();
+    console.log('withdraw', withdraw);
+  } catch (e) {
+    console.error('cant withdraw', e);
   }
   loading.value = false;
 }
@@ -483,3 +670,28 @@ const getRewardsAndPoolInfo = async () => {
 getStakeTotals();
 getRewardsAndPoolInfo();
 </script>
+<style lang="scss" scoped>
+.tabs ul {
+  border-bottom-width: 0px;
+  li {
+    width: 50%;
+    font-size: 18px;
+    a {
+      margin-bottom: 0;
+    }
+    &.is-active {
+      background-color: transparent !important;
+    }
+    &.is-inactive {
+      opacity: .4;
+      a {
+        cursor: not-allowed;
+        &:hover {
+          color: $text;
+        }
+      }
+    }
+  }
+}
+
+</style>

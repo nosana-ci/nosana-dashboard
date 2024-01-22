@@ -20,6 +20,7 @@
     "vue-router": "^4.2.5"
   },
   "dependencies": {
+    "@chenfengyuan/vue-countdown": "^2.1.2",
     "@nosana/sdk": "file:../sdk",
     "@solana/wallet-adapter-wallets": "^0.19.25",
     "bn.js": "^5.2.1",
