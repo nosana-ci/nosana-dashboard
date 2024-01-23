@@ -112,7 +112,7 @@
       </div>
       <div v-else-if="tab === 'unstake'">
         <div v-if="activeStake && !stakeEndDate">
-          <div class="has-text-centered has-limited-width-small is-horizontal-centered mb-6">
+          <div class="has-text-centered is-horizontal-centered mb-6">
             <h3 class="has-text-centered title pt-3 is-4 has-text-weight-semibold">
               Unstake your tokens here.
             </h3>
@@ -143,85 +143,50 @@
             <h3 class="has-text-centered title is-4 has-text-weight-semibold">
               You have unstaked your tokens
             </h3>
-            <span v-if="countdownFinished">
-              Claim your tokens!<br>
-            </span>
             <div class="has-text-centered is-block mb-1">
-              <h5 class="mb-0" style="line-height: 1rem;">
+              <h5 class="mb-0">
                 Unstaked at:
               </h5>
-              <span class="is-size-7">{{ activeStake.timeUnstake }}</span><br>
+              <span class="is-size-5">{{ new Intl.DateTimeFormat('en-US', { dateStyle: 'full', timeStyle: 'medium' }).format(activeStake.timeUnstake * 1000) }}</span><br>
 
               <div class="has-background-light box mt-5">
                 <h5 v-if="!countdownFinished" class="mb-3">
                   All tokens will be released in
                 </h5>
-                <client-only>
-                  <vue-countdown :time="stakeEndDate * 1000 - Date.now()" v-slot="{ days, hours, minutes, seconds }">
-                    <div class="columns is-mobile is-multiline">
-                        <div class="column is-3-desktop is-6-touch">
-                          <div class="has-background-white has-radius title mb-0 py-4 px-2">
-                            {{ days }}d
-                          </div>
-                        </div>
-                        <div class="column is-3-desktop is-6-touch">
-                          <div class="has-background-white has-radius title mb-0 py-4 px-2">
-                            {{ hours }}h
-                          </div>
-                        </div>
-                        <div class="column is-3-desktop is-6-touch">
-                          <div class="has-background-white has-radius title mb-0 py-4 px-2">
-                            {{ minutes }}m
-                          </div>
-                        </div>
-                        <div class="column is-3-desktop is-6-touch">
-                          <div class="has-background-white has-radius title mb-0 py-4 px-2">
-                            {{ seconds }}s
-                          </div>
+                <vue-countdown v-if="!countdownFinished" ref="countdown" :time="stakeEndDate * 1000 - Date.now()" @end="finishCountdown()" v-slot="{ days, hours, minutes, seconds }">
+                  <div class="columns is-mobile is-multiline">
+                      <div class="column is-3-desktop is-6-touch">
+                        <div class="has-background-white has-radius title mb-0 py-4 px-2">
+                          {{ days }}d
                         </div>
                       </div>
-                  </vue-countdown>
-                  <!-- <countdown :end-time="stakeEndDate.toString()">
-                    <span
-                      slot="process"
-                      slot-scope="{ timeObj }"
-                    >
-                      <div class="columns is-mobile is-multiline">
-                        <div class="column is-3-desktop is-6-touch">
-                          <div class="has-background-grey-light has-radius title mb-0 py-4 px-2">
-                            {{ timeObj.d }}d
-                          </div>
-                        </div>
-                        <div class="column is-3-desktop is-6-touch">
-                          <div class="has-background-grey-light has-radius title mb-0 py-4 px-2">
-                            {{ timeObj.h }}h
-                          </div>
-                        </div>
-                        <div class="column is-3-desktop is-6-touch">
-                          <div class="has-background-grey-light has-radius title mb-0 py-4 px-2">
-                            {{ timeObj.m }}m
-                          </div>
-                        </div>
-                        <div class="column is-3-desktop is-6-touch">
-                          <div class="has-background-grey-light has-radius title mb-0 py-4 px-2">
-                            {{ timeObj.s }}s
-                          </div>
+                      <div class="column is-3-desktop is-6-touch">
+                        <div class="has-background-white has-radius title mb-0 py-4 px-2">
+                          {{ hours }}h
                         </div>
                       </div>
-
-                    </span>
-                    <span slot="finish">
-                      <h1 class="title">Claim back your tokens:</h1>
-                      <button
-                        class="button is-accent mt-2"
-                        :class="{'is-loading': loading}"
-                        @click.stop="close"
-                      >
-                        Claim <span v-if="vaultBalance">&nbsp;{{ Math.floor(vaultBalance) }}&nbsp;</span> NOS
-                      </button>
-                    </span>
-                  </countdown> -->
-                </client-only>
+                      <div class="column is-3-desktop is-6-touch">
+                        <div class="has-background-white has-radius title mb-0 py-4 px-2">
+                          {{ minutes }}m
+                        </div>
+                      </div>
+                      <div class="column is-3-desktop is-6-touch">
+                        <div class="has-background-white has-radius title mb-0 py-4 px-2">
+                          {{ seconds }}s
+                        </div>
+                      </div>
+                    </div>
+                </vue-countdown>
+                <div v-if="countdownFinished">
+                  <h3 class="title is-4 has-text-weight-semibold">Claim back your tokens:</h3>
+                  <button
+                    class="button is-fullwidth is-primary mt-2"
+                    :class="{'is-loading': loading}"
+                    @click.prevent="close"
+                  >
+                    Claim <span v-if="vaultBalance">&nbsp;{{ Math.floor(vaultBalance) }}&nbsp;</span> NOS
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -394,6 +359,7 @@ const stakeTotals: Ref<any> = ref(null);
 const tab: Ref<string> = ref('stake');
 const vaultBalance: Ref<number | null | undefined> = ref(null);
 const withdrawAvailable: Ref<number> = ref(0);
+const countdownFinished: Ref<Boolean> = ref(false);
 
 const { data: activeStake, pending: loadingStake, error: errorStake, refresh: refreshStake } =
   await useAsyncData('getStake',
@@ -479,14 +445,15 @@ const stakeEndDate: ComputedRef<any> = computed(() => {
   return activeStake.value && parseInt(activeStake.value.timeUnstake) > 0 ? BN(activeStake.value.timeUnstake).toNumber() + (unstakeDays.value * 24 * 60 * 60) : null;
 });
 
-const countdownFinished = computed({
-  get() {
-    return stakeEndDate.value ? (Date.now() > stakeEndDate.value * 1000) : false;
-  },
-  set(value) {
-    countdownFinished.value = value;
-  }
-});
+const checkCountdownFinished = () => {
+  countdownFinished.value = stakeEndDate.value ? (Date.now() > stakeEndDate.value * 1000) : false;
+  return countdownFinished.value;
+};
+
+const finishCountdown = () => {
+  console.log('finish countdown');
+  countdownFinished.value = true;
+}
 
 const calculateRewards = () => {
   if (poolInfo.value && rewardsInfo.value) {
@@ -645,13 +612,13 @@ const withdraw = async () => {
 const close = async () => {
   loading.value = true;
   try {
-    const withdraw = await nosana.value.stake.withdraw();
+    const close = await nosana.value.stake.close();
     await refreshStake();
     await refreshBalance();
     await getRewardsAndPoolInfo();
-    console.log('withdraw', withdraw);
+    console.log('close', close);
   } catch (e) {
-    console.error('cant withdraw', e);
+    console.error('cant close', e);
   }
   loading.value = false;
 }
