@@ -367,11 +367,14 @@ const { data: activeStake, pending: loadingStake, error: errorStake, refresh: re
       errorStake.value = null;
       if (publicKey.value) {
         try {
+          console.log('publicKey.value',publicKey.value.toString());
           const stakeData = await nosana.value.stake.get(publicKey.value);
+          console.log('stakeData', stakeData);
           unstakeDays.value = stakeData.duration / 60 / 60 / 24;
           tab.value = stakeData && parseInt(stakeData.timeUnstake) > 0 ? 'unstake' : 'stake';
           return stakeData;
         } catch (error: any) {
+          console.error(error)
           if (!error.message.includes('Account does not exist')) {
             throw error;
           }
