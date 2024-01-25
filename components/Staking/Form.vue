@@ -101,8 +101,12 @@
             </div>
             <div class="column is-4">
               <label class="label mb-0">Unstake period of</label>
-              <div class="has-text-black">
-                <span class="is-size-3">{{ unstakeDays }}</span> days
+              <div class="has-text-black is-flex is-align-items-center">
+                <div><span class="is-size-3">{{ unstakeDays }}</span> days</div>
+                <button v-if="unstakeDays < 365" @click.prevent="null"
+                  class="button is-size-7 is-small is-outlined is-primary extend px-1 mt-1 ml-2">
+                  Extend <img src="@/assets/img/icons/arrow-right.svg" style="height: 8px;" class="ml-1">
+                </button>
               </div>
             </div>
             <div class="column is-4">
@@ -605,7 +609,7 @@ const topup = async () => {
       await refreshStake();
       await refreshBalance();
       showTopupModal.value = false;
-      console.log('topup', topup);
+      console.log('topup tx', topup);
     } catch (e) {
       console.error('cant topup', e);
     }
@@ -614,12 +618,11 @@ const topup = async () => {
 }
 
 const stake = async () => {
-  console.log('stake', amount.value);
   showStakeModal.value = false;
   if (amount.value && publicKey.value && unstakeDays.value) {
     try {
       const stake = await nosana.value.stake.create(publicKey.value, amount.value * 1e6, unstakeDays.value);
-      console.log('stake', stake);
+      console.log('stake tx', stake);
     } catch (e) {
       console.error('cant stake', e);
     }
@@ -643,7 +646,6 @@ const claimAndRestakeRewards = async () => {
   showStakeModal.value = false;
   loading.value = true;
   try {
-    console.log('pendingRewards', pendingRewards.value)
     const claim = await nosana.value.stake.claimAndRestakeRewards(pendingRewards.value as number);
     await refreshStake();
     await refreshBalance();
@@ -724,4 +726,9 @@ const { data: poolInfo, pending: loadingPoolInfo, error: errorPoolInfo, refresh:
   });
 
 </script>
-<style lang="scss" scoped></style>
+<style lang="scss" scoped>
+.extend {
+  line-height: .2;
+  height: 19px;
+}
+</style>
