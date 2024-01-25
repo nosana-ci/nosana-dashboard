@@ -1,14 +1,14 @@
 <template>
   <form @submit.prevent="showStakeModal = true">
     <div class="box">
-      <div class="tabs is-fullwidth is-size-5">
+      <div class="tabs is-fullwidth is-size-4">
         <ul>
-          <li :class="{ 'is-active': tab === 'stake', 'is-inactive': activeStake && stakeEndDate }">
-            <a @click="!activeStake || !stakeEndDate ? tab = 'stake' : null"
+          <li :class="{ 'is-active': tab === 'stake' && !(activeStake && stakeEndDate) }">
+            <a :claass="{ 'is-disabled': activeStake && stakeEndDate }" @click="tab = 'stake'"
               class="is-justify-content-flex-start">STAKE</a>
           </li>
-          <li :class="{ 'is-active': tab === 'unstake' || activeStake && stakeEndDate, 'is-inactive': !activeStake }">
-            <a @click="activeStake ? tab = 'unstake' : null" class="is-justify-content-flex-start"
+          <li :class="{ 'is-active': tab === 'unstake' || (activeStake && stakeEndDate) }">
+            <a @click="tab = 'unstake'" class="is-justify-content-flex-start"
               :class="{ 'is-disabled': !activeStake }">UNSTAKE</a>
           </li>
         </ul>
@@ -697,33 +697,4 @@ const { data: poolInfo, pending: loadingPoolInfo, error: errorPoolInfo, refresh:
   });
 
 </script>
-<style lang="scss" scoped>
-.tabs ul {
-  border-bottom-width: 0px;
-
-  li {
-    width: 50%;
-    font-size: 18px;
-
-    a {
-      margin-bottom: 0;
-    }
-
-    &.is-active {
-      background-color: transparent !important;
-    }
-
-    &.is-inactive {
-      opacity: .4;
-
-      a {
-        cursor: not-allowed;
-
-        &:hover {
-          color: $text;
-        }
-      }
-    }
-  }
-}
-</style>
+<style lang="scss" scoped></style>
