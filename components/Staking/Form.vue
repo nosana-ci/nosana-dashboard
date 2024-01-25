@@ -66,8 +66,8 @@
           <label class="label">Unstake period of:</label>
           <div class="control columns is-variable is-5 is-multiline">
             <div class="is-flex is-align-items-center column is-narrow">
-              <input v-model="unstakeDays" required class="input has-text-centered is-medium" type="number"
-                :min="unstakeDays" step="1" :max="365" placeholder="0">
+              <input v-model="unstakeDays" required class="input has-text-centered is-medium" type="number" :min="14"
+                step="1" :max="365" placeholder="0">
               <span class="ml-2 has-text-grey">Days</span>
             </div>
           </div>
