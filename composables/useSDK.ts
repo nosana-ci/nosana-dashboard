@@ -10,7 +10,6 @@ const nosana = computed(() => {
     wallet = useAnchorWallet();
   } catch (error) {}
 
-  console.log('config', config.public);
   const clientConfig: Partial<ClientConfig> = {
     solana: {
       network: config.public.rpcUrl,

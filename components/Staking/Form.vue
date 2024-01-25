@@ -3,21 +3,18 @@
     <div class="box">
       <div class="tabs is-fullwidth is-size-5">
         <ul>
-          <li
-            :class="{'is-active': tab === 'stake', 'is-inactive' : activeStake && stakeEndDate } "
-          >
-            <a @click="!activeStake || !stakeEndDate ? tab = 'stake' : null" class="is-justify-content-flex-start">STAKE</a>
+          <li :class="{ 'is-active': tab === 'stake', 'is-inactive': activeStake && stakeEndDate }">
+            <a @click="!activeStake || !stakeEndDate ? tab = 'stake' : null"
+              class="is-justify-content-flex-start">STAKE</a>
           </li>
-          <li 
-            :class="{'is-active': tab === 'unstake' || activeStake && stakeEndDate, 'is-inactive' : !activeStake}"
-          >
-            <a @click="activeStake ? tab = 'unstake' : null" class="is-justify-content-flex-start" :class="{ 'is-disabled': !activeStake }">UNSTAKE</a>
+          <li :class="{ 'is-active': tab === 'unstake' || activeStake && stakeEndDate, 'is-inactive': !activeStake }">
+            <a @click="activeStake ? tab = 'unstake' : null" class="is-justify-content-flex-start"
+              :class="{ 'is-disabled': !activeStake }">UNSTAKE</a>
           </li>
         </ul>
       </div>
       <div v-if="errorStake" class="has-text-danger">
-        Error fetching data <a @click="refreshStake">retry</a>
-        <p>{{ errorStake }}</p>
+        <p>Error fetching stake (<a @click="refreshStake">retry</a>): {{ errorStake }}</p>
       </div>
       <div v-if="loadingStake">Loading...</div>
       <div v-if="tab === 'stake'">
@@ -25,19 +22,24 @@
           <div class="control columns is-variable is-5 mb-5 is-multiline is-align-items-end">
             <div class="is-flex column is-flex-direction-column" style="min-width: 200px">
               <div class="is-flex is-justify-content-space-between mb-0 is-align-items-center">
-                <label class="label mb-2">Add NOS</label>
-                <span class="is-size-7 mb-2 mr-6" v-if="balance !== null">
-                  <CustomCountUp :end-val="balance" :decimal-places="2" :duration=".5">
+                <label class="label mb-2">Add NOS:</label>
+                <span class="is-size-7 mb-2 mr-6">
+                  <span v-if="loadingBalance">....... NOS</span>
+                  <CustomCountUp v-else-if="balance !== null" class="is-clickable" @click="refreshBalance"
+                    :end-val="balance" :decimal-places="2" :duration=".5">
                     <template #suffix>
-                    <span> NOS</span>
-                  </template>
+                      <span> NOS</span>
+                    </template>
                   </CustomCountUp>
+                  <div v-if="errorBalance" class="has-text-danger">
+                    <p>Error fetching balance (<a @click="refreshBalance">retry</a>): {{ errorBalance }}</p>
+                  </div>
                 </span>
               </div>
               <div class="is-flex is-align-items-center">
                 <input class="input is-medium" v-model="amount" required min="1" :max="balance" step="0.1" type="number"
                   placeholder="0">
-                  <span class="has-text-grey ml-2">NOS</span>
+                <span class="has-text-grey ml-2">NOS</span>
               </div>
             </div>
             <div class="column is-narrow">
@@ -110,7 +112,8 @@
             <div class="column is-4">
               <label class="label mb-0">Daily NOS rewards</label>
               <div class="has-text-black is-size-3">
-                <CustomCountUp v-if="expectedRewards !== null" :end-val="(expectedRewards as number)" :decimal-places="2"></CustomCountUp>
+                <CustomCountUp v-if="expectedRewards !== null" :end-val="expectedRewards" :decimal-places="2">
+                </CustomCountUp>
               </div>
             </div>
             <div class="column is-12">
@@ -134,17 +137,14 @@
             </p>
             <h3 class="title is-5 mt-4">
               {{
-              // current date + unstakedays 
-              new Intl.DateTimeFormat('en-US', { day: 'numeric', month: 'long', year: 'numeric' })
-                .format(new Date().setDate(new Date().getDate() + unstakeDays)) }}
+                // current date + unstakedays
+                new Intl.DateTimeFormat('en-US', { day: 'numeric', month: 'long', year: 'numeric' })
+                  .format(new Date().setDate(new Date().getDate() + unstakeDays)) }}
             </h3>
           </div>
           <form @submit.prevent="unstake">
-            <button
-              type="submit"
-              class="button is-fullwidth is-primary is-large is-outlined"
-              :class="{ 'is-loading': loading }"
-            >
+            <button type="submit" class="button is-fullwidth is-primary is-large is-outlined"
+              :class="{ 'is-loading': loading }">
               Unstake NOS
             </button>
           </form>
@@ -158,43 +158,43 @@
               <h5 class="mb-0">
                 Unstaked at:
               </h5>
-              <span class="is-size-5">{{ new Intl.DateTimeFormat('en-US', { dateStyle: 'full', timeStyle: 'medium' }).format(activeStake.timeUnstake * 1000) }}</span><br>
+              <span class="is-size-5">{{ new Intl.DateTimeFormat('en-US', {
+                dateStyle: 'full', timeStyle: 'medium'
+              }).format(activeStake.timeUnstake * 1000) }}</span><br>
 
               <div class="has-background-light box mt-5">
                 <h5 v-if="!countdownFinished" class="mb-3">
                   All tokens will be released in
                 </h5>
-                <vue-countdown v-if="!countdownFinished" ref="countdown" :time="stakeEndDate * 1000 - Date.now()" @end="finishCountdown()" v-slot="{ days, hours, minutes, seconds }">
+                <vue-countdown v-if="!countdownFinished" ref="countdown" :time="stakeEndDate * 1000 - Date.now()"
+                  @end="finishCountdown()" v-slot="{ days, hours, minutes, seconds }">
                   <div class="columns is-mobile is-multiline">
-                      <div class="column is-3-desktop is-6-touch">
-                        <div class="has-background-white has-radius title mb-0 py-4 px-2">
-                          {{ days }}d
-                        </div>
-                      </div>
-                      <div class="column is-3-desktop is-6-touch">
-                        <div class="has-background-white has-radius title mb-0 py-4 px-2">
-                          {{ hours }}h
-                        </div>
-                      </div>
-                      <div class="column is-3-desktop is-6-touch">
-                        <div class="has-background-white has-radius title mb-0 py-4 px-2">
-                          {{ minutes }}m
-                        </div>
-                      </div>
-                      <div class="column is-3-desktop is-6-touch">
-                        <div class="has-background-white has-radius title mb-0 py-4 px-2">
-                          {{ seconds }}s
-                        </div>
+                    <div class="column is-3-desktop is-6-touch">
+                      <div class="has-background-white has-radius title mb-0 py-4 px-2">
+                        {{ days }}d
                       </div>
                     </div>
+                    <div class="column is-3-desktop is-6-touch">
+                      <div class="has-background-white has-radius title mb-0 py-4 px-2">
+                        {{ hours }}h
+                      </div>
+                    </div>
+                    <div class="column is-3-desktop is-6-touch">
+                      <div class="has-background-white has-radius title mb-0 py-4 px-2">
+                        {{ minutes }}m
+                      </div>
+                    </div>
+                    <div class="column is-3-desktop is-6-touch">
+                      <div class="has-background-white has-radius title mb-0 py-4 px-2">
+                        {{ seconds }}s
+                      </div>
+                    </div>
+                  </div>
                 </vue-countdown>
                 <div v-if="countdownFinished">
                   <h3 class="title is-4 has-text-weight-semibold">Claim back your tokens:</h3>
-                  <button
-                    class="button is-fullwidth is-primary mt-2"
-                    :class="{'is-loading': loading}"
-                    @click.prevent="close"
-                  >
+                  <button class="button is-fullwidth is-primary mt-2" :class="{ 'is-loading': loading }"
+                    @click.prevent="close">
                     Claim <span v-if="vaultBalance">&nbsp;{{ Math.floor(vaultBalance) }}&nbsp;</span> NOS
                   </button>
                 </div>
@@ -206,26 +206,15 @@
             <div class="box has-background-light">
               <p>Withdrawable tokens</p>
               <h2 class="title is-2 has-text-success mb-0 mt-1">
-                <CustomCountUp
-                  :end-val="withdrawAvailable"
-                  :decimal-places="4"
-                  :duration="1.5"
-                />
+                <CustomCountUp :end-val="withdrawAvailable" :decimal-places="4" :duration="1.5" />
               </h2>
               <p>NOS</p>
             </div>
-            <button
-              class="button is-fullwidth is-primary"
-              :class="{'is-loading': loading}"
-              @click.prevent="restake"
-            >
+            <button class="button is-fullwidth is-primary" :class="{ 'is-loading': loading }" @click.prevent="restake">
               Restake<span v-if="vaultBalance">&nbsp;{{ Math.floor(vaultBalance) }}&nbsp;</span> NOS
             </button>
-            <button
-              class="button is-fullwidth is-primary is-outlined mt-2"
-              :class="{'is-loading': loading}"
-              @click.prevent="withdraw"
-            >
+            <button class="button is-fullwidth is-primary is-outlined mt-2" :class="{ 'is-loading': loading }"
+              @click.prevent="withdraw">
               Withdraw released tokens
             </button>
           </div>
@@ -240,10 +229,12 @@
         <span v-else>-</span>
       </div>
       <div class="column is-12">
-        <button class="button mt-2 is-fullwidth is-primary is-large" @click.prevent="claimAndRestakeRewards()" :class="{ 'is-loading': loading }">
+        <button class="button mt-2 is-fullwidth is-primary is-large" @click.prevent="claimAndRestakeRewards()"
+          :class="{ 'is-loading': loading }">
           Restake
         </button>
-        <button class="button mt-2 is-fullwidth is-primary is-large is-outlined" @click.prevent="claimRewards()" :class="{ 'is-loading': loading }">
+        <button class="button mt-2 is-fullwidth is-primary is-large is-outlined" @click.prevent="claimRewards()"
+          :class="{ 'is-loading': loading }">
           Claim your rewards
         </button>
       </div>
@@ -253,8 +244,9 @@
         <div class="box">
           <label class="label">Expected daily NOS rewards</label>
           <div class="is-size-1 has-text-black">
-            <CustomCountUp v-if="expectedRewards !== null" :end-val="(expectedRewards as number)" :decimal-places="2"></CustomCountUp>
-            <span v-else>-</span>
+            <CustomCountUp v-if="expectedRewards !== null" :end-val="expectedRewards" :decimal-places="2">
+            </CustomCountUp>
+            <span v-else>....</span>
           </div>
         </div>
       </div>
@@ -301,6 +293,7 @@
                 <span>%</span>
               </template>
             </CustomCountUp>
+            <span v-else-if="expectedRewards === null">....</span>
             <span v-else>-</span>
           </div>
         </div>
@@ -314,8 +307,8 @@
           </a>
         </template>
       </wallet-modal-provider>
-      <button :disabled="errorStake ? true : undefined" v-else-if="!activeStake && tab === 'stake'" :class="{ 'is-loading': loadingStake }"
-        class="button is-fullwidth is-primary is-large" type="submit">
+      <button :disabled="errorStake ? true : undefined" v-else-if="!activeStake && tab === 'stake'"
+        :class="{ 'is-loading': loadingStake }" class="button is-fullwidth is-primary is-large" type="submit">
         Stake NOS
       </button>
     </ClientOnly>
@@ -365,7 +358,8 @@
           <div class="column is-4">
             <label class="label mb-0">Expected Daily NOS rewards</label>
             <div class="has-text-black is-size-3">
-              <CustomCountUp v-if="expectedRewards !== null" :end-val="(expectedRewards as number)" :decimal-places="2"></CustomCountUp>
+              <CustomCountUp v-if="expectedRewards !== null" :end-val="(expectedRewards as number)" :decimal-places="2">
+              </CustomCountUp>
             </div>
           </div>
         </div>
@@ -377,15 +371,15 @@
                 <span class="is-size-7 mb-2 mr-6" v-if="balance !== null">
                   <CustomCountUp :end-val="balance" :decimal-places="2" :duration=".5">
                     <template #suffix>
-                    <span> NOS</span>
-                  </template>
+                      <span> NOS</span>
+                    </template>
                   </CustomCountUp>
                 </span>
               </div>
               <div class="is-flex is-align-items-center">
                 <input class="input is-medium" v-model="amount" required min="1" :max="balance" step="0.1" type="number"
                   placeholder="0">
-                  <span class="has-text-grey ml-2">NOS</span>
+                <span class="has-text-grey ml-2">NOS</span>
               </div>
             </div>
             <div class="column is-narrow">
@@ -402,7 +396,8 @@
             </div>
           </div>
         </div>
-        <button class="button is-fullwidth is-primary is-large" @click.prevent="topup()" :class="{ 'is-loading': loading }">
+        <button class="button is-fullwidth is-primary is-large" @click.prevent="topup()"
+          :class="{ 'is-loading': loading }">
           Increase Stake
         </button>
       </div>
@@ -420,27 +415,24 @@ const { connected, publicKey } = useWallet();
 const { nosana } = useSDK();
 const SECONDS_PER_DAY = 24 * 60 * 60;
 
-const rewardsInfo: Ref<any> = ref(null);
-const poolInfo: Ref<any> = ref(null);
 const loading: Ref<boolean> = ref(false);
 const showStakeModal: Ref<boolean> = ref(false);
 const showTopupModal: Ref<boolean> = ref(false);
 const amount: Ref<number | null> = ref(null);
 const unstakeDays: Ref<number> = ref(14);
 const rate: Ref<number | null> = ref(null);
-const stakeTotals: Ref<any> = ref(null);
 const tab: Ref<string> = ref('stake');
 const vaultBalance: Ref<number | null | undefined> = ref(null);
 const withdrawAvailable: Ref<number> = ref(0);
 const countdownFinished: Ref<Boolean> = ref(false);
 
 const { data: activeStake, pending: loadingStake, error: errorStake, refresh: refreshStake } =
-  await useAsyncData('getStake',
+  await useLazyAsyncData('getStake',
     async () => {
       errorStake.value = null;
       if (publicKey.value) {
         try {
-          console.log('publicKey.value',publicKey.value.toString());
+          console.log('publicKey.value', publicKey.value.toString());
           const stakeData = await nosana.value.stake.get(publicKey.value);
           console.log('stakeData', stakeData);
           unstakeDays.value = stakeData.duration / 60 / 60 / 24;
@@ -455,21 +447,22 @@ const { data: activeStake, pending: loadingStake, error: errorStake, refresh: re
       }
     }, {
     watch: [publicKey],
-    lazy: true
+    server: false
   });
 
 const { data: balance, pending: loadingBalance, error: errorBalance, refresh: refreshBalance } =
-  await useAsyncData('getBalance',
+  await useLazyAsyncData('getBalance',
     async () => {
-      errorStake.value = null;
+      errorBalance.value = null;
       if (publicKey.value) {
         const nos = await nosana.value.solana.getNosBalance(publicKey.value)
         vaultBalance.value = await nosana.value.stake.getStakeVaultBalance();
         return Number(nos?.uiAmount);
       }
+      return null;
     }, {
     watch: [publicKey],
-    lazy: true
+    server: false
   });
 
 
@@ -498,25 +491,18 @@ const APY: ComputedRef<number | null> = computed(() => {
   return null;
 })
 
+const { data: stakeTotals, pending: loadingStakeTotals, error: errorStakeTotals, refresh: refreshStakeTotals } =
+  await useAPI('/stake/totals');
+
 const expectedRewards: ComputedRef<number | null> = computed(() => {
   if (!stakeTotals.value || !poolInfo.value) { return null; }
+
   let totalXnos = parseFloat(stakeTotals.value.xnos);
   if (activeStake.value && activeStake.value.amount) {
     totalXnos -= activeStake.value.amount;
   }
-  console.log(((xNOS.value! * 1e6) / (totalXnos + (xNOS.value! * 1e6))) * ((poolInfo.value.emission.toNumber() / 1e6) * 60 * 60 * 24));
   return ((xNOS.value! * 1e6) / (totalXnos + (xNOS.value! * 1e6))) * ((poolInfo.value.emission.toNumber() / 1e6) * 60 * 60 * 24);
 })
-
-const getStakeTotals = async () => {
-  try {
-    const config = useRuntimeConfig()
-    const response = await fetch(`${config.public.apiBase}/stake/totals`);
-    stakeTotals.value = await response.json();
-  } catch (error) {
-    console.error(error);
-  }
-};
 
 const stakeEndDate: ComputedRef<any> = computed(() => {
   return activeStake.value && parseInt(activeStake.value.timeUnstake) > 0 ? BN(activeStake.value.timeUnstake).toNumber() + (unstakeDays.value * 24 * 60 * 60) : null;
@@ -595,7 +581,6 @@ const topup = async () => {
       const topup = await nosana.value.stake.topup(amount.value * 1e6);
       await refreshStake();
       await refreshBalance();
-      await getRewardsAndPoolInfo();
       showTopupModal.value = false;
       console.log('topup', topup);
     } catch (e) {
@@ -624,7 +609,6 @@ const claimRewards = async () => {
     const claim = await nosana.value.stake.claimRewards();
     await refreshStake();
     await refreshBalance();
-    await getRewardsAndPoolInfo();
     console.log('claim', claim);
   } catch (e) {
     console.error('cant claim rewards', e);
@@ -640,7 +624,6 @@ const claimAndRestakeRewards = async () => {
     const claim = await nosana.value.stake.claimAndRestakeRewards(pendingRewards.value as number);
     await refreshStake();
     await refreshBalance();
-    await getRewardsAndPoolInfo();
     console.log('claim & restake', claim);
   } catch (e) {
     console.error('cant cant claim & restake', e);
@@ -654,7 +637,6 @@ const unstake = async () => {
     const unstake = await nosana.value.stake.unstake();
     await refreshStake();
     await refreshBalance();
-    await getRewardsAndPoolInfo();
     console.log('unstake', unstake);
   } catch (e) {
     console.error('cant unstake', e);
@@ -668,7 +650,6 @@ const restake = async () => {
     const restake = await nosana.value.stake.restake();
     await refreshStake();
     await refreshBalance();
-    await getRewardsAndPoolInfo();
     console.log('restake', restake);
   } catch (e) {
     console.error('cant restake', e);
@@ -682,7 +663,6 @@ const withdraw = async () => {
     const withdraw = await nosana.value.stake.withdraw();
     await refreshStake();
     await refreshBalance();
-    await getRewardsAndPoolInfo();
     console.log('withdraw', withdraw);
   } catch (e) {
     console.error('cant withdraw', e);
@@ -696,7 +676,6 @@ const close = async () => {
     const close = await nosana.value.stake.close();
     await refreshStake();
     await refreshBalance();
-    await getRewardsAndPoolInfo();
     console.log('close', close);
   } catch (e) {
     console.error('cant close', e);
@@ -704,36 +683,42 @@ const close = async () => {
   loading.value = false;
 }
 
-const getRewardsAndPoolInfo = async () => {
-  try {
-    rewardsInfo.value = await nosana.value.stake.getRewardsInfo();
-    poolInfo.value = await nosana.value.stake.getPoolInfo();
-    console.log('poolInfo', poolInfo.value);
-    console.log('rewardsInfo', rewardsInfo.value);
-  } catch (e) {
-    console.error('cant fetch rewards info', e);
-  }
-}
+const { data: rewardsInfo, pending: loadingRewardsInfo, error: errorRewardsInfo, refresh: refreshRewardsInfo } =
+  await useLazyAsyncData('getRewardsInfo',
+    async () => nosana.value.stake.getRewardsInfo(), {
+    watch: [activeStake],
+    server: false
+  });
+const { data: poolInfo, pending: loadingPoolInfo, error: errorPoolInfo, refresh: refreshPoolInfo } =
+  await useLazyAsyncData('getPoolInfo',
+    async () => nosana.value.stake.getPoolInfo(), {
+    watch: [activeStake],
+    server: false
+  });
 
-getStakeTotals();
-getRewardsAndPoolInfo();
 </script>
 <style lang="scss" scoped>
 .tabs ul {
   border-bottom-width: 0px;
+
   li {
     width: 50%;
     font-size: 18px;
+
     a {
       margin-bottom: 0;
     }
+
     &.is-active {
       background-color: transparent !important;
     }
+
     &.is-inactive {
       opacity: .4;
+
       a {
         cursor: not-allowed;
+
         &:hover {
           color: $text;
         }
@@ -741,5 +726,4 @@ getRewardsAndPoolInfo();
     }
   }
 }
-
 </style>
