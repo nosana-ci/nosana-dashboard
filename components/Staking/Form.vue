@@ -22,20 +22,31 @@
       <div v-if="loadingStake">Loading...</div>
       <div v-if="tab === 'stake'">
         <div class="field" v-if="!activeStake">
-          <label class="label">Add NOS:</label>
-          <div class="control columns is-variable is-5 mb-5 is-multiline">
-            <div class="is-flex is-align-items-center column" style="min-width: 200px">
-              <input class="input is-medium" v-model="amount" required min="1" :max="balance" step="0.1" type="number"
-                placeholder="0">
-              <span class="ml-2 has-text-grey">NOS</span>
+          <div class="control columns is-variable is-5 mb-5 is-multiline is-align-items-end">
+            <div class="is-flex column is-flex-direction-column" style="min-width: 200px">
+              <div class="is-flex is-justify-content-space-between mb-0 is-align-items-center">
+                <label class="label mb-2">Add NOS:</label>
+                <span class="is-size-7 mb-2 mr-6" v-if="balance !== null">
+                  <CustomCountUp :end-val="balance" :decimal-places="2" :duration=".5">
+                    <template #suffix>
+                    <span> NOS</span>
+                  </template>
+                  </CustomCountUp>
+                </span>
+              </div>
+              <div class="is-flex is-align-items-center">
+                <input class="input is-medium" v-model="amount" required min="1" :max="balance" step="0.1" type="number"
+                  placeholder="0">
+                  <span class="has-text-grey ml-2">NOS</span>
+              </div>
             </div>
             <div class="column is-narrow">
               <div class="buttons is-centered">
-                <a class="button is-primary is-outlined mr-2" :disabled="balance === null ? true : null"
+                <a class="button is-primary is-outlined mr-2 mb-3" :disabled="balance === null ? true : null"
                   @click="balance !== null ? amount = parseInt((balance / 2)) : null">
                   HALF
                 </a>
-                <a class="button is-primary is-outlined" :disabled="balance === null ? true : null"
+                <a class="button is-primary is-outlined mb-3" :disabled="balance === null ? true : null"
                   @click="balance !== null ? amount = balance : null">
                   MAX
                 </a>
