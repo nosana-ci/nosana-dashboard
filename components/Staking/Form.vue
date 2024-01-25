@@ -93,8 +93,11 @@
             </div>
             <div class="column is-4">
               <label class="label mb-0">Unstake period of</label>
-              <div class="has-text-black">
-                <span class="is-size-3">{{ unstakeDays }}</span> days
+              <div class="has-text-black is-flex is-align-items-center">
+                <div><span class="is-size-3">{{ unstakeDays }}</span> days</div>
+                <button v-if="unstakeDays < 365" @click.prevent="null" class="button is-size-7 is-small is-outlined is-primary extend px-1 mt-1 ml-2">
+                  Extend <img src="@/assets/img/icons/arrow-right.svg" style="height: 8px;" class="ml-1">
+                </button>
               </div>
             </div>
             <div class="column is-4">
@@ -440,9 +443,7 @@ const { data: activeStake, pending: loadingStake, error: errorStake, refresh: re
       errorStake.value = null;
       if (publicKey.value) {
         try {
-          console.log('publicKey.value',publicKey.value.toString());
           const stakeData = await nosana.value.stake.get(publicKey.value);
-          console.log('stakeData', stakeData);
           unstakeDays.value = stakeData.duration / 60 / 60 / 24;
           tab.value = stakeData && parseInt(stakeData.timeUnstake) > 0 ? 'unstake' : 'stake';
           return stakeData;
@@ -504,7 +505,6 @@ const expectedRewards: ComputedRef<number | null> = computed(() => {
   if (activeStake.value && activeStake.value.amount) {
     totalXnos -= activeStake.value.amount;
   }
-  console.log(((xNOS.value! * 1e6) / (totalXnos + (xNOS.value! * 1e6))) * ((poolInfo.value.emission.toNumber() / 1e6) * 60 * 60 * 24));
   return ((xNOS.value! * 1e6) / (totalXnos + (xNOS.value! * 1e6))) * ((poolInfo.value.emission.toNumber() / 1e6) * 60 * 60 * 24);
 })
 
@@ -597,7 +597,7 @@ const topup = async () => {
       await refreshBalance();
       await getRewardsAndPoolInfo();
       showTopupModal.value = false;
-      console.log('topup', topup);
+      console.log('topup tx', topup);
     } catch (e) {
       console.error('cant topup', e);
     }
@@ -606,12 +606,11 @@ const topup = async () => {
 }
 
 const stake = async () => {
-  console.log('stake', amount.value);
   showStakeModal.value = false;
   if (amount.value && publicKey.value && unstakeDays.value) {
     try {
       const stake = await nosana.value.stake.create(publicKey.value, amount.value * 1e6, unstakeDays.value);
-      console.log('stake', stake);
+      console.log('stake tx', stake);
     } catch (e) {
       console.error('cant stake', e);
     }
@@ -625,7 +624,7 @@ const claimRewards = async () => {
     await refreshStake();
     await refreshBalance();
     await getRewardsAndPoolInfo();
-    console.log('claim', claim);
+    console.log('claim tx', claim);
   } catch (e) {
     console.error('cant claim rewards', e);
   }
@@ -636,12 +635,11 @@ const claimAndRestakeRewards = async () => {
   showStakeModal.value = false;
   loading.value = true;
   try {
-    console.log('pendingRewards', pendingRewards.value)
     const claim = await nosana.value.stake.claimAndRestakeRewards(pendingRewards.value as number);
     await refreshStake();
     await refreshBalance();
     await getRewardsAndPoolInfo();
-    console.log('claim & restake', claim);
+    console.log('claim & restake tx', claim);
   } catch (e) {
     console.error('cant cant claim & restake', e);
   }
@@ -655,7 +653,7 @@ const unstake = async () => {
     await refreshStake();
     await refreshBalance();
     await getRewardsAndPoolInfo();
-    console.log('unstake', unstake);
+    console.log('unstake tx', unstake);
   } catch (e) {
     console.error('cant unstake', e);
   }
@@ -669,7 +667,7 @@ const restake = async () => {
     await refreshStake();
     await refreshBalance();
     await getRewardsAndPoolInfo();
-    console.log('restake', restake);
+    console.log('restake tx', restake);
   } catch (e) {
     console.error('cant restake', e);
   }
@@ -683,7 +681,7 @@ const withdraw = async () => {
     await refreshStake();
     await refreshBalance();
     await getRewardsAndPoolInfo();
-    console.log('withdraw', withdraw);
+    console.log('withdraw tx', withdraw);
   } catch (e) {
     console.error('cant withdraw', e);
   }
@@ -697,7 +695,7 @@ const close = async () => {
     await refreshStake();
     await refreshBalance();
     await getRewardsAndPoolInfo();
-    console.log('close', close);
+    console.log('close tx', close);
   } catch (e) {
     console.error('cant close', e);
   }
@@ -708,8 +706,6 @@ const getRewardsAndPoolInfo = async () => {
   try {
     rewardsInfo.value = await nosana.value.stake.getRewardsInfo();
     poolInfo.value = await nosana.value.stake.getPoolInfo();
-    console.log('poolInfo', poolInfo.value);
-    console.log('rewardsInfo', rewardsInfo.value);
   } catch (e) {
     console.error('cant fetch rewards info', e);
   }
@@ -740,6 +736,11 @@ getRewardsAndPoolInfo();
       }
     }
   }
+}
+
+.extend {
+  line-height: .2;
+  height: 19px;
 }
 
 </style>
