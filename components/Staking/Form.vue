@@ -25,7 +25,7 @@
           <div class="control columns is-variable is-5 mb-5 is-multiline is-align-items-end">
             <div class="is-flex column is-flex-direction-column" style="min-width: 200px">
               <div class="is-flex is-justify-content-space-between mb-0 is-align-items-center">
-                <label class="label mb-2">Add NOS:</label>
+                <label class="label mb-2">Add NOS</label>
                 <span class="is-size-7 mb-2 mr-6" v-if="balance !== null">
                   <CustomCountUp :end-val="balance" :decimal-places="2" :duration=".5">
                     <template #suffix>
@@ -56,7 +56,7 @@
         </div>
         <div class="field" v-if="!activeStake">
           <label class="label">Unstake period of:</label>
-          <div class="control columns is-variable is-5 mb-5 is-multiline">
+          <div class="control columns is-variable is-5 is-multiline">
             <div class="is-flex is-align-items-center column is-narrow">
               <input v-model="unstakeDays" required class="input has-text-centered is-medium" type="number"
                 :min="unstakeDays" step="1" :max="365" placeholder="0">
@@ -110,11 +110,11 @@
             <div class="column is-4">
               <label class="label mb-0">Daily NOS rewards</label>
               <div class="has-text-black is-size-3">
-                <CustomCountUp v-if="expectedRewards !== null" :end-val="(expectedRewards as number)" :decimal-places="1"></CustomCountUp>
+                <CustomCountUp v-if="expectedRewards !== null" :end-val="(expectedRewards as number)" :decimal-places="2"></CustomCountUp>
               </div>
             </div>
             <div class="column is-12">
-              <button class="button is-fullwidth is-primary is-large" @click="alert('increase')">
+              <button class="button is-fullwidth is-primary is-large" @click.prevent="showTopupModal = true;">
                 Increase Your Stake
               </button>
             </div>
@@ -253,19 +253,13 @@
         <div class="box">
           <label class="label">Expected daily NOS rewards</label>
           <div class="is-size-1 has-text-black">
-            <CustomCountUp v-if="expectedRewards !== null" :end-val="(expectedRewards as number)" :decimal-places="1"></CustomCountUp>
+            <CustomCountUp v-if="expectedRewards !== null" :end-val="(expectedRewards as number)" :decimal-places="2"></CustomCountUp>
             <span v-else>-</span>
           </div>
         </div>
       </div>
       <div class="column is-6">
         <div class="box">
-          <!-- <label class="label">Pending NOS rewards</label>
-          <div class="is-size-1 has-text-black">
-            <CustomCountUp v-if="pendingRewards !== null" :end-val="pendingRewards" :decimal-places="4" :duration="1.5">
-            </CustomCountUp>
-            <span v-else>-</span>
-          </div> -->
           <label class="label">Staked NOS</label>
           <div class="is-size-1 has-text-black">
             <CustomCountUp v-if="amount !== null" :end-val="amount">
@@ -326,6 +320,7 @@
       </button>
     </ClientOnly>
   </form>
+  <!--- Modals -->
   <div class="modal" :class="{ 'is-active': showStakeModal }">
     <div class="modal-background" @click="showStakeModal = false"></div>
     <div class="modal-content">
@@ -348,6 +343,72 @@
     </div>
     <button class="modal-close is-large" @click="showStakeModal = false" aria-label="close"></button>
   </div>
+  <div class="modal" v-if="activeStake" :class="{ 'is-active': showTopupModal }">
+    <div class="modal-background" @click="showTopupModal = false"></div>
+    <div class="modal-content">
+      <div class="box">
+        <h2 class="is-size-2 mb-5 has-text-weight-semibold has-text-centered">Increase Stake</h2>
+        <div class="columns pt-3">
+          <div class="column is-3">
+            <label class="label is-size-6 mb-0">NOS Staked</label>
+            <div class="has-text-black is-size-3">
+              {{ (activeStake.amount / 1e6).toFixed() }}
+            </div>
+          </div>
+          <div class="column is-3">
+            <label class="label mb-0">xNOS</label>
+            <div class="has-text-black is-size-3">
+              <CustomCountUp v-if="xNOS !== null" :end-val="xNOS">
+              </CustomCountUp>
+            </div>
+          </div>
+          <div class="column is-4">
+            <label class="label mb-0">Expected Daily NOS rewards</label>
+            <div class="has-text-black is-size-3">
+              <CustomCountUp v-if="expectedRewards !== null" :end-val="(expectedRewards as number)" :decimal-places="2"></CustomCountUp>
+            </div>
+          </div>
+        </div>
+        <div class="field">
+          <div class="control columns is-variable is-5 mb-5 is-multiline is-align-items-end">
+            <div class="is-flex column is-flex-direction-column" style="min-width: 200px">
+              <div class="is-flex is-justify-content-space-between mb-0 is-align-items-center">
+                <label class="label mb-2">Add NOS</label>
+                <span class="is-size-7 mb-2 mr-6" v-if="balance !== null">
+                  <CustomCountUp :end-val="balance" :decimal-places="2" :duration=".5">
+                    <template #suffix>
+                    <span> NOS</span>
+                  </template>
+                  </CustomCountUp>
+                </span>
+              </div>
+              <div class="is-flex is-align-items-center">
+                <input class="input is-medium" v-model="amount" required min="1" :max="balance" step="0.1" type="number"
+                  placeholder="0">
+                  <span class="has-text-grey ml-2">NOS</span>
+              </div>
+            </div>
+            <div class="column is-narrow">
+              <div class="buttons is-centered">
+                <a class="button is-primary is-outlined mr-2 mb-3" :disabled="balance === null ? true : null"
+                  @click="balance !== null ? amount = parseInt((balance / 2)) : null">
+                  HALF
+                </a>
+                <a class="button is-primary is-outlined mb-3" :disabled="balance === null ? true : null"
+                  @click="balance !== null ? amount = balance : null">
+                  MAX
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+        <button class="button is-fullwidth is-primary is-large" @click.prevent="topup()" :class="{ 'is-loading': loading }">
+          Increase Stake
+        </button>
+      </div>
+    </div>
+    <button class="modal-close is-large" @click="showTopupModal = false" aria-label="close"></button>
+  </div>
 </template>
 
 <script lang="ts" setup>
@@ -363,6 +424,7 @@ const rewardsInfo: Ref<any> = ref(null);
 const poolInfo: Ref<any> = ref(null);
 const loading: Ref<boolean> = ref(false);
 const showStakeModal: Ref<boolean> = ref(false);
+const showTopupModal: Ref<boolean> = ref(false);
 const amount: Ref<number | null> = ref(null);
 const unstakeDays: Ref<number> = ref(14);
 const rate: Ref<number | null> = ref(null);
@@ -531,6 +593,10 @@ const topup = async () => {
     loading.value = true;
     try {
       const topup = await nosana.value.stake.topup(amount.value * 1e6);
+      await refreshStake();
+      await refreshBalance();
+      await getRewardsAndPoolInfo();
+      showTopupModal.value = false;
       console.log('topup', topup);
     } catch (e) {
       console.error('cant topup', e);
