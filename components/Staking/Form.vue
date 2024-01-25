@@ -99,7 +99,7 @@
             <div class="column is-4">
               <label class="label mb-0">Daily NOS rewards</label>
               <div class="has-text-black is-size-3">
-                <CustomCountUp v-if="expectedRewards !== null" :end-val="(expectedRewards as number)"></CustomCountUp>
+                <CustomCountUp v-if="expectedRewards !== null" :end-val="(expectedRewards as number)" :decimal-places="1"></CustomCountUp>
               </div>
             </div>
             <div class="column is-12">
@@ -242,7 +242,7 @@
         <div class="box">
           <label class="label">Expected daily NOS rewards</label>
           <div class="is-size-1 has-text-black">
-            <CustomCountUp v-if="expectedRewards !== null" :end-val="(expectedRewards as number)"></CustomCountUp>
+            <CustomCountUp v-if="expectedRewards !== null" :end-val="(expectedRewards as number)" :decimal-places="1"></CustomCountUp>
             <span v-else>-</span>
           </div>
         </div>
@@ -431,13 +431,14 @@ const expectedRewards: ComputedRef<number | null> = computed(() => {
   if (activeStake.value && activeStake.value.amount) {
     totalXnos -= activeStake.value.amount;
   }
+  console.log(((xNOS.value! * 1e6) / (totalXnos + (xNOS.value! * 1e6))) * ((poolInfo.value.emission.toNumber() / 1e6) * 60 * 60 * 24));
   return ((xNOS.value! * 1e6) / (totalXnos + (xNOS.value! * 1e6))) * ((poolInfo.value.emission.toNumber() / 1e6) * 60 * 60 * 24);
 })
 
 const getStakeTotals = async () => {
   try {
-    // TODO: url in config
-    const response = await fetch('https://backend.k8s.prd.nos.ci/stake/totals');
+    const config = useRuntimeConfig()
+    const response = await fetch(`${config.public.apiBase}/stake/totals`);
     stakeTotals.value = await response.json();
   } catch (error) {
     console.error(error);
