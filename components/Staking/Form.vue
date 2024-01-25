@@ -13,10 +13,14 @@
           </li>
         </ul>
       </div>
-      <div v-if="errorStake" class="has-text-danger">
-        <p>Error fetching stake (<a @click="refreshStake">retry</a>): {{ errorStake }}</p>
+      <div class="my-2">
+        <div v-if="loadingStake">Loading...</div>
+        <div v-else-if="errorStake" class="has-text-danger">
+          <p>Error fetching stake: {{ errorStake }}.
+            <a class="has-text-danger" @click="refreshStake"><u>retry</u></a>
+          </p>
+        </div>
       </div>
-      <div v-if="loadingStake">Loading...</div>
       <div v-if="tab === 'stake'">
         <div class="field" v-if="!activeStake">
           <div class="control columns is-variable is-5 mb-5 is-multiline is-align-items-end">
@@ -32,7 +36,9 @@
                     </template>
                   </CustomCountUp>
                   <div v-if="errorBalance" class="has-text-danger">
-                    <p>Error fetching balance (<a @click="refreshBalance">retry</a>): {{ errorBalance }}</p>
+                    <p>Error fetching balance: {{ errorBalance }}.
+                      <a class="has-text-danger" @click="refreshBalance"><u>retry</u></a>
+                    </p>
                   </div>
                 </span>
               </div>
@@ -246,8 +252,11 @@
           <div class="is-size-1 has-text-black">
             <CustomCountUp v-if="expectedRewards !== null" :end-val="expectedRewards" :decimal-places="2">
             </CustomCountUp>
-            <span v-else>....</span>
+            <span v-else-if="loadingPoolInfo">....</span>
           </div>
+          <p class="has-text-danger" v-if="errorPoolInfo">Error fetching pool info: {{ errorPoolInfo }}.
+            <a class="has-text-danger" @click="refreshPoolInfo"><u>retry</u></a>
+          </p>
         </div>
       </div>
       <div class="column is-6">
@@ -293,7 +302,7 @@
                 <span>%</span>
               </template>
             </CustomCountUp>
-            <span v-else-if="expectedRewards === null">....</span>
+            <span v-else-if="loadingPoolInfo">....</span>
             <span v-else>-</span>
           </div>
         </div>
@@ -330,7 +339,7 @@
         </p>
         <p class="block buttons is-right">
           <a class="button is-text mr-3 is-large" @click="showStakeModal = false">Cancel</a>
-          <a class="button is-primary is-wide is-large" @click="submit">Stake</a>
+          <a class="button is-primary is-wide is-large" @click="stakeOrTopup">Stake</a>
         </p>
       </div>
     </div>
@@ -410,6 +419,7 @@
 import { WalletModalProvider, useWallet } from "solana-wallets-vue";
 import VueCountdown from '@chenfengyuan/vue-countdown';
 import * as BN from 'bn.js';
+const timestamp = useTimestamp({ interval: 1000 })
 
 const { connected, publicKey } = useWallet();
 const { nosana } = useSDK();
@@ -422,8 +432,6 @@ const amount: Ref<number | null> = ref(null);
 const unstakeDays: Ref<number> = ref(14);
 const rate: Ref<number | null> = ref(null);
 const tab: Ref<string> = ref('stake');
-const vaultBalance: Ref<number | null | undefined> = ref(null);
-const withdrawAvailable: Ref<number> = ref(0);
 const countdownFinished: Ref<Boolean> = ref(false);
 
 const { data: activeStake, pending: loadingStake, error: errorStake, refresh: refreshStake } =
@@ -432,11 +440,8 @@ const { data: activeStake, pending: loadingStake, error: errorStake, refresh: re
       errorStake.value = null;
       if (publicKey.value) {
         try {
-          console.log('publicKey.value', publicKey.value.toString());
           const stakeData = await nosana.value.stake.get(publicKey.value);
-          console.log('stakeData', stakeData);
-          unstakeDays.value = stakeData.duration / 60 / 60 / 24;
-          tab.value = stakeData && parseInt(stakeData.timeUnstake) > 0 ? 'unstake' : 'stake';
+          unstakeDays.value = stakeData.duration / SECONDS_PER_DAY;
           return stakeData;
         } catch (error: any) {
           console.error(error)
@@ -456,7 +461,6 @@ const { data: balance, pending: loadingBalance, error: errorBalance, refresh: re
       errorBalance.value = null;
       if (publicKey.value) {
         const nos = await nosana.value.solana.getNosBalance(publicKey.value)
-        vaultBalance.value = await nosana.value.stake.getStakeVaultBalance();
         return Number(nos?.uiAmount);
       }
       return null;
@@ -464,6 +468,7 @@ const { data: balance, pending: loadingBalance, error: errorBalance, refresh: re
     watch: [publicKey],
     server: false
   });
+
 
 
 const multiplier: ComputedRef<number> = computed(() => {
@@ -508,6 +513,19 @@ const stakeEndDate: ComputedRef<any> = computed(() => {
   return activeStake.value && parseInt(activeStake.value.timeUnstake) > 0 ? BN(activeStake.value.timeUnstake).toNumber() + (unstakeDays.value * 24 * 60 * 60) : null;
 });
 
+const { data: vaultBalance, pending: loadingVaultBalance, error: errorVaultBalance, refresh: refreshVaultBalance } =
+  await useLazyAsyncData('getVaultBalance',
+    async () => {
+      errorVaultBalance.value = null;
+      if (stakeEndDate.value) {
+        return nosana.value.stake.getStakeVaultBalance();
+      }
+      return null;
+    }, {
+    watch: [stakeEndDate],
+    server: false
+  });
+
 const checkCountdownFinished = () => {
   countdownFinished.value = stakeEndDate.value ? (Date.now() > stakeEndDate.value * 1000) : false;
   return countdownFinished.value;
@@ -535,38 +553,43 @@ const calculateRewards = () => {
   }
 }
 
-const calculateWithdrawable = () => {
+const withdrawAvailable: ComputedRef<number | null> = computed(() => {
   if (activeStake.value && stakeEndDate && vaultBalance.value) {
-    const now = new Date().getTime();
     // @ts-ignore
     const emission = parseFloat(parseInt(activeStake.value.amount) / parseInt(activeStake.value.duration));
-    const secondsBetween = now / 1000 - parseInt(activeStake.value.timeUnstake);
+    const secondsBetween = timestamp.value / 1000 - parseInt(activeStake.value.timeUnstake);
 
     const tokensReleased = emission * secondsBetween;
     const withdrawn = (parseInt(activeStake.value.amount) - (vaultBalance.value * 1e6));
     const available = Math.min(tokensReleased - withdrawn, vaultBalance.value * 1e6);
 
-    withdrawAvailable.value = +(available / 1e6);
+    return +(available / 1e6);
   }
-}
-
+  return null
+});
 const pendingRewards: ComputedRef<number | null> = computed(() => {
-  let reward = 0;
-  if (rewardsInfo.value && rewardsInfo.value.account && rate.value) {
-    reward = (rewardsInfo.value.account.reflection / rate.value) -
+  if (rewardsInfo.value && rewardsInfo.value.account && poolInfo.value) {
+    let rate = rewardsInfo.value.global.rate;
+    const secondsBetween = (timestamp.value / 1000) - parseInt(poolInfo.value.startTime);
+    const fees =
+      new BN(
+        Math.max(secondsBetween, 0) * parseInt(poolInfo.value.emission) -
+        parseInt(poolInfo.value.claimedTokens)
+      );
+    const newTotalXnos = rewardsInfo.value.global.totalXnos.add(fees);
+    if (poolInfo.value.poolBalance > 0) {
+      rate = new BN(rewardsInfo.value.global.totalReflection / newTotalXnos);
+    }
+    const reward = (rewardsInfo.value.account.reflection / rate) -
       rewardsInfo.value.account.xnos;
+    return +(reward / 1e6).toFixed(4);
   }
-  return +(reward / 1e6).toFixed(4);
+  return null;
 })
-
-useIntervalFn(() => {
-  calculateRewards();
-  calculateWithdrawable();
-}, 1000)
 
 
 // Staking methods
-const submit = () => {
+const stakeOrTopup = () => {
   if (activeStake.value) {
     topup()
   } else {
@@ -663,6 +686,7 @@ const withdraw = async () => {
     const withdraw = await nosana.value.stake.withdraw();
     await refreshStake();
     await refreshBalance();
+    await refreshVaultBalance();
     console.log('withdraw', withdraw);
   } catch (e) {
     console.error('cant withdraw', e);
@@ -691,7 +715,10 @@ const { data: rewardsInfo, pending: loadingRewardsInfo, error: errorRewardsInfo,
   });
 const { data: poolInfo, pending: loadingPoolInfo, error: errorPoolInfo, refresh: refreshPoolInfo } =
   await useLazyAsyncData('getPoolInfo',
-    async () => nosana.value.stake.getPoolInfo(), {
+    async () => {
+      errorPoolInfo.value = null;
+      return nosana.value.stake.getPoolInfo()
+    }, {
     watch: [activeStake],
     server: false
   });
