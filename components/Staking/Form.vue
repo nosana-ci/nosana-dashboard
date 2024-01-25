@@ -540,23 +540,6 @@ const finishCountdown = () => {
   countdownFinished.value = true;
 }
 
-const calculateRewards = () => {
-  if (poolInfo.value && rewardsInfo.value) {
-    rate.value = rewardsInfo.value.global.rate;
-    const now = new Date().getTime();
-    const secondsBetween = (now / 1000) - parseInt(poolInfo.value.startTime);
-    const fees =
-      new BN(
-        Math.max(secondsBetween, 0) * parseInt(poolInfo.value.emission) -
-        parseInt(poolInfo.value.claimedTokens)
-      );
-    const newTotalXnos = rewardsInfo.value.global.totalXnos.add(fees);
-    if (poolInfo.value.poolBalance > 0) {
-      rate.value = new BN(rewardsInfo.value.global.totalReflection / newTotalXnos);
-    }
-  }
-}
-
 const withdrawAvailable: ComputedRef<number | null> = computed(() => {
   if (activeStake.value && stakeEndDate && vaultBalance.value) {
     // @ts-ignore
