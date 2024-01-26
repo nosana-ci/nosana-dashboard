@@ -16,8 +16,8 @@
       <div class="my-2">
         <div v-if="loadingStake">Loading...</div>
         <div v-else-if="errorStake" class="has-text-danger">
-          <p>Error fetching stake: {{ errorStake }}.
-            <a class="has-text-danger" @click="refreshStake"><u>retry</u></a>
+          <p>Error fetching stake account.
+            <a class="has-text-danger" @click="refreshStake"><u><b>Retry</b></u></a>
           </p>
         </div>
       </div>
@@ -445,36 +445,25 @@
           </div>
         </div>
         <label class="label">Extend unstake period with:</label>
-          <div class="control columns is-variable is-5 is-multiline">
-            <div class="is-flex is-align-items-center column is-narrow">
-              <input
-                v-model="extraUnstakeDays"
-                required
-                class="input has-text-centered"
-                type="number"
-                :min="1"
-                step="1"
-                :max="365 - unstakeDays"
-                placeholder="0"
-                style="width: auto;"
-              >
-              <span class="ml-2 has-text-grey">Days</span>
-              <button
-                class="px-2 button is-accent is-outlined has-text-weight-semibold is-uppercase is-size-7"
-                style="width: 45px; height: 22px; margin-left: 10px;"
-                @click.prevent="extraUnstakeDays = 365 - unstakeDays"
-              >
-                Max
-              </button>
-            </div>
+        <div class="control columns is-variable is-5 is-multiline">
+          <div class="is-flex is-align-items-center column is-narrow">
+            <input v-model="extraUnstakeDays" required class="input has-text-centered" type="number" :min="1" step="1"
+              :max="365 - unstakeDays" placeholder="0" style="width: auto;">
+            <span class="ml-2 has-text-grey">Days</span>
+            <button class="px-2 button is-accent is-outlined has-text-weight-semibold is-uppercase is-size-7"
+              style="width: 45px; height: 22px; margin-left: 10px;" @click.prevent="extraUnstakeDays = 365 - unstakeDays">
+              Max
+            </button>
           </div>
+        </div>
         <button class="button is-fullwidth is-primary is-large" @click.prevent="extend()"
           :class="{ 'is-loading': loading }">
           Extend Unstake
         </button>
       </div>
     </div>
-    <button class="modal-close is-large" @click="showExtendModal = false, extraUnstakeDays = 0" aria-label="close"></button>
+    <button class="modal-close is-large" @click="showExtendModal = false, extraUnstakeDays = 0"
+      aria-label="close"></button>
   </div>
 </template>
 
@@ -482,6 +471,7 @@
 import { WalletModalProvider, useWallet } from "solana-wallets-vue";
 import VueCountdown from '@chenfengyuan/vue-countdown';
 import * as BN from 'bn.js';
+import { useToast } from "vue-toastification";
 const timestamp = useTimestamp({ interval: 1000 })
 
 const { connected, publicKey } = useWallet();
@@ -495,9 +485,10 @@ const showExtendModal: Ref<boolean> = ref(false);
 const amount: Ref<number | null> = ref(null);
 const unstakeDays: Ref<number> = ref(14);
 const extraUnstakeDays: Ref<number> = ref(0);
-const rate: Ref<number | null> = ref(null);
 const tab: Ref<string> = ref('stake');
 const countdownFinished: Ref<Boolean> = ref(false);
+
+const toast = useToast();
 
 const { data: activeStake, pending: loadingStake, error: errorStake, refresh: refreshStake } =
   await useLazyAsyncData('getStake',
@@ -509,8 +500,8 @@ const { data: activeStake, pending: loadingStake, error: errorStake, refresh: re
           unstakeDays.value = stakeData.duration / SECONDS_PER_DAY;
           return stakeData;
         } catch (error: any) {
-          console.error(error)
           if (!error.message.includes('Account does not exist')) {
+            toast.error(error.message);
             throw error;
           }
         }
