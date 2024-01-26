@@ -21,7 +21,6 @@
 <script lang="ts" setup>
 import { useWallet } from "solana-wallets-vue";
 import * as BN from 'bn.js';
-import { useToast } from "vue-toastification";
 const timestamp = useTimestamp({ interval: 1000 })
 
 const { publicKey } = useWallet();
@@ -31,10 +30,8 @@ const SECONDS_PER_DAY = 24 * 60 * 60;
 const loading: Ref<boolean> = ref(false);
 const unstakeDays: Ref<number> = ref(14);
 
-const toast = useToast();
-
 const { data: activeStake, pending: loadingStake, error: errorStake, refresh: refreshStake } =
-  await useLazyAsyncData('getStake',
+  await useMyAsyncData('getStake',
     async () => {
       errorStake.value = null;
       if (publicKey.value) {
@@ -44,18 +41,16 @@ const { data: activeStake, pending: loadingStake, error: errorStake, refresh: re
           return stakeData;
         } catch (error: any) {
           if (!error.message.includes('Account does not exist')) {
-            toast.error(error.message);
             throw error;
           }
         }
       }
     }, {
-    watch: [publicKey],
-    server: false
+    watch: [publicKey]
   });
 
 const { data: balance, pending: loadingBalance, error: errorBalance, refresh: refreshBalance } =
-  await useLazyAsyncData('getBalance',
+  await useMyAsyncData('getBalance',
     async () => {
       errorBalance.value = null;
       if (publicKey.value) {
@@ -64,8 +59,7 @@ const { data: balance, pending: loadingBalance, error: errorBalance, refresh: re
       }
       return null;
     }, {
-    watch: [publicKey],
-    server: false
+    watch: [publicKey]
   });
 
 const pendingRewards: ComputedRef<number | null> = computed(() => {
@@ -115,25 +109,17 @@ const claimAndRestakeRewards = async () => {
 }
 
 const { data: rewardsInfo, pending: loadingRewardsInfo, error: errorRewardsInfo, refresh: refreshRewardsInfo } =
-  await useLazyAsyncData('getRewardsInfo',
+  await useMyAsyncData('getRewardsInfo',
     async () => nosana.value.stake.getRewardsInfo(), {
-    watch: [activeStake],
-    server: false
+    watch: [activeStake]
   });
 const { data: poolInfo, pending: loadingPoolInfo, error: errorPoolInfo, refresh: refreshPoolInfo } =
-  await useLazyAsyncData('getPoolInfo',
+  await useMyAsyncData('getPoolInfo',
     async () => {
       errorPoolInfo.value = null;
       return nosana.value.stake.getPoolInfo()
     }, {
-    watch: [activeStake],
-    server: false
+    watch: [activeStake]
   });
 
 </script>
-<style lang="scss" scoped>
-.extend {
-  line-height: .2;
-  height: 19px;
-}
-</style>
