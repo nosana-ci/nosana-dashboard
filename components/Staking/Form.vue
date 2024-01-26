@@ -103,7 +103,7 @@
               <label class="label mb-0">Unstake period of</label>
               <div class="has-text-black is-flex is-align-items-center">
                 <div><span class="is-size-3">{{ unstakeDays }}</span> days</div>
-                <button v-if="unstakeDays < 365" @click.prevent="null"
+                <button v-if="unstakeDays < 365" @click.prevent="showExtendModal = true;"
                   class="button is-size-7 is-small is-outlined is-primary extend px-1 mt-1 ml-2">
                   Extend <img src="@/assets/img/icons/arrow-right.svg" style="height: 8px;" class="ml-1">
                 </button>
@@ -417,6 +417,65 @@
     </div>
     <button class="modal-close is-large" @click="showTopupModal = false" aria-label="close"></button>
   </div>
+  <div class="modal" v-if="activeStake" :class="{ 'is-active': showExtendModal }">
+    <div class="modal-background" @click="showExtendModal = false, extraUnstakeDays = 0"></div>
+    <div class="modal-content">
+      <div class="box">
+        <h2 class="is-size-2 mb-5 has-text-weight-semibold has-text-centered">Extend Unstake Period</h2>
+        <div class="columns pt-3">
+          <div class="column is-3">
+            <label class="label mb-0">Unstake period of</label>
+            <div class="has-text-black is-flex is-align-items-center">
+              <div><span class="is-size-3">{{ unstakeDays }}</span> days</div>
+            </div>
+          </div>
+          <div class="column is-3">
+            <label class="label mb-0">xNOS</label>
+            <div class="has-text-black is-size-3">
+              <CustomCountUp v-if="xNOS !== null" :end-val="xNOS">
+              </CustomCountUp>
+            </div>
+          </div>
+          <div class="column is-4">
+            <label class="label mb-0">Expected Daily NOS rewards</label>
+            <div class="has-text-black is-size-3">
+              <CustomCountUp v-if="expectedRewards !== null" :end-val="(expectedRewards as number)" :decimal-places="2">
+              </CustomCountUp>
+            </div>
+          </div>
+        </div>
+        <label class="label">Extend unstake period with:</label>
+          <div class="control columns is-variable is-5 is-multiline">
+            <div class="is-flex is-align-items-center column is-narrow">
+              <input
+                v-model="extraUnstakeDays"
+                required
+                class="input has-text-centered"
+                type="number"
+                :min="1"
+                step="1"
+                :max="365 - unstakeDays"
+                placeholder="0"
+                style="width: auto;"
+              >
+              <span class="ml-2 has-text-grey">Days</span>
+              <button
+                class="px-2 button is-accent is-outlined has-text-weight-semibold is-uppercase is-size-7"
+                style="width: 45px; height: 22px; margin-left: 10px;"
+                @click.prevent="extraUnstakeDays = 365 - unstakeDays"
+              >
+                Max
+              </button>
+            </div>
+          </div>
+        <button class="button is-fullwidth is-primary is-large" @click.prevent="extend()"
+          :class="{ 'is-loading': loading }">
+          Extend Unstake
+        </button>
+      </div>
+    </div>
+    <button class="modal-close is-large" @click="showExtendModal = false, extraUnstakeDays = 0" aria-label="close"></button>
+  </div>
 </template>
 
 <script lang="ts" setup>
@@ -432,8 +491,10 @@ const SECONDS_PER_DAY = 24 * 60 * 60;
 const loading: Ref<boolean> = ref(false);
 const showStakeModal: Ref<boolean> = ref(false);
 const showTopupModal: Ref<boolean> = ref(false);
+const showExtendModal: Ref<boolean> = ref(false);
 const amount: Ref<number | null> = ref(null);
 const unstakeDays: Ref<number> = ref(14);
+const extraUnstakeDays: Ref<number> = ref(0);
 const rate: Ref<number | null> = ref(null);
 const tab: Ref<string> = ref('stake');
 const countdownFinished: Ref<Boolean> = ref(false);
@@ -476,8 +537,9 @@ const { data: balance, pending: loadingBalance, error: errorBalance, refresh: re
 
 
 const multiplier: ComputedRef<number> = computed(() => {
+  const days = extraUnstakeDays.value > 0 ? extraUnstakeDays.value + unstakeDays.value : unstakeDays.value;
   let unstakeTime;
-  unstakeTime = unstakeDays.value * SECONDS_PER_DAY;
+  unstakeTime = days * SECONDS_PER_DAY;
   const multiplierSeconds = (SECONDS_PER_DAY * 365) / 3; // 4 months
   const multiplier = unstakeTime / multiplierSeconds;
   return multiplier + 1;
@@ -529,11 +591,6 @@ const { data: vaultBalance, pending: loadingVaultBalance, error: errorVaultBalan
     watch: [stakeEndDate],
     server: false
   });
-
-const checkCountdownFinished = () => {
-  countdownFinished.value = stakeEndDate.value ? (Date.now() > stakeEndDate.value * 1000) : false;
-  return countdownFinished.value;
-};
 
 const finishCountdown = () => {
   console.log('finish countdown');
@@ -595,6 +652,22 @@ const topup = async () => {
       console.log('topup tx', topup);
     } catch (e) {
       console.error('cant topup', e);
+    }
+    loading.value = false;
+  }
+}
+
+const extend = async () => {
+  if (extraUnstakeDays.value) {
+    loading.value = true;
+    try {
+      const extend = await nosana.value.stake.extend(extraUnstakeDays.value * SECONDS_PER_DAY);
+      await refreshStake();
+      showExtendModal.value = false;
+      extraUnstakeDays.value = 0;
+      console.log('extend tx', extend);
+    } catch (e) {
+      console.error('cant extend', e);
     }
     loading.value = false;
   }
