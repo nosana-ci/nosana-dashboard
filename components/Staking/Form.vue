@@ -473,7 +473,6 @@
 import { WalletModalProvider, useWallet } from "solana-wallets-vue";
 import VueCountdown from '@chenfengyuan/vue-countdown';
 import * as BN from 'bn.js';
-import { useToast } from "vue-toastification";
 const timestamp = useTimestamp({ interval: 1000 })
 
 const { connected, publicKey } = useWallet();
@@ -490,10 +489,8 @@ const extraUnstakeDays: Ref<number> = ref(0);
 const tab: Ref<string> = ref('stake');
 const countdownFinished: Ref<Boolean> = ref(false);
 
-const toast = useToast();
-
 const { data: activeStake, pending: loadingStake, error: errorStake, refresh: refreshStake } =
-  await useLazyAsyncData('getStake',
+  await useMyAsyncData('getStake',
     async () => {
       errorStake.value = null;
       if (publicKey.value) {
@@ -503,18 +500,16 @@ const { data: activeStake, pending: loadingStake, error: errorStake, refresh: re
           return stakeData;
         } catch (error: any) {
           if (!error.message.includes('Account does not exist')) {
-            toast.error(error.message);
             throw error;
           }
         }
       }
     }, {
-    watch: [publicKey],
-    server: false
+    watch: [publicKey]
   });
 
 const { data: balance, pending: loadingBalance, error: errorBalance, refresh: refreshBalance } =
-  await useLazyAsyncData('getBalance',
+  await useMyAsyncData('getBalance',
     async () => {
       errorBalance.value = null;
       if (publicKey.value) {
@@ -523,8 +518,7 @@ const { data: balance, pending: loadingBalance, error: errorBalance, refresh: re
       }
       return null;
     }, {
-    watch: [publicKey],
-    server: false
+    watch: [publicKey]
   });
 
 
@@ -573,7 +567,7 @@ const stakeEndDate: ComputedRef<any> = computed(() => {
 });
 
 const { data: vaultBalance, pending: loadingVaultBalance, error: errorVaultBalance, refresh: refreshVaultBalance } =
-  await useLazyAsyncData('getVaultBalance',
+  await useMyAsyncData('getVaultBalance',
     async () => {
       errorVaultBalance.value = null;
       if (stakeEndDate.value) {
@@ -581,8 +575,7 @@ const { data: vaultBalance, pending: loadingVaultBalance, error: errorVaultBalan
       }
       return null;
     }, {
-    watch: [stakeEndDate],
-    server: false
+    watch: [stakeEndDate]
   });
 
 const finishCountdown = () => {
@@ -759,19 +752,17 @@ const close = async () => {
 }
 
 const { data: rewardsInfo, pending: loadingRewardsInfo, error: errorRewardsInfo, refresh: refreshRewardsInfo } =
-  await useLazyAsyncData('getRewardsInfo',
+  await useMyAsyncData('getRewardsInfo',
     async () => nosana.value.stake.getRewardsInfo(), {
-    watch: [activeStake],
-    server: false
+    watch: [activeStake]
   });
 const { data: poolInfo, pending: loadingPoolInfo, error: errorPoolInfo, refresh: refreshPoolInfo } =
-  await useLazyAsyncData('getPoolInfo',
+  await useMyAsyncData('getPoolInfo',
     async () => {
       errorPoolInfo.value = null;
       return nosana.value.stake.getPoolInfo()
     }, {
-    watch: [activeStake],
-    server: false
+    watch: [activeStake]
   });
 
 </script>
