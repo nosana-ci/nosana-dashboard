@@ -19,25 +19,17 @@
   </div>
 </template>
 <script lang="ts" setup>
-import { WalletModalProvider, useWallet } from "solana-wallets-vue";
-import VueCountdown from '@chenfengyuan/vue-countdown';
+import { useWallet } from "solana-wallets-vue";
 import * as BN from 'bn.js';
 import { useToast } from "vue-toastification";
 const timestamp = useTimestamp({ interval: 1000 })
 
-const { connected, publicKey } = useWallet();
+const { publicKey } = useWallet();
 const { nosana } = useSDK();
 const SECONDS_PER_DAY = 24 * 60 * 60;
 
 const loading: Ref<boolean> = ref(false);
-const showStakeModal: Ref<boolean> = ref(false);
-const showTopupModal: Ref<boolean> = ref(false);
-const showExtendModal: Ref<boolean> = ref(false);
-const amount: Ref<number | null> = ref(null);
 const unstakeDays: Ref<number> = ref(14);
-const extraUnstakeDays: Ref<number> = ref(0);
-const tab: Ref<string> = ref('stake');
-const countdownFinished: Ref<Boolean> = ref(false);
 
 const toast = useToast();
 
@@ -57,6 +49,20 @@ const { data: activeStake, pending: loadingStake, error: errorStake, refresh: re
           }
         }
       }
+    }, {
+    watch: [publicKey],
+    server: false
+  });
+
+const { data: balance, pending: loadingBalance, error: errorBalance, refresh: refreshBalance } =
+  await useLazyAsyncData('getBalance',
+    async () => {
+      errorBalance.value = null;
+      if (publicKey.value) {
+        const nos = await nosana.value.solana.getNosBalance(publicKey.value)
+        return nos ? Number(nos.uiAmount) : 0;
+      }
+      return null;
     }, {
     watch: [publicKey],
     server: false
@@ -96,7 +102,6 @@ const claimRewards = async () => {
 }
 
 const claimAndRestakeRewards = async () => {
-  showStakeModal.value = false;
   loading.value = true;
   try {
     const claim = await nosana.value.stake.claimAndRestakeRewards(pendingRewards.value as number);

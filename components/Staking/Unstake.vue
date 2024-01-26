@@ -95,13 +95,13 @@
   </div>
 </template>
 <script lang="ts" setup>
-import { WalletModalProvider, useWallet } from "solana-wallets-vue";
+import { useWallet } from "solana-wallets-vue";
 import VueCountdown from '@chenfengyuan/vue-countdown';
 import * as BN from 'bn.js';
 import { useToast } from "vue-toastification";
 const timestamp = useTimestamp({ interval: 1000 })
 
-const { connected, publicKey } = useWallet();
+const { publicKey } = useWallet();
 const { nosana } = useSDK();
 const SECONDS_PER_DAY = 24 * 60 * 60;
 
@@ -234,23 +234,6 @@ const close = async () => {
   }
   loading.value = false;
 }
-
-const { data: rewardsInfo, pending: loadingRewardsInfo, error: errorRewardsInfo, refresh: refreshRewardsInfo } =
-  await useLazyAsyncData('getRewardsInfo',
-    async () => nosana.value.stake.getRewardsInfo(), {
-    watch: [activeStake],
-    server: false
-  });
-const { data: poolInfo, pending: loadingPoolInfo, error: errorPoolInfo, refresh: refreshPoolInfo } =
-  await useLazyAsyncData('getPoolInfo',
-    async () => {
-      errorPoolInfo.value = null;
-      return nosana.value.stake.getPoolInfo()
-    }, {
-    watch: [activeStake],
-    server: false
-  });
-
 </script>
 <style lang="scss" scoped>
 </style>

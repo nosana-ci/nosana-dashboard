@@ -4,7 +4,7 @@
       <div class="tabs is-fullwidth is-size-4">
         <ul>
           <li :class="{ 'is-active': tab === 'stake' && !(activeStake && stakeEndDate) }">
-            <a :claass="{ 'is-disabled': activeStake && stakeEndDate }" @click="tab = 'stake'"
+            <a :class="{ 'is-disabled': activeStake && stakeEndDate }" @click="tab = 'stake'"
               class="is-justify-content-flex-start">STAKE</a>
           </li>
           <li :class="{ 'is-active': tab === 'unstake' || (activeStake && stakeEndDate) }">
@@ -21,7 +21,7 @@
           </p>
         </div>
       </div>
-      <div v-if="tab === 'stake'">
+      <div v-if="tab === 'stake' && !stakeEndDate">
         <div class="field" v-if="!activeStake">
           <div class="is-flex is-justify-content-space-between mb-0 is-align-items-center">
             <label class="label">Add NOS:</label>
@@ -134,7 +134,7 @@
           </div>
         </div>
       </div>
-      <StakingUnstake v-else-if="tab === 'unstake'" />
+      <StakingUnstake v-else-if="tab === 'unstake' || stakeEndDate" />
     </div>
     <StakingPendingRewards v-if="activeStake && !stakeEndDate" />
     <div class="columns" v-if="!activeStake">
@@ -361,7 +361,6 @@
 import { WalletModalProvider, useWallet } from "solana-wallets-vue";
 import * as BN from 'bn.js';
 import { useToast } from "vue-toastification";
-const timestamp = useTimestamp({ interval: 1000 })
 
 const { connected, publicKey } = useWallet();
 const { nosana } = useSDK();
@@ -375,7 +374,6 @@ const amount: Ref<number | null> = ref(null);
 const unstakeDays: Ref<number> = ref(14);
 const extraUnstakeDays: Ref<number> = ref(0);
 const tab: Ref<string> = ref('stake');
-const countdownFinished: Ref<Boolean> = ref(false);
 
 const toast = useToast();
 
@@ -509,13 +507,6 @@ const stake = async () => {
     }
   }
 }
-
-const { data: rewardsInfo, pending: loadingRewardsInfo, error: errorRewardsInfo, refresh: refreshRewardsInfo } =
-  await useLazyAsyncData('getRewardsInfo',
-    async () => nosana.value.stake.getRewardsInfo(), {
-    watch: [activeStake],
-    server: false
-  });
 const { data: poolInfo, pending: loadingPoolInfo, error: errorPoolInfo, refresh: refreshPoolInfo } =
   await useLazyAsyncData('getPoolInfo',
     async () => {
