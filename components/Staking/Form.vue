@@ -155,7 +155,7 @@
         <div class="box">
           <label class="label">Staked NOS</label>
           <div class="is-size-1 has-text-black">
-            <CustomCountUp v-if="amount !== null" :end-val="amount">
+            <CustomCountUp v-if="amount !== null" :end-val="Math.max(0, amount)">
             </CustomCountUp>
             <span v-else>-</span>
           </div>
@@ -417,9 +417,10 @@ const multiplier: ComputedRef<number> = computed(() => {
 
 const xNOS: ComputedRef<number | null> = computed(() => {
   const formAmount = amount.value ? amount.value : 0;
-  return activeStake.value ?
+  const score = activeStake.value ?
     (formAmount + (activeStake.value.amount.toNumber() / 1e6)) * multiplier.value :
-    formAmount * multiplier.value
+    formAmount * multiplier.value;
+  return Math.max(0, score);
 })
 
 const APY: ComputedRef<number | null> = computed(() => {
@@ -442,7 +443,8 @@ const expectedRewards: ComputedRef<number | null> = computed(() => {
   if (activeStake.value && activeStake.value.amount) {
     totalXnos -= activeStake.value.amount;
   }
-  return ((xNOS.value! * 1e6) / (totalXnos + (xNOS.value! * 1e6))) * ((poolInfo.value.emission.toNumber() / 1e6) * SECONDS_PER_DAY);
+  const rewards = ((xNOS.value! * 1e6) / (totalXnos + (xNOS.value! * 1e6))) * ((poolInfo.value.emission.toNumber() / 1e6) * SECONDS_PER_DAY)
+  return Math.max(0, rewards);
 })
 
 const stakeEndDate: ComputedRef<any> = computed(() => {
