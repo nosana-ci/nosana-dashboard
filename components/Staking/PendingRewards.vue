@@ -75,25 +75,17 @@ const claimAndRestakeRewards = async () => {
 }
 
 const { data: rewardsInfo, pending: loadingRewardsInfo, error: errorRewardsInfo, refresh: refreshRewardsInfo } =
-  await useLazyAsyncData('getRewardsInfo',
+  await useMyAsyncData('getRewardsInfo',
     async () => nosana.value.stake.getRewardsInfo(), {
-    watch: [activeStake],
-    server: false
+    watch: [activeStake]
   });
 const { data: poolInfo, pending: loadingPoolInfo, error: errorPoolInfo, refresh: refreshPoolInfo } =
-  await useLazyAsyncData('getPoolInfo',
+  await useMyAsyncData('getPoolInfo',
     async () => {
       errorPoolInfo.value = null;
       return nosana.value.stake.getPoolInfo()
     }, {
-    watch: [activeStake],
-    server: false
+    watch: [activeStake]
   });
 
 </script>
-<style lang="scss" scoped>
-.extend {
-  line-height: .2;
-  height: 19px;
-}
-</style>

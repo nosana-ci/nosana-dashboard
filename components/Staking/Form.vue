@@ -155,7 +155,7 @@
         <div class="box">
           <label class="label">Staked NOS</label>
           <div class="is-size-1 has-text-black">
-            <CustomCountUp v-if="amount !== null" :end-val="amount">
+            <CustomCountUp v-if="amount !== null" :end-val="Math.max(0, amount)">
             </CustomCountUp>
             <span v-else>-</span>
           </div>
@@ -360,7 +360,6 @@
 <script lang="ts" setup>
 import { WalletModalProvider, useWallet } from "solana-wallets-vue";
 import * as BN from 'bn.js';
-import { useToast } from "vue-toastification";
 
 const { connected, publicKey } = useWallet();
 const { nosana } = useSDK();
@@ -375,10 +374,8 @@ const unstakeDays: Ref<number> = ref(14);
 const extraUnstakeDays: Ref<number> = ref(0);
 const tab: Ref<string> = ref('stake');
 
-const toast = useToast();
-
 const { data: activeStake, pending: loadingStake, error: errorStake, refresh: refreshStake } =
-  await useLazyAsyncData('getStake',
+  await useMyAsyncData('getStake',
     async () => {
       errorStake.value = null;
       if (publicKey.value) {
@@ -388,18 +385,16 @@ const { data: activeStake, pending: loadingStake, error: errorStake, refresh: re
           return stakeData;
         } catch (error: any) {
           if (!error.message.includes('Account does not exist')) {
-            toast.error(error.message);
             throw error;
           }
         }
       }
     }, {
-    watch: [publicKey],
-    server: false
+    watch: [publicKey]
   });
 
 const { data: balance, pending: loadingBalance, error: errorBalance, refresh: refreshBalance } =
-  await useLazyAsyncData('getBalance',
+  await useMyAsyncData('getBalance',
     async () => {
       errorBalance.value = null;
       if (publicKey.value) {
@@ -408,8 +403,7 @@ const { data: balance, pending: loadingBalance, error: errorBalance, refresh: re
       }
       return null;
     }, {
-    watch: [publicKey],
-    server: false
+    watch: [publicKey]
   });
 
 const multiplier: ComputedRef<number> = computed(() => {
@@ -423,9 +417,10 @@ const multiplier: ComputedRef<number> = computed(() => {
 
 const xNOS: ComputedRef<number | null> = computed(() => {
   const formAmount = amount.value ? amount.value : 0;
-  return activeStake.value ?
+  const score = activeStake.value ?
     (formAmount + (activeStake.value.amount.toNumber() / 1e6)) * multiplier.value :
-    formAmount * multiplier.value
+    formAmount * multiplier.value;
+  return Math.max(0, score);
 })
 
 const APY: ComputedRef<number | null> = computed(() => {
@@ -448,7 +443,8 @@ const expectedRewards: ComputedRef<number | null> = computed(() => {
   if (activeStake.value && activeStake.value.amount) {
     totalXnos -= activeStake.value.amount;
   }
-  return ((xNOS.value! * 1e6) / (totalXnos + (xNOS.value! * 1e6))) * ((poolInfo.value.emission.toNumber() / 1e6) * SECONDS_PER_DAY);
+  const rewards = ((xNOS.value! * 1e6) / (totalXnos + (xNOS.value! * 1e6))) * ((poolInfo.value.emission.toNumber() / 1e6) * SECONDS_PER_DAY)
+  return Math.max(0, rewards);
 })
 
 const stakeEndDate: ComputedRef<any> = computed(() => {
@@ -507,14 +503,14 @@ const stake = async () => {
     }
   }
 }
+
 const { data: poolInfo, pending: loadingPoolInfo, error: errorPoolInfo, refresh: refreshPoolInfo } =
-  await useLazyAsyncData('getPoolInfo',
+  await useMyAsyncData('getPoolInfo',
     async () => {
       errorPoolInfo.value = null;
       return nosana.value.stake.getPoolInfo()
     }, {
-    watch: [activeStake],
-    server: false
+    watch: [activeStake]
   });
 
 </script>
