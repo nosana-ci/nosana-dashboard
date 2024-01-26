@@ -320,8 +320,9 @@
           </a>
         </template>
       </wallet-modal-provider>
-      <button :disabled="errorStake || !amount || !balance ? true : undefined" v-else-if="!activeStake && tab === 'stake'"
-        :class="{ 'is-loading': loadingStake }" class="button is-fullwidth is-primary is-large" type="submit">
+      <button :disabled="errorStake || !amount || !balance || amount > balance ? true : undefined"
+        v-else-if="!activeStake && tab === 'stake'" :class="{ 'is-loading': loadingStake }"
+        class="button is-fullwidth is-primary is-large" type="submit">
         <span v-if="amount && balance !== null && amount > balance">Insufficient NOS</span>
         <span v-else>Stake NOS</span>
       </button>
