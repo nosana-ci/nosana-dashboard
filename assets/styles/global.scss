@@ -32,7 +32,9 @@
 .has-radius-small {
   border-radius: $radius-small;
 }
-
+.has-radius-large {
+  border-radius: $radius-large;
+}
 
 .has-limited-width {
   width: 650px;
@@ -114,9 +116,15 @@
     display: none;
    }
 }
+.has-background-body {
+  background-color: $body-background-color !important;
+}
 .dark-mode {
   body {
     background-color: $body-background-color-dark;
+  }
+  .has-background-body {
+    background-color: $body-background-color-dark !important;
   }
   .navbar {
     background: $black;
@@ -213,6 +221,5 @@
         color: $grey;
       }
     }
-
   }
 }
