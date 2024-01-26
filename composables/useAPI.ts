@@ -1,8 +1,12 @@
-export const useAPI: typeof useFetch = (request, opts?) => {
+export const useAPI: typeof useMyAsyncData = (request, opts?) => {
   const config = useRuntimeConfig()
-  return useFetch(request, {
-    baseURL: config.public.apiBase, lazy: true, transform: (value) => {
+  return useMyAsyncData(request, async () => {
+    const fetchData = await $fetch(request, { baseURL: config.public.apiBase })
+    return fetchData;
+  }, {
+    transform(value) {
       return JSON.parse(value as unknown as string)
-    }, server: false, ...opts
-  })
+    },
+    ...opts
+  });
 }
