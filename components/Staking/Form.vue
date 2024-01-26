@@ -23,25 +23,25 @@
       </div>
       <div v-if="tab === 'stake'">
         <div class="field" v-if="!activeStake">
+          <div class="is-flex is-justify-content-space-between mb-0 is-align-items-center">
+            <label class="label">Add NOS:</label>
+            <span class="is-size-7 mr-1">
+              <span v-if="loadingBalance">....... NOS</span>
+              <CustomCountUp v-else-if="balance !== null" class="is-clickable" @click="refreshBalance" :end-val="balance"
+                :decimal-places="2" :duration=".5">
+                <template #suffix>
+                  <span> NOS</span>
+                </template>
+              </CustomCountUp>
+              <div v-if="errorBalance" class="has-text-danger">
+                <p>Error fetching balance: {{ errorBalance }}.
+                  <a class="has-text-danger" @click="refreshBalance"><u>retry</u></a>
+                </p>
+              </div>
+            </span>
+          </div>
           <div class="control columns is-variable is-5 mb-5 is-multiline is-align-items-end">
             <div class="is-flex column is-flex-direction-column" style="min-width: 200px">
-              <div class="is-flex is-justify-content-space-between mb-0 is-align-items-center">
-                <label class="label mb-2">Add NOS:</label>
-                <span class="is-size-7 mb-2 mr-6">
-                  <span v-if="loadingBalance">....... NOS</span>
-                  <CustomCountUp v-else-if="balance !== null" class="is-clickable" @click="refreshBalance"
-                    :end-val="balance" :decimal-places="2" :duration=".5">
-                    <template #suffix>
-                      <span> NOS</span>
-                    </template>
-                  </CustomCountUp>
-                  <div v-if="errorBalance" class="has-text-danger">
-                    <p>Error fetching balance: {{ errorBalance }}.
-                      <a class="has-text-danger" @click="refreshBalance"><u>retry</u></a>
-                    </p>
-                  </div>
-                </span>
-              </div>
               <div class="is-flex is-align-items-center">
                 <input class="input is-medium" v-model="amount" required min="1" :max="balance" step="0.1" type="number"
                   placeholder="0">
@@ -320,9 +320,10 @@
           </a>
         </template>
       </wallet-modal-provider>
-      <button :disabled="errorStake ? true : undefined" v-else-if="!activeStake && tab === 'stake'"
+      <button :disabled="errorStake || !amount || !balance ? true : undefined" v-else-if="!activeStake && tab === 'stake'"
         :class="{ 'is-loading': loadingStake }" class="button is-fullwidth is-primary is-large" type="submit">
-        Stake NOS
+        <span v-if="amount && balance !== null && amount > balance">Insufficient NOS</span>
+        <span v-else>Stake NOS</span>
       </button>
     </ClientOnly>
   </form>
@@ -517,7 +518,7 @@ const { data: balance, pending: loadingBalance, error: errorBalance, refresh: re
       errorBalance.value = null;
       if (publicKey.value) {
         const nos = await nosana.value.solana.getNosBalance(publicKey.value)
-        return Number(nos?.uiAmount);
+        return nos ? Number(nos.uiAmount) : 0;
       }
       return null;
     }, {
@@ -563,7 +564,7 @@ const expectedRewards: ComputedRef<number | null> = computed(() => {
   if (activeStake.value && activeStake.value.amount) {
     totalXnos -= activeStake.value.amount;
   }
-  return ((xNOS.value! * 1e6) / (totalXnos + (xNOS.value! * 1e6))) * ((poolInfo.value.emission.toNumber() / 1e6) * 60 * 60 * 24);
+  return ((xNOS.value! * 1e6) / (totalXnos + (xNOS.value! * 1e6))) * ((poolInfo.value.emission.toNumber() / 1e6) * SECONDS_PER_DAY);
 })
 
 const stakeEndDate: ComputedRef<any> = computed(() => {
