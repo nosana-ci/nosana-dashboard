@@ -25,11 +25,9 @@ export function useStake(publicKey: any) {
     });
 
   const unstakeDays: ComputedRef<number> = computed(() => {
-    console.log('activeStake', activeStake.value);
     return activeStake.value ? activeStake.value.duration / SECONDS_PER_DAY : 14;
   });
 
-  console.log('activestake', activeStake);
   const { data: poolInfo, pending: loadingPoolInfo, error: errorPoolInfo, refresh: refreshPoolInfo } =
     useLazyAsyncData('getPoolInfo',
       async () => {
