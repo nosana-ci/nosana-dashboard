@@ -99,13 +99,9 @@ import VueCountdown from '@chenfengyuan/vue-countdown';
 import * as BN from 'bn.js';
 const timestamp = useTimestamp({ interval: 1000 })
 const { publicKey } = useWallet();
-const { activeStake, rewardsInfo, poolInfo, refreshStake, refreshBalance } = useStake(publicKey);
-
+const { unstakeDays, activeStake, refreshStake, refreshBalance } = useStake(publicKey);
 const { nosana } = useSDK();
-const SECONDS_PER_DAY = 24 * 60 * 60;
-
 const loading: Ref<boolean> = ref(false);
-const unstakeDays: Ref<number> = ref(14);
 const countdownFinished: Ref<Boolean> = ref(false);
 
 const stakeEndDate: ComputedRef<any> = computed(() => {

@@ -362,7 +362,7 @@ import { WalletModalProvider, useWallet } from "solana-wallets-vue";
 import * as BN from 'bn.js';
 
 const { connected, publicKey } = useWallet();
-const { balance, activeStake, loadingPoolInfo, poolInfo, refreshPoolInfo, errorPoolInfo, refreshStake, refreshBalance, loadingStake, errorStake } = useStake(publicKey);
+const { unstakeDays, balance, activeStake, loadingPoolInfo, poolInfo, refreshPoolInfo, errorPoolInfo, refreshStake, refreshBalance, loadingStake, errorStake } = useStake(publicKey);
 const { nosana } = useSDK();
 const SECONDS_PER_DAY = 24 * 60 * 60;
 
@@ -371,7 +371,6 @@ const showStakeModal: Ref<boolean> = ref(false);
 const showTopupModal: Ref<boolean> = ref(false);
 const showExtendModal: Ref<boolean> = ref(false);
 const amount: Ref<number | null> = ref(null);
-const unstakeDays: Ref<number> = ref(14);
 const extraUnstakeDays: Ref<number> = ref(0);
 const tab: Ref<string> = ref('stake');
 
