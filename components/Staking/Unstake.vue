@@ -98,47 +98,15 @@ import { useWallet } from "solana-wallets-vue";
 import VueCountdown from '@chenfengyuan/vue-countdown';
 import * as BN from 'bn.js';
 const timestamp = useTimestamp({ interval: 1000 })
-
 const { publicKey } = useWallet();
+const { activeStake, rewardsInfo, poolInfo, refreshStake, refreshBalance } = useStake(publicKey);
+
 const { nosana } = useSDK();
 const SECONDS_PER_DAY = 24 * 60 * 60;
 
 const loading: Ref<boolean> = ref(false);
 const unstakeDays: Ref<number> = ref(14);
 const countdownFinished: Ref<Boolean> = ref(false);
-
-
-const { data: balance, pending: loadingBalance, error: errorBalance, refresh: refreshBalance } =
-  await useMyAsyncData('getBalance',
-    async () => {
-      errorBalance.value = null;
-      if (publicKey.value) {
-        const nos = await nosana.value.solana.getNosBalance(publicKey.value)
-        return nos ? Number(nos.uiAmount) : 0;
-      }
-      return null;
-    }, {
-    watch: [publicKey]
-  });
-
-const { data: activeStake, pending: loadingStake, error: errorStake, refresh: refreshStake } =
-  await useMyAsyncData('getStake',
-    async () => {
-      errorStake.value = null;
-      if (publicKey.value) {
-        try {
-          const stakeData = await nosana.value.stake.get(publicKey.value);
-          unstakeDays.value = stakeData.duration / SECONDS_PER_DAY;
-          return stakeData;
-        } catch (error: any) {
-          if (!error.message.includes('Account does not exist')) {
-            throw error;
-          }
-        }
-      }
-    }, {
-    watch: [publicKey]
-  });
 
 const stakeEndDate: ComputedRef<any> = computed(() => {
   return activeStake.value && parseInt(activeStake.value.timeUnstake) > 0 ? BN(activeStake.value.timeUnstake).toNumber() + (unstakeDays.value * 24 * 60 * 60) : null;

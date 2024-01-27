@@ -25,7 +25,7 @@ const timestamp = useTimestamp({ interval: 1000 })
 
 const { publicKey } = useWallet();
 const { nosana } = useSDK();
-const { activeStake, loadingStake } = useStake(publicKey);
+const { rewardsInfo, poolInfo, refreshStake, refreshBalance } = useStake(publicKey);
 const loading: Ref<boolean> = ref(false);
 
 const pendingRewards: ComputedRef<number | null> = computed(() => {
@@ -73,19 +73,5 @@ const claimAndRestakeRewards = async () => {
   }
   loading.value = false;
 }
-
-const { data: rewardsInfo, pending: loadingRewardsInfo, error: errorRewardsInfo, refresh: refreshRewardsInfo } =
-  await useMyAsyncData('getRewardsInfo',
-    async () => nosana.value.stake.getRewardsInfo(), {
-    watch: [activeStake]
-  });
-const { data: poolInfo, pending: loadingPoolInfo, error: errorPoolInfo, refresh: refreshPoolInfo } =
-  await useMyAsyncData('getPoolInfo',
-    async () => {
-      errorPoolInfo.value = null;
-      return nosana.value.stake.getPoolInfo()
-    }, {
-    watch: [activeStake]
-  });
 
 </script>

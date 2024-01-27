@@ -362,6 +362,7 @@ import { WalletModalProvider, useWallet } from "solana-wallets-vue";
 import * as BN from 'bn.js';
 
 const { connected, publicKey } = useWallet();
+const { balance, activeStake, loadingPoolInfo, poolInfo, refreshPoolInfo, errorPoolInfo, refreshStake, refreshBalance, loadingStake, errorStake } = useStake(publicKey);
 const { nosana } = useSDK();
 const SECONDS_PER_DAY = 24 * 60 * 60;
 
@@ -373,38 +374,6 @@ const amount: Ref<number | null> = ref(null);
 const unstakeDays: Ref<number> = ref(14);
 const extraUnstakeDays: Ref<number> = ref(0);
 const tab: Ref<string> = ref('stake');
-
-const { data: activeStake, pending: loadingStake, error: errorStake, refresh: refreshStake } =
-  await useMyAsyncData('getStake',
-    async () => {
-      errorStake.value = null;
-      if (publicKey.value) {
-        try {
-          const stakeData = await nosana.value.stake.get(publicKey.value);
-          unstakeDays.value = stakeData.duration / SECONDS_PER_DAY;
-          return stakeData;
-        } catch (error: any) {
-          if (!error.message.includes('Account does not exist')) {
-            throw error;
-          }
-        }
-      }
-    }, {
-    watch: [publicKey]
-  });
-
-const { data: balance, pending: loadingBalance, error: errorBalance, refresh: refreshBalance } =
-  await useMyAsyncData('getBalance',
-    async () => {
-      errorBalance.value = null;
-      if (publicKey.value) {
-        const nos = await nosana.value.solana.getNosBalance(publicKey.value)
-        return nos ? Number(nos.uiAmount) : 0;
-      }
-      return null;
-    }, {
-    watch: [publicKey]
-  });
 
 const multiplier: ComputedRef<number> = computed(() => {
   const days = extraUnstakeDays.value > 0 ? extraUnstakeDays.value + unstakeDays.value : unstakeDays.value;
@@ -503,16 +472,6 @@ const stake = async () => {
     }
   }
 }
-
-const { data: poolInfo, pending: loadingPoolInfo, error: errorPoolInfo, refresh: refreshPoolInfo } =
-  await useMyAsyncData('getPoolInfo',
-    async () => {
-      errorPoolInfo.value = null;
-      return nosana.value.stake.getPoolInfo()
-    }, {
-    watch: [activeStake]
-  });
-
 </script>
 <style lang="scss" scoped>
 .extend {
