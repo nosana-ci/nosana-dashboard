@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "nuxt build",
-    "dev": "nuxt dev --dotenv .env.dev",
+    "dev": "nuxt dev --dotenv .env.prod",
     "generate": "nuxt generate --dotenv .env.prod",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare"
@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "@chenfengyuan/vue-countdown": "^2.1.2",
-    "@nosana/sdk": "file:../typescript",
+    "@nosana/sdk": "file:../sdk",
     "@solana/wallet-adapter-wallets": "^0.19.25",
     "bn.js": "^5.2.1",
     "solana-wallets-vue": "^0.6.0",
