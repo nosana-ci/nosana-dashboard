@@ -22,9 +22,7 @@
       <div class="column is-12 is-6-widescreen">
         <StakingTestgrid />
         <div class="box has-background-white-ter">
-          <div class="box">
-            test
-          </div>
+          <StakingStats />
         </div>
       </div>
     </div>
