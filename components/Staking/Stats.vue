@@ -36,7 +36,7 @@
         <div class="box">
           <label class="label mb-1">% total supply staked</label>
           <div class="is-size-1 has-text-black">
-            <CustomCountUp :end-val="38">
+            <CustomCountUp :end-val="38" :decimal-places="2">
               <template #suffix>
                 <span>%</span>
               </template>
@@ -60,23 +60,35 @@
           <div class="columns">
             <div class="column is-4">
               <label class="label">Staked Tokens Trend</label>
-              <div class="is-size-2 has-text-black">
-                <CustomCountUp :end-val="100">
-                </CustomCountUp>
+              <div class="is-size-2 has-text-black is-flex">
+                <CustomCountUp :end-val="50.12" :decimal-places="2">
+                  <template #suffix>
+                    <span>%</span>
+                  </template>
+                </CustomCountUp> 
+                <img class="ml-2" width="15" src="@/assets/img/icons/red-arrow.svg">
               </div>
             </div>
             <div class="column is-4">
               <label class="label">Trading Volume Trend</label>
-              <div class="is-size-2 has-text-black">
-                <CustomCountUp :end-val="100">
+              <div class="is-size-2 has-text-black is-flex">
+                <CustomCountUp :end-val="33.33" :decimal-places="2">
+                  <template #suffix>
+                    <span>%</span>
+                  </template>
                 </CustomCountUp>
+                <img class="ml-2" width="15" src="@/assets/img/icons/green-arrow.svg">
               </div>
             </div>
             <div class="column is-4">
               <label class="label">Page Views Trend</label>
-              <div class="is-size-2 has-text-black">
-                <CustomCountUp :end-val="100">
+              <div class="is-size-2 has-text-black is-flex">
+                <CustomCountUp :end-val="9.12" :decimal-places="2">
+                  <template #suffix>
+                    <span>%</span>
+                  </template>
                 </CustomCountUp>
+                <img class="ml-2" width="15" src="@/assets/img/icons/green-arrow.svg">
               </div>
             </div>
           </div>
@@ -99,21 +111,60 @@
               <label class="label">Reward rate</label>
               <div class="is-size-2 has-text-black">
                 <CustomCountUp :end-val="100">
+                  <template #suffix>
+                    <span>%</span>
+                  </template>
                 </CustomCountUp>
+                <span class="label is-size-7 is-flex" style="margin-top: -5px;">
+                  <CustomCountUp :end-val="0.42" :decimal-places="2">
+                    <template #prefix>
+                      <span>+</span>
+                    </template>
+                    <template #suffix>
+                      <span>%</span>
+                    </template>
+                  </CustomCountUp>
+                  <img class="ml-1" src="@/assets/img/icons/green-arrow.svg">
+                </span>
               </div>
             </div>
             <div class="column is-4">
               <label class="label">Real Reward rate</label>
               <div class="is-size-2 has-text-black">
                 <CustomCountUp :end-val="100">
+                  <template #suffix>
+                    <span>%</span>
+                  </template>
                 </CustomCountUp>
+                <span class="label is-size-7 is-flex" style="margin-top: -5px;">
+                  <CustomCountUp :end-val="0.42" :decimal-places="2">
+                    <template #prefix>
+                      <span>+</span>
+                    </template>
+                    <template #suffix>
+                      <span>%</span>
+                    </template>
+                  </CustomCountUp>
+                  <img class="ml-1" src="@/assets/img/icons/green-arrow.svg">
+                </span>
               </div>
             </div>
             <div class="column is-4">
               <label class="label">Rewards Per Year</label>
               <div class="is-size-2 has-text-black">
                 <CustomCountUp :end-val="100">
+                  <template #prefix>
+                    <span>$</span>
+                  </template>
                 </CustomCountUp>
+                <span class="label is-size-7 is-flex" style="margin-top: -5px;">
+                  <CustomCountUp :end-val="-0.42" :decimal-places="2">
+                    <template #suffix>
+                      <span>%</span>
+                    </template>
+                  </CustomCountUp>
+                  <img class="ml-1" src="@/assets/img/icons/red-arrow.svg">
+                </span>
               </div>
             </div>
           </div>
@@ -136,21 +187,63 @@
               <label class="label">Price</label>
               <div class="is-size-2 has-text-black">
                 <CustomCountUp :end-val="100">
+                  <template #prefix>
+                    <span>$</span>
+                  </template>
                 </CustomCountUp>
+                <span class="label is-size-7 is-flex" style="margin-top: -5px;">
+                  <CustomCountUp :end-val="0.42" :decimal-places="2">
+                    <template #prefix>
+                      <span>+</span>
+                    </template>
+                    <template #suffix>
+                      <span>%</span>
+                    </template>
+                  </CustomCountUp>
+                  <img class="ml-1" src="@/assets/img/icons/green-arrow.svg">
+                </span>
               </div>
             </div>
             <div class="column is-4">
               <label class="label">Market Cap</label>
               <div class="is-size-2 has-text-black">
                 <CustomCountUp :end-val="100">
+                  <template #prefix>
+                    <span>$</span>
+                  </template>
                 </CustomCountUp>
+                <span class="label is-size-7 is-flex" style="margin-top: -5px;">
+                  <CustomCountUp :end-val="0.42" :decimal-places="2">
+                    <template #prefix>
+                      <span>+</span>
+                    </template>
+                    <template #suffix>
+                      <span>%</span>
+                    </template>
+                  </CustomCountUp>
+                  <img class="ml-1" src="@/assets/img/icons/green-arrow.svg">
+                </span>
               </div>
             </div>
             <div class="column is-4">
               <label class="label">Daily Volume</label>
               <div class="is-size-2 has-text-black">
                 <CustomCountUp :end-val="100">
+                  <template #prefix>
+                    <span>$</span>
+                  </template>
                 </CustomCountUp>
+                <span class="label is-size-7 is-flex" style="margin-top: -5px;">
+                  <CustomCountUp :end-val="0.42" :decimal-places="2">
+                    <template #prefix>
+                      <span>+</span>
+                    </template>
+                    <template #suffix>
+                      <span>%</span>
+                    </template>
+                  </CustomCountUp>
+                  <img class="ml-1" src="@/assets/img/icons/green-arrow.svg">
+                </span>
               </div>
             </div>
           </div>
