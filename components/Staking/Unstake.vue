@@ -79,7 +79,7 @@
       <div class="box has-background-light">
         <p>Withdrawable tokens</p>
         <h2 class="title is-2 has-text-success mb-0 mt-1">
-          <CustomCountUp :end-val="withdrawAvailable" :decimal-places="4" :duration="1.5" />
+          <CustomCountUp :end-val="(withdrawAvailable as unknown as number)" :decimal-places="4" :duration="1.5" />
         </h2>
         <p>NOS</p>
       </div>
@@ -97,6 +97,8 @@
 import { useWallet } from "solana-wallets-vue";
 import VueCountdown from '@chenfengyuan/vue-countdown';
 import * as BN from 'bn.js';
+import { useToast } from "vue-toastification";
+const toast = useToast();
 const timestamp = useTimestamp({ interval: 1000 })
 const { publicKey } = useWallet();
 const { unstakeDays, activeStake, refreshStake, refreshBalance } = useStake(publicKey);
@@ -146,8 +148,10 @@ const unstake = async () => {
     const unstake = await nosana.value.stake.unstake();
     await refreshStake();
     console.log('unstake', unstake);
-  } catch (e) {
+    toast.success('Succesfully unstaked NOS');
+  } catch (e: any) {
     console.error('cant unstake', e);
+    toast.error(e.toString());
   }
   loading.value = false;
 }
@@ -159,8 +163,10 @@ const restake = async () => {
     await refreshStake();
     await refreshBalance();
     console.log('restake', restake);
-  } catch (e) {
+    toast.success('Succesfully restaked NOS');
+  } catch (e: any) {
     console.error('cant restake', e);
+    toast.error(e.toString());
   }
   loading.value = false;
 }
@@ -173,8 +179,10 @@ const withdraw = async () => {
     await refreshBalance();
     await refreshVaultBalance();
     console.log('withdraw', withdraw);
-  } catch (e) {
+    toast.success('Succesfully withdrawed NOS');
+  } catch (e: any) {
     console.error('cant withdraw', e);
+    toast.error(e.toString());
   }
   loading.value = false;
 }
@@ -186,8 +194,10 @@ const close = async () => {
     await refreshStake();
     await refreshBalance();
     console.log('close', close);
-  } catch (e) {
+    toast.success('Succesfully claimed & closed staking account');
+  } catch (e: any) {
     console.error('cant close', e);
+    toast.error(e.toString());
   }
   loading.value = false;
 }

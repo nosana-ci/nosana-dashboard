@@ -21,6 +21,8 @@
 <script lang="ts" setup>
 import { useWallet } from "solana-wallets-vue";
 import * as BN from 'bn.js';
+import { useToast } from "vue-toastification";
+const toast = useToast();
 const timestamp = useTimestamp({ interval: 1000 })
 
 const { publicKey } = useWallet();
@@ -55,8 +57,10 @@ const claimRewards = async () => {
     await refreshStake();
     await refreshBalance();
     console.log('claim', claim);
-  } catch (e) {
+    toast.success('Succesfully claimed rewards');
+  } catch (e: any) {
     console.error('cant claim rewards', e);
+    toast.error(e.toString());
   }
   loading.value = false;
 }
@@ -68,8 +72,10 @@ const claimAndRestakeRewards = async () => {
     await refreshStake();
     await refreshBalance();
     console.log('claim & restake', claim);
-  } catch (e) {
+    toast.success('Succesfully restaked NOS');
+  } catch (e: any) {
     console.error('cant cant claim & restake', e);
+    toast.error(e.toString());
   }
   loading.value = false;
 }

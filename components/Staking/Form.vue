@@ -360,7 +360,9 @@
 <script lang="ts" setup>
 import { WalletModalProvider, useWallet } from "solana-wallets-vue";
 import * as BN from 'bn.js';
+import { useToast } from "vue-toastification";
 
+const toast = useToast();
 const { connected, publicKey } = useWallet();
 const { unstakeDays, balance, activeStake, loadingPoolInfo, poolInfo, 
   refreshPoolInfo, errorPoolInfo, refreshStake, refreshBalance, 
@@ -438,9 +440,11 @@ const topup = async () => {
       await refreshStake();
       await refreshBalance();
       showTopupModal.value = false;
+      toast.success('Succesfully topped up stake');
       console.log('topup tx', topup);
-    } catch (e) {
+    } catch (e: any) {
       console.error('cant topup', e);
+      toast.error(e.toString());
     }
     loading.value = false;
   }
@@ -455,8 +459,10 @@ const extend = async () => {
       showExtendModal.value = false;
       extraUnstakeDays.value = 0;
       console.log('extend tx', extend);
-    } catch (e) {
+      toast.success('Succesfully extended unstake period');
+    } catch (e: any) {
       console.error('cant extend', e);
+      toast.error(e.toString());
     }
     loading.value = false;
   }
@@ -468,8 +474,10 @@ const stake = async () => {
     try {
       const stake = await nosana.value.stake.create(publicKey.value, amount.value * 1e6, unstakeDays.value);
       console.log('stake tx', stake);
-    } catch (e) {
+      toast.success('Succesfully staked');
+    } catch (e: any) {
       console.error('cant stake', e);
+      toast.error(e.toString());
     }
   }
 }
