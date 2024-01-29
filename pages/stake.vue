@@ -16,9 +16,7 @@
           <StakingForm />
         </div>
         <div class="box has-background-white-ter">
-          <div class="box">
-            <h2 class="is-size-4">TOP 5 STAKERS</h2>
-          </div>
+          <StakingLeaderboard />
         </div>
       </div>
       <div class="column is-12 is-6-widescreen">

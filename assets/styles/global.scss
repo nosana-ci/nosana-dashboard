@@ -223,3 +223,12 @@
     }
   }
 }
+
+.address {
+  font-family: monospace;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  display: block;
+}
