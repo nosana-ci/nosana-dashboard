@@ -17,6 +17,7 @@
       </button>
     </div>
   </div>
+  <p class="is-size-7">You can either restake your pending rewards to increase your xNOS score and earn even more rewards, or you can claim your pending rewards immediately to your wallet.</p>
 </template>
 <script lang="ts" setup>
 import { useWallet } from "solana-wallets-vue";
