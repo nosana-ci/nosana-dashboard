@@ -12,32 +12,16 @@
       <tbody>
         <tr v-for="stake in leaderboard" style="max-width: 100%;">
           <td class="pl-0 address" style="max-width: 200px;">{{ stake.address }}</td>
-          <td>{{ stake.unstake }}</td>
-          <td>{{ stake.xnos.toFixed().toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",") }}</td>
+          <td>{{ stake.duration / 60 / 60 / 24 }}</td>
+          <td>{{ (stake.xnos / 1e6).toFixed().toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",") }}</td>
         </tr>
       </tbody>
     </table>
   </div>
 </template>
 <script lang="ts" setup>
-const leaderboard: Ref<any> = ref([
-  {
-    'address': 'nosXBVoaCTtYdLvKY6Csb4AC8JCdQKKAaWYtx2ZMoo7',
-    'unstake': 365,
-    'xnos': 5012941
-  },
-  {
-    'address': 'nosXBVoaCTtYdLvKY6Csb4AC8JCdQKKAaWYtx2ZMoo7',
-    'unstake': 365,
-    'xnos': 5012941
-  },
-  {
-    'address': 'nosXBVoaCTtYdLvKY6Csb4AC8JCdQKKAaWYtx2ZMoo7',
-    'unstake': 365,
-    'xnos': 5012941
-  },
-])
-
+const { data: leaderboard, pending: loadingStakeTotals, error: errorStakeTotals, refresh: refreshLeaderboard } =
+  await useAPI('/stake/leaderboard');
 </script>
 <style scoped lang="scss">
 table {

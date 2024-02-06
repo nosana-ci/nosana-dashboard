@@ -13,7 +13,7 @@
           </li>
         </ul>
       </div>
-      <div class="my-2">
+      <div class="my-2" v-if="connected">
         <div v-if="loadingStake">Loading...</div>
         <div v-else-if="errorStake" class="has-text-danger">
           <p>Error fetching stake account.
@@ -359,7 +359,6 @@
 
 <script lang="ts" setup>
 import { WalletModalProvider, useWallet } from "solana-wallets-vue";
-import * as BN from 'bn.js';
 import { useToast } from "vue-toastification";
 
 const toast = useToast();
@@ -390,7 +389,7 @@ const multiplier: ComputedRef<number> = computed(() => {
 const xNOS: ComputedRef<number | null> = computed(() => {
   const formAmount = amount.value ? amount.value : 0;
   const score = activeStake.value ?
-    (formAmount + (activeStake.value.amount.toNumber() / 1e6)) * multiplier.value :
+    (formAmount + (activeStake.value.amount / 1e6)) * multiplier.value :
     formAmount * multiplier.value;
   return Math.max(0, score);
 })
@@ -420,7 +419,7 @@ const expectedRewards: ComputedRef<number | null> = computed(() => {
 })
 
 const stakeEndDate: ComputedRef<any> = computed(() => {
-  return activeStake.value && parseInt(activeStake.value.timeUnstake) > 0 ? BN(activeStake.value.timeUnstake).toNumber() + (unstakeDays.value * 24 * 60 * 60) : null;
+  return activeStake.value && parseInt(activeStake.value.timeUnstake) > 0 ? Number(activeStake.value.timeUnstake) + Number(unstakeDays.value * 24 * 60 * 60) : null;
 });
 
 // Staking methods

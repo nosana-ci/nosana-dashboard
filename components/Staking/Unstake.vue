@@ -96,7 +96,6 @@
 <script lang="ts" setup>
 import { useWallet } from "solana-wallets-vue";
 import VueCountdown from '@chenfengyuan/vue-countdown';
-import * as BN from 'bn.js';
 import { useToast } from "vue-toastification";
 const toast = useToast();
 const timestamp = useTimestamp({ interval: 1000 })
@@ -107,7 +106,7 @@ const loading: Ref<boolean> = ref(false);
 const countdownFinished: Ref<Boolean> = ref(false);
 
 const stakeEndDate: ComputedRef<any> = computed(() => {
-  return activeStake.value && parseInt(activeStake.value.timeUnstake) > 0 ? BN(activeStake.value.timeUnstake).toNumber() + (unstakeDays.value * 24 * 60 * 60) : null;
+  return activeStake.value && parseInt(activeStake.value.timeUnstake) > 0 ? Number(activeStake.value.timeUnstake) + Number(unstakeDays.value * 24 * 60 * 60) : null;
 });
 
 const { data: vaultBalance, pending: loadingVaultBalance, error: errorVaultBalance, refresh: refreshVaultBalance } =

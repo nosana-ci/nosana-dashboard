@@ -5,24 +5,9 @@ const SECONDS_PER_DAY = 24 * 60 * 60;
 
 export function useStake(publicKey: any) {
   const { data: activeStake, pending: loadingStake, error: errorStake, refresh: refreshStake } =
-    useLazyAsyncData('getStake',
-      async () => {
-        errorStake.value = null;
-        if (publicKey.value) {
-          try {
-            const stakeData = await nosana.value.stake.get(publicKey.value);
-            return stakeData;
-          } catch (error: any) {
-            if (!error.message.includes('Account does not exist')) {
-              toast.error(error.message);
-              throw error;
-            }
-          }
-        }
-      }, {
-      watch: [publicKey],
-      server: false
-    });
+    useAPI(`/stake/`,
+      { watch: [publicKey] },
+    );
 
   const unstakeDays: ComputedRef<number> = computed(() => {
     return activeStake.value ? activeStake.value.duration / SECONDS_PER_DAY : 14;
@@ -58,7 +43,7 @@ export function useStake(publicKey: any) {
     watch: [publicKey]
   });
     
-  return { 
+  return {
     activeStake, loadingStake, errorStake, refreshStake,
     poolInfo, loadingPoolInfo, errorPoolInfo, refreshPoolInfo,
     rewardsInfo, loadingRewardsInfo, errorRewardsInfo, refreshRewardsInfo,
