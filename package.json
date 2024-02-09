@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "@chenfengyuan/vue-countdown": "^2.1.2",
-    "@nosana/sdk": "file:../sdk",
+    "@nosana/sdk": "^0.2.38",
     "@solana/wallet-adapter-wallets": "^0.19.25",
     "bn.js": "^5.2.1",
     "solana-wallets-vue": "^0.6.0",
