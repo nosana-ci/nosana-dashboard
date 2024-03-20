@@ -1,5 +1,5 @@
 <template>
-  <div>    
+  <div>
     <div class="columns is-multiline">
       <div class="column is-6">
         <div class="box">
@@ -65,7 +65,7 @@
                   <template #suffix>
                     <span>%</span>
                   </template>
-                </CustomCountUp> 
+                </CustomCountUp>
                 <img class="ml-2" width="15" src="@/assets/img/icons/red-arrow.svg">
               </div>
             </div>
@@ -250,7 +250,7 @@
         </div>
       </div>
     </div>
-</div>
+  </div>
 </template>
 <script setup lang="ts">
 const loading: Ref<Boolean> = ref(false);
@@ -258,6 +258,7 @@ const loading: Ref<Boolean> = ref(false);
 <style scoped lang="scss">
 .select-filter {
   position: relative;
+
   &:after {
     content: url('@/assets/img/icons/arrow-down.svg');
     position: absolute;
@@ -265,8 +266,10 @@ const loading: Ref<Boolean> = ref(false);
     right: 2px;
     display: block;
     width: 10px;
+    pointer-events: none;
     height: 10px;
   }
+
   select {
     appearance: none;
     border: none;

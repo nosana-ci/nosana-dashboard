@@ -66,7 +66,7 @@
           </nuxt-link>
         </li>
         <li>
-          <nuxt-link active-class="is-active" @click="showMenu = false" disabled>
+          <nuxt-link to="/explorer" active-class="is-active" @click="showMenu = false">
             <span class="icon is-small mr-4">
               <svg width="16" height="17" viewBox="0 0 16 17" fill="none">
                 <path

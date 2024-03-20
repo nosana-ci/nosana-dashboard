@@ -21,5 +21,6 @@
 #content {
   min-height: 100vh;
   max-width: 1400px;
+  min-width: 0;
 }
 </style>

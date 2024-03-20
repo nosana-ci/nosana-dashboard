@@ -136,6 +136,10 @@
       box-shadow: 0 2px 0 0 $grey-dark;
     }
   }
+  .table {
+    color: $table-background-color;
+    background-color: $table-color;
+  }
   .light-only {
     display: none;
   }

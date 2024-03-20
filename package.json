@@ -16,15 +16,24 @@
     "bulma": "^0.9.4",
     "nuxt": "^3.9.1",
     "sass": "^1.69.7",
+    "vite-svg-loader": "^5.1.0",
     "vue": "^3.4.6",
     "vue-router": "^4.2.5"
   },
   "dependencies": {
     "@chenfengyuan/vue-countdown": "^2.1.2",
-    "@nosana/sdk": "^0.2.38",
+    "@nosana/sdk": "^0.3.10",
     "@solana/wallet-adapter-wallets": "^0.19.25",
+    "@vueuse/components": "^10.9.0",
+    "@vueuse/integrations": "^10.9.0",
     "bn.js": "^5.2.1",
+    "chart.js": "^4.3.3",
+    "chartjs-adapter-dayjs-4": "^1.0.4",
+    "chartjs-plugin-crosshair": "^2.0.0",
+    "dayjs": "^1.11.10",
+    "idb-keyval": "^6.2.1",
     "solana-wallets-vue": "^0.6.0",
+    "vue-chartjs": "^5.3.0",
     "vue-countup-v3": "^1.4.1",
     "vue-toastification": "^2.0.0-rc.5"
   }

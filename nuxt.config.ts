@@ -1,3 +1,5 @@
+import svgLoader from 'vite-svg-loader';
+
 // https://nuxt.com/docs/api/configuration/nuxt-config
 
 export default defineNuxtConfig({
@@ -32,6 +34,11 @@ export default defineNuxtConfig({
     esbuild: {
       target: "esnext",
     },
+    plugins: [
+      svgLoader({
+        defaultImport: 'url',
+      }),
+    ],
     build: {
       target: "esnext",
     },
