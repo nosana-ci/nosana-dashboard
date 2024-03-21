@@ -22,12 +22,6 @@ export default defineNuxtConfig({
       rpcUrl: process.env.RPC_URL,
       apiBase: process.env.API_BASE,
       network: process.env.NETWORK || 'devnet',
-      jobs_address: process.env.JOBS_ADDRESS,
-      rewards_address: process.env.REWARDS_ADDRESS,
-      staking_address: process.env.STAKING_ADDRESS,
-      pools_address: process.env.POOLS_ADDRESS,
-      pool_address: process.env.POOL_ADDRESS,
-      nos_address: process.env.NOS_ADDRESS
     }
   },
   vite: {
