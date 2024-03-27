@@ -71,7 +71,7 @@ import {
   Legend,
   BarElement,
 } from 'chart.js';
-import testgridMarkets from '@/static/markets.json';
+import testgridMarkets from '@/assets/markets.json';
 
 Chartjs.register(BarController, BarElement, Tooltip, Legend);
 

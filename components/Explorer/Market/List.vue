@@ -87,8 +87,8 @@
 </template>
 
 <script setup lang="ts">
-import { Market } from '@nosana/sdk';
-import testgridMarkets from '@/static/markets.json';
+import { type Market } from '@nosana/sdk';
+import testgridMarkets from '@/assets/markets.json';
 const { network } = useSDK();
 
 const props = defineProps({

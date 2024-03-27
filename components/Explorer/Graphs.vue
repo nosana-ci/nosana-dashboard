@@ -5,7 +5,7 @@
         <div class="box">
           <div class="is-flex is-align-items-center">
             <h2 class="title is-5 mb-0">
-              INFERENCES
+              Inferences
               <span class="has-text-weight-bold ml-2">
                 <count-up v-if="jobs" :end-val="jobData.datasets[0].data.reduce((n, { y }) => n + y, 0)"></count-up>
                 <span v-else-if="loadingJobs">...</span>

@@ -33,7 +33,6 @@ const router = useRouter();
 const address = ref('');
 const { data: jobs } = await useAPI('/api/jobs');
 
-const { nodes } = useNodes();
 const { markets } = useMarkets();
 const items: Ref<Array<any>> = ref([]);
 const activeSearchItem: Ref<number> = ref(0);
@@ -46,21 +45,16 @@ const selectItem = (item: { type: string; value: string }) => {
 
 const searchItems = computed(() => {
   activeSearchItem.value = 0;
-  if (address.value === '' || (!jobs.value && !nodes.value && !markets.value)) {
+  if (address.value === '' || (!jobs.value && !markets.value)) {
     return [];
   }
 
-  // combine jobs & nodes in one list
+  // combine jobs and markets in one list
   items.value = jobs
     .value!.map((a: any) => {
       return { value: a.pubkey.toString(), type: 'job' };
     })
     .concat(
-      nodes.value
-        ? nodes.value!.map((a: Node) => {
-          return { value: a.authority.toString(), type: 'node' };
-        })
-        : [],
       markets.value
         ? markets.value!.map((a: Node) => {
           return { value: a.address.toString(), type: 'market' };

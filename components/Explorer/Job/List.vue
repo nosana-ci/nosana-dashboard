@@ -5,42 +5,42 @@
         {{ title ? title : 'Inferences' }}
       </h2>
     </div>
-    <div v-if="!limit && filteredJobs && filteredJobs.length" class="column has-text-right">
-      <span v-if="filteredJobs && filteredJobs.length > perPage">{{ (page - 1) * perPage + 1 }} -
-        {{ Math.min(page * perPage, filteredJobs.length) }} of</span>
-      {{ filteredJobs.length }} inferences
+    <div v-if="!small && jobs && jobs.length" class="column has-text-right">
+      <span v-if="totalJobs && totalJobs > perPage">{{ (page - 1) * perPage + 1 }} -
+        {{ Math.min(page * perPage, jobs.length) }} of</span>
+      {{ totalJobs }} inferences
     </div>
   </div>
   <div class="is-flex is-flex-wrap-wrap state-filter">
     <div class="mr-2 my-2">
-      <a href="#" class="button is-dark is-outlined" :class="{
+      <a class="button is-dark is-outlined" :class="{
         'is-hovered': state === null,
         'is-small': small,
-      }" @click="state = null">
+      }" @click="changeState(null)">
         <b><span>All</span></b>
       </a>
     </div>
     <div class="mr-2 my-2">
-      <a href="#" class="button is-success is-outlined" :class="{
+      <a  class="button is-success is-outlined" :class="{
         'is-hovered': state === 2,
         'is-small': small,
-      }" @click="state = 2">
+      }" @click="changeState(2)">
         <b><span>Completed</span></b>
       </a>
     </div>
     <div class="mr-2 my-2">
-      <a href="#" class="button is-info is-outlined" :class="{
+      <a class="button is-info is-outlined" :class="{
         'is-hovered': state === 1,
         'is-small': small,
-      }" @click="state = 1">
+      }" @click="changeState(1)">
         <b><span>Running</span></b>
       </a>
     </div>
     <div class="mr-2 my-2">
-      <a href="#" class="button is-warning is-outlined" :class="{
+      <a class="button is-warning is-outlined" :class="{
         'is-hovered': state === 0,
         'is-small': small,
-      }" @click="state = 0">
+      }" @click="changeState(0)">
         <b><span>Queued</span></b>
       </a>
     </div>
@@ -56,13 +56,13 @@
       </tr>
     </thead>
     <tbody>
-      <tr v-if="!filteredJobs">
+      <tr v-if="!jobs">
         <td colspan="5">Loading inferences..</td>
       </tr>
-      <tr v-else-if="!filteredJobs.length">
+      <tr v-else-if="!jobs.length">
         <td colspan="5">No inferences</td>
       </tr>
-      <nuxt-link v-for="job in paginatedJobs" v-else :key="job.pubkey" :to="`/jobs/${job.pubkey}`" custom>
+      <nuxt-link v-for="job in jobs" v-else :key="job.address" :to="`/jobs/${job.address}`" custom>
         <template #default="{ navigate }">
           <tr class="is-clickable remove-greyscale-on-hover" @click="navigate">
             <td>
@@ -93,13 +93,14 @@
       </nuxt-link>
     </tbody>
   </table>
-  <pagination v-if="filteredJobs && filteredJobs.length > perPage" v-model="page" class="pagination is-centered mt-4"
-    :total-page="Math.ceil(filteredJobs.length / perPage)" :max-page="10">
+  <pagination v-if="totalJobs && totalJobs > perPage" v-model="page" class="pagination is-centered mt-4"
+    :total-page="Math.ceil(totalJobs / perPage)" :max-page="6">
   </pagination>
   <progress v-if="loadingJobs" class="progress is-small is-info my-0" max="100"></progress>
 </template>
 
 <script setup lang="ts">
+import type { Job } from '@nosana/sdk';
 import { UseTimeAgo } from '@vueuse/components';
 
 const timestamp = useTimestamp({ interval: 1000 });
@@ -108,12 +109,11 @@ const fmtMSS = (s: number) => {
 };
 const props = defineProps({
   jobs: {
-    type: Array<{
-      pubkey: any;
-      timeStart: number;
-      timeEnd: number;
-      state: number;
-    }>,
+    type: Array<Job & { address: string }>,
+    default: undefined,
+  },
+  totalJobs: {
+    type: Number,
     default: undefined,
   },
   title: {
@@ -124,66 +124,24 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-  limit: {
+  perPage: {
     type: Number,
-    default: null,
+    required: true,
   },
   loadingJobs: {
     type: Boolean,
     default: false,
   },
 });
-const state: Ref<number | null> = ref(null);
-
-const page: Ref<number> = ref(1);
-const perPage: Ref<number> = ref(25);
-
-const jobStateMapping: any = {
-  0: 'QUEUED',
-  1: 'RUNNING',
-  2: 'COMPLETED',
-  3: 'STOPPED',
-};
-
-const filteredJobs = computed(() => {
-  if (!props.jobs || !props.jobs.length) return props.jobs;
-  let filteredJobs =
-    state.value !== null
-      ? props.jobs.filter((j) => {
-        // check if running
-        return (
-          j.state === state.value || j.state === jobStateMapping[state.value]
-        );
-      })
-      : props.jobs;
-  if (props.limit) {
-    filteredJobs = filteredJobs.slice(0, props.limit);
-  }
-  return filteredJobs;
-});
-
-const paginatedJobs = computed(() => {
-  if (!filteredJobs.value || !filteredJobs.value.length)
-    return filteredJobs.value;
-  return filteredJobs.value.slice(
-    (page.value - 1) * perPage.value,
-    page.value * perPage.value,
-  );
-});
+const state: Ref<number | null> = defineModel('state', {default: null});
+const changeState = (newState: number | null) => {
+  page.value = 1;
+  state.value = newState;
+}
+const page: Ref<number>  = defineModel('page', {default: 1})
 </script>
 
 <style lang="scss" scoped>
-@keyframes flash {
-  50% {
-    background-color: $primary;
-  }
-}
-
-.flash {
-  animation: flash 2s ease-out;
-  animation-iteration-count: 1;
-}
-
 .table {
   white-space: nowrap;
 
