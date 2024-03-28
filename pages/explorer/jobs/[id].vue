@@ -168,7 +168,7 @@
             <a @click.prevent="activeTab = 'result'">Result</a>
           </li>
           <li :class="{ 'is-active': activeTab === 'info' }">
-            <a @click.prevent="activeTab = 'info'">JSON Flow</a>
+            <a @click.prevent="activeTab = 'info'">Job Definition</a>
           </li>
           <li
             v-if="artifacts"
