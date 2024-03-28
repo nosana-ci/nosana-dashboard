@@ -21,7 +21,7 @@
       </a>
     </div>
     <div class="mr-2 my-2">
-      <a  class="button is-success is-outlined" :class="{
+      <a class="button is-success is-outlined" :class="{
         'is-hovered': state === 2,
         'is-small': small,
       }" @click="changeState(2)">
@@ -50,8 +50,10 @@
     <thead>
       <tr>
         <th>Address</th>
+        <th v-if="!small" class="is-hidden-touch">Node</th>
         <th>Started</th>
         <th class="is-hidden-mobile">Duration</th>
+        <th v-if="!small" class="is-hidden-touch">Price</th>
         <th>Status</th>
       </tr>
     </thead>
@@ -70,6 +72,14 @@
                 {{ job.address }}
               </div>
             </td>
+            <td v-if="!small" class="is-hidden-touch">
+              <div class="is-family-monospace address">
+                <span v-if="job.state !== 'QUEUED'">
+                  {{ job.node }}
+                </span>
+              </div>
+            </td>
+
             <td>
               <UseTimeAgo v-if="job.timeStart" v-slot="{ timeAgo }" :time="new Date(job.timeStart * 1000)">
                 {{ timeAgo }}
@@ -85,6 +95,21 @@
               </span>
               <span v-else> - </span>
             </td>
+            <td v-if="!small" class="is-hidden-touch">
+              <span v-if="job.timeEnd && job.timeStart">
+                {{
+        (
+          (job.price / 1e6) *
+          (job.timeEnd -
+            job.timeStart)
+        ).toFixed(2)
+      }}
+                NOS</span>
+              <span v-else>
+                {{ job.price / 1e6 }}
+              </span>
+            </td>
+
             <td>
               <ExplorerJobStatus :status="job.state" :image-only="small"></ExplorerJobStatus>
             </td>
@@ -133,12 +158,12 @@ const props = defineProps({
     default: false,
   },
 });
-const state: Ref<number | null> = defineModel('state', {default: null});
+const state: Ref<number | null> = defineModel('state', { default: null });
 const changeState = (newState: number | null) => {
   page.value = 1;
   state.value = newState;
 }
-const page: Ref<number>  = defineModel('page', {default: 1})
+const page: Ref<number> = defineModel('page', { default: 1 })
 </script>
 
 <style lang="scss" scoped>
