@@ -249,6 +249,7 @@
 <script setup lang="ts">
 import { useRoute } from "vue-router";
 import VueJsonPretty from "vue-json-pretty";
+import 'vue-json-pretty/lib/styles.css';
 import { UseTimeAgo } from "@vueuse/components";
 import axios from "axios";
 import { type Ref, ref, watch } from "vue";
