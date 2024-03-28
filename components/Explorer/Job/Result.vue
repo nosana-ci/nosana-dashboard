@@ -117,4 +117,25 @@ defineProps({
 .pre {
   white-space: pre-wrap;
 }
+.row-count {
+  word-break: break-word;
+  max-width: 85%;
+  padding-left: 40px;
+  &:before {
+    counter-increment: line;
+    font-family: $family-monospace;
+    font-weight: normal;
+    content: counter(line);
+    display: inline-block;
+    padding: 0 0.5em;
+    margin-right: 0.5em;
+    color: $grey !important;
+    min-width: 50px;
+    text-align: right;
+    margin-left: -62px;
+  }
+  &.has-text-danger:before {
+    color: $red !important;
+  }
+}
 </style>
