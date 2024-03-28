@@ -169,7 +169,7 @@ const barOptions = computed<ChartOptions<'bar'>>(() => ({
     },
   },
 }));
-
+getMarkets();
 // Fetch markets every 30 seconds
 useIntervalFn(getMarkets, 30000);
 </script>
