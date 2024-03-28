@@ -2,9 +2,9 @@ const { nosana } = useSDK();
 const SECONDS_PER_DAY = 24 * 60 * 60;
 
 export function useStake(publicKey: any) {
-  const getStakeUrl = computed(() => { return publicKey.value ? `/stake/${publicKey.value}` : '' })
+  const getStakeUrl = computed(() => { return publicKey.value ? `/user/stake?userAddress=${publicKey.value}` : '' })
   const { data: activeStake, pending: loadingStake, error: errorStake, refresh: refreshStake } =
-    useAPI(getStakeUrl,
+    useAPI2(getStakeUrl,
       { watch: [getStakeUrl] },
     );
 

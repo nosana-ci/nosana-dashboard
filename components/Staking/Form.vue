@@ -360,6 +360,7 @@
 <script lang="ts" setup>
 import { WalletModalProvider, useWallet } from "solana-wallets-vue";
 import { useToast } from "vue-toastification";
+import { useAPI2 } from '~/composables/useAPI2';
 
 const toast = useToast();
 const { connected, publicKey } = useWallet();
@@ -405,7 +406,7 @@ const APY: ComputedRef<number | null> = computed(() => {
 })
 
 const { data: stakeTotals, pending: loadingStakeTotals, error: errorStakeTotals, refresh: refreshStakeTotals } =
-  await useAPI('/stake/totals');
+  await useAPI2('/stake/totals');
 
 const expectedRewards: ComputedRef<number | null> = computed(() => {
   if (!stakeTotals.value || !poolInfo.value) { return null; }
