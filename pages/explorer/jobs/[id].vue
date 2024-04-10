@@ -207,8 +207,8 @@
             <span v-else>Waiting for results...</span>
           </div>
           <div v-else-if="loading">Loading results..</div>
-          <div v-else-if="!ipfsResult || !ipfsResult.results">No results</div>
-          <div v-else-if="ipfsResult.results[0] === 'nos/secret'">
+          <div v-else-if="!ipfsResult">No results</div>
+          <div v-else-if="ipfsResult.results && ipfsResult.results[0] === 'nos/secret'">
             Results are secret
           </div>
           <ExplorerJobResult
