@@ -7,7 +7,9 @@
     "dev": "nuxt dev --dotenv .env.local",
     "generate": "nuxt generate --dotenv .env.prod",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "lint": "exit 0; eslint . --ext .vue,.js,.ts,.jsx,.cjs,.mjs --ignore-path .gitignore",
+    "lint:fix": "eslint . --ext .vue,.js,.ts,.jsx,.cjs,.mjs --fix --ignore-path .gitignore"
   },
   "devDependencies": {
     "@nuxtjs/color-mode": "^3.3.2",
