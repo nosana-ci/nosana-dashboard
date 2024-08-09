@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div v-if="false">
     <div class="columns">
       <div class="column is-12">
         <div class="box">
@@ -75,7 +75,8 @@ declare module 'chart.js' {
   }
 }
 
-const { data: jobs, pending: loadingJobs } = await useAPI('/api/jobs/stats');
+// const { data: jobs, pending: loadingJobs } = await useAPI('/api/jobs/stats');
+const jobs = ref([]);
 Interaction.modes.interpolate = Interpolate;
 
 Chartjs.register(

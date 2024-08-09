@@ -3,16 +3,16 @@
     <div class="is-flex is-justify-content-space-between mb-5">
       <div>
         <h2 class="title">Explorer</h2>
-        <h3 class="subtitle mb-2 is-capitalized">{{ config.public.network }}</h3>
+        <h3 class="subtitle mb-2 is-capitalized">{{ config.public.network === 'mainnet' ? 'testgrid' : config.public.network }}</h3>
       </div>
       <ClientOnly>
         <wallet-multi-button :dark="$colorMode.value === 'dark'"></wallet-multi-button>
       </ClientOnly>
     </div>
     <ExplorerSearch />
-    <div class="box is-flex is-flex-direction-column">
+    <!-- <div class="box is-flex is-flex-direction-column">
       <h2 class="title is-5">Statistics</h2>
-    </div>
+    </div> -->
     <ExplorerGraphs />
     <div class="columns mt-4 is-multiline">
       <div class="column is-6">

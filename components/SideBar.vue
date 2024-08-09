@@ -1,7 +1,7 @@
 <template>
   <aside class="column has-background-white sidebar has-overflow-scroll" :class="{ 'is-hidden-touch': !showMenu }">
     <div class="mb-6 is-hidden-touch">
-      <nuxt-link to="/">
+      <nuxt-link to="/explorer">
         <logo width="160px" :animated="true" class="light-only" />
         <logo width="160px" :white="true" class="dark-only" :animated="true" />
       </nuxt-link>
@@ -9,7 +9,7 @@
     <div class="menu">
       <ul class="menu-list is-size-5">
         <li>
-          <nuxt-link to="/" active-class="is-active" @click="showMenu = false">
+          <nuxt-link to="/" active-class="is-active" @click="showMenu = false" disabled>
             <span class="icon is-small mr-4">
               <svg width="16" height="17" viewBox="0 0 16 17" fill="none">
                 <path
@@ -107,7 +107,7 @@
   </aside>
   <nav class="navbar is-hidden-desktop is-fixed-top has-shadow">
     <div class="navbar-brand">
-      <nuxt-link to="/" class="navbar-item" @click="showMenu = false">
+      <nuxt-link to="/explorer" class="navbar-item" @click="showMenu = false">
         <logo width="135px" :animated="true" class="light-only" />
         <logo width="135px" :white="true" class="dark-only" :animated="true" />
       </nuxt-link>
