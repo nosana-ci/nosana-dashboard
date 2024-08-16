@@ -1,10 +1,6 @@
 const markets: Ref<Array<any> | undefined> = ref(undefined);
 
-const { nosana, network } = useSDK();
-
-watch(network, () => {
-  markets.value = undefined;
-});
+const { nosana } = useSDK();
 
 const loadingMarkets = ref(false);
 

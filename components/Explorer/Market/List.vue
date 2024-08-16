@@ -15,8 +15,7 @@
     <table class="table is-fullwidth is-striped is-hoverable">
       <thead>
         <tr>
-          <th v-if="network === 'mainnet'">Name</th>
-          <th v-else>Address</th>
+          <th>Name</th>
           <th>NOS per second</th>
           <th>Job timeout</th>
           <th>Nodes in queue</th>
@@ -31,7 +30,7 @@
           v-for="market in filteredMarkets"
           v-else
           :key="market.address.toString()"
-          :to="`/markets/${market.address.toString()}`"
+          :to="`/explorer/markets/${market.address.toString()}`"
           custom
         >
           <template #default="{ navigate }">
@@ -39,17 +38,12 @@
               <td>
                 <span
                   v-if="
-                    network === 'mainnet' &&
-                    testgridMarkets[
-                      market.address.toString() as keyof typeof testgridMarkets
-                    ]
+                    testgridMarkets.find((tgm: any) => tgm.address ===  market.address.toString())
                   "
                   class="py-2"
                 >
                   {{
-                    testgridMarkets[
-                      market.address.toString() as keyof typeof testgridMarkets
-                    ].name
+                    testgridMarkets.find((tgm: any) => tgm.address ===  market.address.toString()).name
                   }}
                 </span>
                 <span v-else class="is-family-monospace py-2 address">
@@ -88,8 +82,8 @@
 
 <script setup lang="ts">
 import { type Market } from '@nosana/sdk';
-import testgridMarkets from '@/assets/markets.json';
-const { network } = useSDK();
+
+const { data: testgridMarkets, pending: loadingTestgridMarkets } = await useAPI('/api/markets', { default: () => [] });
 
 const props = defineProps({
   markets: {
@@ -105,11 +99,7 @@ const filteredMarkets = computed(() => {
 
   const paginatedMarkets: Array<any> = props.markets
     .filter((market) =>
-      network.value === 'mainnet'
-        ? testgridMarkets[
-            market.address.toString() as keyof typeof testgridMarkets
-          ]
-        : true,
+         testgridMarkets.value.find((tgm: any) => tgm.address ===  market.address.toString())
     )
     .slice((page.value - 1) * perPage.value, page.value * perPage.value);
   return paginatedMarkets;

@@ -18,12 +18,14 @@
     "bulma": "^0.9.4",
     "nuxt": "^3.9.1",
     "sass": "^1.69.7",
+    "vite-plugin-node-polyfills": "^0.22.0",
     "vite-svg-loader": "^5.1.0",
     "vue": "^3.4.6",
     "vue-router": "^4.2.5"
   },
   "dependencies": {
     "@chenfengyuan/vue-countdown": "^2.1.2",
+    "@metaplex-foundation/js": "^0.20.1",
     "@nosana/sdk": "^0.3.11",
     "@solana/wallet-adapter-wallets": "^0.19.25",
     "@vueuse/components": "^10.9.0",

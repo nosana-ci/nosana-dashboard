@@ -112,8 +112,12 @@
 .swv-modal-wrapper {
     font-family: inherit !important;
 }
-
-
+.tag.is-outlined {
+  border: 1px solid;
+}
+.is-fullwidth {
+  width: 100%;
+}
 
 .light-mode {
   .dark-only {

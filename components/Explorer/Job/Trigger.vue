@@ -33,6 +33,8 @@ const trigger: ComputedRef<keyof typeof typeMap> = computed(() => {
     jobtrigger = props.ipfs.state['nosana/job-type'];
   } else if (props.ipfs.state && props.ipfs.state['nosana/type']) {
     jobtrigger = props.ipfs.state['nosana/type'];
+  } else if (props.ipfs.meta && props.ipfs.meta.trigger) {
+    jobtrigger = props.ipfs.meta.trigger;
   } else if (props.ipfs.type) {
     jobtrigger = props.ipfs.type;
   }

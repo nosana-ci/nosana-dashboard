@@ -40,6 +40,8 @@ const type = computed(() => {
     case 'Gitlab':
     case 'gitlab-flow':
       return 'docker';
+    case 'container':
+      return 'docker';
     default:
       return jobtype;
   }

@@ -1,11 +1,12 @@
 <template>
   <div class="field has-addons mb-5">
-    <div class="control is-fullwidth dropdown is-active has-icons-right">
+    <div class="control is-fullwidth dropdown is-active has-icons-right" :class="{'is-loading': checkingIfJob}">
       <input v-model="address" autofocus type="text" class="input py-5 px-3" style="
           padding-top: 1.4rem !important;
           padding-bottom: 1.4rem !important;
-        " placeholder="Search for inferences, nodes, markets and accounts" />
-      <span class="icon is-small pt-1 is-right">
+        " placeholder="Search for inferences, nodes, markets and accounts"
+        :disabled="checkingIfJob" />
+      <span class="icon is-small pt-1 is-right" v-if="!checkingIfJob">
         <SearchIcon />
       </span>
       <div v-if="searchItems.length" class="dropdown-menu is-active is-fullwidth" role="menu">
@@ -31,36 +32,39 @@ import SearchIcon from '@/assets/img/icons/search.svg?component';
 
 const router = useRouter();
 const address = ref('');
-const { data: jobs } = await useAPI('/api/jobs');
-
 const { markets } = useMarkets();
 const items: Ref<Array<any>> = ref([]);
 const activeSearchItem: Ref<number> = ref(0);
+const checkingIfJob = ref(false);
 
-const selectItem = (item: { type: string; value: string }) => {
+const selectItem = async (item: { type: string; value: string }) => {
   let s = '';
-  if (item.type !== 'address') s = 's';
-  router.push(`/${item.type}${s}/${item.value}`);
+  if (item.type === 'address') {
+    checkingIfJob.value = true;
+    const { data: job } = await useAPI(`/api/jobs/${item.value}`);
+    checkingIfJob.value = false;
+    if (job.value) {
+      item.type = 'job';
+    }
+  }
+  if (item.type !== 'address') { 
+    s = 's'
+  }
+  router.push(`/explorer/${item.type}${s}/${item.value}`);
 };
 
 const searchItems = computed(() => {
   activeSearchItem.value = 0;
-  if (address.value === '' || (!jobs.value && !markets.value)) {
+  if (address.value === '') {
     return [];
   }
 
   // combine jobs and markets in one list
-  items.value = jobs
-    .value!.map((a: any) => {
-      return { value: a.pubkey.toString(), type: 'job' };
-    })
-    .concat(
-      markets.value
+  items.value = markets.value
         ? markets.value!.map((a: Node) => {
           return { value: a.address.toString(), type: 'market' };
         })
-        : [],
-    );
+        : [];
 
   let matches = 0;
   const results = items.value!.filter((item: any) => {

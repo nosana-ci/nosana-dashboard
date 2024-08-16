@@ -9,11 +9,11 @@
       'is-danger': statusString === 'FAILED' || statusString === 'YAML_ERROR',
     }"
   >
-    <img class="mr-2" :src="`/img/icons/status/${getIcon(statusString)}.svg`" />
+    <img class="mr-2" :src="`/img/icons/status/${getIcon(statusString as string)}.svg`" />
 
     <span v-if="!imageOnly">{{ statusString }}</span>
   </div>
-  <img v-else :src="`/img/icons/status/${getIcon(statusString)}.svg`" />
+  <img v-else :src="`/img/icons/status/${getIcon(statusString as string)}.svg`" />
 </template>
 
 <script setup lang="ts">

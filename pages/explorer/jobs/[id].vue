@@ -1,16 +1,11 @@
 <template>
   <div class="box">
     <div v-if="job">
-      <div
-        class="is-flex is-align-items-center is-justify-content-space-between mb-4"
-      >
+      <div class="is-flex is-align-items-center is-justify-content-space-between mb-4">
         <h3 class="title is-5 address is-family-monospace my-0">
           {{ jobId }}
         </h3>
-        <JobStatus
-          class="ml-2"
-          :status="jobStatus ? jobStatus : job.state"
-        ></JobStatus>
+        <ExplorerJobStatus class="ml-2" :status="jobStatus ? jobStatus : job.state"></ExplorerJobStatus>
       </div>
 
       <table class="table is-fullwidth is-striped">
@@ -18,63 +13,44 @@
           <tr>
             <td>Node</td>
             <td>
-              <span
-                v-if="
-                  job.node.toString() === '11111111111111111111111111111111'
-                "
-                >Unclaimed</span
-              >
-              <nuxt-link
-                v-else
-                class="address is-family-monospace"
-                :to="`/address/${job.node}`"
-                >{{ job.node }}</nuxt-link
-              >
+              <span v-if="job.node.toString() === '11111111111111111111111111111111'
+      ">Unclaimed</span>
+              <nuxt-link v-else class="address is-family-monospace" :to="`/explorer/address/${job.node}`">{{ job.node
+                }}</nuxt-link>
             </td>
           </tr>
           <tr>
             <td>Market</td>
             <td>
-              <nuxt-link
-                :to="`/markets/${job.market}`"
-                class="address is-family-monospace"
-                >{{ job.market }}</nuxt-link
-              >
+              <nuxt-link :to="`/explorer/markets/${job.market}`" class="address is-family-monospace">
+                <span v-if="testgridMarkets && testgridMarkets.find((tgm: any) => tgm.address === job.market)">
+                  {{ testgridMarkets.find((tgm: any) => tgm.address === job.market).name }}
+                </span>
+                <span v-else>{{ job.market }}</span>
+              </nuxt-link>
             </td>
           </tr>
           <tr>
             <td>Project</td>
             <td>
-              <nuxt-link
-                class="address is-family-monospace"
-                :to="`/address/${job.project}`"
-              >
-                <span
-                  v-if="
-                    job.project.toString() ===
-                    'FEEw3nDocYSyrLT4HPjibjYuaNekakWNmasNvEx3nHKi'
-                  "
-                  >Nosana Test Grid</span
-                >
+              <nuxt-link class="address is-family-monospace" :to="`/explorer/address/${job.project}`">
+                <span v-if="job.project.toString() === 'FEEw3nDocYSyrLT4HPjibjYuaNekakWNmasNvEx3nHKi'">
+                  Nosana Test Grid
+                </span>
                 <span v-else>{{ job.project }}</span>
               </nuxt-link>
             </td>
           </tr>
-          <tr
-            v-if="
-              jobStatus === 'COMPLETED' ||
-              job.state === 'COMPLETED' ||
-              job.state === 2
-            "
-          >
+          <tr v-if="jobStatus === 'COMPLETED' ||
+      job.state === 'COMPLETED' ||
+      job.state === 2
+      ">
             <td>Price</td>
             <td>
-              <span
-                >{{
-                  (job.price / 1e6) * (job.timeEnd - job.timeStart)
-                }}
-                NOS</span
-              >
+              <span>{{
+      ((parseInt(job.price, 16) / 1e6) * (job.timeEnd - job.timeStart)).toFixed(6)
+    }}
+                NOS</span>
             </td>
           </tr>
           <tr>
@@ -82,15 +58,12 @@
             <td>
               <span v-if="job.timeStart">
                 {{
-                  useDateFormat(
-                    new Date(job.timeStart * 1000),
-                    "YYYY-MM-DD HH:mm:ss"
-                  ).value
-                }}
-                <UseTimeAgo
-                  v-slot="{ timeAgo }"
-                  :time="new Date(job.timeStart * 1000)"
-                >
+      useDateFormat(
+        new Date(job.timeStart * 1000),
+        "YYYY-MM-DD HH:mm:ss"
+      ).value
+    }}
+                <UseTimeAgo v-slot="{ timeAgo }" :time="new Date(job.timeStart * 1000)">
                   ({{ timeAgo }})
                 </UseTimeAgo>
               </span>
@@ -112,48 +85,31 @@
           <tr>
             <td>Type</td>
             <td>
-              <ExplorerJobType
-                v-if="ipfsJob"
-                :ipfs="ipfsJob"
-                :text="true"
-                class="ml-1"
-              />
+              <ExplorerJobType v-if="ipfsJob" :ipfs="ipfsJob" :text="true" class="ml-1" />
             </td>
           </tr>
           <tr>
             <td>Trigger</td>
             <td>
-              <ExplorerJobTrigger
-                v-if="ipfsJob"
-                :ipfs="ipfsJob"
-                :text="true"
-                class="ml-1"
-              />
+              <ExplorerJobTrigger v-if="ipfsJob" :ipfs="ipfsJob" :text="true" class="ml-1" />
             </td>
           </tr>
-          <tr>
+          <tr v-if="ipfsJob &&
+      ipfsJob.state &&
+      ipfsJob.state['nosana/job-type']">
             <td>Source</td>
-            <td
-              v-if="
-                ipfsJob &&
-                ipfsJob.state &&
-                ipfsJob.state['nosana/job-type'] &&
-                (ipfsJob.state['nosana/job-type'] === 'Github' ||
-                  ipfsJob.state['nosana/job-type'] === 'github-flow')
-              "
-            >
-              <a
-                v-if="
-                  ipfsJob.state['input/repo'] &&
-                  ipfsJob.state['input/commit-sha']
-                "
-                :href="
-                  ipfsJob.state['input/repo'].replace('.git', '') +
-                  '/commit/' +
-                  ipfsJob.state['input/commit-sha']
-                "
-                target="_blank"
-              >
+            <td v-if="ipfsJob &&
+      ipfsJob.state &&
+      ipfsJob.state['nosana/job-type'] &&
+      (ipfsJob.state['nosana/job-type'] === 'Github' ||
+        ipfsJob.state['nosana/job-type'] === 'github-flow')
+      ">
+              <a v-if="ipfsJob.state['input/repo'] &&
+      ipfsJob.state['input/commit-sha']
+      " :href="ipfsJob.state['input/repo'].replace('.git', '') +
+      '/commit/' +
+      ipfsJob.state['input/commit-sha']
+      " target="_blank">
                 {{ ipfsJob.state["input/commit-sha"] }}
               </a>
             </td>
@@ -170,36 +126,21 @@
           <li :class="{ 'is-active': activeTab === 'info' }">
             <a @click.prevent="activeTab = 'info'">Job Definition</a>
           </li>
-          <li
-            v-if="artifacts"
-            :class="{ 'is-active': activeTab === 'artifacts' }"
-          >
+          <li v-if="artifacts" :class="{ 'is-active': activeTab === 'artifacts' }">
             <a @click.prevent="activeTab = 'artifacts'">Artifacts</a>
           </li>
         </ul>
       </div>
       <div>
-        <div
-          v-show="activeTab === 'info'"
-          class="p-1 py-4 has-background-white-bis"
-        >
+        <div v-show="activeTab === 'info'" class="p-1 py-4 has-background-white-bis">
           <VueJsonPretty :data="ipfsJob" show-icon show-line-number />
         </div>
-        <div
-          v-show="activeTab === 'result'"
-          class="p-1 py-4 has-background-white-bis"
-        >
-          <div
-            v-if="job.state === 'RUNNING' || job.state === 1"
-            class="is-family-monospace has-background-black has-text-white box"
-          >
+        <div v-show="activeTab === 'result'" class="p-1 py-4 has-background-white-bis">
+          <div v-if="job.state === 'RUNNING' || job.state === 1"
+            class="is-family-monospace has-background-black has-text-white box">
             <div v-if="logs && logs.length > 0" style="counter-reset: line">
               <div v-for="step in logs" :key="step.id">
-                <div
-                  v-for="(log, ik) in step.logs.split('\n')"
-                  :key="ik"
-                  class="row-count"
-                >
+                <div v-for="(log, ik) in step.logs.split('\n')" :key="ik" class="row-count">
                   <span class="pre" v-html="log.slice(0, 10000)" />
                 </div>
               </div>
@@ -211,25 +152,13 @@
           <div v-else-if="ipfsResult.results && ipfsResult.results[0] === 'nos/secret'">
             Results are secret
           </div>
-          <ExplorerJobResult
-            v-else-if="
-              (ipfsResult && job.state === 'COMPLETED') || job.state === 2
-            "
-            :ipfs-result="ipfsResult"
-            :ipfs-job="ipfsJob"
-          />
+          <ExplorerJobResult v-else-if="(ipfsResult && job.state === 'COMPLETED') || job.state === 2
+      " :ipfs-result="ipfsResult" :ipfs-job="ipfsJob" />
         </div>
-        <div
-          v-show="activeTab === 'artifacts'"
-          class="p-1 py-4 has-background-white-bis"
-        >
+        <div v-show="activeTab === 'artifacts'" class="p-1 py-4 has-background-white-bis">
           <div>
             <p class="block">
-              <a
-                v-if="ipfsGateway && artifacts"
-                class="button"
-                :href="`${ipfsGateway}${artifacts.trim()}`"
-              >
+              <a v-if="ipfsGateway && artifacts" class="button" :href="`${ipfsGateway}${artifacts.trim()}`">
                 Download artifacts
               </a>
             </p>
@@ -241,7 +170,7 @@
         </div>
       </div>
     </div>
-    <div v-else-if="loading">Loading inference..</div>
+    <div v-else-if="loadingJob">Loading inference..</div>
     <div v-else>Inference not found</div>
   </div>
 </template>
@@ -251,11 +180,10 @@ import { useRoute } from "vue-router";
 import VueJsonPretty from "vue-json-pretty";
 import 'vue-json-pretty/lib/styles.css';
 import { UseTimeAgo } from "@vueuse/components";
-import axios from "axios";
 import { type Ref, ref, watch } from "vue";
 import AnsiUp from 'ansi_up';
 
-const { nosana, network } = useSDK();
+const { nosana } = useSDK();
 const ansi = new AnsiUp();
 
 const ipfsJob: Ref<{ [key: string]: any }> = ref({});
@@ -275,7 +203,9 @@ const fmtMSS = (s: number) => {
   return (s - (s %= 60)) / 60 + (s > 9 ? "m:" : "m:0") + s + "s";
 };
 
-const { data: job } = await useAPI(`/api/jobs/${jobId.value}`);
+const { data: job, pending: loadingJob } = await useAPI(`/api/jobs/${jobId.value}`);
+const { data: testgridMarkets, pending: loadingTestgridMarkets } = await useAPI('/api/markets');
+
 
 watch(job, async () => {
   try {
@@ -294,7 +224,7 @@ watch(job, async () => {
       if (
         job.value!.ipfsResult &&
         job.value!.ipfsResult !==
-          "QmNLei78zWmzUdbeRB3CiUfAizWUrbeeZh5K1rhAQKCh51"
+        "QmNLei78zWmzUdbeRB3CiUfAizWUrbeeZh5K1rhAQKCh51"
       ) {
         const resultResponse = await getIpfs(job.value!.ipfsResult);
         ipfsResult.value = resultResponse;

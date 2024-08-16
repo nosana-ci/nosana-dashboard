@@ -1,4 +1,5 @@
 import svgLoader from 'vite-svg-loader';
+import { nodePolyfills } from 'vite-plugin-node-polyfills';
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 
@@ -32,7 +33,27 @@ export default defineNuxtConfig({
       svgLoader({
         defaultImport: 'url',
       }),
+      nodePolyfills({
+        // To exclude specific polyfills, add them to this list.
+        exclude: [
+          'fs', // Excludes the polyfill for `fs` and `node:fs`.
+        ],
+        // Whether to polyfill specific globals.
+        globals: {
+          Buffer: true, // can also be 'build', 'dev', or false
+          global: true,
+          process: true,
+        },
+        // Whether to polyfill `node:` protocol imports.
+        protocolImports: true,
+      }),
     ],
+    resolve: {
+      alias: {
+        stream: 'rollup-plugin-node-polyfills/polyfills/stream',
+        events: 'rollup-plugin-node-polyfills/polyfills/events',
+      },
+    },
     build: {
       target: "esnext",
     },
@@ -40,6 +61,9 @@ export default defineNuxtConfig({
       include: ["@solana/web3.js", "buffer"],
       esbuildOptions: {
         target: "esnext",
+        define: {
+          global: 'globalThis',
+        },
       },
     },
     define: {

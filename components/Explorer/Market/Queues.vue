@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div style="height: 350px">
+    <div style="height: 375px">
       <Bar :options="barOptions" :data="queueData" style="width: 100%" />
     </div>
     <table class="table is-fullwidth is-striped">
@@ -12,11 +12,9 @@
               {{
         markets
           .filter((m) =>
-            network === 'mainnet'
-              ? testgridMarkets[
-              m.address.toString() as keyof typeof testgridMarkets
-              ]
-              : true,
+            testgridMarkets.find((tgm: any) =>
+              tgm.address === m.address.toString()
+            ),
           )
           .reduce(
             (a, b) => a + (b.queueType === 0 ? b.queue.length : 0),
@@ -25,7 +23,7 @@
       }}
               inferences
             </span>
-            <span v-else-if="loadingMarkets">...</span>
+            <span v-else-if="loadingMarkets || loadingTestgridMarkets">...</span>
             <span v-else>-</span>
           </td>
         </tr>
@@ -36,11 +34,9 @@
               {{
         markets
           .filter((m) =>
-            network === 'mainnet'
-              ? testgridMarkets[
-              m.address.toString() as keyof typeof testgridMarkets
-              ]
-              : true,
+            testgridMarkets.find((tgm: any) =>
+              tgm.address === m.address.toString()
+            )
           )
           .reduce(
             (a, b) => a + (b.queueType === 1 ? b.queue.length : 0),
@@ -49,13 +45,25 @@
       }}
               nodes
             </span>
-            <span v-else-if="loadingMarkets">...</span>
+            <span v-else-if="loadingMarkets || loadingTestgridMarkets">...</span>
+            <span v-else>-</span>
+          </td>
+        </tr>
+        <tr>
+          <td><b>Testgrid Jobs Running</b></td>
+          <td>
+            <span v-if="jobs">
+              {{ jobs.totalJobs }}
+              jobs
+            </span>
+            <span v-else-if="loadingJobs">...</span>
             <span v-else>-</span>
           </td>
         </tr>
       </tbody>
     </table>
-    <div v-if="!loadingMarkets && !markets">Could not load markets</div>
+    <div v-if="!loadingMarkets && !markets">Could not load markets from blockchain</div>
+    <div v-if="!loadingTestgridMarkets && (!testgridMarkets || !testgridMarkets.length)">Could not load markets from testgrid</div>
   </div>
 </template>
 
@@ -71,30 +79,31 @@ import {
   Legend,
   BarElement,
 } from 'chart.js';
-import testgridMarkets from '@/assets/markets.json';
 
 Chartjs.register(BarController, BarElement, Tooltip, Legend);
 
 const { markets, loadingMarkets, getMarkets } = useMarkets();
 
+const { data: testgridMarkets, pending: loadingTestgridMarkets } = await useAPI('/api/markets', { default: () => [] });
+const { data: jobs, pending: loadingJobs } = await useAPI('api/jobs?limit=1&offset=0&state=RUNNING');
+
+
 // @ts-ignore
 const queueData = computed<ChartData<'bar'>>(() => {
-  const data: Array<any> = markets.value
+  const data: Array<any> = markets.value && testgridMarkets.value
     ? markets.value
       .filter((m) => m.queue.length)
       .filter((m) =>
-        'mainnet' === 'mainnet'
-          ? testgridMarkets[
-          m.address.toString() as keyof typeof testgridMarkets
-          ]
-          : true,
+        testgridMarkets.value.find((tgm: any) =>
+          tgm.address === m.address.toString()
+        ),
       )
     : [];
   return {
     labels: data.map(
       (m) =>
-        testgridMarkets[m.address.toString() as keyof typeof testgridMarkets]
-          .name,
+        testgridMarkets.value.find((tgm: any) => tgm.address === m.address.toString())
+          .slug,
     ),
     datasets: [
       {
@@ -102,14 +111,14 @@ const queueData = computed<ChartData<'bar'>>(() => {
         borderWidth: 3,
         borderColor: '#2feb2b',
         backgroundColor: '#2feb2b45',
-        data: data.map((m) => (m.queueType === 1 ? m.queue.length : 0)),
+        data: data.map((m: any) => (m.queueType === 1 ? m.queue.length : 0)),
       },
       {
         label: 'Jobs',
         borderWidth: 3,
         borderColor: '#f9d54b',
         backgroundColor: '#f9d54b45',
-        data: data.map((m) => (m.queueType === 0 ? -m.queue.length : 0)),
+        data: data.map((m: { queueType: number; queue: string | any[]; }) => (m.queueType === 0 ? -m.queue.length : 0)),
       },
     ],
   };
