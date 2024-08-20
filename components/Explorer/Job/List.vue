@@ -44,6 +44,14 @@
         <b><span>Queued</span></b>
       </a>
     </div>
+    <div class="mr-2 my-2">
+      <a class="button is-dark is-outlined" :class="{
+        'is-hovered': state === 3,
+        'is-small': small,
+      }" @click="changeState(3)">
+        <b><span>Stopped</span></b>
+      </a>
+    </div>
   </div>
 
   <table class="table is-fullwidth is-striped is-hoverable mb-0" :class="{ 'is-small': small }">

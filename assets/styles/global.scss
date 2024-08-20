@@ -5,19 +5,24 @@
   &.is-wide {
     min-width: 140px;
   }
+
   &.is-wider {
     min-width: 170px;
   }
+
   &.is-widest {
     min-width: 220px;
   }
+
   &.is-small {
     padding-top: 3px;
     padding-bottom: 3px;
   }
 }
+
 .menu {
   font-family: $title-family;
+
   .menu-list a {
     display: flex;
     align-items: center;
@@ -36,6 +41,7 @@
 .has-radius-small {
   border-radius: $radius-small;
 }
+
 .has-radius-large {
   border-radius: $radius-large;
 }
@@ -44,14 +50,17 @@
   width: 650px;
   max-width: 100%;
 }
+
 .has-limited-width-small {
   width: 560px;
   max-width: 100%;
 }
+
 .has-limited-width-smaller {
   width: 460px;
   max-width: 100%;
 }
+
 .has-limited-width-smallest {
   width: 320px;
   max-width: 100%;
@@ -61,19 +70,22 @@
   overflow-y: auto;
   height: 100%;
 }
+
 .is-disabled {
   pointer-events: none;
   cursor: not-allowed;
-} 
+}
 
 ::-webkit-scrollbar-track-piece {
   border-radius: 6px;
-  background: rgba(0,0,0,.1);
+  background: rgba(0, 0, 0, .1);
 }
+
 ::-webkit-scrollbar-thumb {
   border-radius: 6px;
   background: $secondary;
 }
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -92,6 +104,7 @@
   --swv-button-outline-color: black !important;
   --swv-button-hover-background-color: #353535 !important;
 }
+
 .dark-mode {
   --swv-button-background-color: white !important;
   --swv-button-outline-color: white !important;
@@ -110,11 +123,13 @@
 }
 
 .swv-modal-wrapper {
-    font-family: inherit !important;
+  font-family: inherit !important;
 }
+
 .tag.is-outlined {
   border: 1px solid;
 }
+
 .is-fullwidth {
   width: 100%;
 }
@@ -122,70 +137,121 @@
 .light-mode {
   .dark-only {
     display: none;
-   }
+  }
 }
+
 .has-background-body {
   background-color: $body-background-color !important;
 }
+
 .dark-mode {
   body {
     background-color: $body-background-color-dark;
   }
+
   .has-background-body {
     background-color: $body-background-color-dark !important;
   }
+
   .navbar {
     background: $black;
+
     &.has-shadow {
       box-shadow: 0 2px 0 0 $grey-dark;
+    }
+  }
+  .pagination-previous, .pagination-next, .pagination-link {
+    color: $white;
+    &.is-current {
+      color: $text;
     }
   }
   .table {
     color: $table-background-color;
     background-color: $table-color;
+
+    thead th {
+      color: $table-background-color;
+    }
+    tbody {
+      tr:not(.is-selected) {
+        &:hover {
+          background-color: darken($secondary, 30%);
+        }
+      }
+    }
+    &.is-striped {
+      tbody {
+        tr:not(.is-selected) {
+          &:hover {
+            background-color: darken($secondary, 30%);
+          }
+          &:nth-child(even) {
+            background-color: $grey-dark;
+            &:hover {
+              background-color: darken($secondary, 30%);
+            }
+          }
+        }
+      }
+    }
   }
+
   .light-only {
     display: none;
   }
+
   .has-text-white {
     color: $black !important;
   }
+
   .has-text-black {
     color: $white !important;
   }
+
   a.has-text-black:hover {
     color: $grey-light !important;
   }
+
   .has-background-white {
     background-color: $black !important;
   }
+
   .sidebar {
     background-color: $black-bis !important;
   }
+
   .has-background-black {
     background-color: $white !important;
   }
+
   .has-background-white-ter {
     background-color: $black-ter !important;
   }
+
   .has-background-white-bis {
     background-color: $black-bis !important;
   }
+
   .title {
     color: white;
   }
+
   .box {
     background-color: $scheme-invert;
     color: white;
   }
-  .button{ 
+
+  .button {
     &.is-primary {
       background-color: $primary-invert;
       color: $primary;
+
       &.is-outlined {
         background-color: transparent;
         border-color: $primary-invert;
         color: $primary-invert;
+
         &:hover {
           background-color: $primary-invert;
           border-color: $primary-invert;
@@ -194,20 +260,25 @@
       }
     }
   }
+
   .input {
     background-color: $black-ter;
     border-color: $black-ter;
     color: white;
+
     &::placeholder {
       color: $grey;
-    }    
+    }
   }
+
   .menu-list {
     a {
       color: $grey-lighter;
+
       &:hover {
         background-color: $black-ter;
       }
+
       &.is-active {
         background-color: white;
         color: black;
@@ -225,9 +296,11 @@
       border-bottom-color: $primary-invert;
       color: $primary-invert;
     }
+
     a {
       border-bottom-color: $grey-dark;
       color: $grey-dark;
+
       &:hover {
         border-bottom-color: $grey;
         color: $grey;

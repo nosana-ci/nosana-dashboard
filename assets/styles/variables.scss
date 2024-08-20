@@ -62,4 +62,7 @@ $input-focus-box-shadow-color: rgba($secondary, 0.25);
 $label-weight: 400;
 $label-color: $grey;
 
+$table-row-hover-background-color: lighten($secondary, 40%);
+$table-striped-row-even-hover-background-color: lighten($secondary, 40%);
+
 @import 'bulma/sass/utilities/mixins';
