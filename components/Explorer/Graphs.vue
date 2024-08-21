@@ -1,5 +1,5 @@
 <template>
-  <div v-if="false">
+  <div>
     <div class="columns">
       <div class="column is-12">
         <div class="box">
@@ -75,8 +75,15 @@ declare module 'chart.js' {
   }
 }
 
-// const { data: jobs, pending: loadingJobs } = await useAPI('/api/jobs/stats');
-const jobs = ref([]);
+const time: Ref<number | string> = ref(365 / 12 * 24 * 3600); // 1 month
+
+const statsUrl = computed(() => { return `/api/jobs/stats?period=${time.value}` })
+watch(statsUrl, () => {
+  console.log('resetting stats..')
+  jobs.value = null
+})
+
+const { data: jobs, pending: loadingJobs } = await useAPI(statsUrl, { watch: [statsUrl] });
 Interaction.modes.interpolate = Interpolate;
 
 Chartjs.register(
@@ -93,73 +100,36 @@ Chartjs.register(
   CrosshairPlugin,
 );
 
-const time: Ref<number | string> = ref(365 / 12 * 24 * 3600); // 1 month
 
 const tooltipFormat = ref('[Week] W MMM YYYY');
 const unit: Ref<false | "millisecond" | "second" | "minute" | "hour" | "day" | "week" | "month" | "quarter" | "year" | undefined> = ref('day');
 
 const jobData = computed<ChartData<'line'>>(() => {
-  const data: Array<any> = jobs.value && jobs.value.timeStamps ? [...jobs.value.timeStamps] : [];
-  const updatedData: Array<any> = [];
-  const tempDateCollection: Array<any> = [];
-  data
-    .sort((a, b) => b - a)
-    .forEach((j) => {
-      const timestamp = j * 1000;
-      const timeValue = parseInt(time.value as string);
-      if (timestamp && (!timeValue || timestamp > Date.now() - timeValue * 1000)) {
-        const formatedDate = dayjs(timestamp).format('MMM/YYYY');
-        const currentDate = new Date(timestamp);
-        const startDate = new Date(currentDate.getFullYear(), 0, 1);
-        const days = Math.floor(
-          (currentDate.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000),
-        );
+  const data: Array<any> = jobs.value && jobs.value.data ? [...jobs.value.data] : [];
+  const timeValue = parseInt(time.value as string);
 
-        const weekNumber = Math.ceil(days / 7);
-        let granularity: string | null;
-        if (timeValue > 365 / 3 * 24 * 3600) {
-          // Bigger than 4 month, group by week
-          granularity = weekNumber + dayjs(timestamp).format('YYYY');
-          tooltipFormat.value = '[Week] W - MMMM YYYY';
-          unit.value = 'month';
-        } else if (timeValue > 5 * 24 * 3600) {
-          // Bigger than 5 days, group by day
-          granularity = dayjs(timestamp).format('DD/MMM/YYYY');
-          tooltipFormat.value = 'DD MMMM YYYY';
-          unit.value = 'day';
-        } else if (timeValue > 12 * 3600) {
-          // Bigger than 12 hours, group by hour
-          granularity = dayjs(timestamp).format('HH DD/MMM/YYYY');
-          tooltipFormat.value = 'HH[h] - DD MMMM YYYY';
-          unit.value = 'hour';
-        } else if (timeValue > 0) {
-          // under 12 hours
-          granularity = dayjs(timestamp).format('HH:mm DD/MMM/YYYY');
-          tooltipFormat.value = 'HH:mm - DD MMMM YYYY';
-          unit.value = 'minute';
-        }
-        else {
-          // All: Group by month
-          granularity = dayjs(timestamp).format('MMM/YYYY');
-          tooltipFormat.value = 'MMMM YYYY';
-          unit.value = 'month';
-        }
-        if (granularity && tempDateCollection.includes(granularity)) {
-          const index = tempDateCollection.indexOf(granularity);
-          const element = updatedData[index];
-          updatedData[index] = {
-            x: updatedData[index].x,
-            y: element.y + 1,
-          };
-        } else {
-          tempDateCollection.push(granularity);
-          updatedData.push({
-            x: timestamp,
-            y: 1,
-          });
-        }
-      }
-    });
+  if (timeValue > 365 / 3 * 24 * 3600) {
+    // Bigger than 4 month, group by week
+    tooltipFormat.value = '[Week] W - MMMM YYYY';
+    unit.value = 'month';
+  } else if (timeValue > 5 * 24 * 3600) {
+    // Bigger than 5 days, group by day
+    tooltipFormat.value = 'DD MMMM YYYY';
+    unit.value = 'day';
+  } else if (timeValue > 12 * 3600) {
+    // Bigger than 12 hours, group by hour
+    tooltipFormat.value = 'HH[h] - DD MMMM YYYY';
+    unit.value = 'hour';
+  } else if (timeValue > 0) {
+    // under 12 hours
+    tooltipFormat.value = 'HH:mm - DD MMMM YYYY';
+    unit.value = 'minute';
+  }
+  else {
+    // All: Group by month
+    tooltipFormat.value = 'MMMM YYYY';
+    unit.value = 'month';
+  }
   return {
     datasets: [
       {
@@ -169,7 +139,7 @@ const jobData = computed<ChartData<'line'>>(() => {
         borderColor: '#2feb2b',
         showLine: true,
         backgroundColor: '#2feb2b45',
-        data: updatedData,
+        data: data,
         interpolate: true,
         // pointRadius: 2,
       },
