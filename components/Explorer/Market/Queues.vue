@@ -21,7 +21,7 @@
             0,
           )
       }}
-              inferences
+              jobs
             </span>
             <span v-else-if="loadingMarkets || loadingTestgridMarkets">...</span>
             <span v-else>-</span>

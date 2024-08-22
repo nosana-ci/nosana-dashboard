@@ -2,13 +2,13 @@
   <div class="columns is-mobile is-vcentered">
     <div class="column">
       <h2 class="title" :class="{ 'is-5': small, 'is-4': !small }">
-        {{ title ? title : 'Inferences' }}
+        {{ title ? title : 'Jobs' }}
       </h2>
     </div>
     <div v-if="!small && jobs && jobs.length" class="column has-text-right">
       <span v-if="totalJobs && totalJobs > perPage">{{ (page - 1) * perPage + 1 }} -
         {{ Math.min(page * perPage, jobs.length) }} of</span>
-      {{ totalJobs }} inferences
+      {{ totalJobs }} jobs
     </div>
   </div>
   <div class="is-flex is-flex-wrap-wrap state-filter">
@@ -67,10 +67,10 @@
     </thead>
     <tbody>
       <tr v-if="!jobs">
-        <td colspan="5">Loading inferences..</td>
+        <td colspan="5">Loading jobs..</td>
       </tr>
       <tr v-else-if="!jobs.length">
-        <td colspan="5">No inferences</td>
+        <td colspan="5">No jobs</td>
       </tr>
       <nuxt-link v-for="job in jobs" v-else :key="job.address" :to="`/explorer/jobs/${job.address}`" custom>
         <template #default="{ navigate }">

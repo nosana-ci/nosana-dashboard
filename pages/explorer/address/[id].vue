@@ -97,7 +97,7 @@
         </table>
         <div v-if="jobs && jobs.jobs && jobs.jobs.length > 0">
           <ExplorerJobList :per-page="limit" :total-jobs="jobs ? jobs.totalJobs : null" v-model:page="page" v-model:state="state"
-          :loading-jobs="loadingJobs" title="Inferences by this node" :jobs="jobs ? jobs.jobs : null"
+          :loading-jobs="loadingJobs" title="Jobs by this node" :jobs="jobs ? jobs.jobs : null"
           >
         </ExplorerJobList>
         </div>

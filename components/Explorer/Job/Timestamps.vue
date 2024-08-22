@@ -5,10 +5,10 @@
         <div class="box">
           <div class="is-flex is-align-items-center">
             <h2 class="title is-5 mb-0">
-              Inferences
+              Jobs
               <span class="has-text-weight-bold ml-2">
-                <count-up v-if="jobs" :end-val="jobData.datasets[0].data.reduce((n, { y }) => n + y, 0)"></count-up>
-                <span v-else-if="loadingJobs">...</span>
+                <count-up v-if="timestamps" :end-val="chartData.datasets[0].data.reduce((n, { y }) => n + y, 0)"></count-up>
+                <span v-else-if="loadingTimestamps">...</span>
                 <span v-else>-</span>
               </span>
               <small class="ml-2">
@@ -35,7 +35,7 @@
           </div>
 
           <div style="height: 200px; position: relative;">
-            <Line :options="lineOptions" :data="jobData" style="width: 100%" />
+            <Line :options="lineOptions" :data="chartData" style="width: 100%" />
           </div>
         </div>
       </div>
@@ -77,13 +77,13 @@ declare module 'chart.js' {
 
 const time: Ref<number | string> = ref(365 / 12 * 24 * 3600); // 1 month
 
-const statsUrl = computed(() => { return `/api/jobs/stats?period=${time.value}` })
-watch(statsUrl, () => {
-  console.log('resetting stats..')
-  jobs.value = null
+const timestampsUrl = computed(() => { return `/api/jobs/stats/timestamps?period=${time.value}` })
+watch(timestampsUrl, () => {
+  console.log('resetting timestamps..')
+  timestamps.value = null
 })
 
-const { data: jobs, pending: loadingJobs } = await useAPI(statsUrl, { watch: [statsUrl] });
+const { data: timestamps, pending: loadingTimestamps } = await useAPI(timestampsUrl, { watch: [timestampsUrl] });
 Interaction.modes.interpolate = Interpolate;
 
 Chartjs.register(
@@ -104,8 +104,8 @@ Chartjs.register(
 const tooltipFormat = ref('[Week] W MMM YYYY');
 const unit: Ref<false | "millisecond" | "second" | "minute" | "hour" | "day" | "week" | "month" | "quarter" | "year" | undefined> = ref('day');
 
-const jobData = computed<ChartData<'line'>>(() => {
-  const data: Array<any> = jobs.value && jobs.value.data ? [...jobs.value.data] : [];
+const chartData = computed<ChartData<'line'>>(() => {
+  const data: Array<any> = timestamps.value && timestamps.value.data ? [...timestamps.value.data] : [];
   const timeValue = parseInt(time.value as string);
 
   if (timeValue > 365 / 3 * 24 * 3600) {

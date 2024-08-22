@@ -62,7 +62,7 @@
           </div>
         </div>
         <ExplorerJobList :per-page="limit" :total-jobs="jobs ? jobs.totalJobs : null" v-model:page="page" v-model:state="state"
-          :loading-jobs="loadingJobs" title="All Inferences in this market" :jobs="jobs ? jobs.jobs : null"
+          :loading-jobs="loadingJobs" title="All Jobs in this market" :jobs="jobs ? jobs.jobs : null"
           >
         </ExplorerJobList>
       </div>

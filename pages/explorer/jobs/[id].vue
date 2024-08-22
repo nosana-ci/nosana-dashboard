@@ -31,7 +31,7 @@
             </td>
           </tr>
           <tr>
-            <td>Project</td>
+            <td>Poster</td>
             <td>
               <nuxt-link class="address is-family-monospace" :to="`/explorer/address/${job.project}`">
                 <span v-if="job.project.toString() === 'FEEw3nDocYSyrLT4HPjibjYuaNekakWNmasNvEx3nHKi'">
@@ -48,7 +48,7 @@
             <td>Price</td>
             <td>
               <span>{{
-      ((parseInt(job.price, 16) / 1e6) * (job.timeEnd - job.timeStart)).toFixed(6)
+      ((parseInt(job.price) / 1e6) * (job.timeEnd - job.timeStart)).toFixed(6)
     }}
                 NOS</span>
             </td>

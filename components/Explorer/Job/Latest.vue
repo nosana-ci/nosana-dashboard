@@ -1,7 +1,7 @@
 <template>
   <div>
     <ExplorerJobList :per-page="limit" :total-jobs="limit" v-model:page="page" v-model:state="state"
-      :loading-jobs="loadingJobs" title="Latest Inferences" :jobs="jobs ? jobs.jobs : null" :small="true">
+      :loading-jobs="loadingJobs" title="Latest Jobs" :jobs="jobs ? jobs.jobs : null" :small="true">
     </ExplorerJobList>
     <div class="has-text-right mt-auto pt-2">
       <nuxt-link to="/explorer/jobs" class="button is-white">

@@ -4,7 +4,7 @@
       <input v-model="address" autofocus type="text" class="input py-5 px-3" style="
           padding-top: 1.4rem !important;
           padding-bottom: 1.4rem !important;
-        " placeholder="Search for inferences, nodes, markets and accounts"
+        " placeholder="Search for jobs, nodes, markets and accounts"
         :disabled="checkingIfJob" />
       <span class="icon is-small pt-1 is-right" v-if="!checkingIfJob">
         <SearchIcon />

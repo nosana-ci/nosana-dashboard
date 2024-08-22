@@ -10,10 +10,8 @@
       </ClientOnly>
     </div>
     <ExplorerSearch />
-    <!-- <div class="box is-flex is-flex-direction-column">
-      <h2 class="title is-5">Statistics</h2>
-    </div> -->
-    <ExplorerGraphs />
+    <ExplorerJobStats />
+    <ExplorerJobTimestamps />
     <div class="columns mt-4 is-multiline">
       <div class="column is-6">
         <div class="box is-flex is-flex-direction-column">
