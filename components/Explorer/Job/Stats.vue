@@ -12,15 +12,15 @@
       <div class="column is-one-fifth">
         <h2 class="subtitle">Running jobs</h2>
         <h2 class="title is-1 pt-2">
-          <span v-if="loadingJobs">...</span>
+          <span v-if="loadingRunningJobs">...</span>
           <CustomCountUp v-else :end-val="runningJobs.totalJobs"></CustomCountUp>
         </h2>
       </div>
       <div class="column is-one-fifth">
-        <h2 class="subtitle">Total NOS earned</h2>
+        <h2 class="subtitle">Queued jobs</h2>
         <h2 class="title is-1 pt-2">
-          <span v-if="loadingStats">...</span>
-          <CustomCountUp v-else :end-val="Math.round(stats.price)"></CustomCountUp>
+          <span v-if="loadingQueuedJobs">...</span>
+          <CustomCountUp v-else :end-val="queuedJobs.totalJobs"></CustomCountUp>
         </h2>
       </div>
       <div class="column is-one-fifth">
@@ -33,7 +33,7 @@
       <div class="column is-one-fifth">
         <h2 class="subtitle">Online GPU Nodes</h2>
         <h2 class="title is-1 pt-2">
-          <span v-if="loadingMarkets || loadingJobs">...</span>
+          <span v-if="loadingMarkets || loadingRunningJobs">...</span>
           <CustomCountUp v-else-if="markets" :end-val="markets.reduce((a, b) => a + (b.queueType === 1 ? b.queue.length : 0), 0) + runningJobs.totalJobs"></CustomCountUp>
         </h2>
       </div>
@@ -44,6 +44,7 @@
 
 <script lang="ts" setup>
 const { data: stats, pending: loadingStats } = useAPI('/api/jobs/stats');
-const { data: runningJobs, pending: loadingJobs } = await useAPI('api/jobs?limit=1&offset=0&state=RUNNING');
+const { data: runningJobs, pending: loadingRunningJobs } = await useAPI('api/jobs?limit=1&offset=0&state=RUNNING');
+const { data: queuedJobs, pending: loadingQueuedJobs } = await useAPI('api/jobs?limit=1&offset=0&state=QUEUED');
 const { markets, loadingMarkets } = useMarkets();
 </script>
