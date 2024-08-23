@@ -144,7 +144,7 @@ const showMenu = ref(false);
     width: 100% !important;
     height: calc(100% - $navbar-height);
     top: $navbar-height;
-    z-index: 1;
+    z-index: 5;
   }
 }
 </style>

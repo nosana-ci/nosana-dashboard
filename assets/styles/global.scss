@@ -155,6 +155,10 @@
 
   .navbar:not(.light-mode) {
     background: $black;
+    
+    .navbar-burger {
+      color: $white;
+    }
 
     &.has-shadow {
       box-shadow: 0 2px 0 0 $grey-dark;
@@ -311,10 +315,11 @@
 }
 
 .address {
-  font-family: monospace;
-  text-overflow: ellipsis;
-  max-width: 100%;
-  white-space: nowrap;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  display: -webkit-box;
   overflow: hidden;
-  display: block;
+  text-overflow: ellipsis;
+  white-space: normal;
+  word-break: break-all;
 }
