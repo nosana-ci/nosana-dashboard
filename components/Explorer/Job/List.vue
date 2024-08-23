@@ -72,7 +72,7 @@
       <tr v-else-if="!jobs.length">
         <td colspan="5">No jobs</td>
       </tr>
-      <nuxt-link v-for="job in jobs" v-else :key="job.address" :to="`/explorer/jobs/${job.address}`" custom>
+      <nuxt-link v-for="job in jobs" v-else :key="job.address" :to="`/jobs/${job.address}`" custom>
         <template #default="{ navigate }">
           <tr class="is-clickable remove-greyscale-on-hover" @click="navigate">
             <td>

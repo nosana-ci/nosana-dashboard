@@ -4,7 +4,7 @@
       :loading-jobs="loadingJobs" title="Latest Jobs" :jobs="jobs ? jobs.jobs : null" :small="true">
     </ExplorerJobList>
     <div class="has-text-right mt-auto pt-2">
-      <nuxt-link to="/explorer/jobs" class="button is-white">
+      <nuxt-link to="/jobs" class="button is-white">
         <span>All jobs</span>
         <span class="icon"> &#8250; </span>
       </nuxt-link>

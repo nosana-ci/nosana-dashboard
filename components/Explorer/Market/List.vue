@@ -30,7 +30,7 @@
           v-for="market in filteredMarkets"
           v-else
           :key="market.address.toString()"
-          :to="`/explorer/markets/${market.address.toString()}`"
+          :to="`/markets/${market.address.toString()}`"
           custom
         >
           <template #default="{ navigate }">

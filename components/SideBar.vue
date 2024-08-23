@@ -1,7 +1,7 @@
 <template>
   <aside class="column has-background-white sidebar has-overflow-scroll" :class="{ 'is-hidden-touch': !showMenu }">
     <div class="mb-6 is-hidden-touch">
-      <nuxt-link to="/explorer">
+      <nuxt-link to="/">
         <logo width="160px" :animated="true" class="light-only" />
         <logo width="160px" :white="true" class="dark-only" :animated="true" />
       </nuxt-link>
@@ -9,7 +9,7 @@
     <div class="menu">
       <ul class="menu-list is-size-5">
         <li>
-          <nuxt-link to="/" active-class="is-active" @click="showMenu = false" disabled>
+          <nuxt-link to="/" active-class="is-active" @click="showMenu = false">
             <span class="icon is-small mr-4">
               <svg width="16" height="17" viewBox="0 0 16 17" fill="none">
                 <path
@@ -17,11 +17,11 @@
                   fill="currentColor" />
               </svg>
             </span>
-            <span>Dashboard</span>
+            <span>Explorer</span>
           </nuxt-link>
         </li>
         <li>
-          <nuxt-link to="/stake" active-class="is-active" @click="showMenu = false">
+          <nuxt-link to="/jobs" active-class="is-active" @click="showMenu = false">
             <span class="icon is-small mr-4">
               <svg width="16" height="17" viewBox="0 0 16 17" fill="none">
                 <g clip-path="url(#clip0_64_1076)">
@@ -36,25 +36,11 @@
                 </defs>
               </svg>
             </span>
-            <span>Staking</span>
+            <span>Jobs</span>
           </nuxt-link>
         </li>
         <li>
-          <nuxt-link active-class="is-active" @click="showMenu = false" disabled>
-            <span class="icon is-small mr-4">
-              <svg width="16" height="17" viewBox="0 0 18 19" fill="none">
-                <path
-                  d="M16.3255 2.22974C16.2549 2.15236 16.1694 2.09007 16.074 2.04664C15.9787 2.0032 15.8756 1.97952 15.7708 1.97703C15.6661 1.97453 15.5619 1.99327 15.4647 2.03211C15.3674 2.07095 15.2789 2.12909 15.2047 2.20303L14.561 2.84463L15.6572 3.93799L16.29 3.30834C16.434 3.16791 16.5181 2.97722 16.5248 2.77619C16.5314 2.57515 16.46 2.37934 16.3255 2.22974ZM8.88609 12.3126H6.1875V9.61396L6.51797 9.2842L11.3745 4.43756H1.6875V16.8126H14.0625V7.1256L9.21586 11.9821L8.88609 12.3126ZM14.0625 5.53303L15.2153 4.37779L14.1223 3.28478L12.9674 4.43756H14.0625V5.53303Z"
-                  fill="#666666" />
-                <path d="M7.3125 11.1875H8.41957L14.0625 5.53297V4.4375H12.9674L7.3125 10.0804V11.1875Z"
-                  fill="currentColor" />
-              </svg>
-            </span>
-            <span>Job Creator</span>
-          </nuxt-link>
-        </li>
-        <li>
-          <nuxt-link active-class="is-active" @click="showMenu = false" disabled>
+          <nuxt-link to="/markets" active-class="is-active" @click="showMenu = false">
             <span class="icon is-small mr-4">
               <svg width="16" height="17" viewBox="0 0 18 19" fill="none">
                 <path
@@ -62,22 +48,10 @@
                   fill="currentColor" />
               </svg>
             </span>
-            <span>Browser node</span>
+            <span>Markets</span>
           </nuxt-link>
         </li>
-        <li>
-          <nuxt-link to="/explorer" active-class="is-active" @click="showMenu = false">
-            <span class="icon is-small mr-4">
-              <svg width="16" height="17" viewBox="0 0 16 17" fill="none">
-                <path
-                  d="M3.6 12.9L9.6 10.1L12.4 4.1L6.4 6.9L3.6 12.9ZM8 9.3C7.77333 9.3 7.58347 9.2232 7.4304 9.0696C7.27733 8.916 7.20053 8.72613 7.2 8.5C7.2 8.27333 7.2768 8.08347 7.4304 7.9304C7.584 7.77733 7.77387 7.70053 8 7.7C8.22667 7.7 8.4168 7.7768 8.5704 7.9304C8.724 8.084 8.80053 8.27387 8.8 8.5C8.8 8.72667 8.7232 8.9168 8.5696 9.0704C8.416 9.224 8.22613 9.30053 8 9.3ZM8 16.5C6.89333 16.5 5.85333 16.2899 4.88 15.8696C3.90667 15.4493 3.06 14.8795 2.34 14.16C1.62 13.44 1.05013 12.5933 0.6304 11.62C0.210667 10.6467 0.000533333 9.60667 0 8.5C0 7.39333 0.210133 6.35333 0.6304 5.38C1.05067 4.40667 1.62053 3.56 2.34 2.84C3.06 2.12 3.90667 1.55013 4.88 1.1304C5.85333 0.710667 6.89333 0.500533 8 0.5C9.10667 0.5 10.1467 0.710133 11.12 1.1304C12.0933 1.55067 12.94 2.12053 13.66 2.84C14.38 3.56 14.9501 4.40667 15.3704 5.38C15.7907 6.35333 16.0005 7.39333 16 8.5C16 9.60667 15.7899 10.6467 15.3696 11.62C14.9493 12.5933 14.3795 13.44 13.66 14.16C12.94 14.88 12.0933 15.4501 11.12 15.8704C10.1467 16.2907 9.10667 16.5005 8 16.5Z"
-                  fill="currentColor" />
-              </svg>
-            </span>
-            <span>Explorer</span>
-          </nuxt-link>
-        </li>
-        <li>
+        <!-- <li>
           <nuxt-link active-class="is-active" @click="showMenu = false" disabled>
             <span class="icon is-small mr-4">
               <svg width="16" height="17" viewBox="0 0 16 17" fill="none">
@@ -100,14 +74,14 @@
             </span>
             <span>Help & Support</span>
           </nuxt-link>
-        </li>
+        </li> -->
       </ul>
     </div>
     <ColorModeSwitcher class="mt-auto has-text-right" />
   </aside>
   <nav class="navbar is-hidden-desktop is-fixed-top has-shadow">
     <div class="navbar-brand">
-      <nuxt-link to="/explorer" class="navbar-item" @click="showMenu = false">
+      <nuxt-link to="/" class="navbar-item" @click="showMenu = false">
         <logo width="135px" :animated="true" class="light-only" />
         <logo width="135px" :white="true" class="dark-only" :animated="true" />
       </nuxt-link>

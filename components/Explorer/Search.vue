@@ -50,7 +50,7 @@ const selectItem = async (item: { type: string; value: string }) => {
   if (item.type !== 'address') { 
     s = 's'
   }
-  router.push(`/explorer/${item.type}${s}/${item.value}`);
+  router.push(`/${item.type}${s}/${item.value}`);
 };
 
 const searchItems = computed(() => {

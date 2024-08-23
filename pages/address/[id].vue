@@ -69,14 +69,14 @@
       ">
               <td>Market</td>
               <td>
-                <nuxt-link :to="`/explorer/markets/${nodeMarket[0].address.toString()}`" class="address is-family-monospace">{{
+                <nuxt-link :to="`/markets/${nodeMarket[0].address.toString()}`" class="address is-family-monospace">{{
       nodeMarket[0].address.toString() }}</nuxt-link>
               </td>
             </tr>
             <tr v-if="nodeStatus === 'RUNNING' && nodeRuns && nodeRuns.length > 0">
               <td>Running job</td>
               <td>
-                <nuxt-link :to="`/explorer/jobs/${nodeRuns[0].account.job}`" class="address is-family-monospace">{{
+                <nuxt-link :to="`/jobs/${nodeRuns[0].account.job}`" class="address is-family-monospace">{{
       nodeRuns[0].account.job }}</nuxt-link>
               </td>
             </tr>

@@ -15,14 +15,14 @@
             <td>
               <span v-if="job.node.toString() === '11111111111111111111111111111111'
       ">Unclaimed</span>
-              <nuxt-link v-else class="address is-family-monospace" :to="`/explorer/address/${job.node}`">{{ job.node
+              <nuxt-link v-else class="address is-family-monospace" :to="`/address/${job.node}`">{{ job.node
                 }}</nuxt-link>
             </td>
           </tr>
           <tr>
             <td>Market</td>
             <td>
-              <nuxt-link :to="`/explorer/markets/${job.market}`" class="address is-family-monospace">
+              <nuxt-link :to="`/markets/${job.market}`" class="address is-family-monospace">
                 <span v-if="testgridMarkets && testgridMarkets.find((tgm: any) => tgm.address === job.market)">
                   {{ testgridMarkets.find((tgm: any) => tgm.address === job.market).name }}
                 </span>
@@ -33,7 +33,7 @@
           <tr>
             <td>Poster</td>
             <td>
-              <nuxt-link class="address is-family-monospace" :to="`/explorer/address/${job.project}`">
+              <nuxt-link class="address is-family-monospace" :to="`/address/${job.project}`">
                 <span v-if="job.project.toString() === 'FEEw3nDocYSyrLT4HPjibjYuaNekakWNmasNvEx3nHKi'">
                   Nosana Test Grid
                 </span>
@@ -137,7 +137,7 @@
         </div>
         <div v-show="activeTab === 'result'" class="p-1 py-4 has-background-white-bis">
           <div v-if="job.state === 'RUNNING' || job.state === 1"
-            class="is-family-monospace has-background-black has-text-white box">
+            class="is-family-monospace has-background-black has-text-white box light-mode">
             <div v-if="logs && logs.length > 0" style="counter-reset: line">
               <div v-for="step in logs" :key="step.id">
                 <div v-for="(log, ik) in step.logs.split('\n')" :key="ik" class="row-count">

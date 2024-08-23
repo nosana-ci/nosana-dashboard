@@ -145,15 +145,15 @@
 }
 
 .dark-mode {
-  body {
+  body:not(.light-mode) {
     background-color: $body-background-color-dark;
   }
 
-  .has-background-body {
+  .has-background-body:not(.light-mode) {
     background-color: $body-background-color-dark !important;
   }
 
-  .navbar {
+  .navbar:not(.light-mode) {
     background: $black;
 
     &.has-shadow {
@@ -166,12 +166,13 @@
       color: $text;
     }
   }
-  .table {
+  .table:not(.light-mode) {
     color: $table-background-color;
-    background-color: $table-color;
+    background-color: $grey-darker;
 
     thead th {
       color: $table-background-color;
+      background-color: $black-ter;
     }
     tbody {
       tr:not(.is-selected) {
@@ -187,7 +188,7 @@
             background-color: darken($secondary, 30%);
           }
           &:nth-child(even) {
-            background-color: $grey-dark;
+            background-color: $black-ter;
             &:hover {
               background-color: darken($secondary, 30%);
             }
@@ -201,48 +202,48 @@
     display: none;
   }
 
-  .has-text-white {
+  .has-text-white:not(.light-mode) {
     color: $black !important;
   }
 
-  .has-text-black {
+  .has-text-black:not(.light-mode) {
     color: $white !important;
   }
 
-  a.has-text-black:hover {
+  a.has-text-black:hover:not(.light-mode) {
     color: $grey-light !important;
   }
 
-  .has-background-white {
+  .has-background-white:not(.light-mode) {
     background-color: $black !important;
   }
 
-  .sidebar {
+  .sidebar:not(.light-mode) {
     background-color: $black-bis !important;
   }
 
-  .has-background-black {
+  .has-background-black:not(.light-mode) {
     background-color: $white !important;
   }
 
-  .has-background-white-ter {
+  .has-background-white-ter:not(.light-mode) {
     background-color: $black-ter !important;
   }
 
-  .has-background-white-bis {
+  .has-background-white-bis:not(.light-mode) {
     background-color: $black-bis !important;
   }
 
-  .title {
+  .title:not(.light-mode) {
     color: white;
   }
 
-  .box {
-    background-color: $scheme-invert;
+  .box:not(.light-mode) {
+    background-color: $black-bis;
     color: white;
   }
 
-  .button {
+  .button:not(.light-mode) {
     &.is-primary {
       background-color: $primary-invert;
       color: $primary;
@@ -261,7 +262,7 @@
     }
   }
 
-  .input {
+  .input:not(.light-mode) {
     background-color: $black-ter;
     border-color: $black-ter;
     color: white;
@@ -271,7 +272,7 @@
     }
   }
 
-  .menu-list {
+  .menu-list:not(.light-mode) {
     a {
       color: $grey-lighter;
 
@@ -286,12 +287,12 @@
     }
   }
 
-  .footer {
+  .footer:not(.light-mode) {
     background-color: $body-background-color-dark;
     color: white;
   }
 
-  .tabs {
+  .tabs:not(.light-mode) {
     li.is-active a {
       border-bottom-color: $primary-invert;
       color: $primary-invert;
