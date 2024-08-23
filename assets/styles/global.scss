@@ -168,7 +168,7 @@
   }
   .table:not(.light-mode) {
     color: $table-background-color;
-    background-color: $grey-darker;
+    background-color: darken($black-ter, 3%);
 
     thead th {
       color: $table-background-color;

@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div v-if="ipfsResult.opStates" class="is-family-monospace has-background-black has-text-white box light-mode">
+    <div v-if="ipfsResult.opStates" class="is-family-monospace has-background-black has-text-white box light-mode" style="counter-reset: line">
       <div v-for="opState in ipfsResult.opStates" :key="opState.operationId">
         <div class="row-count has-text-link">
           <span>- Executed step '{{ opState.operationId }}'</span>
