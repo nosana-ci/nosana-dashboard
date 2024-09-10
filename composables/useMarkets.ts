@@ -8,7 +8,9 @@ const getMarkets = async () => {
   console.log('retrieving all markets..');
   loadingMarkets.value = true;
   try {
-    markets.value = await nosana.value.jobs.allMarkets();
+    markets.value = (await nosana.value.jobs.allMarkets()).sort(function(a, b) {
+      return (a.address < b.address) ? -1 : 1;
+  });
   } catch (e) {
     console.error(e);
   }
