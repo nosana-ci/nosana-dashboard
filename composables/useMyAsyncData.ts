@@ -8,7 +8,9 @@ export const useMyAsyncData = (key: string, callable: CallableFunction, opts?: {
         return await callable();
       } catch (error: any) {
         console.error(error)
-        toast.error(error.toString());
+        if (!opts?.disableToastonError) {
+          toast.error(error.toString());
+        }
         throw error;
       }
     }, {
