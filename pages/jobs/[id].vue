@@ -47,8 +47,10 @@
       ">
             <td>Price</td>
             <td>
-              <span>{{
-      ((parseInt(job.price) / 1e6) * (job.timeEnd - job.timeStart)).toFixed(6)
+              <span v-if="loadingMarkets">..</span>
+              <span v-else>
+                {{
+      ((parseInt(job.price) / 1e6) * Math.min(job.timeEnd - job.timeStart,  markets?.find(m => m.address == job.market).jobTimeout)).toFixed(6)
     }}
                 NOS</span>
             </td>
@@ -202,6 +204,13 @@ const timestamp = useTimestamp({ interval: 1000 });
 const fmtMSS = (s: number) => {
   return (s - (s %= 60)) / 60 + (s > 9 ? "m:" : "m:0") + s + "s";
 };
+
+const { markets, getMarkets, loadingMarkets } = useMarkets();
+
+
+if (!markets.value) {
+  getMarkets();
+}
 
 const { data: job, pending: loadingJob } = await useAPI(`/api/jobs/${jobId.value}`);
 const { data: testgridMarkets, pending: loadingTestgridMarkets } = await useAPI('/api/markets');
