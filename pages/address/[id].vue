@@ -95,7 +95,7 @@
             </tr> -->
           </tbody>
         </table>
-        <div v-if="jobs && jobs.jobs && jobs.jobs.length > 0">
+        <div v-if="jobs && jobs.jobs">
           <ExplorerJobList :per-page="limit" :total-jobs="jobs ? jobs.totalJobs : null" v-model:page="page" v-model:state="state"
           :loading-jobs="loadingJobs" title="Jobs by this node" :jobs="jobs ? jobs.jobs : null"
           >
