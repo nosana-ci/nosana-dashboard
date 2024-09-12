@@ -152,6 +152,9 @@
   .has-background-body:not(.light-mode) {
     background-color: $body-background-color-dark !important;
   }
+  .vjs-tree-node.is-highlight, .vjs-tree-node:hover {
+    background-color: $grey-darker;
+  }
 
   .navbar:not(.light-mode) {
     background: $black;
