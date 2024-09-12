@@ -115,7 +115,11 @@ const config = useRuntimeConfig();
 
 const { params } = useRoute();
 const { nosana } = useSDK();
-const { markets } = useMarkets();
+const { markets, getMarkets, loadingMarkets } = useMarkets();
+
+if (!markets.value) {
+  getMarkets();
+}
 const address: Ref<string | null> = ref(null);
 const balance: Ref<any | null> = ref(null);
 const solBalance: Ref<any | null> = ref(null);
@@ -193,6 +197,12 @@ watch(loadingTestgridMarkets, (newLoading) => {
     getAddress();
   }
 })
+watch(loadingMarkets, (newLoading) => {
+  if (!newLoading) {
+    getAddress();
+  }
+})
+
 
 // useIntervalFn(getMarkets, 30000);
 </script>
