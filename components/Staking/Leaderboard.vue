@@ -11,7 +11,9 @@
       </thead>
       <tbody>
         <tr v-for="stake in leaderboard.stakes.data.slice(0, 5)" style="max-width: 100%;">
-          <td class="pl-0 address" style="max-width: 200px;">{{ stake.address }}</td>
+          <td class="pl-0">
+            <span class="address">{{ stake.address }}</span>
+          </td>
           <td>{{ stake.duration / 60 / 60 / 24 }}</td>
           <td>{{ (stake.xnos / 1e6).toFixed().toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",") }}</td>
         </tr>

@@ -24,6 +24,7 @@
         <div class="box has-background-white-ter">
           <StakingStats />
         </div>
+        <StakingLeaderboard />
       </div>
     </div>
   </div>
