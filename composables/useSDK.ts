@@ -2,6 +2,7 @@ import { Client, type ClientConfig } from '@nosana/sdk';
 import { useAnchorWallet, type AnchorWallet } from "solana-wallets-vue";
 const config = useRuntimeConfig()
 let wallet: Ref<AnchorWallet | undefined>;
+const prioFee = useLocalStorage('prio-fee', 10000);
 
 const nosana = computed(() => {
   try {
@@ -11,6 +12,7 @@ const nosana = computed(() => {
   const clientConfig: Partial<ClientConfig> = {
     solana: {
       network: config.public.rpcUrl,
+      priority_fee: prioFee.value
     },
   };
 
@@ -18,5 +20,5 @@ const nosana = computed(() => {
 });
 
 export const useSDK = () => {
-  return { nosana };
+  return { nosana, prioFee };
 };
