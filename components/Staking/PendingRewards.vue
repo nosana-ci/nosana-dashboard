@@ -21,7 +21,7 @@
 </template>
 <script lang="ts" setup>
 import { useWallet } from "solana-wallets-vue";
-import * as BN from 'bn.js';
+import BN from 'bn.js';
 import { useToast } from "vue-toastification";
 const toast = useToast();
 const timestamp = useTimestamp({ interval: 1000 })
