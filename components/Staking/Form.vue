@@ -9,7 +9,7 @@
           </li>
           <li :class="{ 'is-active': tab === 'unstake' || (activeStake && stakeEndDate) }">
             <a @click="tab = 'unstake'" class="is-justify-content-flex-start"
-              :class="{ 'is-disabled': !activeStake }">UNSTAKE</a>
+              :class="{ 'is-disabled': !activeStake || !activeStake.address }">UNSTAKE</a>
           </li>
         </ul>
       </div>
@@ -22,7 +22,7 @@
         </div>
       </div>
       <div v-if="tab === 'stake' && !stakeEndDate">
-        <div class="field" v-if="!activeStake">
+        <div class="field" v-if="!activeStake || !activeStake.address">
           <div class="is-flex is-justify-content-space-between mb-0 is-align-items-center">
             <label class="label">Add NOS:</label>
             <span class="is-size-7 mr-1">
@@ -55,25 +55,25 @@
                   HALF
                 </a>
                 <a class="button is-primary is-outlined mb-3" :disabled="balance === null ? true : null"
-                  @click="balance !== null ? amount = balance : null">
+                  @click="balance !== null ? amount = parseInt(balance) : null">
                   MAX
                 </a>
               </div>
             </div>
           </div>
         </div>
-        <div class="field" v-if="!activeStake">
+        <div class="field" v-if="!activeStake || !activeStake.address">
           <label class="label">Unstake period of:</label>
           <div class="control columns is-variable is-5 is-multiline">
             <div class="is-flex is-align-items-center column is-narrow">
-              <input v-model="unstakeDays" required class="input has-text-centered is-medium" type="number" :min="14"
+              <input v-model="newUnstakeDays" required class="input has-text-centered is-medium" type="number" :min="14"
                 step="1" :max="365" placeholder="0">
               <span class="ml-2 has-text-grey">Days</span>
             </div>
           </div>
         </div>
         <!-- Your stake block -->
-        <div v-if="activeStake">
+        <div v-if="activeStake && activeStake.address">
           <p class="has-text-black is-uppercase mb-4">Your stake</p>
           <div class="columns is-multiline">
             <div class="column is-4 mb-">
@@ -136,8 +136,8 @@
       </div>
       <StakingUnstake v-else-if="tab === 'unstake' || stakeEndDate" />
     </div>
-    <StakingPendingRewards v-if="activeStake && !stakeEndDate" />
-    <div class="columns" v-if="!activeStake">
+    <StakingPendingRewards v-if="activeStake && activeStake.address && !stakeEndDate" />
+    <div class="columns" v-if="!activeStake || !activeStake.address">
       <div class="column is-6">
         <div class="box">
           <label class="label">Expected daily NOS rewards</label>
@@ -162,7 +162,7 @@
         </div>
       </div>
     </div>
-    <div class="columns" v-if="!activeStake">
+    <div class="columns" v-if="!activeStake || !activeStake.address">
       <div class="column is-4">
         <div class="box">
           <label class="label">xNOS Score</label>
@@ -209,7 +209,7 @@
         </template>
       </wallet-modal-provider>
       <button :disabled="errorStake || !amount || !balance || amount > balance ? true : undefined"
-        v-else-if="!activeStake && tab === 'stake'" :class="{ 'is-loading': loadingStake }"
+        v-else-if="(!activeStake || !activeStake.address) && tab === 'stake'" :class="{ 'is-loading': loading }"
         class="button is-fullwidth is-primary is-large" type="submit">
         <span v-if="amount && balance !== null && amount > balance">Insufficient NOS</span>
         <span v-else>Stake NOS</span>
@@ -239,7 +239,7 @@
     </div>
     <button class="modal-close is-large" @click="showStakeModal = false" aria-label="close"></button>
   </div>
-  <div class="modal" v-if="activeStake" :class="{ 'is-active': showTopupModal }">
+  <div class="modal" v-if="activeStake && activeStake.address" :class="{ 'is-active': showTopupModal }">
     <div class="modal-background" @click="showTopupModal = false"></div>
     <div class="modal-content">
       <div class="box">
@@ -307,7 +307,7 @@
     </div>
     <button class="modal-close is-large" @click="showTopupModal = false" aria-label="close"></button>
   </div>
-  <div class="modal" v-if="activeStake" :class="{ 'is-active': showExtendModal }">
+  <div class="modal" v-if="activeStake && activeStake.address" :class="{ 'is-active': showExtendModal }">
     <div class="modal-background" @click="showExtendModal = false, extraUnstakeDays = 0"></div>
     <div class="modal-content">
       <div class="box">
@@ -377,9 +377,10 @@ const showExtendModal: Ref<boolean> = ref(false);
 const amount: Ref<number | null> = ref(null);
 const extraUnstakeDays: Ref<number> = ref(0);
 const tab: Ref<string> = ref('stake');
+const newUnstakeDays: Ref<number> = ref(14);
 
 const multiplier: ComputedRef<number> = computed(() => {
-  const days = extraUnstakeDays.value > 0 ? extraUnstakeDays.value + unstakeDays.value : unstakeDays.value;
+  const days = extraUnstakeDays.value > 0 ? extraUnstakeDays.value + unstakeDays.value : (unstakeDays.value ? unstakeDays.value : newUnstakeDays.value);
   let unstakeTime;
   unstakeTime = days * SECONDS_PER_DAY;
   const multiplierSeconds = (SECONDS_PER_DAY * 365) / 3; // 4 months
@@ -389,7 +390,7 @@ const multiplier: ComputedRef<number> = computed(() => {
 
 const xNOS: ComputedRef<number | null> = computed(() => {
   const formAmount = amount.value ? amount.value : 0;
-  const score = activeStake.value ?
+  const score = activeStake.value && activeStake.value.amount ?
     (formAmount + (activeStake.value.amount / 1e6)) * multiplier.value :
     formAmount * multiplier.value;
   return Math.max(0, score);
@@ -420,12 +421,12 @@ const expectedRewards: ComputedRef<number | null> = computed(() => {
 })
 
 const stakeEndDate: ComputedRef<any> = computed(() => {
-  return activeStake.value && parseInt(activeStake.value.timeUnstake) > 0 ? Number(activeStake.value.timeUnstake) + Number(unstakeDays.value * 24 * 60 * 60) : null;
+  return activeStake.value && parseInt(activeStake.value.time_unstake) > 0 ? Number(activeStake.value.time_unstake) + Number(unstakeDays.value * 24 * 60 * 60) : null;
 });
 
 // Staking methods
 const stakeOrTopup = () => {
-  if (activeStake.value) {
+  if (activeStake.value && activeStake.value.amount) {
     topup()
   } else {
     stake()
@@ -470,15 +471,18 @@ const extend = async () => {
 
 const stake = async () => {
   showStakeModal.value = false;
-  if (amount.value && publicKey.value && unstakeDays.value) {
+  if (amount.value && publicKey.value && newUnstakeDays.value) {
+    loading.value = true;
     try {
-      const stake = await nosana.value.stake.create(publicKey.value, amount.value * 1e6, unstakeDays.value);
+      const stake = await nosana.value.stake.create(publicKey.value, amount.value * 1e6, newUnstakeDays.value);
+      await refreshStake();
       console.log('stake tx', stake);
       toast.success('Succesfully staked');
     } catch (e: any) {
       console.error('cant stake', e);
       toast.error(e.toString());
     }
+    loading.value = false;
   }
 }
 </script>

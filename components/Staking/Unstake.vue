@@ -5,9 +5,10 @@
         Unstake your tokens here.
       </h3>
       <p>
-        Be aware that after you unstake,
-        you will have to wait until your unstake period ends to claim your tokens<br><br>
-        If you were to unstake now, you can claim your tokens on:
+        Be aware that after you unstake, your tokens will be released linearly
+         over the duration of your unstaking period, and you will not receive 
+         any rewards during this time.<br><br>
+        If you were to unstake now, your last tokens can be claimed on:
       </p>
       <h3 class="title is-5 mt-4">
         {{
@@ -34,7 +35,7 @@
         </h5>
         <span class="is-size-5">{{ new Intl.DateTimeFormat('en-US', {
           dateStyle: 'full', timeStyle: 'medium'
-        }).format(activeStake.timeUnstake * 1000) }}</span><br>
+        }).format(activeStake.time_unstake * 1000) }}</span><br>
 
         <div class="has-background-light box mt-5">
           <h5 v-if="!countdownFinished" class="mb-3">
@@ -106,7 +107,7 @@ const loading: Ref<boolean> = ref(false);
 const countdownFinished: Ref<Boolean> = ref(false);
 
 const stakeEndDate: ComputedRef<any> = computed(() => {
-  return activeStake.value && parseInt(activeStake.value.timeUnstake) > 0 ? Number(activeStake.value.timeUnstake) + Number(unstakeDays.value * 24 * 60 * 60) : null;
+  return activeStake.value && parseInt(activeStake.value.time_unstake) > 0 ? Number(activeStake.value.time_unstake) + Number(unstakeDays.value * 24 * 60 * 60) : null;
 });
 
 const { data: vaultBalance, pending: loadingVaultBalance, error: errorVaultBalance, refresh: refreshVaultBalance } =
@@ -130,7 +131,7 @@ const withdrawAvailable: ComputedRef<number | null> = computed(() => {
   if (activeStake.value && stakeEndDate && vaultBalance.value) {
     // @ts-ignore
     const emission = parseFloat(parseInt(activeStake.value.amount) / parseInt(activeStake.value.duration));
-    const secondsBetween = timestamp.value / 1000 - parseInt(activeStake.value.timeUnstake);
+    const secondsBetween = timestamp.value / 1000 - parseInt(activeStake.value.time_unstake);
 
     const tokensReleased = emission * secondsBetween;
     const withdrawn = (parseInt(activeStake.value.amount) - (vaultBalance.value * 1e6));

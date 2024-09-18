@@ -9,7 +9,7 @@ export function useStake(publicKey: any) {
     );
 
   const unstakeDays: ComputedRef<number> = computed(() => {
-    return activeStake.value ? activeStake.value.duration / SECONDS_PER_DAY : 14;
+    return activeStake.value ? activeStake.value.duration / SECONDS_PER_DAY : 0;
   });
 
   const { data: poolInfo, pending: loadingPoolInfo, error: errorPoolInfo, refresh: refreshPoolInfo } =
