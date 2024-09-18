@@ -5,7 +5,7 @@
         <div class="box">
           <label class="label mb-1">USD value staked</label>
           <div class="is-size-1 has-text-black">
-            <CustomCountUp v-if="!loading" :end-val="1000000">
+            <CustomCountUp v-if="!loading" :end-val="stats[0].usdValueStaked">
               <template #prefix>
                 <span>$</span>
               </template>
@@ -18,8 +18,10 @@
         <div class="box">
           <label class="label mb-1">NOS Stakers</label>
           <div class="is-size-1 has-text-black">
-            <CustomCountUp :end-val="10000">
+            <CustomCountUp v-if="!loading" :end-val="stats[0].stakers">
             </CustomCountUp>
+            <span v-else-if="loading">....</span>
+
           </div>
         </div>
       </div>
@@ -27,24 +29,23 @@
         <div class="box">
           <label class="label mb-1">NOS Staked</label>
           <div class="is-size-1 has-text-black">
-            <CustomCountUp :end-val="10000">
+            <CustomCountUp v-if="!loading" :end-val="stats[0].nosStaked">
             </CustomCountUp>
+            <span v-else-if="loading">....</span>
           </div>
         </div>
       </div>
       <div class="column is-6">
         <div class="box">
-          <label class="label mb-1">% total supply staked</label>
+          <label class="label mb-1">total xNOS score</label>
           <div class="is-size-1 has-text-black">
-            <CustomCountUp :end-val="38" :decimal-places="2">
-              <template #suffix>
-                <span>%</span>
-              </template>
+            <CustomCountUp v-if="!loading" :end-val="stats[0].totalXNosStaked">
             </CustomCountUp>
+            <span v-else-if="loading">....</span>
           </div>
         </div>
       </div>
-
+<!-- 
       <div class="column is-12">
         <div class="box">
           <div class="is-flex">
@@ -246,14 +247,14 @@
                 </span>
               </div>
             </div>
-          </div>
+          </div> 
         </div>
-      </div>
+      </div> -->
     </div>
   </div>
 </template>
 <script setup lang="ts">
-const loading: Ref<Boolean> = ref(false);
+  const { data: stats, pending: loading } = await useAPI('/api/stats');
 </script>
 <style scoped lang="scss">
 .select-filter {

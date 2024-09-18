@@ -79,7 +79,8 @@
             <div class="column is-4 mb-">
               <label class="label is-size-6 mb-0">NOS Staked</label>
               <div class="has-text-black is-size-3">
-                {{ (activeStake.amount / 1e6).toFixed() }}
+                <CustomCountUp :end-val="(activeStake.amount / 1e6)" :decimal-places="0">
+                </CustomCountUp>
               </div>
             </div>
             <div class="column is-4">
