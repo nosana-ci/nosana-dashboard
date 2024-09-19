@@ -23,6 +23,7 @@
 import { useWallet } from "solana-wallets-vue";
 import BN from 'bn.js';
 import { useToast } from "vue-toastification";
+import { sleep } from "@nosana/sdk";
 const toast = useToast();
 const timestamp = useTimestamp({ interval: 1000 })
 
@@ -70,8 +71,9 @@ const claimAndRestakeRewards = async () => {
   loading.value = true;
   try {
     const claim = await nosana.value.stake.claimAndRestakeRewards(pendingRewards.value as number);
-    await refreshStake();
+    await sleep(3);
     await refreshBalance();
+    await refreshStake();
     console.log('claim & restake', claim);
     toast.success('Succesfully restaked NOS');
   } catch (e: any) {
