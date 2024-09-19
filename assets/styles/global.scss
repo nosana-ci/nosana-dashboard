@@ -224,6 +224,9 @@
   .has-background-white:not(.light-mode) {
     background-color: $black !important;
   }
+  .has-background-light:not(.light-mode) {
+    background-color: $black-ter !important;
+  }
 
   .sidebar:not(.light-mode) {
     background-color: $black-bis !important;
@@ -251,6 +254,9 @@
   }
 
   .button:not(.light-mode) {
+    &.is-text {
+      color: $white;
+    }
     &.is-primary {
       background-color: $primary-invert;
       color: $primary;
