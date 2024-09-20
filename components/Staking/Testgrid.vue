@@ -6,7 +6,7 @@
         Test Grid Specifications
       </h2>
       <a class="button is-outlined is-wider is-secondary has-text-weight-semibold is-rounded"
-        href="https://nosana.io/test-grid/" target="_blank">
+        href="https://nosana.com/compute" target="_blank">
         Find Out More
       </a>
     </div>

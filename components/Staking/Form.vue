@@ -228,7 +228,7 @@
         </p>
         <p class="block is-size-5">
           For more information about Nosana staking click
-          <a href="https://docs.nosana.io/protocols/staking.html" target="_blank">
+          <a href="https://docs.nosana.com/protocols/staking.html" target="_blank">
             <u>here</u>
           </a>
         </p>
