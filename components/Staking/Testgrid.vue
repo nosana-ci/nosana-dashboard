@@ -1,6 +1,6 @@
 <template>
   <div class="dark-mode">
-    <div class="box has-background-body mb-5">
+    <div class="box has-background-body mb-5" style="background-color: #051306 !important;">
       <logo width="130px" class="mt-3" :white="true" :animated="true" />
       <h2 class="title is-2 pt-2 mb-3 is-family-primary has-text-weight-semibold">
         Test Grid Specifications
@@ -18,6 +18,6 @@
   background-position: right;
   background-size: contain;
   background-repeat: no-repeat;
-  border: 1px solid $grey !important;
+  border: 1px solid $grey-darker !important;
 }
 </style>

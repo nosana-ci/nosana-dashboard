@@ -18,6 +18,9 @@
     padding-top: 3px;
     padding-bottom: 3px;
   }
+  &.is-text {
+    text-decoration: none;
+  }
 }
 
 .menu {
@@ -106,16 +109,19 @@
 }
 
 .dark-mode {
-  --swv-button-background-color: white !important;
+  --swv-button-background-color: transparent !important;
   --swv-button-outline-color: white !important;
   --swv-button-hover-background-color: #cbcbcb !important;
-  --swv-button-text-color: black !important;
+  // --swv-button-text-color: black !important;
 }
 
 .swv-button {
   font-family: inherit !important;
   font-weight: 400 !important;
   line-height: 1.1 !important;
+}
+.swv-button-trigger {
+  border: 1px solid var(--swv-button-outline-color) !important;
 }
 
 .swv-dropdown-list {
@@ -145,8 +151,19 @@
 }
 
 .dark-mode {
+  .sidebar {
+    box-shadow: 0px 6px 40px 0px rgba(255, 255, 255, 0.02) !important;
+  }
   body:not(.light-mode) {
     background-color: $body-background-color-dark;
+  }
+  
+  .tag {
+    // color:white !important;
+    span {
+      color: white;
+    }
+    background-color: $black-ter !important;
   }
 
   .has-background-body:not(.light-mode) {
@@ -155,7 +172,15 @@
   .vjs-tree-node.is-highlight, .vjs-tree-node:hover {
     background-color: $grey-darker;
   }
-
+  .progress {
+    // background-color: $black-ter;
+    &:indeterminate {
+      background-color: $black-ter;
+    }
+    &.is-info:indeterminate {
+      background-image: linear-gradient(to right, hsl(207, 61%, 53%) 30%, $black-ter 30%);
+    }
+  }
   .navbar:not(.light-mode) {
     background: $black;
     
@@ -173,35 +198,36 @@
       color: $text;
     }
   }
+  .select:not(.light-mode) select {
+      background-color: $black-ter;
+      border-color: $black-ter;
+      color: white;
+  }
   .table:not(.light-mode) {
     color: $table-background-color;
-    background-color: darken($black-ter, 3%);
+    background-color: $black-bis;
 
     thead th {
       color: $table-background-color;
-      background-color: $black-ter;
+      // background-color: $black-ter;
     }
     td, th {
       border-color: $grey-dark;
     }
-    tbody {
-      tr:not(.is-selected) {
-        &:hover {
-          background-color: darken($secondary, 30%);
+    &.is-hoverable {
+      tbody {
+        tr:not(.is-selected) {
+          &:hover {
+            background-color: $black-ter !important;
+          }
         }
       }
     }
     &.is-striped {
       tbody {
         tr:not(.is-selected) {
-          &:hover {
-            background-color: darken($secondary, 30%);
-          }
           &:nth-child(even) {
-            background-color: $black-ter;
-            &:hover {
-              background-color: darken($secondary, 30%);
-            }
+            background-color: darken($black-ter, 3%);
           }
         }
       }
@@ -259,6 +285,9 @@
   .button:not(.light-mode) {
     &.is-text {
       color: $white;
+      &:hover {
+        background-color: $black-ter;
+      }
     }
     &.is-primary {
       background-color: $primary-invert;
@@ -297,7 +326,7 @@
       }
 
       &.is-active {
-        background-color: white;
+        background-color: $white-bis;
         color: black;
       }
     }

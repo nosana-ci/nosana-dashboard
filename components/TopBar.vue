@@ -1,5 +1,5 @@
 <template>
-  <div class="is-flex is-justify-content-space-between mb-5">
+  <div class="is-flex is-justify-content-space-between mb-5 is-flex-wrap-wrap">
     <div>
       <h2 class="title">{{ title }}</h2>
       <h3 v-if="subtitle" class="subtitle mb-2 is-capitalized">
@@ -29,7 +29,8 @@
           </p>
           <div class="field has-addons">
             <p class="control">
-              <button class="button is-medium is-primary" @click="prioFee = 0" :class="{ 'is-outlined': prioFee !== 0 }">
+              <button class="button is-medium is-primary" @click="prioFee = 0"
+                :class="{ 'is-outlined': prioFee !== 0 }">
                 <span>Disable</span>
               </button>
             </p>

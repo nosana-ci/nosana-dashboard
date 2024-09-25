@@ -106,12 +106,12 @@
             <td v-if="!small" class="is-hidden-touch">
               <span v-if="job.timeEnd && job.timeStart">
                 {{
-        (
-          (job.price / 1e6) *
-          (job.timeEnd -
-            job.timeStart)
-        ).toFixed(2)
-      }}
+                  (
+                    (job.price / 1e6) *
+                    (job.timeEnd -
+                      job.timeStart)
+                ).toFixed(2)
+                }}
                 NOS</span>
               <span v-else>
                 {{ job.price / 1e6 }}

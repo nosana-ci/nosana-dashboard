@@ -16,7 +16,7 @@
           <h2 class="title is-5">Test Grid Markets</h2>
           <ExplorerMarketQueues></ExplorerMarketQueues>
           <div class="has-text-right mt-auto pt-2">
-            <nuxt-link to="/markets" class="button is-white">
+            <nuxt-link to="/markets" class="button is-text">
               <span>All markets</span>
               <span class="icon"> &#8250; </span>
             </nuxt-link>

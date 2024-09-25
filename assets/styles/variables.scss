@@ -21,7 +21,7 @@ $title-family: 'Space Grotesk', sans-serif;
 $subtitle-family: 'Space Grotesk', sans-serif;
 
 $body-background-color: $white-bis;
-$body-background-color-dark: #010c04;
+$body-background-color-dark: #181818;
 
 $navbar-height: 3.5rem;
 
@@ -61,8 +61,5 @@ $input-shadow: none;
 $input-focus-box-shadow-color: rgba($secondary, 0.25);
 $label-weight: 400;
 $label-color: $grey;
-
-$table-row-hover-background-color: lighten($secondary, 40%);
-$table-striped-row-even-hover-background-color: lighten($secondary, 40%);
 
 @import 'bulma/sass/utilities/mixins';
