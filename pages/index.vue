@@ -1,14 +1,7 @@
 <template>
   <div>
-    <div class="is-flex is-justify-content-space-between mb-5">
-      <div>
-        <h2 class="title">Explorer</h2>
-        <h3 class="subtitle mb-2 is-capitalized">{{ config.public.network === 'mainnet' ? 'testgrid' : config.public.network }}</h3>
-      </div>
-      <ClientOnly>
-        <wallet-multi-button :dark="$colorMode.value === 'dark'"></wallet-multi-button>
-      </ClientOnly>
-    </div>
+    <TopBar :title="'Explorer'" :subtitle="config.public.network === 'mainnet' ? 'testgrid' :
+      config.public.network"></TopBar>
     <ExplorerSearch />
     <ExplorerJobStats />
     <ExplorerJobTimestamps />
@@ -35,6 +28,5 @@
 </template>
 
 <script lang="ts" setup>
-import { WalletMultiButton } from "solana-wallets-vue";
 const config = useRuntimeConfig();
 </script>

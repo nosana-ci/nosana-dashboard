@@ -181,6 +181,9 @@
       color: $table-background-color;
       background-color: $black-ter;
     }
+    td, th {
+      border-color: $grey-dark;
+    }
     tbody {
       tr:not(.is-selected) {
         &:hover {
