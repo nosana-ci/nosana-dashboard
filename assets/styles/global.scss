@@ -343,14 +343,17 @@
   }
 
   .tabs:not(.light-mode) {
+    ul {
+      border-bottom-color: $grey;
+    }
     li.is-active a {
       border-bottom-color: $primary-invert;
       color: $primary-invert;
     }
 
     a {
-      border-bottom-color: $grey-dark;
-      color: $grey-dark;
+      border-bottom-color: $grey;
+      color: $grey;
 
       &:hover {
         border-bottom-color: $grey;
