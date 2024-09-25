@@ -1,8 +1,9 @@
 <template>
   <div>
-    <TopBar :title="'Explorer'" :subtitle="config.public.network === 'mainnet' ? 'testgrid' :
-      config.public.network"></TopBar>
-    <ExplorerSearch />
+    <TopBar :title="'Explorer'" :subtitle="'Overview'"></TopBar>
+    <div class="box has-background-white-ter">
+      <ExplorerSearch />
+    </div>
     <ExplorerJobStats />
     <ExplorerJobTimestamps />
     <div class="columns mt-4 is-multiline">
@@ -28,5 +29,4 @@
 </template>
 
 <script lang="ts" setup>
-const config = useRuntimeConfig();
 </script>

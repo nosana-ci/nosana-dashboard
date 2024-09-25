@@ -1,6 +1,6 @@
 <template>
   <div>
-    <TopBar :title="'Earn by staking'" :subtitle="'Stake NOS and receive rewards'" />
+    <TopBar :title="'Staking'" :subtitle="'Stake NOS and earn rewards'" />
     <div class="columns is-multiline">
       <div class="column is-12 is-6-widescreen">
         <div class="box has-background-white-ter">

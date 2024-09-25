@@ -283,6 +283,11 @@
   }
 
   .button:not(.light-mode) {
+    &.is-dark {
+      &.is-outlined {
+        color: $light;
+      }
+    }
     &.is-text {
       color: $white;
       &:hover {

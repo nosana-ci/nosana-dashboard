@@ -2,7 +2,7 @@
   <div class="is-flex is-justify-content-space-between mb-5 is-flex-wrap-wrap">
     <div>
       <h2 class="title">{{ title }}</h2>
-      <h3 v-if="subtitle" class="subtitle mb-2 is-capitalized">
+      <h3 v-if="subtitle" class="subtitle mb-2">
         {{ subtitle }}
       </h3>
     </div>

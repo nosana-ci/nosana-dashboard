@@ -6,6 +6,9 @@
 $family-sans-serif: 'Outfit', sans-serif;
 $primary: black;
 $secondary: #10E80C;
+$info: #0066FF;
+$success: #04DE00;
+$warning: #FFB800;
 $custom-colors: (
   'secondary': $secondary,
 );
@@ -46,6 +49,8 @@ $menu-item-active-color: white;
 $menu-list-link-padding: 0.65em 1em;
 $menu-item-color: $text-dark;
 
+$radius-small: 4px;
+
 $box-shadow: none;
 $box-padding: 1.6rem;
 
@@ -55,8 +60,8 @@ $tabs-link-active-border-bottom-color: $primary;
 $tabs-link-color: $grey;
 
 $input-icon-active-color: $secondary;
-$input-background-color: $white-ter;
-$input-border-color: $white-ter;
+// $input-background-color: $white;
+// $input-border-color: $white-ter;
 $input-shadow: none;
 $input-focus-box-shadow-color: rgba($secondary, 0.25);
 $label-weight: 400;

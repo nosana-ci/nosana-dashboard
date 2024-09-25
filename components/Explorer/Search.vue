@@ -1,13 +1,12 @@
 <template>
-  <div class="field has-addons mb-5">
-    <div class="control is-fullwidth dropdown is-active has-icons-right" :class="{'is-loading': checkingIfJob}">
-      <input v-model="address" autofocus type="text" class="input py-5 px-3" style="
+  <div class="field has-addons">
+    <div class="control is-fullwidth dropdown is-active has-icons-left" :class="{ 'is-loading': checkingIfJob }">
+      <input v-model="address" autofocus type="text" class="input" style="
           padding-top: 1.4rem !important;
           padding-bottom: 1.4rem !important;
-        " placeholder="Search for jobs, nodes, markets and accounts"
-        :disabled="checkingIfJob" />
-      <span class="icon is-small pt-1 is-right" v-if="!checkingIfJob">
-        <SearchIcon />
+        " placeholder="Search for jobs, nodes, markets and accounts" :disabled="checkingIfJob" />
+      <span class="icon pt-1 is-left" v-if="!checkingIfJob">
+        <SearchIcon style="width:1.5em; height: 1.5em" />
       </span>
       <div v-if="searchItems.length" class="dropdown-menu is-active is-fullwidth" role="menu">
         <div class="dropdown-content has-background-white-bis">
@@ -16,8 +15,8 @@
             :class="{ 'is-active': index === activeSearchItem }" @click="selectItem(item), (address = '')">
             {{ item.value }}
             <span class="is-capitalized has-text-grey-light">{{
-        item.type
-      }}</span>
+              item.type
+            }}</span>
           </a>
         </div>
       </div>
@@ -42,13 +41,13 @@ const selectItem = async (item: { type: string; value: string }) => {
   if (item.type === 'address') {
     checkingIfJob.value = true;
     // @ts-ignore TODO: add to useAPI opts type
-    const { data: job } = await useAPI(`/api/jobs/${item.value}`, {disableToastonError: true});
+    const { data: job } = await useAPI(`/api/jobs/${item.value}`, { disableToastonError: true });
     checkingIfJob.value = false;
     if (job.value) {
       item.type = 'job';
     }
   }
-  if (item.type !== 'address') { 
+  if (item.type !== 'address') {
     s = 's'
   }
   router.push(`/${item.type}${s}/${item.value}`);
@@ -62,10 +61,10 @@ const searchItems = computed(() => {
 
   // combine jobs and markets in one list
   items.value = markets.value
-        ? markets.value!.map((a: Node) => {
-          return { value: a.address.toString(), type: 'market' };
-        })
-        : [];
+    ? markets.value!.map((a: Node) => {
+      return { value: a.address.toString(), type: 'market' };
+    })
+    : [];
 
   let matches = 0;
   const results = items.value!.filter((item: any) => {

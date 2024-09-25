@@ -1,9 +1,13 @@
 <template>
   <div>
+    <TopBar :title="'Explorer'" :subtitle="'Jobs'"></TopBar>
+    <div class="box has-background-white-ter">
+      <ExplorerSearch />
+    </div>
     <div class="box">
-      <ExplorerJobList :per-page="limit" :total-jobs="jobs ? jobs.totalJobs : null" v-model:page="page" v-model:state="state"
-      :loading-jobs="loadingJobs" :jobs="jobs ? jobs.jobs : null">
-    </ExplorerJobList>
+      <ExplorerJobList :per-page="limit" :total-jobs="jobs ? jobs.totalJobs : null" v-model:page="page"
+        v-model:state="state" :loading-jobs="loadingJobs" :jobs="jobs ? jobs.jobs : null">
+      </ExplorerJobList>
     </div>
     <div v-if="!loadingJobs && !jobs">Could not load jobs</div>
   </div>

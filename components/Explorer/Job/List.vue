@@ -13,7 +13,7 @@
   </div>
   <div class="is-flex is-flex-wrap-wrap state-filter">
     <div class="mr-2 my-2">
-      <a class="button is-dark is-outlined" :class="{
+      <a class="button is-primary is-outlined" :class="{
         'is-hovered': state === null,
         'is-small': small,
       }" @click="changeState(null)">
@@ -110,7 +110,7 @@
                     (job.price / 1e6) *
                     (job.timeEnd -
                       job.timeStart)
-                ).toFixed(2)
+                  ).toFixed(2)
                 }}
                 NOS</span>
               <span v-else>
