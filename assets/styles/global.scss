@@ -313,8 +313,8 @@
   }
 
   .input:not(.light-mode) {
-    background-color: $black-ter;
-    border-color: $black-ter;
+    background-color: $grey-darker;
+    border-color: $black-bis;
     color: white;
 
     &::placeholder {
