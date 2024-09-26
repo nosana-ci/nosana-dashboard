@@ -7,7 +7,8 @@
             <h2 class="title is-5 mb-0">
               Jobs
               <span class="has-text-weight-bold ml-2">
-                <count-up v-if="timestamps" :end-val="chartData.datasets[0].data.reduce((n, { y }) => n + y, 0)"></count-up>
+                <count-up v-if="timestamps"
+                  :end-val="chartData.datasets[0].data.reduce((n, { y }) => n + y, 0)"></count-up>
                 <span v-else-if="loadingTimestamps">...</span>
                 <span v-else>-</span>
               </span>
@@ -64,16 +65,16 @@ import {
   BarElement,
   Interaction,
 } from 'chart.js';
-import { CrosshairPlugin, Interpolate } from 'chartjs-plugin-crosshair';
+// import { CrosshairPlugin, Interpolate } from 'chartjs-plugin-crosshair';
 import dayjs from 'dayjs';
 import isoWeek from 'dayjs/plugin/isoWeek';
 dayjs.extend(isoWeek);
 
-declare module 'chart.js' {
-  interface InteractionModeMap {
-    interpolate: Interpolate;
-  }
-}
+// declare module 'chart.js' {
+//   interface InteractionModeMap {
+//     interpolate: Interpolate;
+//   }
+// }
 
 const time: Ref<number | string> = ref(365 / 12 * 24 * 3600); // 1 month
 
@@ -84,7 +85,7 @@ watch(timestampsUrl, () => {
 })
 
 const { data: timestamps, pending: loadingTimestamps } = await useAPI(timestampsUrl, { watch: [timestampsUrl] });
-Interaction.modes.interpolate = Interpolate;
+// Interaction.modes.interpolate = Interpolate;
 
 Chartjs.register(
   TimeScale,
@@ -97,7 +98,7 @@ Chartjs.register(
   BarElement,
   Filler,
   Tooltip,
-  CrosshairPlugin,
+  // CrosshairPlugin,
 );
 
 

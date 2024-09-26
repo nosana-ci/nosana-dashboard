@@ -5,10 +5,10 @@
       <div v-if="market">
         <h3 class="title mt-3">
           {{
-      testgridMarkets.find(m => m.address === marketId)
-        ? testgridMarkets.find(m => m.address === marketId).name
-        : marketId
-    }}
+            testgridMarkets.find(m => m.address === marketId)
+              ? testgridMarkets.find(m => m.address === marketId).name
+              : marketId
+          }}
         </h3>
         <table class="table is-fullwidth is-striped">
           <tbody>
@@ -23,7 +23,7 @@
               <td>Authority</td>
               <td>
                 <a target="_blank" class="address is-family-monospace" :href="'https://explorer.solana.com/address/' + market.authority
-      ">{{ market.authority }}</a>
+                  ">{{ market.authority }}</a>
               </td>
             </tr>
             <tr>
@@ -42,8 +42,8 @@
               <td>Node access key</td>
               <td>
                 <a target="_blank" class="address is-family-monospace" :href="'https://explorer.solana.com/address/' +
-      market.nodeAccessKey.toString()
-      ">{{ market.nodeAccessKey.toString() }}</a>
+                  market.nodeAccessKey.toString()
+                  ">{{ market.nodeAccessKey.toString() }}</a>
               </td>
             </tr>
             <tr>
@@ -61,9 +61,9 @@
             <p v-else>There are no nodes in the queue at the moment</p>
           </div>
         </div>
-        <ExplorerJobList :per-page="limit" :total-jobs="jobs ? jobs.totalJobs : null" v-model:page="page" v-model:state="state"
-          :loading-jobs="loadingJobs" title="All Jobs in this market" :jobs="jobs ? jobs.jobs : null"
-          >
+        <ExplorerJobList :per-page="limit" :total-jobs="jobs ? jobs.totalJobs : null" v-model:page="page"
+          v-model:state="state" :loading-jobs="loadingJobs" title="All Jobs in this market"
+          :jobs="jobs ? jobs.jobs : null">
         </ExplorerJobList>
       </div>
       <div v-else>Market not found</div>
@@ -101,11 +101,6 @@ const getMarket = async () => {
   try {
     loading.value = true;
     market.value = await nosana.value.jobs.getMarket(marketId.value);
-    try {
-      jobs.value = await getJobs({ market: marketId.value });
-    } catch (error) {
-      console.error('cant fetch jobs from market', error);
-    }
   } catch (e) {
     market.value = null;
   }
