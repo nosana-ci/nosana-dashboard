@@ -14,7 +14,7 @@
             <td>Node</td>
             <td>
               <span v-if="job.node.toString() === '11111111111111111111111111111111'
-      ">Unclaimed</span>
+              ">Unclaimed</span>
               <nuxt-link v-else class="address is-family-monospace" :to="`/address/${job.node}`">{{ job.node
                 }}</nuxt-link>
             </td>
@@ -42,16 +42,17 @@
             </td>
           </tr>
           <tr v-if="jobStatus === 'COMPLETED' ||
-      job.state === 'COMPLETED' ||
-      job.state === 2
-      ">
+            job.state === 'COMPLETED' ||
+            job.state === 2
+          ">
             <td>Price</td>
             <td>
               <span v-if="loadingMarkets">..</span>
               <span v-else>
                 {{
-      ((parseInt(job.price) / 1e6) * Math.min(job.timeEnd - job.timeStart,  markets?.find(m => m.address == job.market).jobTimeout)).toFixed(6)
-    }}
+                  ((parseInt(job.price) / 1e6) * Math.min(job.timeEnd - job.timeStart, markets?.find(m => m.address ==
+                    job.market).jobTimeout)).toFixed(6)
+                }}
                 NOS</span>
             </td>
           </tr>
@@ -60,11 +61,11 @@
             <td>
               <span v-if="job.timeStart">
                 {{
-      useDateFormat(
-        new Date(job.timeStart * 1000),
-        "YYYY-MM-DD HH:mm:ss"
-      ).value
-    }}
+                  useDateFormat(
+                    new Date(job.timeStart * 1000),
+                    "YYYY-MM-DD HH:mm:ss"
+                ).value
+                }}
                 <UseTimeAgo v-slot="{ timeAgo }" :time="new Date(job.timeStart * 1000)">
                   ({{ timeAgo }})
                 </UseTimeAgo>
@@ -97,21 +98,21 @@
             </td>
           </tr>
           <tr v-if="ipfsJob &&
-      ipfsJob.state &&
-      ipfsJob.state['nosana/job-type']">
+            ipfsJob.state &&
+            ipfsJob.state['nosana/job-type']">
             <td>Source</td>
             <td v-if="ipfsJob &&
-      ipfsJob.state &&
-      ipfsJob.state['nosana/job-type'] &&
-      (ipfsJob.state['nosana/job-type'] === 'Github' ||
-        ipfsJob.state['nosana/job-type'] === 'github-flow')
-      ">
+              ipfsJob.state &&
+              ipfsJob.state['nosana/job-type'] &&
+              (ipfsJob.state['nosana/job-type'] === 'Github' ||
+                ipfsJob.state['nosana/job-type'] === 'github-flow')
+            ">
               <a v-if="ipfsJob.state['input/repo'] &&
-      ipfsJob.state['input/commit-sha']
-      " :href="ipfsJob.state['input/repo'].replace('.git', '') +
-      '/commit/' +
-      ipfsJob.state['input/commit-sha']
-      " target="_blank">
+                ipfsJob.state['input/commit-sha']
+              " :href="ipfsJob.state['input/repo'].replace('.git', '') +
+        '/commit/' +
+        ipfsJob.state['input/commit-sha']
+        " target="_blank">
                 {{ ipfsJob.state["input/commit-sha"] }}
               </a>
             </td>
@@ -155,7 +156,7 @@
             Results are secret
           </div>
           <ExplorerJobResult v-else-if="(ipfsResult && job.state === 'COMPLETED') || job.state === 2
-      " :ipfs-result="ipfsResult" :ipfs-job="ipfsJob" />
+          " :ipfs-result="ipfsResult" :ipfs-job="ipfsJob" />
         </div>
         <div v-show="activeTab === 'artifacts'" class="p-1 py-4 has-background-white-bis">
           <div>

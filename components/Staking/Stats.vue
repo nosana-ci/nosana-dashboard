@@ -30,6 +30,9 @@
           <label class="label mb-1">NOS Staked</label>
           <div class="is-size-1 has-text-black">
             <CustomCountUp v-if="!loading" :end-val="stats[0].nosStaked">
+              <!-- <template #suffix>
+                <img src="~assets/img/icon.svg" width="24px" class="ml-2" />
+              </template> -->
             </CustomCountUp>
             <span v-else-if="loading">....</span>
           </div>
@@ -45,7 +48,7 @@
           </div>
         </div>
       </div>
-<!-- 
+      <!-- 
       <div class="column is-12">
         <div class="box">
           <div class="is-flex">
@@ -254,7 +257,7 @@
   </div>
 </template>
 <script setup lang="ts">
-  const { data: stats, pending: loading } = await useAPI('/api/stats');
+const { data: stats, pending: loading } = await useAPI('/api/stats');
 </script>
 <style scoped lang="scss">
 .select-filter {

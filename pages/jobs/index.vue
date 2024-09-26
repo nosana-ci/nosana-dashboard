@@ -4,7 +4,16 @@
     <div class="box has-background-white-ter">
       <ExplorerSearch />
     </div>
+    <div class="has-text-right mb-2">
+      <nuxt-link class="button is-primary is-outlined" to="/jobs/create">
+        <span class="icon">
+          <JobBuilderIcon />
+        </span>
+        <span>Create Job</span>
+      </nuxt-link>
+    </div>
     <div class="box">
+
       <ExplorerJobList :per-page="limit" :total-jobs="jobs ? jobs.totalJobs : null" v-model:page="page"
         v-model:state="state" :loading-jobs="loadingJobs" :jobs="jobs ? jobs.jobs : null">
       </ExplorerJobList>
@@ -14,6 +23,7 @@
 </template>
 
 <script setup lang="ts">
+import JobBuilderIcon from '@/assets/img/icons/sidebar/job-builder.svg?component';
 const page: Ref<number> = ref(1);
 const state: Ref<number | null> = ref(null);
 const jobStateMapping: any = {

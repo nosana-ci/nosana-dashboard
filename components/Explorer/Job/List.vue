@@ -82,7 +82,8 @@
             </td>
             <td v-if="!small" class="is-hidden-touch">
               <div class="is-family-monospace address">
-                <span v-if="job.state !== 'QUEUED'">
+                <span v-if="job.node.toString() === '11111111111111111111111111111111'">Unclaimed</span>
+                <span v-else>
                   {{ job.node }}
                 </span>
               </div>

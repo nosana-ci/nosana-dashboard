@@ -27,7 +27,7 @@
   "dependencies": {
     "@chenfengyuan/vue-countdown": "^2.1.2",
     "@metaplex-foundation/js": "^0.20.1",
-    "@nosana/sdk": "^0.3.29",
+    "@nosana/sdk": "^0.3.30",
     "@solana/wallet-adapter-wallets": "^0.19.25",
     "@vueuse/components": "^10.9.0",
     "@vueuse/integrations": "^10.9.0",
