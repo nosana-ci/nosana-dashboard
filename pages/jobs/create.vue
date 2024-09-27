@@ -14,13 +14,14 @@
         </ul>
       </div>
       <div v-if="tab === 'builder'">
-        <div v-for="(op, i) in jobDefinition.ops" class="notification">
+        <div v-for="(op, i) in jobDefinition.ops" class="notification has-background-white-ter">
+          <a v-if="jobDefinition.ops.length > 1" class="is-pulled-right"
+            @click="jobDefinition.ops.splice(i, 1)">remove</a>
           <div class="field" v-if="op">
             <label class="label">Operation Identifier</label>
             <div class="control">
-              <input class="input" v-model="op.id" type="text" placeholder="Text input">
+              <input class="input" v-model="op.id" type="text" placeholder="id">
             </div>
-            <a v-if="jobDefinition.ops.length > 1" @click="jobDefinition.ops.splice(i, 1)">delete</a>
           </div>
 
           <div class="field">
@@ -37,9 +38,61 @@
           <div v-if="op.type === 'container/run'">
             <div class="field">
               <label class="label">Docker Image</label>
-              <div class="control">
+              <div class="control has-icons-left has-icons-right">
                 <input class="input" v-model="(op.args as OperationArgsMap['container/run']).image" type="text"
-                  placeholder="Text input">
+                  placeholder="image">
+                <span class="icon is-small is-left">
+                  <img src="/img/icons/type/docker.svg" width="20px" />
+                </span>
+                <span class="icon is-small is-right" style="pointer-events: all;">
+                  <a :href="`https://hub.docker.com/search?q=${(op.args as OperationArgsMap['container/run']).image}&type=image`"
+                    target="_blank">
+                    <img src="~assets/img/icons/external.png" width="15px" />
+                  </a>
+                </span>
+              </div>
+            </div>
+            <div class="field">
+              <label class="label">Command
+                <a class="is-pulled-right is-size-7 mt-2"
+                  href="https://www.docker.com/blog/docker-best-practices-choosing-between-run-cmd-and-entrypoint/"
+                  target="_blank">Learn more about docker CMD</a>
+              </label>
+              <div class="control">
+                <div
+                  v-if="typeof (op.args as OperationArgsMap['container/run']).cmd === 'string' || !(op.args as OperationArgsMap['container/run']).cmd">
+                  <input class="input" v-model="(op.args as OperationArgsMap['container/run']).cmd" type="text"
+                    placeholder="cmd">
+                  <p class="is-size-7">
+                    <b>Shell</b> form<span class="ml-2"><a
+                        @click="(op.args as OperationArgsMap['container/run']).cmd = ((op.args as OperationArgsMap['container/run']).cmd! as string).split(' ')">Switch
+                        to exec form</a></span>
+                  </p>
+                </div>
+                <div v-else-if="Array.isArray((op.args as OperationArgsMap['container/run']).cmd)">
+                  <div v-for="(cmd, i) in (op.args as OperationArgsMap['container/run']).cmd">
+                    <div class="field has-addons">
+                      <p class="control is-expanded">
+                        <input class="input" v-model="(op.args as OperationArgsMap['container/run']).cmd![i]"
+                          type="text" placeholder="cmd">
+                      </p>
+                      <p class="control">
+                        <a class="button"
+                          @click="((op.args as OperationArgsMap['container/run']).cmd! as string[]).splice(i, 1)">
+                          delete
+                        </a>
+                      </p>
+                    </div>
+                  </div>
+                  <a class="button" @click="((op.args as OperationArgsMap['container/run']).cmd! as string[]).push('')">
+                    add cmd
+                  </a>
+                  <p class="is-size-7">
+                    <b>Exec</b> form<span class="ml-2"><a
+                        @click="(op.args as OperationArgsMap['container/run']).cmd = ((op.args as OperationArgsMap['container/run']).cmd! as string[]).join(' ')">Switch
+                        to shell form</a></span>
+                  </p>
+                </div>
               </div>
             </div>
           </div>

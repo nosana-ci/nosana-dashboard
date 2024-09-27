@@ -106,6 +106,10 @@
   --swv-button-background-color: black !important;
   --swv-button-outline-color: black !important;
   --swv-button-hover-background-color: #353535 !important;
+  --jse-theme-color: #353535;
+}
+.jse-theme-dark {
+  --jse-theme-color: #353535 !important;
 }
 
 .dark-mode {
@@ -199,7 +203,7 @@
     }
   }
   .select:not(.light-mode) select {
-      background-color: $black-ter;
+      background-color: $grey-darker;
       border-color: $black-ter;
       color: white;
   }
