@@ -111,11 +111,12 @@
                     (job.price / 1e6) *
                     (job.timeEnd -
                       job.timeStart)
-                  ).toFixed(2)
+                  ).toFixed(6)
                 }}
                 NOS</span>
               <span v-else>
                 {{ job.price / 1e6 }}
+                NOS/s
               </span>
             </td>
 
