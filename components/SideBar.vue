@@ -47,7 +47,7 @@
             <span class="icon is-small mr-4">
               <BrowserIcon />
             </span>
-            <span>Markets</span>
+            <span>GPU Markets</span>
           </nuxt-link>
         </li>
         <!-- <li>

@@ -19,13 +19,12 @@
       <div class="modal-background" @click="showSettingsModal = false"></div>
       <div class="modal-content">
         <div class="box">
-          <h2 class="title mb-5 has-text-weight-bold">Global Priority Fee
-          </h2>
-          <p class="block is-size-5">
+          <h2 class="title mb-5 has-text-weight-bold">Settings</h2>
+          <h3 class="title is-5">
+            Global Priority Fee Level
+          </h3>
+          <p class="subtitle is-size-5">
             These fees apply across Nosana's entire product suite, such as staking actions, posting jobs etc.
-          </p>
-          <p class="block title is-5">
-            Priority Level
           </p>
           <div class="field has-addons">
             <p class="control">
