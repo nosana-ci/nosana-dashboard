@@ -69,7 +69,7 @@
                       runningJobs[market.address].running : 0)"></progress></span>
                   </template>
                 </span>
-                <span v-else-if="market.queueType === 0">
+                <span v-else>
                   <span v-if="loadingRunningJobs">0 / ...</span>
                   <span v-else>
                     0 /
@@ -79,9 +79,13 @@
                     <span v-else>
                       ?
                     </span>
+                    <span>
+                      nodes</span>
+                    <span><progress class="is-pulled-right progress is-secondary" :value="0" :max="(runningJobs[market.address] ?
+                      runningJobs[market.address].running : 0)"></progress></span>
                   </span>
                   <br>
-                  <small>{{ market.queue.length }} jobs queued</small>
+                  <small v-if="market.queueType === 0">{{ market.queue.length }} jobs queued</small>
                 </span>
               </td>
             </tr>
