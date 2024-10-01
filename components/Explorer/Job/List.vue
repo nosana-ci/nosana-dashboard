@@ -76,9 +76,9 @@
         <template #default="{ navigate }">
           <tr class="is-clickable remove-greyscale-on-hover" @click="navigate">
             <td>
-              <div class="is-family-monospace address">
+              <nuxt-link :to="`/jobs/${job.address}`" class="is-family-monospace address has-text-black">
                 {{ job.address }}
-              </div>
+              </nuxt-link>
             </td>
             <td v-if="!small" class="is-hidden-touch">
               <div class="is-family-monospace address">
@@ -106,12 +106,12 @@
             <td v-if="!small" class="is-hidden-touch">
               <span v-if="job.timeEnd && job.timeStart">
                 {{
-        (
-          (job.price / 1e6) *
-          (job.timeEnd -
-            job.timeStart)
-        ).toFixed(2)
-      }}
+                  (
+                    (job.price / 1e6) *
+                    (job.timeEnd -
+                      job.timeStart)
+                ).toFixed(2)
+                }}
                 NOS</span>
               <span v-else>
                 {{ job.price / 1e6 }}
