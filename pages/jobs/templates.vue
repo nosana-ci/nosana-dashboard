@@ -1,8 +1,7 @@
 <template>
   <div>
-    <TopBar :title="'Job Builder'" :subtitle="'Create and deploy job definition files'"></TopBar>
-    <h2 class="title">Explore our Templates</h2>
-    <h3 class="subtitle">Select a template to get started with a pre-built Job Definition File</h3>
+    <TopBar :title="'Explore our Templates'"
+      :subtitle="'Select a template to get started with a pre-built Job Definition File'"></TopBar>
     <div class="columns">
       <div class="column is-3">
         <div class="box has-background-white-ter">
@@ -104,7 +103,7 @@ const categories = computed(() => {
 </script>
 <style lang="scss" scoped>
 .template-icon {
-  box-shadow: 1px 1px rgba(140, 149, 159, 0.15);
+  border: 1px solid $grey-lighter;
   width: 42px;
   height: 42px;
   border-radius: 100%;
