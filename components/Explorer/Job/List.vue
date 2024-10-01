@@ -76,9 +76,9 @@
         <template #default="{ navigate }">
           <tr class="is-clickable remove-greyscale-on-hover" @click="navigate">
             <td>
-              <div class="is-family-monospace address">
+              <nuxt-link :to="`/jobs/${job.address}`" class="is-family-monospace address has-text-black">
                 {{ job.address }}
-              </div>
+              </nuxt-link>
             </td>
             <td v-if="!small" class="is-hidden-touch">
               <div class="is-family-monospace address">
