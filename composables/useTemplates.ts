@@ -10,7 +10,8 @@ const emptyJobDefinition: JobDefinition = {
       "type": "container/run",
       "id": "",
       "args": {
-        "image": ""
+        "image": "",
+        "gpu": true
       }
     }
   ]

@@ -22,28 +22,30 @@
                 <a v-if="jobDefinition.ops.length > 1" class="is-pulled-right"
                   @click="jobDefinition.ops.splice(i, 1)">remove</a>
                 <div class="field" v-if="op">
-                  <label class="label">Operation Identifier</label>
+                  <label class="label">Operation Identifier <span class="has-text-danger">*</span></label>
                   <div class="control">
-                    <input @focus="info = 'ops.id'" class="input" v-model="op.id" type="text" placeholder="id">
+                    <input @focus="info = 'ops.id'" required class="input" v-model="op.id" type="text" placeholder="id">
                   </div>
                 </div>
 
                 <div class="field">
-                  <label class="label">Type</label>
+                  <label class="label">Type <span class="has-text-danger">*</span></label>
                   <div class="control">
                     <div class="select">
-                      <select v-model="op.type" @focus="info = 'ops.type'">
+                      <select v-model="op.type" required @focus="info = 'ops.type'" @change="
+                        op.type === 'container/create-volume' ? op.args = { name: 'volume-name-' + (i + 1) } :
+                          op.type === 'container/run' ? op.args = { image: 'ubuntu', gpu: true } : null">
                         <option value="container/run">Docker command</option>
-                        <option disabled value="container/create-volume">Create volume</option>
+                        <option value="container/create-volume">Create volume</option>
                       </select>
                     </div>
                   </div>
                 </div>
                 <div v-if="op.type === 'container/run'">
                   <div class="field">
-                    <label class="label">Docker Image</label>
+                    <label class="label">Docker Image <span class="has-text-danger">*</span></label>
                     <div class="control has-icons-left has-icons-right">
-                      <input class="input" @focus="info = 'ops.args.image'"
+                      <input class="input" @focus="info = 'ops.args.image'" required
                         v-model="(op.args as OperationArgsMap['container/run']).image" type="text" placeholder="image">
                       <span class="icon is-small is-left">
                         <img src="/img/icons/type/docker.svg" width="20px" />
@@ -62,6 +64,7 @@
                       <div
                         v-if="typeof (op.args as OperationArgsMap['container/run']).cmd === 'string' || !(op.args as OperationArgsMap['container/run']).cmd">
                         <input @focus="info = 'ops.args.cmd'" class="input"
+                          @change="(op.args as OperationArgsMap['container/run']).cmd === '' ? (op.args as OperationArgsMap['container/run']).cmd = undefined : null"
                           v-model="(op.args as OperationArgsMap['container/run']).cmd" type="text" placeholder="cmd">
                         <p class="is-size-7">
                           <b>Shell</b> form<span class="ml-2"><a
@@ -97,12 +100,85 @@
                       </div>
                     </div>
                   </div>
+                  <div class="field">
+                    <label class="label">Expose port</label>
+                    <div class="control">
+                      <input class="input" @focus="info = 'ops.args.expose'" required
+                        @change="(op.args as OperationArgsMap['container/run']).expose === '' ? (op.args as OperationArgsMap['container/run']).expose = undefined : null"
+                        v-model.number="(op.args as OperationArgsMap['container/run']).expose" type="number"
+                        placeholder="80">
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label class="label">Environment variables</label>
+                    <div class="control">
+                      <div v-for="(env, i) in (op.args as OperationArgsMap['container/run']).env">
+                        <div class="field has-addons is-horizontal">
+                          <div class="field-label is-normal">
+                            <label class="label">{{ i }}</label>
+                          </div>
+                          <p class="control is-expanded">
+                            <input class="input" @focus="info = 'ops.args.env'"
+                              v-model="(op.args as OperationArgsMap['container/run']).env![i]" type="text"
+                              placeholder="value">
+                          </p>
+                          <p class="control">
+                            <a class="button"
+                              @click="info = 'ops.args.env'; delete ((op.args as OperationArgsMap['container/run']).env! as any)[i]">
+                              delete
+                            </a>
+                          </p>
+                        </div>
+                      </div>
+                      <div class="field has-addons mt-2">
+                        <p class="control">
+                          <input class="input" @focus="info = 'ops.args.env'" v-model="envName[i]" type="text"
+                            placeholder="env name">
+                        </p>
+                        <p class="control">
+                          <a class="button" :class="{ 'is-disabled': !envName[i] || !envName[i].length }"
+                            @click="info = 'ops.args.env'; !(op.args as OperationArgsMap['container/run']).env ? (op.args as OperationArgsMap['container/run']).env = {} : null; ((op.args as OperationArgsMap['container/run']).env!)[envName[i]] = ''; envName[i] = null">
+                            Add env {{ envName[i] }}
+                          </a>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="field">
+                    <div class="control">
+                      <label class="checkbox">
+                        <input type="checkbox" @focus="info = 'ops.args.gpu'"
+                          v-model="(op.args as OperationArgsMap['container/run']).gpu" />
+                        Enable GPU
+                      </label>
+                    </div>
+                  </div>
+                  <div class="field">
+                    <div class="control">
+                      <label class="checkbox">
+                        <input type="checkbox" @focus="info = 'ops.args.private'"
+                          v-model="(op.args as OperationArgsMap['container/run']).private" />
+                        Private
+                      </label>
+                    </div>
+                  </div>
                 </div>
+                <div v-else-if="op.type === 'container/create-volume'">
+                  <div class="field">
+                    <label class="label">Name <span class="has-text-danger">*</span></label>
+                    <div class="control">
+                      <input class="input" @focus="info = 'ops.args.name'" required
+                        v-model="(op.args as OperationArgsMap['container/create-volume']).name" type="text"
+                        placeholder="Name">
+                    </div>
+                  </div>
+                </div>
+
               </div>
               <div class="field is-grouped is-grouped-right">
                 <p class="control">
                   <a class="button is-primary is-small" @click="jobDefinition.ops.push({
-                    id: 'operation-' + (jobDefinition.ops.length + 1), type: 'container/run', args: { image: 'ubuntu' }
+                    id: 'operation-' + (jobDefinition.ops.length + 1), type: 'container/run', args: { image: 'ubuntu', gpu: true }
                   })">
                     <span class="icon">+</span>
                     <span>Add Operation</span>
@@ -156,6 +232,23 @@
                   <b>cmd:</b> The command(s) to be executed in the container.<br>
                   <a href="https://www.docker.com/blog/docker-best-practices-choosing-between-run-cmd-and-entrypoint/"
                     target="_blank">Learn more about docker CMD</a>
+                </span>
+                <span v-else-if="info === 'ops.args.expose'">
+                  <b>expose:</b> A number representing the application port that needs to be exposed via the Nosana
+                  Service Endpoint.
+                </span>
+                <span v-else-if="info === 'ops.args.gpu'">
+                  <b>gpu:</b> A boolean indicating whether GPU resources are required.
+                </span>
+                <span v-else-if="info === 'ops.args.private'">
+                  <b>private:</b> A boolean indicating whether the job definition file, exposed service and the results
+                  should be private.
+                </span>
+                <span v-else-if="info === 'ops.args.name'">
+                  <b>name:</b> Volume name of the docker volume that will be created.
+                </span>
+                <span v-else-if="info === 'ops.args.env'">
+                  <b>env:</b> Key value map for environment variables in the container.
                 </span>
               </p>
               <MarkdownFile v-if="template" :name="'README.md'" :raw-markdown="template.readme" />
@@ -229,7 +322,7 @@ const loading: Ref<boolean> = ref(false);
 const { connected, publicKey } = useWallet();
 const { balance, refreshBalance, loadingBalance, errorBalance } = useStake(publicKey);
 const jobDefinition: Ref<JobDefinition> = useLocalStorage('job-definition', emptyJobDefinition)
-
+const envName: Ref<string[]> = ref([]);
 if (template.value) {
   jobDefinition.value = template.value.template;
 }
