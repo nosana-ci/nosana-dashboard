@@ -21,7 +21,7 @@
 <script setup lang="ts">
 const { markets, getMarkets, loadingMarkets } = useMarkets();
 
-if (!markets.value && !loadingMarkets) {
+if (!markets.value && !loadingMarkets.value) {
   getMarkets();
 }
 

@@ -61,7 +61,7 @@ const { markets, getMarkets, loadingMarkets } = useMarkets();
 const { data: runningJobs, pending: loadingRunningJobs } = await useAPI('/api/jobs/running');
 
 
-if (!markets.value && !loadingMarkets) {
+if (!markets.value && !loadingMarkets.value) {
   getMarkets();
 }
 </script>
