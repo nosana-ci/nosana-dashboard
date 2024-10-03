@@ -34,10 +34,7 @@
             <td>Poster</td>
             <td>
               <nuxt-link class="address is-family-monospace" :to="`/address/${job.project}`">
-                <span v-if="job.project.toString() === 'FEEw3nDocYSyrLT4HPjibjYuaNekakWNmasNvEx3nHKi'">
-                  Nosana Test Grid
-                </span>
-                <span v-else>{{ job.project }}</span>
+                <span>{{ job.project }}</span>
               </nuxt-link>
             </td>
           </tr>
@@ -64,7 +61,7 @@
                   useDateFormat(
                     new Date(job.timeStart * 1000),
                     "YYYY-MM-DD HH:mm:ss"
-                ).value
+                  ).value
                 }}
                 <UseTimeAgo v-slot="{ timeAgo }" :time="new Date(job.timeStart * 1000)">
                   ({{ timeAgo }})
@@ -110,9 +107,9 @@
               <a v-if="ipfsJob.state['input/repo'] &&
                 ipfsJob.state['input/commit-sha']
               " :href="ipfsJob.state['input/repo'].replace('.git', '') +
-        '/commit/' +
-        ipfsJob.state['input/commit-sha']
-        " target="_blank">
+                '/commit/' +
+                ipfsJob.state['input/commit-sha']
+                " target="_blank">
                 {{ ipfsJob.state["input/commit-sha"] }}
               </a>
             </td>

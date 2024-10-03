@@ -5,10 +5,7 @@
       <div v-if="address">
         <div class="is-flex is-align-items-center is-justify-content-space-between mb-4">
           <h3 class="title is-5 address is-family-monospace my-0">
-            <span v-if="address.toString() ===
-      'FEEw3nDocYSyrLT4HPjibjYuaNekakWNmasNvEx3nHKi'
-      ">Nosana Test Grid</span>
-            <span v-else>{{ address }}</span>
+            <span>{{ address }}</span>
           </h3>
         </div>
 
@@ -32,25 +29,6 @@
                 <span>{{ jobs.totalJobs }}</span>
               </td>
             </tr>
-            <tr v-if="jobs && nodeNfts && nodeNfts.length > 0">
-              <td>Node Access Key</td>
-              <td style="vertical-align: middle">
-                <div v-for="nft in nodeNfts" data-tooltip="Node Access Key found" style="width: fit-content"
-                  class="is-flex">
-                  <JobStatus :status="'COMPLETED'" image-only></JobStatus>
-                  <span class="address is-family-monospace ml-2">{{
-      Object.values(testgridMarkets).find(
-        (m) => m.collection === nft.collection.address.toString(),
-      )
-        ? Object.values(testgridMarkets).find(
-          (m) =>
-            m.collection === nft.collection.address.toString(),
-        ).name
-        : nft.collection.address.toString()
-    }}</span>
-                </div>
-              </td>
-            </tr>
             <tr v-if="nodeStatus">
               <td>Status</td>
               <td style="vertical-align: middle">
@@ -66,20 +44,41 @@
               </td>
             </tr>
             <tr v-if="nodeStatus === 'QUEUED' && nodeMarket && nodeMarket.length > 0
-      ">
+            ">
               <td>Market</td>
               <td>
                 <nuxt-link :to="`/markets/${nodeMarket[0].address.toString()}`" class="address is-family-monospace">{{
-      nodeMarket[0].address.toString() }}</nuxt-link>
+                  nodeMarket[0].address.toString() }}</nuxt-link>
               </td>
             </tr>
             <tr v-if="nodeStatus === 'RUNNING' && nodeRuns && nodeRuns.length > 0">
               <td>Running job</td>
               <td>
                 <nuxt-link :to="`/jobs/${nodeRuns[0].account.job}`" class="address is-family-monospace">{{
-      nodeRuns[0].account.job }}</nuxt-link>
+                  nodeRuns[0].account.job }}</nuxt-link>
               </td>
             </tr>
+            <template v-if="nodeStatus || (jobs && jobs.length)">
+              <tr>
+                <td>Node Uptime</td>
+                <td v-if="!nodeInfo || !nodeInfo.uptime">Offline</td>
+                <td v-else>{{ (nodeInfo.uptime / (3600 * 1000)).toFixed(1) }} hours</td>
+              </tr>
+              <tr>
+                <td>Node GPU</td>
+                <td v-if="!nodeInfo || !nodeInfo.info || !nodeInfo.info.gpu">Unknown</td>
+                <td v-else>
+                  <div v-for="gpu in nodeInfo.info.gpu">{{ gpu.name }}</div>
+                </td>
+              </tr>
+              <tr>
+                <td>Node Disk Space</td>
+                <td v-if="!nodeInfo || !nodeInfo.info || !nodeInfo.info.disk">Unknown</td>
+                <td v-else>
+                  <div>{{ (nodeInfo.info.disk / 10000).toFixed(0) }} GB</div>
+                </td>
+              </tr>
+            </template>
             <!-- TODO: First need to include price in the jobs.all() in SDK-->
             <!-- <tr v-if="jobs">
               <td>Total NOS earned</td>
@@ -96,10 +95,9 @@
           </tbody>
         </table>
         <div v-if="jobs && jobs.jobs">
-          <ExplorerJobList :per-page="limit" :total-jobs="jobs ? jobs.totalJobs : null" v-model:page="page" v-model:state="state"
-          :loading-jobs="loadingJobs" title="Jobs by this node" :jobs="jobs ? jobs.jobs : null"
-          >
-        </ExplorerJobList>
+          <ExplorerJobList :per-page="limit" :total-jobs="jobs ? jobs.totalJobs : null" v-model:page="page"
+            v-model:state="state" :loading-jobs="loadingJobs" title="Jobs by this node" :jobs="jobs ? jobs.jobs : null">
+          </ExplorerJobList>
         </div>
       </div>
       <div v-else>Address not found</div>
@@ -108,12 +106,11 @@
 </template>
 
 <script setup lang="ts">
-import { PublicKey, Connection } from '@solana/web3.js';
-// import { Metaplex } from '@metaplex-foundation/js';
+import { PublicKey } from '@solana/web3.js';
+import dayjs from 'dayjs';
 const { data: testgridMarkets, pending: loadingTestgridMarkets } = useAPI('/api/markets', { default: () => [] });
-const config = useRuntimeConfig();
-
 const { params } = useRoute();
+const { data: nodeInfo, pending: loadingNode } = useFetch(`https://${String(params.id)}.node.k8s.prd.nos.ci/node/info`);
 const { nosana } = useSDK();
 const { markets, getMarkets, loadingMarkets } = useMarkets();
 
@@ -124,7 +121,6 @@ const address: Ref<string | null> = ref(null);
 const balance: Ref<any | null> = ref(null);
 const solBalance: Ref<any | null> = ref(null);
 const nodeStatus: Ref<any | null> = ref(null);
-const nodeNfts: Ref<Array<any>> = ref([]);
 const nodeMarket: Ref<any> = ref(null);
 const nodeRuns: Ref<any> = ref(null);
 const loading: Ref<boolean> = ref(false);
@@ -139,11 +135,6 @@ const jobStateMapping: any = {
 const limit: Ref<number> = ref(10);
 const jobsUrl = computed(() => { return `/api/jobs?limit=${limit.value}&offset=${(page.value - 1) * limit.value}${state.value !== null ? `&state=${jobStateMapping[state.value]}` : ''}${`&node=${params.id}`}` })
 const { data: jobs, pending: loadingJobs, refresh: refreshJobs } = useAPI(jobsUrl, { watch: [jobsUrl] });
-
-// create connection for Metaplex
-// TODO move this to SDK or plugin(?)
-// const web3 = new Connection(config.public.rpcUrl);
-// const metaplex = new Metaplex(web3);
 
 const getAddress = async () => {
   loading.value = true;
