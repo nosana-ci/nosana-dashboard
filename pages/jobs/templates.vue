@@ -28,7 +28,7 @@
                     <a :class="{ 'is-active': filterCategory === category }" @click="filterCategory = category">
                       <span>{{ category }}</span>
                       <span class="ml-auto is-size-7">({{ templates.filter(t =>
-                        t.category.includes(category)).length }})</span>
+                        t.category.split("|").includes(category)).length }})</span>
                     </a>
                   </li>
                 </ul>
@@ -41,13 +41,14 @@
       <div class="column is-9">
         <div class="box has-background-white-ter">
 
-          <div v-for="category in categories">
+          <div v-for="category in categories" v-if="filteredTemplates">
             <div v-if="!filterCategory || category === filterCategory" class="mb-6">
               <h2 class="title is-4">{{ category }}</h2>
-              <h3 class="subtitle is-6">{{ filteredTemplates.filter(t => t.category.includes(category)).length }}
+              <h3 class="subtitle is-6">{{ filteredTemplates.filter(t =>
+                t.category.split("|").includes(category)).length }}
                 templates</h3>
               <div class="columns is-multiline">
-                <div v-for="template in filteredTemplates.filter(t => t.category.includes(category))"
+                <div v-for="template in filteredTemplates.filter(t => t.category.split('|').includes(category))"
                   :key="template.name" class="column is-4">
                   <nuxt-link class="box" style="height: 100%;"
                     :to="{ path: '/jobs/create', query: { templateId: template.id } }">
@@ -73,11 +74,11 @@
 </template>
 
 <script lang="ts" setup>
-const { templates } = useTemplates();
+const { templates, loadingTemplates } = useTemplates();
 const filterCategory: Ref<string | null> = ref(null);
 const search: Ref<string | null> = ref(null);
 const filteredTemplates = computed(() => {
-  return templates.value.filter(t => {
+  return templates.value ? templates.value.filter(t => {
     let found = true;
     let inCategory = true;
     if (search.value) {
@@ -89,10 +90,10 @@ const filteredTemplates = computed(() => {
       inCategory = t.category.includes(filterCategory.value);
     }
     return found && inCategory;
-  })
+  }) : null;
 });
 const categories = computed(() => {
-  const categoryIds = [...new Set(templates.value.flatMap(({ category }) => category))];
+  const categoryIds = [...new Set(templates.value.flatMap(({ category }) => category.split("|")))];
 
   return categoryIds.sort(function (a, b) {
     if (a == "Featured") return -1;

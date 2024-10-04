@@ -1,9 +1,9 @@
 <template>
   <div>
     <TopBar :title="'Job Builder'" :subtitle="'Create and deploy job definition files'"></TopBar>
-    <form @submit.prevent="postJob">
+    <div v-if="loadingTemplates && templateId">Loading template..</div>
+    <form @submit.prevent="postJob" v-else>
       <div class="box">
-
         <div class="columns">
           <div class="column is-7">
             <div class="tabs">
@@ -318,10 +318,12 @@ import { sleep, validateJobDefinition, type IValidation, type JobDefinition, typ
 import { WalletModalProvider, useWallet } from "solana-wallets-vue";
 import { useToast } from "vue-toastification";
 import type { LocationQueryValue } from 'vue-router';
-const { templates, emptyJobDefinition } = useTemplates();
+const { templates, emptyJobDefinition, loadingTemplates } = useTemplates();
 const route = useRoute();
 const templateId: Ref<LocationQueryValue> = ref(route.query.templateId as LocationQueryValue);
-const template: Ref<Template | undefined> = ref(templates.value.find(t => t.id === templateId.value))
+const template: ComputedRef<Template | undefined> = computed(() => {
+  return templates.value ? templates.value.find(t => t.id === templateId.value) : undefined;
+})
 const toast = useToast();
 const tab: Ref<string> = ref('builder');
 const info: Ref<string | null> = ref(null);
@@ -331,12 +333,18 @@ const { balance, refreshBalance, loadingBalance, errorBalance } = useStake(publi
 const jobDefinition: Ref<JobDefinition> = useLocalStorage('job-definition', emptyJobDefinition)
 const envName: Ref<string[]> = ref([]);
 if (template.value) {
-  jobDefinition.value = template.value.template;
+  jobDefinition.value = template.value.jobDefinition;
 }
+watch(() => template.value, async (newValue: Template | undefined) => {
+  if (newValue) {
+    console.log("TES", newValue);
+    jobDefinition.value = newValue.jobDefinition;
+  }
+})
 watch(() => jobDefinition.value, async (newValue: any) => {
   if (newValue === "") {
     await nextTick();
-    jobDefinition.value = template.value ? template.value.template : emptyJobDefinition;
+    jobDefinition.value = template.value ? template.value.jobDefinition : emptyJobDefinition;
   }
 });
 
