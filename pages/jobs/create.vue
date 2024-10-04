@@ -83,14 +83,17 @@
                             <p class="control">
                               <a class="button"
                                 @click="info = 'ops.args.cmd'; ((op.args as OperationArgsMap['container/run']).cmd! as string[]).splice(i, 1)">
-                                delete
+                                <span class="icon is-small">
+                                  <TrashIcon />
+                                </span>
                               </a>
                             </p>
                           </div>
                         </div>
-                        <a class="button"
+                        <a class="button is-small is-primary is-pulled-right mt-2"
                           @click="info = 'ops.args.cmd'; ((op.args as OperationArgsMap['container/run']).cmd! as string[]).push('')">
-                          add cmd
+                          <span>Add cmd</span>
+                          <span class="icon">+</span>
                         </a>
                         <p class="is-size-7">
                           <b>Exec</b> form<span class="ml-2"><a
@@ -125,20 +128,24 @@
                           <p class="control">
                             <a class="button"
                               @click="info = 'ops.args.env'; delete ((op.args as OperationArgsMap['container/run']).env! as any)[i]">
-                              delete
+                              <span class="icon is-small">
+                                <TrashIcon />
+                              </span>
                             </a>
                           </p>
                         </div>
                       </div>
-                      <div class="field has-addons mt-2">
+                      <div class="field has-addons has-addons-right mt-2">
                         <p class="control">
-                          <input class="input" @focus="info = 'ops.args.env'" v-model="envName[i]" type="text"
+                          <input class="input is-small" @focus="info = 'ops.args.env'" v-model="envName[i]" type="text"
                             placeholder="env name">
                         </p>
                         <p class="control">
-                          <a class="button" :class="{ 'is-disabled': !envName[i] || !envName[i].length }"
+                          <a class="button is-primary is-small"
+                            :class="{ 'is-disabled': !envName[i] || !envName[i].length }"
                             @click="info = 'ops.args.env'; !(op.args as OperationArgsMap['container/run']).env ? (op.args as OperationArgsMap['container/run']).env = {} : null; ((op.args as OperationArgsMap['container/run']).env!)[envName[i]] = ''; envName[i] = null">
-                            Add env {{ envName[i] }}
+                            <span>Add env</span>
+                            <span class="icon">+</span>
                           </a>
                         </p>
                       </div>
@@ -173,15 +180,14 @@
                     </div>
                   </div>
                 </div>
-
               </div>
               <div class="field is-grouped is-grouped-right">
                 <p class="control">
                   <a class="button is-primary is-small" @click="jobDefinition.ops.push({
                     id: 'operation-' + (jobDefinition.ops.length + 1), type: 'container/run', args: { image: 'ubuntu', gpu: true }
                   })">
+                    <span>Add operation</span>
                     <span class="icon">+</span>
-                    <span>Add Operation</span>
                   </a>
                 </p>
               </div>
@@ -304,6 +310,7 @@
 <script lang="ts" setup>
 import JsonEditorVue from 'json-editor-vue';
 import 'vanilla-jsoneditor/themes/jse-theme-dark.css'
+import TrashIcon from '@/assets/img/icons/trash.svg?component';
 import { faSave } from '@fortawesome/free-regular-svg-icons';
 import { faUpload } from '@fortawesome/free-solid-svg-icons';
 import { Mode, type MenuItem, parseJSONPath, ValidationSeverity, type ValidationError } from 'vanilla-jsoneditor'
