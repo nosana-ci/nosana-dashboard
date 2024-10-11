@@ -8,14 +8,14 @@
 
 <script setup lang="ts">
 useSeoMeta({
-  title: 'Nosana Explorer',
-  ogTitle: 'Nosana Explorer',
-  twitterTitle: 'Nosana Explorer',
+  title: 'Nosana Dashboard',
+  ogTitle: 'Nosana Dashboard',
+  twitterTitle: 'Nosana Dashboard',
   description: 'Powering the AI revolution',
   ogDescription: 'Powering the AI revolution',
   twitterDescription: 'Powering the AI revolution',
-  ogImage: 'https://explorer.nosana.io/img/screenshot.png',
-  twitterImage: 'https://explorer.nosana.io/img/screenshot.png',
+  ogImage: 'https://dashboard.nosana.com/img/screenshot.png',
+  twitterImage: 'https://dashboard.nosana.com/img/screenshot.png',
   twitterCard: 'summary_large_image'
 })
 

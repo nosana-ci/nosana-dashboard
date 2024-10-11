@@ -29,7 +29,6 @@ export type Template = {
 
 const { data: templates, pending: loadingTemplates } = useAPI('/api/jobs/templates');
 
-
 export const useTemplates = (): {templates: Ref<Template[]>, emptyJobDefinition: JobDefinition, loadingTemplates: Ref<boolean>} => {
   return { templates, emptyJobDefinition, loadingTemplates };
 };

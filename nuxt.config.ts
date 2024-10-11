@@ -55,7 +55,7 @@ export default defineNuxtConfig({
       },
     },
     build: {
-      target: "esnext",
+      target: "esnext"
     },
     optimizeDeps: {
       include: ["@solana/web3.js", "buffer"],
@@ -74,6 +74,7 @@ export default defineNuxtConfig({
         scss: {
           sourceMap: false,
           additionalData: '@import "@/assets/styles/variables.scss";',
+          silenceDeprecations: ['mixed-decls']
         },
       },
     },

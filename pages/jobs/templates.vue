@@ -15,7 +15,8 @@
           <div class="field">
             <div class="control">
               <label class="label">Category</label>
-              <div class="menu">
+              <span v-if="!templates">...</span>
+              <div class="menu" v-else>
                 <ul class="menu-list">
                   <li>
                     <a @click="filterCategory = null" :class="{ 'is-active': filterCategory === null }">

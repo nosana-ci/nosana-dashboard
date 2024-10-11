@@ -168,10 +168,10 @@
   
   .tag {
     // color:white !important;
+    background-color: $black-ter !important;
     span {
       color: white;
     }
-    background-color: $black-ter !important;
   }
 
   .has-background-body:not(.light-mode) {
