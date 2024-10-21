@@ -14,7 +14,15 @@
             <tr>
               <td>NOS Balance</td>
               <td>
-                <span v-if="balance">{{ balance.uiAmount }}</span> NOS
+                <span v-if="balance">{{ balance.uiAmount }}  NOS</span>
+                <span v-else>-</span>
+              </td>
+            </tr>
+            <tr>
+              <td>NOS Staked</td>
+              <td>
+                <span v-if="nosStaked && nosStaked.amount">{{ nosStaked.amount/1e6 }} NOS</span>
+                <span v-else>-</span>
               </td>
             </tr>
             <tr>
@@ -107,7 +115,6 @@
 
 <script setup lang="ts">
 import { PublicKey } from '@solana/web3.js';
-import dayjs from 'dayjs';
 const { data: testgridMarkets, pending: loadingTestgridMarkets } = useAPI('/api/markets', { default: () => [] });
 const { params } = useRoute();
 const { data: nodeInfo, pending: loadingNode } = useFetch(`https://${String(params.id)}.node.k8s.prd.nos.ci/node/info`);
@@ -120,6 +127,7 @@ if (!markets.value) {
 const address: Ref<string | null> = ref(null);
 const balance: Ref<any | null> = ref(null);
 const solBalance: Ref<any | null> = ref(null);
+const nosStaked: Ref<any | null> = ref(null);
 const nodeStatus: Ref<any | null> = ref(null);
 const nodeMarket: Ref<any> = ref(null);
 const nodeRuns: Ref<any> = ref(null);
@@ -145,6 +153,11 @@ const getAddress = async () => {
     try {
       balance.value = await nosana.value.solana.getNosBalance(address.value);
       solBalance.value = await nosana.value.solana.getSolBalance(address.value);
+      try {
+        nosStaked.value = await nosana.value.stake.get(address.value);
+      } catch (error) {
+        console.error('cant fetch stake', error)
+      }
     } catch (e) {
       console.error('cant get balance', e);
     }
