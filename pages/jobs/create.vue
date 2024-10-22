@@ -68,7 +68,7 @@
                           v-model="(op.args as OperationArgsMap['container/run']).cmd" type="text" placeholder="cmd">
                         <p class="is-size-7">
                           <b>Shell</b> form<span class="ml-2"><a
-                              @click="(op.args as OperationArgsMap['container/run']).cmd = ((op.args as OperationArgsMap['container/run']).cmd! as string).split(' ')">Switch
+                              @click="(op.args as OperationArgsMap['container/run']).cmd = switchCmd((op.args as OperationArgsMap['container/run']).cmd, 'exec')">Switch
                               to exec form</a></span>
                         </p>
                       </div>
@@ -97,7 +97,7 @@
                         </a>
                         <p class="is-size-7">
                           <b>Exec</b> form<span class="ml-2"><a
-                              @click="(op.args as OperationArgsMap['container/run']).cmd = ((op.args as OperationArgsMap['container/run']).cmd! as string[]).join(' ')">Switch
+                              @click="(op.args as OperationArgsMap['container/run']).cmd = switchCmd((op.args as OperationArgsMap['container/run']).cmd, 'shell')">Switch
                               to shell form</a></span>
                         </p>
                       </div>
@@ -364,6 +364,19 @@ onFileUpload(async (files) => {
     }
   }
 })
+
+const switchCmd = (cmd: string | string[] | undefined, type: 'exec' | 'shell') => {
+  if (type === 'exec' && (typeof cmd === 'string' || !cmd)) {
+    if (!cmd) {
+      cmd = [];
+    } else {
+      cmd = cmd.split(' ');
+    }
+  } else if (type === 'shell' && Array.isArray(cmd)) {
+    cmd = cmd.join(' ')
+  }
+  return cmd;
+}
 
 const JSONToFile = (obj: any, filename: string) => {
   const blob = new Blob([JSON.stringify(obj, null, 2)], {
