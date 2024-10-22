@@ -109,7 +109,7 @@
                     <div class="field">
                       <label class="label">Expose port</label>
                       <div class="control">
-                        <input class="input" @focus="info = 'ops.args.expose'" required
+                        <input class="input" @focus="info = 'ops.args.expose'"
                           @change="(op.args as OperationArgsMap['container/run']).expose === '' ? (op.args as OperationArgsMap['container/run']).expose = undefined : null"
                           v-model.number="(op.args as OperationArgsMap['container/run']).expose" type="number"
                           placeholder="80">
@@ -368,11 +368,13 @@ import { useToast } from "vue-toastification";
 import type { LocationQueryValue } from 'vue-router';
 const { templates, emptyJobDefinition, loadingTemplates } = useTemplates();
 const route = useRoute();
+const router = useRouter();
 const templateId: Ref<LocationQueryValue> = ref(route.query.templateId as LocationQueryValue);
 const template: ComputedRef<Template | undefined> = computed(() => {
   return templates.value ? templates.value.find(t => t.id === templateId.value) : undefined;
 })
 const toast = useToast();
+const { nosana } = useSDK();
 const { markets, getMarkets, loadingMarkets } = useMarkets();
 const { data: testgridMarkets } = await useAPI('/api/markets', { default: () => [] });
 
@@ -527,8 +529,17 @@ const validator = (json: any): Array<ValidationError> => {
 
 const postJob = async () => {
   loading.value = true;
-  await sleep(2);
+  if (!jobDefinition.value || !market.value) return;
+  try {
+    const ipfsHash = await nosana.value.ipfs.pin(jobDefinition.value);
+    console.log('ipfs uploaded!', nosana.value.ipfs.config.gateway + ipfsHash);
+    const response = await nosana.value.jobs.list(ipfsHash, market.value!.address);
+    toast.success(`Succesfully created job ${response.job}`);
+    await sleep(3);
+    router.push('/jobs/' + response.job);
+  } catch (e: any) {
+    toast.error(e.toString());
+  }
   loading.value = false;
-  toast.success('Succesfully created job');
 }
 </script>
