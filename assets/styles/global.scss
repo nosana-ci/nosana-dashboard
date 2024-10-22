@@ -22,6 +22,9 @@
     text-decoration: none;
   }
 }
+.table.is-narrow td, .table.is-narrow th {
+  line-height: 1;
+}
 
 .box {
   position: relative;

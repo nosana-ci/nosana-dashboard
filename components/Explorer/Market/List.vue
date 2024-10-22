@@ -9,7 +9,7 @@
   </div>
 
   <div class="table-container">
-    <table class="table is-fullwidth is-striped is-hoverable">
+    <table class="table is-fullwidth is-striped is-hoverable" :class="{ 'is-narrow': select }">
       <thead>
         <tr>
           <th>Name</th>
@@ -25,7 +25,8 @@
         <nuxt-link v-for="market in filteredMarkets" v-else :key="market.address.toString()"
           :to="`/markets/${market.address.toString()}`" custom>
           <template #default="{ navigate }">
-            <tr class="is-clickable" @click="navigate">
+            <tr class="is-clickable" :class="{ 'is-selected': selectedMarket === market }"
+              @click="select ? selectedMarket = market : navigate()">
               <td>
                 <span v-if="
                   testgridMarkets.find((tgm: any) => tgm.address === market.address.toString())
@@ -111,6 +112,16 @@ const props = defineProps({
     type: Array<Market>,
     default: undefined,
   },
+  select: {
+    type: Boolean,
+    default: false
+  }
+});
+const emit = defineEmits(['selectedMarket'])
+const selectedMarket: Ref<Market | null> = ref(null);
+
+watch(selectedMarket, (newValue: Market | null) => {
+  emit('selectedMarket', newValue)
 });
 const page: Ref<number> = ref(1);
 const perPage: Ref<number> = ref(25);
