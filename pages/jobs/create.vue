@@ -1,6 +1,28 @@
 <template>
   <div>
     <TopBar :title="'Job Builder'" :subtitle="'Create and deploy job definition files'"></TopBar>
+    <ul class="steps has-content-centered has-gaps">
+      <li class="steps-segment" :class="{ 'is-active': step === 'job-definition' }">
+        <span class="steps-marker is-clickable" @click="step = 'job-definition'">1</span>
+        <div class="steps-content">
+          <p class="is-size-4">Job Definition</p>
+        </div>
+      </li>
+      <li class="steps-segment" :class="{ 'is-active': step === 'pick-market' }">
+        <span class="steps-marker" :class="{ 'is-clickable': step !== 'job-definition' }"
+          @click="step !== 'job-definition' ? step = 'pick-market' : null">2</span>
+        <div class="steps-content">
+          <p class="is-size-4">GPU Market</p>
+        </div>
+      </li>
+      <li class="steps-segment" :class="{ 'is-active': step === 'post-job' }">
+        <span class="steps-marker">3</span>
+        <div class="steps-content">
+          <p class="is-size-4">Post Job</p>
+        </div>
+      </li>
+    </ul>
+
     <div v-if="step === 'job-definition'">
       <div v-if="loadingTemplates && templateId">Loading template..</div>
       <form @submit.prevent="market = null; step = 'pick-market'" v-else>
@@ -293,23 +315,6 @@
       <ExplorerMarketList :markets="markets" :select="true"
         @selectedMarket="(selectedMarket) => { market = selectedMarket }"></ExplorerMarketList>
       <div v-if="!loadingMarkets && !markets">Could not load markets</div>
-      <div v-if="market">
-        <div>Selected market:
-          <span v-if="
-            testgridMarkets.find((tgm: any) => tgm.address === market!.address.toString())
-          " class="py-2">
-            {{
-              testgridMarkets.find((tgm: any) => tgm.address === market!.address.toString()).name
-            }}
-          </span>
-          <span v-else class="is-family-monospace py-2 address">
-            {{ market.address.toString() }}
-          </span>
-        </div>
-        <div>Max price: {{ ((market.jobPrice * market.jobTimeout) / 1e6).toFixed(4) }} NOS</div>
-        <div>Max duration: {{ market.jobTimeout / 60 }} minutes</div>
-        <div>Network fee (10%): {{ (((market.jobPrice * market.jobTimeout) / 1e6) * 0.1).toFixed(4) }} NOS</div>
-      </div>
       <div class="field">
         <label class="label" v-if="balance !== null || loadingBalance">NOS Balance:</label>
         <span>
@@ -327,10 +332,62 @@
           </div>
         </span>
       </div>
-      <form @submit.prevent="postJob">
+      <form @submit.prevent="step = 'post-job'">
         <div class="field is-grouped is-grouped-right">
           <p class="control">
             <a @click="step = 'job-definition'" :class="{ 'is-loading': loading }"
+              class="button is-primary is-large is-outlined">
+              <span>Previous</span>
+            </a>
+          </p>
+          <p class="control">
+            <button :disabled="!jobDefinition || !market ? true : undefined" :class="{ 'is-loading': loading }"
+              class="button is-primary is-large" type="submit">
+              <span>Next</span>
+            </button>
+          </p>
+        </div>
+      </form>
+    </div>
+    <div v-else-if="step === 'post-job'">
+      <form @submit.prevent="postJob">
+        <div v-if="market" class="box">
+          <table class="table is-fullwidth is-striped">
+            <tbody>
+              <tr>
+                <td>Selected market</td>
+                <td>
+                  <span v-if="
+                    testgridMarkets.find((tgm: any) => tgm.address === market!.address.toString())
+                  " class="py-2">
+                    {{
+                      testgridMarkets.find((tgm: any) => tgm.address === market!.address.toString()).name
+                    }}
+                  </span>
+                  <span v-else class="is-family-monospace py-2 address">
+                    {{ market.address.toString() }}
+                  </span>
+                </td>
+              </tr>
+              <tr>
+                <td>Max price</td>
+                <td>{{ ((market.jobPrice * market.jobTimeout) / 1e6).toFixed(4) }} NOS</td>
+              </tr>
+              <tr>
+                <td>Max duration</td>
+                <td>{{ market.jobTimeout / 60 }} minutes</td>
+              </tr>
+              <tr>
+                <td>Network fee <small>(10%)</small></td>
+                <td>{{ (((market.jobPrice * market.jobTimeout) / 1e6) * 0.1).toFixed(4) }} NOS</td>
+              </tr>
+            </tbody>
+          </table>
+          <VueJsonPretty :data="jobDefinition" show-icon show-line-number />
+        </div>
+        <div class="field is-grouped is-grouped-right">
+          <p class="control">
+            <a @click="step = 'pick-market'" :class="{ 'is-loading': loading }"
               class="button is-primary is-large is-outlined">
               <span>Previous</span>
             </a>
@@ -356,6 +413,8 @@
   </div>
 </template>
 <script lang="ts" setup>
+import VueJsonPretty from "vue-json-pretty";
+import 'vue-json-pretty/lib/styles.css';
 import JsonEditorVue from 'json-editor-vue';
 import 'vanilla-jsoneditor/themes/jse-theme-dark.css'
 import TrashIcon from '@/assets/img/icons/trash.svg?component';

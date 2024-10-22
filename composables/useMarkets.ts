@@ -9,7 +9,8 @@ const getMarkets = async () => {
   loadingMarkets.value = true;
   try {
     markets.value = (await nosana.value.jobs.allMarkets()).sort(function(a, b) {
-      return (a.address < b.address) ? -1 : 1;
+      console.log(parseInt(a.jobPrice));
+      return (parseInt(a.jobPrice) < parseInt(b.jobPrice)) ? -1 : 1;
   });
   } catch (e) {
     console.error(e);

@@ -74,7 +74,7 @@ export default defineNuxtConfig({
         scss: {
           sourceMap: false,
           additionalData: '@import "@/assets/styles/variables.scss";',
-          silenceDeprecations: ['mixed-decls']
+          silenceDeprecations: ['mixed-decls', 'slash-div']
         },
       },
     },
