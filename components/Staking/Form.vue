@@ -27,8 +27,8 @@
             <label class="label">Add NOS:</label>
             <span class="is-size-7 mr-1">
               <span v-if="loadingBalance">....... NOS</span>
-              <CustomCountUp v-else-if="balance !== null" class="is-clickable" @click="refreshBalance" :end-val="balance"
-                :decimal-places="2" :duration=".5">
+              <CustomCountUp v-else-if="balance !== null" class="is-clickable" @click="refreshBalance"
+                :end-val="balance" :decimal-places="2" :duration=".5">
                 <template #suffix>
                   <span> NOS</span>
                 </template>
@@ -71,6 +71,22 @@
               <span class="ml-2 has-text-grey">Days</span>
             </div>
           </div>
+        </div>
+        <!-- Show reward account warning if address is in list & reward account doesn't exists -->
+        <div v-if="
+          activeStake &&
+          stakesWithoutRewardAccount.includes(activeStake.address) &&
+          rewardsInfo &&
+          !rewardsInfo.vault" class="notification is-warning is-light">
+          <p class="is-size-5 mb-4">
+            You have an active stake, but there is no reward account found. <br>
+            To fix this create a reward account with the button below to start receiving $NOS rewards.
+            Contact the Nosana team for further details.
+          </p>
+          <button class="button mt-2 is-fullwidth is-primary is-large" @click.prevent="createRewardAccount()"
+            :class="{ 'is-loading': loading }">
+            Create Reward Account
+          </button>
         </div>
         <!-- Your stake block -->
         <div v-if="activeStake && activeStake.address">
@@ -342,7 +358,8 @@
               :max="365 - unstakeDays" placeholder="0" style="width: auto;">
             <span class="ml-2 has-text-grey">Days</span>
             <button class="px-2 button is-accent is-outlined has-text-weight-semibold is-uppercase is-size-7"
-              style="width: 45px; height: 22px; margin-left: 10px;" @click.prevent="extraUnstakeDays = 365 - unstakeDays">
+              style="width: 45px; height: 22px; margin-left: 10px;"
+              @click.prevent="extraUnstakeDays = 365 - unstakeDays">
               Max
             </button>
           </div>
@@ -365,8 +382,8 @@ import { useAPI2 } from '~/composables/useAPI2';
 
 const toast = useToast();
 const { connected, publicKey } = useWallet();
-const { unstakeDays, balance, activeStake, loadingPoolInfo, poolInfo, 
-  refreshPoolInfo, errorPoolInfo, refreshStake, refreshBalance, 
+const { rewardsInfo, unstakeDays, balance, activeStake, loadingPoolInfo, poolInfo,
+  refreshPoolInfo, errorPoolInfo, refreshStake, refreshBalance,
   loadingStake, errorStake, loadingBalance, errorBalance } = useStake(publicKey);
 const { nosana } = useSDK();
 const SECONDS_PER_DAY = 24 * 60 * 60;
@@ -379,6 +396,32 @@ const amount: Ref<number | null> = ref(null);
 const extraUnstakeDays: Ref<number> = ref(0);
 const tab: Ref<string> = ref('stake');
 const newUnstakeDays: Ref<number> = ref(14);
+const stakesWithoutRewardAccount = ref([
+  'HUuiuxCmrYFZx8riSrStAzGv3ZpqgAjXx51a35xcRRsT',
+  'Efx77rVMgUP5AQEeiNEnzuCdcckK5qQUDPeJ6wZStWGo',
+  'DCVMG5Pub1SckQRKLhsdTUbFrhM5QXaAr8ah62VgxvtK',
+  '7rzHNGGyvZBTy4eprTAtwsLfhWncZPMsmqxvUbhXK4Vb',
+  'HMZdymumUcxnJHbqShPj7SeBjePoSdJshHcRuAJ1Tk3m',
+  '4DEzPsgde8JRoHaquWMX1tmbaDSWArzpeR1z8A6iwaGM',
+  '34HZW9e7oejnMUi56hAdCkkyuyZnnSVg2BHfW3K7qiMD',
+  'GqnEJtRXezyYrZzCHpMMyymW3SJifE7DDB7SATbzrdpL',
+  'EuUqi98wsumcfxMvYbR7Xd7gpLBdiuBgDUU64jHMJ5dC',
+  '3N6LxjWPe7LQuqrueoSMKm1BFBTPFSinrY3EQgL5Vh1T',
+  '3NbuLEPFpCSubCiVgkBvnLevaAg4R6pKd1V1vbcc8jBx',
+  '8iiV4xAXxZj135tBRtxHDDaspbTCwnMTcgpGujKpf3RY',
+  '5DScvc6atvFvfkQBsWD9A6qxhfAJqfnhjvH3FZLmSqTv',
+  'BoEh9JTFEiFwzX5QXQDT5xxZsm4DVDFo1TNbox9cyhvW',
+  '5s4STD8V8AooefGf6VBdA32frqXytX2UdEuHFvvKz6Y9',
+  '7BpcjAmG8A2G412QDww4QnkVPcRRgxqaFhzAQVV9xaG5',
+  '2XofmYToG9caMt1PkKzQQB9jLywWLR34LLG1wM6sBXze',
+  'FR4LHhpLAPDBwawZJsU4RdYiuPaFHgLLaZhnjE3p5JYo',
+  '7W8zxJDkNdM219WejmMvfiH5cE8TRVPg1E1FeWXBCY8J',
+  '4f94CU5KSPnc5C3QdE3cCG7wnEhQCfbBodwEMEYc8qSW',
+  'EiH61gDJTaa81P6cLHZLZjGgGNpGtXw1V6VNQdBfsLFX',
+  'Dvtai7nF1nb78KHUAtrDC2PduGsZaEDgchYFa1XPLZUr',
+  '8j9ounoWkCWyX9Uhi6x14q9R79yddTukEPbp7m7f9MD2',
+  'DmzckmHiaWvoxarKXS3Hcxr7hcz6XRY7QQy76JEJUk5Z',
+]);
 
 const multiplier: ComputedRef<number> = computed(() => {
   const days = extraUnstakeDays.value > 0 ? extraUnstakeDays.value + unstakeDays.value : (unstakeDays.value ? unstakeDays.value : newUnstakeDays.value);
@@ -432,6 +475,14 @@ const stakeOrTopup = () => {
   } else {
     stake()
   }
+}
+
+const createRewardAccount = async () => {
+  const createRewardAccount = await nosana.value.stake.createRewardAccount();
+  await refreshStake();
+  await refreshBalance();
+  toast.success('Succesfully created reward account');
+  console.log('create reward account tx', createRewardAccount);
 }
 
 const topup = async () => {
