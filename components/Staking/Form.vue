@@ -421,7 +421,7 @@ const stakesWithoutRewardAccount = ref([
   'Dvtai7nF1nb78KHUAtrDC2PduGsZaEDgchYFa1XPLZUr',
   '8j9ounoWkCWyX9Uhi6x14q9R79yddTukEPbp7m7f9MD2',
   'DmzckmHiaWvoxarKXS3Hcxr7hcz6XRY7QQy76JEJUk5Z',
-  '9B5wDHGZmL2HHyFXx11F9KaiAqyv77fiUr6xqfanmCzS',
+  '9B5wDHGZmL2HHyFXx11F9KaiAqyv77fiUr6xqfanmCzS'
 ]);
 
 const multiplier: ComputedRef<number> = computed(() => {
