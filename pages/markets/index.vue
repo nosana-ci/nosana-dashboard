@@ -5,9 +5,9 @@
       <ExplorerSearch />
     </div>
     <div class="box">
-      <h1 class="title is-5">GPU Markets</h1>
       <div class="columns">
         <div class="column is-2 has-text-centered">
+          <h1 class="title is-5">GPU Markets</h1>
           <ExplorerNodesAvailable />
         </div>
         <div class="column is-10">

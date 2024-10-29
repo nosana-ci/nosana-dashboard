@@ -3,7 +3,7 @@ export const useAPI2: typeof useFetch<any> = (request, opts?) => {
   return useMyAsyncData(toValue(request).toString(), async () => {
     const url = toValue(request);
     if (url === '') return;
-    return $fetch('https://backend.k8s.prd.nos.ci' + url)
+    return $fetch(config.public.oldApiBase + url)
   }, {
     transform(value: any) {
       return JSON.parse(value as unknown as string)

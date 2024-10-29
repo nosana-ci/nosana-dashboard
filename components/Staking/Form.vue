@@ -163,7 +163,7 @@
             </CustomCountUp>
             <span v-else-if="loadingPoolInfo">....</span>
           </div>
-          <p class="has-text-danger" v-if="errorPoolInfo">Error fetching pool info: {{ errorPoolInfo }}.
+          <p class="has-text-danger" v-if="errorPoolInfo">Error fetching reward pool info.
             <a class="has-text-danger" @click="refreshPoolInfo"><u>retry</u></a>
           </p>
         </div>

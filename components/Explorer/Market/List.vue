@@ -1,10 +1,26 @@
 <template>
-  <div v-if="filteredMarkets && !filteredMarkets.length">No markets</div>
-  <div class="columns is-mobile is-vcentered">
-    <div v-if="markets && markets.length > perPage" class="column has-text-right">
-      {{ (page - 1) * perPage + 1 }} -
-      {{ Math.min(page * perPage, markets.length) }} of
-      {{ markets.length }} markets
+  <div class="columns">
+    <div class="column">
+      <div class="tabs">
+        <ul>
+          <li :class="{ 'is-active': tab === 'premium' }">
+            <a @click="tab = 'premium'" class="is-justify-content-flex-start">PREMIUM</a>
+          </li>
+          <li :class="{ 'is-active': tab === 'community' }">
+            <a @click="tab = 'community'" class="is-justify-content-flex-start">COMMUNITY</a>
+          </li>
+          <li :class="{ 'is-active': tab === 'all' }">
+            <a @click="tab = 'all'" class="is-justify-content-flex-start">ALL</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+    <div class="column is-narrow">
+      <div v-if="filteredMarkets && filteredMarkets.length" class="has-text-right">
+        <span v-if="filteredMarkets.length > perPage">{{ (page - 1) * perPage + 1 }} -
+          {{ Math.min(page * perPage, filteredMarkets.length) }} of </span>
+        <span>{{ filteredMarkets.length }} markets</span>
+      </div>
     </div>
   </div>
 
@@ -22,7 +38,10 @@
         <tr v-if="!filteredMarkets">
           <td colspan="4">Loading markets..</td>
         </tr>
-        <nuxt-link v-for="market in filteredMarkets" v-else :key="market.address.toString()"
+        <tr v-if="filteredMarkets && !filteredMarkets.length">
+          <td colspan="4">No markets</td>
+        </tr>
+        <nuxt-link v-for="market in paginatedMarkets" v-else :key="market.address.toString()"
           :to="`/markets/${market.address.toString()}`" custom>
           <template #default="{ navigate }">
             <tr class="is-clickable" :class="{ 'is-selected': selectedMarket === market }"
@@ -95,8 +114,8 @@
       </tbody>
     </table>
   </div>
-  <pagination v-if="markets && markets.length > perPage" v-model="page" class="pagination is-centered"
-    :total-page="Math.ceil(markets.length / perPage)" :max-page="6">
+  <pagination v-if="filteredMarkets && filteredMarkets.length > perPage" v-model="page" class="pagination is-centered"
+    :total-page="Math.ceil(filteredMarkets.length / perPage)" :max-page="6">
   </pagination>
 </template>
 
@@ -106,6 +125,7 @@ import { type Market } from '@nosana/sdk';
 const { data: testgridMarkets, pending: loadingTestgridMarkets } = await useAPI('/api/markets', { default: () => [] });
 const { data: runningJobs, pending: loadingRunningJobs } = await useAPI('/api/jobs/running');
 const { data: stats, pending: loadingStats } = await useAPI('/api/stats');
+const tab: Ref<string> = ref('premium');
 
 const props = defineProps({
   markets: {
@@ -128,13 +148,20 @@ const perPage: Ref<number> = ref(25);
 
 const filteredMarkets = computed(() => {
   if (!props.markets || !props.markets.length) return props.markets;
-
-  const paginatedMarkets: Array<any> = props.markets
-    .filter((market) =>
-      testgridMarkets.value.find((tgm: any) => tgm.address === market.address.toString())
-    )
-    .slice((page.value - 1) * perPage.value, page.value * perPage.value);
-  return paginatedMarkets;
+  return props.markets
+    .filter((market) => {
+      if (tab.value === 'premium') {
+        return testgridMarkets.value.find((tgm: any) => tgm.address === market.address.toString());
+      }
+      if (tab.value === 'community') {
+        return false;
+      }
+      return true;
+    });
+});
+const paginatedMarkets = computed(() => {
+  if (!filteredMarkets.value || !filteredMarkets.value.length) return props.markets;
+  return filteredMarkets.value.slice((page.value - 1) * perPage.value, page.value * perPage.value);
 });
 </script>
 <style lang="scss" scoped>

@@ -22,7 +22,8 @@ export default defineNuxtConfig({
     public: {
       rpcUrl: process.env.RPC_URL,
       apiBase: process.env.API_BASE,
-      network: process.env.NETWORK || 'devnet',
+      oldApiBase: process.env.OLD_API_BASE || 'https://backend.k8s.prd.nos.ci',
+      network: process.env.NETWORK || 'mainnet',
     }
   },
   vite: {
