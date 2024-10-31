@@ -5,7 +5,7 @@
   "scripts": {
     "build": "nuxt build",
     "dev": "nuxt dev --dotenv .env.local",
-    "generate": "nuxt generate --dotenv .env.prod",
+    "generate": "nuxt generate --dotenv .env.${APP_ENV:=prod}",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "lint": "exit 0; eslint . --ext .vue,.js,.ts,.jsx,.cjs,.mjs --ignore-path .gitignore",
