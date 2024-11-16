@@ -1,0 +1,6 @@
+apiVersion: v2
+name: nosana-dashboard
+description: A Helm chart for deploying the Nosana Dashboard on K3s
+type: application
+version: 0.1.0
+appVersion: "latest"
