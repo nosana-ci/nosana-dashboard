@@ -1,12 +1,12 @@
 replicaCount: 1
 
 image:
-  repository: nosana/nosana-dashboard
+  repository: cbijon/nosana-dashboard
   tag: latest
   pullPolicy: IfNotPresent
 
 service:
-  type: ClusterIP
+  type: LoadBalancer
   port: 80
 
 resources: {}
