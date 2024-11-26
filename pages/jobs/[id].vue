@@ -115,6 +115,15 @@
             </td>
             <td v-else>Other</td>
           </tr>
+          <tr v-if="job && job.state === 1">
+            <td>Exposed Service</td>
+            <td>
+              <span v-if="ipfsJob && ipfsJob.ops[0].args.expose">
+                <a :href="`https://${jobId}.node.k8s.prd.nos.ci`" target="_blank">Visit service</a>
+              </span>
+              <span v-else>Not exposed</span>
+            </td>
+          </tr>
         </tbody>
       </table>
 
