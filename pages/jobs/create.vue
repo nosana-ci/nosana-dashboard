@@ -403,7 +403,7 @@
               </wallet-modal-provider>
               <button v-else :disabled="!jobDefinition || !market ? true : undefined" :class="{ 'is-loading': loading }"
                 class="button is-primary is-large" type="submit">
-                <span>Create Job</span>
+                <span>Post Job</span>
               </button>
             </ClientOnly>
           </p>
