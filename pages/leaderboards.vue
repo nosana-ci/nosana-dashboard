@@ -17,7 +17,9 @@
         <LeaderboardLLM />
       </div>
       <div v-else-if="activeTab === 'image'">
-        <LeaderboardImageGen />
+        <div class="has-text-centered py-6">
+          <p>Image Generation Leaderboard coming soon</p>
+        </div>
       </div>
     </div>
   </div>
@@ -26,7 +28,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import LeaderboardLLM from '~/components/Leaderboard/LLM.vue';
-import LeaderboardImageGen from '~/components/Leaderboard/ImageGen.vue';
 
 const activeTab = ref('llm');
 </script>
