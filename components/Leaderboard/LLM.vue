@@ -92,11 +92,7 @@ const { data: response, refresh, pending, error } = await useFetch('/api/benchma
     order: order.value,
     limit: limit.value,
     offset: offset.value
-  })),
-  baseURL: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:3000',
-  onResponseError(err) {
-    console.error('API Error:', err);
-  }
+  }))
 });
 
 const data = computed(() => response.value?.data ?? []);
