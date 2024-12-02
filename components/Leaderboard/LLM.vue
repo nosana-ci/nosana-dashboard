@@ -1,131 +1,278 @@
 <template>
   <div>
-    <div class="field">
-      <div class="control">
-        <div class="select">
-          <select v-model="orderBy">
-            <option value="averageTokensPerSecond">Tokens/Second</option>
-            <option value="totalTokensProduced">Total Tokens</option>
-            <option value="pricePerToken">Price/Token</option>
-            <option value="pricePerHour">Price/Hour</option>
-            <option value="avgUtilization">GPU Utilization</option>
-            <option value="avgTemperature">Temperature</option>
-          </select>
+    <!-- Filters Section -->
+    <div class="filters">
+      <!-- Node Address Filter -->
+      <div class="field">
+        <label class="label">Node Address</label>
+        <div class="control">
+          <input class="input" v-model="filters.node" placeholder="Enter Node Address" />
         </div>
       </div>
-    </div>
 
-    <div v-if="pending" class="has-text-centered py-6">
-      <p>Loading leaderboard data...</p>
-    </div>
-    
-    <div v-else-if="error" class="has-text-centered py-6">
-      <p class="has-text-danger">{{ error }}</p>
-      <button class="button mt-4" @click="refresh">Retry</button>
-    </div>
-
-    <template v-else>
-      <table v-if="data?.length" class="table is-fullwidth">
-        <thead>
-          <tr>
-            <th>Node</th>
-            <th>GPU</th>
-            <th>Model</th>
-            <th>Framework</th>
-            <th>Tokens/s</th>
-            <th>Total Tokens</th>
-            <th>Price/Token</th>
-            <th>Price/Hour</th>
-            <th>Utilization</th>
-            <th>Temperature</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="item in data" :key="item.node">
-            <td>{{ shortenAddress(item.node) }}</td>
-            <td>{{ item.gpu }}</td>
-            <td>{{ item.model }}</td>
-            <td>{{ item.framework }}</td>
-            <td>{{ formatNumber(item.metrics.averageTokensPerSecond) }}</td>
-            <td>{{ formatNumber(item.metrics.totalTokensProduced) }}</td>
-            <td>${{ formatNumber(item.metrics.pricePerToken, 6) }}</td>
-            <td>${{ formatNumber(item.metrics.pricePerHour, 2) }}</td>
-            <td>{{ formatNumber(item.metrics.avgUtilization) }}%</td>
-            <td>{{ formatNumber(item.metrics.avgTemperature) }}°C</td>
-          </tr>
-        </tbody>
-      </table>
-      
-      <div v-else class="has-text-centered py-6">
-        <p>No benchmark data available</p>
+      <!-- CU Filter -->
+      <div class="field">
+        <label class="label">Concurrent Users (CU)</label>
+        <div class="control">
+          <div class="select is-fullwidth" :class="{ 'is-loading': filtersLoading }">
+            <select v-model="filters.cu" :disabled="filtersLoading">
+              <option :value="null">All CUs</option>
+              <option v-for="cu in availableCUs" :key="cu" :value="cu">
+                {{ cu }} CU
+              </option>
+            </select>
+          </div>
+        </div>
       </div>
-    </template>
 
-    <div class="pagination is-centered" role="navigation" aria-label="pagination">
-      <button 
-        class="button pagination-previous" 
-        :disabled="offset === 0"
-        @click="previousPage"
-      >
-        Previous
-      </button>
-      <button 
-        class="button pagination-next" 
-        :disabled="!hasMorePages"
-        @click="nextPage"
-      >
-        Next
-      </button>
+      <!-- Model Filter -->
+      <div class="field">
+        <label class="label">Model</label>
+        <div class="control">
+          <div class="select is-fullwidth" :class="{ 'is-loading': filtersLoading }">
+            <select v-model="filters.model" :disabled="filtersLoading">
+              <option value="">All Models</option>
+              <option v-for="model in availableModels" :key="model" :value="model">
+                {{ model }}
+              </option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Framework Filter -->
+      <div class="field">
+        <label class="label">Framework</label>
+        <div class="control">
+          <div class="select is-fullwidth" :class="{ 'is-loading': filtersLoading }">
+            <select v-model="filters.framework" :disabled="filtersLoading">
+              <option value="">All Frameworks</option>
+              <option v-for="framework in availableFrameworks" :key="framework" :value="framework">
+                {{ framework }}
+              </option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- GPU Filter -->
+      <div class="field">
+        <label class="label">GPU (Market)</label>
+        <div class="control">
+          <div class="select is-fullwidth" :class="{ 'is-loading': filtersLoading }">
+            <select v-model="filters.market" :disabled="filtersLoading">
+              <option value="">All GPUs</option>
+              <option v-for="gpu in availableGPUs" :key="gpu" :value="gpu">
+                {{ gpu }}
+              </option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Apply Filters Button -->
+      <div class="field">
+        <button class="button is-primary" @click="applyFilters" :disabled="filtersLoading">Apply Filters</button>
+      </div>
+    </div>
+
+    <!-- Leaderboard Table -->
+    <table class="table is-fullwidth is-striped">
+      <thead>
+        <tr>
+          <th>Node</th>
+          <th>GPU</th>
+          <th>Framework</th>
+          <th>Model</th>
+          <th>Concurrent Users (CU)</th>
+          <th class="is-sortable" @click="sortBy('averageTokensPerSecond')">
+            Avg Tokens/Sec
+            <span v-if="sort.orderBy === 'averageTokensPerSecond'" class="icon is-small">
+              <i class="fas" :class="sort.order === 'desc' ? 'fa-sort-down' : 'fa-sort-up'"></i>
+            </span>
+          </th>
+          <th class="is-sortable" @click="sortBy('pricePerMillionTokens')">
+            Price per Million Tokens
+            <span v-if="sort.orderBy === 'pricePerMillionTokens'" class="icon is-small">
+              <i class="fas" :class="sort.order === 'desc' ? 'fa-sort-down' : 'fa-sort-up'"></i>
+            </span>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="item in leaderboardData" :key="generateRowKey(item)">
+          <td>{{ item.node }}</td>
+          <td>{{ item.gpu }}</td>
+          <td>{{ item.framework }}</td>
+          <td>{{ item.model }}</td>
+          <td>{{ item.cuCount }}</td>
+          <td>{{ item.metrics.averageTokensPerSecond }}</td>
+          <td>{{ item.metrics.pricePerMillionTokens }}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Pagination -->
+    <div class="mt-4">
+      <Pagination :totalPage="totalPages" :maxPage="5" v-model="page" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-const orderBy = ref('averageTokensPerSecond');
-const order = ref('desc');
-const limit = ref(10);
-const offset = ref(0);
+import { ref, computed, onMounted } from 'vue';
+import Pagination from '@/components/Pagination.vue';
+import { useAPI } from '@/composables/useAPI';
+import { useIntervalFn } from '@vueuse/core';
 
-const { data: response, refresh, pending, error } = await useFetch('/api/benchmarks/llm-leaderboard', {
-  query: computed(() => ({
-    orderBy: orderBy.value,
-    order: order.value,
-    limit: limit.value,
-    offset: offset.value
-  }))
+// Filters and Sorting State
+const defaultFilters = {
+  node: '',
+  cu: null as number | null,
+  model: '',
+  framework: '',
+  market: '',
+};
+
+const filters = ref({ ...defaultFilters });
+
+const sort = ref({
+  orderBy: 'averageTokensPerSecond',
+  order: 'desc',
 });
 
-const data = computed(() => response.value?.data ?? []);
-const pagination = computed(() => response.value?.pagination ?? { total: 0, limit: 10, offset: 0 });
-const hasMorePages = computed(() => {
-  return (pagination.value.offset + pagination.value.limit) < pagination.value.total;
+const page = ref(1);
+const limit = ref(17);
+const offset = computed(() => (page.value - 1) * limit.value);
+
+// Reset filters to default when component is mounted
+onMounted(() => {
+  filters.value = { ...defaultFilters };
 });
 
-function shortenAddress(address: string) {
-  if (!address) return '';
-  return `${address.slice(0, 6)}...${address.slice(-4)}`;
-}
+// Fetch filter options from the new API endpoint
+const { data: filterOptions, pending: filtersLoading, error: filtersError } = await useAPI('/api/benchmarks/llm-filters');
 
-function formatNumber(num: number, decimals = 2) {
-  if (num === undefined || num === null) return '-';
-  return num.toLocaleString(undefined, { 
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals 
-  });
-}
+const availableModels = computed(() =>
+  filterOptions.value ? filterOptions.value.models.sort() : []
+);
 
-function previousPage() {
-  offset.value = Math.max(0, offset.value - limit.value);
-}
+const availableFrameworks = computed(() =>
+  filterOptions.value ? filterOptions.value.frameworks.sort() : []
+);
 
-function nextPage() {
-  if (hasMorePages.value) {
-    offset.value += limit.value;
+const availableGPUs = computed(() =>
+  filterOptions.value ? filterOptions.value.gpus.sort() : []
+);
+
+const availableCUs = computed(() =>
+  filterOptions.value ? filterOptions.value.cuCounts.sort((a, b) => a - b) : []
+);
+
+// Construct API URL with filters and sorting
+const leaderboardUrl = computed(() => {
+  const params = new URLSearchParams();
+  params.append('limit', limit.value.toString());
+  params.append('offset', offset.value.toString());
+
+  // Add filters if they are set and not empty
+  if (filters.value.node) params.append('node', filters.value.node);
+  if (filters.value.cu !== null) params.append('cu', filters.value.cu.toString());
+  if (filters.value.model) params.append('model', filters.value.model);
+  if (filters.value.framework) params.append('framework', filters.value.framework);
+  if (filters.value.market) params.append('market', filters.value.market);
+
+  // Add sorting parameters
+  if (sort.value.orderBy) params.append('orderBy', sort.value.orderBy);
+  if (sort.value.order) params.append('order', sort.value.order);
+
+  return `/api/benchmarks/llm-leaderboard?${params.toString()}`;
+});
+
+const {
+  data: leaderboardResponse,
+  pending: loading,
+  error: leaderboardError,
+  refresh: refreshLeaderboard,
+} = await useAPI(leaderboardUrl, { watch: [leaderboardUrl] });
+
+const leaderboardData = computed(() =>
+  leaderboardResponse.value ? leaderboardResponse.value.data : []
+);
+
+const total = computed(() => (leaderboardResponse.value ? leaderboardResponse.value.total : 0));
+const totalPages = computed(() => Math.ceil(total.value / limit.value));
+
+// Implement sorting functionality
+function sortBy(field: string) {
+  if (sort.value.orderBy === field) {
+    // Toggle order between 'asc' and 'desc'
+    sort.value.order = sort.value.order === 'asc' ? 'desc' : 'asc';
+  } else {
+    // Set new field to sort by
+    sort.value.orderBy = field;
+    sort.value.order = 'asc';
   }
+  // Reset to first page when sorting changes
+  page.value = 1;
+  refreshLeaderboard();
 }
 
-watch(orderBy, () => {
-  offset.value = 0;
-  refresh();
-});
-</script> 
+// Apply filters and reset to first page
+function applyFilters() {
+  page.value = 1;
+  refreshLeaderboard();
+}
+
+// Generate a unique key for each row
+function generateRowKey(item: any) {
+  return `${item.node}-${item.cuCount}-${item.model}-${item.framework}-${item.gpu}`;
+}
+
+// Optionally, refresh data periodically
+useIntervalFn(refreshLeaderboard, 30000); // Refresh every 30 seconds
+</script>
+
+<style scoped>
+.mt-4 {
+  margin-top: 1.5rem;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.field {
+  flex: 1 1 200px;
+}
+
+/* Make sure select boxes are same height as input */
+.select,
+.select select {
+  width: 100%;
+}
+
+/* Only show pointer cursor on sortable columns */
+th.is-sortable {
+  cursor: pointer;
+}
+
+th.is-sortable:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Remove hover effect from non-sortable columns */
+th:not(.is-sortable):hover {
+  background-color: inherit;
+}
+
+/* Loading style for select elements */
+.is-loading select {
+  background-image: url('/path/to/loading-spinner.svg');
+  background-repeat: no-repeat;
+  background-position: right 1em center;
+}
+</style>
