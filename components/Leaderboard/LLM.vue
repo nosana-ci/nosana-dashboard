@@ -69,33 +69,31 @@
           </div>
         </div>
       </div>
+    </div>
 
-      <!-- Apply Filters Button -->
-      <div class="field">
-        <button class="button is-primary" @click="applyFilters" :disabled="filtersLoading">Apply Filters</button>
-      </div>
+    <!-- Total Data Points -->
+    <div class="has-text-right mb-2">
+      <p>Total Data Points: {{ total }}</p>
     </div>
 
     <!-- Leaderboard Table -->
     <table class="table is-fullwidth is-striped">
       <thead>
         <tr>
+          <!-- Removed sorting functionality from these columns -->
           <th>Node</th>
           <th>GPU</th>
           <th>Framework</th>
           <th>Model</th>
           <th>Concurrent Users (CU)</th>
-          <th class="is-sortable" @click="sortBy('averageTokensPerSecond')">
+          <!-- Kept sorting functionality for these columns -->
+          <th @click="sortBy('averageTokensPerSecond')" class="sortable">
             Avg Tokens/Sec
-            <span v-if="sort.orderBy === 'averageTokensPerSecond'" class="icon is-small">
-              <i class="fas" :class="sort.order === 'desc' ? 'fa-sort-down' : 'fa-sort-up'"></i>
-            </span>
+            <span v-html="renderSortIcon('averageTokensPerSecond')"></span>
           </th>
-          <th class="is-sortable" @click="sortBy('pricePerMillionTokens')">
+          <th @click="sortBy('pricePerMillionTokens')" class="sortable">
             Price per Million Tokens
-            <span v-if="sort.orderBy === 'pricePerMillionTokens'" class="icon is-small">
-              <i class="fas" :class="sort.order === 'desc' ? 'fa-sort-down' : 'fa-sort-up'"></i>
-            </span>
+            <span v-html="renderSortIcon('pricePerMillionTokens')"></span>
           </th>
         </tr>
       </thead>
@@ -107,20 +105,41 @@
           <td>{{ item.model }}</td>
           <td>{{ item.cuCount }}</td>
           <td>{{ item.metrics.averageTokensPerSecond }}</td>
-          <td>{{ item.metrics.pricePerMillionTokens }}</td>
+          <td>{{ item.metrics.pricePerMillionTokens.toFixed(2) }}</td>
         </tr>
       </tbody>
     </table>
 
-    <!-- Pagination -->
-    <div class="mt-4">
-      <Pagination :totalPage="totalPages" :maxPage="5" v-model="page" />
-    </div>
+    <!-- Pagination with clickable page numbers -->
+    <nav class="pagination is-centered mt-4" role="navigation" aria-label="pagination">
+      <a class="pagination-previous" @click="prevPage">Previous</a>
+      <a class="pagination-next" @click="nextPage">Next</a>
+      <ul class="pagination-list">
+        <!-- First page -->
+        <li v-if="!pagesToShow.includes(1)">
+          <a @click="goToPage(1)" class="pagination-link">1</a>
+        </li>
+        <li v-if="!pagesToShow.includes(1)">
+          <span class="pagination-ellipsis">&hellip;</span>
+        </li>
+        <!-- Current pages -->
+        <li v-for="p in pagesToShow" :key="p">
+          <a @click="goToPage(p)" :class="{'pagination-link': true, 'is-current': p === page}">{{ p }}</a>
+        </li>
+        <!-- Last page -->
+        <li v-if="!pagesToShow.includes(totalPages)">
+          <span class="pagination-ellipsis">&hellip;</span>
+        </li>
+        <li v-if="!pagesToShow.includes(totalPages)">
+          <a @click="goToPage(totalPages)" class="pagination-link">{{ totalPages }}</a>
+        </li>
+      </ul>
+    </nav>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import Pagination from '@/components/Pagination.vue';
 import { useAPI } from '@/composables/useAPI';
 import { useIntervalFn } from '@vueuse/core';
@@ -128,7 +147,7 @@ import { useIntervalFn } from '@vueuse/core';
 // Filters and Sorting State
 const defaultFilters = {
   node: '',
-  cu: null as number | null,
+  cu: 100 as number | null,
   model: '',
   framework: '',
   market: '',
@@ -137,8 +156,8 @@ const defaultFilters = {
 const filters = ref({ ...defaultFilters });
 
 const sort = ref({
-  orderBy: 'averageTokensPerSecond',
-  order: 'desc',
+  orderBy: 'pricePerMillionTokens',
+  order: 'asc',
 });
 
 const page = ref(1);
@@ -201,10 +220,14 @@ const leaderboardData = computed(() =>
 );
 
 const total = computed(() => (leaderboardResponse.value ? leaderboardResponse.value.total : 0));
-const totalPages = computed(() => Math.ceil(total.value / limit.value));
+const totalPages = computed(() => {
+  const pages = Math.ceil(total.value / limit.value);
+  return pages > 0 ? pages : 1;
+});
 
 // Implement sorting functionality
 function sortBy(field: string) {
+  if (field !== 'averageTokensPerSecond' && field !== 'pricePerMillionTokens') return;
   if (sort.value.orderBy === field) {
     // Toggle order between 'asc' and 'desc'
     sort.value.order = sort.value.order === 'asc' ? 'desc' : 'asc';
@@ -218,12 +241,6 @@ function sortBy(field: string) {
   refreshLeaderboard();
 }
 
-// Apply filters and reset to first page
-function applyFilters() {
-  page.value = 1;
-  refreshLeaderboard();
-}
-
 // Generate a unique key for each row
 function generateRowKey(item: any) {
   return `${item.node}-${item.cuCount}-${item.model}-${item.framework}-${item.gpu}`;
@@ -231,11 +248,65 @@ function generateRowKey(item: any) {
 
 // Optionally, refresh data periodically
 useIntervalFn(refreshLeaderboard, 30000); // Refresh every 30 seconds
+
+// Apply filters automatically on change
+watch([filters, page, sort], () => {
+  refreshLeaderboard();
+}, { deep: true });
+
+// Implement prevPage and nextPage functions
+function prevPage() {
+  page.value = page.value > 1 ? page.value - 1 : totalPages.value;
+  refreshLeaderboard();
+}
+
+function nextPage() {
+  page.value = page.value < totalPages.value ? page.value + 1 : 1;
+  refreshLeaderboard();
+}
+
+// Ensure page value doesn't exceed totalPages
+function goToPage(p: number) {
+  if (p >= 1 && p <= totalPages.value) {
+    page.value = p;
+    refreshLeaderboard();
+  }
+}
+
+// Function to render sort icons
+function renderSortIcon(field: string) {
+  if (sort.value.orderBy === field) {
+    if (sort.value.order === 'asc') {
+      return '&#9650;'; // Up arrow ▲
+    } else {
+      return '&#9660;'; // Down arrow ▼
+    }
+  } else {
+    return '&#9650;&#9660;'; // Up and down arrows ▲▼
+  }
+}
+
+// Pagination logic for clickable page numbers
+const pagesToShow = computed(() => {
+  const pages = [];
+  const maxPagesToShow = 5;
+  let startPage = Math.max(1, page.value - Math.floor(maxPagesToShow / 2));
+  let endPage = Math.min(totalPages.value, startPage + maxPagesToShow - 1);
+  if (endPage - startPage + 1 < maxPagesToShow) {
+    startPage = Math.max(1, endPage - maxPagesToShow + 1);
+  }
+  for (let i = startPage; i <= endPage; i++) {
+    pages.push(i);
+  }
+  return pages;
+});
 </script>
 
 <style scoped>
-.mt-4 {
-  margin-top: 1.5rem;
+.pagination-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .filters {
@@ -249,30 +320,26 @@ useIntervalFn(refreshLeaderboard, 30000); // Refresh every 30 seconds
   flex: 1 1 200px;
 }
 
-/* Make sure select boxes are same height as input */
-.select,
-.select select {
-  width: 100%;
-}
-
-/* Only show pointer cursor on sortable columns */
-th.is-sortable {
+/* Style for sorting icons */
+th {
   cursor: pointer;
 }
-
-th.is-sortable:hover {
-  background-color: rgba(0, 0, 0, 0.05);
+th span {
+  margin-left: 5px;
+  font-size: 0.8em;
 }
 
-/* Remove hover effect from non-sortable columns */
-th:not(.is-sortable):hover {
-  background-color: inherit;
+/* Style for sortable columns */
+th.sortable {
+  cursor: pointer;
+}
+th.sortable span {
+  margin-left: 5px;
+  font-size: 0.8em;
 }
 
-/* Loading style for select elements */
-.is-loading select {
-  background-image: url('/path/to/loading-spinner.svg');
-  background-repeat: no-repeat;
-  background-position: right 1em center;
+/* Adjusted cursor style for non-sortable columns */
+th {
+  cursor: default;
 }
 </style>
