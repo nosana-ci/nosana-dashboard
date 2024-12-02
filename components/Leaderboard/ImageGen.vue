@@ -10,30 +10,15 @@
         </div>
       </div>
 
-      <!-- CU Filter -->
+      <!-- Batch Size Filter -->
       <div class="field">
-        <label class="label">Concurrent Users (CU)</label>
+        <label class="label">Batch Size</label>
         <div class="control">
           <div class="select is-fullwidth" :class="{ 'is-loading': filtersLoading }">
-            <select v-model="filters.cu" :disabled="filtersLoading">
-              <option :value="null">All CUs</option>
-              <option v-for="cu in availableCUs" :key="cu" :value="cu">
-                {{ cu }} CU
-              </option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <!-- Model Filter -->
-      <div class="field">
-        <label class="label">Model</label>
-        <div class="control">
-          <div class="select is-fullwidth" :class="{ 'is-loading': filtersLoading }">
-            <select v-model="filters.model" :disabled="filtersLoading">
-              <option value="">All Models</option>
-              <option v-for="model in availableModels" :key="model" :value="model">
-                {{ model }}
+            <select v-model="filters.batchSize" :disabled="filtersLoading">
+              <option :value="null">All Batch Sizes</option>
+              <option v-for="size in availableBatchSizes" :key="size" :value="size">
+                {{ size }}
               </option>
             </select>
           </div>
@@ -83,20 +68,14 @@
           <th>Node</th>
           <th>GPU</th>
           <th>Framework</th>
-          <th>Model</th>
-          <th>Concurrent Users (CU)</th>
-          <th class="is-sortable" @click="sortBy('averageTokensPerSecond')">
-            Avg Tokens/Sec
-            <span v-if="sort.orderBy === 'averageTokensPerSecond'" class="icon is-small">
+          <th>Batch Size</th>
+          <th class="is-sortable" @click="sortBy('imagesPerSecond')">
+            Images/Sec
+            <span v-if="sort.orderBy === 'imagesPerSecond'" class="icon is-small">
               <i class="fas" :class="sort.order === 'desc' ? 'fa-sort-down' : 'fa-sort-up'"></i>
             </span>
           </th>
-          <th class="is-sortable" @click="sortBy('pricePerMillionTokens')">
-            Price per Million Tokens
-            <span v-if="sort.orderBy === 'pricePerMillionTokens'" class="icon is-small">
-              <i class="fas" :class="sort.order === 'desc' ? 'fa-sort-down' : 'fa-sort-up'"></i>
-            </span>
-          </th>
+          <!-- Add other sortable columns as needed -->
         </tr>
       </thead>
       <tbody>
@@ -104,10 +83,9 @@
           <td>{{ item.node }}</td>
           <td>{{ item.gpu }}</td>
           <td>{{ item.framework }}</td>
-          <td>{{ item.model }}</td>
-          <td>{{ item.cuCount }}</td>
-          <td>{{ item.metrics.averageTokensPerSecond }}</td>
-          <td>{{ item.metrics.pricePerMillionTokens }}</td>
+          <td>{{ item.batchSize }}</td>
+          <td>{{ item.metrics.imagesPerSecond }}</td>
+          <!-- Add other metrics as needed -->
         </tr>
       </tbody>
     </table>
@@ -128,8 +106,7 @@ import { useIntervalFn } from '@vueuse/core';
 // Filters and Sorting State
 const defaultFilters = {
   node: '',
-  cu: null as number | null,
-  model: '',
+  batchSize: 1, // Set default batch size to 1
   framework: '',
   market: '',
 };
@@ -137,7 +114,7 @@ const defaultFilters = {
 const filters = ref({ ...defaultFilters });
 
 const sort = ref({
-  orderBy: 'averageTokensPerSecond',
+  orderBy: 'imagesPerSecond',
   order: 'desc',
 });
 
@@ -148,25 +125,22 @@ const offset = computed(() => (page.value - 1) * limit.value);
 // Reset filters to default when component is mounted
 onMounted(() => {
   filters.value = { ...defaultFilters };
+  applyFilters();
 });
 
 // Fetch filter options from the new API endpoint
-const { data: filterOptions, pending: filtersLoading, error: filtersError } = await useAPI('/api/benchmarks/llm-filters');
-
-const availableModels = computed(() =>
-  filterOptions.value ? filterOptions.value.models.sort() : []
-);
+const { data: filterOptions, pending: filtersLoading, error: filtersError } = await useAPI('/api/benchmarks/image-gen-filters');
 
 const availableFrameworks = computed(() =>
   filterOptions.value ? filterOptions.value.frameworks.sort() : []
 );
 
-const availableGPUs = computed(() =>
-  filterOptions.value ? filterOptions.value.gpus.sort() : []
+const availableBatchSizes = computed(() =>
+  filterOptions.value ? filterOptions.value.batchSizes.sort((a, b) => a - b) : []
 );
 
-const availableCUs = computed(() =>
-  filterOptions.value ? filterOptions.value.cuCounts.sort((a, b) => a - b) : []
+const availableGPUs = computed(() =>
+  filterOptions.value ? filterOptions.value.gpus.sort() : []
 );
 
 // Construct API URL with filters and sorting
@@ -177,8 +151,7 @@ const leaderboardUrl = computed(() => {
 
   // Add filters if they are set and not empty
   if (filters.value.node) params.append('node', filters.value.node);
-  if (filters.value.cu !== null) params.append('cu', filters.value.cu.toString());
-  if (filters.value.model) params.append('model', filters.value.model);
+  if (filters.value.batchSize !== null) params.append('batchSize', filters.value.batchSize.toString());
   if (filters.value.framework) params.append('framework', filters.value.framework);
   if (filters.value.market) params.append('market', filters.value.market);
 
@@ -186,7 +159,7 @@ const leaderboardUrl = computed(() => {
   if (sort.value.orderBy) params.append('orderBy', sort.value.orderBy);
   if (sort.value.order) params.append('order', sort.value.order);
 
-  return `/api/benchmarks/llm-leaderboard?${params.toString()}`;
+  return `/api/benchmarks/image-gen-leaderboard?${params.toString()}`;
 });
 
 const {
@@ -226,7 +199,7 @@ function applyFilters() {
 
 // Generate a unique key for each row
 function generateRowKey(item: any) {
-  return `${item.node}-${item.cuCount}-${item.model}-${item.framework}-${item.gpu}`;
+  return `${item.node}-${item.batchSize}-${item.framework}-${item.gpu}`;
 }
 
 // Optionally, refresh data periodically
@@ -275,4 +248,4 @@ th:not(.is-sortable):hover {
   background-repeat: no-repeat;
   background-position: right 1em center;
 }
-</style>
+</style> 
