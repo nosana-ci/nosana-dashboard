@@ -71,13 +71,26 @@
       </div>
     </div>
 
+    <!-- Reset Filters Link -->
+    <div class="has-text-right mb-4">
+      <a class="is-link" @click="resetFilters">
+        <span class="icon is-small">
+          <i class="fas fa-undo"></i>
+        </span>
+        <span>Reset Filters</span>
+      </a>
+    </div>
+
     <!-- Total Data Points -->
     <div class="has-text-right mb-2">
       <p>Total Data Points: {{ total }}</p>
     </div>
 
+    <!-- Loading Bar -->
+    <progress v-if="loading" class="progress is-small is-info my-0" max="100"></progress>
+
     <!-- Leaderboard Table -->
-    <table class="table is-fullwidth is-striped">
+    <table v-else class="table is-fullwidth is-striped">
       <thead>
         <tr>
           <!-- Removed sorting functionality from these columns -->
@@ -139,8 +152,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue';
-import Pagination from '@/components/Pagination.vue';
+import { ref, computed, onMounted } from 'vue';
 import { useAPI } from '@/composables/useAPI';
 import { useIntervalFn } from '@vueuse/core';
 
@@ -185,7 +197,7 @@ const availableGPUs = computed(() =>
 );
 
 const availableCUs = computed(() =>
-  filterOptions.value ? filterOptions.value.cuCounts.sort((a, b) => a - b) : []
+  filterOptions.value ? filterOptions.value.cuCounts.sort((a: number, b: number) => a - b) : []
 );
 
 // Construct API URL with filters and sorting
@@ -202,8 +214,13 @@ const leaderboardUrl = computed(() => {
   if (filters.value.market) params.append('market', filters.value.market);
 
   // Add sorting parameters
-  if (sort.value.orderBy) params.append('orderBy', sort.value.orderBy);
-  if (sort.value.order) params.append('order', sort.value.order);
+  type SortField = 'pricePerMillionTokens' | 'averageTokensPerSecond';
+  const orderByMap: Record<SortField, string> = {
+    pricePerMillionTokens: 'pricePerMillionTokens',
+    averageTokensPerSecond: 'averageTokensPerSecond',
+  };
+  params.append('orderBy', orderByMap[sort.value.orderBy as SortField]);
+  params.append('order', sort.value.order);
 
   return `/api/benchmarks/llm-leaderboard?${params.toString()}`;
 });
@@ -229,16 +246,12 @@ const totalPages = computed(() => {
 function sortBy(field: string) {
   if (field !== 'averageTokensPerSecond' && field !== 'pricePerMillionTokens') return;
   if (sort.value.orderBy === field) {
-    // Toggle order between 'asc' and 'desc'
     sort.value.order = sort.value.order === 'asc' ? 'desc' : 'asc';
   } else {
-    // Set new field to sort by
     sort.value.orderBy = field;
     sort.value.order = 'asc';
   }
-  // Reset to first page when sorting changes
   page.value = 1;
-  refreshLeaderboard();
 }
 
 // Generate a unique key for each row
@@ -246,30 +259,19 @@ function generateRowKey(item: any) {
   return `${item.node}-${item.cuCount}-${item.model}-${item.framework}-${item.gpu}`;
 }
 
-// Optionally, refresh data periodically
-useIntervalFn(refreshLeaderboard, 30000); // Refresh every 30 seconds
-
-// Apply filters automatically on change
-watch([filters, page, sort], () => {
-  refreshLeaderboard();
-}, { deep: true });
-
 // Implement prevPage and nextPage functions
 function prevPage() {
   page.value = page.value > 1 ? page.value - 1 : totalPages.value;
-  refreshLeaderboard();
 }
 
 function nextPage() {
   page.value = page.value < totalPages.value ? page.value + 1 : 1;
-  refreshLeaderboard();
 }
 
 // Ensure page value doesn't exceed totalPages
 function goToPage(p: number) {
   if (p >= 1 && p <= totalPages.value) {
     page.value = p;
-    refreshLeaderboard();
   }
 }
 
@@ -300,6 +302,11 @@ const pagesToShow = computed(() => {
   }
   return pages;
 });
+
+// Function to reset filters
+function resetFilters() {
+  filters.value = { ...defaultFilters };
+}
 </script>
 
 <style scoped>
@@ -318,6 +325,26 @@ const pagesToShow = computed(() => {
 
 .field {
   flex: 1 1 200px;
+  display: flex;
+  flex-direction: column;
+}
+
+.field:last-child {
+  flex: none;
+}
+
+/* Add styles for the select container to ensure consistent height */
+.select.is-fullwidth {
+  height: 100%;
+}
+
+.select.is-fullwidth select {
+  height: 2.5em;
+}
+
+/* Ensure input fields match select height */
+.input {
+  height: 2.5em;
 }
 
 /* Style for sorting icons */
