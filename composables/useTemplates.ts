@@ -23,8 +23,11 @@ export type Template = {
   description: string;
   jobDefinition: JobDefinition;
   category: string;
+  subcategory?: string | string[];
   icon: string;
   readme: string;
+  avatar_url?: string;
+  stargazers_count?: number;
 }
 
 const { data: templates, pending: loadingTemplates } = useAPI('/api/jobs/templates');

@@ -19,51 +19,134 @@
               <div class="menu" v-else>
                 <ul class="menu-list">
                   <li>
-                    <a @click="filterCategory = null" :class="{ 'is-active': filterCategory === null }">
-                      <span>All</span>
+                    <a :class="{ 'is-active': filterCategory === '' }" @click="filterCategory = ''">
+                      <span>All Templates</span>
                       <span class="ml-auto is-size-7">({{ templates.length }})</span>
                     </a>
-
                   </li>
-                  <li v-for="category in categories">
+                  <li v-for="category in categories" :key="category">
                     <a :class="{ 'is-active': filterCategory === category }" @click="filterCategory = category">
-                      <span>{{ category }}</span>
+                      <span>{{ category === 'API Only' ? 'API' : category }}</span>
                       <span class="ml-auto is-size-7">({{ templates.filter(t =>
-                        t.category.split("|").includes(category)).length }})</span>
+                        (Array.isArray(t.category) ? t.category : t.category.split("|")).includes(category)).length }})</span>
                     </a>
+                    <ul v-if="filterCategory === category && subcategories.length" class="pl-4 mt-2">
+                      <li v-for="subcategory in subcategories" :key="subcategory">
+                        <a
+                          :class="{ 'is-active': filterSubcategory === subcategory }"
+                          @click="filterSubcategory = subcategory"
+                        >
+                          <span>{{ subcategory }}</span>
+                          <span class="ml-auto is-size-7">
+                            ({{
+                              templatesInCategoryAndSubcategory(category, subcategory).length
+                            }})
+                          </span>
+                        </a>
+                      </li>
+                    </ul>
                   </li>
                 </ul>
               </div>
             </div>
           </div>
-
         </div>
       </div>
       <div class="column is-9">
         <div class="box has-background-white-ter">
-
-          <div v-for="category in categories" v-if="filteredTemplates">
-            <div v-if="!filterCategory || category === filterCategory" class="mb-6">
-              <h2 class="title is-4">{{ category }}</h2>
-              <h3 class="subtitle is-6">{{ filteredTemplates.filter(t =>
-                t.category.split("|").includes(category)).length }}
-                templates</h3>
-              <div class="columns is-multiline">
-                <div v-for="template in filteredTemplates.filter(t => t.category.split('|').includes(category))"
-                  :key="template.name" class="column is-4">
-                  <nuxt-link class="box" style="height: 100%;"
-                    :to="{ path: '/jobs/create', query: { templateId: template.id } }">
-                    <div class="is-flex is-justify-content-space-between">
-                      <h2 class="is-size-4 has-text-weight-semibold mb-0 has-text-black">
-                        {{ template.name }}
-                      </h2>
-                      <div v-if="template.icon" class="template-icon is-flex has-text-centered has-background-white">
-                        <img :src="template.icon">
+          <div v-if="filterCategory === ''">
+            <div class="columns is-multiline">
+              <div
+                v-for="template in filteredTemplates"
+                :key="template.id"
+                class="column is-4"
+              >
+                <nuxt-link class="box" style="height: 100%;"
+                  :to="{ path: '/jobs/create', query: { templateId: template.id } }">
+                  <div class="is-flex is-justify-content-space-between is-align-items-center mb-2">
+                    <h2 class="is-size-4 has-text-weight-semibold mb-0 has-text-black">
+                      {{ template.name }}
+                    </h2>
+                    <div class="is-flex is-align-items-center">
+                      <span v-if="template.stargazers_count" class="is-flex is-align-items-center has-text-grey is-size-7">
+                        <span class="has-text-warning mr-1" style="font-size: 12px;">★</span>
+                        <span class="ml-1">{{ template.stargazers_count }}</span>
+                      </span>
+                      <div v-if="template.icon || template.avatar_url" class="template-icon is-flex has-text-centered has-background-white ml-2">
+                        <img :src="template.icon || template.avatar_url">
                       </div>
                     </div>
-                    <p>{{ template.description }}</p>
-                  </nuxt-link>
+                  </div>
+                  <p>{{ template.description }}</p>
+                </nuxt-link>
+              </div>
+            </div>
+          </div>
+          <div v-else>
+            <div v-for="category in categories" :key="category" v-if="filteredTemplates.length">
+              <div v-if="!filterCategory || category === filterCategory" class="mb-6">
+                <h2 class="title is-4">{{ category === 'API Only' ? 'API' : category }}</h2>
+
+                <div v-for="subcategory in subcategoriesForCategory(category)" :key="subcategory">
+                  <h3 class="title is-5">{{ subcategory }}</h3>
+                  <div class="columns is-multiline">
+                    <div
+                      v-for="template in templatesInCategoryAndSubcategory(category, subcategory)"
+                      :key="template.id"
+                      class="column is-4"
+                    >
+                      <nuxt-link class="box" style="height: 100%;"
+                        :to="{ path: '/jobs/create', query: { templateId: template.id } }">
+                        <div class="is-flex is-justify-content-space-between is-align-items-center mb-2">
+                          <h2 class="is-size-4 has-text-weight-semibold mb-0 has-text-black">
+                            {{ template.name }}
+                          </h2>
+                          <div class="is-flex is-align-items-center">
+                            <span v-if="template.stargazers_count" class="is-flex is-align-items-center has-text-grey is-size-7">
+                              <span class="has-text-warning mr-1" style="font-size: 12px;">★</span>
+                              <span class="ml-1">{{ template.stargazers_count }}</span>
+                            </span>
+                            <div v-if="template.icon || template.avatar_url" class="template-icon is-flex has-text-centered has-background-white ml-2">
+                              <img :src="template.icon || template.avatar_url">
+                            </div>
+                          </div>
+                        </div>
+                        <p>{{ template.description }}</p>
+                      </nuxt-link>
+                    </div>
+                  </div>
                 </div>
+
+                <div v-if="templatesWithoutSubcategory(category).length">
+                  <h3 class="title is-5">Others</h3>
+                  <div class="columns is-multiline">
+                    <div
+                      v-for="template in templatesWithoutSubcategory(category)"
+                      :key="template.id"
+                      class="column is-4"
+                    >
+                      <nuxt-link class="box" style="height: 100%;"
+                        :to="{ path: '/jobs/create', query: { templateId: template.id } }">
+                        <div class="is-flex is-justify-content-space-between is-align-items-center mb-2">
+                          <h2 class="is-size-4 has-text-weight-semibold mb-0 has-text-black">
+                            {{ template.name }}
+                          </h2>
+                          <div class="is-flex is-align-items-center">
+                            <span v-if="template.stargazers_count" class="is-flex is-align-items-center has-text-grey is-size-7">
+                              <span class="has-text-warning mr-1" style="font-size: 12px;">★</span>
+                              <span class="ml-1">{{ template.stargazers_count }}</span>
+                            </span>
+                            <div v-if="template.icon || template.avatar_url" class="template-icon is-flex has-text-centered has-background-white ml-2">
+                              <img :src="template.icon || template.avatar_url">
+                            </div>
+                          </div>
+                        </div>
+                        <p>{{ template.description }}</p>
+                      </nuxt-link>
+                    </div>
+                  </div>
+                </div>
+
               </div>
             </div>
           </div>
@@ -75,33 +158,223 @@
 </template>
 
 <script lang="ts" setup>
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+import { faStar } from '@fortawesome/free-solid-svg-icons';
+
 const { templates, loadingTemplates } = useTemplates();
-const filterCategory: Ref<string | null> = ref(null);
-const search: Ref<string | null> = ref(null);
+const filterCategory: Ref<string> = ref('');
+const filterSubcategory: Ref<string> = ref('');
+const search: Ref<string> = ref('');
+
+// Watch for changes in filterCategory to reset filterSubcategory
+watch(filterCategory, (newVal, oldVal) => {
+  if (newVal !== oldVal) {
+    filterSubcategory.value = '';
+  }
+});
+
 const filteredTemplates = computed(() => {
-  return templates.value ? templates.value.filter(t => {
-    let found = true;
-    let inCategory = true;
-    if (search.value) {
-      found = t.name.toLowerCase().includes(search.value.toLowerCase()) ||
-        t.description.toLowerCase().includes(search.value.toLowerCase()) ||
-        t.readme.toLowerCase().includes(search.value.toLowerCase());
-    }
-    if (filterCategory.value) {
-      inCategory = t.category.includes(filterCategory.value);
-    }
-    return found && inCategory;
-  }) : null;
+  const templatesList = templates.value
+    ? templates.value.filter((t) => {
+        let found = true;
+        let inCategory = true;
+        let inSubcategory = true;
+
+        if (search.value !== '') {
+          const searchTerm = search.value.toLowerCase();
+          found =
+            t.name.toLowerCase().includes(searchTerm) ||
+            t.description.toLowerCase().includes(searchTerm) ||
+            t.readme.toLowerCase().includes(searchTerm);
+        }
+
+        if (filterCategory.value !== '') {
+          const templateCategories = Array.isArray(t.category)
+            ? t.category
+            : t.category.split("|");
+          inCategory = templateCategories.includes(filterCategory.value);
+        }
+
+        if (filterSubcategory.value !== '') {
+          const templateSubcategories = t.subcategory
+            ? Array.isArray(t.subcategory)
+              ? t.subcategory
+              : t.subcategory.split("|")
+            : [];
+          inSubcategory = templateSubcategories.includes(filterSubcategory.value);
+        }
+
+        return found && inCategory && inSubcategory;
+      })
+    : [];
+
+  // Sort the filtered templates by stargazers_count in descending order
+  return templatesList.sort((a, b) => (b.stargazers_count || 0) - (a.stargazers_count || 0));
 });
 const categories = computed(() => {
-  const categoryIds = [...new Set(templates.value.flatMap(({ category }) => category.split("|")))];
+  const allCategories = templates.value
+    ? templates.value.flatMap((t) => {
+        const cats = Array.isArray(t.category)
+          ? t.category
+          : t.category.split("|");
+        return cats.map((c) => c.trim());
+      })
+    : [];
+  const categoryIds = [...new Set(allCategories)];
 
-  return categoryIds.sort(function (a, b) {
-    if (a == "Featured") return -1;
-    if (b == "Featured") return 1;
-    return a.localeCompare(b);
-  });;
-}) 
+  const desiredCategoryOrder = ['Featured', 'Web UI', 'API Only'];
+
+  // Lowercase versions for comparison
+  const desiredCategoryOrderNormalized = desiredCategoryOrder.map((c) => c.toLowerCase());
+
+  return categoryIds.sort((a, b) => {
+    const normalizedA = a.toLowerCase();
+    const normalizedB = b.toLowerCase();
+
+    const indexA = desiredCategoryOrderNormalized.indexOf(normalizedA);
+    const indexB = desiredCategoryOrderNormalized.indexOf(normalizedB);
+
+    if (indexA !== -1 && indexB !== -1) {
+      return indexA - indexB;
+    } else if (indexA !== -1) {
+      return -1;
+    } else if (indexB !== -1) {
+      return 1;
+    } else {
+      return normalizedA.localeCompare(normalizedB);
+    }
+  });
+});
+const subcategories = computed(() => {
+  if (!filterCategory.value) return [];
+  const allSubcategories = templates.value
+    ? templates.value.flatMap((t) => {
+        const templateCategories = Array.isArray(t.category)
+          ? t.category
+          : t.category.split("|");
+        if (templateCategories.includes(filterCategory.value) && t.subcategory) {
+          return Array.isArray(t.subcategory)
+            ? t.subcategory
+            : t.subcategory.split("|");
+        }
+        return [];
+      })
+    : [];
+  const uniqueSubcategories = [...new Set(allSubcategories)].map(sub => sub.trim());
+  
+  // Define the desired order
+  const desiredOrder = [
+    'LLM',
+    'LLM Fine-tuning',
+    'Image Generation',
+    'Image Generation Fine-tuning',
+    'Featured'
+  ];
+
+  return uniqueSubcategories.sort((a, b) => {
+    const indexA = desiredOrder.indexOf(a);
+    const indexB = desiredOrder.indexOf(b);
+    
+    if (indexA !== -1 && indexB !== -1) {
+      return indexA - indexB;
+    } else if (indexA !== -1) {
+      return -1;
+    } else if (indexB !== -1) {
+      return 1;
+    } else {
+      return a.localeCompare(b);
+    }
+  });
+});
+
+function subcategoriesForCategory(category: string): string[] {
+  const allSubcategories = filteredTemplates.value
+    .filter((t) => {
+      const templateCategories = Array.isArray(t.category)
+        ? t.category
+        : t.category.split("|");
+      return templateCategories.includes(category);
+    })
+    .flatMap((t) => {
+      const templateSubcategories = t.subcategory
+        ? Array.isArray(t.subcategory)
+          ? t.subcategory
+          : t.subcategory.split("|")
+        : [];
+      return templateSubcategories.map((sub) => sub.trim());
+    });
+
+  // Remove duplicates and normalize subcategory names
+  const uniqueSubcategories = [...new Set(allSubcategories)];
+
+  // Desired order with proper casing for display
+  const desiredOrder = [
+    'LLM',
+    'LLM Fine-tuning',
+    'Image Generation',
+    'Image Generation Fine-tuning',
+    'Featured',
+  ];
+
+  // Lowercase versions for comparison
+  const desiredOrderNormalized = desiredOrder.map((sub) => sub.toLowerCase());
+
+  return uniqueSubcategories.sort((a, b) => {
+    const normalizedA = a.trim().toLowerCase();
+    const normalizedB = b.trim().toLowerCase();
+
+    const indexA = desiredOrderNormalized.indexOf(normalizedA);
+    const indexB = desiredOrderNormalized.indexOf(normalizedB);
+
+    if (indexA !== -1 && indexB !== -1) {
+      // Both subcategories are in desiredOrder
+      return indexA - indexB;
+    } else if (indexA !== -1) {
+      // Only 'a' is in desiredOrder
+      return -1;
+    } else if (indexB !== -1) {
+      // Only 'b' is in desiredOrder
+      return 1;
+    } else {
+      // Neither subcategory is in desiredOrder; sort alphabetically
+      return normalizedA.localeCompare(normalizedB);
+    }
+  });
+}
+
+function templatesInCategoryAndSubcategory(category: string, subcategory: string): Template[] {
+  return templates.value
+    ? templates.value.filter((t) => {
+        const templateCategories = Array.isArray(t.category)
+          ? t.category
+          : t.category.split("|");
+        const inCategory = templateCategories.includes(category);
+
+        const templateSubcategories = t.subcategory
+          ? Array.isArray(t.subcategory)
+            ? t.subcategory
+            : t.subcategory.split("|")
+          : [];
+        const inSubcategory = templateSubcategories.includes(subcategory);
+
+        return inCategory && inSubcategory;
+      })
+    : [];
+}
+
+function templatesWithoutSubcategory(category: string): Template[] {
+  return filteredTemplates.value
+    .filter((t) => {
+      const templateCategories = Array.isArray(t.category)
+        ? t.category
+        : t.category.split("|");
+      const inCategory = templateCategories.includes(category);
+
+      const hasSubcategory = t.subcategory && t.subcategory.length > 0;
+
+      return inCategory && !hasSubcategory;
+    });
+}
 </script>
 <style lang="scss" scoped>
 .template-icon {
