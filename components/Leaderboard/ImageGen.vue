@@ -107,14 +107,25 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="item in leaderboardData" :key="generateRowKey(item)">
-          <td>{{ item.node }}</td>
-          <td>{{ item.gpu }}</td>
-          <td>{{ item.framework }}</td>
-          <td>{{ item.model || 'N/A' }}</td>
-          <td>{{ item.batchSize }}</td>
-          <td>{{ item.metrics.imagesPerSecond }}</td>
-        </tr>
+        <nuxt-link v-for="item in leaderboardData" 
+                   :key="generateRowKey(item)" 
+                   :to="`/address/${item.node}`" 
+                   custom>
+          <template #default="{ navigate }">
+            <tr class="is-clickable remove-greyscale-on-hover" @click="navigate">
+              <td>
+                <nuxt-link :to="`/address/${item.node}`" class="is-family-monospace address has-text-black">
+                  {{ item.node }}
+                </nuxt-link>
+              </td>
+              <td>{{ item.gpu }}</td>
+              <td>{{ item.framework }}</td>
+              <td>{{ item.model || 'N/A' }}</td>
+              <td>{{ item.batchSize }}</td>
+              <td>{{ item.metrics.imagesPerSecond }}</td>
+            </tr>
+          </template>
+        </nuxt-link>
       </tbody>
     </table>
 
@@ -351,5 +362,34 @@
   /* Pagination styles */
   .pagination {
     margin-top: 1.5rem;
+  }
+
+  /* Add these to your existing styles */
+  .is-clickable {
+    cursor: pointer;
+  }
+
+  .remove-greyscale-on-hover:hover {
+    filter: none;
+  }
+
+  /* Update the address styles */
+  td {
+    white-space: nowrap;
+    max-width: 0; /* This forces the cell to respect max-width */
+  }
+
+  .address {
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: block; /* Changed from inline-block to block */
+  }
+
+  @include until-widescreen {
+    .address {
+      max-width: 70px;
+    }
   }
 </style> 
