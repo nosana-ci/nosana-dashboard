@@ -212,7 +212,7 @@
     if (sort.value.orderBy) params.append('orderBy', sort.value.orderBy);
     if (sort.value.order) params.append('order', sort.value.order);
 
-    return `/api/benchmarks/image-gen-leaderboard?${params.toString()}`;
+    return `/api/benchmarks/image-gen-benchmark-data?${params.toString()}`;
   });
 
   const {

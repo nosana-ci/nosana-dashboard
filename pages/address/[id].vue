@@ -3,14 +3,22 @@
     <div v-if="loading">Loading..</div>
     <div v-else>
       <div v-if="address">
-        <div class="is-flex is-align-items-center is-justify-content-space-between mb-4">
-          <h3 class="title is-5 address is-family-monospace my-0">
-            <span>{{ address }}</span>
-          </h3>
-        </div>
+        <h2 class="title is-4 mb-4">Node Information</h2>
 
         <table class="table is-fullwidth is-striped mt-5 mb-6">
           <tbody>
+            <!-- General Section -->
+            <tr>
+              <td colspan="2" class="has-background-light">
+                <h4 class="title is-5 mb-0">General</h4>
+              </td>
+            </tr>
+            <tr>
+              <td>Node</td>
+              <td>
+                {{ address }}
+              </td>
+            </tr>
             <tr>
               <td>NOS Balance</td>
               <td>
@@ -31,60 +39,56 @@
                 <span v-if="solBalance">{{ solBalance / 1e9 }}</span> SOL
               </td>
             </tr>
-            <tr v-if="jobs && jobs.totalJobs">
-              <td>Jobs ran</td>
-              <td>
-                <span>{{ jobs.totalJobs }}</span>
+            <tr>
+              <td colspan="2" class="has-background-light">
+                <h4 class="title is-5 mb-0">Specifications</h4>
               </td>
             </tr>
-            <tr v-if="nodeStatus">
-              <td>Status</td>
-              <td style="vertical-align: middle">
-                <div v-if="nodeStatus === 'QUEUED'" data-tooltip="Node is queued in market" style="width: fit-content"
-                  class="is-flex">
-                  <ExplorerJobStatus :status="'QUEUED'" image-only></ExplorerJobStatus>
-                </div>
-                <div v-else-if="nodeStatus === 'RUNNING'" data-tooltip="Node is running a job"
-                  style="width: fit-content" class="is-flex">
-                  <ExplorerJobStatus image-only :status="'RUNNING'"></ExplorerJobStatus>
-                </div>
-                <span v-else>-</span>
+            <tr>
+              <td>GPU</td>
+              <td v-if="!nodeSpecs">Unknown</td>
+              <td v-else>{{ nodeSpecs.gpu }}</td>
+            </tr>
+            <tr>
+              <td>CPU</td>
+              <td v-if="!nodeSpecs">Unknown</td>
+              <td v-else>{{ nodeSpecs.cpu }}</td>
+            </tr>
+            <tr>
+              <td>RAM</td>
+              <td v-if="!nodeSpecs">Unknown</td>
+              <td v-else>{{ nodeSpecs.ram }} GB</td>
+            </tr>
+            <tr>
+              <td>Disk Space</td>
+              <td v-if="!nodeSpecs">Unknown</td>
+              <td v-else>{{ nodeSpecs.diskSpace }} GB</td>
+            </tr>
+            <tr>
+              <td>Location</td>
+              <td v-if="!nodeSpecs">Unknown</td>
+              <td v-else>{{ nodeSpecs.country }}</td>
+            </tr>
+            <tr>
+              <td colspan="2" class="has-background-light">
+                <h4 class="title is-5 mb-0">Performance</h4>
               </td>
             </tr>
-            <tr v-if="nodeStatus === 'QUEUED' && nodeMarket && nodeMarket.length > 0
-            ">
-              <td>Market</td>
-              <td>
-                <nuxt-link :to="`/markets/${nodeMarket[0].address.toString()}`" class="address is-family-monospace">{{
-                  nodeMarket[0].address.toString() }}</nuxt-link>
-              </td>
+            <tr>
+              <td>Download Speed</td>
+              <td v-if="!nodeSpecs">Unknown</td>
+              <td v-else>{{ nodeSpecs.downloadSpeed }} mbps</td>
             </tr>
-            <tr v-if="nodeStatus === 'RUNNING' && nodeRuns && nodeRuns.length > 0">
-              <td>Running job</td>
-              <td>
-                <nuxt-link :to="`/jobs/${nodeRuns[0].account.job}`" class="address is-family-monospace">{{
-                  nodeRuns[0].account.job }}</nuxt-link>
-              </td>
+            <tr>
+              <td>Upload Speed</td>
+              <td v-if="!nodeSpecs">Unknown</td>
+              <td v-else>{{ nodeSpecs.uploadSpeed }} mbps</td>
             </tr>
             <template v-if="nodeStatus || (jobs && jobs.length)">
               <tr>
                 <td>Node Uptime</td>
                 <td v-if="!nodeInfo || !nodeInfo.uptime">Offline</td>
                 <td v-else>{{ (nodeInfo.uptime / (3600 * 1000)).toFixed(1) }} hours</td>
-              </tr>
-              <tr>
-                <td>Node GPU</td>
-                <td v-if="!nodeInfo || !nodeInfo.info || !nodeInfo.info.gpu">Unknown</td>
-                <td v-else>
-                  <div v-for="gpu in nodeInfo.info.gpu">{{ gpu.name }}</div>
-                </td>
-              </tr>
-              <tr>
-                <td>Node Disk Space</td>
-                <td v-if="!nodeInfo || !nodeInfo.info || !nodeInfo.info.disk">Unknown</td>
-                <td v-else>
-                  <div>{{ (nodeInfo.info.disk / 10000).toFixed(0) }} GB</div>
-                </td>
               </tr>
             </template>
             <!-- TODO: First need to include price in the jobs.all() in SDK-->
@@ -100,11 +104,44 @@
                 }}</span>
               </td>
             </tr> -->
+            <tr>
+              <td colspan="2">
+                <div class="columns">
+                  <div class="column is-6">
+                    <BenchmarkHistogram 
+                      :benchmark-data="llmBenchmarkData"
+                      :market-benchmark-data="llmMarketBenchmarkData"
+                      :default-model="defaultLLMModel"
+                      :default-framework="defaultLLMFramework"
+                      title="LLM Performance"
+                      x-axis-label="Concurrent Users"
+                      y-axis-label="Tokens/sec"
+                    />
+                  </div>
+                  <div class="column is-6">
+                    <BenchmarkHistogram 
+                      :benchmark-data="imageGenBenchmarkData"
+                      :market-benchmark-data="imageGenMarketBenchmarkData"
+                      :default-model="defaultImageGenModel"
+                      :default-framework="defaultImageGenFramework"
+                      title="Image Generation Performance"
+                      x-axis-label="Batch Size"
+                      y-axis-label="Images/sec"
+                    />
+                  </div>
+                </div>
+              </td>
+            </tr>
           </tbody>
         </table>
         <div v-if="jobs && jobs.jobs">
-          <ExplorerJobList :per-page="limit" :total-jobs="jobs ? jobs.totalJobs : null" v-model:page="page"
-            v-model:state="state" :loading-jobs="loadingJobs" title="Jobs by this node" :jobs="jobs ? jobs.jobs : null">
+          <ExplorerJobList 
+            :per-page="limit" 
+            :total-jobs="jobs ? jobs.totalJobs : null" 
+            v-model:page="page"
+            v-model:state="state" 
+            :loading-jobs="loadingJobs" 
+            :jobs="jobs ? jobs.jobs : null">
           </ExplorerJobList>
         </div>
       </div>
@@ -115,8 +152,46 @@
 
 <script setup lang="ts">
 import { PublicKey } from '@solana/web3.js';
-const { data: testgridMarkets, pending: loadingTestgridMarkets } = useAPI('/api/markets', { default: () => [] });
+import BenchmarkHistogram from '~/components/Node/BenchmarkHistogram.vue';
+import { useBenchmarkData } from '~/composables/useBenchmarkData';
+
 const { params } = useRoute();
+
+interface BenchmarkConfig {
+  endpoint: string;
+  formatData: (data: any) => {
+    framework: string;
+    model: string;
+    xValue: number;
+    yValue: number;
+  };
+}
+
+const nodeSpecsUrl = computed(() => `/api/nodes/${params.id}/specs`);
+const { data: nodeSpecs } = useAPI(nodeSpecsUrl, { 
+  watch: [nodeSpecsUrl],
+  default: () => null
+});
+
+interface BenchmarkData {
+  framework: string;
+  model: string;
+  cuCount: string;
+  metrics: {
+    averageTokensPerSecond: number;
+  };
+}
+
+interface ImageGenBenchmarkData {
+  framework: string;
+  model: string;
+  batchSize: string; 
+  metrics: {
+    imagesPerSecond: number; 
+  };
+}
+
+const { data: testgridMarkets, pending: loadingTestgridMarkets } = useAPI('/api/markets', { default: () => [] });
 const { data: nodeInfo, pending: loadingNode } = useFetch(`https://${String(params.id)}.node.k8s.prd.nos.ci/node/info`);
 const { nosana } = useSDK();
 const { markets, getMarkets, loadingMarkets } = useMarkets();
@@ -144,6 +219,40 @@ const limit: Ref<number> = ref(10);
 const jobsUrl = computed(() => { return `/api/jobs?limit=${limit.value}&offset=${(page.value - 1) * limit.value}${state.value !== null ? `&state=${jobStateMapping[state.value]}` : ''}${`&node=${params.id}`}` })
 const { data: jobs, pending: loadingJobs, refresh: refreshJobs } = useAPI(jobsUrl, { watch: [jobsUrl] });
 
+const llmConfig: BenchmarkConfig = {
+  endpoint: '/api/benchmarks/llm-benchmark-data',
+  formatData: (benchmark: BenchmarkData) => ({
+    framework: benchmark.framework,
+    model: benchmark.model,
+    xValue: parseInt(benchmark.cuCount),
+    yValue: benchmark.metrics.averageTokensPerSecond
+  })
+};
+
+const imageGenConfig: BenchmarkConfig = {
+  endpoint: '/api/benchmarks/image-gen-benchmark-data',
+  formatData: (benchmark: ImageGenBenchmarkData) => ({
+    framework: benchmark.framework,
+    model: benchmark.model,
+    xValue: parseInt(benchmark.batchSize),
+    yValue: benchmark.metrics.imagesPerSecond
+  })
+};
+
+const { 
+  formattedBenchmarkData: llmBenchmarkData,
+  formattedMarketBenchmarkData: llmMarketBenchmarkData,
+  defaultModel: defaultLLMModel,
+  defaultFramework: defaultLLMFramework
+} = useBenchmarkData(llmConfig, nodeSpecs);
+
+const { 
+  formattedBenchmarkData: imageGenBenchmarkData,
+  formattedMarketBenchmarkData: imageGenMarketBenchmarkData,
+  defaultModel: defaultImageGenModel,
+  defaultFramework: defaultImageGenFramework
+} = useBenchmarkData(imageGenConfig, nodeSpecs);
+
 const getAddress = async () => {
   loading.value = true;
   try {
@@ -166,7 +275,6 @@ const getAddress = async () => {
     address.value = null;
   }
 
-  // get market where node is in
   const nodesInMarkets = markets?.value?.flatMap((market) => {
     return market.queueType === 1
       ? market.queue.map((data: any) => data.toString())

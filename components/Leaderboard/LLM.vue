@@ -222,7 +222,7 @@ const leaderboardUrl = computed(() => {
   params.append('orderBy', orderByMap[sort.value.orderBy as SortField]);
   params.append('order', sort.value.order);
 
-  return `/api/benchmarks/llm-leaderboard?${params.toString()}`;
+  return `/api/benchmarks/llm-benchmark-data?${params.toString()}`;
 });
 
 const {
