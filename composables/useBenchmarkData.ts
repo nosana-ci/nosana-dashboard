@@ -72,21 +72,14 @@ const findBestFramework = (marketData: FormattedBenchmarkData[]): string => {
 export const useBenchmarkData = (config: BenchmarkConfig, nodeSpecsRef: Ref<any>) => {
   const { params } = useRoute();
   
-  // Get benchmark data
   const benchmarkUrl = computed(() => `${config.endpoint}?node=${params.id}`);
   const { data: benchmarks } = useAPI(benchmarkUrl, { 
     watch: [benchmarkUrl],
     default: () => ({ data: [], total: 0 })
   });
 
-  // Use passed nodeSpecs for market URL
   const marketBenchmarkUrl = computed(() => {
     const marketAddress = nodeSpecsRef.value?.marketAddress;
-    
-    // Log the nodeSpecsRef and marketAddress
-    console.log('Node Specs:', nodeSpecsRef.value);
-    console.log('Market Address:', marketAddress);
-
     return marketAddress 
       ? `${config.endpoint}?level=market&market=${marketAddress}`
       : null;
@@ -101,10 +94,7 @@ export const useBenchmarkData = (config: BenchmarkConfig, nodeSpecsRef: Ref<any>
       });
       marketBenchmarks.value = data.value;
 
-      // Log the fetched market benchmarks
-      console.log('Fetched Market Benchmarks:', marketBenchmarks.value);
     } else {
-      console.log('Market Benchmark URL is not available');
     }
   });
 

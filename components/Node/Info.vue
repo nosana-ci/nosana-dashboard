@@ -5,7 +5,7 @@
         <div v-if="address">
           <h2 class="title is-4 mb-4">Node Information</h2>
   
-          <table class="table is-fullwidth is-striped mt-5 mb-6">
+          <table class="table is-fullwidth mt-5 mb-6">
             <tbody>
               <!-- General Section -->
               <tr>
@@ -39,12 +39,56 @@
                   <span v-if="solBalance">{{ (solBalance / 1e9).toFixed(2) }}</span> SOL
                 </td>
               </tr>
+              
+            <tr v-if="jobs && jobs.totalJobs">
+              <td>Jobs ran</td>
+              <td>
+                <span>{{ jobs.totalJobs }}</span>
+              </td>
+            </tr>
+            <tr v-if="nodeStatus">
+              <td>Status</td>
+              <td style="vertical-align: middle">
+                <div v-if="nodeStatus === 'QUEUED'" data-tooltip="Node is queued in market" style="width: fit-content"
+                  class="is-flex">
+                  <ExplorerJobStatus :status="'QUEUED'" image-only></ExplorerJobStatus>
+                </div>
+                <div v-else-if="nodeStatus === 'RUNNING'" data-tooltip="Node is running a job"
+                  style="width: fit-content" class="is-flex">
+                  <ExplorerJobStatus image-only :status="'RUNNING'"></ExplorerJobStatus>
+                </div>
+                <span v-else>-</span>
+              </td>
+            </tr>
+            <tr v-if="nodeStatus === 'QUEUED' && nodeMarket && nodeMarket.length > 0
+            ">
+              <td>Market</td>
+              <td>
+                <nuxt-link :to="`/markets/${nodeMarket[0].address.toString()}`" class="address is-family-monospace">{{
+                  nodeMarket[0].address.toString() }}</nuxt-link>
+              </td>
+            </tr>
+            <tr v-if="nodeStatus === 'RUNNING' && nodeRuns && nodeRuns.length > 0">
+              <td>Running job</td>
+              <td>
+                <nuxt-link :to="`/jobs/${nodeRuns[0].account.job}`" class="address is-family-monospace">{{
+                  nodeRuns[0].account.job }}</nuxt-link>
+              </td>
+            </tr>
+            <template v-if="nodeStatus || (jobs && jobs.length)">
+              <tr>
+                <td>Node Uptime</td>
+                <td v-if="!nodeInfo || !nodeInfo.uptime">Offline</td>
+                <td v-else>{{ (nodeInfo.uptime / (3600 * 1000)).toFixed(1) }} hours</td>
+              </tr>
+            </template>
               <tr>
                 <td colspan="2" class="has-background-light">
                   <h4 class="title is-5 mb-0">Specifications</h4>
                 </td>
               </tr>
               <tr>
+            
     <td>GPU</td>
     <td v-if="!nodeSpecs">Unknown</td>
                 <td v-else>{{ nodeSpecs.gpus[0]?.gpu }}</td>
@@ -84,13 +128,6 @@
                 <td v-if="!nodeSpecs">Unknown</td>
                 <td v-else>{{ nodeSpecs.uploadSpeed }} mbps</td>
               </tr>
-              <template v-if="nodeStatus || (jobs && jobs.length)">
-                <tr>
-                  <td>Node Uptime</td>
-                  <td v-if="!nodeInfo || !nodeInfo.uptime">Offline</td>
-                  <td v-else>{{ (nodeInfo.uptime / (3600 * 1000)).toFixed(1) }} hours</td>
-                </tr>
-              </template>
               <!-- TODO: First need to include price in the jobs.all() in SDK-->
               <!-- <tr v-if="jobs">
                 <td>Total NOS earned</td>
@@ -108,7 +145,7 @@
                 <td colspan="2">
                   <div class="columns">
                     <div class="column is-6">
-                      <BenchmarkHistogram 
+                      <NodeBenchmarkHistogram 
                         :benchmark-data="llmBenchmarkData"
                         :market-benchmark-data="llmMarketBenchmarkData"
                         :default-model="defaultLLMModel"
@@ -119,7 +156,7 @@
                       />
                     </div>
                     <div class="column is-6">
-                      <BenchmarkHistogram 
+                      <NodeBenchmarkHistogram 
                         :benchmark-data="imageGenBenchmarkData"
                         :market-benchmark-data="imageGenMarketBenchmarkData"
                         :default-model="defaultImageGenModel"
@@ -152,7 +189,6 @@
   
   <script setup lang="ts">
   import { PublicKey } from '@solana/web3.js';
-  import BenchmarkHistogram from '~/components/Node/BenchmarkHistogram.vue';
   import { useBenchmarkData } from '~/composables/useBenchmarkData';
   
   const { params } = useRoute();
@@ -280,7 +316,7 @@
         ? market.queue.map((data: any) => data.toString())
         : [];
     });
-  
+
     if (nodesInMarkets?.includes(address.value)) {
       nodeStatus.value = 'QUEUED';
       nodeMarket.value = markets?.value?.filter((m) =>
@@ -297,7 +333,6 @@
       },
     ]);
   
-    // get active runs of node
     if (nodeRuns.value && nodeRuns.value.length) {
       nodeStatus.value = 'RUNNING';
     }
