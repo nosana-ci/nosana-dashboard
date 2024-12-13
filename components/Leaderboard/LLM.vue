@@ -111,15 +111,26 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="item in leaderboardData" :key="generateRowKey(item)">
-          <td>{{ item.node }}</td>
-          <td>{{ item.gpu }}</td>
-          <td>{{ item.framework }}</td>
-          <td>{{ item.model }}</td>
-          <td>{{ item.cuCount }}</td>
-          <td>{{ item.metrics.averageTokensPerSecond }}</td>
-          <td>{{ item.metrics.pricePerMillionTokens.toFixed(2) }}</td>
-        </tr>
+        <nuxt-link v-for="item in leaderboardData" 
+                   :key="generateRowKey(item)" 
+                   :to="`/address/${item.node}`" 
+                   custom>
+          <template #default="{ navigate }">
+            <tr class="is-clickable remove-greyscale-on-hover" @click="navigate">
+              <td>
+                <nuxt-link :to="`/address/${item.node}`" class="is-family-monospace address has-text-black">
+                  {{ item.node }}
+                </nuxt-link>
+              </td>
+              <td>{{ item.gpu }}</td>
+              <td>{{ item.framework }}</td>
+              <td>{{ item.model }}</td>
+              <td>{{ item.cuCount }}</td>
+              <td>{{ item.metrics.averageTokensPerSecond }}</td>
+              <td>{{ item.metrics.pricePerMillionTokens.toFixed(2) }}</td>
+            </tr>
+          </template>
+        </nuxt-link>
       </tbody>
     </table>
 
@@ -368,5 +379,28 @@ th.sortable span {
 /* Adjusted cursor style for non-sortable columns */
 th {
   cursor: default;
+}
+
+/* Add these to your existing styles */
+.is-clickable {
+  cursor: pointer;
+}
+
+.remove-greyscale-on-hover:hover {
+  filter: none;
+}
+
+.address {
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+}
+
+@include until-widescreen {
+  .address {
+    max-width: 70px;
+  }
 }
 </style>

@@ -25,7 +25,11 @@
                     </a>
                   </li>
                   <li v-for="category in categories" :key="category">
-                    <a :class="{ 'is-active': filterCategory === category }" @click="filterCategory = category">
+                    <a :class="{ 'is-active': filterCategory === category }" 
+                       @click="() => {
+                         filterSubcategory = '';  // Reset subcategory first
+                         filterCategory = category;
+                       }">
                       <span>{{ category === 'API Only' ? 'API' : category }}</span>
                       <span class="ml-auto is-size-7">({{ templates.filter(t =>
                         (Array.isArray(t.category) ? t.category : t.category.split("|")).includes(category)).length }})</span>
@@ -54,100 +58,70 @@
       </div>
       <div class="column is-9">
         <div class="box has-background-white-ter">
-          <div v-if="filterCategory === ''">
-            <div class="columns is-multiline">
+          <template v-if="filterCategory === ''">
+            <h2 class="title is-4 mb-4">Featured Templates</h2>
+            <div class="columns is-multiline mb-6">
               <div
-                v-for="template in filteredTemplates"
+                v-for="template in featuredTemplates"
                 :key="template.id"
                 class="column is-4"
               >
                 <nuxt-link class="box" style="height: 100%;"
                   :to="{ path: '/jobs/create', query: { templateId: template.id } }">
-                  <div class="is-flex is-justify-content-space-between is-align-items-center mb-2">
-                    <h2 class="is-size-4 has-text-weight-semibold mb-0 has-text-black">
-                      {{ template.name }}
-                    </h2>
-                    <div class="is-flex is-align-items-center">
-                      <span v-if="template.stargazers_count" class="is-flex is-align-items-center has-text-grey is-size-7">
+                  <div class="is-flex is-justify-content-space-between">
+                    <div>
+                      <div class="mb-2">
+                        <h2 class="is-size-4 has-text-weight-semibold mb-0 has-text-black">
+                          {{ template.name }}
+                        </h2>
+                      </div>
+                      <p>{{ template.description }}</p>
+                    </div>
+                    <div class="is-flex is-flex-direction-column is-align-items-center ml-3">
+                      <span v-if="template.stargazers_count" class="has-text-grey is-size-7 mb-1">
                         <span class="has-text-warning mr-1" style="font-size: 12px;">★</span>
                         <span class="ml-1">{{ template.stargazers_count }}</span>
                       </span>
-                      <div v-if="template.icon || template.avatar_url" class="template-icon is-flex has-text-centered has-background-white ml-2">
+                      <div v-if="template.icon || template.avatar_url" class="template-icon is-flex is-justify-content-center">
                         <img :src="template.icon || template.avatar_url">
                       </div>
                     </div>
                   </div>
-                  <p>{{ template.description }}</p>
                 </nuxt-link>
               </div>
             </div>
-          </div>
-          <div v-else>
-            <div v-for="category in categories" :key="category" v-if="filteredTemplates.length">
-              <div v-if="!filterCategory || category === filterCategory" class="mb-6">
-                <h2 class="title is-4">{{ category === 'API Only' ? 'API' : category }}</h2>
 
-                <div v-for="subcategory in subcategoriesForCategory(category)" :key="subcategory">
-                  <h3 class="title is-5">{{ subcategory }}</h3>
-                  <div class="columns is-multiline">
-                    <div
-                      v-for="template in templatesInCategoryAndSubcategory(category, subcategory)"
-                      :key="template.id"
-                      class="column is-4"
-                    >
-                      <nuxt-link class="box" style="height: 100%;"
-                        :to="{ path: '/jobs/create', query: { templateId: template.id } }">
-                        <div class="is-flex is-justify-content-space-between is-align-items-center mb-2">
-                          <h2 class="is-size-4 has-text-weight-semibold mb-0 has-text-black">
-                            {{ template.name }}
-                          </h2>
-                          <div class="is-flex is-align-items-center">
-                            <span v-if="template.stargazers_count" class="is-flex is-align-items-center has-text-grey is-size-7">
-                              <span class="has-text-warning mr-1" style="font-size: 12px;">★</span>
-                              <span class="ml-1">{{ template.stargazers_count }}</span>
-                            </span>
-                            <div v-if="template.icon || template.avatar_url" class="template-icon is-flex has-text-centered has-background-white ml-2">
-                              <img :src="template.icon || template.avatar_url">
-                            </div>
-                          </div>
-                        </div>
-                        <p>{{ template.description }}</p>
-                      </nuxt-link>
+            <h2 class="title is-4 mb-4">All Templates</h2>
+          </template>
+
+          <div class="columns is-multiline">
+            <div
+              v-for="template in filteredTemplates"
+              :key="template.id"
+              class="column is-4"
+            >
+              <nuxt-link class="box" style="height: 100%;"
+                :to="{ path: '/jobs/create', query: { templateId: template.id } }">
+                <div class="is-flex is-justify-content-space-between">
+                  <div>
+                    <div class="mb-2">
+                      <h2 class="is-size-4 has-text-weight-semibold mb-0 has-text-black">
+                        {{ template.name }}
+                      </h2>
+                    </div>
+                    <p>{{ template.description }}</p>
+                  </div>
+                  <div class="is-flex is-flex-direction-column is-align-items-center ml-3">
+                    <span v-if="template.stargazers_count" class="has-text-grey is-size-7 mb-1">
+                      <span class="has-text-warning mr-1" style="font-size: 12px;">★</span>
+                      <span class="ml-1">{{ template.stargazers_count }}</span>
+                    </span>
+                    <div v-if="template.icon || template.avatar_url" class="template-icon is-flex is-justify-content-center">
+                      <img :src="template.icon || template.avatar_url">
                     </div>
                   </div>
                 </div>
-
-                <div v-if="templatesWithoutSubcategory(category).length">
-                  <h3 class="title is-5">Others</h3>
-                  <div class="columns is-multiline">
-                    <div
-                      v-for="template in templatesWithoutSubcategory(category)"
-                      :key="template.id"
-                      class="column is-4"
-                    >
-                      <nuxt-link class="box" style="height: 100%;"
-                        :to="{ path: '/jobs/create', query: { templateId: template.id } }">
-                        <div class="is-flex is-justify-content-space-between is-align-items-center mb-2">
-                          <h2 class="is-size-4 has-text-weight-semibold mb-0 has-text-black">
-                            {{ template.name }}
-                          </h2>
-                          <div class="is-flex is-align-items-center">
-                            <span v-if="template.stargazers_count" class="is-flex is-align-items-center has-text-grey is-size-7">
-                              <span class="has-text-warning mr-1" style="font-size: 12px;">★</span>
-                              <span class="ml-1">{{ template.stargazers_count }}</span>
-                            </span>
-                            <div v-if="template.icon || template.avatar_url" class="template-icon is-flex has-text-centered has-background-white ml-2">
-                              <img :src="template.icon || template.avatar_url">
-                            </div>
-                          </div>
-                        </div>
-                        <p>{{ template.description }}</p>
-                      </nuxt-link>
-                    </div>
-                  </div>
-                </div>
-
-              </div>
+              </nuxt-link>
             </div>
           </div>
         </div>
@@ -166,6 +140,19 @@ const filterCategory: Ref<string> = ref('');
 const filterSubcategory: Ref<string> = ref('');
 const search: Ref<string> = ref('');
 
+const featuredTemplateIds = [
+  'AUTOMTIC1111-stable-diffusion',
+  'open-webui',
+  'hello-world'
+];
+
+const featuredTemplates = computed(() => {
+  if (!templates.value) return [];
+  return templates.value
+    .filter(t => featuredTemplateIds.includes(t.id))
+    .sort((a, b) => (b.stargazers_count || 0) - (a.stargazers_count || 0));
+});
+
 // Watch for changes in filterCategory to reset filterSubcategory
 watch(filterCategory, (newVal, oldVal) => {
   if (newVal !== oldVal) {
@@ -176,6 +163,10 @@ watch(filterCategory, (newVal, oldVal) => {
 const filteredTemplates = computed(() => {
   const templatesList = templates.value
     ? templates.value.filter((t) => {
+        if (filterCategory.value === '' && featuredTemplateIds.includes(t.id)) {
+          return false;
+        }
+
         let found = true;
         let inCategory = true;
         let inSubcategory = true;
@@ -185,7 +176,7 @@ const filteredTemplates = computed(() => {
           found =
             t.name.toLowerCase().includes(searchTerm) ||
             t.description.toLowerCase().includes(searchTerm) ||
-            t.readme.toLowerCase().includes(searchTerm);
+            (t.readme && t.readme.toLowerCase().includes(searchTerm));
         }
 
         if (filterCategory.value !== '') {
@@ -193,15 +184,20 @@ const filteredTemplates = computed(() => {
             ? t.category
             : t.category.split("|");
           inCategory = templateCategories.includes(filterCategory.value);
-        }
 
-        if (filterSubcategory.value !== '') {
-          const templateSubcategories = t.subcategory
-            ? Array.isArray(t.subcategory)
-              ? t.subcategory
-              : t.subcategory.split("|")
-            : [];
-          inSubcategory = templateSubcategories.includes(filterSubcategory.value);
+          if (filterSubcategory.value !== '') {
+            const templateSubcategories = t.subcategory
+              ? Array.isArray(t.subcategory)
+                ? t.subcategory
+                : t.subcategory.split("|")
+              : [];
+            inSubcategory = templateSubcategories.includes(filterSubcategory.value);
+          } else {
+            inSubcategory = true;
+          }
+        } else {
+          inCategory = true;
+          inSubcategory = true;
         }
 
         return found && inCategory && inSubcategory;
@@ -260,21 +256,21 @@ const subcategories = computed(() => {
         return [];
       })
     : [];
-  const uniqueSubcategories = [...new Set(allSubcategories)].map(sub => sub.trim());
-  
-  // Define the desired order
+  const uniqueSubcategories = [...new Set(allSubcategories)].map((sub) => sub.trim());
+
+  // Define the desired order for subcategories
   const desiredOrder = [
+    'Featured',
     'LLM',
     'LLM Fine-tuning',
     'Image Generation',
-    'Image Generation Fine-tuning',
-    'Featured'
+    'Image Generation Fine-tuning'
   ];
 
   return uniqueSubcategories.sort((a, b) => {
     const indexA = desiredOrder.indexOf(a);
     const indexB = desiredOrder.indexOf(b);
-    
+
     if (indexA !== -1 && indexB !== -1) {
       return indexA - indexB;
     } else if (indexA !== -1) {
@@ -378,6 +374,7 @@ function templatesWithoutSubcategory(category: string): Template[] {
 </script>
 <style lang="scss" scoped>
 .template-icon {
+  background-color: #ffffff !important;
   border: 1px solid $grey-lighter;
   width: 42px;
   height: 42px;
