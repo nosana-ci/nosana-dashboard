@@ -56,10 +56,12 @@ export default defineNuxtConfig({
       },
     },
     build: {
-      target: "esnext"
+      target: "esnext",
+      reportCompressedSize: false,
     },
     optimizeDeps: {
       include: ["@solana/web3.js", "buffer"],
+      exclude: ['vue-demi'],
       esbuildOptions: {
         target: "esnext",
         define: {
@@ -78,6 +80,13 @@ export default defineNuxtConfig({
           silenceDeprecations: ['mixed-decls', 'slash-div']
         },
       },
+    },
+    devBundler: 'legacy',
+    server: {
+      watch: {
+        usePolling: true,
+        interval: 300
+      }
     },
   },
   components: true,

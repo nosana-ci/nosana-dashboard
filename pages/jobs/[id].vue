@@ -8,6 +8,12 @@
         <ExplorerJobStatus class="ml-2" :status="jobStatus ? jobStatus : job.state"></ExplorerJobStatus>
       </div>
 
+      <div v-if="isJobPoster && (job.state === 'RUNNING' || job.state === 1)" class="mb-4">
+        <button @click="stopJob" :class="{ 'is-loading': loading }" class="button is-danger">
+          Stop Job
+        </button>
+      </div>
+
       <table class="table is-fullwidth is-striped">
         <tbody>
           <tr>
@@ -38,19 +44,13 @@
               </nuxt-link>
             </td>
           </tr>
-          <tr v-if="jobStatus === 'COMPLETED' ||
-            job.state === 'COMPLETED' ||
-            job.state === 2
-          ">
+          <tr>
             <td>Price</td>
             <td>
               <span v-if="loadingMarkets">..</span>
               <span v-else>
-                {{
-                  ((parseInt(job.price) / 1e6) * Math.min(job.timeEnd - job.timeStart, markets?.find(m => m.address ==
-                    job.market).jobTimeout)).toFixed(6)
-                }}
-                NOS</span>
+                {{ displayPrice }}
+              </span>
             </td>
           </tr>
           <tr>
@@ -74,10 +74,10 @@
             <td>Duration</td>
             <td>
               <span v-if="job.timeEnd">
-                {{ fmtMSS(job.timeEnd - job.timeStart) }}
+                {{ fmtMSS(job.timeEnd - job.timeStart) }} (max {{ Math.round(parseInt(maxDuration) / 60) }}m)
               </span>
               <span v-else-if="job.timeStart">
-                {{ fmtMSS(Math.floor(timestamp / 1000) - job.timeStart) }}
+                {{ fmtMSS(Math.floor(timestamp / 1000) - job.timeStart) }} (max {{ Math.round(parseInt(maxDuration) / 60) }}m)
               </span>
               <span v-else> - </span>
             </td>
@@ -189,8 +189,12 @@ import { useRoute } from "vue-router";
 import VueJsonPretty from "vue-json-pretty";
 import 'vue-json-pretty/lib/styles.css';
 import { UseTimeAgo } from "@vueuse/components";
-import { type Ref, ref, watch } from "vue";
+import { type Ref, ref, watch, computed } from "vue";
+import type { ComputedRef } from '@vue/runtime-core';
 import AnsiUp from 'ansi_up';
+import { useWallet } from 'solana-wallets-vue'
+import { useToast } from "vue-toastification";
+const toast = useToast();
 
 const { nosana } = useSDK();
 const ansi = new AnsiUp();
@@ -214,7 +218,7 @@ const fmtMSS = (s: number) => {
 
 const { markets, getMarkets, loadingMarkets } = useMarkets();
 
-
+// Fetch markets if not already loaded
 if (!markets.value) {
   getMarkets();
 }
@@ -222,6 +226,38 @@ if (!markets.value) {
 const { data: job, pending: loadingJob } = await useAPI(`/api/jobs/${jobId.value}`);
 const { data: testgridMarkets, pending: loadingTestgridMarkets } = await useAPI('/api/markets');
 
+const { connected, publicKey } = useWallet();
+
+const isJobPoster = computed(() => {
+  return connected.value && publicKey.value?.toString() === job.value?.project;
+});
+
+const stopJob = async () => {
+  if (!job.value) return;
+  try {
+    loading.value = true;
+    
+    // Get the run account first
+    const runs = await nosana.value.jobs.getRuns(jobId.value);
+    if (!runs || !runs.length) {
+      throw new Error('No active run found for this job');
+    }
+    
+    // Call quit with the run account
+    await nosana.value.jobs.quit(runs[0]);
+    
+    toast.success('Job stopped successfully');
+    
+    // Refresh the job data
+    const updatedJob = await nosana.value.jobs.get(jobId.value);
+    job.value = updatedJob;
+    
+  } catch (e: any) {
+    toast.error(`Error stopping job: ${e.toString()}`);
+  } finally {
+    loading.value = false;
+  }
+};
 
 watch(job, async () => {
   try {
@@ -308,6 +344,29 @@ watch(job, async () => {
   }
   loading.value = false;
 });
+
+// Compute the display price based on the job status
+const displayPrice: ComputedRef<string> = computed(() => {
+  if (loadingMarkets.value || !markets.value || !job.value) return 'N/A';
+  const market = markets.value.find((m) => m.address === job.value.market);
+  if (!market) return 'N/A';
+  if (job.value.state === 'COMPLETED' || job.value.state === 2 || jobStatus.value === 'COMPLETED') {
+    const priceInNos = ((parseInt(job.value.price) / 1e6) * Math.min(job.value.timeEnd - job.value.timeStart, market.jobTimeout)).toFixed(6);
+    return `${priceInNos} NOS`;
+  } else {
+    return market.usd_reward_per_hour
+      ? `${market.usd_reward_per_hour.toFixed(2)} USD/hour`
+      : 'N/A';
+  }
+});
+
+// Compute the max duration based on the market
+const maxDuration: ComputedRef<string> = computed(() => {
+  if (loadingMarkets.value || !markets.value || !job.value) return 'N/A';
+  const market = markets.value.find((m) => m.address === job.value.market);
+  return market && market.jobTimeout ? market.jobTimeout.toString() : 'N/A';
+});
+
 </script>
 <style lang="scss" scoped>
 .pre {
