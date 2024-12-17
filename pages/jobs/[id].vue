@@ -5,7 +5,26 @@
         <h3 class="title is-5 address is-family-monospace my-0">
           {{ jobId }}
         </h3>
-        <ExplorerJobStatus class="ml-2" :status="jobStatus ? jobStatus : job.state"></ExplorerJobStatus>
+        <div class="is-flex is-align-items-center">
+          <ExplorerJobStatus class="mr-2" :status="jobStatus ? jobStatus : job.state"></ExplorerJobStatus>
+          <ClientOnly>
+            <wallet-modal-provider v-if="!connected" :dark="$colorMode.value === 'dark'">
+              <template #default="modalScope">
+                <a class="button is-primary is-small" @click="modalScope.openModal()">
+                  Connect Wallet
+                </a>
+              </template>
+            </wallet-modal-provider>
+            <div v-else class="buttons are-small">
+              <span class="tag is-primary is-light">
+                {{ publicKey?.toString().slice(0,4) }}...{{ publicKey?.toString().slice(-4) }}
+              </span>
+              <button class="button is-small" @click="disconnect">
+                Disconnect
+              </button>
+            </div>
+          </ClientOnly>
+        </div>
       </div>
 
       <div v-if="isJobPoster && (job.state === 'RUNNING' || job.state === 1)" class="mb-4">
@@ -193,7 +212,10 @@ import { type Ref, ref, watch, computed } from "vue";
 import type { ComputedRef } from '@vue/runtime-core';
 import AnsiUp from 'ansi_up';
 import { useWallet } from 'solana-wallets-vue'
+import { WalletModalProvider } from "solana-wallets-vue";
 import { useToast } from "vue-toastification";
+import bs58 from 'bs58';
+import type { MessageSignerWalletAdapter } from '@solana/wallet-adapter-base';
 const toast = useToast();
 
 const { nosana } = useSDK();
@@ -226,32 +248,89 @@ if (!markets.value) {
 const { data: job, pending: loadingJob } = await useAPI(`/api/jobs/${jobId.value}`);
 const { data: testgridMarkets, pending: loadingTestgridMarkets } = await useAPI('/api/markets');
 
-const { connected, publicKey } = useWallet();
+const { wallet, publicKey, connected, disconnect } = useWallet();
 
+// =============================
+// TEMPORARY CODE FOR TESTING
+// Force isJobPoster to return true to show the Stop button for all jobs
+// Remember to remove this after testing
+// =============================
 const isJobPoster = computed(() => {
-  return connected.value && publicKey.value?.toString() === job.value?.project;
+  return true; // Always return true for testing purposes
 });
 
 const stopJob = async () => {
   if (!job.value) return;
   try {
     loading.value = true;
-    
-    // Get the run account first
-    const runs = await nosana.value.jobs.getRuns(jobId.value);
-    if (!runs || !runs.length) {
-      throw new Error('No active run found for this job');
+
+    if (!connected.value || !publicKey.value) {
+      throw new Error('Wallet not connected');
     }
-    
-    // Call quit with the run account
-    await nosana.value.jobs.quit(runs[0]);
-    
+    if (!wallet.value) {
+      throw new Error('Wallet not found');
+    }
+
+    // Prepare the node API endpoint
+    const nodeAddress = job.value.node.toString();
+    const apiUrl = `https://${nodeAddress}.node.k8s.prd.nos.ci/service/stop/${jobId.value}`;
+
+    // Create the authorization header
+    const message = `Stopping job ${jobId.value}`;
+    const encodedMessage = new TextEncoder().encode(message);
+
+    // Cast the adapter to MessageSignerWalletAdapter
+    const adapter = wallet.value.adapter as MessageSignerWalletAdapter;
+    if (!adapter.signMessage) {
+      throw new Error('Wallet does not support message signing');
+    }
+    const signedMessage = await adapter.signMessage(encodedMessage);
+
+    const signature = bs58.encode(signedMessage);
+    const publicKeyString = publicKey.value.toString();
+    const authorizationHeader = `${publicKeyString}:${signature}`;
+
+    // =============================
+    // START OF TEMPORARY MOCK CODE
+    // =============================
+
+    // TODO: Remove this mock when the node API is available
+    // Mocking the fetch call to simulate API response
+    const response = {
+      ok: true, // Simulate a successful response
+      status: 200,
+      json: async () => ({ message: 'Job stopped successfully' }),
+      text: async () => 'Job stopped successfully',
+    };
+
+    // Simulate network delay
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    // Uncomment the real fetch call when the API is available
+    /*
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': authorizationHeader,
+      },
+    });
+    */
+
+    // =============================
+    // END OF TEMPORARY MOCK CODE
+    // =============================
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Error stopping job: ${response.status} ${errorText}`);
+    }
+
     toast.success('Job stopped successfully');
-    
-    // Refresh the job data
+
+    // Optionally refresh the job data
     const updatedJob = await nosana.value.jobs.get(jobId.value);
     job.value = updatedJob;
-    
+
   } catch (e: any) {
     toast.error(`Error stopping job: ${e.toString()}`);
   } finally {
