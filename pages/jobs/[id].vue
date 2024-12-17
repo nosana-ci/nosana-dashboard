@@ -296,8 +296,14 @@ const stopJob = async () => {
 
     // TODO: Remove this mock when the node API is available
     // Mocking the fetch call to simulate API response
+
+    // Log the URL and headers to verify they are correct
+    console.log('Mock fetch to:', apiUrl);
+    console.log('Authorization Header:', authorizationHeader);
+
+    // Simulate a response similar to what the real API would return
     const response = {
-      ok: true, // Simulate a successful response
+      ok: true, // Simulate a successful response (status 200)
       status: 200,
       json: async () => ({ message: 'Job stopped successfully' }),
       text: async () => 'Job stopped successfully',
@@ -325,7 +331,9 @@ const stopJob = async () => {
       throw new Error(`Error stopping job: ${response.status} ${errorText}`);
     }
 
-    toast.success('Job stopped successfully');
+    // Process the response body as you would with the actual API
+    const responseData = await response.json();
+    toast.success(responseData.message);
 
     // Optionally refresh the job data
     const updatedJob = await nosana.value.jobs.get(jobId.value);
