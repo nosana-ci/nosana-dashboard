@@ -214,7 +214,6 @@ import AnsiUp from 'ansi_up';
 import { useWallet } from 'solana-wallets-vue'
 import { WalletModalProvider } from "solana-wallets-vue";
 import { useToast } from "vue-toastification";
-import bs58 from 'bs58';
 import type { MessageSignerWalletAdapter } from '@solana/wallet-adapter-base';
 const toast = useToast();
 
@@ -273,10 +272,10 @@ const stopJob = async () => {
 
     // Prepare the node API endpoint
     const nodeAddress = job.value.node.toString();
-    const apiUrl = `https://${nodeAddress}.node.k8s.prd.nos.ci/service/stop/${jobId.value}`;
+    const apiUrl = `https://${nodeAddress}.${useRuntimeConfig().public.nodeDomain}/service/stop/${jobId.value}`;
 
     // Create the authorization header
-    const message = `Stopping job ${jobId.value}`;
+    const message = 'StopFlow';
     const encodedMessage = new TextEncoder().encode(message);
 
     // Cast the adapter to MessageSignerWalletAdapter
@@ -286,7 +285,7 @@ const stopJob = async () => {
     }
     const signedMessage = await adapter.signMessage(encodedMessage);
 
-    const signature = bs58.encode(signedMessage);
+    const signature = Buffer.from(signedMessage).toString('base64');
     const publicKeyString = publicKey.value.toString();
     const authorizationHeader = `${publicKeyString}:${signature}`;
 
@@ -309,8 +308,6 @@ const stopJob = async () => {
       text: async () => 'Job stopped successfully',
     };
 
-    // Simulate network delay
-    await new Promise((resolve) => setTimeout(resolve, 500));
 
     // Uncomment the real fetch call when the API is available
     /*

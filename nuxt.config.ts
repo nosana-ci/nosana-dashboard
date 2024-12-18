@@ -24,6 +24,7 @@ export default defineNuxtConfig({
       apiBase: process.env.API_BASE,
       oldApiBase: process.env.OLD_API_BASE || 'https://backend.k8s.prd.nos.ci',
       network: process.env.NETWORK || 'mainnet',
+      nodeDomain: process.env.NUXT_PUBLIC_NODE_DOMAIN
     }
   },
   vite: {
