@@ -109,7 +109,7 @@
                 <td v-else>{{ nodeSpecs.diskSpace }} GB</td>
               </tr>
               <tr>
-                <td>Location</td>
+                <td>Country</td>
                 <td v-if="!nodeSpecs">Unknown</td>
                 <td v-else>{{ nodeSpecs.country }}</td>
               </tr>
@@ -119,14 +119,38 @@
                 </td>
               </tr>
               <tr>
-                <td>Download Speed</td>
-                <td v-if="!nodeSpecs">Unknown</td>
-                <td v-else>{{ nodeSpecs.downloadSpeed }} mbps</td>
+                <td>
+                  Performance Rank 
+                  <span 
+                    class="icon is-small tooltip is-tooltip-right" 
+                    data-tooltip="Ranking based on the node's computational performance compared to other nodes in the market. Lower number means better performance.">
+                    <i class="fas fa-info-circle"></i>
+                  </span>
+                </td>
+                <td v-if="!nodeRanking">Unknown</td>
+                <td v-else>{{ nodeRanking.performanceRank }}</td>
               </tr>
               <tr>
-                <td>Upload Speed</td>
-                <td v-if="!nodeSpecs">Unknown</td>
-                <td v-else>{{ nodeSpecs.uploadSpeed }} mbps</td>
+                <td>
+                  Stability Rank
+                  <span 
+                    class="icon is-small tooltip is-tooltip-right" 
+                    data-tooltip="Ranking based on the node's reliability and uptime. Lower number indicates better stability and consistent availability.">
+                    <i class="fas fa-info-circle"></i>
+                  </span>
+                </td>
+                <td v-if="!nodeRanking">Unknown</td>
+                <td v-else>{{ nodeRanking.stabilityRank }}</td>
+              </tr>
+              <tr>
+                <td>Average Download Speed</td>
+                <td v-if="!genericBenchmarkResponse || !genericBenchmarkResponse.data.length">Unknown</td>
+                <td v-else>{{ genericBenchmarkResponse.data[0]?.metrics.internetSpeedDownload }} mbps</td>
+              </tr>
+              <tr>
+                <td>AverageUpload Speed</td>
+                <td v-if="!genericBenchmarkResponse || !genericBenchmarkResponse.data.length">Unknown</td>
+                <td v-else>{{ genericBenchmarkResponse.data[0]?.metrics.internetSpeedUpload }} mbps</td>
               </tr>
               <!-- TODO: First need to include price in the jobs.all() in SDK-->
               <!-- <tr v-if="jobs">
@@ -215,6 +239,7 @@
     cuCount: string;
     metrics: {
       averageTokensPerSecond: number;
+      stddevTokensPerSecond?: number;
     };
   }
   
@@ -224,7 +249,15 @@
     batchSize: string; 
     metrics: {
       imagesPerSecond: number; 
+      stddevImagesPerSecond?: number;
     };
+  }
+  
+  interface NodeRanking {
+    node: string;
+    performanceRank: number;
+    stabilityRank: number;
+    participationRate: number;
   }
   
   const { data: testgridMarkets, pending: loadingTestgridMarkets } = useAPI('/api/markets', { default: () => [] });
@@ -261,7 +294,8 @@
       framework: benchmark.framework,
       model: benchmark.model,
       xValue: parseInt(benchmark.cuCount),
-      yValue: benchmark.metrics.averageTokensPerSecond
+      yValue: benchmark.metrics.averageTokensPerSecond,
+      stddevYValue: benchmark.metrics.stddevTokensPerSecond
     })
   };
   
@@ -271,7 +305,8 @@
       framework: benchmark.framework,
       model: benchmark.model,
       xValue: parseInt(benchmark.batchSize),
-      yValue: benchmark.metrics.imagesPerSecond
+      yValue: benchmark.metrics.imagesPerSecond,
+      stddevYValue: benchmark.metrics.stddevImagesPerSecond
     })
   };
   
@@ -289,12 +324,25 @@
     defaultFramework: defaultImageGenFramework
   } = useBenchmarkData(imageGenConfig, nodeSpecs);
   
+  
+  const genericBenchmarkUrl = computed(() => `/api/benchmarks/generic-benchmark-data?node=${params.id}`);
+  const { data: genericBenchmarkResponse } = useAPI(genericBenchmarkUrl, { 
+    watch: [genericBenchmarkUrl],
+    default: () => ({ data: [] })
+  });
+  
+  // Log the response to check its structure
+  watch(genericBenchmarkResponse, (newData) => {
+    console.log('Benchmark Response:', newData);
+  });
+  
+  const nodeRanking: Ref<NodeRanking | null> = ref(null);
+  
   const getAddress = async () => {
     loading.value = true;
     try {
       const pk = new PublicKey(String(params.id));
       address.value = pk.toString();
-  
       try {
         balance.value = await nosana.value.solana.getNosBalance(address.value);
         solBalance.value = await nosana.value.solana.getSolBalance(address.value);
@@ -336,6 +384,14 @@
     if (nodeRuns.value && nodeRuns.value.length) {
       nodeStatus.value = 'RUNNING';
     }
+  
+    if (nodeSpecs?.value?.marketAddress) {
+      const { data } = await useAPI(`/api/benchmarks/node-ranking?market=${nodeSpecs?.value?.marketAddress}`);
+      nodeRanking.value = data.value.find((ranking: NodeRanking) => {
+        return ranking.node === address.value;
+      }) || null;
+    }
+  
     loading.value = false;
   };
   
