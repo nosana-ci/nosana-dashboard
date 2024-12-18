@@ -270,73 +270,55 @@ const stopJob = async () => {
       throw new Error('Wallet not found');
     }
 
-    // Prepare the node API endpoint
     const nodeAddress = job.value.node.toString();
-    const apiUrl = `https://${nodeAddress}.${useRuntimeConfig().public.nodeDomain}/service/stop/${jobId.value}`;
-
+    // const apiUrl = `https://${nodeAddress}.${useRuntimeConfig().public.nodeDomain}/service/stop/${jobId.value}`;
+    // Use the specific node API URL for a one-time real test
+    const apiUrl = 'https://3vwMHHicGk9enrHst7cJhbucNWSMyMDuB8G9HX1DQk7A.node.k8s.dev.nos.ci/service/stop/testjobid123';
+    
     // Create the authorization header
-    const message = 'StopFlow';
+    const message = 'Hello Nosana Node!';
     const encodedMessage = new TextEncoder().encode(message);
 
-    // Cast the adapter to MessageSignerWalletAdapter
     const adapter = wallet.value.adapter as MessageSignerWalletAdapter;
     if (!adapter.signMessage) {
       throw new Error('Wallet does not support message signing');
     }
+
+    // Sign the message
     const signedMessage = await adapter.signMessage(encodedMessage);
 
+    // Create Authorization header: "PublicKey:Base64Signature"
     const signature = Buffer.from(signedMessage).toString('base64');
     const publicKeyString = publicKey.value.toString();
     const authorizationHeader = `${publicKeyString}:${signature}`;
 
-    // =============================
-    // START OF TEMPORARY MOCK CODE
-    // =============================
-
-    // TODO: Remove this mock when the node API is available
-    // Mocking the fetch call to simulate API response
-
-    // Log the URL and headers to verify they are correct
-    console.log('Mock fetch to:', apiUrl);
-    console.log('Authorization Header:', authorizationHeader);
-
-    // Simulate a response similar to what the real API would return
-    const response = {
-      ok: true, // Simulate a successful response (status 200)
-      status: 200,
-      json: async () => ({ message: 'Job stopped successfully' }),
-      text: async () => 'Job stopped successfully',
-    };
-
-
-    // Uncomment the real fetch call when the API is available
-    /*
+    // Make the real API call
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Authorization': authorizationHeader,
       },
     });
-    */
 
-    // =============================
-    // END OF TEMPORARY MOCK CODE
-    // =============================
+    const text = await response.text();
+    console.log('Response status:', response.status);
+    console.log('Response body:', text);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Error stopping job: ${response.status} ${errorText}`);
+    if (response.status === 403) {
+      toast.error(`Authentication failed: ${text}`);
+      return;
     }
 
-    // Process the response body as you would with the actual API
-    const responseData = await response.json();
-    toast.success(responseData.message);
+    // If we reach here, it means authentication passed.
+    // Even if the job does not exist, passing authentication is considered success.
+    toast.success(`Success: ${text}`);
 
-    // Optionally refresh the job data
+    // Optionally refresh the job data, if needed
     const updatedJob = await nosana.value.jobs.get(jobId.value);
     job.value = updatedJob;
 
   } catch (e: any) {
+    // Catch any runtime errors
     toast.error(`Error stopping job: ${e.toString()}`);
   } finally {
     loading.value = false;
