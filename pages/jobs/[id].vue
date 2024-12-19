@@ -10,19 +10,11 @@
           <ClientOnly>
             <wallet-modal-provider v-if="!connected" :dark="$colorMode.value === 'dark'">
               <template #default="modalScope">
-                <a class="button is-primary is-small" @click="modalScope.openModal()">
+                <a class="button is-primary is-large" @click="modalScope.openModal()">
                   Connect Wallet
                 </a>
               </template>
             </wallet-modal-provider>
-            <div v-else class="buttons are-small">
-              <span class="tag is-primary is-light">
-                {{ publicKey?.toString().slice(0,4) }}...{{ publicKey?.toString().slice(-4) }}
-              </span>
-              <button class="button is-small" @click="disconnect">
-                Disconnect
-              </button>
-            </div>
           </ClientOnly>
         </div>
       </div>
