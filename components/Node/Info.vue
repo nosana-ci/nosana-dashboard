@@ -243,53 +243,116 @@
               </tr> -->
             <tr>
               <td colspan="2">
-                <!-- Filters Section -->
-                <div class="filters mb-4">
-                  <div class="field">
-                    <label class="label">Model</label>
-                    <div class="control">
-                      <div class="select is-fullwidth">
-                        <select v-model="selectedModel">
-                          <option
-                            v-for="model in llmFilters?.models"
-                            :key="model"
-                            :value="model"
-                          >
-                            {{ model }}
-                          </option>
-                        </select>
+                <div class="charts-container">
+                  <!-- LLM Chart Section -->
+                  <div class="chart-section">
+                    <div class="box">
+                      <h3 class="title is-5 mb-4">LLM Performance</h3>
+                      <div class="filters mb-4">
+                        <div class="field">
+                          <label class="label">Model</label>
+                          <div class="control">
+                            <div class="select is-fullwidth">
+                              <select v-model="selectedModel">
+                                <option
+                                  v-for="model in llmFilters?.models"
+                                  :key="model"
+                                  :value="model"
+                                >
+                                  {{ model }}
+                                </option>
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div class="field">
+                          <label class="label">Framework</label>
+                          <div class="control">
+                            <div class="select is-fullwidth">
+                              <select v-model="selectedFramework">
+                                <option
+                                  v-for="framework in llmFilters?.frameworks"
+                                  :key="framework"
+                                  :value="framework"
+                                >
+                                  {{ framework }}
+                                </option>
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="chart-wrapper">
+                        <div v-if="!llmBenchmarkData?.data">
+                          Loading benchmark data...
+                        </div>
+                        <Bar
+                          v-else
+                          :data="chartData"
+                          :options="chartOptions"
+                          :height="300"
+                        />
                       </div>
                     </div>
                   </div>
 
-                  <div class="field">
-                    <label class="label">Framework</label>
-                    <div class="control">
-                      <div class="select is-fullwidth">
-                        <select v-model="selectedFramework">
-                          <option
-                            v-for="framework in llmFilters?.frameworks"
-                            :key="framework"
-                            :value="framework"
-                          >
-                            {{ framework }}
-                          </option>
-                        </select>
+                  <!-- Image Gen Chart Section -->
+                  <div class="chart-section">
+                    <div class="box">
+                      <h3 class="title is-5 mb-4">
+                        Image Generation Performance
+                      </h3>
+                      <div class="filters mb-4">
+                        <div class="field">
+                          <label class="label">Model</label>
+                          <div class="control">
+                            <div class="select is-fullwidth">
+                              <select v-model="selectedImageGenModel">
+                                <option
+                                  v-for="model in imageGenFilters?.models"
+                                  :key="model"
+                                  :value="model"
+                                >
+                                  {{ model }}
+                                </option>
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div class="field">
+                          <label class="label">Framework</label>
+                          <div class="control">
+                            <div class="select is-fullwidth">
+                              <select v-model="selectedImageGenFramework">
+                                <option
+                                  v-for="framework in imageGenFilters?.frameworks"
+                                  :key="framework"
+                                  :value="framework"
+                                >
+                                  {{ framework }}
+                                </option>
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="chart-wrapper">
+                        <div v-if="!imageGenBenchmarkData?.data">
+                          Loading benchmark data...
+                        </div>
+                        <Bar
+                          v-else
+                          :data="imageGenChartData"
+                          :options="imageGenChartOptions"
+                          :height="300"
+                        />
                       </div>
                     </div>
                   </div>
-                </div>
-
-                <div class="chart-wrapper">
-                  <div v-if="!llmBenchmarkData?.data">
-                    Loading benchmark data...
-                  </div>
-                  <Bar
-                    v-else
-                    :data="chartData"
-                    :options="chartOptions"
-                    :height="300"
-                  />
                 </div>
               </td>
             </tr>
@@ -319,6 +382,8 @@ import { Chart, registerables } from "chart.js";
 import { Bar } from "vue-chartjs";
 
 Chart.register(...registerables);
+
+const route = useRoute();
 
 const { params } = useRoute();
 
@@ -469,7 +534,6 @@ const { data: llmFilters } = useAPI(llmFiltersUrl, {
 });
 
 const llmBenchmarkUrl = computed(() => {
-  if (!selectedFramework.value || !selectedModel.value) return "";
   return `/api/benchmarks/llm-benchmark-data?node=C49tmP2PeNLmP2sKe6WiXWMTVbeb9KbqaA1azCwBjfyK&framework=${selectedFramework.value}&model=${selectedModel.value}`;
 });
 
@@ -484,7 +548,6 @@ const { data: llmBenchmarkData } = useAPI(llmBenchmarkUrl, {
 
 // Add new API call for market data
 const marketBenchmarkUrl = computed(() => {
-  if (!selectedFramework.value || !selectedModel.value) return "";
   return `/api/benchmarks/llm-benchmark-data?level=market&market=Crop49jpc7prcgAcS82WbWyGHwbN5GgDym3uFbxxCTZg&framework=${selectedFramework.value}&model=${selectedModel.value}`;
 });
 
@@ -496,35 +559,148 @@ const { data: marketBenchmarkData } = useAPI(marketBenchmarkUrl, {
   transform: (response) => response || { data: [], total: 0 },
 });
 
-// Add this to force a refresh when component is mounted or activated
+// Add these refs before the existing ones
+const selectedImageGenFramework: Ref<string | null> = ref(null);
+const selectedImageGenModel: Ref<string | null> = ref(null);
+
+const imageGenFiltersUrl = computed(() => "/api/benchmarks/image-gen-filters");
+const { data: imageGenFilters } = useAPI(imageGenFiltersUrl, {
+  watch: [imageGenFiltersUrl],
+  default: () => ({ frameworks: [], models: [] }),
+});
+
+const imageGenBenchmarkUrl = computed(() => {
+  return `/api/benchmarks/image-gen-benchmark-data?node=C49tmP2PeNLmP2sKe6WiXWMTVbeb9KbqaA1azCwBjfyK&framework=${selectedImageGenFramework.value}&model=${selectedImageGenModel.value}`;
+});
+
+const { data: imageGenBenchmarkData } = useAPI(imageGenBenchmarkUrl, {
+  watch: [imageGenBenchmarkUrl],
+  default: () => ({ data: [], total: 0 }),
+  immediate: false,
+  server: false,
+  transform: (response) => response || { data: [], total: 0 },
+});
+
+// Add new API call for market image gen data
+const marketImageGenBenchmarkUrl = computed(() => {
+  return `/api/benchmarks/image-gen-benchmark-data?level=market&market=Crop49jpc7prcgAcS82WbWyGHwbN5GgDym3uFbxxCTZg&framework=${selectedImageGenFramework.value}&model=${selectedImageGenModel.value}`;
+});
+
+const { data: marketImageGenBenchmarkData } = useAPI(
+  marketImageGenBenchmarkUrl,
+  {
+    watch: [marketImageGenBenchmarkUrl],
+    default: () => ({ data: [], total: 0 }),
+    immediate: false,
+    server: false,
+    transform: (response) => response || { data: [], total: 0 },
+  }
+);
+
+// Add to the existing onMounted and onActivated hooks
 onMounted(() => {
   if (llmFilters.value) {
     selectedModel.value = llmFilters.value.models[0];
     selectedFramework.value = llmFilters.value.frameworks[0];
   }
-});
-
-onActivated(() => {
-  if (llmFilters.value) {
-    selectedModel.value = llmFilters.value.models[0];
-    selectedFramework.value = llmFilters.value.frameworks[0];
+  if (imageGenFilters.value) {
+    selectedImageGenModel.value = imageGenFilters.value.models[0];
+    selectedImageGenFramework.value = imageGenFilters.value.frameworks[0];
   }
 });
 
-watch(
-  llmFilters,
-  (newFilters) => {
-    if (
-      newFilters &&
-      newFilters.frameworks.length &&
-      newFilters.models.length
-    ) {
-      selectedFramework.value = newFilters.frameworks[0];
-      selectedModel.value = newFilters.models[0];
-    }
+// Add new computed for image gen chart data
+const imageGenChartData = computed(() => {
+  // Log raw data
+  console.log("Raw Image Gen Data:", imageGenBenchmarkData.value);
+  console.log("Raw Market Image Gen Data:", marketImageGenBenchmarkData.value);
+
+  if (!imageGenBenchmarkData.value?.data) {
+    console.log("No node image gen benchmark data available");
+    return {
+      labels: [],
+      datasets: [],
+    };
+  }
+
+  // Sort both datasets by batchSize
+  const sortedNodeData = [...imageGenBenchmarkData.value.data].sort(
+    (a, b) => a.batchSize - b.batchSize
+  );
+  const sortedMarketData = marketImageGenBenchmarkData.value?.data
+    ? [...marketImageGenBenchmarkData.value.data].sort(
+        (a, b) => a.batchSize - b.batchSize
+      )
+    : [];
+
+  // Get all unique batchSizes from both datasets
+  const allBatchSizes = [
+    ...new Set([
+      ...sortedNodeData.map((item) => item.batchSize),
+      ...sortedMarketData.map((item) => item.batchSize),
+    ]),
+  ].sort((a, b) => a - b);
+
+  const result = {
+    labels: allBatchSizes.map((size) => size.toString()),
+    datasets: [
+      {
+        label: "Node Performance",
+        data: allBatchSizes.map((batchSize) => {
+          const dataPoint = sortedNodeData.find(
+            (item) => item.batchSize === batchSize
+          );
+          const value = dataPoint
+            ? parseFloat(dataPoint.metrics.imagesPerSecond)
+            : null;
+
+          return value;
+        }),
+        backgroundColor: "#0066ff",
+        borderWidth: 1,
+      },
+    ],
+  };
+
+  // Only add market data if available
+  if (sortedMarketData.length > 0) {
+    result.datasets.push({
+      label: "Market Average",
+      data: allBatchSizes.map((batchSize) => {
+        const dataPoint = sortedMarketData.find(
+          (item) => item.batchSize === batchSize
+        );
+        return dataPoint ? parseFloat(dataPoint.metrics.imagesPerSecond) : null;
+      }),
+      backgroundColor: "#10E80C",
+      borderWidth: 1,
+    });
+  }
+
+  // Log final chart data
+  console.log("Final Chart Data:", result);
+  return result;
+});
+
+const imageGenChartOptions = computed(() => ({
+  responsive: true,
+  maintainAspectRatio: false,
+  scales: {
+    x: {
+      title: {
+        display: true,
+        text: "Batch Size",
+      },
+    },
+    y: {
+      title: {
+        display: true,
+        text: "Images / Second",
+      },
+      beginAtZero: true,
+    },
   },
-  { immediate: true }
-);
+}));
 
 const chartData = computed(() => {
   if (!llmBenchmarkData.value?.data) {
@@ -581,7 +757,7 @@ const chartData = computed(() => {
         );
         return dataPoint ? dataPoint.metrics.averageTokensPerSecond : null;
       }),
-      backgroundColor: "#ff6600",
+      backgroundColor: "#10E80C",
       borderWidth: 1,
     });
   }
@@ -609,34 +785,52 @@ const chartOptions = computed(() => ({
   },
 }));
 
-// Add these watchers to ensure data is always loaded
+// Update the watchers to handle both LLM and Image Gen filters
 watch(
-  llmFilters,
-  (newFilters) => {
+  [llmFilters, imageGenFilters],
+  ([newLLMFilters, newImageGenFilters]) => {
+    // Handle LLM filters
     if (
-      newFilters &&
-      newFilters.frameworks.length &&
-      newFilters.models.length
+      newLLMFilters &&
+      newLLMFilters.frameworks.length &&
+      newLLMFilters.models.length
     ) {
       if (!selectedFramework.value) {
-        selectedFramework.value = newFilters.frameworks[0];
+        selectedFramework.value = newLLMFilters.frameworks[0];
       }
       if (!selectedModel.value) {
-        selectedModel.value = newFilters.models[0];
+        selectedModel.value = newLLMFilters.models[0];
+      }
+    }
+
+    // Handle Image Gen filters
+    if (
+      newImageGenFilters &&
+      newImageGenFilters.frameworks.length &&
+      newImageGenFilters.models.length
+    ) {
+      if (!selectedImageGenFramework.value) {
+        selectedImageGenFramework.value = newImageGenFilters.frameworks[0];
+      }
+      if (!selectedImageGenModel.value) {
+        selectedImageGenModel.value = newImageGenFilters.models[0];
       }
     }
   },
   { immediate: true }
 );
 
-// Add a watcher for route changes
-const route = useRoute();
+// Update the route watcher to handle both sets of filters
 watch(
   () => route.path,
   () => {
     if (llmFilters.value) {
       selectedFramework.value = llmFilters.value.frameworks[0];
       selectedModel.value = llmFilters.value.models[0];
+    }
+    if (imageGenFilters.value) {
+      selectedImageGenFramework.value = imageGenFilters.value.frameworks[0];
+      selectedImageGenModel.value = imageGenFilters.value.models[0];
     }
   }
 );
@@ -653,6 +847,31 @@ watch(
   height: 300px;
   width: 100%;
   margin: 20px 0;
+}
+
+.filters {
+  display: flex;
+  gap: 1rem;
+}
+
+.field {
+  flex: 1;
+}
+
+.chart-wrapper {
+  height: 400px;
+  position: relative;
+}
+
+.charts-container {
+  display: flex;
+  gap: 2rem;
+  margin: 1rem 0;
+}
+
+.chart-section {
+  flex: 1;
+  min-width: 0; // This prevents flex items from overflowing
 }
 
 .filters {
