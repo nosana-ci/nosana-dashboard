@@ -251,6 +251,10 @@ const { wallet, publicKey, connected, disconnect } = useWallet();
 //   return true; // Always return true for testing purposes
 // });
 
+const isJobPoster = computed(() => {
+  return connected.value && job.value && publicKey.value?.toString() === job.value.project;
+});
+
 const stopJob = async () => {
   if (!job.value) return;
   try {
