@@ -246,9 +246,10 @@ const { wallet, publicKey, connected, disconnect } = useWallet();
 // Force isJobPoster to return true to show the Stop button for all jobs
 // Remember to remove this after testing
 // =============================
-const isJobPoster = computed(() => {
-  return true; // Always return true for testing purposes
-});
+
+// const isJobPoster = computed(() => {
+//   return true; // Always return true for testing purposes
+// });
 
 const stopJob = async () => {
   if (!job.value) return;
@@ -263,9 +264,10 @@ const stopJob = async () => {
     }
 
     const nodeAddress = job.value.node.toString();
-    // const apiUrl = `https://${nodeAddress}.${useRuntimeConfig().public.nodeDomain}/service/stop/${jobId.value}`;
+    const apiUrl = `https://${nodeAddress}.${useRuntimeConfig().public.nodeDomain}/service/stop/${jobId.value}`;
+    
     // Use the specific node API URL for a one-time real test
-    const apiUrl = 'https://3vwMHHicGk9enrHst7cJhbucNWSMyMDuB8G9HX1DQk7A.node.k8s.dev.nos.ci/service/stop/testjobid123';
+    // const apiUrl = 'https://3vwMHHicGk9enrHst7cJhbucNWSMyMDuB8G9HX1DQk7A.node.k8s.dev.nos.ci/service/stop/testjobid123';
     
     // Create the authorization header
     const message = 'Hello Nosana Node!';
@@ -301,11 +303,12 @@ const stopJob = async () => {
       return;
     }
 
-    // If we reach here, it means authentication passed.
-    // Even if the job does not exist, passing authentication is considered success.
-    toast.success(`Success: ${text}`);
-
-    // Optionally refresh the job data, if needed
+    if (response.status === 200) {
+      toast.success(`Success: ${text}`);
+      return;
+    }
+    
+    // Rrefresh the job data
     const updatedJob = await nosana.value.jobs.get(jobId.value);
     job.value = updatedJob;
 
