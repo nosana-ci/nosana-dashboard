@@ -66,10 +66,9 @@
                 :key="template.id"
                 class="column is-4"
               >
-                <nuxt-link class="box" style="height: 100%;"
-                  :to="{ path: '/jobs/create', query: { templateId: template.id } }">
-                  <div class="is-flex is-justify-content-space-between">
-                    <div>
+                <nuxt-link class="box template-card" :to="{ path: '/jobs/create', query: { templateId: template.id } }">
+                  <div class="template-content">
+                    <div class="template-info">
                       <div class="mb-2">
                         <h2 class="is-size-4 has-text-weight-semibold mb-0 has-text-black">
                           {{ template.name }}
@@ -77,10 +76,10 @@
                       </div>
                       <p>{{ template.description }}</p>
                     </div>
-                    <div class="is-flex is-flex-direction-column is-align-items-center ml-3">
+                    <div class="template-meta">
                       <span v-if="template.stargazers_count" class="has-text-grey is-size-7 mb-1">
                         <span class="has-text-warning mr-1" style="font-size: 12px;">★</span>
-                        <span class="ml-1">{{ template.stargazers_count }}</span>
+                        <span class="ml-1">{{ String(template.stargazers_count) }}</span>
                       </span>
                       <div v-if="template.icon || template.avatar_url" class="template-icon is-flex is-justify-content-center">
                         <img :src="template.icon || template.avatar_url">
@@ -100,10 +99,9 @@
               :key="template.id"
               class="column is-4"
             >
-              <nuxt-link class="box" style="height: 100%;"
-                :to="{ path: '/jobs/create', query: { templateId: template.id } }">
-                <div class="is-flex is-justify-content-space-between">
-                  <div>
+              <nuxt-link class="box template-card" :to="{ path: '/jobs/create', query: { templateId: template.id } }">
+                <div class="template-content">
+                  <div class="template-info">
                     <div class="mb-2">
                       <h2 class="is-size-4 has-text-weight-semibold mb-0 has-text-black">
                         {{ template.name }}
@@ -111,10 +109,10 @@
                     </div>
                     <p>{{ template.description }}</p>
                   </div>
-                  <div class="is-flex is-flex-direction-column is-align-items-center ml-3">
+                  <div class="template-meta">
                     <span v-if="template.stargazers_count" class="has-text-grey is-size-7 mb-1">
                       <span class="has-text-warning mr-1" style="font-size: 12px;">★</span>
-                      <span class="ml-1">{{ template.stargazers_count }}</span>
+                      <span class="ml-1">{{ String(template.stargazers_count) }}</span>
                     </span>
                     <div v-if="template.icon || template.avatar_url" class="template-icon is-flex is-justify-content-center">
                       <img :src="template.icon || template.avatar_url">
@@ -132,9 +130,6 @@
 </template>
 
 <script lang="ts" setup>
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-import { faStar } from '@fortawesome/free-solid-svg-icons';
-
 const { templates, loadingTemplates } = useTemplates();
 const filterCategory: Ref<string> = ref('');
 const filterSubcategory: Ref<string> = ref('');
@@ -149,7 +144,7 @@ const featuredTemplateIds = [
 const featuredTemplates = computed(() => {
   if (!templates.value) return [];
   return templates.value
-    .filter(t => featuredTemplateIds.includes(t.id))
+    .filter(t => featuredTemplateIds.includes(String(t.id)))
     .sort((a, b) => (b.stargazers_count || 0) - (a.stargazers_count || 0));
 });
 
@@ -163,7 +158,7 @@ watch(filterCategory, (newVal, oldVal) => {
 const filteredTemplates = computed(() => {
   const templatesList = templates.value
     ? templates.value.filter((t) => {
-        if (filterCategory.value === '' && featuredTemplateIds.includes(t.id)) {
+        if (filterCategory.value === '' && featuredTemplateIds.includes(String(t.id))) {
           return false;
         }
 
@@ -173,10 +168,11 @@ const filteredTemplates = computed(() => {
 
         if (search.value !== '') {
           const searchTerm = search.value.toLowerCase();
-          found =
+          found = Boolean(
             t.name.toLowerCase().includes(searchTerm) ||
             t.description.toLowerCase().includes(searchTerm) ||
-            (t.readme && t.readme.toLowerCase().includes(searchTerm));
+            (t.readme && t.readme.toLowerCase().includes(searchTerm))
+          );
         }
 
         if (filterCategory.value !== '') {
@@ -373,6 +369,35 @@ function templatesWithoutSubcategory(category: string): Template[] {
 }
 </script>
 <style lang="scss" scoped>
+.template-card {
+  height: 100%;
+  display: block;
+}
+
+.template-content {
+  display: flex;
+  gap: 1rem;
+  height: 100%;
+  align-items: flex-start;
+}
+
+.template-info {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+
+.template-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  margin-left: auto;
+  padding-left: 0.75rem;
+  min-width: 50px;
+}
+
 .template-icon {
   background-color: #ffffff !important;
   border: 1px solid $grey-lighter;
@@ -381,9 +406,52 @@ function templatesWithoutSubcategory(category: string): Template[] {
   border-radius: 100%;
   padding: 7px;
   flex-shrink: 0;
+  margin-top: 0.25rem;
 
   img {
+    width: 100%;
+    height: 100%;
     object-fit: scale-down;
+  }
+}
+
+// Improve responsive behavior
+@media screen and (max-width: 768px) {
+  .template-content {
+    gap: 0.5rem;
+  }
+  
+  .template-meta {
+    padding-left: 0.5rem;
+    min-width: 42px;
+  }
+  
+  .template-icon {
+    width: 36px;
+    height: 36px;
+    padding: 5px;
+  }
+
+  .template-info h2 {
+    font-size: 1.25rem !important;
+  }
+}
+
+// Add this new media query for very small screens
+@media screen and (max-width: 480px) {
+  .template-content {
+    gap: 0.25rem;
+  }
+  
+  .template-meta {
+    padding-left: 0.25rem;
+    min-width: 36px;
+  }
+  
+  .template-icon {
+    width: 32px;
+    height: 32px;
+    padding: 4px;
   }
 }
 </style>
