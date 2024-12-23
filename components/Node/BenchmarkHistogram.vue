@@ -1,15 +1,17 @@
 <template>
   <div class="box">
     <h3 class="title is-5 mb-4">{{ title }}</h3>
-    
-    <!-- Filters Section -->
     <div class="filters mb-4">
       <div class="field">
         <label class="label">Model</label>
         <div class="control">
           <div class="select is-fullwidth">
             <select v-model="selectedModel">
-              <option v-for="model in uniqueModels" :key="model" :value="model">
+              <option
+                v-for="model in filters?.models"
+                :key="model"
+                :value="model"
+              >
                 {{ model }}
               </option>
             </select>
@@ -22,8 +24,29 @@
         <div class="control">
           <div class="select is-fullwidth">
             <select v-model="selectedFramework">
-              <option v-for="framework in uniqueFrameworks" :key="framework" :value="framework">
+              <option
+                v-for="framework in filters?.frameworks"
+                :key="framework"
+                :value="framework"
+              >
                 {{ framework }}
+              </option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="label">Metric</label>
+        <div class="control">
+          <div class="select is-fullwidth">
+            <select v-model="selectedMetric">
+              <option
+                v-for="metric in metricOptions"
+                :key="metric.value"
+                :value="metric.value"
+              >
+                {{ metric.label }}
               </option>
             </select>
           </div>
@@ -31,146 +54,205 @@
       </div>
     </div>
 
-    <!-- Single Chart -->
     <div class="chart-wrapper">
-      <Bar
-        :data="chartData"
-        :options="chartOptions"
-      />
+      <div v-if="!benchmarkData?.data">Loading benchmark data...</div>
+      <Bar v-else :data="chartData" :options="chartOptions" :height="300" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
-import { Chart, registerables } from 'chart.js';
-import { Bar } from 'vue-chartjs';
+import { computed, watch, onMounted } from "vue";
+import { Bar } from "vue-chartjs";
+import { useBenchmark } from "@/composables/useBenchmarkData";
 
-Chart.register(...registerables);
+const props = defineProps({
+  title: {
+    type: String,
+    required: true,
+  },
+  type: {
+    type: String,
+    required: true,
+    validator: (value: string) => ["llm", "image-gen"].includes(value),
+  },
+  nodeId: {
+    type: String,
+    required: true,
+  },
+  marketId: {
+    type: String,
+    required: true,
+  },
+  defaultMetric: {
+    type: String,
+    required: true,
+  },
+  metrics: {
+    type: Array as () => Array<{ value: string; label: string }>,
+    required: true,
+  },
+  xAxisLabel: {
+    type: String,
+    required: true,
+  },
+});
 
-// Generic interface for benchmark data
-interface BenchmarkDataPoint {
-  framework: string;
-  model: string;
-  xValue: number;
-  yValue: number;
-}
+const {
+  selectedFramework,
+  selectedModel,
+  filters,
+  benchmarkData,
+  marketBenchmarkData,
+} = useBenchmark({
+  type: props.type,
+  nodeId: props.nodeId,
+  marketId: props.marketId,
+});
 
-const props = defineProps<{
-  benchmarkData: Array<BenchmarkDataPoint>;
-  marketBenchmarkData?: Array<BenchmarkDataPoint>;
-  title: string;
-  xAxisLabel: string;
-  yAxisLabel: string;
-  defaultModel?: string;
-  defaultFramework?: string;
-}>();
+const selectedMetric = ref(props.defaultMetric);
 
-// Computed properties for unique values
-const uniqueModels = computed(() => 
-  [...new Set(props.benchmarkData.map(item => item.model))].sort()
-);
+const metricOptions = computed(() => {
+  if (!benchmarkData.value?.data || benchmarkData.value.data.length === 0) {
+    return [];
+  }
 
-const uniqueFrameworks = computed(() => 
-  [...new Set(props.benchmarkData.map(item => item.framework))].sort()
-);
-
-// Set default values for filters
-const selectedModel = ref(props.defaultModel || '');
-const selectedFramework = ref(props.defaultFramework || '');
-
-// Filtered data based on selections
-const filteredData = computed(() => {
-  return props.benchmarkData.filter(item => 
-    item.model === selectedModel.value && 
-    item.framework === selectedFramework.value
+  const sampleMetrics = benchmarkData.value.data[0]?.metrics || {};
+  return props.metrics.filter(
+    (metric) =>
+      sampleMetrics[metric.value] !== undefined &&
+      sampleMetrics[metric.value] !== null
   );
 });
 
-// Updated chartData computed to use generic property names
+// Watch metric options and update selected metric if current selection becomes invalid
+watch(metricOptions, (newOptions) => {
+  if (
+    newOptions.length > 0 &&
+    !newOptions.find((opt) => opt.value === selectedMetric.value)
+  ) {
+    selectedMetric.value = newOptions[0].value;
+  }
+});
+
 const chartData = computed(() => {
-  const sortedData = [...filteredData.value].sort((a, b) => a.xValue - b.xValue);
-  const marketData = props.marketBenchmarkData?.filter(item => 
-    item.model === selectedModel.value && 
-    item.framework === selectedFramework.value
-  ).sort((a, b) => a.xValue - b.xValue);
-  
+  const sortKey = props.type === "llm" ? "cuCount" : "batchSize";
+
+  if (!benchmarkData.value?.data) {
+    return { labels: [], datasets: [] };
+  }
+
+  const sortedNodeData = [...benchmarkData.value.data].sort(
+    (a, b) => (a[sortKey] || 0) - (b[sortKey] || 0)
+  );
+
+  const sortedMarketData = marketBenchmarkData.value?.data
+    ? [...marketBenchmarkData.value.data].sort(
+        (a, b) => (a[sortKey] || 0) - (b[sortKey] || 0)
+      )
+    : [];
+
+  const allValues = [
+    ...new Set([
+      ...sortedNodeData.map((item) => item[sortKey]),
+      ...sortedMarketData.map((item) => item[sortKey]),
+    ]),
+  ].sort((a, b) => (a || 0) - (b || 0));
+
   return {
-    labels: sortedData.map(item => item.xValue.toString()),
+    labels: allValues.map((value) => value?.toString() || ""),
     datasets: [
       {
-        label: 'Node Performance',
-        data: sortedData.map(item => item.yValue),
-        backgroundColor: '#0066ff',
-        borderWidth: 1
+        label: "Node Performance",
+        data: allValues.map((value) => {
+          const dataPoint = sortedNodeData.find(
+            (item) => item[sortKey] === value
+          );
+          return dataPoint ? dataPoint.metrics[selectedMetric.value] : null;
+        }),
+        backgroundColor: "#0066ff",
+        borderWidth: 1,
       },
-      ...(marketData ? [{
-        label: 'Market Average',
-        data: marketData.map(item => item.yValue),
-        backgroundColor: '#10E80C',
-        borderWidth: 1
-      }] : [])
-    ]
+      ...(sortedMarketData.length > 0
+        ? [
+            {
+              label: "Market Average",
+              data: allValues.map((value) => {
+                const dataPoint = sortedMarketData.find(
+                  (item) => item[sortKey] === value
+                );
+                return dataPoint
+                  ? dataPoint.metrics[selectedMetric.value]
+                  : null;
+              }),
+              backgroundColor: "#10E80C",
+              borderWidth: 1,
+            },
+          ]
+        : []),
+    ],
   };
 });
 
-// Update chartOptions to use provided labels
 const chartOptions = computed(() => ({
   responsive: true,
   maintainAspectRatio: false,
-  plugins: {
-    legend: {
-      display: true
-    },
-    tooltip: {
-      callbacks: {
-        label: (context: any) => 
-          `${context.dataset.label}: ${context.formattedValue} ${props.yAxisLabel}`
-      }
-    }
-  },
   scales: {
     x: {
       title: {
         display: true,
-        text: props.xAxisLabel
-      }
+        text: props.xAxisLabel,
+      },
     },
     y: {
-      beginAtZero: true,
       title: {
         display: true,
-        text: props.yAxisLabel
-      }
-    }
-  }
+        text:
+          metricOptions.value.find((m) => m.value === selectedMetric.value)
+            ?.label || "",
+      },
+      beginAtZero: true,
+    },
+  },
 }));
 
-// Set initial values when component mounts
-onMounted(() => {
-  if (!selectedModel.value && uniqueModels.value.length) {
-    selectedModel.value = uniqueModels.value[0];
-  }
-  if (!selectedFramework.value && uniqueFrameworks.value.length) {
-    selectedFramework.value = uniqueFrameworks.value[0];
-  }
-});
+watch(
+  filters,
+  (newFilters) => {
+    if (newFilters) {
+      selectedModel.value = newFilters.models[0];
 
-// Add watchers for the defaults
-watch(() => props.defaultModel, (newValue) => {
-  if (newValue && newValue !== selectedModel.value) {
-    selectedModel.value = newValue;
-  }
-});
-
-watch(() => props.defaultFramework, (newValue) => {
-  if (newValue && newValue !== selectedFramework.value) {
-    selectedFramework.value = newValue;
-  }
-});
+      if (props.type === "image-gen") {
+        const comfyIndex = newFilters.frameworks.findIndex(
+          (f: string) => f.toLowerCase() === "comfy"
+        );
+        selectedFramework.value =
+          comfyIndex >= 0
+            ? newFilters.frameworks[comfyIndex]
+            : newFilters.frameworks[0];
+      } else {
+        selectedFramework.value = newFilters.frameworks[0];
+      }
+    }
+  },
+  { immediate: true }
+);
 </script>
 
-<style scoped>
+<style lang="scss" scoped>
+.label {
+  display: inline-block;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.chart-wrapper {
+  height: 400px;
+  position: relative;
+  width: 100%;
+  margin: 20px 0;
+}
+
 .filters {
   display: flex;
   gap: 1rem;
@@ -178,10 +260,5 @@ watch(() => props.defaultFramework, (newValue) => {
 
 .field {
   flex: 1;
-}
-
-.chart-wrapper {
-  height: 400px;
-  position: relative;
 }
 </style>
