@@ -5,7 +5,7 @@
         {{ title ? title : 'Jobs' }}
       </h2>
     </div>
-    <div v-if="!small && jobs && jobs.length" class="column has-text-right">
+    <div v-if="jobs && jobs.length && (!small || (totalJobs && totalJobs > perPage))" class="column has-text-right">
       <span v-if="totalJobs && totalJobs > perPage">{{ (page - 1) * perPage + 1 }} -
         {{ Math.min(page * perPage, totalJobs) }} of</span>
       {{ totalJobs }} jobs
