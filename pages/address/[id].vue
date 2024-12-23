@@ -1,94 +1,102 @@
 <template>
   <div class="box">
-    <div v-if="loading">Loading..</div>
-    <div v-else>
-      <div v-if="address">
-        <div class="is-flex is-align-items-center is-justify-content-space-between mb-4">
-          <h3 class="title is-5 address is-family-monospace my-0">
-            <span>{{ address }}</span>
-          </h3>
-        </div>
+    <div v-if="address">
+      <div class="is-flex is-align-items-center is-justify-content-space-between mb-4">
+        <h3 class="title is-5 address is-family-monospace my-0">
+          <span>{{ address }}</span>
+        </h3>
+      </div>
 
-        <table class="table is-fullwidth is-striped mt-5 mb-6">
-          <tbody>
+      <table class="table is-fullwidth is-striped mt-5 mb-6">
+        <tbody>
+          <tr>
+            <td>NOS Balance</td>
+            <td>
+              <span v-if="balance">{{ balance.uiAmount }} NOS</span>
+              <span v-else-if="loading">...</span>
+              <span v-else>-</span>
+            </td>
+          </tr>
+          <tr>
+            <td>NOS Staked</td>
+            <td>
+              <span v-if="nosStaked && nosStaked.amount">{{ nosStaked.amount / 1e6 }} NOS</span>
+              <span v-else-if="loading">...</span>
+              <span v-else>-</span>
+            </td>
+          </tr>
+          <tr>
+            <td>SOL Balance</td>
+            <td>
+              <span v-if="solBalance">{{ solBalance / 1e9 }} SOL</span>
+              <span v-else-if="loading">...</span>
+              <span v-else>-</span>
+            </td>
+          </tr>
+          <tr v-if="nodeJobs && nodeJobs.totalJobs">
+            <td>Jobs ran</td>
+            <td>
+              <span>{{ nodeJobs.totalJobs }}</span>
+            </td>
+          </tr>
+          <tr v-if="postedJobs && postedJobs.totalJobs">
+            <td>Jobs posted</td>
+            <td>
+              <span>{{ postedJobs.totalJobs }}</span>
+            </td>
+          </tr>
+          <tr v-if="nodeStatus">
+            <td>Status</td>
+            <td style="vertical-align: middle">
+              <div v-if="nodeStatus === 'QUEUED'" data-tooltip="Node is queued in market" style="width: fit-content"
+                class="is-flex">
+                <ExplorerJobStatus :status="'QUEUED'" image-only></ExplorerJobStatus>
+              </div>
+              <div v-else-if="nodeStatus === 'RUNNING'" data-tooltip="Node is running a job" style="width: fit-content"
+                class="is-flex">
+                <ExplorerJobStatus image-only :status="'RUNNING'"></ExplorerJobStatus>
+              </div>
+              <span v-else>-</span>
+            </td>
+          </tr>
+          <tr v-if="nodeStatus === 'QUEUED' && nodeMarket && nodeMarket.length > 0
+          ">
+            <td>Market</td>
+            <td>
+              <nuxt-link :to="`/markets/${nodeMarket[0].address.toString()}`" class="address is-family-monospace">{{
+                nodeMarket[0].address.toString() }}</nuxt-link>
+            </td>
+          </tr>
+          <tr v-if="nodeStatus === 'RUNNING' && nodeRuns && nodeRuns.length > 0">
+            <td>Running job</td>
+            <td>
+              <nuxt-link :to="`/jobs/${nodeRuns[0].account.job}`" class="address is-family-monospace">{{
+                nodeRuns[0].account.job }}</nuxt-link>
+            </td>
+          </tr>
+          <template v-if="nodeStatus || (nodeJobs && nodeJobs.length)">
             <tr>
-              <td>NOS Balance</td>
-              <td>
-                <span v-if="balance">{{ balance.uiAmount }}  NOS</span>
-                <span v-else>-</span>
+              <td>Node Uptime</td>
+              <td v-if="!nodeInfo || !nodeInfo.uptime">Offline</td>
+              <td v-else>{{ (nodeInfo.uptime / (3600 * 1000)).toFixed(1) }} hours</td>
+            </tr>
+            <tr>
+              <td>Node GPU</td>
+              <td v-if="!nodeInfo || !nodeInfo.info || !nodeInfo.info.gpu">Unknown</td>
+              <td v-else>
+                <div v-for="gpu in nodeInfo.info.gpu">{{ gpu.name }}</div>
               </td>
             </tr>
             <tr>
-              <td>NOS Staked</td>
-              <td>
-                <span v-if="nosStaked && nosStaked.amount">{{ nosStaked.amount/1e6 }} NOS</span>
-                <span v-else>-</span>
+              <td>Node Disk Space</td>
+              <td v-if="!nodeInfo || !nodeInfo.info || !nodeInfo.info.disk">Unknown</td>
+              <td v-else>
+                <div>{{ (nodeInfo.info.disk / 10000).toFixed(0) }} GB</div>
               </td>
             </tr>
-            <tr>
-              <td>SOL Balance</td>
-              <td>
-                <span v-if="solBalance">{{ solBalance / 1e9 }}</span> SOL
-              </td>
-            </tr>
-            <tr v-if="jobs && jobs.totalJobs">
-              <td>Jobs ran</td>
-              <td>
-                <span>{{ jobs.totalJobs }}</span>
-              </td>
-            </tr>
-            <tr v-if="nodeStatus">
-              <td>Status</td>
-              <td style="vertical-align: middle">
-                <div v-if="nodeStatus === 'QUEUED'" data-tooltip="Node is queued in market" style="width: fit-content"
-                  class="is-flex">
-                  <ExplorerJobStatus :status="'QUEUED'" image-only></ExplorerJobStatus>
-                </div>
-                <div v-else-if="nodeStatus === 'RUNNING'" data-tooltip="Node is running a job"
-                  style="width: fit-content" class="is-flex">
-                  <ExplorerJobStatus image-only :status="'RUNNING'"></ExplorerJobStatus>
-                </div>
-                <span v-else>-</span>
-              </td>
-            </tr>
-            <tr v-if="nodeStatus === 'QUEUED' && nodeMarket && nodeMarket.length > 0
-            ">
-              <td>Market</td>
-              <td>
-                <nuxt-link :to="`/markets/${nodeMarket[0].address.toString()}`" class="address is-family-monospace">{{
-                  nodeMarket[0].address.toString() }}</nuxt-link>
-              </td>
-            </tr>
-            <tr v-if="nodeStatus === 'RUNNING' && nodeRuns && nodeRuns.length > 0">
-              <td>Running job</td>
-              <td>
-                <nuxt-link :to="`/jobs/${nodeRuns[0].account.job}`" class="address is-family-monospace">{{
-                  nodeRuns[0].account.job }}</nuxt-link>
-              </td>
-            </tr>
-            <template v-if="nodeStatus || (jobs && jobs.length)">
-              <tr>
-                <td>Node Uptime</td>
-                <td v-if="!nodeInfo || !nodeInfo.uptime">Offline</td>
-                <td v-else>{{ (nodeInfo.uptime / (3600 * 1000)).toFixed(1) }} hours</td>
-              </tr>
-              <tr>
-                <td>Node GPU</td>
-                <td v-if="!nodeInfo || !nodeInfo.info || !nodeInfo.info.gpu">Unknown</td>
-                <td v-else>
-                  <div v-for="gpu in nodeInfo.info.gpu">{{ gpu.name }}</div>
-                </td>
-              </tr>
-              <tr>
-                <td>Node Disk Space</td>
-                <td v-if="!nodeInfo || !nodeInfo.info || !nodeInfo.info.disk">Unknown</td>
-                <td v-else>
-                  <div>{{ (nodeInfo.info.disk / 10000).toFixed(0) }} GB</div>
-                </td>
-              </tr>
-            </template>
-            <!-- TODO: First need to include price in the jobs.all() in SDK-->
-            <!-- <tr v-if="jobs">
+          </template>
+          <!-- TODO: First need to include price in the jobs.all() in SDK-->
+          <!-- <tr v-if="jobs">
               <td>Total NOS earned</td>
               <td>
                 <span>{{
@@ -100,30 +108,42 @@
                 }}</span>
               </td>
             </tr> -->
-          </tbody>
-        </table>
-        <div v-if="jobs && jobs.jobs">
-          <ExplorerJobList :per-page="limit" :total-jobs="jobs ? jobs.totalJobs : null" v-model:page="page"
-            v-model:state="state" :loading-jobs="loadingJobs" title="Jobs by this node" :jobs="jobs ? jobs.jobs : null">
+        </tbody>
+      </table>
+      <div class="columns is-multiline">
+        <div class="column" v-if="hasRanJobs" :class="{ 'is-6': hasRanJobs && hasPostedJobs }">
+          <ExplorerJobList :small="hasPostedJobs" :per-page="limit" :total-jobs="nodeJobs ? nodeJobs.totalJobs : null"
+            v-model:page="pageJobsRun" v-model:state="state" :loading-jobs="loadingJobs" title="Jobs Ran"
+            :jobs="nodeJobs ? nodeJobs.jobs : null">
+          </ExplorerJobList>
+        </div>
+        <div class="column" v-if="hasPostedJobs" :class="{ 'is-6': hasRanJobs && hasPostedJobs }">
+          <ExplorerJobList :small="hasRanJobs" :per-page="limit" :total-jobs="postedJobs ? postedJobs.totalJobs : null"
+            v-model:page="pageJobsPosted" v-model:state="statePosted" :loading-jobs="loadingPostedJobs"
+            title="Jobs Posted" :jobs="postedJobs ? postedJobs.jobs : null">
           </ExplorerJobList>
         </div>
       </div>
-      <div v-else>Address not found</div>
+    </div>
+    <div v-else>
+      <span v-if="loading || loadingMarkets">
+        Loading..
+      </span>
+      <span v-else>
+        Address not found
+      </span>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { PublicKey } from '@solana/web3.js';
-const { data: testgridMarkets, pending: loadingTestgridMarkets } = useAPI('/api/markets', { default: () => [] });
 const { params } = useRoute();
 const { data: nodeInfo, pending: loadingNode } = useFetch(`https://${String(params.id)}.node.k8s.prd.nos.ci/node/info`);
 const { nosana } = useSDK();
 const { markets, getMarkets, loadingMarkets } = useMarkets();
 
-if (!markets.value) {
-  getMarkets();
-}
+
 const address: Ref<string | null> = ref(null);
 const balance: Ref<any | null> = ref(null);
 const solBalance: Ref<any | null> = ref(null);
@@ -132,8 +152,10 @@ const nodeStatus: Ref<any | null> = ref(null);
 const nodeMarket: Ref<any> = ref(null);
 const nodeRuns: Ref<any> = ref(null);
 const loading: Ref<boolean> = ref(false);
-const page: Ref<number> = ref(1);
+const pageJobsRun: Ref<number> = ref(1);
+const pageJobsPosted: Ref<number> = ref(1);
 const state: Ref<number | null> = ref(null);
+const statePosted: Ref<number | null> = ref(null);
 const jobStateMapping: any = {
   0: 'QUEUED',
   1: 'RUNNING',
@@ -141,10 +163,20 @@ const jobStateMapping: any = {
   3: 'STOPPED',
 };
 const limit: Ref<number> = ref(10);
-const jobsUrl = computed(() => { return `/api/jobs?limit=${limit.value}&offset=${(page.value - 1) * limit.value}${state.value !== null ? `&state=${jobStateMapping[state.value]}` : ''}${`&node=${params.id}`}` })
-const { data: jobs, pending: loadingJobs, refresh: refreshJobs } = useAPI(jobsUrl, { watch: [jobsUrl] });
+const nodeJobsUrl = computed(() => { return `/api/jobs?limit=${limit.value}&offset=${(pageJobsRun.value - 1) * limit.value}${state.value !== null ? `&state=${jobStateMapping[state.value]}` : ''}${`&node=${params.id}`}` })
+const { data: nodeJobs, pending: loadingJobs, refresh: refreshJobs } = useAPI(nodeJobsUrl, { watch: [nodeJobsUrl] });
 
-const getAddress = async () => {
+const postedJobsUrl = computed(() => { return `/api/jobs?limit=${limit.value}&offset=${(pageJobsPosted.value - 1) * limit.value}${statePosted.value !== null ? `&state=${jobStateMapping[statePosted.value]}` : ''}${`&poster=${params.id}`}` })
+const { data: postedJobs, pending: loadingPostedJobs, refresh: refreshPostedJobs } = useAPI(postedJobsUrl, { watch: [postedJobsUrl] });
+
+const hasRanJobs = computed(() => {
+  return nodeJobs.value && nodeJobs.value.jobs && nodeJobs.value.jobs.length
+})
+const hasPostedJobs = computed(() => {
+  return postedJobs.value && postedJobs.value.jobs && postedJobs.value.jobs.length
+})
+
+const getAddressAndBalance = async () => {
   loading.value = true;
   try {
     const pk = new PublicKey(String(params.id));
@@ -166,20 +198,10 @@ const getAddress = async () => {
     address.value = null;
   }
 
-  // get market where node is in
-  const nodesInMarkets = markets?.value?.flatMap((market) => {
-    return market.queueType === 1
-      ? market.queue.map((data: any) => data.toString())
-      : [];
-  });
+  loading.value = false;
+};
 
-  if (nodesInMarkets?.includes(address.value)) {
-    nodeStatus.value = 'QUEUED';
-    nodeMarket.value = markets?.value?.filter((m) =>
-      m.queue.find((a: any) => a.toString() === address.value?.toString()),
-    );
-  }
-
+const getNodeStatus = async () => {
   nodeRuns.value = await nosana.value.jobs.getRuns([
     {
       memcmp: {
@@ -193,17 +215,31 @@ const getAddress = async () => {
   if (nodeRuns.value && nodeRuns.value.length) {
     nodeStatus.value = 'RUNNING';
   }
-  loading.value = false;
-};
+  // get market where node is in
+  const nodesInMarkets = markets?.value?.flatMap((market) => {
+    return market.queueType === 1
+      ? market.queue.map((data: any) => data.toString())
+      : [];
+  });
 
-watch(loadingTestgridMarkets, (newLoading) => {
-  if (!newLoading) {
-    getAddress();
+  if (nodesInMarkets?.includes(address.value)) {
+    nodeStatus.value = 'QUEUED';
+    nodeMarket.value = markets?.value?.filter((m) =>
+      m.queue.find((a: any) => a.toString() === address.value?.toString()),
+    );
   }
-})
+}
+getAddressAndBalance();
+
+if (!markets.value) {
+  getMarkets();
+} else {
+  getNodeStatus();
+}
+
 watch(loadingMarkets, (newLoading) => {
   if (!newLoading) {
-    getAddress();
+    getNodeStatus();
   }
 })
 

@@ -5,13 +5,15 @@ const { nosana } = useSDK();
 const loadingMarkets = ref(false);
 
 const getMarkets = async () => {
-  console.log('retrieving all markets..');
+  console.log("retrieving all markets..");
   loadingMarkets.value = true;
   try {
-    markets.value = (await nosana.value.jobs.allMarkets()).sort(function(a, b) {
-      console.log(parseInt(a.jobPrice));
-      return (parseInt(a.jobPrice) < parseInt(b.jobPrice)) ? -1 : 1;
-  });
+    markets.value = (await nosana.value.jobs.allMarkets()).sort(
+      function (a, b) {
+        console.log(parseInt(a.jobPrice));
+        return parseInt(a.jobPrice) < parseInt(b.jobPrice) ? -1 : 1;
+      }
+    );
   } catch (e) {
     console.error(e);
   }

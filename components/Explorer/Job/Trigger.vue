@@ -1,10 +1,7 @@
 <template>
-  <span
-    v-if="trigger && typeMap[trigger]"
-    class="is-flex is-align-items-center"
-  >
-    <img style="height: 20px" :src="`/img/icons/trigger/${trigger}.svg`" />
-    <span v-if="text" class="ml-2 is-capitalized">{{ typeMap[trigger] }}</span>
+  <span v-if="trigger" class="is-flex is-align-items-center">
+    <img v-if="typeMap[trigger]" class="mr-2" style="height: 20px" :src="`/img/icons/trigger/${trigger}.svg`" />
+    <span v-if="text" class="is-capitalized">{{ typeMap[trigger] ? typeMap[trigger] : trigger }}</span>
   </span>
 </template>
 
@@ -55,7 +52,8 @@ const trigger: ComputedRef<keyof typeof typeMap> = computed(() => {
 <style lang="scss" scoped>
 img {
   max-width: none;
-  -webkit-filter: grayscale(30%); /* Chrome 19+ & Safari 6+ */
+  -webkit-filter: grayscale(30%);
+  /* Chrome 19+ & Safari 6+ */
   transition: 0.2s;
 }
 </style>

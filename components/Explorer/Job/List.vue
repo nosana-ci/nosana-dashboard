@@ -62,6 +62,7 @@
         <th>Started</th>
         <th class="is-hidden-mobile">Duration</th>
         <th v-if="!small" class="is-hidden-touch">Price</th>
+        <th v-if="!small" class="is-hidden-touch">Market</th>
         <th>Status</th>
       </tr>
     </thead>
@@ -105,21 +106,45 @@
               <span v-else> - </span>
             </td>
             <td v-if="!small" class="is-hidden-touch">
-              <span v-if="job.timeEnd && job.timeStart">
-                {{
-                  (
-                    (job.price / 1e6) *
-                    (job.timeEnd -
-                      job.timeStart)
-                  ).toFixed(6)
-                }}
-                NOS</span>
+              <span v-if="job.timeEnd && job.timeStart && !job.timeout">
+                <span v-if="stats && stats[0] && stats[0].price">
+                  $
+                  {{
+                    ((job.price / 1e6) * Math.min(job.timeEnd - job.timeStart, job.timeout ? job.timeout :
+                      7200) * stats[0].price).toFixed(2)
+                  }}
+                </span>
+                <span v-else>
+
+                  {{
+                    ((job.price / 1e6) * Math.min(job.timeEnd - job.timeStart, job.timeout ? job.timeout :
+                      7200)).toFixed(6)
+                  }}
+                  NOS</span>
+              </span>
               <span v-else>
-                {{ job.price / 1e6 }}
-                NOS/s
+                <span v-if="stats && stats[0] && stats[0].price">
+                  ${{ ((job.price / 1e6) * 3600 * stats[0].price).toFixed(2) }} / h
+                </span>
+                <span v-else>
+                  {{ (job.price / 1e6) }}
+                  NOS/s
+                </span>
               </span>
             </td>
+            <td v-if="!small" class="is-hidden-touch">
+              <span v-if="
+                testgridMarkets.find((tgm: any) => tgm.address === job.market.toString())
+              " class="py-2">
+                {{
+                  testgridMarkets.find((tgm: any) => tgm.address === job.market.toString()).name
+                }}
+              </span>
+              <span v-else class="is-family-monospace py-2 address">
+                {{ job.market.toString() }}
+              </span>
 
+            </td>
             <td>
               <ExplorerJobStatus :status="job.state" :image-only="small"></ExplorerJobStatus>
             </td>
@@ -137,6 +162,10 @@
 <script setup lang="ts">
 import type { Job } from '@nosana/sdk';
 import { UseTimeAgo } from '@vueuse/components';
+
+const { data: testgridMarkets, pending: loadingTestgridMarkets } = await useAPI('/api/markets', { default: () => [] });
+
+const { data: stats, pending: loadingStats } = await useAPI('/api/stats');
 
 const timestamp = useTimestamp({ interval: 1000 });
 const fmtMSS = (s: number) => {

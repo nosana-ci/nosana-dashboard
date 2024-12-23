@@ -91,12 +91,13 @@
               <td>Duration</td>
               <td>
                 <span v-if="job.timeEnd">
-                  {{ fmtMSS(job.timeEnd - job.timeStart) }} (max {{ Math.round(parseInt(maxDuration) / 60) }}m)
+                  {{ fmtMSS(job.timeEnd - job.timeStart) }}
                 </span>
                 <span v-else-if="job.timeStart">
-                  {{ fmtMSS(Math.floor(timestamp / 1000) - job.timeStart) }} (max {{ Math.round(parseInt(maxDuration) / 60) }}m)
+                  {{ fmtMSS(Math.floor(timestamp / 1000) - job.timeStart) }}
                 </span>
                 <span v-else> - </span>
+                <span v-if="maxDuration"> (max {{ Math.round(maxDuration / 60) }}m)</span>
               </td>
             </tr>
             <tr>
@@ -246,7 +247,9 @@ if (!markets.value) {
 const { data: job, pending: loadingJob } = await useAPI(`/api/jobs/${jobId.value}`);
 const { data: testgridMarkets, pending: loadingTestgridMarkets } = await useAPI('/api/markets');
 
-const { wallet, publicKey, connected, disconnect } = useWallet();
+const { data: stats, pending: loadingStats } = await useAPI('/api/stats');
+
+const { wallet, publicKey, connected } = useWallet();
 
 // =============================
 // TEMPORARY CODE FOR TESTING
@@ -276,10 +279,10 @@ const stopJob = async () => {
 
     const nodeAddress = job.value.node.toString();
     const apiUrl = `https://${nodeAddress}.${useRuntimeConfig().public.nodeDomain}/service/stop/${jobId.value}`;
-    
+
     // Use the specific node API URL for a one-time real test
     // const apiUrl = 'https://3vwMHHicGk9enrHst7cJhbucNWSMyMDuB8G9HX1DQk7A.node.k8s.dev.nos.ci/service/stop/testjobid123';
-    
+
     // Create the authorization header
     const message = 'Hello Nosana Node!';
     const encodedMessage = new TextEncoder().encode(message);
@@ -318,7 +321,7 @@ const stopJob = async () => {
       toast.success(`Success: ${text}`);
       return;
     }
-    
+
     // Rrefresh the job data
     const updatedJob = await nosana.value.jobs.get(jobId.value);
     job.value = updatedJob;
@@ -419,24 +422,26 @@ watch(job, async () => {
 
 // Compute the display price based on the job status
 const displayPrice: ComputedRef<string> = computed(() => {
-  if (loadingMarkets.value || !markets.value || !job.value) return 'N/A';
-  const market = markets.value.find((m) => m.address === job.value.market);
-  if (!market) return 'N/A';
+  if (loadingMarkets.value || !markets.value || !job.value) return 'Could not load market';
+  const market = markets.value.find((m) => m.address.toString() === job.value.market);
+  if (!market) return 'Could not find market';
+  const nosPrice = stats.value && stats.value[0] && stats.value[0].price ? stats.value[0].price : 0;
+
   if (job.value.state === 'COMPLETED' || job.value.state === 2 || jobStatus.value === 'COMPLETED') {
-    const priceInNos = ((parseInt(job.value.price) / 1e6) * Math.min(job.value.timeEnd - job.value.timeStart, market.jobTimeout)).toFixed(6);
-    return `${priceInNos} NOS`;
+    const priceInNos = ((parseInt(job.value.price) / 1e6) * Math.min(job.value.timeEnd - job.value.timeStart, job.value.timeout ? job.value.timeout : market.jobTimeout));
+    return `${priceInNos.toFixed(6)} NOS ${nosPrice ? `($${((nosPrice * priceInNos)).toFixed(2)})` : ''}`;
   } else {
-    return market.usd_reward_per_hour
-      ? `${market.usd_reward_per_hour.toFixed(2)} USD/hour`
-      : 'N/A';
+    return job.value.price
+      ? `${(parseInt(job.value.price) / 1e6)} NOS/s ${nosPrice ? `($${((nosPrice * (parseInt(job.value.price) / 1e6)) * 3600).toFixed(2)} / h)` : ''}`
+      : 'Unknown';
   }
 });
 
 // Compute the max duration based on the market
-const maxDuration: ComputedRef<string> = computed(() => {
-  if (loadingMarkets.value || !markets.value || !job.value) return 'N/A';
-  const market = markets.value.find((m) => m.address === job.value.market);
-  return market && market.jobTimeout ? market.jobTimeout.toString() : 'N/A';
+const maxDuration: ComputedRef<number> = computed(() => {
+  if (loadingMarkets.value || !markets.value || !job.value) return 0;
+  const market = markets.value.find((m) => m.address.toString() === job.value.market);
+  return market && market.jobTimeout ? market.jobTimeout.toNumber() : 0;
 });
 
 </script>
