@@ -1,4 +1,5 @@
 <template>
+  <TopBar :title="'Your Dashboard'" :subtitle="'Node Page'"></TopBar>
   <div class="box">
     <div v-if="nodeId">
       <h2 class="title is-4 mb-4">Node Information</h2>

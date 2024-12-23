@@ -8,6 +8,15 @@
     </div>
     <div class="menu">
       <ul class="menu-list is-size-5">
+        <li v-if="connected">
+          <nuxt-link to="/address/4MPso21xXzgb2BocnCxe8BiQ1yuWemCS7eKCXeyD5zKw" active-class="is-active "
+            class="is-primary" @click="showMenu = false">
+            <span class="icon is-small mr-4">
+              <UserIcon />
+            </span>
+            <span>My Node</span>
+          </nuxt-link>
+        </li>
         <li>
           <nuxt-link to="/" active-class="is-active" @click="showMenu = false">
             <span class="icon is-small mr-4">
@@ -98,11 +107,13 @@ import JobBuilderIcon from '@/assets/img/icons/sidebar/job-builder.svg?component
 import TemplateIcon from '@/assets/img/icons/sidebar/template.svg?component';
 import BlocksIcon from '@/assets/img/icons/sidebar/blocks.svg?component';
 import ExplorerIcon from '@/assets/img/icons/sidebar/explorer.svg?component';
+import UserIcon from '@/assets/img/icons/sidebar/user.svg?component';
 import BrowserIcon from '@/assets/img/icons/sidebar/browser.svg?component';
 import CoinsIcon from '@/assets/img/icons/sidebar/coins.svg?component';
 import SupportIcon from '@/assets/img/icons/sidebar/support.svg?component';
 import LeaderboardIcon from '@/assets/img/icons/sidebar/leaderboard.svg?component';
-
+import { useWallet } from "solana-wallets-vue";
+const { connected } = useWallet();
 </script>
 
 <style lang="scss" scoped>
