@@ -35,7 +35,7 @@
               <td>{{ market.jobPrice / 1e6 }} NOS/s</td>
             </tr>
             <tr>
-              <td>Job timeout</td>
+              <td>Max job duration</td>
               <td>{{ market.jobTimeout / 60 }} minutes</td>
             </tr>
             <tr>
@@ -48,7 +48,7 @@
             </tr>
             <tr>
               <td>Minimum Stake</td>
-              <td>{{ market.nodeXnosMinimum / 1e6 }} xNOS</td>
+              <td>{{ market.nodeXnosMinimum / 1e6 }} NOS</td>
             </tr>
           </tbody>
         </table>
@@ -59,6 +59,13 @@
               Total of: {{ market.queue.length }} node(s) in queue
             </p>
             <p v-else>There are no nodes in the queue at the moment</p>
+            <ol>
+              <li v-for="node in market.queue">
+                <nuxt-link :to="`/address/${node}`" class="address is-family-monospace">
+                  {{ node }}
+                </nuxt-link>
+              </li>
+            </ol>
           </div>
         </div>
         <ExplorerJobList :per-page="limit" :total-jobs="jobs ? jobs.totalJobs : null" v-model:page="page"
