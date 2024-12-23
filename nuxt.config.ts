@@ -24,6 +24,7 @@ export default defineNuxtConfig({
       apiBase: process.env.API_BASE,
       oldApiBase: process.env.OLD_API_BASE || 'https://backend.k8s.prd.nos.ci',
       network: process.env.NETWORK || 'mainnet',
+      nodeDomain: process.env.NUXT_PUBLIC_NODE_DOMAIN
     }
   },
   vite: {
@@ -56,10 +57,12 @@ export default defineNuxtConfig({
       },
     },
     build: {
-      target: "esnext"
+      target: "esnext",
+      reportCompressedSize: false,
     },
     optimizeDeps: {
       include: ["@solana/web3.js", "buffer"],
+      exclude: ['vue-demi'],
       esbuildOptions: {
         target: "esnext",
         define: {
@@ -78,6 +81,13 @@ export default defineNuxtConfig({
           silenceDeprecations: ['mixed-decls', 'slash-div']
         },
       },
+    },
+    devBundler: 'legacy',
+    server: {
+      watch: {
+        usePolling: true,
+        interval: 300
+      }
     },
   },
   components: true,
