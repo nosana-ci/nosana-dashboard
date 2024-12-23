@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "start": "nuxt preview",
     "build": "nuxt build",
     "dev": "nuxt dev --dotenv .env.local",
     "generate": "nuxt generate --dotenv .env.${APP_ENV:=production}",
