@@ -1,5 +1,5 @@
 // /* Import the rest of Bulma */
-@import 'bulma/bulma';
+@import "bulma/bulma";
 @import "bulma-o-steps/bulma-steps.css";
 
 .button {
@@ -23,7 +23,8 @@
     text-decoration: none;
   }
 }
-.table.is-narrow td, .table.is-narrow th {
+.table.is-narrow td,
+.table.is-narrow th {
   line-height: 1;
 }
 
@@ -40,7 +41,7 @@
   }
 
   .menu-list a[disabled] {
-    opacity: .5;
+    opacity: 0.5;
   }
 }
 
@@ -89,7 +90,7 @@
 
 ::-webkit-scrollbar-track-piece {
   border-radius: 6px;
-  background: rgba(0, 0, 0, .1);
+  background: rgba(0, 0, 0, 0.1);
 }
 
 ::-webkit-scrollbar-thumb {
@@ -101,7 +102,6 @@
   width: 6px;
   height: 6px;
 }
-
 
 @include touch {
   .has-navbar-fixed-top-mobile {
@@ -169,7 +169,7 @@
   body:not(.light-mode) {
     background-color: $body-background-color-dark;
   }
-  
+
   .tag {
     // color:white !important;
     background-color: $black-ter !important;
@@ -181,7 +181,8 @@
   .has-background-body:not(.light-mode) {
     background-color: $body-background-color-dark !important;
   }
-  .vjs-tree-node.is-highlight, .vjs-tree-node:hover {
+  .vjs-tree-node.is-highlight,
+  .vjs-tree-node:hover {
     background-color: $grey-darker;
   }
   .progress {
@@ -190,12 +191,16 @@
       background-color: $black-ter;
     }
     &.is-info:indeterminate {
-      background-image: linear-gradient(to right, hsl(207, 61%, 53%) 30%, $black-ter 30%);
+      background-image: linear-gradient(
+        to right,
+        hsl(207, 61%, 53%) 30%,
+        $black-ter 30%
+      );
     }
   }
   .navbar:not(.light-mode) {
     background: $black;
-    
+
     .navbar-burger {
       color: $white;
     }
@@ -204,16 +209,18 @@
       box-shadow: 0 2px 0 0 $grey-dark;
     }
   }
-  .pagination-previous, .pagination-next, .pagination-link {
+  .pagination-previous,
+  .pagination-next,
+  .pagination-link {
     color: $white;
     &.is-current {
       color: $text;
     }
   }
   .select:not(.light-mode) select {
-      background-color: $grey-darker;
-      border-color: $black-ter;
-      color: white;
+    background-color: $grey-darker;
+    border-color: $black-ter;
+    color: white;
   }
   .table:not(.light-mode) {
     color: $table-background-color;
@@ -223,7 +230,8 @@
       color: $table-background-color;
       // background-color: $black-ter;
     }
-    td, th {
+    td,
+    th {
       border-color: $grey-dark;
     }
     &.is-hoverable {
@@ -386,4 +394,31 @@
 }
 .jse-validation-errors-overview.svelte-1uindol.svelte-1uindol {
   max-height: none !important;
+}
+
+.tooltip {
+  position: relative;
+  display: inline-block;
+}
+
+.tooltip .tooltip-text {
+  visibility: hidden;
+  width: 120px;
+  background-color: black;
+  color: #fff;
+  text-align: center;
+  border-radius: 6px;
+  padding: 5px;
+
+  /* Position the tooltip */
+  position: absolute;
+  left: 140px; /* Position to the right of the icon */
+  top: 50%; /* Center vertically */
+  transform: translateY(-50%); /* Center vertically */
+  margin-left: 8px; /* Add some space between icon and tooltip */
+  z-index: 1;
+}
+
+.tooltip:hover .tooltip-text {
+  visibility: visible;
 }
