@@ -1,4 +1,6 @@
-const markets: Ref<Array<any> | undefined> = ref(undefined);
+import type { Market } from "@nosana/sdk";
+
+const markets: Ref<Array<Market> | undefined> = ref(undefined);
 
 const { nosana } = useSDK();
 
@@ -10,7 +12,6 @@ const getMarkets = async () => {
   try {
     markets.value = (await nosana.value.jobs.allMarkets()).sort(
       function (a, b) {
-        console.log(parseInt(a.jobPrice));
         return parseInt(a.jobPrice) < parseInt(b.jobPrice) ? -1 : 1;
       }
     );

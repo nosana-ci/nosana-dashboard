@@ -111,14 +111,11 @@
         </tr>
       </thead>
       <tbody>
-        <nuxt-link v-for="item in leaderboardData" 
-                   :key="generateRowKey(item)" 
-                   :to="`/address/${item.node}`" 
-                   custom>
+        <nuxt-link v-for="item in leaderboardData" :key="generateRowKey(item)" :to="`/account/${item.node}`" custom>
           <template #default="{ navigate }">
             <tr class="is-clickable remove-greyscale-on-hover" @click="navigate">
               <td>
-                <nuxt-link :to="`/address/${item.node}`" class="is-family-monospace address has-text-black">
+                <nuxt-link :to="`/account/${item.node}`" class="is-family-monospace address has-text-black">
                   {{ item.node }}
                 </nuxt-link>
               </td>
@@ -148,14 +145,16 @@
         </li>
         <!-- Current pages -->
         <li v-for="p in pagesToShow" :key="p">
-          <a @click="goToPage(p)" :class="{'pagination-link': true, 'is-current': p === page}">{{ p }}</a>
+          <a @click="goToPage(p)" :class="{ 'pagination-link': true, 'is-current': p === page }">{{ p }}</a>
         </li>
         <!-- Last page -->
         <li v-if="!pagesToShow.includes(totalPages)">
           <span class="pagination-ellipsis">&hellip;</span>
         </li>
         <li v-if="!pagesToShow.includes(totalPages)">
-          <a @click="goToPage(totalPages)" class="pagination-link">{{ totalPages }}</a>
+          <a @click="goToPage(totalPages)" class="pagination-link">{{
+            totalPages
+          }}</a>
         </li>
       </ul>
     </nav>
@@ -163,24 +162,24 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
-import { useAPI } from '@/composables/useAPI';
-import { useIntervalFn } from '@vueuse/core';
+import { ref, computed, onMounted } from "vue";
+import { useAPI } from "@/composables/useAPI";
+import { useIntervalFn } from "@vueuse/core";
 
 // Filters and Sorting State
 const defaultFilters = {
-  node: '',
+  node: "",
   cu: 100 as number | null,
-  model: '',
-  framework: '',
-  market: '',
+  model: "",
+  framework: "",
+  market: "",
 };
 
 const filters = ref({ ...defaultFilters });
 
 const sort = ref({
-  orderBy: 'pricePerMillionTokens',
-  order: 'asc',
+  orderBy: "pricePerMillionTokens",
+  order: "asc",
 });
 
 const page = ref(1);
@@ -193,7 +192,11 @@ onMounted(() => {
 });
 
 // Fetch filter options from the new API endpoint
-const { data: filterOptions, pending: filtersLoading, error: filtersError } = await useAPI('/api/benchmarks/llm-filters');
+const {
+  data: filterOptions,
+  pending: filtersLoading,
+  error: filtersError,
+} = await useAPI("/api/benchmarks/llm-filters");
 
 const availableModels = computed(() =>
   filterOptions.value ? filterOptions.value.models.sort() : []
@@ -203,37 +206,51 @@ const availableFrameworks = computed(() =>
   filterOptions.value ? filterOptions.value.frameworks.sort() : []
 );
 
-const availableGPUs = computed(() =>
-  filterOptions.value ? filterOptions.value.gpus.sort() : []
-);
+const availableGPUs = computed(() => {
+  if (!marketsData.value) return [];
+  return marketsData.value.map((market) => market.slug).sort();
+});
 
 const availableCUs = computed(() =>
-  filterOptions.value ? filterOptions.value.cuCounts.sort((a: number, b: number) => a - b) : []
+  filterOptions.value
+    ? filterOptions.value.cuCounts.sort((a: number, b: number) => a - b)
+    : []
 );
 
 // Construct API URL with filters and sorting
 const leaderboardUrl = computed(() => {
   const params = new URLSearchParams();
-  params.append('limit', limit.value.toString());
-  params.append('offset', offset.value.toString());
+  params.append("limit", limit.value.toString());
+  params.append("offset", offset.value.toString());
 
   // Add filters if they are set and not empty
-  if (filters.value.node) params.append('node', filters.value.node);
-  if (filters.value.cu !== null) params.append('cu', filters.value.cu.toString());
-  if (filters.value.model) params.append('model', filters.value.model);
-  if (filters.value.framework) params.append('framework', filters.value.framework);
-  if (filters.value.market) params.append('market', filters.value.market);
+  if (filters.value.node) params.append("node", filters.value.node);
+  if (filters.value.cu !== null)
+    params.append("cu", filters.value.cu.toString());
+  if (filters.value.model) params.append("model", filters.value.model);
+  if (filters.value.framework)
+    params.append("framework", filters.value.framework);
+
+  // Convert slug back to address for the API call
+  if (filters.value.market) {
+    const market = marketsData.value?.find(
+      (m) => m.slug === filters.value.market
+    );
+    if (market) {
+      params.append("market", market.address);
+    }
+  }
 
   // Add sorting parameters
-  type SortField = 'pricePerMillionTokens' | 'averageTokensPerSecond';
+  type SortField = "pricePerMillionTokens" | "averageTokensPerSecond";
   const orderByMap: Record<SortField, string> = {
-    pricePerMillionTokens: 'pricePerMillionTokens',
-    averageTokensPerSecond: 'averageTokensPerSecond',
+    pricePerMillionTokens: "pricePerMillionTokens",
+    averageTokensPerSecond: "averageTokensPerSecond",
   };
-  params.append('orderBy', orderByMap[sort.value.orderBy as SortField]);
-  params.append('order', sort.value.order);
+  params.append("orderBy", orderByMap[sort.value.orderBy as SortField]);
+  params.append("order", sort.value.order);
 
-  return `/api/benchmarks/llm-leaderboard?${params.toString()}`;
+  return `/api/benchmarks/llm-benchmark-data?${params.toString()}`;
 });
 
 const {
@@ -243,11 +260,31 @@ const {
   refresh: refreshLeaderboard,
 } = await useAPI(leaderboardUrl, { watch: [leaderboardUrl] });
 
-const leaderboardData = computed(() =>
-  leaderboardResponse.value ? leaderboardResponse.value.data : []
-);
+const { data: marketsData } = await useAPI("/api/markets");
 
-const total = computed(() => (leaderboardResponse.value ? leaderboardResponse.value.total : 0));
+const gpuAddressToSlug = computed(() => {
+  if (!marketsData.value) return {};
+  return marketsData.value.reduce(
+    (acc: Record<string, string>, market: any) => {
+      acc[market.address] = market.slug;
+      return acc;
+    },
+    {}
+  );
+});
+
+const leaderboardData = computed(() => {
+  if (!leaderboardResponse.value) return [];
+
+  return leaderboardResponse.value.data.map((item) => ({
+    ...item,
+    gpu: gpuAddressToSlug.value[item.gpu] || item.gpu, // Fall back to address if slug not found
+  }));
+});
+
+const total = computed(() =>
+  leaderboardResponse.value ? leaderboardResponse.value.total : 0
+);
 const totalPages = computed(() => {
   const pages = Math.ceil(total.value / limit.value);
   return pages > 0 ? pages : 1;
@@ -255,12 +292,13 @@ const totalPages = computed(() => {
 
 // Implement sorting functionality
 function sortBy(field: string) {
-  if (field !== 'averageTokensPerSecond' && field !== 'pricePerMillionTokens') return;
+  if (field !== "averageTokensPerSecond" && field !== "pricePerMillionTokens")
+    return;
   if (sort.value.orderBy === field) {
-    sort.value.order = sort.value.order === 'asc' ? 'desc' : 'asc';
+    sort.value.order = sort.value.order === "asc" ? "desc" : "asc";
   } else {
     sort.value.orderBy = field;
-    sort.value.order = 'asc';
+    sort.value.order = "asc";
   }
   page.value = 1;
 }
@@ -289,13 +327,13 @@ function goToPage(p: number) {
 // Function to render sort icons
 function renderSortIcon(field: string) {
   if (sort.value.orderBy === field) {
-    if (sort.value.order === 'asc') {
-      return '&#9650;'; // Up arrow ▲
+    if (sort.value.order === "asc") {
+      return "&#9650;"; // Up arrow ▲
     } else {
-      return '&#9660;'; // Down arrow ▼
+      return "&#9660;"; // Down arrow ▼
     }
   } else {
-    return '&#9650;&#9660;'; // Up and down arrows ▲▼
+    return "&#9650;&#9660;"; // Up and down arrows ▲▼
   }
 }
 
@@ -362,6 +400,7 @@ function resetFilters() {
 th {
   cursor: pointer;
 }
+
 th span {
   margin-left: 5px;
   font-size: 0.8em;
@@ -371,6 +410,7 @@ th span {
 th.sortable {
   cursor: pointer;
 }
+
 th.sortable span {
   margin-left: 5px;
   font-size: 0.8em;

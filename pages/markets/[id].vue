@@ -61,7 +61,7 @@
             <p v-else>There are no nodes in the queue at the moment</p>
             <ol>
               <li v-for="node in market.queue">
-                <nuxt-link :to="`/address/${node}`" class="address is-family-monospace">
+                <nuxt-link :to="`/account/${node}`" class="address is-family-monospace">
                   {{ node }}
                 </nuxt-link>
               </li>

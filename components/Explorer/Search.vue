@@ -38,7 +38,7 @@ const checkingIfJob = ref(false);
 
 const selectItem = async (item: { type: string; value: string }) => {
   let s = '';
-  if (item.type === 'address') {
+  if (item.type === 'account') {
     checkingIfJob.value = true;
     // @ts-ignore TODO: add to useAPI opts type
     const { data: job } = await useAPI(`/api/jobs/${item.value}`, { disableToastonError: true });
@@ -47,7 +47,7 @@ const selectItem = async (item: { type: string; value: string }) => {
       item.type = 'job';
     }
   }
-  if (item.type !== 'address') {
+  if (item.type !== 'account') {
     s = 's'
   }
   router.push(`/${item.type}${s}/${item.value}`);
@@ -86,7 +86,7 @@ const searchItems = computed(() => {
   if (results.length === 0) {
     try {
       const pk = new PublicKey(address.value);
-      results.push({ value: pk.toString(), type: 'address' });
+      results.push({ value: pk.toString(), type: 'account' });
     } catch (error) { }
   }
 

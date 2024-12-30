@@ -38,7 +38,7 @@
               <td>
                 <span v-if="job.node.toString() === '11111111111111111111111111111111'
                 ">Unclaimed</span>
-                <nuxt-link v-else class="address is-family-monospace" :to="`/address/${job.node}`">{{ job.node
+                <nuxt-link v-else class="address is-family-monospace" :to="`/account/${job.node}`">{{ job.node
                   }}</nuxt-link>
               </td>
             </tr>
@@ -56,7 +56,7 @@
             <tr>
               <td>Poster</td>
               <td>
-                <nuxt-link class="address is-family-monospace" :to="`/address/${job.project}`">
+                <nuxt-link class="address is-family-monospace" :to="`/account/${job.project}`">
                   <span>{{ job.project }}</span>
                 </nuxt-link>
               </td>

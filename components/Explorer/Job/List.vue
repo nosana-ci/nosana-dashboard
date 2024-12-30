@@ -12,7 +12,7 @@
     </div>
   </div>
   <div class="is-flex is-flex-wrap-wrap state-filter">
-    <div class="mr-2 my-2">
+    <div class="mr-2 my-2" v-if="!states || states.length >= 2">
       <a class="button is-primary is-outlined" :class="{
         'is-hovered': state === null,
         'is-small': small,
@@ -20,7 +20,7 @@
         <b><span>All</span></b>
       </a>
     </div>
-    <div class="mr-2 my-2">
+    <div class="mr-2 my-2" v-if="!states || states.includes(2)">
       <a class="button is-success is-outlined" :class="{
         'is-hovered': state === 2,
         'is-small': small,
@@ -28,7 +28,7 @@
         <b><span>Completed</span></b>
       </a>
     </div>
-    <div class="mr-2 my-2">
+    <div class="mr-2 my-2" v-if="!states || states.includes(1)">
       <a class="button is-info is-outlined" :class="{
         'is-hovered': state === 1,
         'is-small': small,
@@ -36,7 +36,7 @@
         <b><span>Running</span></b>
       </a>
     </div>
-    <div class="mr-2 my-2">
+    <div class="mr-2 my-2" v-if="!states || states.includes(0)">
       <a class="button is-warning is-outlined" :class="{
         'is-hovered': state === 0,
         'is-small': small,
@@ -44,7 +44,7 @@
         <b><span>Queued</span></b>
       </a>
     </div>
-    <div class="mr-2 my-2">
+    <div class="mr-2 my-2" v-if="!states || states.includes(3)">
       <a class="button is-dark is-outlined" :class="{
         'is-hovered': state === 3,
         'is-small': small,
@@ -135,12 +135,12 @@
             <td v-if="!small" class="is-hidden-touch">
               <span v-if="
                 testgridMarkets.find((tgm: any) => tgm.address === job.market.toString())
-              " class="py-2">
+              ">
                 {{
                   testgridMarkets.find((tgm: any) => tgm.address === job.market.toString()).name
                 }}
               </span>
-              <span v-else class="is-family-monospace py-2 address">
+              <span v-else class="is-family-monospace address">
                 {{ job.market.toString() }}
               </span>
 
@@ -175,6 +175,10 @@ const props = defineProps({
   jobs: {
     type: Array<Job & { address: string }>,
     default: undefined,
+  },
+  states: {
+    type: Array<number>,
+    default: undefined
   },
   totalJobs: {
     type: Number,
