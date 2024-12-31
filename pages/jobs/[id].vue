@@ -1,152 +1,29 @@
 <template>
   <div>
     <TopBar :title="'Job Page'" :subtitle="'Find information about your job here'">
-      <template #right>
-        <ClientOnly>
-          <wallet-modal-provider v-if="!connected" :dark="$colorMode.value === 'dark'">
-            <template #default="modalScope">
-              <a class="button is-primary is-large" @click="modalScope.openModal()">
-                Connect Wallet
-              </a>
-            </template>
-          </wallet-modal-provider>
-        </ClientOnly>
-      </template>
     </TopBar>
 
     <div class="box">
       <div v-if="job">
         <div class="is-flex is-align-items-center is-justify-content-space-between mb-4">
-          <h3 class="title is-5 address is-family-monospace my-0">
-            {{ jobId }}
-          </h3>
-          <div class="is-flex is-align-items-center">
+          <div></div>
+          <div class="is-flex is-align-items-center is-justify-content-center">
+            <div v-if="isJobPoster && (job.state === 'RUNNING' || job.state === 1)" class="mr-4">
+              <button @click="stopJob" :class="{ 'is-loading': loading }" class="button is-danger is-small is-outlined">
+                Stop Job
+              </button>
+            </div>
             <ExplorerJobStatus class="mr-2" :status="jobStatus ? jobStatus : job.state"></ExplorerJobStatus>
           </div>
         </div>
 
-        <div v-if="isJobPoster && (job.state === 'RUNNING' || job.state === 1)" class="mb-4">
-          <button @click="stopJob" :class="{ 'is-loading': loading }" class="button is-danger">
-            Stop Job
-          </button>
-        </div>
-
-        <table class="table is-fullwidth is-striped">
-          <tbody>
-            <tr>
-              <td>Node</td>
-              <td>
-                <span v-if="job.node.toString() === '11111111111111111111111111111111'
-                ">Unclaimed</span>
-                <nuxt-link v-else class="address is-family-monospace" :to="`/account/${job.node}`">{{ job.node
-                  }}</nuxt-link>
-              </td>
-            </tr>
-            <tr>
-              <td>Market</td>
-              <td>
-                <nuxt-link :to="`/markets/${job.market}`" class="address is-family-monospace">
-                  <span v-if="testgridMarkets && testgridMarkets.find((tgm: any) => tgm.address === job.market)">
-                    {{ testgridMarkets.find((tgm: any) => tgm.address === job.market).name }}
-                  </span>
-                  <span v-else>{{ job.market }}</span>
-                </nuxt-link>
-              </td>
-            </tr>
-            <tr>
-              <td>Poster</td>
-              <td>
-                <nuxt-link class="address is-family-monospace" :to="`/account/${job.project}`">
-                  <span>{{ job.project }}</span>
-                </nuxt-link>
-              </td>
-            </tr>
-            <tr>
-              <td>Price</td>
-              <td>
-                <span v-if="loadingMarkets">..</span>
-                <span v-else>
-                  {{ displayPrice }}
-                </span>
-              </td>
-            </tr>
-            <tr>
-              <td>Started</td>
-              <td>
-                <span v-if="job.timeStart">
-                  {{
-                    useDateFormat(
-                      new Date(job.timeStart * 1000),
-                      "YYYY-MM-DD HH:mm:ss"
-                    ).value
-                  }}
-                  <UseTimeAgo v-slot="{ timeAgo }" :time="new Date(job.timeStart * 1000)">
-                    ({{ timeAgo }})
-                  </UseTimeAgo>
-                </span>
-                <span v-else>-</span>
-              </td>
-            </tr>
-            <tr>
-              <td>Duration</td>
-              <td>
-                <span v-if="job.timeEnd">
-                  {{ fmtMSS(job.timeEnd - job.timeStart) }}
-                </span>
-                <span v-else-if="job.timeStart">
-                  {{ fmtMSS(Math.floor(timestamp / 1000) - job.timeStart) }}
-                </span>
-                <span v-else> - </span>
-                <span v-if="maxDuration"> (max {{ Math.round(maxDuration / 60) }}m)</span>
-              </td>
-            </tr>
-            <tr>
-              <td>Type</td>
-              <td>
-                <ExplorerJobType v-if="ipfsJob" :ipfs="ipfsJob" :text="true" class="ml-1" />
-              </td>
-            </tr>
-            <tr>
-              <td>Trigger</td>
-              <td>
-                <ExplorerJobTrigger v-if="ipfsJob" :ipfs="ipfsJob" :text="true" class="ml-1" />
-              </td>
-            </tr>
-            <tr v-if="ipfsJob &&
-              ipfsJob.state &&
-              ipfsJob.state['nosana/job-type']">
-              <td>Source</td>
-              <td v-if="ipfsJob &&
-                ipfsJob.state &&
-                ipfsJob.state['nosana/job-type'] &&
-                (ipfsJob.state['nosana/job-type'] === 'Github' ||
-                  ipfsJob.state['nosana/job-type'] === 'github-flow')
-              ">
-                <a v-if="ipfsJob.state['input/repo'] &&
-                  ipfsJob.state['input/commit-sha']
-                " :href="ipfsJob.state['input/repo'].replace('.git', '') +
-                  '/commit/' +
-                  ipfsJob.state['input/commit-sha']
-                  " target="_blank">
-                  {{ ipfsJob.state["input/commit-sha"] }}
-                </a>
-              </td>
-              <td v-else>Other</td>
-            </tr>
-            <tr v-if="job && job.state === 1">
-              <td>Exposed Service</td>
-              <td>
-                <span v-if="ipfsJob && ipfsJob.ops[0].args.expose">
-                  <a :href="`https://${jobId}.node.k8s.prd.nos.ci`" target="_blank">Visit service</a>
-                </span>
-                <span v-else>Not exposed</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <ExplorerJobInfo :job="job" />
 
         <div class="tabs mt-5">
           <ul>
+            <li :class="{ 'is-active': activeTab === 'logs' }">
+              <a @click.prevent="activeTab = 'logs'">Logs</a>
+            </li>
             <li :class="{ 'is-active': activeTab === 'result' }">
               <a @click.prevent="activeTab = 'result'">Result</a>
             </li>
@@ -160,9 +37,9 @@
         </div>
         <div>
           <div v-show="activeTab === 'info'" class="p-1 py-4 has-background-white-bis">
-            <VueJsonPretty :data="ipfsJob" show-icon show-line-number />
+            <VueJsonPretty :data="job.jobDefinition" show-icon show-line-number />
           </div>
-          <div v-show="activeTab === 'result'" class="p-1 py-4 has-background-white-bis">
+          <div v-show="activeTab === 'logs'" class="p-1 py-4 has-background-white-bis">
             <div v-if="job.state === 'RUNNING' || job.state === 1"
               class="is-family-monospace has-background-black has-text-white box light-mode">
               <div v-if="logs && logs.length > 0" style="counter-reset: line">
@@ -172,15 +49,18 @@
                   </div>
                 </div>
               </div>
-              <span v-else>Waiting for results...</span>
+              <span v-else>Waiting for logs...</span>
             </div>
-            <div v-else-if="loading">Loading results..</div>
-            <div v-else-if="!ipfsResult">No results</div>
+            <div v-else-if="loading">Loading logs..</div>
+            <div v-else-if="!ipfsResult">No logs</div>
             <div v-else-if="ipfsResult.results && ipfsResult.results[0] === 'nos/secret'">
               Results are secret
             </div>
             <ExplorerJobResult v-else-if="(ipfsResult && job.state === 'COMPLETED') || job.state === 2
-            " :ipfs-result="ipfsResult" :ipfs-job="ipfsJob" />
+            " :ipfs-result="ipfsResult" :ipfs-job="job.jobDefinition" />
+          </div>
+          <div v-show="activeTab === 'result'" class="p-1 py-4 has-background-white-bis">
+            <VueJsonPretty :data="job.jobResult" show-icon show-line-number />
           </div>
           <div v-show="activeTab === 'artifacts'" class="p-1 py-4 has-background-white-bis">
             <div>
@@ -191,14 +71,14 @@
               </p>
               <p class="block">
                 Download with CLI:<br />
-                <code>npx nosana/cli download {{ artifacts }}</code>
+                <code>npx @nosana/cli download {{ artifacts }}</code>
               </p>
             </div>
           </div>
         </div>
       </div>
-      <div v-else-if="loadingJob">Loading inference..</div>
-      <div v-else>Inference not found</div>
+      <div v-else-if="loadingJob">Loading job..</div>
+      <div v-else>Job not found</div>
     </div>
   </div>
 </template>
@@ -207,12 +87,8 @@
 import { useRoute } from "vue-router";
 import VueJsonPretty from "vue-json-pretty";
 import 'vue-json-pretty/lib/styles.css';
-import { UseTimeAgo } from "@vueuse/components";
-import { type Ref, ref, watch, computed } from "vue";
-import type { ComputedRef } from '@vue/runtime-core';
 import AnsiUp from 'ansi_up';
 import { useWallet } from 'solana-wallets-vue'
-import { WalletModalProvider } from "solana-wallets-vue";
 import { useToast } from "vue-toastification";
 import type { MessageSignerWalletAdapter } from '@solana/wallet-adapter-base';
 const toast = useToast();
@@ -220,46 +96,24 @@ const toast = useToast();
 const { nosana } = useSDK();
 const ansi = new AnsiUp();
 
-const ipfsJob: Ref<{ [key: string]: any }> = ref({});
 const ipfsResult: Ref<{ [key: string]: any }> = ref({});
 const { params } = useRoute();
 const jobId: Ref<string> = ref(String(params.id) || "");
 const loading: Ref<boolean> = ref(false);
-const activeTab: Ref<string> = ref("result");
+const activeTab: Ref<string> = ref("logs");
 const jobStatus: Ref<string | null> = ref(null);
 const logs: Ref<any | null> = ref(null);
 const { getIpfs } = useIpfs();
 const artifacts = ref(null);
 const ipfsGateway = ref(nosana.value ? nosana.value.ipfs.config.gateway : null);
 
-const timestamp = useTimestamp({ interval: 1000 });
-const fmtMSS = (s: number) => {
-  return (s - (s %= 60)) / 60 + (s > 9 ? "m:" : "m:0") + s + "s";
-};
 
-const { markets, getMarkets, loadingMarkets } = useMarkets();
 
-// Fetch markets if not already loaded
-if (!markets.value) {
-  getMarkets();
-}
 
-const { data: job, pending: loadingJob } = await useAPI(`/api/jobs/${jobId.value}`);
-const { data: testgridMarkets, pending: loadingTestgridMarkets } = await useAPI('/api/markets');
+const { data: job, pending: loadingJob } = useAPI(`/api/jobs/${jobId.value}`);
 
-const { data: stats, pending: loadingStats } = await useAPI('/api/stats');
 
 const { wallet, publicKey, connected } = useWallet();
-
-// =============================
-// TEMPORARY CODE FOR TESTING
-// Force isJobPoster to return true to show the Stop button for all jobs
-// Remember to remove this after testing
-// =============================
-
-// const isJobPoster = computed(() => {
-//   return true; // Always return true for testing purposes
-// });
 
 const isJobPoster = computed(() => {
   return connected.value && job.value && publicKey.value?.toString() === job.value.project;
@@ -338,12 +192,10 @@ watch(job, async () => {
   try {
     loading.value = true;
     try {
-      ipfsJob.value = await getIpfs(job.value!.ipfsJob);
-      console.log('ipfsJob.value', ipfsJob.value);
       if (
         (job.value?.state === "RUNNING" || job.value?.state === 1) &&
-        ipfsJob.value &&
-        typeof ipfsJob.value !== "string" &&
+        job.value.jobDefinition &&
+        typeof job.value.jobDefinition !== "string" &&
         !logs.value
       ) {
         logs.value = [];
@@ -420,29 +272,9 @@ watch(job, async () => {
   loading.value = false;
 });
 
-// Compute the display price based on the job status
-const displayPrice: ComputedRef<string> = computed(() => {
-  if (loadingMarkets.value || !markets.value || !job.value) return 'Could not load market';
-  const market = markets.value.find((m) => m.address.toString() === job.value.market);
-  if (!market) return 'Could not find market';
-  const nosPrice = stats.value && stats.value[0] && stats.value[0].price ? stats.value[0].price : 0;
 
-  if (job.value.state === 'COMPLETED' || job.value.state === 2 || jobStatus.value === 'COMPLETED') {
-    const priceInNos = ((parseInt(job.value.price) / 1e6) * Math.min(job.value.timeEnd - job.value.timeStart, job.value.timeout ? job.value.timeout : market.jobTimeout));
-    return `${priceInNos.toFixed(6)} NOS ${nosPrice ? `($${((nosPrice * priceInNos)).toFixed(2)})` : ''}`;
-  } else {
-    return job.value.price
-      ? `${(parseInt(job.value.price) / 1e6)} NOS/s ${nosPrice ? `($${((nosPrice * (parseInt(job.value.price) / 1e6)) * 3600).toFixed(2)} / h)` : ''}`
-      : 'Unknown';
-  }
-});
 
-// Compute the max duration based on the market
-const maxDuration: ComputedRef<number> = computed(() => {
-  if (loadingMarkets.value || !markets.value || !job.value) return 0;
-  const market = markets.value.find((m) => m.address.toString() === job.value.market);
-  return market && market.jobTimeout ? market.jobTimeout.toNumber() : 0;
-});
+
 
 </script>
 <style lang="scss" scoped>
