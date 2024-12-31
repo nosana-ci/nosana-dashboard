@@ -24,7 +24,7 @@
 
         <ExplorerJobInfo :job="job" />
 
-        <div v-if="job && job.node && job.node.toString() !== '11111111111111111111111111111111'" class="mt-4">
+        <div v-if="job.node && job.node.toString() !== '11111111111111111111111111111111'" class="mt-4">
           <JobNodeInfo :address="job.node.toString()" />
         </div>
 
@@ -121,34 +121,125 @@ const ipfsGateway = ref(nosana.value ? nosana.value.ipfs.config.gateway : null);
 
 
 
-const { data: job, pending: loadingJob, refresh: refreshJob } = useAPI(`/api/jobs/${jobId.value}`, {
-  watch: false,
-})
+const { data: job, pending: loadingJob, refresh: refreshJob } = useAPI(
+  `https://dashboard.k8s.prd.nos.ci/api/jobs/${jobId.value}`,
+  { watch: false }
+);
 
 /**
  * This interval will poll the job data every 30 seconds, but we'll pause or resume
- * based on the job's running state. This means we only poll if the job is running (state === 'RUNNING' or 1).
+ * based on the job's running state. This means we only poll while it's running,
+ * and stop once we confirm it's truly done/failed.
  */
 const { pause: pauseJobPolling, resume: resumeJobPolling } = useIntervalFn(() => {
-  // If still running, refresh to get updated info/logs. 
-  // The watch on 'job' below will detect changes and eventually pause polling if state changes.
+  // If still running, refresh to get updated info/logs
   refreshJob()
-}, 30000, { immediate: false }) // immediate:false => wait 30s for first poll
+}, 30000, { immediate: false })
 
 /**
- * Watch the job's state and pause/resume polling as needed.
- * If the job stops running, we stop polling.
- * If it transitions back to running (possible in some flows), we resume.
+ * Unified watcher for job state changes, polling control, and IPFS handling
  */
-watch(job, (newJob) => {
+watch(job, async (newJob, oldJob) => {
   if (!newJob) return
-  const currentState = newJob.state
-  if (currentState === 'RUNNING' || currentState === 1) {
-    resumeJobPolling()
-  } else {
+
+  // 1) Update jobStatus based on the new state
+  if (newJob.state === 2 || newJob.state === 'COMPLETED') {
+    jobStatus.value = 'COMPLETED'
     pauseJobPolling()
+  } else if (newJob.state === 3 || newJob.state === 'STOPPED') {
+    jobStatus.value = 'STOPPED'
+    pauseJobPolling()
+  } else if (newJob.state === 'FAILED') {
+    jobStatus.value = 'FAILED'
+    pauseJobPolling()
+  } else if (newJob.state === 1 || newJob.state === 'RUNNING') {
+    jobStatus.value = null
+    resumeJobPolling()
   }
-})
+
+  // 2) Handle logs and IPFS updates
+  try {
+    loading.value = true
+
+    // Initialize logs array for running jobs
+    if (
+      (newJob.state === 'RUNNING' || newJob.state === 1) &&
+      newJob.jobDefinition &&
+      typeof newJob.jobDefinition !== 'string' &&
+      !logs.value
+    ) {
+      logs.value = []
+    }
+
+    // Fetch and process IPFS results
+    if (
+      newJob.ipfsResult &&
+      newJob.ipfsResult !== 'QmNLei78zWmzUdbeRB3CiUfAizWUrbeeZh5K1rhAQKCh51'
+    ) {
+      const resultResponse = await getIpfs(newJob.ipfsResult)
+      ipfsResult.value = resultResponse
+
+      if (ipfsResult.value && typeof ipfsResult.value !== 'string') {
+        // Handle artifacts
+        const artifactId = newJob.jobDefinition.ops[newJob.jobDefinition.ops.length - 1].id
+        if (artifactId.startsWith('artifact-')) {
+          if (ipfsResult.value.results[artifactId]) {
+            const steps = ipfsResult.value.results[artifactId][1]
+            if (Array.isArray(steps)) {
+              const logs = steps[steps.length - 1].log
+              if (logs && logs[logs.length - 2]) {
+                artifacts.value = logs[logs.length - 2][1].slice(-47)
+              }
+            }
+          }
+        }
+
+        // Process IPFS results and check for errors
+        for (const key in ipfsResult.value.results) {
+          const results = ipfsResult.value.results[key]
+          if (
+            (results && results[0] && results[0].exit) ||
+            (results &&
+              results[0] &&
+              (results[0].includes('error') || results[0].includes('failed')))
+          ) {
+            jobStatus.value = 'FAILED'
+          }
+
+          if (Array.isArray(results)) {
+            if (results[1]) {
+              if (Array.isArray(results[1]) || Array.isArray(results[2])) {
+                const resultsArray = Array.isArray(results[1])
+                  ? results[1]
+                  : results[2][1]
+                if (resultsArray) {
+                  for (let i = 0; i < resultsArray.length; i++) {
+                    const step = resultsArray[i]
+                    if (step.log && Array.isArray(step.log)) {
+                      step.log = step.log
+                        .reduce((str: any, log: any) => str.concat(log[1]), '')
+                        .split('\n')
+                        .map((l: any) => [1, ansi.ansi_to_html(l)])
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        // Final error check
+        if (ipfsResult.value.results && ipfsResult.value.results['nosana/error']) {
+          jobStatus.value = 'FAILED'
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error while processing job update:', error)
+  } finally {
+    loading.value = false
+  }
+}, { immediate: true, deep: true })
 
 const { wallet, publicKey, connected } = useWallet();
 
@@ -224,94 +315,6 @@ const stopJob = async () => {
     loading.value = false;
   }
 };
-
-watch(job, async () => {
-  try {
-    loading.value = true;
-    try {
-      if (
-        (job.value?.state === "RUNNING" || job.value?.state === 1) &&
-        job.value.jobDefinition &&
-        typeof job.value.jobDefinition !== "string" &&
-        !logs.value
-      ) {
-        logs.value = [];
-      }
-      if (
-        job.value!.ipfsResult &&
-        job.value!.ipfsResult !==
-        "QmNLei78zWmzUdbeRB3CiUfAizWUrbeeZh5K1rhAQKCh51"
-      ) {
-        const resultResponse = await getIpfs(job.value!.ipfsResult);
-        ipfsResult.value = resultResponse;
-      }
-      if (ipfsResult.value && typeof ipfsResult.value !== "string") {
-        const artifactId = job.value.jobDefinition.ops[job.value.jobDefinition.ops.length - 1].id;
-        if (artifactId.startsWith("artifact-")) {
-          if (ipfsResult.value!.results[artifactId]) {
-            const steps = ipfsResult.value!.results[artifactId][1];
-            if (Array.isArray(steps)) {
-              const logs = steps[steps.length - 1].log;
-              if (logs && logs[logs.length - 2]) {
-                artifacts.value = logs[logs.length - 2][1].slice(-47);
-              }
-            }
-          }
-        }
-        console.log('ipfsResult.value', ipfsResult.value);
-        for (const key in ipfsResult.value!.results) {
-          const results = ipfsResult.value!.results[key];
-          if (
-            (results && results[0] && results[0].exit) ||
-            (results &&
-              results[0] &&
-              (results[0].includes("error") || results[0].includes("failed")))
-          ) {
-            jobStatus.value = "FAILED";
-          }
-
-          if (Array.isArray(results)) {
-            if (results[1]) {
-              if (Array.isArray(results[1]) || Array.isArray(results[2])) {
-                const resultsArray = Array.isArray(results[1])
-                  ? results[1]
-                  : results[2][1];
-                if (resultsArray) {
-                  for (let i = 0; i < resultsArray.length; i++) {
-                    const step = resultsArray[i];
-                    if (step.log && Array.isArray(step.log)) {
-                      step.log = step.log
-                        .reduce((str: any, log: any) => str.concat(log[1]), "")
-                        .split("\n")
-                        .map((l: any) => [1, ansi.ansi_to_html(l)]);
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-
-        if (
-          ipfsResult.value.results &&
-          ipfsResult.value.results["nosana/error"]
-        ) {
-          jobStatus.value = "FAILED";
-        }
-      }
-    } catch (error) {
-      console.log("error when processing ipfs", error);
-    }
-  } catch (e) {
-    console.error(e);
-    job.value = null;
-  }
-  loading.value = false;
-});
-
-
-
-
 
 </script>
 <style lang="scss" scoped>
