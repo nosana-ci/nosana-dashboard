@@ -8,8 +8,13 @@
         <div class="is-flex is-align-items-center is-justify-content-space-between mb-4">
           <div></div>
           <div class="is-flex is-align-items-center is-justify-content-center">
+            <div v-if="job.state === 1 && job.jobDefinition && job.jobDefinition.ops && job.jobDefinition.ops[0] && job.jobDefinition.ops[0].args.expose" class="mr-4">
+              <a :href="`https://${job.address}.node.k8s.prd.nos.ci`" target="_blank" class="button is-primary is-medium is-outlined">
+                Visit Service
+              </a>
+            </div>
             <div v-if="isJobPoster && (job.state === 'RUNNING' || job.state === 1)" class="mr-4">
-              <button @click="stopJob" :class="{ 'is-loading': loading }" class="button is-danger is-small is-outlined">
+              <button @click="stopJob" :class="{ 'is-loading': loading }" class="button is-danger is-medium is-outlined">
                 Stop Job
               </button>
             </div>
@@ -18,6 +23,10 @@
         </div>
 
         <ExplorerJobInfo :job="job" />
+
+        <div v-if="job && job.node && job.node.toString() !== '11111111111111111111111111111111'" class="mt-4">
+          <JobNodeInfo :address="job.node.toString()" />
+        </div>
 
         <div class="tabs mt-5">
           <ul>
@@ -65,7 +74,7 @@
           <div v-show="activeTab === 'artifacts'" class="p-1 py-4 has-background-white-bis">
             <div>
               <p class="block">
-                <a v-if="ipfsGateway && artifacts" class="button" :href="`${ipfsGateway}${artifacts.trim()}`">
+                <a v-if="ipfsGateway && artifacts" class="button" :href="`${ipfsGateway}${String(artifacts).trim()}`">
                   Download artifacts
                 </a>
               </p>
@@ -91,6 +100,8 @@ import AnsiUp from 'ansi_up';
 import { useWallet } from 'solana-wallets-vue'
 import { useToast } from "vue-toastification";
 import type { MessageSignerWalletAdapter } from '@solana/wallet-adapter-base';
+import JobNodeInfo from '~/components/Node/JobNodeInfo.vue';
+import { useIntervalFn, useTimestamp } from '@vueuse/core'
 const toast = useToast();
 
 const { nosana } = useSDK();
@@ -110,8 +121,34 @@ const ipfsGateway = ref(nosana.value ? nosana.value.ipfs.config.gateway : null);
 
 
 
-const { data: job, pending: loadingJob } = useAPI(`/api/jobs/${jobId.value}`);
+const { data: job, pending: loadingJob, refresh: refreshJob } = useAPI(`/api/jobs/${jobId.value}`, {
+  watch: false,
+})
 
+/**
+ * This interval will poll the job data every 30 seconds, but we'll pause or resume
+ * based on the job's running state. This means we only poll if the job is running (state === 'RUNNING' or 1).
+ */
+const { pause: pauseJobPolling, resume: resumeJobPolling } = useIntervalFn(() => {
+  // If still running, refresh to get updated info/logs. 
+  // The watch on 'job' below will detect changes and eventually pause polling if state changes.
+  refreshJob()
+}, 30000, { immediate: false }) // immediate:false => wait 30s for first poll
+
+/**
+ * Watch the job's state and pause/resume polling as needed.
+ * If the job stops running, we stop polling.
+ * If it transitions back to running (possible in some flows), we resume.
+ */
+watch(job, (newJob) => {
+  if (!newJob) return
+  const currentState = newJob.state
+  if (currentState === 'RUNNING' || currentState === 1) {
+    resumeJobPolling()
+  } else {
+    pauseJobPolling()
+  }
+})
 
 const { wallet, publicKey, connected } = useWallet();
 
@@ -209,7 +246,7 @@ watch(job, async () => {
         ipfsResult.value = resultResponse;
       }
       if (ipfsResult.value && typeof ipfsResult.value !== "string") {
-        const artifactId = ipfsJob.value.ops[ipfsJob.value.ops.length - 1].id;
+        const artifactId = job.value.jobDefinition.ops[job.value.jobDefinition.ops.length - 1].id;
         if (artifactId.startsWith("artifact-")) {
           if (ipfsResult.value!.results[artifactId]) {
             const steps = ipfsResult.value!.results[artifactId][1];

@@ -80,18 +80,6 @@
           <span v-if="maxDuration"> (max {{ Math.round(maxDuration / 60) }}m)</span>
         </td>
       </tr>
-      <tr>
-        <td>Type</td>
-        <td>
-          <ExplorerJobType v-if="job.jobDefinition" :ipfs="job.jobDefinition" :text="true" class="ml-1" />
-        </td>
-      </tr>
-      <tr>
-        <td>Trigger</td>
-        <td>
-          <ExplorerJobTrigger v-if="job.jobDefinition" :ipfs="job.jobDefinition" :text="true" class="ml-1" />
-        </td>
-      </tr>
       <tr v-if="job.jobDefinition &&
         job.jobDefinition.state &&
         job.jobDefinition.state['nosana/job-type']">
@@ -112,16 +100,6 @@
           </a>
         </td>
         <td v-else>Other</td>
-      </tr>
-      <tr v-if="job && job.state === 1">
-        <td>Exposed Service</td>
-        <td>
-          <span
-            v-if="job.jobDefinition && job.jobDefinition.ops && job.jobDefinition.ops[0] && job.jobDefinition.ops[0].args.expose">
-            <a :href="`https://${jobId}.node.k8s.prd.nos.ci`" target="_blank">Visit service</a>
-          </span>
-          <span v-else>Not exposed</span>
-        </td>
       </tr>
     </tbody>
   </table>
@@ -171,7 +149,7 @@ const displayPrice: ComputedRef<string> = computed(() => {
 const maxDuration: ComputedRef<number> = computed(() => {
   if (loadingMarkets.value || !markets.value || !job.value) return 0;
   const market = markets.value.find((m) => m.address.toString() === job.value.market);
-  return market && market.jobTimeout ? market.jobTimeout.toNumber() : 0;
+  return market && market.jobTimeout ? market.jobTimeout : 0;
 });
 
 </script>
