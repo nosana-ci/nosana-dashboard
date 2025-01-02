@@ -30,8 +30,11 @@
 
         <div class="tabs mt-5">
           <ul>
-            <li :class="{ 'is-active': activeTab === 'logs' }">
-              <a @click.prevent="activeTab = 'logs'">Logs</a>
+            <li :class="{ 'is-active': activeTab === 'jobLogs' }">
+              <a @click.prevent="activeTab = 'jobLogs'">Job Logs</a>
+            </li>
+            <li :class="{ 'is-active': activeTab === 'nodeLogs' }">
+              <a @click.prevent="activeTab = 'nodeLogs'">Node Logs</a>
             </li>
             <li :class="{ 'is-active': activeTab === 'result' }">
               <a @click.prevent="activeTab = 'result'">Result</a>
@@ -48,7 +51,7 @@
           <div v-show="activeTab === 'info'" class="p-1 py-4 has-background-white-bis">
             <VueJsonPretty :data="job.jobDefinition" show-icon show-line-number />
           </div>
-          <div v-show="activeTab === 'logs'" class="p-1 py-4 has-background-white-bis">
+          <div v-show="activeTab === 'jobLogs'" class="p-1 py-4 has-background-white-bis">
             <div v-if="job.state === 'RUNNING' || job.state === 1"
               class="is-family-monospace has-background-black has-text-white box light-mode">
               <div v-if="logs && logs.length > 0" style="counter-reset: line">
@@ -67,6 +70,16 @@
             </div>
             <ExplorerJobResult v-else-if="(ipfsResult && job.state === 'COMPLETED') || job.state === 2
             " :ipfs-result="ipfsResult" :ipfs-job="job.jobDefinition" />
+          </div>
+          <div v-show="activeTab === 'nodeLogs'" class="p-1 py-4 has-background-white-bis">
+            <div v-if="logs && logs.length > 0" style="counter-reset: line">
+              <div v-for="step in logs" :key="step.id">
+                <div v-for="(log, ik) in step.logs.split('\n')" :key="ik" class="row-count">
+                  <span class="pre" v-html="log.slice(0, 10000)" />
+                </div>
+              </div>
+            </div>
+            <span v-else>Waiting for node logs...</span>
           </div>
           <div v-show="activeTab === 'result'" class="p-1 py-4 has-background-white-bis">
             <VueJsonPretty :data="job.jobResult" show-icon show-line-number />
@@ -112,12 +125,12 @@ const toast = useToast();
 const { nosana } = useSDK();
 const ansi = new AnsiUp();
 
-const ipfsResult = ref({});
+const ipfsResult = ref<{ results?: string[] }>({});
 const { params } = useRoute();
 const jobId = ref(String(params.id) || "");
 const loading = ref(false);
-const activeTab = ref("logs");
-const jobStatus = ref(null);
+const activeTab = ref("jobLogs");
+const jobStatus = ref<string | null>(null);
 const logs = ref<any[] | null>(null);
 
 const { getIpfs } = useIpfs();
@@ -181,69 +194,51 @@ const isJobPoster = computed(() => {
   return connected.value && job.value && publicKey.value?.toString() === job.value.project;
 });
 
+// Add a function to handle signing
+const signMessage = async () => {
+  if (!connected.value || !publicKey.value || !wallet.value) {
+    throw new Error('Wallet not connected or not found');
+  }
+  const message = 'Hello Nosana Node!';
+  const encodedMessage = new TextEncoder().encode(message);
+  const adapter = wallet.value.adapter as MessageSignerWalletAdapter;
+  if (!adapter.signMessage) {
+    throw new Error('Wallet does not support message signing');
+  }
+  const signedMessage = await adapter.signMessage(encodedMessage);
+  const signature = Buffer.from(signedMessage).toString('base64');
+  const publicKeyString = publicKey.value.toString();
+  return `${publicKeyString}:${signature}`;
+};
+
+// Modify stopJob to use signMessage
 const stopJob = async () => {
   if (!job.value) return;
   try {
     loading.value = true;
-
-    if (!connected.value || !publicKey.value) {
-      throw new Error('Wallet not connected');
-    }
-    if (!wallet.value) {
-      throw new Error('Wallet not found');
-    }
-
+    const authorizationHeader = await signMessage();
     const nodeAddress = job.value.node.toString();
     const apiUrl = `https://${nodeAddress}.${useRuntimeConfig().public.nodeDomain}/service/stop/${jobId.value}`;
-
-    // Use the specific node API URL for a one-time real test
-    // const apiUrl = 'https://3vwMHHicGk9enrHst7cJhbucNWSMyMDuB8G9HX1DQk7A.node.k8s.dev.nos.ci/service/stop/testjobid123';
-
-    // Create the authorization header
-    const message = 'Hello Nosana Node!';
-    const encodedMessage = new TextEncoder().encode(message);
-
-    const adapter = wallet.value.adapter as MessageSignerWalletAdapter;
-    if (!adapter.signMessage) {
-      throw new Error('Wallet does not support message signing');
-    }
-
-    // Sign the message
-    const signedMessage = await adapter.signMessage(encodedMessage);
-
-    // Create Authorization header: "PublicKey:Base64Signature"
-    const signature = Buffer.from(signedMessage).toString('base64');
-    const publicKeyString = publicKey.value.toString();
-    const authorizationHeader = `${publicKeyString}:${signature}`;
-
-    // Make the real API call
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Authorization': authorizationHeader,
       },
     });
-
     const text = await response.text();
     console.log('Response status:', response.status);
     console.log('Response body:', text);
-
     if (response.status === 403) {
       toast.error(`Authentication failed: ${text}`);
       return;
     }
-
     if (response.status === 200) {
       toast.success(`Success: ${text}`);
       return;
     }
-
-    // Rrefresh the job data
     const updatedJob = await nosana.value.jobs.get(jobId.value);
     job.value = updatedJob;
-
   } catch (e: any) {
-    // Catch any runtime errors
     toast.error(`Error stopping job: ${e.toString()}`);
   } finally {
     loading.value = false;
@@ -256,112 +251,83 @@ const stopJob = async () => {
 
 let ws: WebSocket | null = null;
 
-/**
- * Connect once to the WebSocket "/log" endpoint, send the authentication message,
- * and listen for streaming logs. No retry logic here.
- */
+// Add a flag to track WebSocket connection state
+let isWebSocketConnected = false;
+
+// Modify connectWebSocket to use signMessage
 const connectWebSocket = async () => {
   if (!job.value || !job.value.node || !connected.value || !publicKey.value || !wallet.value) {
     console.error('Cannot connect WebSocket - missing job, node, or wallet connection');
     return;
   }
-
-  // Close existing connection if any
   if (ws) {
     ws.close();
     ws = null;
   }
-
   const nodeAddress = job.value.node.toString();
   const frpServer = useRuntimeConfig().public.frpServer || 'node.k8s.prd.nos.ci';
-
-  console.log('Connecting WebSocket to Node for logs:', {
-    nodeAddress,
-    frpServer,
-    jobId: jobId.value
-  });
-
-  // Prepare the signature for the authorization message
-  const message = 'Hello Nosana Node!';
-  const encodedMessage = new TextEncoder().encode(message);
-  const adapter = wallet.value.adapter as MessageSignerWalletAdapter;
   let authHeader = '';
   try {
-    const signedMessage = await adapter.signMessage(encodedMessage);
-    const signature = Buffer.from(signedMessage).toString('base64');
-    const publicKeyString = publicKey.value.toString();
-    authHeader = `${publicKeyString}:${signature}`;
+    authHeader = await signMessage();
   } catch (error) {
     console.error('Error creating auth header:', error);
-    toast.error('Failed to sign message for log stream');
     return;
   }
-
   const wsUrl = `wss://${nodeAddress}.${frpServer}/log`;
   try {
     ws = new WebSocket(wsUrl);
-
     ws.onopen = () => {
-      console.log('WebSocket connection opened for logs');
-      toast.success('Connected to log stream');
-
-      // Send the authentication message once connection is open
       const authMessage = {
         path: '/log',
         header: authHeader,
         body: {
           jobAddress: jobId.value,
-          address: job.value.project // or whichever address is correct for your job
+          address: job.value.project
         }
       };
       ws?.send(JSON.stringify(authMessage));
     };
-
     ws.onmessage = (event: MessageEvent) => {
       try {
-        const data = JSON.parse(event.data);
-        // According to your docs, body may contain { log: string, ... }
-        if (data?.log) {
-          // Convert ANSI codes to HTML
-          const convertedLog = ansi.ansi_to_html(data.log);
+        const outerData = JSON.parse(event.data);
+        const innerData = JSON.parse(outerData.data); // Parse the nested JSON string
+        if (innerData?.log) {
+          const convertedLog = ansi.ansi_to_html(innerData.log);
           logs.value?.push({
             id: Date.now(),
             logs: convertedLog,
           });
         }
       } catch (err) {
-        console.error('Error parsing log data:', err);
-        toast.error('Error parsing log data');
+        console.error('Error parsing log data');
       }
     };
-
     ws.onclose = (event) => {
-      console.log('WebSocket connection closed:', {
-        code: event.code,
-        reason: event.reason,
-        wasClean: event.wasClean
-      });
-      toast.info('Log stream disconnected');
       ws = null;
+      isWebSocketConnected = false;
     };
-
     ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
-      toast.error('Error connecting to log stream');
+      console.error('Error connecting to log stream');
     };
   } catch (error) {
     console.error('Error creating WebSocket:', error);
-    toast.error('Failed to connect to log stream');
   }
 };
 
-// Whenever the job changes, open/close the WebSocket as needed
-watch(job, (newJob) => {
-  if (newJob && (newJob.state === 'RUNNING' || newJob.state === 1)) {
+// Modify the watch logic to ensure WebSocket connection only on state transition
+watch(job, (newJob, oldJob) => {
+  if (
+    newJob &&
+    (newJob.state === 'RUNNING' || newJob.state === 1) &&
+    (!oldJob || oldJob.state !== 'RUNNING' && oldJob.state !== 1) &&
+    !isWebSocketConnected
+  ) {
     connectWebSocket();
-  } else if (ws) {
+    isWebSocketConnected = true;
+  } else if (ws && !(newJob.state === 'RUNNING' || newJob.state === 1)) {
     console.log('Closing WebSocket because job is no longer running');
     ws.close();
+    isWebSocketConnected = false;
   }
 });
 
