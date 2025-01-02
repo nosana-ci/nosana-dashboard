@@ -120,6 +120,9 @@ const toast = useToast();
 const { nosana } = useSDK();
 const ansi = new AnsiUp();
 
+// Add stored auth header
+const storedAuthHeader = ref<string | null>(null);
+
 const ipfsResult = ref<{ results?: string[] }>({});
 const { params } = useRoute();
 const jobId = ref(String(params.id) || "");
@@ -179,7 +182,6 @@ watch(job, async (newJob) => {
       ipfsResult.value = resultResponse;
     }
   } catch (error) {
-    console.error('Error while processing job update:', error);
   } finally {
     loading.value = false;
   }
@@ -191,8 +193,16 @@ const isJobPoster = computed(() => {
   return connected.value && job.value && publicKey.value?.toString() === job.value.project;
 });
 
-// Add a function to handle signing
-const signMessage = async () => {
+// Add verification status
+const isVerified = ref(false);
+
+// Modify signMessage to handle verification
+const signMessage = async (forceNew = false) => {
+  // Return stored auth header if available and not forcing new
+  if (storedAuthHeader.value && !forceNew) {
+    return storedAuthHeader.value;
+  }
+
   if (!connected.value || !publicKey.value || !wallet.value) {
     throw new Error('Wallet not connected or not found');
   }
@@ -205,12 +215,61 @@ const signMessage = async () => {
   const signedMessage = await adapter.signMessage(encodedMessage);
   const signature = Buffer.from(signedMessage).toString('base64');
   const publicKeyString = publicKey.value.toString();
-  return `${publicKeyString}:${signature}`;
+  const authHeader = `${publicKeyString}:${signature}`;
+  
+  // Store the auth header for future use
+  storedAuthHeader.value = authHeader;
+  isVerified.value = true;
+  return authHeader;
 };
 
-// Modify stopJob to use signMessage
+// Add a computed property to check if verification is needed
+const needsVerification = computed(() => {
+  return job.value && 
+    (job.value.state === 'RUNNING' || job.value.state === 1) && 
+    isJobPoster.value;
+});
+
+// Instead of separate watchers for connected & needsVerification,
+// unify them so it only attempts to sign once on page load or state changes.
+watch(
+  [connected, needsVerification],
+  async ([newConnected, newNeedsVerification]) => {
+    // Whenever either "connected" or "needsVerification" changes, 
+    // re-check if the user must sign.
+    if (newConnected && newNeedsVerification && !isVerified.value) {
+      try {
+        await signMessage(true);
+        toast.success('Wallet verified successfully');
+      } catch (error) {
+        toast.error('Failed to verify wallet');
+      }
+    }
+    // If user becomes disconnected, reset
+    else if (!newConnected) {
+      isVerified.value = false;
+      storedAuthHeader.value = null;
+      // Close the websocket if it's open
+      if (ws) {
+        ws.close();
+        isWebSocketConnected = false;
+      }
+    }
+  },
+  { immediate: true }
+);
+
+// Modify stopJob to check verification
 const stopJob = async () => {
   if (!job.value) return;
+  if (!isVerified.value) {
+    try {
+      await signMessage(true);
+    } catch (error) {
+      toast.error('Please verify your wallet first');
+      return;
+    }
+  }
   try {
     loading.value = true;
     const authorizationHeader = await signMessage();
@@ -223,9 +282,8 @@ const stopJob = async () => {
       },
     });
     const text = await response.text();
-    console.log('Response status:', response.status);
-    console.log('Response body:', text);
     if (response.status === 403) {
+      storedAuthHeader.value = null;
       toast.error(`Authentication failed: ${text}`);
       return;
     }
@@ -233,9 +291,11 @@ const stopJob = async () => {
       toast.success(`Success: ${text}`);
       return;
     }
+    // Refresh job data
     const updatedJob = await nosana.value.jobs.get(jobId.value);
     job.value = updatedJob;
   } catch (e: any) {
+    storedAuthHeader.value = null;
     toast.error(`Error stopping job: ${e.toString()}`);
   } finally {
     loading.value = false;
@@ -244,28 +304,46 @@ const stopJob = async () => {
 
 // WebSocket code for streaming logs in real-time while job is running
 // ─────────────────────────────────────────────────────────────
-// Overhauled multi-layer download progress handling
-// ─────────────────────────────────────────────────────────────
 
 let ws: WebSocket | null = null;
 let isWebSocketConnected = false;
 
+// Add a function to check if we should connect to WebSocket
+const shouldConnectWebSocket = computed(() => {
+  return job.value && 
+    (job.value.state === 'RUNNING' || job.value.state === 1) && 
+    connected.value && 
+    isVerified.value &&
+    isJobPoster.value;
+});
+
+// Modify the job watcher to use shouldConnectWebSocket
+watch(
+  job,
+  async (newJob, oldJob) => {
+    if (shouldConnectWebSocket.value && !isWebSocketConnected) {
+      await connectWebSocket();
+    } else if (ws && !(newJob?.state === 'RUNNING' || newJob?.state === 1)) {
+      ws.close();
+      isWebSocketConnected = false;
+    }
+  },
+  { immediate: true, deep: true }
+);
+
+// Modify connectWebSocket to be simpler since checks are done before calling
 const connectWebSocket = async () => {
-  if (!job.value || !job.value.node || !connected.value || !publicKey.value || !wallet.value) {
-    console.error('Cannot connect WebSocket - missing job, node, or wallet connection');
-    return;
-  }
   if (ws) {
     ws.close();
     ws = null;
   }
+
   const nodeAddress = job.value.node.toString();
   const frpServer = useRuntimeConfig().public.frpServer || 'node.k8s.prd.nos.ci';
   let authHeader = '';
   try {
     authHeader = await signMessage();
   } catch (error) {
-    console.error('Error creating auth header:', error);
     return;
   }
   const wsUrl = `wss://${nodeAddress}.${frpServer}/log`;
@@ -275,7 +353,6 @@ const connectWebSocket = async () => {
 
     ws.onopen = () => {
       isWebSocketConnected = true;
-      console.log('WebSocket connected');
       const authMessage = {
         path: '/log',
         header: authHeader,
@@ -387,48 +464,21 @@ const connectWebSocket = async () => {
           });
         }
       } catch (err: any) {
-        console.error('Error parsing log data:', err);
-        console.error('Raw message:', event.data);
         toast.error('Error parsing log data: ' + err.toString());
       }
     };
 
     ws.onclose = () => {
-      console.log('WebSocket closed');
       ws = null;
       isWebSocketConnected = false;
     };
     ws.onerror = (error) => {
-      console.error('Error connecting to log stream', error);
       isWebSocketConnected = false;
     };
   } catch (error) {
-    console.error('Error creating WebSocket:', error);
     isWebSocketConnected = false;
   }
 };
-
-watch(
-  job,
-  (newJob, oldJob) => {
-    // If the job transitions to RUNNING, connect to the WebSocket if not already connected
-    if (
-      newJob &&
-      (newJob.state === 'RUNNING' || newJob.state === 1) &&
-      (!oldJob || (oldJob.state !== 'RUNNING' && oldJob.state !== 1)) &&
-      !isWebSocketConnected
-    ) {
-      connectWebSocket();
-      isWebSocketConnected = true;
-    }
-    // If the job is no longer running and the WS is open, close it
-    else if (ws && !(newJob.state === 'RUNNING' || newJob.state === 1)) {
-      console.log('Closing WebSocket because job is no longer running');
-      ws.close();
-      isWebSocketConnected = false;
-    }
-  }
-);
 
 // Ensure we close the WebSocket on unmount
 onUnmounted(() => {
