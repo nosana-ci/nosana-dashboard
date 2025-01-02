@@ -18,6 +18,11 @@
                 Stop Job
               </button>
             </div>
+            <div v-if="isJobPoster && (job.state === 'RUNNING' || job.state === 1)" class="mr-4">
+              <button @click="extendJob" :class="{ 'is-loading': loadingExtend }" class="button is-warning is-medium is-outlined">
+                Extend Job
+              </button>
+            </div>
             <ExplorerJobStatus class="mr-2" :status="jobStatus ? jobStatus : job.state"></ExplorerJobStatus>
           </div>
         </div>
@@ -127,6 +132,7 @@ const ipfsResult = ref<{ results?: string[] }>({});
 const { params } = useRoute();
 const jobId = ref(String(params.id) || "");
 const loading = ref(false);
+const loadingExtend = ref(false);
 const activeTab = ref("logs");
 const jobStatus = ref<string | null>(null);
 const logs = ref<any[] | null>(null);
@@ -299,6 +305,52 @@ const stopJob = async () => {
     toast.error(`Error stopping job: ${e.toString()}`);
   } finally {
     loading.value = false;
+  }
+};
+
+// 2) The new "extendJob" function which calls the SDK's extend:
+const extendJob = async () => {
+  if (!job.value) return;
+  if (!isVerified.value) {
+    try {
+      await signMessage(true);
+    } catch (error) {
+      toast.error('Please verify your wallet first');
+      return;
+    }
+  }
+
+  try {
+    loadingExtend.value = true;
+    // For demonstration, let's add 300 more seconds to jobTimeout:
+    const extensionSeconds = 300;
+
+    // First get the market from the job
+    const market = job.value.market;
+    if (!market) {
+      throw new Error('No market found for this job');
+    }
+
+    // Call extend with proper error handling
+    try {
+      const result = await nosana.value.jobs.extend(jobId.value, extensionSeconds);
+      toast.success(`Job extended successfully. Tx: ${result.tx}`);
+      // Refresh job to see updated jobTimeout in UI
+      await refreshJob();
+    } catch (error: any) {
+      // Handle specific error cases
+      if (error.message.includes('Account does not exist')) {
+        toast.error('Market account not found. Please try again later.');
+      } else if (error.message.includes('job cannot be extended')) {
+        toast.error('Job cannot be extended - it must be in running state.');
+      } else {
+        toast.error(`Error extending job: ${error.message}`);
+      }
+    }
+  } catch (error: any) {
+    toast.error(`Error extending job: ${error.message}`);
+  } finally {
+    loadingExtend.value = false;
   }
 };
 
