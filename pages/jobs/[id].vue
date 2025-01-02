@@ -30,11 +30,8 @@
 
         <div class="tabs mt-5">
           <ul>
-            <li :class="{ 'is-active': activeTab === 'jobLogs' }">
-              <a @click.prevent="activeTab = 'jobLogs'">Job Logs</a>
-            </li>
-            <li :class="{ 'is-active': activeTab === 'nodeLogs' }">
-              <a @click.prevent="activeTab = 'nodeLogs'">Node Logs</a>
+            <li :class="{ 'is-active': activeTab === 'logs' }">
+              <a @click.prevent="activeTab = 'logs'">Logs</a>
             </li>
             <li :class="{ 'is-active': activeTab === 'result' }">
               <a @click.prevent="activeTab = 'result'">Result</a>
@@ -51,13 +48,21 @@
           <div v-show="activeTab === 'info'" class="p-1 py-4 has-background-white-bis">
             <VueJsonPretty :data="job.jobDefinition" show-icon show-line-number />
           </div>
-          <div v-show="activeTab === 'jobLogs'" class="p-1 py-4 has-background-white-bis">
+          <div v-show="activeTab === 'logs'" class="p-1 py-4 has-background-white-bis">
             <div v-if="job.state === 'RUNNING' || job.state === 1"
               class="is-family-monospace has-background-black has-text-white box light-mode">
               <div v-if="logs && logs.length > 0" style="counter-reset: line">
                 <div v-for="step in logs" :key="step.id">
                   <div v-for="(log, ik) in step.logs.split('\n')" :key="ik" class="row-count">
                     <span class="pre" v-html="log.slice(0, 10000)" />
+                  </div>
+                  <div v-if="step.progress" class="progress-bar mb-2">
+                    <div class="progress-text">
+                      {{ step.progress.status }} | {{ step.progress.id }} | {{ step.progress.sizeText }}
+                    </div>
+                    <progress class="progress is-primary" :value="step.progress.current" :max="step.progress.total">
+                      {{ step.progress.progress }}
+                    </progress>
                   </div>
                 </div>
               </div>
@@ -68,18 +73,8 @@
             <div v-else-if="ipfsResult.results && ipfsResult.results[0] === 'nos/secret'">
               Results are secret
             </div>
-            <ExplorerJobResult v-else-if="(ipfsResult && job.state === 'COMPLETED') || job.state === 2
-            " :ipfs-result="ipfsResult" :ipfs-job="job.jobDefinition" />
-          </div>
-          <div v-show="activeTab === 'nodeLogs'" class="p-1 py-4 has-background-white-bis">
-            <div v-if="logs && logs.length > 0" style="counter-reset: line">
-              <div v-for="step in logs" :key="step.id">
-                <div v-for="(log, ik) in step.logs.split('\n')" :key="ik" class="row-count">
-                  <span class="pre" v-html="log.slice(0, 10000)" />
-                </div>
-              </div>
-            </div>
-            <span v-else>Waiting for node logs...</span>
+            <ExplorerJobResult v-else-if="(ipfsResult && job.state === 'COMPLETED') || job.state === 2" 
+              :ipfs-result="ipfsResult" :ipfs-job="job.jobDefinition" />
           </div>
           <div v-show="activeTab === 'result'" class="p-1 py-4 has-background-white-bis">
             <VueJsonPretty :data="job.jobResult" show-icon show-line-number />
@@ -129,7 +124,7 @@ const ipfsResult = ref<{ results?: string[] }>({});
 const { params } = useRoute();
 const jobId = ref(String(params.id) || "");
 const loading = ref(false);
-const activeTab = ref("jobLogs");
+const activeTab = ref("logs");
 const jobStatus = ref<string | null>(null);
 const logs = ref<any[] | null>(null);
 
@@ -145,6 +140,9 @@ const { data: job, pending: loadingJob, refresh: refreshJob } = useAPI(
 const { pause: pauseJobPolling, resume: resumeJobPolling } = useIntervalFn(() => {
   refreshJob();
 }, 30000, { immediate: false });
+
+// Add progressBars ref at the top with other refs
+const progressBars = ref<{ [key: string]: any }>({});
 
 watch(job, async (newJob) => {
   if (!newJob) return;
@@ -164,12 +162,12 @@ watch(job, async (newJob) => {
     resumeJobPolling();
   }
 
-  // If job is RUNNING, initialize logs for streaming
-  if ((newJob.state === 'RUNNING' || newJob.state === 1) && newJob.jobDefinition && !logs.value) {
-    logs.value = [];
+  // Initialize logs when job starts running
+  if ((newJob.state === 'RUNNING' || newJob.state === 1) && newJob.jobDefinition) {
+    if (!logs.value) logs.value = [];
   }
 
-  // Fetch IPFS results if needed, etc.
+  // Fetch IPFS results if needed
   try {
     loading.value = true;
 
@@ -179,7 +177,6 @@ watch(job, async (newJob) => {
     ) {
       const resultResponse = await getIpfs(newJob.ipfsResult);
       ipfsResult.value = resultResponse;
-      // ...existing logic for artifact detection, marking job as FAILED, etc.
     }
   } catch (error) {
     console.error('Error while processing job update:', error);
@@ -245,16 +242,14 @@ const stopJob = async () => {
   }
 };
 
-// ─────────────────────────────────────────────────────────────
 // WebSocket code for streaming logs in real-time while job is running
+// ─────────────────────────────────────────────────────────────
+// Overhauled multi-layer download progress handling
 // ─────────────────────────────────────────────────────────────
 
 let ws: WebSocket | null = null;
-
-// Add a flag to track WebSocket connection state
 let isWebSocketConnected = false;
 
-// Modify connectWebSocket to use signMessage
 const connectWebSocket = async () => {
   if (!job.value || !job.value.node || !connected.value || !publicKey.value || !wallet.value) {
     console.error('Cannot connect WebSocket - missing job, node, or wallet connection');
@@ -274,9 +269,13 @@ const connectWebSocket = async () => {
     return;
   }
   const wsUrl = `wss://${nodeAddress}.${frpServer}/log`;
+
   try {
     ws = new WebSocket(wsUrl);
+
     ws.onopen = () => {
+      isWebSocketConnected = true;
+      console.log('WebSocket connected');
       const authMessage = {
         path: '/log',
         header: authHeader,
@@ -287,49 +286,149 @@ const connectWebSocket = async () => {
       };
       ws?.send(JSON.stringify(authMessage));
     };
+
     ws.onmessage = (event: MessageEvent) => {
       try {
         const outerData = JSON.parse(event.data);
-        const innerData = JSON.parse(outerData.data); // Parse the nested JSON string
-        if (innerData?.log) {
-          const convertedLog = ansi.ansi_to_html(innerData.log);
+        
+        // Handle empty responses
+        if (!outerData.data && !outerData.type) return;
+        
+        // If it's a direct message (not wrapped in data)
+        const innerData = outerData.data ? JSON.parse(outerData.data) : outerData;
+        
+        if (!innerData) return;
+
+        // Convert ANSI codes in any text field we have
+        const convertedLog = ansi.ansi_to_html(innerData.log || '');
+
+        // Handle regular logs and container logs
+        if ((innerData.log && !innerData.type) || innerData.type === 'container') {
           logs.value?.push({
             id: Date.now(),
-            logs: convertedLog,
+            logs: convertedLog
+          });
+          return;
+        }
+
+        // Handle progress bar updates
+        if ((innerData.type === 'multi-process-bar-update' || innerData.method === 'MultiProgressBarReporter.update') && innerData.payload?.event) {
+          const event = innerData.payload.event;
+          const layerId = event.id;
+
+          // Handle completion states
+          if (
+            event.status === 'Download complete' ||
+            event.status === 'Pull complete' ||
+            event.status === 'Already exists'
+          ) {
+            if (progressBars.value[layerId]) {
+              const index = logs.value?.findIndex(
+                (item) => item.id === progressBars.value[layerId]
+              );
+              if (index !== undefined && index !== -1 && logs.value) {
+                logs.value.splice(index, 1);
+              }
+              delete progressBars.value[layerId];
+            }
+
+            logs.value?.push({
+              id: Date.now(),
+              logs: `${event.status}: ${layerId}`
+            });
+            return;
+          }
+
+          // Handle active download/extract states
+          if (event.status === 'Downloading' || event.status === 'Extracting') {
+            const current = event.progressDetail?.current || 0;
+            const total = event.progressDetail?.total || 0;
+
+            // Format size for display
+            const formatSize = (bytes: number) => {
+              if (!bytes || isNaN(bytes)) return '0B';
+              const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+              const i = Math.floor(Math.log(bytes) / Math.log(1024));
+              return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`;
+            };
+
+            const progressText = `${event.status} | ${layerId} | ${formatSize(current)}/${formatSize(total)}`;
+            const progressObj = {
+              id: progressBars.value[layerId] || Date.now(),
+              logs: progressText,
+              progress: {
+                status: event.status,
+                id: layerId,
+                current: current,
+                total: total,
+                progress: progressText,
+                sizeText: `${formatSize(current)}/${formatSize(total)}`
+              }
+            };
+
+            // Update existing progress bar or create new one
+            if (progressBars.value[layerId]) {
+              const index = logs.value?.findIndex(
+                (item) => item.id === progressBars.value[layerId]
+              );
+              if (index !== undefined && index !== -1 && logs.value) {
+                logs.value[index] = progressObj;
+              }
+            } else {
+              logs.value?.push(progressObj);
+              progressBars.value[layerId] = progressObj.id;
+            }
+          }
+        } else if (innerData.log) {
+          // Handle all other log messages
+          logs.value?.push({
+            id: Date.now(),
+            logs: convertedLog
           });
         }
-      } catch (err) {
-        console.error('Error parsing log data');
+      } catch (err: any) {
+        console.error('Error parsing log data:', err);
+        console.error('Raw message:', event.data);
+        toast.error('Error parsing log data: ' + err.toString());
       }
     };
-    ws.onclose = (event) => {
+
+    ws.onclose = () => {
+      console.log('WebSocket closed');
       ws = null;
       isWebSocketConnected = false;
     };
     ws.onerror = (error) => {
-      console.error('Error connecting to log stream');
+      console.error('Error connecting to log stream', error);
+      isWebSocketConnected = false;
     };
   } catch (error) {
     console.error('Error creating WebSocket:', error);
+    isWebSocketConnected = false;
   }
 };
 
-// Modify the watch logic to ensure WebSocket connection only on state transition
-watch(job, (newJob, oldJob) => {
-  if (
-    newJob &&
-    (newJob.state === 'RUNNING' || newJob.state === 1) &&
-    (!oldJob || oldJob.state !== 'RUNNING' && oldJob.state !== 1) &&
-    !isWebSocketConnected
-  ) {
-    connectWebSocket();
-    isWebSocketConnected = true;
-  } else if (ws && !(newJob.state === 'RUNNING' || newJob.state === 1)) {
-    console.log('Closing WebSocket because job is no longer running');
-    ws.close();
-    isWebSocketConnected = false;
+watch(
+  job,
+  (newJob, oldJob) => {
+    // If the job transitions to RUNNING, connect to the WebSocket if not already connected
+    if (
+      newJob &&
+      (newJob.state === 'RUNNING' || newJob.state === 1) &&
+      (!oldJob || (oldJob.state !== 'RUNNING' && oldJob.state !== 1)) &&
+      !isWebSocketConnected
+    ) {
+      connectWebSocket();
+      isWebSocketConnected = true;
+    }
+    // If the job is no longer running and the WS is open, close it
+    else if (ws && !(newJob.state === 'RUNNING' || newJob.state === 1)) {
+      console.log('Closing WebSocket because job is no longer running');
+      ws.close();
+      isWebSocketConnected = false;
+    }
   }
-});
+);
 
 // Ensure we close the WebSocket on unmount
 onUnmounted(() => {
@@ -342,5 +441,17 @@ onUnmounted(() => {
 <style lang="scss" scoped>
 .pre {
   white-space: pre-wrap;
+}
+
+.progress.is-primary::-webkit-progress-bar {
+  background-color: #dbdbdb;
+}
+
+.progress.is-primary::-webkit-progress-value {
+  background-color: #00d1b2;
+}
+
+.progress.is-primary::-moz-progress-bar {
+  background-color: #00d1b2;
 }
 </style>
