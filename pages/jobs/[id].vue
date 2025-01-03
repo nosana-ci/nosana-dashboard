@@ -8,31 +8,33 @@
         <div class="is-flex is-align-items-center is-justify-content-space-between mb-4">
           <div></div>
           <div class="is-flex is-align-items-center is-justify-content-center">
-            <div v-if="job.state === 1 && job.jobDefinition && job.jobDefinition.ops && job.jobDefinition.ops[0] && job.jobDefinition.ops[0].args.expose" class="mr-4">
-              <a :href="`https://${job.address}.node.k8s.prd.nos.ci`" target="_blank" class="button is-primary is-medium is-outlined">
+            <div
+              v-if="job.state === 1 && job.jobDefinition && job.jobDefinition.ops && job.jobDefinition.ops[0] && job.jobDefinition.ops[0].args.expose"
+              class="mr-4">
+              <a :href="`https://${job.address}.node.k8s.prd.nos.ci`" target="_blank"
+                class="button is-primary is-medium is-outlined">
                 Visit Service
               </a>
             </div>
             <div v-if="isJobPoster && (job.state === 'RUNNING' || job.state === 1)" class="mr-4">
-              <button @click="stopJob" :class="{ 'is-loading': loading }" class="button is-danger is-medium is-outlined">
+              <button @click="stopJob" :class="{ 'is-loading': loading }"
+                class="button is-danger is-medium is-outlined">
                 Stop Job
               </button>
             </div>
             <div v-if="isJobPoster && (job.state === 'RUNNING' || job.state === 1)" class="mr-4">
-              <button @click="extendJob" :class="{ 'is-loading': loadingExtend }" class="button is-warning is-medium is-outlined">
+              <button @click="extendJob" :class="{ 'is-loading': loadingExtend }"
+                class="button is-warning is-medium is-outlined">
                 Extend Job
               </button>
             </div>
             <div class="mr-4">
-              <button
-                @click="repostJob"
-                :class="{ 'is-loading': loadingRepost }"
-                class="button is-primary is-medium is-outlined"
-              >
+              <button @click="repostJob" :class="{ 'is-loading': loadingRepost }"
+                class="button is-primary is-medium is-outlined">
                 Repost
               </button>
             </div>
-            <ExplorerJobStatus class="mr-2" :status="jobStatus ? jobStatus : job.state"></ExplorerJobStatus>
+            <ExplorerJobStatus class="mr-2" :status="job.state"></ExplorerJobStatus>
           </div>
         </div>
 
@@ -95,7 +97,7 @@
             <div v-else-if="ipfsResult.results && ipfsResult.results[0] === 'nos/secret'">
               Results are secret
             </div>
-            <ExplorerJobResult v-else-if="(ipfsResult && job.state === 'COMPLETED') || job.state === 2" 
+            <ExplorerJobResult v-else-if="(ipfsResult && job.state === 'COMPLETED') || job.state === 2"
               :ipfs-result="ipfsResult" :ipfs-job="job.jobDefinition" />
           </div>
           <div v-show="activeTab === 'result'" class="p-1 py-4 has-background-white-bis">
@@ -137,13 +139,7 @@ import { useSDK } from '~/composables/useSDK';
 import { useAPI } from '~/composables/useAPI';
 import { useIpfs } from '~/composables/useIpfs';
 import { useRuntimeConfig } from '#imports';
-import { PublicKey } from '@solana/web3.js';
-import { BN } from '@coral-xyz/anchor';
-import { getAssociatedTokenAddress } from '@solana/spl-token';
 import { useMarkets } from '~/composables/useMarkets';
-import { Mode, ValidationSeverity, type ValidationError } from 'vanilla-jsoneditor';
-import { validateJobDefinition, type Market, type IValidation } from "@nosana/sdk";
-import JsonEditorVue from 'json-editor-vue';
 import { useLocalStorage } from '@vueuse/core';
 
 const toast = useToast();
@@ -159,7 +155,6 @@ const jobId = ref(String(params.id) || "");
 const loading = ref(false);
 const loadingExtend = ref(false);
 const activeTab = ref("logs");
-const jobStatus = ref<string | null>(null);
 const logs = ref<any[] | null>(null);
 
 const { getIpfs } = useIpfs();
@@ -167,13 +162,14 @@ const artifacts = ref(null);
 const ipfsGateway = ref(nosana.value ? nosana.value.ipfs.config.gateway : null);
 
 const { data: job, pending: loadingJob, refresh: refreshJob } = useAPI(
-  `https://dashboard.k8s.prd.nos.ci/api/jobs/${jobId.value}`,
+  `/api/jobs/${jobId.value}`,
   { watch: false }
 );
 
 const { pause: pauseJobPolling, resume: resumeJobPolling } = useIntervalFn(() => {
+  console.log("REFRESHING");
   refreshJob();
-}, 30000, { immediate: false });
+}, 3000, { immediate: false });
 
 // Add progressBars ref at the top with other refs
 const progressBars = ref<{ [key: string]: any }>({});
@@ -189,23 +185,14 @@ const jobStateMapping: { [key: string]: number } = {
 watch(job, async (newJob) => {
   if (!newJob) return;
 
-  // Update jobStatus
-  if (newJob.state === 2 || newJob.state === 'COMPLETED') {
-    jobStatus.value = 'COMPLETED';
-    pauseJobPolling();
-  } else if (newJob.state === 3 || newJob.state === 'STOPPED') {
-    jobStatus.value = 'STOPPED';
-    pauseJobPolling();
-  } else if (newJob.state === 'FAILED') {
-    jobStatus.value = 'FAILED';
-    pauseJobPolling();
-  } else if (newJob.state === 1 || newJob.state === 'RUNNING') {
-    jobStatus.value = null;
+  if (newJob.state < 2) {
     resumeJobPolling();
     // Initialize logs only if wallet is connected
     if (connected.value && !logs.value) {
       logs.value = [];
     }
+  } else {
+    pauseJobPolling();
   }
 
   // Fetch IPFS results if needed
@@ -268,8 +255,8 @@ const signMessage = async (forceNew = false) => {
 };
 
 const needsVerification = computed(() => {
-  return job.value && 
-    (job.value.state === 'RUNNING' || job.value.state === 1) && 
+  return job.value &&
+    (job.value.state === 'RUNNING' || job.value.state === 1) &&
     isJobPoster.value &&
     !isVerified.value;
 });
@@ -424,7 +411,7 @@ const extendJob = async () => {
       }
     }
 
-    const result = await nosana.value.jobs.extend(job.value.address, 300); 
+    const result = await nosana.value.jobs.extend(job.value.address, 300);
     toast.success(`Job has been extended! Transaction: ${result.tx}`);
 
     const updated = await nosana.value.jobs.get(job.value.address);
@@ -471,7 +458,7 @@ const repostJob = async () => {
     toast.error("No valid job address to repost.");
     return;
   }
-  
+
   try {
     loadingRepost.value = true;
     router.push({
@@ -531,7 +518,7 @@ const connectWebSocket = async () => {
 
   const nodeAddress = job.value.node.toString();
   const frpServer = useRuntimeConfig().public.frpServer || 'node.k8s.prd.nos.ci';
-  
+
   let authHeader = '';
   try {
     authHeader = await signMessage();
@@ -581,22 +568,22 @@ const connectWebSocket = async () => {
       isConnecting.value = false;
       try {
         const outerData = JSON.parse(event.data);
-        
+
         // Handle empty responses
         if (!outerData.data && !outerData.type) return;
-        
+
         // If it's a direct message (not wrapped in data)
         const innerData = outerData.data ? JSON.parse(outerData.data) : outerData;
-        
+
         if (!innerData) return;
 
         // Convert ANSI codes in any text field we have
         const convertedLog = ansi.ansi_to_html(innerData.log || '');
 
         // Handle progress bar updates
-        if ((innerData.type === 'multi-process-bar-update' || 
-             innerData.method === 'MultiProgressBarReporter.update') && 
-             innerData.payload?.event) {
+        if ((innerData.type === 'multi-process-bar-update' ||
+          innerData.method === 'MultiProgressBarReporter.update') &&
+          innerData.payload?.event) {
           const event = innerData.payload.event;
           const layerId = event.id;
 
@@ -750,22 +737,6 @@ onUnmounted(() => {
     ws.close();
   }
 });
-
-// Add validator function near other functions
-const validator = (json: any): ValidationError[] => {
-  const validation: IValidation<any> = validateJobDefinition(json);
-  const errors: ValidationError[] = [];
-  if (validation.errors?.length) {
-    validation.errors.forEach((error: any) => {
-      errors.push({
-        path: error.path.replace('$input.', '').replace('$input', '').split('.'),
-        message: error.message || 'Invalid value',
-        severity: ValidationSeverity.error
-      });
-    });
-  }
-  return errors;
-};
 
 </script>
 <style lang="scss" scoped>
