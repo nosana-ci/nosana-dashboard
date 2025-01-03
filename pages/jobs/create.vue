@@ -643,4 +643,89 @@ const postJob = async () => {
   }
   loading.value = false;
 }
+
+watchEffect(async () => {
+  // Check for repost parameters
+  if (route.query?.fromRepost === 'true' && route.query?.jobAddress) {
+    const address = route.query.jobAddress.toString();
+    
+    try {
+      loading.value = true;
+
+      // Set step to post-job immediately
+      if (route.query?.step === 'post-job') {
+        step.value = 'post-job';
+      }
+
+      // 1. Fetch the job using the same API endpoint
+      const response = await fetch(
+        `https://dashboard.k8s.prd.nos.ci/api/jobs/${address}`
+      );
+      
+      if (!response.ok) {
+        throw new Error(`Failed to load job with address ${address}`);
+      }
+      
+      const jobData = await response.json();
+      if (!jobData?.jobDefinition) {
+        throw new Error('No job definition found in the job data');
+      }
+
+      // 2. Set the job definition
+      jobDefinition.value = jobData.jobDefinition;
+
+      // 3. Force GPU for container/run operations
+      if (jobDefinition.value.ops?.length) {
+        jobDefinition.value.ops.forEach((op) => {
+          if (op.type === 'container/run') {
+            if (!op.args) op.args = {};
+            op.args.gpu = true;
+          }
+        });
+      }
+
+      // 4. Wait for markets to load if needed
+      if (!markets.value && !loadingMarkets.value) {
+        await getMarkets();
+      }
+
+      // 5. Try to select the original market first
+      if (jobData.market && markets.value) {
+        const originalMarket = markets.value.find(
+          m => m.address.toString() === jobData.market
+        );
+        if (originalMarket) {
+          market.value = originalMarket;
+          return; // Exit if we found the original market
+        }
+      }
+
+      // 6. Otherwise find first GPU market
+      if (markets.value?.length) {
+        const gpuMarket = markets.value.find(m => {
+          return m.jobPrice > 0 && (
+            m.gpu || 
+            (m.requirements && m.requirements.gpu) ||
+            m.name?.toLowerCase().includes('gpu')
+          );
+        });
+
+        if (gpuMarket) {
+          market.value = gpuMarket;
+          toast.success('Selected GPU market automatically');
+        } else {
+          toast.warning('No GPU market found. Please select a market manually.');
+        }
+      }
+
+    } catch (err: any) {
+      toast.error('Error setting up reposted job: ' + err.toString());
+      console.error('Repost setup error:', err);
+      // On error, reset step to first page
+      step.value = 'job-definition';
+    } finally {
+      loading.value = false;
+    }
+  }
+});
 </script>

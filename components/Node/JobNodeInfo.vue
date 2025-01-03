@@ -28,15 +28,15 @@
           <td>Country</td>
           <td>{{ nodeSpecs.country }}</td>
         </tr>
-        <tr v-if="nodeSpecs?.bandwidth">
+        <tr v-if="nodeSpecs?.bandwidth?.ping">
           <td>Ping</td>
           <td>{{ nodeSpecs.bandwidth.ping.toFixed(1) }} ms</td>
         </tr>
-        <tr v-if="nodeSpecs?.bandwidth">
+        <tr v-if="nodeSpecs?.bandwidth?.download">
           <td>Download Speed</td>
           <td>{{ nodeSpecs.bandwidth.download.toFixed(1) }} Mbps</td>
         </tr>
-        <tr v-if="nodeSpecs?.bandwidth">
+        <tr v-if="nodeSpecs?.bandwidth?.upload">
           <td>Upload Speed</td>
           <td>{{ nodeSpecs.bandwidth.upload.toFixed(1) }} Mbps</td>
         </tr>

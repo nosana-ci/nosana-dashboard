@@ -119,99 +119,6 @@
       <div v-else-if="loadingJob">Loading job..</div>
       <div v-else>Job not found</div>
     </div>
-
-    <div class="modal" :class="{ 'is-active': showRepostModal }">
-      <div class="modal-background" @click="showRepostModal = false"></div>
-      <div class="modal-card" style="width: 80vw; max-height: 80vh;">
-        <header class="modal-card-head">
-          <p class="modal-card-title">Repost Job</p>
-          <button class="delete" aria-label="close" @click="showRepostModal = false"></button>
-        </header>
-        <section class="modal-card-body">
-          <div class="columns">
-            <div class="column is-4">
-              <div class="field">
-                <label class="label">Market <span class="has-text-danger">*</span></label>
-                <div class="control">
-                  <div class="select is-fullwidth">
-                    <select v-model="repostMarket" required>
-                      <option :value="null">Select market</option>
-                      <option v-for="m in markets" :key="m.address.toString()" :value="m">
-                        {{ testgridMarkets.find((tgm: any) => tgm.address === m.address.toString())?.name || m.address.toString() }}
-                      </option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <div v-if="repostMarket" class="box mt-4">
-                <div class="field">
-                  <label class="label">Price per hour</label>
-                  <div class="control">
-                    {{ pricePerHour.toFixed(4) }} NOS/h (${{ (pricePerHour * nosPrice).toFixed(2) }}/h)
-                  </div>
-                </div>
-
-                <div class="field">
-                  <label class="label">Job Timeout (minutes) <span class="has-text-danger">*</span></label>
-                  <div class="control">
-                    <input 
-                      v-model.number="repostTimeout" 
-                      class="input" 
-                      type="number" 
-                      min="1"
-                      :max="repostMarket.jobTimeout / 60"
-                      placeholder="Minutes"
-                      required
-                    >
-                  </div>
-                </div>
-
-                <div class="field">
-                  <label class="label">Max price</label>
-                  <div class="control">
-                    {{ maxPrice.toFixed(4) }} NOS (${{ (maxPrice * nosPrice).toFixed(2) }})
-                  </div>
-                </div>
-
-                <div class="field">
-                  <label class="label">Network fee (10%)</label>
-                  <div class="control">
-                    {{ networkFee.toFixed(4) }} NOS (${{ (networkFee * nosPrice).toFixed(2) }})
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="column">
-              <div class="field">
-                <label class="label">Job Definition <span class="has-text-danger">*</span></label>
-                <div class="control">
-                  <JsonEditorVue 
-                    v-if="repostJobDefinition"
-                    v-model="repostJobDefinition"
-                    :validator="validator"
-                    :mode="Mode.text"
-                    :mainMenuBar="true"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-        <footer class="modal-card-foot">
-          <button 
-            class="button is-primary" 
-            :class="{ 'is-loading': loadingRepost }" 
-            :disabled="!repostJobDefinition || !repostMarket || !repostTimeout || !connected"
-            @click="repostJobWithTimeout"
-          >
-            Repost
-          </button>
-          <button class="button" @click="showRepostModal = false">Cancel</button>
-        </footer>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -532,12 +439,7 @@ const extendJob = async () => {
 };
 
 // Add these refs near the top with other refs
-const showRepostModal = ref(false);
-const repostTimeout = ref(60);
 const loadingRepost = ref(false);
-const repostJobDefinition = ref(null);
-const repostMarket = ref<Market | null>(null);
-const nosPrice = ref(0);
 
 // Remove duplicate imports and fix market types
 const { markets, getMarkets, loadingMarkets } = useMarkets();
@@ -564,70 +466,24 @@ const networkFee = computed(() => {
 });
 
 // Modify the repostJob function to initialize the values
-const repostJob = () => {
-  if (!job.value?.jobDefinition) {
-    toast.error("No job definition found to repost.");
+const repostJob = async () => {
+  if (!job.value?.address) {
+    toast.error("No valid job address to repost.");
     return;
   }
   
-  // Deep clone the job definition to make it editable
-  repostJobDefinition.value = JSON.parse(JSON.stringify(job.value.jobDefinition));
-  
-  // Initialize market selection with current market
-  if (markets.value) {
-    const currentMarket = markets.value.find(m => m.address.toString() === job.value.market);
-    repostMarket.value = currentMarket || null;
-  }
-  
-  showRepostModal.value = true;
-};
-
-// Update the repostJobWithTimeout function with proper validation
-const repostJobWithTimeout = async () => {
-  if (!connected.value) {
-    toast.error("Please connect your wallet first!");
-    return;
-  }
-
-  if (!repostJobDefinition.value) {
-    toast.error("Please provide a job definition.");
-    return;
-  }
-
-  if (!repostMarket.value) {
-    toast.error("Please select a market.");
-    return;
-  }
-
-  if (!repostTimeout.value) {
-    toast.error("Please specify a job timeout.");
-    return;
-  }
-
-  // Validate job definition
-  const validation = validateJobDefinition(repostJobDefinition.value);
-  if (validation.errors?.length) {
-    toast.error("Invalid job definition. Please check the errors in the editor.");
-    return;
-  }
-
   try {
     loadingRepost.value = true;
-
-    // Pin the current job definition to IPFS
-    const ipfsHash = await nosana.value.ipfs.pin(repostJobDefinition.value);
-    console.log('ipfs uploaded!', nosana.value.ipfs.config.gateway + ipfsHash);
-
-    // List a new job using the selected market
-    const response = await nosana.value.jobs.list(ipfsHash, repostTimeout.value * 60, repostMarket.value.address);
-
-    toast.success(`Successfully created job ${response.job}`);
-    showRepostModal.value = false;
-    // Sleep a bit, then nav to the newly posted job
-    await new Promise((r) => setTimeout(r, 3000));
-    router.push('/jobs/' + response.job);
-  } catch (e: any) {
-    toast.error(e.toString());
+    router.push({
+      path: '/jobs/create',
+      query: {
+        fromRepost: 'true',
+        step: 'post-job',
+        jobAddress: job.value.address,
+      },
+    });
+  } catch (error: any) {
+    toast.error(`Error preparing repost: ${error.toString()}`);
   } finally {
     loadingRepost.value = false;
   }
@@ -637,27 +493,41 @@ let ws: WebSocket | null = null;
 let isWebSocketConnected = false;
 const isConnecting = ref(false);
 
-const shouldConnectWebSocket = computed(() => {
-  return job.value && 
-    (job.value.state === 'RUNNING' || job.value.state === 1) && 
-    connected.value && 
-    isVerified.value &&
-    isJobPoster.value;
-});
-
 watch(
-  job,
-  async (newJob) => {
-    if (shouldConnectWebSocket.value && !isWebSocketConnected) {
+  () => job.value?.state,
+  async (newState, oldState) => {
+    // If job is not defined, bail out
+    if (!job.value) return;
+
+    // Determine if the state indicates the job is running
+    const isRunState = (newState === 'RUNNING' || newState === 1);
+    const wasRunState = (oldState === 'RUNNING' || oldState === 1);
+    const walletOk = connected.value && isVerified.value && isJobPoster.value;
+
+    // Only connect if transitioning to running state with valid wallet
+    if (isRunState && walletOk && !isWebSocketConnected) {
       isConnecting.value = true;
       await connectWebSocket();
-    } else if (ws && !(newJob?.state === 'RUNNING' || newJob?.state === 1)) {
+    }
+    // Close socket if job is no longer running
+    else if (ws && isWebSocketConnected && wasRunState && !isRunState) {
       ws.close();
       isWebSocketConnected = false;
       isConnecting.value = false;
     }
-  },
-  { immediate: true, deep: true }
+  }
+);
+
+// Also add a watch for wallet connection changes to handle disconnects
+watch(
+  () => connected.value && isVerified.value && isJobPoster.value,
+  (newWalletOk, oldWalletOk) => {
+    if (!newWalletOk && ws) {
+      ws.close();
+      isWebSocketConnected = false;
+      isConnecting.value = false;
+    }
+  }
 );
 
 const connectWebSocket = async () => {
@@ -680,7 +550,20 @@ const connectWebSocket = async () => {
   try {
     ws = new WebSocket(wsUrl);
 
+    // Add connection timeout
+    const connectionTimeout = setTimeout(() => {
+      if (!isWebSocketConnected) {
+        ws?.close();
+        isConnecting.value = false;
+        logs.value?.push({
+          id: Date.now(),
+          logs: "Could not establish WebSocket connection to get the logs. The node may be offline."
+        });
+      }
+    }, 10000); // 10 second timeout
+
     ws.onopen = () => {
+      clearTimeout(connectionTimeout);
       isWebSocketConnected = true;
       const authMessage = {
         path: '/log',
@@ -799,14 +682,34 @@ const connectWebSocket = async () => {
     };
 
     ws.onclose = () => {
+      clearTimeout(connectionTimeout);
       ws = null;
       isWebSocketConnected = false;
+      if (isConnecting.value) {
+        logs.value?.push({
+          id: Date.now(),
+          logs: "WebSocket connection closed. Could not establish connection to get the logs."
+        });
+        isConnecting.value = false;
+      }
     };
+
     ws.onerror = (error) => {
+      clearTimeout(connectionTimeout);
       isWebSocketConnected = false;
+      logs.value?.push({
+        id: Date.now(),
+        logs: "Error connecting to WebSocket. The node may be offline."
+      });
+      isConnecting.value = false;
     };
   } catch (error) {
     isWebSocketConnected = false;
+    logs.value?.push({
+      id: Date.now(),
+      logs: "Failed to establish WebSocket connection. The node may be offline."
+    });
+    isConnecting.value = false;
   }
 };
 
