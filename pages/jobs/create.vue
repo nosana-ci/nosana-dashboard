@@ -376,16 +376,8 @@
               <tr>
                 <td>Job timeout <span class="has-text-danger">*</span></td>
                 <td>
-                  <input 
-                    v-model.number="jobTimeout" 
-                    class="input"
-                    style="width: 100px" 
-                    type="number" 
-                    min="1"
-                    :max="market.jobTimeout / 60"
-                    placeholder="Minutes"
-                    required
-                  >
+                  <input v-model.number="jobTimeout" class="input" style="width: 100px" type="number" min="1"
+                    placeholder="Minutes" required>
                 </td>
               </tr>
               <tr>
@@ -468,8 +460,8 @@ const envName: Ref<string[]> = ref([]);
 const jobTimeout: Ref<number> = ref(60); // Default 60 minutes
 const nosPrice = ref(0);
 
-const { data: nosPriceData } = await useAPI('https://api.coingecko.com/api/v3/simple/price?ids=nosana&vs_currencies=usd', { 
-  default: () => ({ nosana: { usd: 0 } }) 
+const { data: nosPriceData } = await useAPI('https://api.coingecko.com/api/v3/simple/price?ids=nosana&vs_currencies=usd', {
+  default: () => ({ nosana: { usd: 0 } })
 });
 
 watch(() => nosPriceData.value, (newPrice) => {
@@ -648,7 +640,7 @@ watchEffect(async () => {
   // Check for repost parameters
   if (route.query?.fromRepost === 'true' && route.query?.jobAddress) {
     const address = route.query.jobAddress.toString();
-    
+
     try {
       loading.value = true;
 
@@ -661,11 +653,11 @@ watchEffect(async () => {
       const response = await fetch(
         `https://dashboard.k8s.prd.nos.ci/api/jobs/${address}`
       );
-      
+
       if (!response.ok) {
         throw new Error(`Failed to load job with address ${address}`);
       }
-      
+
       const jobData = await response.json();
       if (!jobData?.jobDefinition) {
         throw new Error('No job definition found in the job data');
@@ -704,7 +696,7 @@ watchEffect(async () => {
       if (markets.value?.length) {
         const gpuMarket = markets.value.find(m => {
           return m.jobPrice > 0 && (
-            m.gpu || 
+            m.gpu ||
             (m.requirements && m.requirements.gpu) ||
             m.name?.toLowerCase().includes('gpu')
           );

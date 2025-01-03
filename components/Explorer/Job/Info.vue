@@ -171,19 +171,17 @@ const displayPrice = computed(() => {
       props.job.timeout ?? (market.jobTimeout || 0)
     );
     const priceInNos = (parseInt(props.job.price, 10) / 1e6) * usedTime;
-    return `${priceInNos.toFixed(6)} NOS ${
-      nosPrice ? `($${(nosPrice * priceInNos).toFixed(2)})` : ''
-    }`;
+    return `${priceInNos.toFixed(6)} NOS ${nosPrice ? `($${(nosPrice * priceInNos).toFixed(2)})` : ''
+      }`;
   }
 
   // Running / queued
   if (props.job.price) {
     const pricePerSecond = parseInt(props.job.price, 10) / 1e6;
-    return `${pricePerSecond} NOS/s ${
-      nosPrice
-        ? `($${((nosPrice * pricePerSecond) * 3600).toFixed(2)} / h)`
-        : ''
-    }`;
+    return `${pricePerSecond} NOS/s ${nosPrice
+      ? `($${((nosPrice * pricePerSecond) * 3600).toFixed(2)} / h)`
+      : ''
+      }`;
   }
 
   return 'Unknown';
@@ -194,6 +192,6 @@ const maxDuration = computed(() => {
   if (loadingMarkets.value || !apiMarkets.value || !props.job) return 0;
   // find the job’s market in the /api/markets array
   const market = apiMarkets.value.find((m: any) => m.address === props.job.market);
-  return market?.jobTimeout ?? 0;
+  return props.job && props.job.timeout ? props.job.timeout : (market?.jobTimeout ?? 0);
 });
 </script>
