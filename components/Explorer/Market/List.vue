@@ -151,10 +151,10 @@ const filteredMarkets = computed(() => {
   return props.markets
     .filter((market) => {
       if (tab.value === 'premium') {
-        return testgridMarkets.value.find((tgm: any) => tgm.address === market.address.toString());
+        return testgridMarkets.value.find((tgm: any) => tgm.address === market.address.toString() && tgm.type === 'PREMIUM');
       }
       if (tab.value === 'community') {
-        return false;
+        return testgridMarkets.value.find((tgm: any) => tgm.address === market.address.toString() && tgm.type === 'COMMUNITY');
       }
       return true;
     });

@@ -144,7 +144,7 @@
           </tr>
         </tbody>
       </table>
-      <!-- <div class="columns">
+      <div class="columns">
         <div class="column is-6">
           <NodeBenchmarkHistogram title="LLM Performance" type="llm" :node-id="address"
             :market-id="nodeSpecs.marketAddress" default-metric="averageTokensPerSecond" :metrics="[
@@ -167,7 +167,7 @@
               { value: 'avgTemperature', label: 'Temperature (°C)' },
             ]" x-axis-label="Batch Size" />
         </div>
-      </div> -->
+      </div>
       <ExplorerJobList :per-page="limit" :total-jobs="jobs ? jobs.totalJobs : null" v-model:page="page"
         v-model:state="state" :loading-jobs="loadingJobs" title="Jobs Ran" :jobs="jobs ? jobs.jobs : null"
         :states="[1, 2]">
@@ -301,7 +301,7 @@ watch(nodeSpecs, (specs) => {
   if (specs?.marketAddress) {
     if (!rankingAPInstance) {
       // TODO: this call is disabled because it is really slow and causes other queries to freeze as well
-      // rankingAPInstance = useAPI(`/api/benchmarks/node-ranking?market=${specs.marketAddress}`);
+      rankingAPInstance = useAPI(`/api/benchmarks/node-ranking?market=${specs.marketAddress}`);
     }
   }
 })

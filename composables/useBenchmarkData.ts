@@ -45,10 +45,8 @@ export function useBenchmark(options: BenchmarkOptions) {
     },
     {
       watch: [benchmarkUrl],
-      default: () => ({ data: [], total: 0 }),
       immediate: false,
       server: false,
-      transform: (response) => response || { data: [], total: 0 },
     }
   );
 
@@ -68,10 +66,8 @@ export function useBenchmark(options: BenchmarkOptions) {
     },
     {
       watch: [marketBenchmarkUrl],
-      default: () => ({ data: [], total: 0 }),
       immediate: false,
       server: false,
-      transform: (response) => response || { data: [], total: 0 },
     }
   );
 
