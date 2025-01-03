@@ -229,14 +229,14 @@ import { useMarkets } from '~/composables/useMarkets';
 import { Mode, ValidationSeverity, type ValidationError } from 'vanilla-jsoneditor';
 import { validateJobDefinition, type Market, type IValidation } from "@nosana/sdk";
 import JsonEditorVue from 'json-editor-vue';
+import { useLocalStorage } from '@vueuse/core';
 
 const toast = useToast();
 const { nosana } = useSDK();
 const ansi = new AnsiUp();
 const router = useRouter();
 
-// Add stored auth header
-const storedAuthHeader = ref<string | null>(null);
+const storedAuthHeader = useLocalStorage<string | null>('nosanaAuthHeader', null);
 
 const ipfsResult = ref<{ results?: string[] }>({});
 const { params } = useRoute();
@@ -318,12 +318,13 @@ const isJobPoster = computed(() => {
 });
 
 // Add verification status
-const isVerified = ref(false);
+const isVerified = ref(storedAuthHeader.value !== null);
 
-// Modify signMessage to handle verification
+// 3) In signMessage, we now store the signed message to storedAuthHeader,
+//    which is bound to localStorage.
 const signMessage = async (forceNew = false) => {
-  // Return stored auth header if available and not forcing new
   if (storedAuthHeader.value && !forceNew) {
+    isVerified.value = true;
     return storedAuthHeader.value;
   }
 
@@ -340,40 +341,51 @@ const signMessage = async (forceNew = false) => {
   const signature = Buffer.from(signedMessage).toString('base64');
   const publicKeyString = publicKey.value.toString();
   const authHeader = `${publicKeyString}:${signature}`;
-  
-  // Store the auth header for future use
+
+  // Save the auth header to local storage so that
+  // it persists when switching between pages.
   storedAuthHeader.value = authHeader;
   isVerified.value = true;
   return authHeader;
 };
 
-// Add a computed property to check if verification is needed
 const needsVerification = computed(() => {
   return job.value && 
     (job.value.state === 'RUNNING' || job.value.state === 1) && 
-    isJobPoster.value;
+    isJobPoster.value &&
+    !isVerified.value;
 });
 
-// Instead of separate watchers for connected & needsVerification,
-// unify them so it only attempts to sign once on page load or state changes.
+// Add a watch for the wallet connection to validate stored auth header
+watch(
+  publicKey,
+  async (newPublicKey) => {
+    if (newPublicKey && storedAuthHeader.value) {
+      // Check if the stored auth header matches the current wallet
+      const [storedKey] = storedAuthHeader.value.split(':');
+      if (storedKey !== newPublicKey.toString()) {
+        // If the stored key doesn't match the current wallet, clear it
+        storedAuthHeader.value = null;
+        isVerified.value = false;
+      }
+    }
+  },
+  { immediate: true }
+);
+
 watch(
   [connected, needsVerification],
   async ([newConnected, newNeedsVerification]) => {
-    // Whenever either "connected" or "needsVerification" changes, 
-    // re-check if the user must sign.
-    if (newConnected && newNeedsVerification && !isVerified.value) {
+    if (newConnected && newNeedsVerification) {
       try {
         await signMessage(true);
         toast.success('Wallet verified successfully');
       } catch (error) {
         toast.error('Failed to verify wallet');
       }
-    }
-    // If user becomes disconnected, reset
-    else if (!newConnected) {
+    } else if (!newConnected) {
       isVerified.value = false;
       storedAuthHeader.value = null;
-      // Close the websocket if it's open
       if (ws) {
         ws.close();
         isWebSocketConnected = false;
@@ -488,7 +500,7 @@ const extendJob = async () => {
 
 // Add these refs near the top with other refs
 const showRepostModal = ref(false);
-const repostTimeout = ref(60); // Default 60 minutes
+const repostTimeout = ref(60);
 const loadingRepost = ref(false);
 const repostJobDefinition = ref(null);
 const repostMarket = ref<Market | null>(null);
@@ -506,12 +518,12 @@ if (!markets.value && !loadingMarkets.value) {
 // Add these computed properties
 const pricePerHour = computed(() => {
   if (!repostMarket.value) return 0;
-  return (repostMarket.value.jobPrice * 3600) / 1e6; // Convert to NOS per hour
+  return (repostMarket.value.jobPrice * 3600) / 1e6;
 });
 
 const maxPrice = computed(() => {
   if (!repostMarket.value || !repostTimeout.value) return 0;
-  return (repostMarket.value.jobPrice * repostTimeout.value * 60) / 1e6; // Convert to NOS
+  return (repostMarket.value.jobPrice * repostTimeout.value * 60) / 1e6;
 });
 
 const networkFee = computed(() => {
@@ -602,7 +614,7 @@ const shouldConnectWebSocket = computed(() => {
 // Modify the job watcher to use shouldConnectWebSocket
 watch(
   job,
-  async (newJob, oldJob) => {
+  async (newJob) => {
     if (shouldConnectWebSocket.value && !isWebSocketConnected) {
       await connectWebSocket();
     } else if (ws && !(newJob?.state === 'RUNNING' || newJob?.state === 1)) {
