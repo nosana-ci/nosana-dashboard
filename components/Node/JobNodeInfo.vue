@@ -8,34 +8,37 @@
           </td>
         </tr>
         <!-- Specifications -->
-        <tr v-if="nodeSpecs">
+        <tr v-if="nodeSpecs?.gpus && nodeSpecs.gpus.length > 0">
           <td>GPU</td>
           <td>{{ nodeSpecs.gpus[0]?.gpu }}</td>
         </tr>
-        <tr v-if="nodeSpecs">
+        <tr v-if="nodeSpecs?.cpu">
           <td>CPU</td>
           <td>{{ nodeSpecs.cpu }}</td>
         </tr>
-        <tr v-if="nodeSpecs">
+        <tr v-if="nodeSpecs?.ram">
           <td>RAM</td>
-          <td>{{ nodeSpecs.ram }} GB</td>
+          <td>{{ nodeSpecs.ram.toFixed(1) }} GB</td>
         </tr>
-        <tr v-if="nodeSpecs">
+        <tr v-if="nodeSpecs?.diskSpace">
           <td>Disk Space</td>
-          <td>{{ nodeSpecs.diskSpace }} GB</td>
+          <td>{{ nodeSpecs.diskSpace.toFixed(1) }} GB</td>
         </tr>
-        <tr v-if="nodeSpecs">
+        <tr v-if="nodeSpecs?.country">
           <td>Country</td>
           <td>{{ nodeSpecs.country }}</td>
         </tr>
-        <tr v-if="nodeSpecs">
+        <tr v-if="nodeSpecs?.bandwidth">
           <td>Ping</td>
-          <td>
-            <span v-if="nodeSpecs.bandwidth">
-              {{ nodeSpecs.bandwidth?.ping }} ms
-            </span>
-            <span v-else>Unknown</span>
-          </td>
+          <td>{{ nodeSpecs.bandwidth.ping.toFixed(1) }} ms</td>
+        </tr>
+        <tr v-if="nodeSpecs?.bandwidth">
+          <td>Download Speed</td>
+          <td>{{ nodeSpecs.bandwidth.download.toFixed(1) }} Mbps</td>
+        </tr>
+        <tr v-if="nodeSpecs?.bandwidth">
+          <td>Upload Speed</td>
+          <td>{{ nodeSpecs.bandwidth.upload.toFixed(1) }} Mbps</td>
         </tr>
         <tr>
           <td>
