@@ -7,7 +7,12 @@
   </tr>
   <tr>
     <td>GPU</td>
-    <td>{{ specs.gpus[0]?.gpu }}</td>
+    <td>
+      <span v-if="specs.gpu && specs.gpus[0]">
+        {{ specs.gpus[0]?.gpu }}
+      </span>
+      <span v-else>-</span>
+    </td>
   </tr>
   <tr>
     <td>CPU</td>
