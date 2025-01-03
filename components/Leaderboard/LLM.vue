@@ -6,7 +6,11 @@
       <div class="field">
         <label class="label">Node Address</label>
         <div class="control">
-          <input class="input" v-model="filters.node" placeholder="Enter Node Address" />
+          <input
+            class="input"
+            v-model="filters.node"
+            placeholder="Enter Node Address"
+          />
         </div>
       </div>
 
@@ -14,8 +18,8 @@
       <div class="field">
         <label class="label">Concurrent Users (CU)</label>
         <div class="control">
-          <div class="select is-fullwidth" :class="{ 'is-loading': filtersLoading }">
-            <select v-model="filters.cu" :disabled="filtersLoading">
+          <div class="select is-fullwidth">
+            <select v-model="filters.cu">
               <option :value="null">All CUs</option>
               <option v-for="cu in availableCUs" :key="cu" :value="cu">
                 {{ cu }} CU
@@ -29,10 +33,14 @@
       <div class="field">
         <label class="label">Model</label>
         <div class="control">
-          <div class="select is-fullwidth" :class="{ 'is-loading': filtersLoading }">
-            <select v-model="filters.model" :disabled="filtersLoading">
+          <div class="select is-fullwidth">
+            <select v-model="filters.model">
               <option value="">All Models</option>
-              <option v-for="model in availableModels" :key="model" :value="model">
+              <option
+                v-for="model in availableModels"
+                :key="model"
+                :value="model"
+              >
                 {{ model }}
               </option>
             </select>
@@ -44,10 +52,14 @@
       <div class="field">
         <label class="label">Framework</label>
         <div class="control">
-          <div class="select is-fullwidth" :class="{ 'is-loading': filtersLoading }">
-            <select v-model="filters.framework" :disabled="filtersLoading">
+          <div class="select is-fullwidth">
+            <select v-model="filters.framework">
               <option value="">All Frameworks</option>
-              <option v-for="framework in availableFrameworks" :key="framework" :value="framework">
+              <option
+                v-for="framework in availableFrameworks"
+                :key="framework"
+                :value="framework"
+              >
                 {{ framework }}
               </option>
             </select>
@@ -59,8 +71,8 @@
       <div class="field">
         <label class="label">GPU (Market)</label>
         <div class="control">
-          <div class="select is-fullwidth" :class="{ 'is-loading': filtersLoading }">
-            <select v-model="filters.market" :disabled="filtersLoading">
+          <div class="select is-fullwidth">
+            <select v-model="filters.market">
               <option value="">All GPUs</option>
               <option v-for="gpu in availableGPUs" :key="gpu" :value="gpu">
                 {{ gpu }}
@@ -87,7 +99,11 @@
     </div>
 
     <!-- Loading Bar -->
-    <progress v-if="loading" class="progress is-small is-info my-0" max="100"></progress>
+    <progress
+      v-if="loading"
+      class="progress is-small is-info my-0"
+      max="100"
+    ></progress>
 
     <!-- Leaderboard Table -->
     <table v-else class="table is-fullwidth is-striped">
@@ -111,11 +127,22 @@
         </tr>
       </thead>
       <tbody>
-        <nuxt-link v-for="item in leaderboardData" :key="generateRowKey(item)" :to="`/account/${item.node}`" custom>
+        <nuxt-link
+          v-for="item in leaderboardData"
+          :key="generateRowKey(item)"
+          :to="`/account/${item.node}`"
+          custom
+        >
           <template #default="{ navigate }">
-            <tr class="is-clickable remove-greyscale-on-hover" @click="navigate">
+            <tr
+              class="is-clickable remove-greyscale-on-hover"
+              @click="navigate"
+            >
               <td>
-                <nuxt-link :to="`/account/${item.node}`" class="is-family-monospace address has-text-black">
+                <nuxt-link
+                  :to="`/account/${item.node}`"
+                  class="is-family-monospace address has-text-black"
+                >
                   {{ item.node }}
                 </nuxt-link>
               </td>
@@ -132,7 +159,11 @@
     </table>
 
     <!-- Pagination with clickable page numbers -->
-    <nav class="pagination is-centered mt-4" role="navigation" aria-label="pagination">
+    <nav
+      class="pagination is-centered mt-4"
+      role="navigation"
+      aria-label="pagination"
+    >
       <a class="pagination-previous" @click="prevPage">Previous</a>
       <a class="pagination-next" @click="nextPage">Next</a>
       <ul class="pagination-list">
@@ -145,7 +176,11 @@
         </li>
         <!-- Current pages -->
         <li v-for="p in pagesToShow" :key="p">
-          <a @click="goToPage(p)" :class="{ 'pagination-link': true, 'is-current': p === page }">{{ p }}</a>
+          <a
+            @click="goToPage(p)"
+            :class="{ 'pagination-link': true, 'is-current': p === page }"
+            >{{ p }}</a
+          >
         </li>
         <!-- Last page -->
         <li v-if="!pagesToShow.includes(totalPages)">
@@ -191,31 +226,47 @@ onMounted(() => {
   filters.value = { ...defaultFilters };
 });
 
-// Fetch filter options from the new API endpoint
-const {
-  data: filterOptions,
-  pending: filtersLoading,
-  error: filtersError,
-} = await useAPI("/api/benchmarks/llm-filters");
+// Replace the API call and its related variables with hardcoded data
+const filterOptions = ref({
+  frameworks: ["lmdeploy", "tgi", "vllm"],
+  models: ["llama3.1_70B_4x", "llama3.1_8B", "llama3.1_8B_4x"],
+  cuCounts: [1, 5, 10, 50, 100],
+  gpus: [
+    "nvidia-3060",
+    "nvidia-3070",
+    "nvidia-3080",
+    "nvidia-3090",
+    "nvidia-4000-a4000",
+    "nvidia-4060",
+    "nvidia-4070",
+    "nvidia-4080",
+    "nvidia-4090",
+    "nvidia-6000-a6000",
+    "nvidia-a100",
+    "nvidia-a100-40gb",
+    "nvidia-a40",
+    "nvidia-a5000",
+    "nvidia-h100",
+  ],
+});
 
-const availableModels = computed(() =>
-  filterOptions.value ? filterOptions.value.models.sort() : []
-);
-
+// Update the computed properties to use the hardcoded data
+const availableModels = computed(() => filterOptions.value.models.sort());
 const availableFrameworks = computed(() =>
-  filterOptions.value ? filterOptions.value.frameworks.sort() : []
+  filterOptions.value.frameworks.sort()
 );
+const availableCUs = computed(() =>
+  filterOptions.value.cuCounts.sort((a, b) => a - b)
+);
+
+// Note: Keep availableGPUs as is since it depends on marketsData
+
+const { data: marketsData } = await useAPI("/api/markets");
 
 const availableGPUs = computed(() => {
   if (!marketsData.value) return [];
   return marketsData.value.map((market) => market.slug).sort();
 });
-
-const availableCUs = computed(() =>
-  filterOptions.value
-    ? filterOptions.value.cuCounts.sort((a: number, b: number) => a - b)
-    : []
-);
 
 // Construct API URL with filters and sorting
 const leaderboardUrl = computed(() => {
@@ -259,8 +310,6 @@ const {
   error: leaderboardError,
   refresh: refreshLeaderboard,
 } = await useAPI(leaderboardUrl, { watch: [leaderboardUrl] });
-
-const { data: marketsData } = await useAPI("/api/markets");
 
 const gpuAddressToSlug = computed(() => {
   if (!marketsData.value) return {};
