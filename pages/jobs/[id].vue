@@ -517,7 +517,7 @@ const connectWebSocket = async () => {
   }
 
   const nodeAddress = job.value.node.toString();
-  const frpServer = useRuntimeConfig().public.frpServer || 'node.k8s.prd.nos.ci';
+  const frpServer = useRuntimeConfig().public.nodeDomain;
 
   let authHeader = '';
   try {
