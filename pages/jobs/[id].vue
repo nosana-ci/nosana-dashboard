@@ -65,7 +65,15 @@
           <div v-show="activeTab === 'logs'" class="p-1 py-4 has-background-white-bis">
             <div v-if="job.state === 'RUNNING' || job.state === 1"
               class="is-family-monospace has-background-black has-text-white box light-mode">
-              <div v-if="logs && logs.length > 0" style="counter-reset: line">
+              <div v-if="isConnecting" class="has-text-info">
+                <span class="icon-text">
+                  <span class="icon">
+                    <i class="fas fa-sync fa-spin"></i>
+                  </span>
+                  <span>Connecting to logs...</span>
+                </span>
+              </div>
+              <div v-else-if="logs && logs.length > 0" style="counter-reset: line">
                 <div v-for="step in logs" :key="step.id">
                   <div v-for="(log, ik) in step.logs.split('\n')" :key="ik" class="row-count">
                     <span class="pre" v-html="log.slice(0, 10000)" />
@@ -287,11 +295,10 @@ watch(job, async (newJob) => {
   } else if (newJob.state === 1 || newJob.state === 'RUNNING') {
     jobStatus.value = null;
     resumeJobPolling();
-  }
-
-  // Initialize logs when job starts running
-  if ((newJob.state === 'RUNNING' || newJob.state === 1) && newJob.jobDefinition) {
-    if (!logs.value) logs.value = [];
+    // Initialize logs only if wallet is connected
+    if (connected.value && !logs.value) {
+      logs.value = [];
+    }
   }
 
   // Fetch IPFS results if needed
@@ -324,8 +331,12 @@ const isVerified = ref(storedAuthHeader.value !== null);
 //    which is bound to localStorage.
 const signMessage = async (forceNew = false) => {
   if (storedAuthHeader.value && !forceNew) {
-    isVerified.value = true;
-    return storedAuthHeader.value;
+    // Verify the stored signature matches the current wallet
+    const [storedKey] = storedAuthHeader.value.split(':');
+    if (storedKey === publicKey.value?.toString()) {
+      isVerified.value = true;
+      return storedAuthHeader.value;
+    }
   }
 
   if (!connected.value || !publicKey.value || !wallet.value) {
@@ -376,20 +387,42 @@ watch(
 watch(
   [connected, needsVerification],
   async ([newConnected, newNeedsVerification]) => {
-    if (newConnected && newNeedsVerification) {
+    if (newConnected && newNeedsVerification && !isVerified.value) {
       try {
         await signMessage(true);
         toast.success('Wallet verified successfully');
+        refreshJob();
+        // Initialize logs if job is running
+        if (job.value && (job.value.state === 'RUNNING' || job.value.state === 1)) {
+          logs.value = [];
+        }
       } catch (error) {
         toast.error('Failed to verify wallet');
       }
     } else if (!newConnected) {
       isVerified.value = false;
       storedAuthHeader.value = null;
+      // Clear logs when disconnecting
+      logs.value = null;
       if (ws) {
         ws.close();
         isWebSocketConnected = false;
+        isConnecting.value = false;
       }
+    }
+  },
+  { immediate: true }
+);
+
+// Add a watch for connected state to handle logs initialization
+watch(
+  connected,
+  async (newConnected) => {
+    if (newConnected && job.value && (job.value.state === 'RUNNING' || job.value.state === 1)) {
+      logs.value = [];
+
+    } else if (!newConnected) {
+      logs.value = null;
     }
   },
   { immediate: true }
@@ -602,6 +635,7 @@ const repostJobWithTimeout = async () => {
 
 let ws: WebSocket | null = null;
 let isWebSocketConnected = false;
+const isConnecting = ref(false);
 
 const shouldConnectWebSocket = computed(() => {
   return job.value && 
@@ -611,21 +645,21 @@ const shouldConnectWebSocket = computed(() => {
     isJobPoster.value;
 });
 
-// Modify the job watcher to use shouldConnectWebSocket
 watch(
   job,
   async (newJob) => {
     if (shouldConnectWebSocket.value && !isWebSocketConnected) {
+      isConnecting.value = true;
       await connectWebSocket();
     } else if (ws && !(newJob?.state === 'RUNNING' || newJob?.state === 1)) {
       ws.close();
       isWebSocketConnected = false;
+      isConnecting.value = false;
     }
   },
   { immediate: true, deep: true }
 );
 
-// Modify connectWebSocket to be simpler since checks are done before calling
 const connectWebSocket = async () => {
   if (ws) {
     ws.close();
@@ -638,6 +672,7 @@ const connectWebSocket = async () => {
   try {
     authHeader = await signMessage();
   } catch (error) {
+    isConnecting.value = false;
     return;
   }
   const wsUrl = `wss://${nodeAddress}.${frpServer}/log`;
@@ -659,6 +694,7 @@ const connectWebSocket = async () => {
     };
 
     ws.onmessage = (event: MessageEvent) => {
+      isConnecting.value = false;
       try {
         const outerData = JSON.parse(event.data);
         
