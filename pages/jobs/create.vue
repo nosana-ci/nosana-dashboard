@@ -370,16 +370,31 @@
                 </td>
               </tr>
               <tr>
-                <td>Max price</td>
-                <td>{{ ((market.jobPrice * market.jobTimeout) / 1e6).toFixed(4) }} NOS</td>
+                <td>Price per hour</td>
+                <td>{{ pricePerHour.toFixed(4) }} NOS/h (${{ (pricePerHour * nosPrice).toFixed(2) }}/h)</td>
               </tr>
               <tr>
-                <td>Max duration</td>
-                <td>{{ market.jobTimeout / 60 }} minutes</td>
+                <td>Job timeout <span class="has-text-danger">*</span></td>
+                <td>
+                  <input 
+                    v-model.number="jobTimeout" 
+                    class="input"
+                    style="width: 100px" 
+                    type="number" 
+                    min="1"
+                    :max="market.jobTimeout / 60"
+                    placeholder="Minutes"
+                    required
+                  >
+                </td>
+              </tr>
+              <tr>
+                <td>Max price</td>
+                <td>{{ maxPrice.toFixed(4) }} NOS (${{ (maxPrice * nosPrice).toFixed(2) }})</td>
               </tr>
               <tr>
                 <td>Network fee <small>(10%)</small></td>
-                <td>{{ (((market.jobPrice * market.jobTimeout) / 1e6) * 0.1).toFixed(4) }} NOS</td>
+                <td>{{ networkFee.toFixed(4) }} NOS (${{ (networkFee * nosPrice).toFixed(2) }})</td>
               </tr>
             </tbody>
           </table>
@@ -450,6 +465,33 @@ const { connected, publicKey } = useWallet();
 const { balance, refreshBalance, loadingBalance, errorBalance } = useStake(publicKey);
 const jobDefinition: Ref<JobDefinition> = useLocalStorage('job-definition', emptyJobDefinition)
 const envName: Ref<string[]> = ref([]);
+const jobTimeout: Ref<number> = ref(60); // Default 60 minutes
+const nosPrice = ref(0);
+
+const { data: nosPriceData } = await useAPI('https://api.coingecko.com/api/v3/simple/price?ids=nosana&vs_currencies=usd', { 
+  default: () => ({ nosana: { usd: 0 } }) 
+});
+
+watch(() => nosPriceData.value, (newPrice) => {
+  if (newPrice?.nosana?.usd) {
+    nosPrice.value = newPrice.nosana.usd;
+  }
+}, { immediate: true });
+
+const pricePerHour = computed(() => {
+  if (!market.value) return 0;
+  return (market.value.jobPrice * 3600) / 1e6; // Convert to NOS per hour
+});
+
+const maxPrice = computed(() => {
+  if (!market.value || !jobTimeout.value) return 0;
+  return (market.value.jobPrice * jobTimeout.value * 60) / 1e6; // Convert to NOS
+});
+
+const networkFee = computed(() => {
+  return maxPrice.value * 0.1;
+});
+
 if (template.value) {
   jobDefinition.value = template.value.jobDefinition;
 }
@@ -588,12 +630,12 @@ const validator = (json: any): Array<ValidationError> => {
 
 const postJob = async () => {
   loading.value = true;
-  if (!jobDefinition.value || !market.value) return;
+  if (!jobDefinition.value || !market.value || !jobTimeout.value) return;
   try {
     const ipfsHash = await nosana.value.ipfs.pin(jobDefinition.value);
     console.log('ipfs uploaded!', nosana.value.ipfs.config.gateway + ipfsHash);
-    const response = await nosana.value.jobs.list(ipfsHash, market.value!.address);
-    toast.success(`Succesfully created job ${response.job}`);
+    const response = await nosana.value.jobs.list(ipfsHash, jobTimeout.value * 60, market.value!.address);
+    toast.success(`Successfully created job ${response.job}`);
     await sleep(3);
     router.push('/jobs/' + response.job);
   } catch (e: any) {

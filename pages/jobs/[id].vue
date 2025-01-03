@@ -23,6 +23,15 @@
                 Extend Job
               </button>
             </div>
+            <div class="mr-4">
+              <button
+                @click="repostJob"
+                :class="{ 'is-loading': loadingRepost }"
+                class="button is-primary is-medium is-outlined"
+              >
+                Repost
+              </button>
+            </div>
             <ExplorerJobStatus class="mr-2" :status="jobStatus ? jobStatus : job.state"></ExplorerJobStatus>
           </div>
         </div>
@@ -102,12 +111,105 @@
       <div v-else-if="loadingJob">Loading job..</div>
       <div v-else>Job not found</div>
     </div>
+
+    <div class="modal" :class="{ 'is-active': showRepostModal }">
+      <div class="modal-background" @click="showRepostModal = false"></div>
+      <div class="modal-card" style="width: 80vw; max-height: 80vh;">
+        <header class="modal-card-head">
+          <p class="modal-card-title">Repost Job</p>
+          <button class="delete" aria-label="close" @click="showRepostModal = false"></button>
+        </header>
+        <section class="modal-card-body">
+          <div class="columns">
+            <div class="column is-4">
+              <div class="field">
+                <label class="label">Market <span class="has-text-danger">*</span></label>
+                <div class="control">
+                  <div class="select is-fullwidth">
+                    <select v-model="repostMarket" required>
+                      <option :value="null">Select market</option>
+                      <option v-for="m in markets" :key="m.address.toString()" :value="m">
+                        {{ testgridMarkets.find((tgm: any) => tgm.address === m.address.toString())?.name || m.address.toString() }}
+                      </option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div v-if="repostMarket" class="box mt-4">
+                <div class="field">
+                  <label class="label">Price per hour</label>
+                  <div class="control">
+                    {{ pricePerHour.toFixed(4) }} NOS/h (${{ (pricePerHour * nosPrice).toFixed(2) }}/h)
+                  </div>
+                </div>
+
+                <div class="field">
+                  <label class="label">Job Timeout (minutes) <span class="has-text-danger">*</span></label>
+                  <div class="control">
+                    <input 
+                      v-model.number="repostTimeout" 
+                      class="input" 
+                      type="number" 
+                      min="1"
+                      :max="repostMarket.jobTimeout / 60"
+                      placeholder="Minutes"
+                      required
+                    >
+                  </div>
+                </div>
+
+                <div class="field">
+                  <label class="label">Max price</label>
+                  <div class="control">
+                    {{ maxPrice.toFixed(4) }} NOS (${{ (maxPrice * nosPrice).toFixed(2) }})
+                  </div>
+                </div>
+
+                <div class="field">
+                  <label class="label">Network fee (10%)</label>
+                  <div class="control">
+                    {{ networkFee.toFixed(4) }} NOS (${{ (networkFee * nosPrice).toFixed(2) }})
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="column">
+              <div class="field">
+                <label class="label">Job Definition <span class="has-text-danger">*</span></label>
+                <div class="control">
+                  <JsonEditorVue 
+                    v-if="repostJobDefinition"
+                    v-model="repostJobDefinition"
+                    :validator="validator"
+                    :mode="Mode.text"
+                    :mainMenuBar="true"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        <footer class="modal-card-foot">
+          <button 
+            class="button is-primary" 
+            :class="{ 'is-loading': loadingRepost }" 
+            :disabled="!repostJobDefinition || !repostMarket || !repostTimeout || !connected"
+            @click="repostJobWithTimeout"
+          >
+            Repost
+          </button>
+          <button class="button" @click="showRepostModal = false">Cancel</button>
+        </footer>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { onUnmounted, watch, ref, computed } from 'vue';
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import VueJsonPretty from "vue-json-pretty";
 import 'vue-json-pretty/lib/styles.css';
 import AnsiUp from 'ansi_up';
@@ -123,10 +225,15 @@ import { useRuntimeConfig } from '#imports';
 import { PublicKey } from '@solana/web3.js';
 import { BN } from '@coral-xyz/anchor';
 import { getAssociatedTokenAddress } from '@solana/spl-token';
+import { useMarkets } from '~/composables/useMarkets';
+import { Mode, ValidationSeverity, type ValidationError } from 'vanilla-jsoneditor';
+import { validateJobDefinition, type Market, type IValidation } from "@nosana/sdk";
+import JsonEditorVue from 'json-editor-vue';
 
 const toast = useToast();
 const { nosana } = useSDK();
 const ansi = new AnsiUp();
+const router = useRouter();
 
 // Add stored auth header
 const storedAuthHeader = ref<string | null>(null);
@@ -379,10 +486,110 @@ const extendJob = async () => {
   }
 };
 
+// Add these refs near the top with other refs
+const showRepostModal = ref(false);
+const repostTimeout = ref(60); // Default 60 minutes
+const loadingRepost = ref(false);
+const repostJobDefinition = ref(null);
+const repostMarket = ref<Market | null>(null);
+const nosPrice = ref(0);
+
+// Remove duplicate imports and fix market types
+const { markets, getMarkets, loadingMarkets } = useMarkets();
+const { data: testgridMarkets } = await useAPI('/api/markets', { default: () => [] });
+
+// Add this watch to initialize markets if needed
+if (!markets.value && !loadingMarkets.value) {
+  getMarkets();
+}
+
+// Add these computed properties
+const pricePerHour = computed(() => {
+  if (!repostMarket.value) return 0;
+  return (repostMarket.value.jobPrice * 3600) / 1e6; // Convert to NOS per hour
+});
+
+const maxPrice = computed(() => {
+  if (!repostMarket.value || !repostTimeout.value) return 0;
+  return (repostMarket.value.jobPrice * repostTimeout.value * 60) / 1e6; // Convert to NOS
+});
+
+const networkFee = computed(() => {
+  return maxPrice.value * 0.1;
+});
+
+// Modify the repostJob function to initialize the values
+const repostJob = () => {
+  if (!job.value?.jobDefinition) {
+    toast.error("No job definition found to repost.");
+    return;
+  }
+  
+  // Deep clone the job definition to make it editable
+  repostJobDefinition.value = JSON.parse(JSON.stringify(job.value.jobDefinition));
+  
+  // Initialize market selection with current market
+  if (markets.value) {
+    const currentMarket = markets.value.find(m => m.address.toString() === job.value.market);
+    repostMarket.value = currentMarket || null;
+  }
+  
+  showRepostModal.value = true;
+};
+
+// Update the repostJobWithTimeout function with proper validation
+const repostJobWithTimeout = async () => {
+  if (!connected.value) {
+    toast.error("Please connect your wallet first!");
+    return;
+  }
+
+  if (!repostJobDefinition.value) {
+    toast.error("Please provide a job definition.");
+    return;
+  }
+
+  if (!repostMarket.value) {
+    toast.error("Please select a market.");
+    return;
+  }
+
+  if (!repostTimeout.value) {
+    toast.error("Please specify a job timeout.");
+    return;
+  }
+
+  // Validate job definition
+  const validation = validateJobDefinition(repostJobDefinition.value);
+  if (validation.errors?.length) {
+    toast.error("Invalid job definition. Please check the errors in the editor.");
+    return;
+  }
+
+  try {
+    loadingRepost.value = true;
+
+    // Pin the current job definition to IPFS
+    const ipfsHash = await nosana.value.ipfs.pin(repostJobDefinition.value);
+    console.log('ipfs uploaded!', nosana.value.ipfs.config.gateway + ipfsHash);
+
+    // List a new job using the selected market
+    const response = await nosana.value.jobs.list(ipfsHash, repostTimeout.value * 60, repostMarket.value.address);
+
+    toast.success(`Successfully created job ${response.job}`);
+    showRepostModal.value = false;
+    // Sleep a bit, then nav to the newly posted job
+    await new Promise((r) => setTimeout(r, 3000));
+    router.push('/jobs/' + response.job);
+  } catch (e: any) {
+    toast.error(e.toString());
+  } finally {
+    loadingRepost.value = false;
+  }
+};
 
 let ws: WebSocket | null = null;
 let isWebSocketConnected = false;
-
 
 const shouldConnectWebSocket = computed(() => {
   return job.value && 
@@ -561,6 +768,22 @@ onUnmounted(() => {
     ws.close();
   }
 });
+
+// Add validator function near other functions
+const validator = (json: any): ValidationError[] => {
+  const validation: IValidation<any> = validateJobDefinition(json);
+  const errors: ValidationError[] = [];
+  if (validation.errors?.length) {
+    validation.errors.forEach((error: any) => {
+      errors.push({
+        path: error.path.replace('$input.', '').replace('$input', '').split('.'),
+        message: error.message || 'Invalid value',
+        severity: ValidationSeverity.error
+      });
+    });
+  }
+  return errors;
+};
 
 </script>
 <style lang="scss" scoped>
