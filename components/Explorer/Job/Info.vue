@@ -108,15 +108,14 @@
 <script setup lang="ts">
 import { UseTimeAgo } from "@vueuse/components";
 import type { PropType } from 'vue';
-
-interface JobDefinitionState {
-  'nosana/job-type'?: string;
-  'input/repo'?: string;
-  'input/commit-sha'?: string;
-}
+import { useAPI } from '~/composables/useAPI';
 
 interface JobDefinition {
-  state?: JobDefinitionState;
+  state?: {
+    'nosana/job-type'?: string;
+    'input/repo'?: string;
+    'input/commit-sha'?: string;
+  };
   ops?: any[];
 }
 
@@ -137,45 +136,64 @@ interface Job {
 const props = defineProps({
   job: {
     type: Object as PropType<Job>,
-    required: true
+    required: true,
   },
 });
 
-const { data: testgridMarkets, pending: loadingTestgridMarkets } = useAPI('/api/markets');
-const { data: stats, pending: loadingStats } = useAPI('/api/stats');
+// Pull from /api/markets instead of the composable
+const { data: apiMarkets, pending: loadingMarkets } = useAPI('/api/markets');
 
-const { markets, getMarkets, loadingMarkets } = useMarkets();
-// Fetch markets if not already loaded
-if (!markets.value) {
-  getMarkets();
-}
+// Some additional data to get stats, if needed
+const { data: stats } = useAPI('/api/stats');
 
 const timestamp = useTimestamp({ interval: 1000 });
 const fmtMSS = (s: number) => {
   return (s - (s %= 60)) / 60 + (s > 9 ? "m:" : "m:0") + s + "s";
 };
 
-// Compute the display price based on the job status
+// Price
 const displayPrice = computed(() => {
-  if (loadingMarkets.value || !markets.value || !props.job) return 'Could not load market';
-  const market = markets.value.find((m) => m.address.toString() === props.job.market);
-  if (!market) return 'Could not find market';
-  const nosPrice = stats.value && stats.value[0] && stats.value[0].price ? stats.value[0].price : 0;
-
-  if (props.job.state === 'COMPLETED' || props.job.state === 2) {
-    const priceInNos = ((parseInt(props.job.price) / 1e6) * Math.min(props.job.timeEnd - props.job.timeStart, props.job.timeout ? props.job.timeout : market.jobTimeout));
-    return `${priceInNos.toFixed(6)} NOS ${nosPrice ? `($${((nosPrice * priceInNos)).toFixed(2)})` : ''}`;
-  } else {
-    return props.job.price
-      ? `${(parseInt(props.job.price) / 1e6)} NOS/s ${nosPrice ? `($${((nosPrice * (parseInt(props.job.price) / 1e6)) * 3600).toFixed(2)} / h)` : ''}`
-      : 'Unknown';
+  if (loadingMarkets.value || !apiMarkets.value || !props.job) {
+    return 'Could not load market';
   }
+  // Find the job’s market in the /api/markets array
+  const market = apiMarkets.value.find((m: any) => m.address === props.job.market);
+  if (!market) {
+    return 'Could not find market';
+  }
+  // If you also want a price in $ using some stats
+  const nosPrice = stats.value?.[0]?.price ?? 0;
+
+  // Completed case
+  if (props.job.state === 'COMPLETED' || props.job.state === 2) {
+    const usedTime = Math.min(
+      props.job.timeEnd - props.job.timeStart,
+      props.job.timeout ?? (market.jobTimeout || 0)
+    );
+    const priceInNos = (parseInt(props.job.price, 10) / 1e6) * usedTime;
+    return `${priceInNos.toFixed(6)} NOS ${
+      nosPrice ? `($${(nosPrice * priceInNos).toFixed(2)})` : ''
+    }`;
+  }
+
+  // Running / queued
+  if (props.job.price) {
+    const pricePerSecond = parseInt(props.job.price, 10) / 1e6;
+    return `${pricePerSecond} NOS/s ${
+      nosPrice
+        ? `($${((nosPrice * pricePerSecond) * 3600).toFixed(2)} / h)`
+        : ''
+    }`;
+  }
+
+  return 'Unknown';
 });
 
-// Compute the max duration based on the market
+// Max Duration
 const maxDuration = computed(() => {
-  if (loadingMarkets.value || !markets.value || !props.job) return 0;
-  const market = markets.value.find((m) => m.address.toString() === props.job.market);
-  return market && market.jobTimeout ? market.jobTimeout : 0;
+  if (loadingMarkets.value || !apiMarkets.value || !props.job) return 0;
+  // find the job’s market in the /api/markets array
+  const market = apiMarkets.value.find((m: any) => m.address === props.job.market);
+  return market?.jobTimeout ?? 0;
 });
 </script>

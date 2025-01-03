@@ -120,6 +120,9 @@ import { useSDK } from '~/composables/useSDK';
 import { useAPI } from '~/composables/useAPI';
 import { useIpfs } from '~/composables/useIpfs';
 import { useRuntimeConfig } from '#imports';
+import { PublicKey } from '@solana/web3.js';
+import { BN } from '@coral-xyz/anchor';
+import { getAssociatedTokenAddress } from '@solana/spl-token';
 
 const toast = useToast();
 const { nosana } = useSDK();
@@ -152,6 +155,14 @@ const { pause: pauseJobPolling, resume: resumeJobPolling } = useIntervalFn(() =>
 
 // Add progressBars ref at the top with other refs
 const progressBars = ref<{ [key: string]: any }>({});
+
+// Add state mapping at the top with other constants
+const jobStateMapping: { [key: string]: number } = {
+  RUNNING: 1,
+  COMPLETED: 2,
+  STOPPED: 3,
+  FAILED: 4
+};
 
 watch(job, async (newJob) => {
   if (!newJob) return;
@@ -310,57 +321,69 @@ const stopJob = async () => {
 
 // 2) The new "extendJob" function which calls the SDK's extend:
 const extendJob = async () => {
-  if (!job.value) return;
-  if (!isVerified.value) {
-    try {
-      await signMessage(true);
-    } catch (error) {
-      toast.error('Please verify your wallet first');
-      return;
-    }
+  if (!job.value) {
+    toast.error('No job found.');
+    return;
+  }
+
+  if (!connected.value || !publicKey.value) {
+    toast.error('Please connect your wallet first!');
+    return;
   }
 
   try {
     loadingExtend.value = true;
-    // For demonstration, let's add 300 more seconds to jobTimeout:
-    const extensionSeconds = 300;
 
-    // First get the market from the job
-    const market = job.value.market;
-    if (!market) {
-      throw new Error('No market found for this job');
-    }
+    // Fetch a fresh copy from on-chain
+    const onChainJob = await nosana.value.jobs.get(job.value.address);
 
-    // Call extend with proper error handling
-    try {
-      const result = await nosana.value.jobs.extend(jobId.value, extensionSeconds);
-      toast.success(`Job extended successfully. Tx: ${result.tx}`);
-      // Refresh job to see updated jobTimeout in UI
-      await refreshJob();
-    } catch (error: any) {
-      // Handle specific error cases
-      if (error.message.includes('Account does not exist')) {
-        toast.error('Market account not found. Please try again later.');
-      } else if (error.message.includes('job cannot be extended')) {
-        toast.error('Job cannot be extended - it must be in running state.');
-      } else {
-        toast.error(`Error extending job: ${error.message}`);
+    // Convert to numeric if it's a string state
+    const numericState = typeof onChainJob.state === 'string'
+      ? jobStateMapping[onChainJob.state]
+      : onChainJob.state;
+
+    // Show toast logs with the actual states
+    toast.info(`On-chain job.state: "${onChainJob.state}" (numeric: ${numericState})`);
+    toast.info(`Local job.state: "${job.value.state}" (type: ${typeof job.value.state})`);
+    toast.info(`Market: ${onChainJob.market || 'None'}`);
+    toast.info(`Node: ${onChainJob.node}`);
+    toast.info(`Project: ${onChainJob.project}`);
+    toast.info(`Your wallet: ${publicKey.value.toString()}`);
+
+    // Check if numericState matches RUNNING (1)
+    if (numericState !== 1) {
+      toast.warning(`Job is not in numeric RUNNING (1). Retrying in 3s...`);
+      await new Promise((r) => setTimeout(r, 3000));
+      const reCheck = await nosana.value.jobs.get(job.value.address);
+      const reCheckNumeric = typeof reCheck.state === 'string'
+        ? jobStateMapping[reCheck.state]
+        : reCheck.state;
+
+      if (reCheckNumeric !== 1) {
+        toast.error(`Still cannot extend: On-chain says "${reCheck.state}" (numeric: ${reCheckNumeric})`);
+        return;
       }
     }
-  } catch (error: any) {
-    toast.error(`Error extending job: ${error.message}`);
+
+    const result = await nosana.value.jobs.extend(job.value.address, 300); 
+    toast.success(`Job has been extended! Transaction: ${result.tx}`);
+
+    const updated = await nosana.value.jobs.get(job.value.address);
+    job.value = updated;
+    toast.info(`After extension: On-chain job.state is "${updated.state}"`);
+
+  } catch (err: any) {
+    toast.error(`Error extending job: ${err.message ?? err.toString()}`);
   } finally {
     loadingExtend.value = false;
   }
 };
 
-// WebSocket code for streaming logs in real-time while job is running
-// ─────────────────────────────────────────────────────────────
 
 let ws: WebSocket | null = null;
 let isWebSocketConnected = false;
 
-// Add a function to check if we should connect to WebSocket
+
 const shouldConnectWebSocket = computed(() => {
   return job.value && 
     (job.value.state === 'RUNNING' || job.value.state === 1) && 
