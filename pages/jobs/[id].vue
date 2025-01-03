@@ -123,7 +123,7 @@
 </template>
 
 <script setup lang="ts">
-import { onUnmounted, watch, ref, computed } from 'vue';
+import { onUnmounted, watch, ref, computed, onMounted, onActivated } from 'vue';
 import { useRoute, useRouter } from "vue-router";
 import VueJsonPretty from "vue-json-pretty";
 import 'vue-json-pretty/lib/styles.css';
@@ -493,58 +493,54 @@ let ws: WebSocket | null = null;
 let isWebSocketConnected = false;
 const isConnecting = ref(false);
 
-watch(
-  () => job.value?.state,
-  async (newState, oldState) => {
-    // If job is not defined, bail out
-    if (!job.value) return;
+// Add the new check and connect function
+const checkAndConnectWebSocket = async () => {
+  // If we're already connected or connecting, don't try again
+  if (isWebSocketConnected || isConnecting.value) return;
 
-    // Determine if the state indicates the job is running
-    const isRunState = (newState === 'RUNNING' || newState === 1);
-    const wasRunState = (oldState === 'RUNNING' || oldState === 1);
-    const walletOk = connected.value && isVerified.value && isJobPoster.value;
-
-    // Only connect if transitioning to running state with valid wallet
-    if (isRunState && walletOk && !isWebSocketConnected) {
-      isConnecting.value = true;
-      await connectWebSocket();
-    }
-    // Close socket if job is no longer running
-    else if (ws && isWebSocketConnected && wasRunState && !isRunState) {
-      ws.close();
-      isWebSocketConnected = false;
-      isConnecting.value = false;
-    }
+  // Check all conditions for connection
+  if (
+    job.value &&
+    (job.value.state === 'RUNNING' || job.value.state === 1) &&
+    isJobPoster.value &&
+    isVerified.value &&
+    connected.value
+  ) {
+    isConnecting.value = true;
+    await connectWebSocket();
   }
-);
+};
 
-// Also add a watch for wallet connection changes to handle disconnects
-watch(
-  () => connected.value && isVerified.value && isJobPoster.value,
-  (newWalletOk, oldWalletOk) => {
-    if (!newWalletOk && ws) {
-      ws.close();
-      isWebSocketConnected = false;
-      isConnecting.value = false;
-    }
-  }
-);
+// Add mounted and activated hooks
+onMounted(() => {
+  checkAndConnectWebSocket();
+});
 
+onActivated(() => {
+  checkAndConnectWebSocket();
+});
+
+// Update the connectWebSocket function to properly handle connection states
 const connectWebSocket = async () => {
+  // Always close existing connection first
   if (ws) {
     ws.close();
     ws = null;
+    isWebSocketConnected = false;
   }
 
   const nodeAddress = job.value.node.toString();
   const frpServer = useRuntimeConfig().public.frpServer || 'node.k8s.prd.nos.ci';
+  
   let authHeader = '';
   try {
     authHeader = await signMessage();
   } catch (error) {
     isConnecting.value = false;
+    isWebSocketConnected = false;
     return;
   }
+
   const wsUrl = `wss://${nodeAddress}.${frpServer}/log`;
 
   try {
@@ -553,18 +549,23 @@ const connectWebSocket = async () => {
     // Add connection timeout
     const connectionTimeout = setTimeout(() => {
       if (!isWebSocketConnected) {
-        ws?.close();
+        if (ws) {
+          ws.close();
+          ws = null;
+        }
         isConnecting.value = false;
+        isWebSocketConnected = false;
         logs.value?.push({
           id: Date.now(),
           logs: "Could not establish WebSocket connection to get the logs. The node may be offline."
         });
       }
-    }, 10000); // 10 second timeout
+    }, 10000);
 
     ws.onopen = () => {
       clearTimeout(connectionTimeout);
       isWebSocketConnected = true;
+      isConnecting.value = false;
       const authMessage = {
         path: '/log',
         header: authHeader,
@@ -592,17 +593,10 @@ const connectWebSocket = async () => {
         // Convert ANSI codes in any text field we have
         const convertedLog = ansi.ansi_to_html(innerData.log || '');
 
-        // Handle regular logs and container logs
-        if ((innerData.log && !innerData.type) || innerData.type === 'container') {
-          logs.value?.push({
-            id: Date.now(),
-            logs: convertedLog
-          });
-          return;
-        }
-
         // Handle progress bar updates
-        if ((innerData.type === 'multi-process-bar-update' || innerData.method === 'MultiProgressBarReporter.update') && innerData.payload?.event) {
+        if ((innerData.type === 'multi-process-bar-update' || 
+             innerData.method === 'MultiProgressBarReporter.update') && 
+             innerData.payload?.event) {
           const event = innerData.payload.event;
           const layerId = event.id;
 
@@ -622,11 +616,16 @@ const connectWebSocket = async () => {
               delete progressBars.value[layerId];
             }
 
-            logs.value?.push({
-              id: Date.now(),
-              logs: `${event.status}: ${layerId}`
-            });
-            return;
+            // Check if this exact message isn't the last one before adding
+            const lastLog = logs.value?.[logs.value.length - 1]?.logs;
+            const newLog = `${event.status}: ${layerId}`;
+            if (newLog !== lastLog) {
+              logs.value?.push({
+                id: Date.now(),
+                logs: newLog
+              });
+            }
+            return; // Stop here to prevent duplicate logging
           }
 
           // Handle active download/extract states
@@ -668,13 +667,17 @@ const connectWebSocket = async () => {
               logs.value?.push(progressObj);
               progressBars.value[layerId] = progressObj.id;
             }
+            return; // Stop here to prevent duplicate logging
           }
         } else if (innerData.log) {
-          // Handle all other log messages
-          logs.value?.push({
-            id: Date.now(),
-            logs: convertedLog
-          });
+          // Handle regular logs - check for duplicates
+          const lastLog = logs.value?.[logs.value.length - 1]?.logs;
+          if (convertedLog !== lastLog) {
+            logs.value?.push({
+              id: Date.now(),
+              logs: convertedLog
+            });
+          }
         }
       } catch (err: any) {
         toast.error('Error parsing log data: ' + err.toString());
@@ -696,6 +699,7 @@ const connectWebSocket = async () => {
 
     ws.onerror = (error) => {
       clearTimeout(connectionTimeout);
+      ws = null;
       isWebSocketConnected = false;
       logs.value?.push({
         id: Date.now(),
@@ -703,15 +707,42 @@ const connectWebSocket = async () => {
       });
       isConnecting.value = false;
     };
+
   } catch (error) {
+    ws = null;
     isWebSocketConnected = false;
+    isConnecting.value = false;
     logs.value?.push({
       id: Date.now(),
       logs: "Failed to establish WebSocket connection. The node may be offline."
     });
-    isConnecting.value = false;
   }
 };
+
+// Update the unmount handler to be more thorough
+onUnmounted(() => {
+  if (ws) {
+    ws.close();
+    ws = null;
+  }
+  isWebSocketConnected = false;
+  isConnecting.value = false;
+  logs.value = null;
+});
+
+// Keep your existing watch, but make it simpler since we have the check function
+watch(
+  [
+    () => job.value?.state,
+    () => connected.value,
+    () => isVerified.value,
+    () => isJobPoster.value
+  ],
+  async () => {
+    await checkAndConnectWebSocket();
+  },
+  { immediate: true }
+);
 
 // Ensure we close the WebSocket on unmount
 onUnmounted(() => {
