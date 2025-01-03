@@ -7,7 +7,11 @@
         <div class="control">
           <div class="select is-fullwidth">
             <select v-model="selectedModel">
-              <option v-for="model in filters?.models" :key="model" :value="model">
+              <option
+                v-for="model in availableModels"
+                :key="model"
+                :value="model"
+              >
                 {{ model }}
               </option>
             </select>
@@ -20,7 +24,11 @@
         <div class="control">
           <div class="select is-fullwidth">
             <select v-model="selectedFramework">
-              <option v-for="framework in filters?.frameworks" :key="framework" :value="framework">
+              <option
+                v-for="framework in availableFrameworks"
+                :key="framework"
+                :value="framework"
+              >
                 {{ framework }}
               </option>
             </select>
@@ -33,7 +41,11 @@
         <div class="control">
           <div class="select is-fullwidth">
             <select v-model="selectedMetric">
-              <option v-for="metric in metricOptions" :key="metric.value" :value="metric.value">
+              <option
+                v-for="metric in metricOptions"
+                :key="metric.value"
+                :value="metric.value"
+              >
                 {{ metric.label }}
               </option>
             </select>
@@ -50,7 +62,12 @@
 </template>
 
 <script setup lang="ts">
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement } from 'chart.js'
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+} from "chart.js";
 import { Bar } from "vue-chartjs";
 import { useBenchmark } from "@/composables/useBenchmarkData";
 ChartJS.register(CategoryScale, LinearScale, BarElement);
@@ -136,8 +153,8 @@ const chartData = computed(() => {
 
   const sortedMarketData = marketBenchmarkData.value?.data
     ? [...marketBenchmarkData.value.data].sort(
-      (a, b) => (a[sortKey] || 0) - (b[sortKey] || 0)
-    )
+        (a, b) => (a[sortKey] || 0) - (b[sortKey] || 0)
+      )
     : [];
 
   const allValues = [
@@ -163,20 +180,20 @@ const chartData = computed(() => {
       },
       ...(sortedMarketData.length > 0
         ? [
-          {
-            label: "Market Average",
-            data: allValues.map((value) => {
-              const dataPoint = sortedMarketData.find(
-                (item) => item[sortKey] === value
-              );
-              return dataPoint
-                ? dataPoint.metrics[selectedMetric.value]
-                : null;
-            }),
-            backgroundColor: "#10E80C",
-            borderWidth: 1,
-          },
-        ]
+            {
+              label: "Market Average",
+              data: allValues.map((value) => {
+                const dataPoint = sortedMarketData.find(
+                  (item) => item[sortKey] === value
+                );
+                return dataPoint
+                  ? dataPoint.metrics[selectedMetric.value]
+                  : null;
+              }),
+              backgroundColor: "#10E80C",
+              borderWidth: 1,
+            },
+          ]
         : []),
     ],
   };
@@ -203,6 +220,36 @@ const chartOptions = computed(() => ({
     },
   },
 }));
+
+const availableFrameworks = computed(() => {
+  if (!benchmarkData.value?.data || benchmarkData.value.data.length === 0) {
+    return [];
+  }
+
+  // Get unique frameworks that exist in the data
+  const existingFrameworks = new Set(
+    benchmarkData.value.data.map((item) => item.framework)
+  );
+  return (
+    filters.value?.frameworks.filter((framework) =>
+      existingFrameworks.has(framework)
+    ) || []
+  );
+});
+
+const availableModels = computed(() => {
+  if (!benchmarkData.value?.data || benchmarkData.value.data.length === 0) {
+    return [];
+  }
+
+  // Get unique models that exist in the data
+  const existingModels = new Set(
+    benchmarkData.value.data.map((item) => item.model)
+  );
+  return (
+    filters.value?.models.filter((model) => existingModels.has(model)) || []
+  );
+});
 
 watch(
   filters,

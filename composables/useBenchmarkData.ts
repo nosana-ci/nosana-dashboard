@@ -7,16 +7,24 @@ interface BenchmarkOptions {
   marketId: ComputedRef<string | undefined> | string;
 }
 
+const llmFilters = {
+  frameworks: ["lmdeploy", "tgi", "vllm"],
+  models: ["llama3.1_70B_4x", "llama3.1_8B", "llama3.1_8B_4x"],
+};
+
+const imageGenFilters = {
+  frameworks: ["auto", "comfy", "forge", "invokeai"],
+  models: ["stable_diffusion_1.5"],
+};
+
 export function useBenchmark(options: BenchmarkOptions) {
   const selectedFramework = ref<string | null>(null);
   const selectedModel = ref<string | null>(null);
 
-  // Get filters
-  const filtersUrl = computed(() => `/api/benchmarks/${options.type}-filters`);
-  const { data: filters } = useAPI(filtersUrl, {
-    watch: [filtersUrl],
-    default: () => ({ frameworks: [], models: [] }),
-  });
+  // Replace API call with computed that returns hardcoded filters
+  const filters = computed(() =>
+    options.type === "llm" ? llmFilters : imageGenFilters
+  );
 
   // Get columns based on type
   const columns =
