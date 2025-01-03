@@ -144,7 +144,7 @@
           </tr>
         </tbody>
       </table>
-      <div class="columns">
+      <div class="columns" v-if="nodeSpecs">
         <div class="column is-6">
           <NodeBenchmarkHistogram title="LLM Performance" type="llm" :node-id="address"
             :market-id="nodeSpecs.marketAddress" default-metric="averageTokensPerSecond" :metrics="[
