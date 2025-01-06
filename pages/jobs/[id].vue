@@ -72,7 +72,7 @@
                   <span class="icon">
                     <i class="fas fa-sync fa-spin"></i>
                   </span>
-                  <span>Connecting to logs...</span>
+                  <span>Connecting to node...</span>
                 </span>
               </div>
               <div v-else-if="logs && logs.length > 0" style="counter-reset: line">
