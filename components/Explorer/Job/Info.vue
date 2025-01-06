@@ -34,13 +34,7 @@
         <td>
           <nuxt-link
             class="address is-family-monospace"
-            :to="
-              testgridMarkets &&
-              testgridMarkets.find((tgm: any) => tgm.address === props.job.market)
-                ? '/markets/' +
-                  testgridMarkets.find((tgm: any) => tgm.address === props.job.market).slug
-                : '/markets/' + props.job.market
-            "
+            :to="`/markets/${props.job.market}`"
           >
             <span
               v-if="
@@ -48,7 +42,7 @@
                 testgridMarkets.find((tgm: any) => tgm.address === props.job.market)
               "
             >
-              {{ testgridMarkets.find((tgm: any) => tgm.address === props.job.market).slug }}
+              {{ testgridMarkets.find((tgm: any) => tgm.address === props.job.market).name }}
             </span>
             <span v-else>{{ props.job.market }}</span>
           </nuxt-link>
