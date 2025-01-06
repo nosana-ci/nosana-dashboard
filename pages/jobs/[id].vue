@@ -33,7 +33,7 @@
           </div>
         </div>
 
-        <ExplorerJobInfo :job="job" @repost="repostJob" />
+        <ExplorerJobInfo :job="job" :is-job-poster="isJobPoster" @repost="repostJob" />
 
         <div v-if="job.node && job.node.toString() !== '11111111111111111111111111111111'" class="mt-4">
           <JobNodeInfo :address="job.node.toString()" />
