@@ -30,7 +30,7 @@
         <tr>
           <th>Name</th>
           <th>Price</th>
-          <th>Availibility</th>
+          <th>Availability</th>
         </tr>
       </thead>
       <tbody>

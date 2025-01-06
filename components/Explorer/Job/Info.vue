@@ -102,10 +102,10 @@
         </td>
       </tr>
       <tr>
-        <td>Repost this job</td>
+        <td>{{ isJobPoster ? 'Repost this job' : 'Post this job' }}</td>
         <td>
           <button @click="$emit('repost')" class="button is-primary is-small is-outlined">
-            Repost
+            {{ isJobPoster ? 'Repost' : 'Post' }}
           </button>
         </td>
       </tr>
@@ -177,6 +177,10 @@ const props = defineProps({
   job: {
     type: Object as PropType<Job>,
     required: true,
+  },
+  isJobPoster: {
+    type: Boolean,
+    default: false,
   },
 });
 
