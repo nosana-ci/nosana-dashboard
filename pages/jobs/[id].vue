@@ -6,13 +6,12 @@
     <div class="box">
       <div v-if="job">
         <div class="is-flex is-align-items-center is-justify-content-space-between mb-4">
-          <div></div>
-          <div class="is-flex is-align-items-center is-justify-content-center">
+          <div class="is-flex is-align-items-center">
             <div
               v-if="job.state === 1 && job.jobDefinition && job.jobDefinition.ops && job.jobDefinition.ops[0] && job.jobDefinition.ops[0].args.expose"
               class="mr-4">
               <a :href="`https://${job.address}.node.k8s.prd.nos.ci`" target="_blank"
-                class="button is-primary is-medium is-outlined">
+                class="button is-medium is-outlined has-background-transparent visit-service-btn">
                 Visit Service
               </a>
             </div>
@@ -28,17 +27,13 @@
                 Extend Job
               </button>
             </div>
-            <div class="mr-4">
-              <button @click="repostJob" :class="{ 'is-loading': loadingRepost }"
-                class="button is-primary is-medium is-outlined">
-                Repost
-              </button>
-            </div>
-            <ExplorerJobStatus class="mr-2" :status="job.state"></ExplorerJobStatus>
+          </div>
+          <div>
+            <ExplorerJobStatus :status="job.state"></ExplorerJobStatus>
           </div>
         </div>
 
-        <ExplorerJobInfo :job="job" />
+        <ExplorerJobInfo :job="job" @repost="repostJob" />
 
         <div v-if="job.node && job.node.toString() !== '11111111111111111111111111111111'" class="mt-4">
           <JobNodeInfo :address="job.node.toString()" />
@@ -49,7 +44,7 @@
             <li :class="{ 'is-active': activeTab === 'logs' }">
               <a @click.prevent="activeTab = 'logs'">Logs</a>
             </li>
-            <li :class="{ 'is-active': activeTab === 'result' }">
+            <li v-if="hasResultsRegex" :class="{ 'is-active': activeTab === 'result' }">
               <a @click.prevent="activeTab = 'result'">Result</a>
             </li>
             <li :class="{ 'is-active': activeTab === 'info' }">
@@ -78,7 +73,17 @@
               <div v-else-if="logs && logs.length > 0" style="counter-reset: line">
                 <div v-for="step in logs" :key="step.id">
                   <div v-for="(log, ik) in step.logs.split('\n')" :key="ik" class="row-count">
-                    <span class="pre" v-html="log.slice(0, 10000)" />
+                    <div class="is-flex is-justify-content-space-between is-align-items-center">
+                      <span class="pre" v-html="log.slice(0, 10000)" />
+                      <button v-if="log.includes('Error connecting to WebSocket')" 
+                        @click="checkAndConnectWebSocket" 
+                        class="button is-info is-small ml-4">
+                        <span class="icon">
+                          <i class="fas fa-sync"></i>
+                        </span>
+                        <span>Retry Connection</span>
+                      </button>
+                    </div>
                   </div>
                   <div v-if="step.progress" class="progress-bar mb-2">
                     <div class="progress-text">
@@ -101,7 +106,13 @@
               :ipfs-result="ipfsResult" :ipfs-job="job.jobDefinition" />
           </div>
           <div v-show="activeTab === 'result'" class="p-1 py-4 has-background-white-bis">
-            <VueJsonPretty :data="job.jobResult" show-icon show-line-number />
+            <div v-if="job.state === 'RUNNING' || job.state === 1" class="has-text-grey">
+              Waiting for results...
+            </div>
+            <div v-else-if="!job.jobResult" class="has-text-grey">
+              This container did not have a results regex
+            </div>
+            <VueJsonPretty v-else :data="job.jobResult" show-icon show-line-number />
           </div>
           <div v-show="activeTab === 'artifacts'" class="p-1 py-4 has-background-white-bis">
             <div>
@@ -459,6 +470,9 @@ const repostJob = async () => {
     return;
   }
 
+  // Get the timeout value from the job (convert from seconds to minutes), fallback to 60 minutes if not found
+  const theTimeout = job.value.timeout ? Math.floor(job.value.timeout / 60) : 60;
+
   try {
     loadingRepost.value = true;
     router.push({
@@ -467,6 +481,7 @@ const repostJob = async () => {
         fromRepost: 'true',
         step: 'post-job',
         jobAddress: job.value.address,
+        jobTimeout: theTimeout
       },
     });
   } catch (error: any) {
@@ -514,6 +529,11 @@ const connectWebSocket = async () => {
     ws.close();
     ws = null;
     isWebSocketConnected = false;
+  }
+
+  // Clear any previous error messages
+  if (logs.value) {
+    logs.value = logs.value.filter(log => !log.logs.includes('Error connecting to WebSocket'));
   }
 
   const nodeAddress = job.value.node.toString();
@@ -738,6 +758,21 @@ onUnmounted(() => {
   }
 });
 
+interface JobOperation {
+  id: string;
+  type: string;
+  args: any;
+  results?: {
+    [key: string]: string;
+  };
+}
+
+// Add computed property to check for results regex
+const hasResultsRegex = computed(() => {
+  if (!job.value?.jobDefinition?.ops) return false;
+  return job.value.jobDefinition.ops.some((op: JobOperation) => op.results);
+});
+
 </script>
 <style lang="scss" scoped>
 .pre {
@@ -754,5 +789,16 @@ onUnmounted(() => {
 
 .progress.is-primary::-moz-progress-bar {
   background-color: #00d1b2;
+}
+
+.visit-service-btn {
+  color: #10E80C !important;
+  border-color: #10E80C !important;
+  background: transparent !important;
+
+  &:hover {
+    background: #10E80C !important;
+    color: white !important;
+  }
 }
 </style>

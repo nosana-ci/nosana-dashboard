@@ -8,37 +8,37 @@
           </td>
         </tr>
         <!-- Specifications -->
-        <tr v-if="nodeSpecs?.gpus && nodeSpecs.gpus.length > 0">
+        <tr>
           <td>GPU</td>
-          <td>{{ nodeSpecs.gpus[0]?.gpu }}</td>
+          <td>{{ nodeSpecs?.gpus?.[0]?.gpu || '-' }}</td>
         </tr>
-        <tr v-if="nodeSpecs?.cpu">
+        <tr>
           <td>CPU</td>
-          <td>{{ nodeSpecs.cpu }}</td>
+          <td>{{ nodeSpecs?.cpu || '-' }}</td>
         </tr>
-        <tr v-if="nodeSpecs?.ram">
+        <tr>
           <td>RAM</td>
-          <td>{{ nodeSpecs.ram.toFixed(1) }} GB</td>
+          <td>{{ nodeSpecs?.ram ? `${nodeSpecs.ram.toFixed(1)} GB` : '-' }}</td>
         </tr>
-        <tr v-if="nodeSpecs?.diskSpace">
+        <tr>
           <td>Disk Space</td>
-          <td>{{ nodeSpecs.diskSpace.toFixed(1) }} GB</td>
+          <td>{{ nodeSpecs?.diskSpace ? `${nodeSpecs.diskSpace.toFixed(1)} GB` : '-' }}</td>
         </tr>
-        <tr v-if="nodeSpecs?.country">
+        <tr>
           <td>Country</td>
-          <td>{{ nodeSpecs.country }}</td>
+          <td>{{ nodeSpecs?.country || '-' }}</td>
         </tr>
-        <tr v-if="nodeSpecs?.bandwidth?.ping">
+        <tr>
           <td>Ping</td>
-          <td>{{ nodeSpecs.bandwidth.ping.toFixed(1) }} ms</td>
+          <td>{{ nodeSpecs?.bandwidth?.ping ? `${nodeSpecs.bandwidth.ping.toFixed(1)} ms` : '-' }}</td>
         </tr>
-        <tr v-if="nodeSpecs?.bandwidth?.download">
+        <tr>
           <td>Download Speed</td>
-          <td>{{ nodeSpecs.bandwidth.download.toFixed(1) }} Mbps</td>
+          <td>{{ nodeSpecs?.bandwidth?.download ? `${nodeSpecs.bandwidth.download.toFixed(1)} Mbps` : '-' }}</td>
         </tr>
-        <tr v-if="nodeSpecs?.bandwidth?.upload">
+        <tr>
           <td>Upload Speed</td>
-          <td>{{ nodeSpecs.bandwidth.upload.toFixed(1) }} Mbps</td>
+          <td>{{ nodeSpecs?.bandwidth?.upload ? `${nodeSpecs.bandwidth.upload.toFixed(1)} Mbps` : '-' }}</td>
         </tr>
         <tr>
           <td>
