@@ -30,16 +30,15 @@
         <tr>
           <th>Name</th>
           <th>Price</th>
-          <th>Max. duration</th>
           <th>Availibility</th>
         </tr>
       </thead>
       <tbody>
         <tr v-if="!filteredMarkets">
-          <td colspan="4">Loading markets..</td>
+          <td colspan="3">Loading markets..</td>
         </tr>
         <tr v-if="filteredMarkets && !filteredMarkets.length">
-          <td colspan="4">No markets</td>
+          <td colspan="3">No markets</td>
         </tr>
         <nuxt-link v-for="market in paginatedMarkets" v-else :key="market.address.toString()"
           :to="`/markets/${market.address.toString()}`" custom>
@@ -64,9 +63,7 @@
                   ${{ ((stats[0].price * (parseInt(market.jobPrice) / 1e6)) * 3600).toFixed(2) }} / h
                 </span>
                 <span v-else>{{ parseInt(market.jobPrice) / 1e6 }} NOS/s</span>
-
               </td>
-              <td class="py-3">{{ parseInt(market.jobTimeout) / 60 }} min</td>
               <td class="py-3">
                 <span v-if="market.queueType === 1">
                   <span v-if="loadingRunningJobs">...</span>
