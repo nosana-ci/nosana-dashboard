@@ -109,6 +109,8 @@ const {
   filters,
   benchmarkData,
   marketBenchmarkData,
+  availableFrameworks,
+  availableModels,
 } = useBenchmark({
   type: props.type as "image-gen" | "llm",
   nodeId: props.nodeId,
@@ -118,11 +120,14 @@ const {
 const selectedMetric = ref(props.defaultMetric);
 
 const metricOptions = computed(() => {
-  if (!benchmarkData.value?.data || benchmarkData.value.data.length === 0) {
+  if (
+    !marketBenchmarkData.value?.data ||
+    marketBenchmarkData.value.data.length === 0
+  ) {
     return [];
   }
 
-  const sampleMetrics = benchmarkData.value.data[0]?.metrics || {};
+  const sampleMetrics = marketBenchmarkData.value.data[0]?.metrics || {};
   return props.metrics.filter(
     (metric) =>
       sampleMetrics[metric.value] !== undefined &&
@@ -220,58 +225,6 @@ const chartOptions = computed(() => ({
     },
   },
 }));
-
-const availableFrameworks = computed(() => {
-  if (!benchmarkData.value?.data || benchmarkData.value.data.length === 0) {
-    return [];
-  }
-
-  // Get unique frameworks that exist in the data
-  const existingFrameworks = new Set(
-    benchmarkData.value.data.map((item) => item.framework)
-  );
-  return (
-    filters.value?.frameworks.filter((framework) =>
-      existingFrameworks.has(framework)
-    ) || []
-  );
-});
-
-const availableModels = computed(() => {
-  if (!benchmarkData.value?.data || benchmarkData.value.data.length === 0) {
-    return [];
-  }
-
-  // Get unique models that exist in the data
-  const existingModels = new Set(
-    benchmarkData.value.data.map((item) => item.model)
-  );
-  return (
-    filters.value?.models.filter((model) => existingModels.has(model)) || []
-  );
-});
-
-watch(
-  filters,
-  (newFilters) => {
-    if (newFilters) {
-      selectedModel.value = newFilters.models[0];
-
-      if (props.type === "image-gen") {
-        const comfyIndex = newFilters.frameworks.findIndex(
-          (f: string) => f.toLowerCase() === "comfy"
-        );
-        selectedFramework.value =
-          comfyIndex >= 0
-            ? newFilters.frameworks[comfyIndex]
-            : newFilters.frameworks[0];
-      } else {
-        selectedFramework.value = newFilters.frameworks[0];
-      }
-    }
-  },
-  { immediate: true }
-);
 </script>
 
 <style lang="scss" scoped>
