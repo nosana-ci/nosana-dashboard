@@ -54,7 +54,7 @@
             </td>
           </tr>
           <tr>
-            <td>Market</td>
+            <td>GPU Market</td>
             <td v-if="queueInfo">
               <span>
                 <nuxt-link :to="`/markets/${queueInfo.market.address.toString()}`" class="address is-family-monospace">
