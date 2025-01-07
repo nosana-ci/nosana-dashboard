@@ -9,7 +9,7 @@ interface BenchmarkOptions {
 
 interface BenchmarkDataItem {
   framework: string;
-  model: string;
+  modelName: string;
   metrics: {
     avgClockSpeed: string;
     avgWattage: string;
@@ -98,7 +98,7 @@ export function useBenchmark(options: BenchmarkOptions) {
         (item: BenchmarkDataItem) =>
           (!selectedFramework.value ||
             item.framework === selectedFramework.value) &&
-          (!selectedModel.value || item.model === selectedModel.value)
+          (!selectedModel.value || item.modelName === selectedModel.value)
       ),
     };
   });
@@ -110,7 +110,7 @@ export function useBenchmark(options: BenchmarkOptions) {
         (item: BenchmarkDataItem) =>
           (!selectedFramework.value ||
             item.framework === selectedFramework.value) &&
-          (!selectedModel.value || item.model === selectedModel.value)
+          (!selectedModel.value || item.modelName === selectedModel.value)
       ),
     };
   });
@@ -143,7 +143,7 @@ export function useBenchmark(options: BenchmarkOptions) {
 
     const existingModels = new Set(
       rawMarketBenchmarkData.value.data.map(
-        (item: BenchmarkDataItem) => item.model
+        (item: BenchmarkDataItem) => item.modelName
       )
     );
     return filters.value.models.filter((model) => existingModels.has(model));
@@ -151,26 +151,23 @@ export function useBenchmark(options: BenchmarkOptions) {
 
   // Initialize filters when market data is loaded
   watch(
-    rawMarketBenchmarkData,
-    (newData) => {
-      if (newData?.data && newData.data.length > 0) {
+    [rawMarketBenchmarkData, rawBenchmarkData],
+    ([marketData, nodeData]) => {
+      if (marketData?.data?.length > 0 && nodeData?.data) {
         // Get node data combinations
         const nodeDataCombinations = new Set(
-          rawBenchmarkData.value?.data?.map(
-            (item: { model: string; framework: string }) =>
-              `${item.model}-${item.framework}`
-          ) || []
+          nodeData.data.map(
+            (item: { modelName: string; framework: string }) =>
+              `${item.modelName}-${item.framework}`
+          )
         );
 
         if (availableModels.value.length > 0) {
           // First find a model that has any node data
-          const modelWithNodeData = availableModels.value.find(
-            (model) =>
-              nodeDataCombinations.has(
-                `${model}-${availableFrameworks.value[0]}`
-              ) ||
-              nodeDataCombinations.has(`${model}-comfy`) ||
-              nodeDataCombinations.has(`${model}-forge`)
+          const modelWithNodeData = availableModels.value.find((model) =>
+            availableFrameworks.value.some((framework) =>
+              nodeDataCombinations.has(`${model}-${framework}`)
+            )
           );
 
           // Set the model first
@@ -185,20 +182,15 @@ export function useBenchmark(options: BenchmarkOptions) {
 
             if (frameworksWithNodeData.length > 0) {
               if (options.type === "image-gen") {
-                // If we have node data and comfy is among the frameworks with node data, use it
-                const comfyIndex = frameworksWithNodeData.findIndex(
-                  (f) => f.toLowerCase() === "comfy"
-                );
-                selectedFramework.value =
-                  comfyIndex >= 0
-                    ? frameworksWithNodeData[comfyIndex]
-                    : frameworksWithNodeData[0];
+                // For image-gen, prioritize comfy if it has node data
+                const hasComfy = frameworksWithNodeData.includes("comfy");
+                selectedFramework.value = hasComfy
+                  ? "comfy"
+                  : frameworksWithNodeData[0];
               } else {
-                // For LLM, use the first framework with node data
                 selectedFramework.value = frameworksWithNodeData[0];
               }
             } else {
-              // Fall back to first market framework if none have node data
               selectedFramework.value = availableFrameworks.value[0];
             }
           }
