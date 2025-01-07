@@ -148,7 +148,7 @@
               </td>
               <td>{{ item.gpu }}</td>
               <td>{{ item.framework }}</td>
-              <td>{{ item.model }}</td>
+              <td>{{ item.modelName }}</td>
               <td>{{ item.cuCount }}</td>
               <td>{{ item.metrics.averageTokensPerSecond }}</td>
               <td>{{ item.metrics.pricePerMillionTokens.toFixed(2) }}</td>
@@ -354,7 +354,7 @@ function sortBy(field: string) {
 
 // Generate a unique key for each row
 function generateRowKey(item: any) {
-  return `${item.node}-${item.cuCount}-${item.model}-${item.framework}-${item.gpu}`;
+  return `${item.node}-${item.cuCount}-${item.modelName}-${item.framework}-${item.gpu}`;
 }
 
 // Implement prevPage and nextPage functions
