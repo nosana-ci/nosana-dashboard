@@ -8,16 +8,41 @@
         <div class="is-flex is-align-items-center is-justify-content-space-between mb-4">
           <div></div>
           <div class="is-flex is-align-items-center is-justify-content-center">
+            <div
+              v-if="job.state === 1 && job.jobDefinition && job.jobDefinition.ops && job.jobDefinition.ops[0] && job.jobDefinition.ops[0].args.expose"
+              class="mr-4">
+              <a :href="`https://${job.address}.node.k8s.prd.nos.ci`" target="_blank"
+                class="button is-primary is-medium is-outlined">
+                Visit Service
+              </a>
+            </div>
             <div v-if="isJobPoster && (job.state === 'RUNNING' || job.state === 1)" class="mr-4">
-              <button @click="stopJob" :class="{ 'is-loading': loading }" class="button is-danger is-small is-outlined">
+              <button @click="stopJob" :class="{ 'is-loading': loading }"
+                class="button is-danger is-medium is-outlined">
                 Stop Job
               </button>
             </div>
-            <ExplorerJobStatus class="mr-2" :status="jobStatus ? jobStatus : job.state"></ExplorerJobStatus>
+            <div v-if="isJobPoster && (job.state === 'RUNNING' || job.state === 1)" class="mr-4">
+              <button @click="extendJob" :class="{ 'is-loading': loadingExtend }"
+                class="button is-warning is-medium is-outlined">
+                Extend Job
+              </button>
+            </div>
+            <div class="mr-4">
+              <button @click="repostJob" :class="{ 'is-loading': loadingRepost }"
+                class="button is-primary is-medium is-outlined">
+                Repost
+              </button>
+            </div>
+            <ExplorerJobStatus class="mr-2" :status="job.state"></ExplorerJobStatus>
           </div>
         </div>
 
         <ExplorerJobInfo :job="job" />
+
+        <div v-if="job.node && job.node.toString() !== '11111111111111111111111111111111'" class="mt-4">
+          <JobNodeInfo :address="job.node.toString()" />
+        </div>
 
         <div class="tabs mt-5">
           <ul>
@@ -42,10 +67,26 @@
           <div v-show="activeTab === 'logs'" class="p-1 py-4 has-background-white-bis">
             <div v-if="job.state === 'RUNNING' || job.state === 1"
               class="is-family-monospace has-background-black has-text-white box light-mode">
-              <div v-if="logs && logs.length > 0" style="counter-reset: line">
+              <div v-if="isConnecting" class="has-text-info">
+                <span class="icon-text">
+                  <span class="icon">
+                    <i class="fas fa-sync fa-spin"></i>
+                  </span>
+                  <span>Connecting to logs...</span>
+                </span>
+              </div>
+              <div v-else-if="logs && logs.length > 0" style="counter-reset: line">
                 <div v-for="step in logs" :key="step.id">
                   <div v-for="(log, ik) in step.logs.split('\n')" :key="ik" class="row-count">
                     <span class="pre" v-html="log.slice(0, 10000)" />
+                  </div>
+                  <div v-if="step.progress" class="progress-bar mb-2">
+                    <div class="progress-text">
+                      {{ step.progress.status }} | {{ step.progress.id }} | {{ step.progress.sizeText }}
+                    </div>
+                    <progress class="progress is-primary" :value="step.progress.current" :max="step.progress.total">
+                      {{ step.progress.progress }}
+                    </progress>
                   </div>
                 </div>
               </div>
@@ -56,8 +97,8 @@
             <div v-else-if="ipfsResult.results && ipfsResult.results[0] === 'nos/secret'">
               Results are secret
             </div>
-            <ExplorerJobResult v-else-if="(ipfsResult && job.state === 'COMPLETED') || job.state === 2
-            " :ipfs-result="ipfsResult" :ipfs-job="job.jobDefinition" />
+            <ExplorerJobResult v-else-if="(ipfsResult && job.state === 'COMPLETED') || job.state === 2"
+              :ipfs-result="ipfsResult" :ipfs-job="job.jobDefinition" />
           </div>
           <div v-show="activeTab === 'result'" class="p-1 py-4 has-background-white-bis">
             <VueJsonPretty :data="job.jobResult" show-icon show-line-number />
@@ -65,7 +106,7 @@
           <div v-show="activeTab === 'artifacts'" class="p-1 py-4 has-background-white-bis">
             <div>
               <p class="block">
-                <a v-if="ipfsGateway && artifacts" class="button" :href="`${ipfsGateway}${artifacts.trim()}`">
+                <a v-if="ipfsGateway && artifacts" class="button" :href="`${ipfsGateway}${String(artifacts).trim()}`">
                   Download artifacts
                 </a>
               </p>
@@ -84,34 +125,92 @@
 </template>
 
 <script setup lang="ts">
-import { useRoute } from "vue-router";
+import { onUnmounted, watch, ref, computed, onMounted, onActivated } from 'vue';
+import { useRoute, useRouter } from "vue-router";
 import VueJsonPretty from "vue-json-pretty";
 import 'vue-json-pretty/lib/styles.css';
 import AnsiUp from 'ansi_up';
-import { useWallet } from 'solana-wallets-vue'
+import { useWallet } from 'solana-wallets-vue';
 import { useToast } from "vue-toastification";
 import type { MessageSignerWalletAdapter } from '@solana/wallet-adapter-base';
-const toast = useToast();
+import JobNodeInfo from '~/components/Node/JobNodeInfo.vue';
+import { useIntervalFn } from '@vueuse/core';
+import { useSDK } from '~/composables/useSDK';
+import { useAPI } from '~/composables/useAPI';
+import { useIpfs } from '~/composables/useIpfs';
+import { useRuntimeConfig } from '#imports';
+import { useMarkets } from '~/composables/useMarkets';
+import { useLocalStorage } from '@vueuse/core';
 
+const toast = useToast();
 const { nosana } = useSDK();
 const ansi = new AnsiUp();
+const router = useRouter();
 
-const ipfsResult: Ref<{ [key: string]: any }> = ref({});
+const storedAuthHeader = useLocalStorage<string | null>('nosanaAuthHeader', null);
+
+const ipfsResult = ref<{ results?: string[] }>({});
 const { params } = useRoute();
-const jobId: Ref<string> = ref(String(params.id) || "");
-const loading: Ref<boolean> = ref(false);
-const activeTab: Ref<string> = ref("logs");
-const jobStatus: Ref<string | null> = ref(null);
-const logs: Ref<any | null> = ref(null);
+const jobId = ref(String(params.id) || "");
+const loading = ref(false);
+const loadingExtend = ref(false);
+const activeTab = ref("logs");
+const logs = ref<any[] | null>(null);
+
 const { getIpfs } = useIpfs();
 const artifacts = ref(null);
 const ipfsGateway = ref(nosana.value ? nosana.value.ipfs.config.gateway : null);
 
+const { data: job, pending: loadingJob, refresh: refreshJob } = useAPI(
+  `/api/jobs/${jobId.value}`,
+  { watch: false }
+);
 
+const { pause: pauseJobPolling, resume: resumeJobPolling } = useIntervalFn(() => {
+  console.log("REFRESHING");
+  refreshJob();
+}, 3000, { immediate: false });
 
+// Add progressBars ref at the top with other refs
+const progressBars = ref<{ [key: string]: any }>({});
 
-const { data: job, pending: loadingJob } = useAPI(`/api/jobs/${jobId.value}`);
+// Add state mapping at the top with other constants
+const jobStateMapping: { [key: string]: number } = {
+  RUNNING: 1,
+  COMPLETED: 2,
+  STOPPED: 3,
+  FAILED: 4
+};
 
+watch(job, async (newJob) => {
+  if (!newJob) return;
+
+  if (newJob.state < 2) {
+    resumeJobPolling();
+    // Initialize logs only if wallet is connected
+    if (connected.value && !logs.value) {
+      logs.value = [];
+    }
+  } else {
+    pauseJobPolling();
+  }
+
+  // Fetch IPFS results if needed
+  try {
+    loading.value = true;
+
+    if (
+      newJob.ipfsResult &&
+      newJob.ipfsResult !== 'QmNLei78zWmzUdbeRB3CiUfAizWUrbeeZh5K1rhAQKCh51'
+    ) {
+      const resultResponse = await getIpfs(newJob.ipfsResult);
+      ipfsResult.value = resultResponse;
+    }
+  } catch (error) {
+  } finally {
+    loading.value = false;
+  }
+}, { immediate: true, deep: true });
 
 const { wallet, publicKey, connected } = useWallet();
 
@@ -119,166 +218,541 @@ const isJobPoster = computed(() => {
   return connected.value && job.value && publicKey.value?.toString() === job.value.project;
 });
 
+// Add verification status
+const isVerified = ref(storedAuthHeader.value !== null);
+
+// 3) In signMessage, we now store the signed message to storedAuthHeader,
+//    which is bound to localStorage.
+const signMessage = async (forceNew = false) => {
+  if (storedAuthHeader.value && !forceNew) {
+    // Verify the stored signature matches the current wallet
+    const [storedKey] = storedAuthHeader.value.split(':');
+    if (storedKey === publicKey.value?.toString()) {
+      isVerified.value = true;
+      return storedAuthHeader.value;
+    }
+  }
+
+  if (!connected.value || !publicKey.value || !wallet.value) {
+    throw new Error('Wallet not connected or not found');
+  }
+  const message = 'Hello Nosana Node!';
+  const encodedMessage = new TextEncoder().encode(message);
+  const adapter = wallet.value.adapter as MessageSignerWalletAdapter;
+  if (!adapter.signMessage) {
+    throw new Error('Wallet does not support message signing');
+  }
+  const signedMessage = await adapter.signMessage(encodedMessage);
+  const signature = Buffer.from(signedMessage).toString('base64');
+  const publicKeyString = publicKey.value.toString();
+  const authHeader = `${publicKeyString}:${signature}`;
+
+  // Save the auth header to local storage so that
+  // it persists when switching between pages.
+  storedAuthHeader.value = authHeader;
+  isVerified.value = true;
+  return authHeader;
+};
+
+const needsVerification = computed(() => {
+  return job.value &&
+    (job.value.state === 'RUNNING' || job.value.state === 1) &&
+    isJobPoster.value &&
+    !isVerified.value;
+});
+
+// Add a watch for the wallet connection to validate stored auth header
+watch(
+  publicKey,
+  async (newPublicKey) => {
+    if (newPublicKey && storedAuthHeader.value) {
+      // Check if the stored auth header matches the current wallet
+      const [storedKey] = storedAuthHeader.value.split(':');
+      if (storedKey !== newPublicKey.toString()) {
+        // If the stored key doesn't match the current wallet, clear it
+        storedAuthHeader.value = null;
+        isVerified.value = false;
+      }
+    }
+  },
+  { immediate: true }
+);
+
+watch(
+  [connected, needsVerification],
+  async ([newConnected, newNeedsVerification]) => {
+    if (newConnected && newNeedsVerification && !isVerified.value) {
+      try {
+        await signMessage(true);
+        toast.success('Wallet verified successfully');
+        refreshJob();
+        // Initialize logs if job is running
+        if (job.value && (job.value.state === 'RUNNING' || job.value.state === 1)) {
+          logs.value = [];
+        }
+      } catch (error) {
+        toast.error('Failed to verify wallet');
+      }
+    } else if (!newConnected) {
+      isVerified.value = false;
+      storedAuthHeader.value = null;
+      // Clear logs when disconnecting
+      logs.value = null;
+      if (ws) {
+        ws.close();
+        isWebSocketConnected = false;
+        isConnecting.value = false;
+      }
+    }
+  },
+  { immediate: true }
+);
+
+// Add a watch for connected state to handle logs initialization
+watch(
+  connected,
+  async (newConnected) => {
+    if (newConnected && job.value && (job.value.state === 'RUNNING' || job.value.state === 1)) {
+      logs.value = [];
+
+    } else if (!newConnected) {
+      logs.value = null;
+    }
+  },
+  { immediate: true }
+);
+
+// Modify stopJob to check verification
 const stopJob = async () => {
   if (!job.value) return;
+  if (!isVerified.value) {
+    try {
+      await signMessage(true);
+    } catch (error) {
+      toast.error('Please verify your wallet first');
+      return;
+    }
+  }
   try {
     loading.value = true;
-
-    if (!connected.value || !publicKey.value) {
-      throw new Error('Wallet not connected');
-    }
-    if (!wallet.value) {
-      throw new Error('Wallet not found');
-    }
-
+    const authorizationHeader = await signMessage();
     const nodeAddress = job.value.node.toString();
     const apiUrl = `https://${nodeAddress}.${useRuntimeConfig().public.nodeDomain}/service/stop/${jobId.value}`;
-
-    // Use the specific node API URL for a one-time real test
-    // const apiUrl = 'https://3vwMHHicGk9enrHst7cJhbucNWSMyMDuB8G9HX1DQk7A.node.k8s.dev.nos.ci/service/stop/testjobid123';
-
-    // Create the authorization header
-    const message = 'Hello Nosana Node!';
-    const encodedMessage = new TextEncoder().encode(message);
-
-    const adapter = wallet.value.adapter as MessageSignerWalletAdapter;
-    if (!adapter.signMessage) {
-      throw new Error('Wallet does not support message signing');
-    }
-
-    // Sign the message
-    const signedMessage = await adapter.signMessage(encodedMessage);
-
-    // Create Authorization header: "PublicKey:Base64Signature"
-    const signature = Buffer.from(signedMessage).toString('base64');
-    const publicKeyString = publicKey.value.toString();
-    const authorizationHeader = `${publicKeyString}:${signature}`;
-
-    // Make the real API call
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Authorization': authorizationHeader,
       },
     });
-
     const text = await response.text();
-    console.log('Response status:', response.status);
-    console.log('Response body:', text);
-
     if (response.status === 403) {
+      storedAuthHeader.value = null;
       toast.error(`Authentication failed: ${text}`);
       return;
     }
-
     if (response.status === 200) {
       toast.success(`Success: ${text}`);
       return;
     }
-
-    // Rrefresh the job data
+    // Refresh job data
     const updatedJob = await nosana.value.jobs.get(jobId.value);
     job.value = updatedJob;
-
   } catch (e: any) {
-    // Catch any runtime errors
+    storedAuthHeader.value = null;
     toast.error(`Error stopping job: ${e.toString()}`);
   } finally {
     loading.value = false;
   }
 };
 
-watch(job, async () => {
-  try {
-    loading.value = true;
-    try {
-      if (
-        (job.value?.state === "RUNNING" || job.value?.state === 1) &&
-        job.value.jobDefinition &&
-        typeof job.value.jobDefinition !== "string" &&
-        !logs.value
-      ) {
-        logs.value = [];
-      }
-      if (
-        job.value!.ipfsResult &&
-        job.value!.ipfsResult !==
-        "QmNLei78zWmzUdbeRB3CiUfAizWUrbeeZh5K1rhAQKCh51"
-      ) {
-        const resultResponse = await getIpfs(job.value!.ipfsResult);
-        ipfsResult.value = resultResponse;
-      }
-      if (ipfsResult.value && typeof ipfsResult.value !== "string") {
-        const artifactId = ipfsJob.value.ops[ipfsJob.value.ops.length - 1].id;
-        if (artifactId.startsWith("artifact-")) {
-          if (ipfsResult.value!.results[artifactId]) {
-            const steps = ipfsResult.value!.results[artifactId][1];
-            if (Array.isArray(steps)) {
-              const logs = steps[steps.length - 1].log;
-              if (logs && logs[logs.length - 2]) {
-                artifacts.value = logs[logs.length - 2][1].slice(-47);
-              }
-            }
-          }
-        }
-        console.log('ipfsResult.value', ipfsResult.value);
-        for (const key in ipfsResult.value!.results) {
-          const results = ipfsResult.value!.results[key];
-          if (
-            (results && results[0] && results[0].exit) ||
-            (results &&
-              results[0] &&
-              (results[0].includes("error") || results[0].includes("failed")))
-          ) {
-            jobStatus.value = "FAILED";
-          }
-
-          if (Array.isArray(results)) {
-            if (results[1]) {
-              if (Array.isArray(results[1]) || Array.isArray(results[2])) {
-                const resultsArray = Array.isArray(results[1])
-                  ? results[1]
-                  : results[2][1];
-                if (resultsArray) {
-                  for (let i = 0; i < resultsArray.length; i++) {
-                    const step = resultsArray[i];
-                    if (step.log && Array.isArray(step.log)) {
-                      step.log = step.log
-                        .reduce((str: any, log: any) => str.concat(log[1]), "")
-                        .split("\n")
-                        .map((l: any) => [1, ansi.ansi_to_html(l)]);
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-
-        if (
-          ipfsResult.value.results &&
-          ipfsResult.value.results["nosana/error"]
-        ) {
-          jobStatus.value = "FAILED";
-        }
-      }
-    } catch (error) {
-      console.log("error when processing ipfs", error);
-    }
-  } catch (e) {
-    console.error(e);
-    job.value = null;
+// 2) The new "extendJob" function which calls the SDK's extend:
+const extendJob = async () => {
+  if (!job.value) {
+    toast.error('No job found.');
+    return;
   }
-  loading.value = false;
+
+  if (!connected.value || !publicKey.value) {
+    toast.error('Please connect your wallet first!');
+    return;
+  }
+
+  try {
+    loadingExtend.value = true;
+
+    // Fetch a fresh copy from on-chain
+    const onChainJob = await nosana.value.jobs.get(job.value.address);
+
+    // Convert to numeric if it's a string state
+    const numericState = typeof onChainJob.state === 'string'
+      ? jobStateMapping[onChainJob.state]
+      : onChainJob.state;
+
+    // Show toast logs with the actual states
+    toast.info(`On-chain job.state: "${onChainJob.state}" (numeric: ${numericState})`);
+    toast.info(`Local job.state: "${job.value.state}" (type: ${typeof job.value.state})`);
+    toast.info(`Market: ${onChainJob.market || 'None'}`);
+    toast.info(`Node: ${onChainJob.node}`);
+    toast.info(`Project: ${onChainJob.project}`);
+    toast.info(`Your wallet: ${publicKey.value.toString()}`);
+
+    // Check if numericState matches RUNNING (1)
+    if (numericState !== 1) {
+      toast.warning(`Job is not in numeric RUNNING (1). Retrying in 3s...`);
+      await new Promise((r) => setTimeout(r, 3000));
+      const reCheck = await nosana.value.jobs.get(job.value.address);
+      const reCheckNumeric = typeof reCheck.state === 'string'
+        ? jobStateMapping[reCheck.state]
+        : reCheck.state;
+
+      if (reCheckNumeric !== 1) {
+        toast.error(`Still cannot extend: On-chain says "${reCheck.state}" (numeric: ${reCheckNumeric})`);
+        return;
+      }
+    }
+
+    const result = await nosana.value.jobs.extend(job.value.address, 300);
+    toast.success(`Job has been extended! Transaction: ${result.tx}`);
+
+    const updated = await nosana.value.jobs.get(job.value.address);
+    job.value = updated;
+    toast.info(`After extension: On-chain job.state is "${updated.state}"`);
+
+  } catch (err: any) {
+    toast.error(`Error extending job: ${err.message ?? err.toString()}`);
+  } finally {
+    loadingExtend.value = false;
+  }
+};
+
+// Add these refs near the top with other refs
+const loadingRepost = ref(false);
+
+// Remove duplicate imports and fix market types
+const { markets, getMarkets, loadingMarkets } = useMarkets();
+const { data: testgridMarkets } = await useAPI('/api/markets', { default: () => [] });
+
+// Add this watch to initialize markets if needed
+if (!markets.value && !loadingMarkets.value) {
+  getMarkets();
+}
+
+// Add these computed properties
+const pricePerHour = computed(() => {
+  if (!repostMarket.value) return 0;
+  return (repostMarket.value.jobPrice * 3600) / 1e6;
 });
 
+const maxPrice = computed(() => {
+  if (!repostMarket.value || !repostTimeout.value) return 0;
+  return (repostMarket.value.jobPrice * repostTimeout.value * 60) / 1e6;
+});
 
+const networkFee = computed(() => {
+  return maxPrice.value * 0.1;
+});
 
+// Modify the repostJob function to initialize the values
+const repostJob = async () => {
+  if (!job.value?.address) {
+    toast.error("No valid job address to repost.");
+    return;
+  }
 
+  try {
+    loadingRepost.value = true;
+    router.push({
+      path: '/jobs/create',
+      query: {
+        fromRepost: 'true',
+        step: 'post-job',
+        jobAddress: job.value.address,
+      },
+    });
+  } catch (error: any) {
+    toast.error(`Error preparing repost: ${error.toString()}`);
+  } finally {
+    loadingRepost.value = false;
+  }
+};
+
+let ws: WebSocket | null = null;
+let isWebSocketConnected = false;
+const isConnecting = ref(false);
+
+// Add the new check and connect function
+const checkAndConnectWebSocket = async () => {
+  // If we're already connected or connecting, don't try again
+  if (isWebSocketConnected || isConnecting.value) return;
+
+  // Check all conditions for connection
+  if (
+    job.value &&
+    (job.value.state === 'RUNNING' || job.value.state === 1) &&
+    isJobPoster.value &&
+    isVerified.value &&
+    connected.value
+  ) {
+    isConnecting.value = true;
+    await connectWebSocket();
+  }
+};
+
+// Add mounted and activated hooks
+onMounted(() => {
+  checkAndConnectWebSocket();
+});
+
+onActivated(() => {
+  checkAndConnectWebSocket();
+});
+
+// Update the connectWebSocket function to properly handle connection states
+const connectWebSocket = async () => {
+  // Always close existing connection first
+  if (ws) {
+    ws.close();
+    ws = null;
+    isWebSocketConnected = false;
+  }
+
+  const nodeAddress = job.value.node.toString();
+  const frpServer = useRuntimeConfig().public.nodeDomain;
+
+  let authHeader = '';
+  try {
+    authHeader = await signMessage();
+  } catch (error) {
+    isConnecting.value = false;
+    isWebSocketConnected = false;
+    return;
+  }
+
+  const wsUrl = `wss://${nodeAddress}.${frpServer}/log`;
+
+  try {
+    ws = new WebSocket(wsUrl);
+
+    // Add connection timeout
+    const connectionTimeout = setTimeout(() => {
+      if (!isWebSocketConnected) {
+        if (ws) {
+          ws.close();
+          ws = null;
+        }
+        isConnecting.value = false;
+        isWebSocketConnected = false;
+        logs.value?.push({
+          id: Date.now(),
+          logs: "Could not establish WebSocket connection to get the logs. The node may be offline."
+        });
+      }
+    }, 10000);
+
+    ws.onopen = () => {
+      clearTimeout(connectionTimeout);
+      isWebSocketConnected = true;
+      isConnecting.value = false;
+      const authMessage = {
+        path: '/log',
+        header: authHeader,
+        body: {
+          jobAddress: jobId.value,
+          address: job.value.project
+        }
+      };
+      ws?.send(JSON.stringify(authMessage));
+    };
+
+    ws.onmessage = (event: MessageEvent) => {
+      isConnecting.value = false;
+      try {
+        const outerData = JSON.parse(event.data);
+
+        // Handle empty responses
+        if (!outerData.data && !outerData.type) return;
+
+        // If it's a direct message (not wrapped in data)
+        const innerData = outerData.data ? JSON.parse(outerData.data) : outerData;
+
+        if (!innerData) return;
+
+        // Convert ANSI codes in any text field we have
+        const convertedLog = ansi.ansi_to_html(innerData.log || '');
+
+        // Handle progress bar updates
+        if ((innerData.type === 'multi-process-bar-update' ||
+          innerData.method === 'MultiProgressBarReporter.update') &&
+          innerData.payload?.event) {
+          const event = innerData.payload.event;
+          const layerId = event.id;
+
+          // Handle completion states
+          if (
+            event.status === 'Download complete' ||
+            event.status === 'Pull complete' ||
+            event.status === 'Already exists'
+          ) {
+            if (progressBars.value[layerId]) {
+              const index = logs.value?.findIndex(
+                (item) => item.id === progressBars.value[layerId]
+              );
+              if (index !== undefined && index !== -1 && logs.value) {
+                logs.value.splice(index, 1);
+              }
+              delete progressBars.value[layerId];
+            }
+
+            // Check if this exact message isn't the last one before adding
+            const lastLog = logs.value?.[logs.value.length - 1]?.logs;
+            const newLog = `${event.status}: ${layerId}`;
+            if (newLog !== lastLog) {
+              logs.value?.push({
+                id: Date.now(),
+                logs: newLog
+              });
+            }
+            return; // Stop here to prevent duplicate logging
+          }
+
+          // Handle active download/extract states
+          if (event.status === 'Downloading' || event.status === 'Extracting') {
+            const current = event.progressDetail?.current || 0;
+            const total = event.progressDetail?.total || 0;
+
+            // Format size for display
+            const formatSize = (bytes: number) => {
+              if (!bytes || isNaN(bytes)) return '0B';
+              const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+              const i = Math.floor(Math.log(bytes) / Math.log(1024));
+              return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`;
+            };
+
+            const progressText = `${event.status} | ${layerId} | ${formatSize(current)}/${formatSize(total)}`;
+            const progressObj = {
+              id: progressBars.value[layerId] || Date.now(),
+              logs: progressText,
+              progress: {
+                status: event.status,
+                id: layerId,
+                current: current,
+                total: total,
+                progress: progressText,
+                sizeText: `${formatSize(current)}/${formatSize(total)}`
+              }
+            };
+
+            // Update existing progress bar or create new one
+            if (progressBars.value[layerId]) {
+              const index = logs.value?.findIndex(
+                (item) => item.id === progressBars.value[layerId]
+              );
+              if (index !== undefined && index !== -1 && logs.value) {
+                logs.value[index] = progressObj;
+              }
+            } else {
+              logs.value?.push(progressObj);
+              progressBars.value[layerId] = progressObj.id;
+            }
+            return; // Stop here to prevent duplicate logging
+          }
+        } else if (innerData.log) {
+          // Handle regular logs - check for duplicates
+          const lastLog = logs.value?.[logs.value.length - 1]?.logs;
+          if (convertedLog !== lastLog) {
+            logs.value?.push({
+              id: Date.now(),
+              logs: convertedLog
+            });
+          }
+        }
+      } catch (err: any) {
+        toast.error('Error parsing log data: ' + err.toString());
+      }
+    };
+
+    ws.onclose = () => {
+      clearTimeout(connectionTimeout);
+      ws = null;
+      isWebSocketConnected = false;
+      if (isConnecting.value) {
+        logs.value?.push({
+          id: Date.now(),
+          logs: "WebSocket connection closed. Could not establish connection to get the logs."
+        });
+        isConnecting.value = false;
+      }
+    };
+
+    ws.onerror = (error) => {
+      clearTimeout(connectionTimeout);
+      ws = null;
+      isWebSocketConnected = false;
+      logs.value?.push({
+        id: Date.now(),
+        logs: "Error connecting to WebSocket. The node may be offline."
+      });
+      isConnecting.value = false;
+    };
+
+  } catch (error) {
+    ws = null;
+    isWebSocketConnected = false;
+    isConnecting.value = false;
+    logs.value?.push({
+      id: Date.now(),
+      logs: "Failed to establish WebSocket connection. The node may be offline."
+    });
+  }
+};
+
+// Update the unmount handler to be more thorough
+onUnmounted(() => {
+  if (ws) {
+    ws.close();
+    ws = null;
+  }
+  isWebSocketConnected = false;
+  isConnecting.value = false;
+  logs.value = null;
+});
+
+// Keep your existing watch, but make it simpler since we have the check function
+watch(
+  [
+    () => job.value?.state,
+    () => connected.value,
+    () => isVerified.value,
+    () => isJobPoster.value
+  ],
+  async () => {
+    await checkAndConnectWebSocket();
+  },
+  { immediate: true }
+);
+
+// Ensure we close the WebSocket on unmount
+onUnmounted(() => {
+  if (ws) {
+    ws.close();
+  }
+});
 
 </script>
 <style lang="scss" scoped>
 .pre {
   white-space: pre-wrap;
+}
+
+.progress.is-primary::-webkit-progress-bar {
+  background-color: #dbdbdb;
+}
+
+.progress.is-primary::-webkit-progress-value {
+  background-color: #00d1b2;
+}
+
+.progress.is-primary::-moz-progress-bar {
+  background-color: #00d1b2;
 }
 </style>
