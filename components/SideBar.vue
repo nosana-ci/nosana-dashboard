@@ -46,7 +46,7 @@
             <span class="icon is-small mr-4">
               <JobBuilderIcon />
             </span>
-            <span>Job Builder</span>
+            <span>Create Job</span>
           </nuxt-link>
         </li>
         <li>

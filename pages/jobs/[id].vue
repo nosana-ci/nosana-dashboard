@@ -180,7 +180,7 @@ const { data: job, pending: loadingJob, refresh: refreshJob } = useAPI(
 const { pause: pauseJobPolling, resume: resumeJobPolling } = useIntervalFn(() => {
   console.log("REFRESHING");
   refreshJob();
-}, 3000, { immediate: false });
+}, 30000, { immediate: false });
 
 // Add progressBars ref at the top with other refs
 const progressBars = ref<{ [key: string]: any }>({});
@@ -336,6 +336,8 @@ watch(
 // Modify stopJob to check verification
 const stopJob = async () => {
   if (!job.value) return;
+
+  // Make sure we're verified
   if (!isVerified.value) {
     try {
       await signMessage(true);
@@ -344,37 +346,105 @@ const stopJob = async () => {
       return;
     }
   }
+
+  loading.value = true;
   try {
-    loading.value = true;
-    const authorizationHeader = await signMessage();
-    const nodeAddress = job.value.node.toString();
-    const apiUrl = `https://${nodeAddress}.${useRuntimeConfig().public.nodeDomain}/service/stop/${jobId.value}`;
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': authorizationHeader,
-      },
-    });
-    const text = await response.text();
-    if (response.status === 403) {
-      storedAuthHeader.value = null;
-      toast.error(`Authentication failed: ${text}`);
+    // Refresh the job from chain to ensure up-to-date state
+    const onChainJob = await nosana.value.jobs.get(jobId.value);
+
+    // If job is completed or stopped, no need
+    if (onChainJob.state === 'COMPLETED' || onChainJob.state === 'STOPPED') {
+      toast.info(`Job is already ${onChainJob.state}`);
       return;
     }
-    if (response.status === 200) {
-      toast.success(`Success: ${text}`);
-      return;
+
+    // If job is queued (the CLI waits for it to run, 
+    // but you can decide to do something else or try forcibly stopping)
+    if (onChainJob.state === 'QUEUED') {
+      toast.info('Job is QUEUED; waiting to see if it starts running...');
+      // wait a bit or just proceed with a single attempt
+      // For a more robust approach, you could replicate waiting logic
+      // but for simplicity:
     }
-    // Refresh job data
+
+    // If it's running, we do the postStopJobServiceURLWithRetry
+    if (onChainJob.state === 'RUNNING') {
+      await postStopJobServiceURLWithRetry(
+        onChainJob.node.toString(),
+        jobId.value,
+        () => {
+          // On success, let's show a toast
+          toast.success('Job successfully stopped!');
+          // Force refresh the job data
+          refreshJob();
+        },
+        {
+          interval: 2000,
+          attempts: 5,
+        }
+      );
+    } else {
+      // If the node data or state is something else, let user know
+      toast.info(`Job is not in RUNNING state (currently: ${onChainJob.state})`);
+    }
+
+    // Refresh job data from chain or from the API
     const updatedJob = await nosana.value.jobs.get(jobId.value);
     job.value = updatedJob;
   } catch (e: any) {
-    storedAuthHeader.value = null;
     toast.error(`Error stopping job: ${e.toString()}`);
   } finally {
     loading.value = false;
   }
 };
+
+// Helper function for stopping jobs with retry logic
+async function postStopJobServiceURLWithRetry(
+  nodeAddress: string,
+  jobAddress: string,
+  callback?: () => void,
+  overrides?: {
+    interval?: number;
+    attempts?: number;
+  },
+): Promise<void> {
+  // We'll sign for each new attempt, or sign once at the beginning
+  // (this is up to you; usually once at the beginning is good enough)
+  const authorization = await signMessage(); 
+  const headers = { Authorization: authorization };
+
+  const retryInterval = overrides?.interval || 5000;
+  const maxAttempts = overrides?.attempts || 3;
+
+  let retryCount = 0;
+
+  return new Promise((resolve, reject) => {
+    const intervalId = setInterval(async () => {
+      retryCount++;
+      if (retryCount > maxAttempts) {
+        clearInterval(intervalId);
+        reject(new Error('Max attempts reached, failed to stop job.'));
+        return;
+      }
+
+      try {
+        const response = await fetch(`https://${nodeAddress}.${useRuntimeConfig().public.nodeDomain}/service/stop/${jobAddress}`, {
+          method: 'POST',
+          headers,
+          body: '',
+        });
+
+        if (response.status === 200) {
+          clearInterval(intervalId);
+          if (callback) callback();
+          resolve();
+        }
+      } catch (error) {
+        // We just continue retrying until maxAttempts
+      }
+    }, retryInterval);
+  });
+}
 
 // 2) The new "extendJob" function which calls the SDK's extend:
 const extendJob = async () => {
@@ -586,25 +656,35 @@ const connectWebSocket = async () => {
 
     ws.onmessage = (event: MessageEvent) => {
       isConnecting.value = false;
+
       try {
         const outerData = JSON.parse(event.data);
 
-        // Handle empty responses
-        if (!outerData.data && !outerData.type) return;
+        // Decide if the "outerData" is already the final object or if we need to parse "outerData.data"
+        let logData: any = outerData;
 
-        // If it's a direct message (not wrapped in data)
-        const innerData = outerData.data ? JSON.parse(outerData.data) : outerData;
+        // If outerData has no direct "type" or "log" field, but has a ".data" field,
+        // parse that. This avoids double-parsing in cases where it's already unwrapped.
+        if (
+          !('type' in outerData || 'log' in outerData || 'method' in outerData) &&
+          outerData.data
+        ) {
+          logData = JSON.parse(outerData.data);
+        }
 
-        if (!innerData) return;
+        // Now "logData" is the object we actually want to handle
+        if (!logData) return;
 
-        // Convert ANSI codes in any text field we have
-        const convertedLog = ansi.ansi_to_html(innerData.log || '');
+        // Convert ANSI codes if we have a "log" property
+        const convertedLog = ansi.ansi_to_html(logData.log || '');
 
         // Handle progress bar updates
-        if ((innerData.type === 'multi-process-bar-update' ||
-          innerData.method === 'MultiProgressBarReporter.update') &&
-          innerData.payload?.event) {
-          const event = innerData.payload.event;
+        if (
+          (logData.type === 'multi-process-bar-update' ||
+            logData.method === 'MultiProgressBarReporter.update') &&
+          logData.payload?.event
+        ) {
+          const event = logData.payload.event;
           const layerId = event.id;
 
           // Handle completion states
@@ -676,7 +756,7 @@ const connectWebSocket = async () => {
             }
             return; // Stop here to prevent duplicate logging
           }
-        } else if (innerData.log) {
+        } else if (logData.log) {
           // Handle regular logs - check for duplicates
           const lastLog = logs.value?.[logs.value.length - 1]?.logs;
           if (convertedLog !== lastLog) {
