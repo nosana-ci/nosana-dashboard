@@ -8,8 +8,8 @@
   <tr>
     <td>GPU</td>
     <td>
-      <span v-if="specs.gpu && specs.gpus[0]">
-        {{ specs.gpus[0]?.gpu }}
+      <span v-if="specs.gpus?.length">
+        {{ specs.gpus[0].gpu }}
       </span>
       <span v-else>-</span>
     </td>
@@ -30,43 +30,25 @@
     <td>Country</td>
     <td>{{ specs.country }}</td>
   </tr>
-  <tr>
-    <td>Ping</td>
-    <td>
-      <span v-if="specs.bandwidth">
-        {{ specs.bandwidth?.ping }} ms
-      </span>
-      <span v-else>Unknown</span>
-    </td>
-  </tr>
-  <tr>
-    <td>Download Speed</td>
-    <td>
-      <span v-if="specs.bandwidth">
-        {{ specs.bandwidth?.download }} Mbps
-      </span>
-      <span v-else>Unknown</span>
-    </td>
-  </tr>
-  <tr>
-    <td>Upload Speed</td>
-    <td>
-      <span v-if="specs.bandwidth">
-        {{ specs.bandwidth?.upload }} Mbps
-      </span>
-      <span v-else>Unknown</span>
-    </td>
-  </tr>
 </template>
 
 <script setup lang="ts">
-const props = defineProps({
-  specs: {
-    required: true
-  },
-});
-const specs: Ref<any> = ref(props.specs);
+interface Specs {
+  gpus: Array<{ gpu: string }>;
+  cpu: string;
+  ram: number;
+  diskSpace: number;
+  country: string;
+  bandwidth?: {
+    ping: number;
+    download: number;
+    upload: number;
+  };
+}
 
+const props = defineProps<{
+  specs: Specs;
+}>();
 </script>
 
 <style lang="scss" scoped>
