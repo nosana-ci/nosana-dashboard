@@ -50,7 +50,8 @@
             <td>Running job</td>
             <td>
               <nuxt-link :to="`/jobs/${nodeRuns[0].account.job}`" class="address is-family-monospace">{{
-                nodeRuns[0].account.job }}</nuxt-link>
+                nodeRuns[0].account.job
+              }}</nuxt-link>
             </td>
           </tr>
           <tr>
@@ -68,13 +69,18 @@
             </td>
             <td v-else>
               <span v-if="nodeSpecs">
-                <nuxt-link :to="`/markets/${nodeSpecs.marketAddress}`" class="address is-family-monospace">
-                  <span
-                    v-if="testgridMarkets && testgridMarkets.find((tgm: any) => tgm.address === nodeSpecs.marketAddress)">
-                    {{ testgridMarkets.find((tgm: any) => tgm.address === nodeSpecs.marketAddress).name }}
-                  </span>
-                  <span v-else>{{ nodeSpecs.marketAddress }}</span>
-                </nuxt-link>
+                <template v-if="nodeSpecs.marketAddress">
+                  <nuxt-link :to="`/markets/${nodeSpecs.marketAddress}`" class="address is-family-monospace">
+                    <span
+                      v-if="testgridMarkets && testgridMarkets.find((tgm: any) => tgm.address === nodeSpecs.marketAddress)">
+                      {{ testgridMarkets.find((tgm: any) => tgm.address === nodeSpecs.marketAddress).name }}
+                    </span>
+                    <span v-else>{{ nodeSpecs.marketAddress }}</span>
+                  </nuxt-link>
+                </template>
+                <template v-else>
+                  <span>-</span>
+                </template>
               </span>
               <span v-else-if="loadingMarkets || loadingSpecs">...</span>
               <span v-else>-</span>
@@ -108,7 +114,6 @@
           </tr>
           <tr>
             <td>
-
               <span class="">
                 <span>Stability Rank</span>
                 <span class="has-tooltip-arrow ml-1" style="vertical-align: middle;" data-tooltip="An aggregated stability ranking based on the nodes performance
@@ -122,9 +127,7 @@
           </tr>
           <tr>
             <td>Average Download Speed (Mbps)</td>
-            <td v-if="
-              !genericBenchmarkResponse || !genericBenchmarkResponse.data.length
-            ">
+            <td v-if="!genericBenchmarkResponse || !genericBenchmarkResponse.data.length">
               -
             </td>
             <td v-else>
@@ -133,9 +136,7 @@
           </tr>
           <tr>
             <td>Average Upload Speed (Mbps)</td>
-            <td v-if="
-              !genericBenchmarkResponse || !genericBenchmarkResponse.data.length
-            ">
+            <td v-if="!genericBenchmarkResponse || !genericBenchmarkResponse.data.length">
               -
             </td>
             <td v-else>
@@ -144,67 +145,84 @@
           </tr>
         </tbody>
       </table>
-      <div class="columns" v-if="nodeSpecs">
+
+      <!-- Only render benchmark histograms if nodeSpecs & nodeSpecs.marketAddress are valid -->
+      <div class="columns" v-if="nodeSpecs && nodeSpecs.marketAddress">
         <div class="column is-6">
-          <NodeBenchmarkHistogram title="LLM Performance" type="llm" :node-id="address"
-            :market-id="nodeSpecs.marketAddress" default-metric="averageTokensPerSecond" :metrics="[
-              {
-                value: 'averageTokensPerSecond',
-                label: 'Tokens / Second',
-              },
+          <NodeBenchmarkHistogram
+            title="LLM Performance"
+            type="llm"
+            :node-id="address"
+            :market-id="nodeSpecs.marketAddress"
+            default-metric="averageTokensPerSecond"
+            :metrics="[
+              { value: 'averageTokensPerSecond', label: 'Tokens / Second' },
               { value: 'avgClockSpeed', label: 'Clock Speed (MHz)' },
               { value: 'avgWattage', label: 'Power Usage (W)' },
               { value: 'avgTemperature', label: 'Temperature (°C)' },
-            ]" x-axis-label="Concurrent Users" />
+            ]"
+            x-axis-label="Concurrent Users"
+          />
         </div>
-
         <div class="column is-6">
-          <NodeBenchmarkHistogram title="Image Generation Performance" type="image-gen" :node-id="address"
-            :market-id="nodeSpecs.marketAddress" default-metric="imagesPerSecond" :metrics="[
+          <NodeBenchmarkHistogram
+            title="Image Generation Performance"
+            type="image-gen"
+            :node-id="address"
+            :market-id="nodeSpecs.marketAddress"
+            default-metric="imagesPerSecond"
+            :metrics="[
               { value: 'imagesPerSecond', label: 'Images / Second' },
               { value: 'avgClockSpeed', label: 'Clock Speed (MHz)' },
               { value: 'avgWattage', label: 'Power Usage (W)' },
               { value: 'avgTemperature', label: 'Temperature (°C)' },
-            ]" x-axis-label="Batch Size" />
+            ]"
+            x-axis-label="Batch Size"
+          />
         </div>
       </div>
-      <ExplorerJobList :per-page="limit" :total-jobs="jobs ? jobs.totalJobs : null" v-model:page="page"
-        v-model:state="state" :loading-jobs="loadingJobs" title="Jobs Ran" :jobs="jobs ? jobs.jobs : null"
-        :states="[1, 2]">
-      </ExplorerJobList>
+      <ExplorerJobList
+        :per-page="limit"
+        :total-jobs="jobs ? jobs.totalJobs : null"
+        v-model:page="page"
+        v-model:state="state"
+        :loading-jobs="loadingJobs"
+        title="Jobs Ran"
+        :jobs="jobs ? jobs.jobs : null"
+        :states="[1, 2]"
+      />
     </div>
   </div>
 </template>
+
 <script lang="ts" setup>
-import { type Market, type Run } from "@nosana/sdk";
+import { type Market } from "@nosana/sdk";
 const { nosana } = useSDK();
-const { data: testgridMarkets, pending: loadingTestgridMarkets } = useAPI('/api/markets');
+const { data: testgridMarkets, pending: loadingTestgridMarkets } = useAPI("/api/markets");
+
 interface Props {
   address: string;
 }
 const props = defineProps<Props>();
-
 
 /***************
  * Node Queue  *
  ***************/
 const { markets, getMarkets, loadingMarkets } = useMarkets();
 if (!markets.value) {
-  // Retrieve markets if we don't have them
   getMarkets();
 }
-const queueInfo: ComputedRef<{ market: Market, position: number } | undefined> = computed(() => {
-  let position: number = -1;
-  const market = (markets?.value?.find((m) => {
-    position = m.queue.findIndex((a: any) => a.toString() === props.address)
-    return (position !== -1);
-  }
-  ));
+const queueInfo: ComputedRef<{ market: Market; position: number } | undefined> = computed(() => {
+  let position = -1;
+  const market = markets.value?.find((m) => {
+    position = m.queue.findIndex((a: any) => a.toString() === props.address);
+    return position !== -1;
+  });
   if (market) {
-    return { market, position }
+    return { market, position };
   }
   return undefined;
-})
+});
 
 /***************
  * Node Runs   *
@@ -214,7 +232,6 @@ const { data: nodeRuns, pending: loadingRuns } = useMyAsyncData(
   async () => {
     if (props.address) {
       try {
-        // get active runs of node
         return await nosana.value.jobs.getRuns([
           {
             memcmp: {
@@ -237,40 +254,54 @@ const { data: nodeRuns, pending: loadingRuns } = useMyAsyncData(
 const page: Ref<number> = ref(1);
 const state: Ref<number | null> = ref(null);
 const jobStateMapping: any = {
-  0: 'QUEUED',
-  1: 'RUNNING',
-  2: 'COMPLETED',
-  3: 'STOPPED',
+  0: "QUEUED",
+  1: "RUNNING",
+  2: "COMPLETED",
+  3: "STOPPED",
 };
 const limit: Ref<number> = ref(10);
-const jobsUrl: ComputedRef<string> = computed(() => { return `/api/jobs?limit=${limit.value}&offset=${(page.value - 1) * limit.value}${state.value !== null ? `&state=${jobStateMapping[state.value]}` : ''}${`&node=${props.address}`}` })
+const jobsUrl: ComputedRef<string> = computed(() => {
+  return `/api/jobs?limit=${limit.value}&offset=${
+    (page.value - 1) * limit.value
+  }${state.value !== null ? `&state=${jobStateMapping[state.value]}` : ""}${
+    "&node=" + props.address
+  }`;
+});
 const { data: jobs, pending: loadingJobs } = useAPI(jobsUrl, { watch: [jobsUrl] });
 
 const hasRanJobs: ComputedRef<Boolean> = computed(() => {
-  return jobs.value && jobs.value.jobs && jobs.value.jobs.length
-})
+  return jobs.value && jobs.value.jobs && jobs.value.jobs.length;
+});
 
 /**********************
-* Node Specification *
-**********************/
+ * Node Specification *
+ **********************/
 const { data: nodeSpecs, pending: loadingSpecs } = useAPI(`/api/nodes/${props.address}/specs`, {
-  // @ts-ignore TODO: add to useAPI opts type
-  disableToastonError: true,
+  // @ts-ignore
+  disableToastOnError: true,
 });
 
 const isNode: ComputedRef<Boolean> = computed(() => {
-  return !!((nodeRuns.value && nodeRuns.value.length) || hasRanJobs.value || nodeSpecs.value || queueInfo.value)
-})
+  // If nodeSpecs exists or queueInfo says this is queued, or we found any runs or jobs, consider it a node
+  return (
+    (nodeRuns.value && nodeRuns.value.length) ||
+    hasRanJobs.value ||
+    nodeSpecs.value?.marketAddress ||
+    queueInfo.value
+  );
+});
 
 /*************
  * Node Info *
  *************/
-const { data: nodeInfo, pending: loadingInfo, execute: getNodeInfo } = useAPI(`https://${props.address}.${useRuntimeConfig().public.nodeDomain}/node/info`,
+const { data: nodeInfo, pending: loadingInfo, execute: getNodeInfo } = useAPI(
+  `https://${props.address}.${useRuntimeConfig().public.nodeDomain}/node/info`,
   {
     immediate: false,
-    // @ts-ignore TODO: add to useAPI opts type
-    disableToastonError: true,
-  });
+    // @ts-ignore
+    disableToastOnError: true,
+  }
+);
 
 /*********************
  * Node Benchmarking *
@@ -280,31 +311,38 @@ const { data: genericBenchmarkResponse, execute: getNodeBenchmarks } = useAPI(
   { immediate: false }
 );
 
-if (isNode.value) {
-  // When we determined that we are a node, retrieve benchmarking info
-  getNodeBenchmarks();
-  getNodeInfo();
+// Safely call node info + benchmark if it’s actually (or likely) a node
+function fetchAdditionalNodeData() {
+  getNodeBenchmarks().catch((err) => {
+    console.error("Could not fetch benchmark info. Possibly offline node:", err);
+  });
+  getNodeInfo().catch((err) => {
+    console.error("Could not fetch node info. Possibly offline node:", err);
+  });
 }
 
-watch(isNode, (isNodeValue) => {
-  if (isNodeValue) {
-    console.log('isnode', isNodeValue);
-    // When we determined that we are a node, retrieve benchmarking info
-    getNodeBenchmarks();
-    getNodeInfo();
+// If isNode is truthy, try fetching everything
+if (isNode.value) {
+  fetchAdditionalNodeData();
+}
+
+// Also watch if it changes, e.g. after specs load
+watch(isNode, (val) => {
+  if (val) {
+    fetchAdditionalNodeData();
   }
-})
+});
 
 // When specs are loaded, retrieve node ranking
 let rankingAPInstance: any = null;
 watch(nodeSpecs, (specs) => {
   if (specs?.marketAddress) {
     if (!rankingAPInstance) {
-      // TODO: this call is disabled because it is really slow and causes other queries to freeze as well
+      // Disabled for performance reasons in production
       rankingAPInstance = useAPI(`/api/benchmarks/node-ranking?market=${specs.marketAddress}`);
     }
   }
-})
+});
 
 interface NodeRanking {
   node: string;
@@ -314,11 +352,12 @@ interface NodeRanking {
 }
 const nodeRanking: ComputedRef<NodeRanking | null> = computed(() => {
   if (rankingAPInstance && rankingAPInstance.data && rankingAPInstance.data.value) {
-    return rankingAPInstance.data.value.find((ranking: NodeRanking) => {
-      return ranking.node === props.address;
-    }) || null;
+    return (
+      rankingAPInstance.data.value.find((ranking: NodeRanking) => {
+        return ranking.node === props.address;
+      }) || null
+    );
   }
   return null;
 });
-
 </script>
