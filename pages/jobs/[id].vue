@@ -402,9 +402,7 @@ const stopJob = async () => {
 
   loading.value = true;
   try {
-    // get the current on-chain state of the job
-    const onChainJob = await nosana.value.jobs.get(jobId.value);
-    const numericState = getStateNumber(onChainJob.state);
+    const numericState = getStateNumber(job.value.state);
 
     // If job is completed (2) or stopped (3), no need to proceed
     if (numericState === 2 || numericState === 3) {
@@ -424,9 +422,11 @@ const stopJob = async () => {
     }
     // Otherwise, let the user know
     else {
-      toast.error(`Job is not in QUEUED or RUNNING state (currently: ${onChainJob.state})`);
+      toast.error(`Job is not in QUEUED or RUNNING state (currently: ${job.value.state})`);
     }
 
+    // Wait 10 seconds before refreshing to allow backend to update
+    await new Promise(resolve => setTimeout(resolve, 10000));
     refreshJob();
   } catch (e) {
     const errorMessage = e instanceof Error ? e.message : String(e);
@@ -461,10 +461,9 @@ const confirmExtend = async () => {
 
   try {
     loadingExtend.value = true;
+    showExtendModal.value = false;  // Close modal immediately
 
-    // fetch a fresh copy from on-chain
-    const onChainJob = await nosana.value.jobs.get(job.value.address);
-    const numericState = getStateNumber(onChainJob.state);
+    const numericState = getStateNumber(job.value.state);
 
     // if jobAccount.state != 1 => job cannot be extended per SDK restrictions
     if (numericState !== 1) {
@@ -472,21 +471,23 @@ const confirmExtend = async () => {
       return;
     }
 
-    const timeInSeconds = extendTime.value * 60;
-    console.log('timeInSeconds', timeInSeconds);
-    console.log('job.value.address', job.value.address);
+    // Add the current timeout to the extend time to make it feel like we're adding time
+    const currentTimeoutMinutes = job.value.timeout ? Math.floor(job.value.timeout / 60) : 0;
+    const newTimeoutMinutes = currentTimeoutMinutes + extendTime.value;
+    const timeInSeconds = newTimeoutMinutes * 60;
+
     const result = await nosana.value.jobs.extend(job.value.address, timeInSeconds);
     toast.success(`Job has been extended! Transaction: ${result.tx}`);
 
-    const updated = await nosana.value.jobs.get(job.value.address);
-    job.value = updated;
+    // Wait 10 seconds before refreshing to allow backend to update
+    await new Promise(resolve => setTimeout(resolve, 10000));
+    refreshJob();
   } catch (e) {
     const errorMessage = e instanceof Error ? e.message : String(e);
     toast.error(`Error extending job: ${errorMessage}`);
     console.error('Extend job error:', e);
   } finally {
     loadingExtend.value = false;
-    showExtendModal.value = false;
   }
 };
 

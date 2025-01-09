@@ -171,6 +171,32 @@
     background-color: $body-background-color-dark;
   }
 
+  .modal-card-head:not(.light-mode) {
+    background-color: $black-bis;
+    border-bottom-color: $grey-darker;
+  }
+
+  .modal-card-body:not(.light-mode) {
+    background-color: $black-bis;
+    color: $white;
+  }
+
+  .modal-card-foot:not(.light-mode) {
+    background-color: $black-bis;
+    border-top-color: $grey-darker;
+  }
+
+  .modal-card-title:not(.light-mode) {
+    color: $white;
+  }
+
+  .delete:not(.light-mode) {
+    background-color: rgba($white, 0.2);
+    &:hover {
+      background-color: rgba($white, 0.3);
+    }
+  }
+
   .tag {
     // color:white !important;
     background-color: $black-ter !important;
