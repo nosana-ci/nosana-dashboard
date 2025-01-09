@@ -6,39 +6,38 @@
     <div class="box">
       <div v-if="job">
         <div class="is-flex is-align-items-center is-justify-content-space-between mb-4">
-          <div></div>
-          <div class="is-flex is-align-items-center is-justify-content-center">
+          <div class="is-flex is-align-items-center">
             <div
-              v-if="job.state === 1 && job.jobDefinition && job.jobDefinition.ops && job.jobDefinition.ops[0] && job.jobDefinition.ops[0].args.expose"
+              v-if="(isRunning(job.state))
+                     && job.jobDefinition 
+                     && job.jobDefinition.ops 
+                     && job.jobDefinition.ops[0] 
+                     && job.jobDefinition.ops[0].args.expose"
               class="mr-4">
               <a :href="`https://${job.address}.node.k8s.prd.nos.ci`" target="_blank"
-                class="button is-primary is-medium is-outlined">
+                class="button is-medium is-outlined has-background-transparent visit-service-btn">
                 Visit Service
               </a>
             </div>
-            <div v-if="isJobPoster && (job.state === 'RUNNING' || job.state === 1)" class="mr-4">
+            <div v-if="isJobPoster && isRunning(job.state)" class="mr-4">
               <button @click="stopJob" :class="{ 'is-loading': loading }"
                 class="button is-danger is-medium is-outlined">
                 Stop Job
               </button>
             </div>
-            <div v-if="isJobPoster && (job.state === 'RUNNING' || job.state === 1)" class="mr-4">
-              <button @click="extendJob" :class="{ 'is-loading': loadingExtend }"
+            <div v-if="isJobPoster && isRunning(job.state)" class="mr-4">
+              <button @click="openExtendModal" :class="{ 'is-loading': loadingExtend }"
                 class="button is-warning is-medium is-outlined">
                 Extend Job
               </button>
             </div>
-            <div class="mr-4">
-              <button @click="repostJob" :class="{ 'is-loading': loadingRepost }"
-                class="button is-primary is-medium is-outlined">
-                Repost
-              </button>
-            </div>
-            <ExplorerJobStatus class="mr-2" :status="job.state"></ExplorerJobStatus>
+          </div>
+          <div>
+            <ExplorerJobStatus :status="job.state"></ExplorerJobStatus>
           </div>
         </div>
 
-        <ExplorerJobInfo :job="job" />
+        <ExplorerJobInfo :job="job" :is-job-poster="isJobPoster" @repost="repostJob" />
 
         <div v-if="job.node && job.node.toString() !== '11111111111111111111111111111111'" class="mt-4">
           <JobNodeInfo :address="job.node.toString()" />
@@ -49,7 +48,7 @@
             <li :class="{ 'is-active': activeTab === 'logs' }">
               <a @click.prevent="activeTab = 'logs'">Logs</a>
             </li>
-            <li :class="{ 'is-active': activeTab === 'result' }">
+            <li v-if="hasResultsRegex" :class="{ 'is-active': activeTab === 'result' }">
               <a @click.prevent="activeTab = 'result'">Result</a>
             </li>
             <li :class="{ 'is-active': activeTab === 'info' }">
@@ -65,20 +64,30 @@
             <VueJsonPretty :data="job.jobDefinition" show-icon show-line-number />
           </div>
           <div v-show="activeTab === 'logs'" class="p-1 py-4 has-background-white-bis">
-            <div v-if="job.state === 'RUNNING' || job.state === 1"
+            <div v-if="isRunning(job.state)"
               class="is-family-monospace has-background-black has-text-white box light-mode">
               <div v-if="isConnecting" class="has-text-info">
                 <span class="icon-text">
                   <span class="icon">
                     <i class="fas fa-sync fa-spin"></i>
                   </span>
-                  <span>Connecting to logs...</span>
+                  <span>Connecting to node...</span>
                 </span>
               </div>
               <div v-else-if="logs && logs.length > 0" style="counter-reset: line">
                 <div v-for="step in logs" :key="step.id">
                   <div v-for="(log, ik) in step.logs.split('\n')" :key="ik" class="row-count">
-                    <span class="pre" v-html="log.slice(0, 10000)" />
+                    <div class="is-flex is-justify-content-space-between is-align-items-center">
+                      <span class="pre" v-html="log.slice(0, 10000)" />
+                      <button v-if="log.includes('Error connecting to WebSocket')" 
+                        @click="checkAndConnectWebSocket" 
+                        class="button is-info is-small ml-4">
+                        <span class="icon">
+                          <i class="fas fa-sync"></i>
+                        </span>
+                        <span>Retry Connection</span>
+                      </button>
+                    </div>
                   </div>
                   <div v-if="step.progress" class="progress-bar mb-2">
                     <div class="progress-text">
@@ -97,11 +106,19 @@
             <div v-else-if="ipfsResult.results && ipfsResult.results[0] === 'nos/secret'">
               Results are secret
             </div>
-            <ExplorerJobResult v-else-if="(ipfsResult && job.state === 'COMPLETED') || job.state === 2"
-              :ipfs-result="ipfsResult" :ipfs-job="job.jobDefinition" />
+            <ExplorerJobResult 
+              v-else-if="(ipfsResult && job.state === 'COMPLETED') || getStateNumber(job.state) === 2"
+              :ipfs-result="ipfsResult" 
+              :ipfs-job="job.jobDefinition" />
           </div>
           <div v-show="activeTab === 'result'" class="p-1 py-4 has-background-white-bis">
-            <VueJsonPretty :data="job.jobResult" show-icon show-line-number />
+            <div v-if="isRunning(job.state)" class="has-text-grey">
+              Waiting for results...
+            </div>
+            <div v-else-if="!job.jobResult" class="has-text-grey">
+              This container did not have a results regex
+            </div>
+            <VueJsonPretty v-else :data="job.jobResult" show-icon show-line-number />
           </div>
           <div v-show="activeTab === 'artifacts'" class="p-1 py-4 has-background-white-bis">
             <div>
@@ -121,17 +138,42 @@
       <div v-else-if="loadingJob">Loading job..</div>
       <div v-else>Job not found</div>
     </div>
+
+    <!-- Extend Modal -->
+    <div v-if="showExtendModal" class="modal is-active">
+      <div class="modal-background" @click="showExtendModal = false"></div>
+      <div class="modal-card">
+        <header class="modal-card-head">
+          <p class="modal-card-title">Extend Job</p>
+          <button class="delete" aria-label="close" @click="showExtendModal = false"></button>
+        </header>
+        <section class="modal-card-body">
+          <div class="field">
+            <label class="label">Extension time (minutes)</label>
+            <div class="control">
+              <input class="input" type="number" v-model="extendTime" min="1" />
+            </div>
+          </div>
+        </section>
+        <footer class="modal-card-foot">
+          <button class="button is-success" @click="confirmExtend">
+            Extend
+          </button>
+          <button class="button" @click="showExtendModal = false">Cancel</button>
+        </footer>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { onUnmounted, watch, ref, computed, onMounted, onActivated } from 'vue';
-import { useRoute, useRouter } from "vue-router";
-import VueJsonPretty from "vue-json-pretty";
+import { useRoute, useRouter } from 'vue-router';
+import VueJsonPretty from 'vue-json-pretty';
 import 'vue-json-pretty/lib/styles.css';
 import AnsiUp from 'ansi_up';
 import { useWallet } from 'solana-wallets-vue';
-import { useToast } from "vue-toastification";
+import { useToast } from 'vue-toastification';
 import type { MessageSignerWalletAdapter } from '@solana/wallet-adapter-base';
 import JobNodeInfo from '~/components/Node/JobNodeInfo.vue';
 import { useIntervalFn } from '@vueuse/core';
@@ -142,6 +184,30 @@ import { useRuntimeConfig } from '#imports';
 import { useMarkets } from '~/composables/useMarkets';
 import { useLocalStorage } from '@vueuse/core';
 
+/**
+ * Helper to convert job state to a number, normalizing "RUNNING", "QUEUED", etc.
+ */
+function getStateNumber(stateVal: string | number): number {
+  if (stateVal === 'QUEUED' || stateVal === 0) return 0;
+  if (stateVal === 'RUNNING' || stateVal === 1) return 1;
+  if (stateVal === 'COMPLETED' || stateVal === 2) return 2;
+  if (stateVal === 'STOPPED' || stateVal === 3) return 3;
+  return -1;
+}
+
+function isQueued(stateVal: string | number): boolean {
+  return getStateNumber(stateVal) === 0;
+}
+function isRunning(stateVal: string | number): boolean {
+  return getStateNumber(stateVal) === 1;
+}
+function isCompleted(stateVal: string | number): boolean {
+  return getStateNumber(stateVal) === 2;
+}
+function isStopped(stateVal: string | number): boolean {
+  return getStateNumber(stateVal) === 3;
+}
+
 const toast = useToast();
 const { nosana } = useSDK();
 const ansi = new AnsiUp();
@@ -151,81 +217,76 @@ const storedAuthHeader = useLocalStorage<string | null>('nosanaAuthHeader', null
 
 const ipfsResult = ref<{ results?: string[] }>({});
 const { params } = useRoute();
-const jobId = ref(String(params.id) || "");
+const jobId = ref(String(params.id) || '');
 const loading = ref(false);
 const loadingExtend = ref(false);
-const activeTab = ref("logs");
+const activeTab = ref('logs');
 const logs = ref<any[] | null>(null);
 
 const { getIpfs } = useIpfs();
 const artifacts = ref(null);
 const ipfsGateway = ref(nosana.value ? nosana.value.ipfs.config.gateway : null);
 
-const { data: job, pending: loadingJob, refresh: refreshJob } = useAPI(
-  `/api/jobs/${jobId.value}`,
-  { watch: false }
+const { data: job, pending: loadingJob, refresh: refreshJob } = useAPI(`/api/jobs/${jobId.value}`, {
+  watch: false
+});
+
+const { pause: pauseJobPolling, resume: resumeJobPolling } = useIntervalFn(
+  () => {
+    console.log('REFRESHING');
+    refreshJob();
+  },
+  30000,
+  { immediate: false }
 );
 
-const { pause: pauseJobPolling, resume: resumeJobPolling } = useIntervalFn(() => {
-  console.log("REFRESHING");
-  refreshJob();
-}, 3000, { immediate: false });
-
-// Add progressBars ref at the top with other refs
 const progressBars = ref<{ [key: string]: any }>({});
 
-// Add state mapping at the top with other constants
-const jobStateMapping: { [key: string]: number } = {
-  RUNNING: 1,
-  COMPLETED: 2,
-  STOPPED: 3,
-  FAILED: 4
-};
+watch(
+  job,
+  async (newJob) => {
+    if (!newJob) return;
 
-watch(job, async (newJob) => {
-  if (!newJob) return;
-
-  if (newJob.state < 2) {
-    resumeJobPolling();
-    // Initialize logs only if wallet is connected
-    if (connected.value && !logs.value) {
-      logs.value = [];
+    if (getStateNumber(newJob.state) < 2) {
+      resumeJobPolling();
+      // Initialize logs only if wallet is connected
+      if (connected.value && !logs.value) {
+        logs.value = [];
+      }
+    } else {
+      pauseJobPolling();
     }
-  } else {
-    pauseJobPolling();
-  }
 
-  // Fetch IPFS results if needed
-  try {
-    loading.value = true;
+    try {
+      loading.value = true;
 
-    if (
-      newJob.ipfsResult &&
-      newJob.ipfsResult !== 'QmNLei78zWmzUdbeRB3CiUfAizWUrbeeZh5K1rhAQKCh51'
-    ) {
-      const resultResponse = await getIpfs(newJob.ipfsResult);
-      ipfsResult.value = resultResponse;
+      if (
+        newJob.ipfsResult &&
+        newJob.ipfsResult !== 'QmNLei78zWmzUdbeRB3CiUfAizWUrbeeZh5K1rhAQKCh51'
+      ) {
+        const resultResponse = await getIpfs(newJob.ipfsResult);
+        ipfsResult.value = resultResponse;
+      }
+    } catch (error) {
+      toast.error(`Error fetching IPFS result: ${JSON.stringify(error)}`);
+    } finally {
+      loading.value = false;
     }
-  } catch (error) {
-  } finally {
-    loading.value = false;
-  }
-}, { immediate: true, deep: true });
+  },
+  { immediate: true, deep: true }
+);
 
 const { wallet, publicKey, connected } = useWallet();
 
+// Check if user is job poster
 const isJobPoster = computed(() => {
   return connected.value && job.value && publicKey.value?.toString() === job.value.project;
 });
 
-// Add verification status
 const isVerified = ref(storedAuthHeader.value !== null);
 
-// 3) In signMessage, we now store the signed message to storedAuthHeader,
-//    which is bound to localStorage.
 const signMessage = async (forceNew = false) => {
   if (storedAuthHeader.value && !forceNew) {
-    // Verify the stored signature matches the current wallet
     const [storedKey] = storedAuthHeader.value.split(':');
     if (storedKey === publicKey.value?.toString()) {
       isVerified.value = true;
@@ -247,29 +308,27 @@ const signMessage = async (forceNew = false) => {
   const publicKeyString = publicKey.value.toString();
   const authHeader = `${publicKeyString}:${signature}`;
 
-  // Save the auth header to local storage so that
-  // it persists when switching between pages.
   storedAuthHeader.value = authHeader;
   isVerified.value = true;
   return authHeader;
 };
 
 const needsVerification = computed(() => {
-  return job.value &&
-    (job.value.state === 'RUNNING' || job.value.state === 1) &&
+  return (
+    job.value &&
+    isRunning(job.value.state) &&
     isJobPoster.value &&
-    !isVerified.value;
+    !isVerified.value
+  );
 });
 
-// Add a watch for the wallet connection to validate stored auth header
 watch(
   publicKey,
   async (newPublicKey) => {
+    // if the new key does not match the stored one, clear it out
     if (newPublicKey && storedAuthHeader.value) {
-      // Check if the stored auth header matches the current wallet
       const [storedKey] = storedAuthHeader.value.split(':');
       if (storedKey !== newPublicKey.toString()) {
-        // If the stored key doesn't match the current wallet, clear it
         storedAuthHeader.value = null;
         isVerified.value = false;
       }
@@ -286,8 +345,7 @@ watch(
         await signMessage(true);
         toast.success('Wallet verified successfully');
         refreshJob();
-        // Initialize logs if job is running
-        if (job.value && (job.value.state === 'RUNNING' || job.value.state === 1)) {
+        if (job.value && isRunning(job.value.state)) {
           logs.value = [];
         }
       } catch (error) {
@@ -296,10 +354,10 @@ watch(
     } else if (!newConnected) {
       isVerified.value = false;
       storedAuthHeader.value = null;
-      // Clear logs when disconnecting
       logs.value = null;
       if (ws) {
         ws.close();
+        ws = null;
         isWebSocketConnected = false;
         isConnecting.value = false;
       }
@@ -308,13 +366,11 @@ watch(
   { immediate: true }
 );
 
-// Add a watch for connected state to handle logs initialization
 watch(
   connected,
   async (newConnected) => {
-    if (newConnected && job.value && (job.value.state === 'RUNNING' || job.value.state === 1)) {
+    if (newConnected && job.value && isRunning(job.value.state)) {
       logs.value = [];
-
     } else if (!newConnected) {
       logs.value = null;
     }
@@ -322,9 +378,19 @@ watch(
   { immediate: true }
 );
 
-// Modify stopJob to check verification
+/**
+ * STOP JOB logic
+ * - If job is in queue (state=0 or "QUEUED"), delist
+ * - If job is running (state=1 or "RUNNING"), end
+ * - Else, let user know
+ */
 const stopJob = async () => {
-  if (!job.value) return;
+  if (!job.value) {
+    toast.error('No job found.');
+    return;
+  }
+
+  // Make sure we're verified
   if (!isVerified.value) {
     try {
       await signMessage(true);
@@ -333,40 +399,56 @@ const stopJob = async () => {
       return;
     }
   }
+
+  loading.value = true;
   try {
-    loading.value = true;
-    const authorizationHeader = await signMessage();
-    const nodeAddress = job.value.node.toString();
-    const apiUrl = `https://${nodeAddress}.${useRuntimeConfig().public.nodeDomain}/service/stop/${jobId.value}`;
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': authorizationHeader,
-      },
-    });
-    const text = await response.text();
-    if (response.status === 403) {
-      storedAuthHeader.value = null;
-      toast.error(`Authentication failed: ${text}`);
+    const numericState = getStateNumber(job.value.state);
+
+    // If job is completed (2) or stopped (3), no need to proceed
+    if (numericState === 2 || numericState === 3) {
+      toast.info(`Job is already ${numericState === 2 ? 'COMPLETED' : 'STOPPED'}`);
       return;
     }
-    if (response.status === 200) {
-      toast.success(`Success: ${text}`);
-      return;
+
+    // If job is queued (0), delist it
+    if (numericState === 0) {
+      await nosana.value.jobs.delist(jobId.value);
+      toast.success('Job successfully delisted (canceled) from queue!');
     }
-    // Refresh job data
-    const updatedJob = await nosana.value.jobs.get(jobId.value);
-    job.value = updatedJob;
-  } catch (e: any) {
-    storedAuthHeader.value = null;
-    toast.error(`Error stopping job: ${e.toString()}`);
+    // If job is running (1), end it
+    else if (numericState === 1) {
+      await nosana.value.jobs.end(jobId.value);
+      toast.success('Job successfully ended!');
+    }
+    // Otherwise, let the user know
+    else {
+      toast.error(`Job is not in QUEUED or RUNNING state (currently: ${job.value.state})`);
+    }
+
+    // Wait 10 seconds before refreshing to allow backend to update
+    await new Promise(resolve => setTimeout(resolve, 10000));
+    refreshJob();
+  } catch (e) {
+    const errorMessage = e instanceof Error ? e.message : String(e);
+    toast.error(`Error stopping job: ${errorMessage}`);
+    console.error('Stop job error:', e);
   } finally {
     loading.value = false;
   }
 };
 
-// 2) The new "extendJob" function which calls the SDK's extend:
-const extendJob = async () => {
+// Show/hide the extend modal
+const showExtendModal = ref(false);
+// How many minutes to extend
+const extendTime = ref<number>(5);
+
+// Open the modal
+const openExtendModal = () => {
+  showExtendModal.value = true;
+};
+
+// Confirm extend – uses the new "extend" method from the SDK
+const confirmExtend = async () => {
   if (!job.value) {
     toast.error('No job found.');
     return;
@@ -379,85 +461,51 @@ const extendJob = async () => {
 
   try {
     loadingExtend.value = true;
+    showExtendModal.value = false;  // Close modal immediately
 
-    // Fetch a fresh copy from on-chain
-    const onChainJob = await nosana.value.jobs.get(job.value.address);
+    const numericState = getStateNumber(job.value.state);
 
-    // Convert to numeric if it's a string state
-    const numericState = typeof onChainJob.state === 'string'
-      ? jobStateMapping[onChainJob.state]
-      : onChainJob.state;
-
-    // Show toast logs with the actual states
-    toast.info(`On-chain job.state: "${onChainJob.state}" (numeric: ${numericState})`);
-    toast.info(`Local job.state: "${job.value.state}" (type: ${typeof job.value.state})`);
-    toast.info(`Market: ${onChainJob.market || 'None'}`);
-    toast.info(`Node: ${onChainJob.node}`);
-    toast.info(`Project: ${onChainJob.project}`);
-    toast.info(`Your wallet: ${publicKey.value.toString()}`);
-
-    // Check if numericState matches RUNNING (1)
+    // if jobAccount.state != 1 => job cannot be extended per SDK restrictions
     if (numericState !== 1) {
-      toast.warning(`Job is not in numeric RUNNING (1). Retrying in 3s...`);
-      await new Promise((r) => setTimeout(r, 3000));
-      const reCheck = await nosana.value.jobs.get(job.value.address);
-      const reCheckNumeric = typeof reCheck.state === 'string'
-        ? jobStateMapping[reCheck.state]
-        : reCheck.state;
-
-      if (reCheckNumeric !== 1) {
-        toast.error(`Still cannot extend: On-chain says "${reCheck.state}" (numeric: ${reCheckNumeric})`);
-        return;
-      }
+      toast.error('Job can only be extended while running (state=1)');
+      return;
     }
 
-    const result = await nosana.value.jobs.extend(job.value.address, 300);
+    // Add the current timeout to the extend time to make it feel like we're adding time
+    const currentTimeoutMinutes = job.value.timeout ? Math.floor(job.value.timeout / 60) : 0;
+    const newTimeoutMinutes = currentTimeoutMinutes + extendTime.value;
+    const timeInSeconds = newTimeoutMinutes * 60;
+
+    const result = await nosana.value.jobs.extend(job.value.address, timeInSeconds);
     toast.success(`Job has been extended! Transaction: ${result.tx}`);
 
-    const updated = await nosana.value.jobs.get(job.value.address);
-    job.value = updated;
-    toast.info(`After extension: On-chain job.state is "${updated.state}"`);
-
-  } catch (err: any) {
-    toast.error(`Error extending job: ${err.message ?? err.toString()}`);
+    // Wait 10 seconds before refreshing to allow backend to update
+    await new Promise(resolve => setTimeout(resolve, 10000));
+    refreshJob();
+  } catch (e) {
+    const errorMessage = e instanceof Error ? e.message : String(e);
+    toast.error(`Error extending job: ${errorMessage}`);
+    console.error('Extend job error:', e);
   } finally {
     loadingExtend.value = false;
   }
 };
 
-// Add these refs near the top with other refs
 const loadingRepost = ref(false);
-
-// Remove duplicate imports and fix market types
 const { markets, getMarkets, loadingMarkets } = useMarkets();
 const { data: testgridMarkets } = await useAPI('/api/markets', { default: () => [] });
 
-// Add this watch to initialize markets if needed
 if (!markets.value && !loadingMarkets.value) {
   getMarkets();
 }
 
-// Add these computed properties
-const pricePerHour = computed(() => {
-  if (!repostMarket.value) return 0;
-  return (repostMarket.value.jobPrice * 3600) / 1e6;
-});
-
-const maxPrice = computed(() => {
-  if (!repostMarket.value || !repostTimeout.value) return 0;
-  return (repostMarket.value.jobPrice * repostTimeout.value * 60) / 1e6;
-});
-
-const networkFee = computed(() => {
-  return maxPrice.value * 0.1;
-});
-
-// Modify the repostJob function to initialize the values
 const repostJob = async () => {
   if (!job.value?.address) {
-    toast.error("No valid job address to repost.");
+    toast.error('No valid job address to repost.');
     return;
   }
+
+  const theTimeout = job.value.timeout ? Math.floor(job.value.timeout / 60) : 60;
 
   try {
     loadingRepost.value = true;
@@ -467,7 +515,8 @@ const repostJob = async () => {
         fromRepost: 'true',
         step: 'post-job',
         jobAddress: job.value.address,
-      },
+        jobTimeout: theTimeout
+      }
     });
   } catch (error: any) {
     toast.error(`Error preparing repost: ${error.toString()}`);
@@ -480,15 +529,12 @@ let ws: WebSocket | null = null;
 let isWebSocketConnected = false;
 const isConnecting = ref(false);
 
-// Add the new check and connect function
 const checkAndConnectWebSocket = async () => {
-  // If we're already connected or connecting, don't try again
   if (isWebSocketConnected || isConnecting.value) return;
 
-  // Check all conditions for connection
   if (
     job.value &&
-    (job.value.state === 'RUNNING' || job.value.state === 1) &&
+    isRunning(job.value.state) &&
     isJobPoster.value &&
     isVerified.value &&
     connected.value
@@ -498,7 +544,6 @@ const checkAndConnectWebSocket = async () => {
   }
 };
 
-// Add mounted and activated hooks
 onMounted(() => {
   checkAndConnectWebSocket();
 });
@@ -507,13 +552,17 @@ onActivated(() => {
   checkAndConnectWebSocket();
 });
 
-// Update the connectWebSocket function to properly handle connection states
 const connectWebSocket = async () => {
-  // Always close existing connection first
   if (ws) {
     ws.close();
     ws = null;
     isWebSocketConnected = false;
+  }
+
+  if (logs.value) {
+    logs.value = logs.value.filter(
+      (log) => !log.logs.includes('Error connecting to WebSocket')
+    );
   }
 
   const nodeAddress = job.value.node.toString();
@@ -533,7 +582,6 @@ const connectWebSocket = async () => {
   try {
     ws = new WebSocket(wsUrl);
 
-    // Add connection timeout
     const connectionTimeout = setTimeout(() => {
       if (!isWebSocketConnected) {
         if (ws) {
@@ -544,7 +592,7 @@ const connectWebSocket = async () => {
         isWebSocketConnected = false;
         logs.value?.push({
           id: Date.now(),
-          logs: "Could not establish WebSocket connection to get the logs. The node may be offline."
+          logs: 'Could not establish WebSocket connection to get the logs. The node may be offline.'
         });
       }
     }, 10000);
@@ -566,28 +614,29 @@ const connectWebSocket = async () => {
 
     ws.onmessage = (event: MessageEvent) => {
       isConnecting.value = false;
+
       try {
         const outerData = JSON.parse(event.data);
+        let logData: any = outerData;
 
-        // Handle empty responses
-        if (!outerData.data && !outerData.type) return;
+        if (
+          !('type' in outerData || 'log' in outerData || 'method' in outerData) &&
+          outerData.data
+        ) {
+          logData = JSON.parse(outerData.data);
+        }
 
-        // If it's a direct message (not wrapped in data)
-        const innerData = outerData.data ? JSON.parse(outerData.data) : outerData;
+        if (!logData) return;
+        const convertedLog = ansi.ansi_to_html(logData.log || '');
 
-        if (!innerData) return;
-
-        // Convert ANSI codes in any text field we have
-        const convertedLog = ansi.ansi_to_html(innerData.log || '');
-
-        // Handle progress bar updates
-        if ((innerData.type === 'multi-process-bar-update' ||
-          innerData.method === 'MultiProgressBarReporter.update') &&
-          innerData.payload?.event) {
-          const event = innerData.payload.event;
+        if (
+          (logData.type === 'multi-process-bar-update' ||
+            logData.method === 'MultiProgressBarReporter.update') &&
+          logData.payload?.event
+        ) {
+          const event = logData.payload.event;
           const layerId = event.id;
 
-          // Handle completion states
           if (
             event.status === 'Download complete' ||
             event.status === 'Pull complete' ||
@@ -603,7 +652,6 @@ const connectWebSocket = async () => {
               delete progressBars.value[layerId];
             }
 
-            // Check if this exact message isn't the last one before adding
             const lastLog = logs.value?.[logs.value.length - 1]?.logs;
             const newLog = `${event.status}: ${layerId}`;
             if (newLog !== lastLog) {
@@ -612,15 +660,13 @@ const connectWebSocket = async () => {
                 logs: newLog
               });
             }
-            return; // Stop here to prevent duplicate logging
+            return;
           }
 
-          // Handle active download/extract states
           if (event.status === 'Downloading' || event.status === 'Extracting') {
             const current = event.progressDetail?.current || 0;
             const total = event.progressDetail?.total || 0;
 
-            // Format size for display
             const formatSize = (bytes: number) => {
               if (!bytes || isNaN(bytes)) return '0B';
               const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
@@ -642,7 +688,6 @@ const connectWebSocket = async () => {
               }
             };
 
-            // Update existing progress bar or create new one
             if (progressBars.value[layerId]) {
               const index = logs.value?.findIndex(
                 (item) => item.id === progressBars.value[layerId]
@@ -654,10 +699,9 @@ const connectWebSocket = async () => {
               logs.value?.push(progressObj);
               progressBars.value[layerId] = progressObj.id;
             }
-            return; // Stop here to prevent duplicate logging
+            return;
           }
-        } else if (innerData.log) {
-          // Handle regular logs - check for duplicates
+        } else if (logData.log) {
           const lastLog = logs.value?.[logs.value.length - 1]?.logs;
           if (convertedLog !== lastLog) {
             logs.value?.push({
@@ -678,7 +722,7 @@ const connectWebSocket = async () => {
       if (isConnecting.value) {
         logs.value?.push({
           id: Date.now(),
-          logs: "WebSocket connection closed. Could not establish connection to get the logs."
+          logs: 'WebSocket connection closed. Could not establish connection to get the logs.'
         });
         isConnecting.value = false;
       }
@@ -690,23 +734,21 @@ const connectWebSocket = async () => {
       isWebSocketConnected = false;
       logs.value?.push({
         id: Date.now(),
-        logs: "Error connecting to WebSocket. The node may be offline."
+        logs: 'Error connecting to WebSocket. The node may be offline.'
       });
       isConnecting.value = false;
     };
-
   } catch (error) {
     ws = null;
     isWebSocketConnected = false;
     isConnecting.value = false;
     logs.value?.push({
       id: Date.now(),
-      logs: "Failed to establish WebSocket connection. The node may be offline."
+      logs: 'Failed to establish WebSocket connection. The node may be offline.'
     });
   }
 };
 
-// Update the unmount handler to be more thorough
 onUnmounted(() => {
   if (ws) {
     ws.close();
@@ -717,28 +759,20 @@ onUnmounted(() => {
   logs.value = null;
 });
 
-// Keep your existing watch, but make it simpler since we have the check function
 watch(
-  [
-    () => job.value?.state,
-    () => connected.value,
-    () => isVerified.value,
-    () => isJobPoster.value
-  ],
+  [() => job.value?.state, () => connected.value, () => isVerified.value, () => isJobPoster.value],
   async () => {
     await checkAndConnectWebSocket();
   },
   { immediate: true }
 );
 
-// Ensure we close the WebSocket on unmount
-onUnmounted(() => {
-  if (ws) {
-    ws.close();
-  }
+const hasResultsRegex = computed(() => {
+  if (!job.value?.jobDefinition?.ops) return false;
+  return job.value.jobDefinition.ops.some((op: any) => op.results);
 });
-
 </script>
+
 <style lang="scss" scoped>
 .pre {
   white-space: pre-wrap;
@@ -754,5 +788,25 @@ onUnmounted(() => {
 
 .progress.is-primary::-moz-progress-bar {
   background-color: #00d1b2;
+}
+
+.visit-service-btn {
+  color: #10E80C !important;
+  border-color: #10E80C !important;
+  background: transparent !important;
+
+  &:hover {
+    background: #10E80C !important;
+    color: white !important;
+  }
+}
+
+.modal.is-active {
+  display: flex;
+}
+
+.modal-card {
+  max-width: 500px;
+  width: 100%;
 }
 </style>

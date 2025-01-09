@@ -27,21 +27,25 @@
         </tbody>
       </table>
 
-      <ExplorerJobList :per-page="limit" :total-jobs="jobs ? jobs.totalJobs : null" v-model:page="page"
-        v-model:state="state" :loading-jobs="loadingJobs" title="Jobs Posted" :jobs="jobs ? jobs.jobs : null">
-      </ExplorerJobList>
+      <ExplorerJobList
+        :per-page="limit"
+        :total-jobs="jobs ? jobs.totalJobs : null"
+        v-model:page="page"
+        v-model:state="state"
+        :loading-jobs="loadingJobs"
+        title="Jobs Posted"
+        :jobs="jobs ? jobs.jobs : null"
+      />
     </div>
   </div>
 </template>
+
 <script lang="ts" setup>
 interface Props {
   address: string;
 }
 const props = defineProps<Props>();
 
-/*************
- * Poster Jobs *
- *************/
 const page: Ref<number> = ref(1);
 const state: Ref<number | null> = ref(null);
 const jobStateMapping: any = {
@@ -51,14 +55,23 @@ const jobStateMapping: any = {
   3: 'STOPPED',
 };
 const limit: Ref<number> = ref(10);
-const jobsUrl: ComputedRef<string> = computed(() => { return `/api/jobs?limit=${limit.value}&offset=${(page.value - 1) * limit.value}${state.value !== null ? `&state=${jobStateMapping[state.value]}` : ''}${`&poster=${props.address}`}` })
+
+const jobsUrl: ComputedRef<string> = computed(() => {
+  return (
+    `/api/jobs?limit=${limit.value}` +
+    `&offset=${(page.value - 1) * limit.value}` +
+    `${state.value !== null ? `&state=${jobStateMapping[state.value]}` : ''}` +
+    `&poster=${props.address}`
+  )
+});
+
 const { data: jobs, pending: loadingJobs } = useAPI(jobsUrl, { watch: [jobsUrl] });
 
-const hasPostedJobs: ComputedRef<Boolean> = computed(() => {
-  return jobs.value && jobs.value.jobs && jobs.value.jobs.length
-})
+const hasPostedJobs: ComputedRef<boolean> = computed(() => {
+  return !!(jobs.value && jobs.value.jobs && jobs.value.jobs.length)
+});
 
-const isPoster: ComputedRef<Boolean> = computed(() => {
-  return hasPostedJobs.value
-})
+const isPoster: ComputedRef<boolean> = computed(() => {
+  return !loadingJobs.value && !!jobs.value
+});
 </script>

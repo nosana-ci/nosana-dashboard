@@ -1,6 +1,6 @@
 <template>
   <div>
-    <TopBar :title="'Job Builder'" :subtitle="'Create and deploy job definition files'"></TopBar>
+    <TopBar :title="'Create Job'" :subtitle="'Create and deploy job definition files'"></TopBar>
     <ul class="steps has-content-centered has-gaps">
       <li class="steps-segment" :class="{ 'is-active': step === 'job-definition' }">
         <span class="steps-marker is-clickable" @click="step = 'job-definition'">1</span>
@@ -649,7 +649,12 @@ watchEffect(async () => {
         step.value = 'post-job';
       }
 
-      // 1. Fetch the job using the same API endpoint
+      // 1. If the query has a jobTimeout, set it first
+      if (route.query?.jobTimeout) {
+        jobTimeout.value = parseInt(route.query.jobTimeout.toString(), 10);
+      }
+
+      // 2. Fetch the job using the same API endpoint
       const response = await fetch(
         `https://dashboard.k8s.prd.nos.ci/api/jobs/${address}`
       );
@@ -663,10 +668,15 @@ watchEffect(async () => {
         throw new Error('No job definition found in the job data');
       }
 
-      // 2. Set the job definition
+      // 3. If no jobTimeout in query but job data has it, use that
+      if (!route.query?.jobTimeout && jobData.timeout) {
+        jobTimeout.value = jobData.timeout;
+      }
+
+      // 4. Set the job definition
       jobDefinition.value = jobData.jobDefinition;
 
-      // 3. Force GPU for container/run operations
+      // 5. Force GPU for container/run operations
       if (jobDefinition.value.ops?.length) {
         jobDefinition.value.ops.forEach((op) => {
           if (op.type === 'container/run') {
@@ -676,12 +686,12 @@ watchEffect(async () => {
         });
       }
 
-      // 4. Wait for markets to load if needed
+      // 6. Wait for markets to load if needed
       if (!markets.value && !loadingMarkets.value) {
         await getMarkets();
       }
 
-      // 5. Try to select the original market first
+      // 7. Try to select the original market first
       if (jobData.market && markets.value) {
         const originalMarket = markets.value.find(
           m => m.address.toString() === jobData.market
@@ -692,7 +702,7 @@ watchEffect(async () => {
         }
       }
 
-      // 6. Otherwise find first GPU market
+      // 8. Otherwise find first GPU market
       if (markets.value?.length) {
         const gpuMarket = markets.value.find(m => {
           return m.jobPrice > 0 && (

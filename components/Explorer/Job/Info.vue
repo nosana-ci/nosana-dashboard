@@ -15,18 +15,33 @@
       <tr>
         <td>Node</td>
         <td>
-          <span v-if="props.job.node.toString() === '11111111111111111111111111111111'
-          ">Unclaimed</span>
-          <nuxt-link v-else class="address is-family-monospace" :to="`/account/${props.job.node}`">
+          <span
+            v-if="props.job.node.toString() === '11111111111111111111111111111111'"
+          >
+            Unclaimed
+          </span>
+          <nuxt-link
+            v-else
+            class="address is-family-monospace"
+            :to="`/account/${props.job.node}`"
+          >
             {{ props.job.node }}
           </nuxt-link>
         </td>
       </tr>
       <tr>
-        <td>Market</td>
+        <td>GPU Market</td>
         <td>
-          <nuxt-link :to="`/markets/${props.job.market}`" class="address is-family-monospace">
-            <span v-if="testgridMarkets && testgridMarkets.find((tgm: any) => tgm.address === props.job.market)">
+          <nuxt-link
+            class="address is-family-monospace"
+            :to="`/markets/${props.job.market}`"
+          >
+            <span
+              v-if="
+                testgridMarkets &&
+                testgridMarkets.find((tgm: any) => tgm.address === props.job.market)
+              "
+            >
               {{ testgridMarkets.find((tgm: any) => tgm.address === props.job.market).name }}
             </span>
             <span v-else>{{ props.job.market }}</span>
@@ -80,22 +95,41 @@
           <span v-if="maxDuration"> (max {{ Math.round(maxDuration / 60) }}m)</span>
         </td>
       </tr>
-      <tr v-if="props.job.jobDefinition &&
-        props.job.jobDefinition.state &&
-        props.job.jobDefinition.state['nosana/job-type']">
-        <td>Source</td>
-        <td v-if="props.job.jobDefinition &&
+      <tr>
+        <td>{{ isJobPoster ? 'Repost this job' : 'Post this job' }}</td>
+        <td>
+          <button @click="$emit('repost')" class="button is-primary is-small is-outlined">
+            {{ isJobPoster ? 'Repost' : 'Post' }}
+          </button>
+        </td>
+      </tr>
+      <tr
+        v-if="
+          props.job.jobDefinition &&
           props.job.jobDefinition.state &&
-          props.job.jobDefinition.state['nosana/job-type'] &&
-          (props.job.jobDefinition.state['nosana/job-type'] === 'Github' ||
-            props.job.jobDefinition.state['nosana/job-type'] === 'github-flow')
-        ">
-          <a v-if="props.job.jobDefinition.state['input/repo'] &&
-            props.job.jobDefinition.state['input/commit-sha']
-          " :href="props.job.jobDefinition.state['input/repo'].replace('.git', '') +
-            '/commit/' +
-            props.job.jobDefinition.state['input/commit-sha']
-            " target="_blank">
+          props.job.jobDefinition.state['nosana/job-type']
+        "
+      >
+        <td>Source</td>
+        <td
+          v-if="
+            props.job.jobDefinition &&
+            props.job.jobDefinition.state &&
+            props.job.jobDefinition.state['nosana/job-type'] &&
+            (props.job.jobDefinition.state['nosana/job-type'] === 'Github' ||
+              props.job.jobDefinition.state['nosana/job-type'] === 'github-flow')
+          "
+        >
+          <a
+            v-if="
+              props.job.jobDefinition.state['input/repo'] &&
+              props.job.jobDefinition.state['input/commit-sha']
+            "
+            :href="props.job.jobDefinition.state['input/repo'].replace('.git', '') +
+              '/commit/' +
+              props.job.jobDefinition.state['input/commit-sha']"
+            target="_blank"
+          >
             {{ props.job.jobDefinition.state["input/commit-sha"] }}
           </a>
         </td>
@@ -138,6 +172,10 @@ const props = defineProps({
     type: Object as PropType<Job>,
     required: true,
   },
+  isJobPoster: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 // Pull from /api/markets instead of the composable
@@ -171,17 +209,19 @@ const displayPrice = computed(() => {
       props.job.timeout ?? (market.jobTimeout || 0)
     );
     const priceInNos = (parseInt(props.job.price, 10) / 1e6) * usedTime;
-    return `${priceInNos.toFixed(6)} NOS ${nosPrice ? `($${(nosPrice * priceInNos).toFixed(2)})` : ''
-      }`;
+    return `${priceInNos.toFixed(6)} NOS ${
+      nosPrice ? `($${(nosPrice * priceInNos).toFixed(2)})` : ''
+    }`;
   }
 
   // Running / queued
   if (props.job.price) {
     const pricePerSecond = parseInt(props.job.price, 10) / 1e6;
-    return `${pricePerSecond} NOS/s ${nosPrice
-      ? `($${((nosPrice * pricePerSecond) * 3600).toFixed(2)} / h)`
-      : ''
-      }`;
+    return `${pricePerSecond} NOS/s ${
+      nosPrice
+        ? `($${((nosPrice * pricePerSecond) * 3600).toFixed(2)} / h)`
+        : ''
+    }`;
   }
 
   return 'Unknown';
@@ -194,4 +234,7 @@ const maxDuration = computed(() => {
   const market = apiMarkets.value.find((m: any) => m.address === props.job.market);
   return props.job && props.job.timeout ? props.job.timeout : (market?.jobTimeout ?? 0);
 });
+
+// We'll re-use the data from /api/markets in another element, so let's keep that naming:
+const { data: testgridMarkets } = useAPI('/api/markets');
 </script>

@@ -13,7 +13,7 @@
         <table class="table is-fullwidth is-striped">
           <tbody>
             <tr v-if="testgridMarkets.find(m => m.address === marketId)">
-              <td>Market</td>
+              <td>Market Address</td>
               <td>
                 <a target="_blank" class="address is-family-monospace"
                   :href="'https://explorer.solana.com/address/' + marketId">{{ marketId }}</a>
@@ -33,10 +33,6 @@
             <tr>
               <td>Price</td>
               <td>{{ market.jobPrice / 1e6 }} NOS/s</td>
-            </tr>
-            <tr>
-              <td>Max job duration</td>
-              <td>{{ market.jobTimeout / 60 }} minutes</td>
             </tr>
             <tr>
               <td>Node access key</td>

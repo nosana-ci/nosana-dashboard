@@ -85,7 +85,8 @@ const checkAddressAndBalance = async () => {
       try {
         nosStaked.value = await nosana.value.stake.get(publicKey.value);
       } catch (error) {
-        console.error("cant fetch stake", error);
+        // Account has no stake, this is normal - set to null silently
+        nosStaked.value = null;
       }
     } catch (e) {
       console.error("cant get balance", e);
