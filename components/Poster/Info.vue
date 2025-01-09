@@ -68,7 +68,7 @@ const jobsUrl: ComputedRef<string> = computed(() => {
 const { data: jobs, pending: loadingJobs } = useAPI(jobsUrl, { watch: [jobsUrl] });
 
 const hasPostedJobs: ComputedRef<boolean> = computed(() => {
-  return !!(jobs.value && jobs.value.jobs)
+  return !!(jobs.value && jobs.value.jobs && jobs.value.jobs.length)
 });
 
 const isPoster: ComputedRef<boolean> = computed(() => {
