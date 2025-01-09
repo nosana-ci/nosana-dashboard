@@ -48,20 +48,36 @@
             </tr>
           </tbody>
         </table>
-        <div v-if="market.queueType === 1" class="py-5 queues columns">
+        <div class="py-5 queues columns">
           <div class="node-queue column is-half">
             <h2 class="title is-5">Node Queue</h2>
-            <p v-if="market.queue.length > 0" class="mb-2">
+            <p v-if="market.queue && market.queue.length > 0" class="mb-2">
               Total of: {{ market.queue.length }} node(s) in queue
             </p>
             <p v-else>There are no nodes in the queue at the moment</p>
-            <ol>
+            <ol v-if="market.queue && market.queue.length > 0">
               <li v-for="node in market.queue">
                 <nuxt-link :to="`/account/${node}`" class="address is-family-monospace">
                   {{ node }}
                 </nuxt-link>
               </li>
             </ol>
+          </div>
+          <div class="running-nodes column is-half">
+            <h2 class="title is-5">Running Nodes</h2>
+            <template v-if="runningNodes.length > 0">
+              <p class="mb-2">
+                Total of: {{ runningNodes.length }} node(s) running
+              </p>
+              <ol>
+                <li v-for="node in runningNodes" :key="node">
+                  <nuxt-link :to="`/account/${node}`" class="address is-family-monospace">
+                    {{ node }}
+                  </nuxt-link>
+                </li>
+              </ol>
+            </template>
+            <p v-else>There are no nodes running at the moment</p>
           </div>
         </div>
         <ExplorerJobList :per-page="limit" :total-jobs="jobs ? jobs.totalJobs : null" v-model:page="page"
@@ -100,6 +116,17 @@ watch(jobsUrl, () => {
   jobs.value = null
 })
 
+const runningNodesUrl = computed(() => `/api/jobs/running-nodes?market=${marketId.value}`);
+const { data: runningNodesData, pending: loadingRunningNodes, refresh: refreshRunningNodes } = useAPI(runningNodesUrl, { 
+  watch: [runningNodesUrl],
+  transform: (data) => data?.nodes || [],
+  default: () => [],
+  immediate: true,
+  lazy: true
+});
+
+const runningNodes = computed(() => runningNodesData.value || []);
+
 const getMarket = async () => {
   try {
     loading.value = true;
@@ -111,8 +138,5 @@ const getMarket = async () => {
 };
 
 getMarket();
-
-// Fetch market every 30 seconds
-// useIntervalFn(getMarket, 30000);
 </script>
 <style lang="scss" scoped></style>
