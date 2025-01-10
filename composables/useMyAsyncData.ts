@@ -1,21 +1,28 @@
 import { useToast } from "vue-toastification";
 const toast = useToast();
 
-export const useMyAsyncData = (key: string, callable: CallableFunction, opts?: { [key: string]: any }) => {
-  const asyncData = useLazyAsyncData(key,
+export const useMyAsyncData = (
+  key: string,
+  callable: CallableFunction,
+  opts?: { [key: string]: any }
+) => {
+  const asyncData = useLazyAsyncData(
+    key,
     async () => {
       try {
         return await callable();
       } catch (error: any) {
-        console.error(error)
-        if (!opts?.disableToastonError) {
+        console.error(error);
+        if (!opts?.disableToastOnError) {
           toast.error(error.toString());
         }
         throw error;
       }
-    }, {
-    server: false,
-    ...opts
-  });
+    },
+    {
+      server: false,
+      ...opts,
+    }
+  );
   return asyncData;
-}
+};
