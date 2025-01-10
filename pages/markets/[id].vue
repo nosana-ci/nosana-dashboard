@@ -10,103 +10,261 @@
               : marketId
           }}
         </h3>
-        <table class="table is-fullwidth is-striped">
-          <tbody>
-            <tr v-if="testgridMarkets.find(m => m.address === marketId)">
-              <td>Market Address</td>
-              <td>
-                <a target="_blank" class="address is-family-monospace"
-                  :href="'https://explorer.solana.com/address/' + marketId">{{ marketId }}</a>
-              </td>
-            </tr>
-            <tr>
-              <td>Authority</td>
-              <td>
-                <a target="_blank" class="address is-family-monospace" :href="'https://explorer.solana.com/address/' + market.authority
-                  ">{{ market.authority }}</a>
-              </td>
-            </tr>
-            <tr>
-              <td>Job expiration</td>
-              <td>{{ market.jobExpiration / 3600 }} hours</td>
-            </tr>
-            <tr>
-              <td>Price</td>
-              <td>{{ market.jobPrice / 1e6 }} NOS/s</td>
-            </tr>
-            <tr>
-              <td>Node access key</td>
-              <td>
-                <a target="_blank" class="address is-family-monospace" :href="'https://explorer.solana.com/address/' +
-                  market.nodeAccessKey.toString()
-                  ">{{ market.nodeAccessKey.toString() }}</a>
-              </td>
-            </tr>
-            <tr>
-              <td>Minimum Stake</td>
-              <td>{{ market.nodeXnosMinimum / 1e6 }} NOS</td>
-            </tr>
-          </tbody>
-        </table>
-        <div class="py-5 queues columns">
-          <div class="node-queue column is-half">
-            <h2 class="title is-5">Node Queue</h2>
-            <p v-if="market.queue && market.queue.length > 0" class="mb-2">
-              Total of: {{ market.queue.length }} node(s) in queue
-            </p>
-            <p v-else>There are no nodes in the queue at the moment</p>
-            <ol v-if="market.queue && market.queue.length > 0">
-              <li v-for="node in market.queue">
-                <nuxt-link :to="`/account/${node}`" class="address is-family-monospace">
-                  {{ node }}
-                </nuxt-link>
-              </li>
-            </ol>
-          </div>
-          <div class="running-nodes column is-half">
-            <h2 class="title is-5">Running Nodes</h2>
-            <template v-if="runningNodes.length > 0">
-              <p class="mb-2">
-                Total of: {{ runningNodes.length }} node(s) running
-              </p>
-              <ol>
-                <li v-for="node in runningNodes" :key="node">
-                  <nuxt-link :to="`/account/${node}`" class="address is-family-monospace">
-                    {{ node }}
-                  </nuxt-link>
-                </li>
-              </ol>
-            </template>
-            <p v-else>There are no nodes running at the moment</p>
+
+        <div class="columns is-multiline">
+          <div class="column is-12">
+            <table class="table is-fullwidth is-striped">
+              <tbody>
+                <tr>
+                  <td>Market Size</td>
+                  <td>{{ totalNodes }} nodes</td>
+                </tr>
+                <tr v-if="testgridMarkets.find(m => m.address === marketId)">
+                  <td>Market Address</td>
+                  <td>
+                    <a
+                      target="_blank"
+                      class="address is-family-monospace"
+                      :href="'https://explorer.solana.com/address/' + marketId"
+                    >
+                      {{ marketId }}
+                    </a>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Authority</td>
+                  <td>
+                    <a
+                      target="_blank"
+                      class="address is-family-monospace"
+                      :href="'https://explorer.solana.com/address/' + market.authority"
+                    >
+                      {{ market.authority }}
+                    </a>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Job expiration</td>
+                  <td>{{ market.jobExpiration / 3600 }} hours</td>
+                </tr>
+                <tr>
+                  <td>Price</td>
+                  <td>{{ market.jobPrice / 1e6 }} NOS/s</td>
+                </tr>
+                <tr>
+                  <td>Node access key</td>
+                  <td>
+                    <a
+                      target="_blank"
+                      class="address is-family-monospace"
+                      :href="'https://explorer.solana.com/address/' + market.nodeAccessKey.toString()"
+                    >
+                      {{ market.nodeAccessKey.toString() }}
+                    </a>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Minimum Stake</td>
+                  <td>{{ market.nodeXnosMinimum / 1e6 }} NOS</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
+
         <div class="py-5">
-          <div class="valid-sft-nodes">
-            <h2 class="title is-5">Nodes with Access Keys</h2>
-            <template v-if="!loadingNodesWithAccess">
-              <template v-if="nodesWithAccess.length > 0">
-                <p class="mb-2">
-                  These nodes have an access key for this market:
-                  {{ nodesWithAccess.length }} node(s)
-                </p>
-                <ol>
-                  <li v-for="node in nodesWithAccess" :key="node">
-                    <nuxt-link :to="`/account/${node}`" class="address is-family-monospace">
-                      {{ node }}
-                    </nuxt-link>
-                  </li>
-                </ol>
-              </template>
-              <p v-else>There are no nodes with an access key for this market.</p>
-            </template>
-            <template v-else>
-              Loading nodes with access keys...
-            </template>
+          <div class="level mb-4">
+            <div class="level-left">
+              <h2 class="title is-5 mb-0">Nodes Overview</h2>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-content p-0">
+              <table class="table is-fullwidth">
+                <thead>
+                  <tr>
+                    <th style="width: 200px;">Status</th>
+                    <th style="width: 100px;">Count</th>
+                    <th class="is-hidden-mobile"></th>
+                    <th style="width: 120px;"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- All Nodes -->
+                  <tr>
+                    <td>
+                      <span class="icon has-text-success">
+                        <i class="fas fa-users"></i>
+                      </span>
+                      <span class="has-text-weight-medium">All nodes</span>
+                    </td>
+                    <td>{{ totalNodes }}</td>
+                    <td class="is-hidden-mobile">
+                      <progress 
+                        class="progress is-success is-small" 
+                        :value="totalNodes" 
+                        :max="totalNodes"
+                      ></progress>
+                    </td>
+                    <td>
+                      <button 
+                        class="button is-small"
+                        @click="toggleAllNodes"
+                        :disabled="!totalNodes"
+                      >
+                        {{ showAllNodes ? 'Hide' : 'Show' }}
+                      </button>
+                    </td>
+                  </tr>
+                  <tr v-show="showAllNodes && totalNodes">
+                    <td colspan="4" class="has-background-white-ter">
+                      <div class="p-3">
+                        <ol class="ml-4">
+                          <li v-for="node in allNodes" :key="node">
+                            <nuxt-link :to="`/account/${node}`" class="is-family-monospace">
+                              {{ node }}
+                            </nuxt-link>
+                          </li>
+                        </ol>
+                      </div>
+                    </td>
+                  </tr>
+
+                  <!-- Running Nodes -->
+                  <tr>
+                    <td>
+                      <span class="icon has-text-info">
+                        <i class="fas fa-play"></i>
+                      </span>
+                      <span class="has-text-weight-medium">Running</span>
+                    </td>
+                    <td>{{ runningNodes.length }}</td>
+                    <td class="is-hidden-mobile">
+                      <progress 
+                        class="progress is-info is-small" 
+                        :value="runningNodes.length" 
+                        :max="totalNodes"
+                      ></progress>
+                    </td>
+                    <td>
+                      <button 
+                        class="button is-small"
+                        @click="toggleRunningNodes"
+                        :disabled="!runningNodes.length"
+                      >
+                        {{ showRunningNodes ? 'Hide' : 'Show' }}
+                      </button>
+                    </td>
+                  </tr>
+                  <tr v-show="showRunningNodes && runningNodes.length">
+                    <td colspan="4" class="has-background-white-ter">
+                      <div class="p-3">
+                        <ol class="ml-4">
+                          <li v-for="node in runningNodes" :key="node">
+                            <nuxt-link :to="`/account/${node}`" class="is-family-monospace">
+                              {{ node }}
+                            </nuxt-link>
+                          </li>
+                        </ol>
+                      </div>
+                    </td>
+                  </tr>
+
+                  <!-- Queued Nodes -->
+                  <tr>
+                    <td>
+                      <span class="icon has-text-warning">
+                        <i class="fas fa-clock"></i>
+                      </span>
+                      <span class="has-text-weight-medium">Queued</span>
+                    </td>
+                    <td>{{ queuedNodes.length }}</td>
+                    <td class="is-hidden-mobile">
+                      <progress 
+                        class="progress is-warning is-small" 
+                        :value="queuedNodes.length" 
+                        :max="totalNodes"
+                      ></progress>
+                    </td>
+                    <td>
+                      <button 
+                        class="button is-small"
+                        @click="toggleQueuedNodes"
+                        :disabled="!queuedNodes.length"
+                      >
+                        {{ showQueuedNodes ? 'Hide' : 'Show' }}
+                      </button>
+                    </td>
+                  </tr>
+                  <tr v-show="showQueuedNodes && queuedNodes.length">
+                    <td colspan="4" class="has-background-white-ter">
+                      <div class="p-3">
+                        <ol class="ml-4">
+                          <li v-for="node in queuedNodes" :key="node">
+                            <nuxt-link :to="`/account/${node}`" class="is-family-monospace">
+                              {{ node }}
+                            </nuxt-link>
+                          </li>
+                        </ol>
+                      </div>
+                    </td>
+                  </tr>
+
+                  <!-- Access to join Nodes -->
+                  <tr>
+                    <td>
+                      <span class="icon">
+                        <i class="fas fa-key"></i>
+                      </span>
+                      <span class="has-text-weight-medium">Access to join</span>
+                    </td>
+                    <td>{{ availableNodesWithAccess.length }}</td>
+                    <td class="is-hidden-mobile">
+                      <progress 
+                        class="progress is-dark is-small" 
+                        :value="availableNodesWithAccess.length" 
+                        :max="totalNodes"
+                      ></progress>
+                    </td>
+                    <td>
+                      <button 
+                        class="button is-small"
+                        :disabled="!availableNodesWithAccess.length"
+                        @click="toggleAccessNodes"
+                      >
+                        {{ showAccessNodes ? 'Hide' : 'Show' }}
+                      </button>
+                    </td>
+                  </tr>
+                  <tr v-show="showAccessNodes && availableNodesWithAccess.length">
+                    <td colspan="4" class="has-background-white-ter">
+                      <div class="p-3">
+                        <ol class="ml-4">
+                          <li v-for="node in availableNodesWithAccess" :key="node">
+                            <nuxt-link :to="`/account/${node}`" class="is-family-monospace">
+                              {{ node }}
+                            </nuxt-link>
+                          </li>
+                        </ol>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
-        <ExplorerJobList :per-page="limit" :total-jobs="jobs ? jobs.totalJobs : null" v-model:page="page"
-          v-model:state="state" :loading-jobs="loadingJobs" title="All Jobs in this market"
-          :jobs="jobs ? jobs.jobs : null">
+
+        <ExplorerJobList
+          :per-page="limit"
+          :total-jobs="jobs ? jobs.totalJobs : null"
+          v-model:page="page"
+          v-model:state="state"
+          :loading-jobs="loadingJobs"
+          title="All Jobs in this market"
+          :jobs="jobs ? jobs.jobs : null"
+        >
         </ExplorerJobList>
       </div>
       <div v-else>Market not found</div>
@@ -115,65 +273,184 @@
 </template>
 
 <script setup lang="ts">
-import { type Market } from '@nosana/sdk';
-const { data: testgridMarkets, pending: loadingTestgridMarkets } = useAPI('/api/markets', { default: () => [] });
+import { type Market } from '@nosana/sdk'
 
-const { params } = useRoute();
-const { nosana } = useSDK();
-const market: Ref<Market | null> = ref(null);
-const marketId: Ref<string> = ref(String(params.id));
-const loading: Ref<boolean> = ref(false);
+interface TestgridMarket {
+  address: string
+  name: string
+}
 
-const page: Ref<number> = ref(1);
-const state: Ref<number | null> = ref(null);
+const { data: testgridMarkets, pending: loadingTestgridMarkets } = useAPI('/api/markets', { 
+  default: () => [] as TestgridMarket[],
+})
+const { params } = useRoute()
+const { nosana } = useSDK()
+
+const market = ref<Market | null>(null)
+const marketId = ref<string>(String(params.id))
+const loading = ref<boolean>(false)
+
+const page = ref<number>(1)
+const state = ref<number | null>(null)
 const jobStateMapping: any = {
   0: 'QUEUED',
   1: 'RUNNING',
   2: 'COMPLETED',
   3: 'STOPPED',
-};
-const limit: Ref<number> = ref(10);
-const jobsUrl = computed(() => { return `/api/jobs?limit=${limit.value}&offset=${(page.value - 1) * limit.value}${state.value !== null ? `&state=${jobStateMapping[state.value]}` : ''}${`&market=${marketId.value}`}` })
-const { data: jobs, pending: loadingJobs, refresh: refreshJobs } = useAPI(jobsUrl, { watch: [jobsUrl] });
+}
+const limit = ref<number>(10)
+
+const jobsUrl = computed(() => {
+  return `/api/jobs?limit=${limit.value}&offset=${(page.value - 1) * limit.value}${
+    state.value !== null ? `&state=${jobStateMapping[state.value]}` : ''
+  }&market=${marketId.value}`
+})
+const { data: jobs, pending: loadingJobs } = useAPI(jobsUrl, { watch: [jobsUrl] })
+
 watch(jobsUrl, () => {
   console.log('resetting jobs..')
   jobs.value = null
 })
 
-const runningNodesUrl = computed(() => `/api/jobs/running-nodes?market=${marketId.value}`);
-const { data: runningNodesData, pending: loadingRunningNodes, refresh: refreshRunningNodes } = useAPI(runningNodesUrl, { 
+const runningNodesUrl = computed(() => `/api/jobs/running-nodes?market=${marketId.value}`)
+const {
+  data: runningNodesData,
+  pending: loadingRunningNodes
+} = useAPI(runningNodesUrl, {
   watch: [runningNodesUrl],
-  transform: (data) => data?.nodes || [],
-  default: () => [],
+  transform: (data: any) => (data || []) as string[],
+  default: () => [] as string[],
   immediate: true,
   lazy: true
-});
+})
 
-const nodesWithAccessUrl = computed(() => `/api/nodes/with-access?marketAddress=${marketId.value}`);
+const nodesWithAccessUrl = computed(() => `/api/nodes/with-access?marketAddress=${marketId.value}`)
 const {
   data: nodesWithAccessData,
   pending: loadingNodesWithAccess
 } = useAPI(nodesWithAccessUrl, {
   watch: [nodesWithAccessUrl],
-  transform: (data) => data || [],
-  default: () => [],
+  transform: (data: any) => (data || []) as string[],
+  default: () => [] as string[],
   immediate: true,
   lazy: true
-});
+})
 
-const nodesWithAccess = computed(() => nodesWithAccessData.value || []);
-const runningNodes = computed(() => runningNodesData.value || []);
+const nodesWithAccess = computed(() => nodesWithAccessData.value || [])
+const runningNodes = computed(() => {
+  // Remove duplicates from running nodes array
+  return [...new Set(runningNodesData.value || [])]
+})
 
 const getMarket = async () => {
   try {
-    loading.value = true;
-    market.value = await nosana.value.jobs.getMarket(marketId.value);
+    loading.value = true
+    market.value = await nosana.value.jobs.getMarket(marketId.value)
   } catch (e) {
-    market.value = null;
+    market.value = null
   }
-  loading.value = false;
-};
+  loading.value = false
+}
 
-getMarket();
+getMarket()
+
+const showRunningNodes = ref(false)
+const showQueuedNodes = ref(false)
+const showAccessNodes = ref(false)
+
+const toggleRunningNodes = () => {
+  showRunningNodes.value = !showRunningNodes.value
+  if (showRunningNodes.value) {
+    showQueuedNodes.value = false
+    showAccessNodes.value = false
+  }
+}
+
+const toggleQueuedNodes = () => {
+  showQueuedNodes.value = !showQueuedNodes.value
+  if (showQueuedNodes.value) {
+    showRunningNodes.value = false
+    showAccessNodes.value = false
+  }
+}
+
+const toggleAccessNodes = () => {
+  showAccessNodes.value = !showAccessNodes.value
+  if (showAccessNodes.value) {
+    showRunningNodes.value = false
+    showQueuedNodes.value = false
+  }
+}
+
+interface NodeLike {
+  toString(): string
+}
+
+const queuedNodes = computed(() => {
+  const runningNodeSet = new Set(runningNodes.value)
+  // Filter out nodes that are already running from the queue
+  const filteredQueue = (market.value?.queue || []).filter((node: NodeLike | string) => {
+    const nodeStr = typeof node === 'string' ? node : node.toString()
+    return !runningNodeSet.has(nodeStr)
+  })
+  
+  return filteredQueue
+})
+
+const totalNodes = computed(() => {
+  const runningSet = new Set(runningNodes.value)
+  const queuedSet = new Set(queuedNodes.value.map((node: NodeLike | string) => 
+    typeof node === 'string' ? node : node.toString()
+  ))
+  const accessSet = new Set(nodesWithAccess.value.map((node: NodeLike | string) => 
+    typeof node === 'string' ? node : node.toString()
+  ))
+  
+  // Combine all sets
+  const allNodesSet = new Set([
+    ...runningSet,
+    ...queuedSet,
+    ...accessSet
+  ])
+  
+  return allNodesSet.size
+})
+
+const allNodes = computed(() => {
+  // Combine all nodes and ensure they're strings
+  return [...new Set([
+    ...runningNodes.value,
+    ...queuedNodes.value.map((node: NodeLike | string) => typeof node === 'string' ? node : node.toString()),
+    ...nodesWithAccess.value.map((node: NodeLike | string) => typeof node === 'string' ? node : node.toString())
+  ])].sort()
+})
+
+const availableNodesWithAccess = computed(() => {
+  const runningNodeSet = new Set(runningNodes.value)
+  const queuedNodeSet = new Set(queuedNodes.value.map((node: NodeLike | string) => 
+    typeof node === 'string' ? node : node.toString()
+  ))
+  
+  return nodesWithAccess.value.filter((node: NodeLike | string) => {
+    const nodeStr = typeof node === 'string' ? node : node.toString()
+    return !runningNodeSet.has(nodeStr) && !queuedNodeSet.has(nodeStr)
+  })
+})
+
+const showAllNodes = ref(false)
+
+const toggleAllNodes = () => {
+  showAllNodes.value = !showAllNodes.value
+  if (showAllNodes.value) {
+    showRunningNodes.value = false
+    showQueuedNodes.value = false
+    showAccessNodes.value = false
+  }
+}
 </script>
-<style lang="scss" scoped></style>
+
+<style lang="scss" scoped>
+.address {
+  word-break: break-all;
+}
+</style>
