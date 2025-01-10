@@ -290,7 +290,7 @@ const leaderboardUrl = computed(() => {
   if (filters.value.node) params.append("node", filters.value.node);
   if (filters.value.batchSize !== null)
     params.append("batchSize", filters.value.batchSize.toString());
-  if (filters.value.model) params.append("model", filters.value.model);
+  if (filters.value.model) params.append("modelName", filters.value.model);
   if (filters.value.framework)
     params.append("framework", filters.value.framework);
 

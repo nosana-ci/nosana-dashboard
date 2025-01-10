@@ -41,7 +41,7 @@ const selectItem = async (item: { type: string; value: string }) => {
   if (item.type === 'account') {
     checkingIfJob.value = true;
     // @ts-ignore TODO: add to useAPI opts type
-    const { data: job } = await useAPI(`/api/jobs/${item.value}`, { disableToastonError: true });
+    const { data: job } = await useAPI(`/api/jobs/${item.value}`, { disableToastOnError: true });
     checkingIfJob.value = false;
     if (job.value) {
       item.type = 'job';
