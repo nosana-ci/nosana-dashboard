@@ -80,6 +80,30 @@
             <p v-else>There are no nodes running at the moment</p>
           </div>
         </div>
+        <div class="py-5">
+          <div class="valid-sft-nodes">
+            <h2 class="title is-5">Nodes with Access Keys</h2>
+            <template v-if="!loadingNodesWithAccess">
+              <template v-if="nodesWithAccess.length > 0">
+                <p class="mb-2">
+                  These nodes have an access key for this market:
+                  {{ nodesWithAccess.length }} node(s)
+                </p>
+                <ol>
+                  <li v-for="node in nodesWithAccess" :key="node">
+                    <nuxt-link :to="`/account/${node}`" class="address is-family-monospace">
+                      {{ node }}
+                    </nuxt-link>
+                  </li>
+                </ol>
+              </template>
+              <p v-else>There are no nodes with an access key for this market.</p>
+            </template>
+            <template v-else>
+              Loading nodes with access keys...
+            </template>
+          </div>
+        </div>
         <ExplorerJobList :per-page="limit" :total-jobs="jobs ? jobs.totalJobs : null" v-model:page="page"
           v-model:state="state" :loading-jobs="loadingJobs" title="All Jobs in this market"
           :jobs="jobs ? jobs.jobs : null">
@@ -125,6 +149,19 @@ const { data: runningNodesData, pending: loadingRunningNodes, refresh: refreshRu
   lazy: true
 });
 
+const nodesWithAccessUrl = computed(() => `/api/nodes/with-access?marketAddress=${marketId.value}`);
+const {
+  data: nodesWithAccessData,
+  pending: loadingNodesWithAccess
+} = useAPI(nodesWithAccessUrl, {
+  watch: [nodesWithAccessUrl],
+  transform: (data) => data || [],
+  default: () => [],
+  immediate: true,
+  lazy: true
+});
+
+const nodesWithAccess = computed(() => nodesWithAccessData.value || []);
 const runningNodes = computed(() => runningNodesData.value || []);
 
 const getMarket = async () => {
