@@ -278,7 +278,7 @@ const leaderboardUrl = computed(() => {
   if (filters.value.node) params.append("node", filters.value.node);
   if (filters.value.cu !== null)
     params.append("cu", filters.value.cu.toString());
-  if (filters.value.model) params.append("model", filters.value.model);
+  if (filters.value.model) params.append("modelName", filters.value.model);
   if (filters.value.framework)
     params.append("framework", filters.value.framework);
 

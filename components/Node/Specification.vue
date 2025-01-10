@@ -28,7 +28,7 @@
   </tr>
   <tr>
     <td>Country</td>
-    <td>{{ specs.country }}</td>
+    <td>{{ formatCountry(specs.country) }}</td>
   </tr>
 </template>
 
@@ -49,6 +49,18 @@ interface Specs {
 const props = defineProps<{
   specs: Specs;
 }>();
+
+const formatCountry = (countryCode: string) => {
+  if (!countryCode) return "-";
+  try {
+    return (
+      new Intl.DisplayNames(["en"], { type: "region" }).of(countryCode) ||
+      countryCode
+    );
+  } catch {
+    return countryCode;
+  }
+};
 </script>
 
 <style lang="scss" scoped>

@@ -29,8 +29,12 @@
             <td v-if="!queueInfo">
               <span v-if="loadingMarkets || loadingRuns">...</span>
               <span v-else>
-                <div v-if="nodeRuns && nodeRuns.length" data-tooltip="Node is running a job" style="width: fit-content"
-                  class="is-flex">
+                <div
+                  v-if="nodeRuns && nodeRuns.length"
+                  data-tooltip="Node is running a job"
+                  style="width: fit-content"
+                  class="is-flex"
+                >
                   <ExplorerJobStatus :status="'RUNNING'"></ExplorerJobStatus>
                 </div>
                 <div v-else>
@@ -41,7 +45,11 @@
               </span>
             </td>
             <td v-else style="vertical-align: middle">
-              <div data-tooltip="Node is queued in market" style="width: fit-content" class="is-flex">
+              <div
+                data-tooltip="Node is queued in market"
+                style="width: fit-content"
+                class="is-flex"
+              >
                 <ExplorerJobStatus :status="'QUEUED'"></ExplorerJobStatus>
               </div>
             </td>
@@ -49,19 +57,36 @@
           <tr v-if="nodeRuns && nodeRuns.length > 0">
             <td>Running job</td>
             <td>
-              <nuxt-link :to="`/jobs/${nodeRuns[0].account.job}`" class="address is-family-monospace">{{
-                nodeRuns[0].account.job
-              }}</nuxt-link>
+              <nuxt-link
+                :to="`/jobs/${nodeRuns[0].account.job}`"
+                class="address is-family-monospace"
+                >{{ nodeRuns[0].account.job }}</nuxt-link
+              >
             </td>
           </tr>
           <tr>
             <td>GPU Market</td>
             <td v-if="queueInfo">
               <span>
-                <nuxt-link :to="`/markets/${queueInfo.market.address.toString()}`" class="address is-family-monospace">
+                <nuxt-link
+                  :to="`/markets/${queueInfo.market.address.toString()}`"
+                  class="address is-family-monospace"
+                >
                   <span
-                    v-if="testgridMarkets && testgridMarkets.find((tgm: any) => tgm.address === queueInfo!.market.address.toString())">
-                    {{ testgridMarkets.find((tgm: any) => tgm.address === queueInfo!.market.address.toString()).name }}
+                    v-if="
+                      testgridMarkets &&
+                      testgridMarkets.find(
+                        (tgm: any) =>
+                          tgm.address === queueInfo!.market.address.toString()
+                      )
+                    "
+                  >
+                    {{
+                      testgridMarkets.find(
+                        (tgm: any) =>
+                          tgm.address === queueInfo!.market.address.toString()
+                      ).name
+                    }}
                   </span>
                   <span v-else>{{ queueInfo.market.address.toString() }}</span>
                 </nuxt-link>
@@ -70,10 +95,23 @@
             <td v-else>
               <span v-if="nodeSpecs">
                 <template v-if="nodeSpecs.marketAddress">
-                  <nuxt-link :to="`/markets/${nodeSpecs.marketAddress}`" class="address is-family-monospace">
+                  <nuxt-link
+                    :to="`/markets/${nodeSpecs.marketAddress}`"
+                    class="address is-family-monospace"
+                  >
                     <span
-                      v-if="testgridMarkets && testgridMarkets.find((tgm: any) => tgm.address === nodeSpecs.marketAddress)">
-                      {{ testgridMarkets.find((tgm: any) => tgm.address === nodeSpecs.marketAddress).name }}
+                      v-if="
+                        testgridMarkets &&
+                        testgridMarkets.find(
+                          (tgm: any) => tgm.address === nodeSpecs.marketAddress
+                        )
+                      "
+                    >
+                      {{
+                        testgridMarkets.find(
+                          (tgm: any) => tgm.address === nodeSpecs.marketAddress
+                        ).name
+                      }}
                     </span>
                     <span v-else>{{ nodeSpecs.marketAddress }}</span>
                   </nuxt-link>
@@ -92,7 +130,7 @@
             <td v-else-if="loadingInfo">...</td>
             <td v-else>Offline</td>
           </tr>
-          <NodeSpecification v-if="nodeSpecs" :specs="nodeSpecs" />
+          <NodeSpecification v-if="combinedSpecs" :specs="combinedSpecs" />
           <!-- Performance Section -->
           <tr>
             <td colspan="2" class="has-background-light">
@@ -103,44 +141,80 @@
             <td>
               <span class="is-flex-inline">
                 <span>Performance Rank</span>
-                <span class="has-tooltip-arrow ml-1" style="vertical-align: middle;" data-tooltip="An aggregated performance ranking based on all leaderboard
-                positions of the node compared to all other nodes in the market.">
+                <span
+                  class="has-tooltip-arrow ml-1"
+                  style="vertical-align: middle"
+                  data-tooltip="An aggregated performance ranking based on all leaderboard
+                positions of the node compared to all other nodes in the market."
+                >
                   <img src="~/assets/img/icons/info.svg" />
                 </span>
               </span>
             </td>
-            <td v-if="!nodeRanking">-</td>
+            <td v-if="!nodeRanking">
+              <span
+                class="has-tooltip-arrow"
+                data-tooltip="This node hasn't completed enough jobs to be ranked yet"
+              >
+                unranked
+              </span>
+            </td>
             <td v-else>{{ nodeRanking.performanceRank }}</td>
           </tr>
           <tr>
             <td>
               <span class="">
                 <span>Stability Rank</span>
-                <span class="has-tooltip-arrow ml-1" style="vertical-align: middle;" data-tooltip="An aggregated stability ranking based on the nodes performance
-                  variance. The less variance the better.">
+                <span
+                  class="has-tooltip-arrow ml-1"
+                  style="vertical-align: middle"
+                  data-tooltip="An aggregated stability ranking based on the nodes performance
+                  variance. The less variance the better."
+                >
                   <img src="~/assets/img/icons/info.svg" />
                 </span>
               </span>
             </td>
-            <td v-if="!nodeRanking">-</td>
+            <td v-if="!nodeRanking">
+              <span
+                class="has-tooltip-arrow"
+                data-tooltip="This node hasn't completed enough jobs to be ranked yet"
+              >
+                unranked
+              </span>
+            </td>
             <td v-else>{{ nodeRanking.stabilityRank }}</td>
           </tr>
           <tr>
             <td>Average Download Speed (Mbps)</td>
-            <td v-if="!genericBenchmarkResponse || !genericBenchmarkResponse.data.length">
+            <td
+              v-if="
+                !genericBenchmarkResponse ||
+                !genericBenchmarkResponse.data.length
+              "
+            >
               -
             </td>
             <td v-else>
-              {{ genericBenchmarkResponse.data[0]?.metrics.internetSpeedDownload }}
+              {{
+                genericBenchmarkResponse.data[0]?.metrics.internetSpeedDownload
+              }}
             </td>
           </tr>
           <tr>
             <td>Average Upload Speed (Mbps)</td>
-            <td v-if="!genericBenchmarkResponse || !genericBenchmarkResponse.data.length">
+            <td
+              v-if="
+                !genericBenchmarkResponse ||
+                !genericBenchmarkResponse.data.length
+              "
+            >
               -
             </td>
             <td v-else>
-              {{ genericBenchmarkResponse.data[0]?.metrics.internetSpeedUpload }}
+              {{
+                genericBenchmarkResponse.data[0]?.metrics.internetSpeedUpload
+              }}
             </td>
           </tr>
         </tbody>
@@ -198,7 +272,8 @@
 <script lang="ts" setup>
 import { type Market } from "@nosana/sdk";
 const { nosana } = useSDK();
-const { data: testgridMarkets, pending: loadingTestgridMarkets } = useAPI("/api/markets");
+const { data: testgridMarkets, pending: loadingTestgridMarkets } =
+  useAPI("/api/markets");
 
 interface Props {
   address: string;
@@ -212,17 +287,20 @@ const { markets, getMarkets, loadingMarkets } = useMarkets();
 if (!markets.value) {
   getMarkets();
 }
-const queueInfo: ComputedRef<{ market: Market; position: number } | undefined> = computed(() => {
-  let position = -1;
-  const market = markets.value?.find((m) => {
-    position = m.queue.findIndex((a: any) => a.toString() === props.address);
-    return position !== -1;
+const queueInfo: ComputedRef<{ market: Market; position: number } | undefined> =
+  computed(() => {
+    let position = -1;
+    const market = markets.value?.find((m) => {
+      position = m.queue.findIndex((a: any) => a.toString() === props.address);
+      return position !== -1;
+    });
+    if (market) {
+      return { market, position };
+    }
+    return undefined;
   });
-  if (market) {
-    return { market, position };
-  }
-  return undefined;
-});
+
+console.log(queueInfo.value?.market.address.toString());
 
 /***************
  * Node Runs   *
@@ -267,7 +345,9 @@ const jobsUrl: ComputedRef<string> = computed(() => {
     "&node=" + props.address
   }`;
 });
-const { data: jobs, pending: loadingJobs } = useAPI(jobsUrl, { watch: [jobsUrl] });
+const { data: jobs, pending: loadingJobs } = useAPI(jobsUrl, {
+  watch: [jobsUrl],
+});
 
 const hasRanJobs: ComputedRef<Boolean> = computed(() => {
   return jobs.value && jobs.value.jobs && jobs.value.jobs.length;
@@ -276,10 +356,13 @@ const hasRanJobs: ComputedRef<Boolean> = computed(() => {
 /**********************
  * Node Specification *
  **********************/
-const { data: nodeSpecs, pending: loadingSpecs } = useAPI(`/api/nodes/${props.address}/specs`, {
-  // @ts-ignore
-  disableToastOnError: true,
-});
+const { data: nodeSpecs, pending: loadingSpecs } = useAPI(
+  `/api/nodes/${props.address}/specs`,
+  {
+    // @ts-ignore
+    disableToastOnError: true,
+  }
+);
 
 const isNode: ComputedRef<Boolean> = computed(() => {
   // If nodeSpecs exists or queueInfo says this is queued, or we found any runs or jobs, consider it a node
@@ -294,7 +377,11 @@ const isNode: ComputedRef<Boolean> = computed(() => {
 /*************
  * Node Info *
  *************/
-const { data: nodeInfo, pending: loadingInfo, execute: getNodeInfo } = useAPI(
+const {
+  data: nodeInfo,
+  pending: loadingInfo,
+  execute: getNodeInfo,
+} = useAPI(
   `https://${props.address}.${useRuntimeConfig().public.nodeDomain}/node/info`,
   {
     immediate: false,
@@ -302,6 +389,37 @@ const { data: nodeInfo, pending: loadingInfo, execute: getNodeInfo } = useAPI(
     disableToastOnError: true,
   }
 );
+
+/*************
+ * Fallback Node Specs *
+ *************/
+const combinedSpecs = computed(() => {
+  if (!nodeSpecs.value) return null;
+
+  const nodeInfoData = nodeInfo.value?.info;
+
+  // First check if node api data is available, otherwise use the database as fallback
+
+  return {
+    nodeAddress: props.address,
+    marketAddress: nodeSpecs.value.marketAddress,
+    ram: nodeInfoData?.ram_mb
+      ? Math.round(nodeInfoData.ram_mb / 1024)
+      : nodeSpecs.value.ram,
+    diskSpace: nodeInfoData?.disk_gb ?? nodeSpecs.value.diskSpace,
+    cpu: nodeInfoData?.cpu?.model ?? nodeSpecs.value.cpu,
+    country: nodeInfoData?.country ?? nodeSpecs.value.country,
+    bandwidth:
+      nodeInfoData?.network?.download_mbps ?? nodeSpecs.value.bandwidth,
+    gpus: nodeInfoData?.gpus?.devices
+      ? nodeInfoData.gpus.devices.map((gpu: any) => ({
+          gpu: gpu.name,
+          memory: gpu.memory?.total_mb,
+          architecture: `${gpu.network_architecture?.major}.${gpu.network_architecture?.minor}`,
+        }))
+      : nodeSpecs.value.gpus,
+  };
+});
 
 /*********************
  * Node Benchmarking *
@@ -314,7 +432,10 @@ const { data: genericBenchmarkResponse, execute: getNodeBenchmarks } = useAPI(
 // Safely call node info + benchmark if it’s actually (or likely) a node
 function fetchAdditionalNodeData() {
   getNodeBenchmarks().catch((err) => {
-    console.error("Could not fetch benchmark info. Possibly offline node:", err);
+    console.error(
+      "Could not fetch benchmark info. Possibly offline node:",
+      err
+    );
   });
   getNodeInfo().catch((err) => {
     console.error("Could not fetch node info. Possibly offline node:", err);
@@ -339,7 +460,9 @@ watch(nodeSpecs, (specs) => {
   if (specs?.marketAddress) {
     if (!rankingAPInstance) {
       // Disabled for performance reasons in production
-      rankingAPInstance = useAPI(`/api/benchmarks/node-ranking?market=${specs.marketAddress}`);
+      rankingAPInstance = useAPI(
+        `/api/benchmarks/node-ranking?market=${specs.marketAddress}`
+      );
     }
   }
 });
@@ -351,7 +474,11 @@ interface NodeRanking {
   participationRate: number;
 }
 const nodeRanking: ComputedRef<NodeRanking | null> = computed(() => {
-  if (rankingAPInstance && rankingAPInstance.data && rankingAPInstance.data.value) {
+  if (
+    rankingAPInstance &&
+    rankingAPInstance.data &&
+    rankingAPInstance.data.value
+  ) {
     return (
       rankingAPInstance.data.value.find((ranking: NodeRanking) => {
         return ranking.node === props.address;
