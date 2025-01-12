@@ -83,7 +83,13 @@
         </li>
       </ul>
     </div>
-    <ColorModeSwitcher class="mt-auto has-text-right" />
+    <div class="is-flex is-justify-content-space-between is-align-items-center mt-auto has-text-right">
+      <nuxt-link to="/status" @click="showMenu = false">
+        <div class="status-dot dot-online"></div> Healthy
+      </nuxt-link>
+
+      <ColorModeSwitcher />
+    </div>
   </aside>
   <nav class="navbar is-hidden-desktop is-fixed-top has-shadow">
     <div class="navbar-brand">
