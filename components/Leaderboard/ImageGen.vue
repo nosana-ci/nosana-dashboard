@@ -6,11 +6,7 @@
       <div class="field">
         <label class="label">Node Address</label>
         <div class="control">
-          <input
-            class="input"
-            v-model="filters.node"
-            placeholder="Enter Node Address"
-          />
+          <input class="input" v-model="filters.node" placeholder="Enter Node Address" />
         </div>
       </div>
 
@@ -21,11 +17,7 @@
           <div class="select is-fullwidth">
             <select v-model="filters.batchSize">
               <option :value="null">All Batch Sizes</option>
-              <option
-                v-for="size in availableBatchSizes"
-                :key="size"
-                :value="size"
-              >
+              <option v-for="size in availableBatchSizes" :key="size" :value="size">
                 {{ size }}
               </option>
             </select>
@@ -40,11 +32,7 @@
           <div class="select is-fullwidth">
             <select v-model="filters.model">
               <option value="">All Models</option>
-              <option
-                v-for="model in availableModels"
-                :key="model"
-                :value="model"
-              >
+              <option v-for="model in availableModels" :key="model" :value="model">
                 {{ model }}
               </option>
             </select>
@@ -59,11 +47,7 @@
           <div class="select is-fullwidth">
             <select v-model="filters.framework">
               <option value="">All Frameworks</option>
-              <option
-                v-for="framework in availableFrameworks"
-                :key="framework"
-                :value="framework"
-              >
+              <option v-for="framework in availableFrameworks" :key="framework" :value="framework">
                 {{ framework }}
               </option>
             </select>
@@ -103,11 +87,7 @@
     </div>
 
     <!-- Loading Bar -->
-    <progress
-      v-if="loading"
-      class="progress is-small is-info my-0"
-      max="100"
-    ></progress>
+    <progress v-if="loading" class="progress is-small is-info my-0" max="100"></progress>
 
     <!-- Leaderboard Table -->
     <table v-else class="table is-fullwidth is-striped">
@@ -127,22 +107,11 @@
         </tr>
       </thead>
       <tbody>
-        <nuxt-link
-          v-for="item in leaderboardData"
-          :key="generateRowKey(item)"
-          :to="`/account/${item.node}`"
-          custom
-        >
+        <nuxt-link v-for="item in leaderboardData" :key="generateRowKey(item)" :to="`/nodes/${item.node}`" custom>
           <template #default="{ navigate }">
-            <tr
-              class="is-clickable remove-greyscale-on-hover"
-              @click="navigate"
-            >
+            <tr class="is-clickable remove-greyscale-on-hover" @click="navigate">
               <td>
-                <nuxt-link
-                  :to="`/account/${item.node}`"
-                  class="is-family-monospace address has-text-black"
-                >
+                <nuxt-link :to="`/nodes/${item.node}`" class="is-family-monospace address has-text-black">
                   {{ item.node }}
                 </nuxt-link>
               </td>
@@ -158,11 +127,7 @@
     </table>
 
     <!-- Pagination with clickable page numbers -->
-    <nav
-      class="pagination is-centered mt-4"
-      role="navigation"
-      aria-label="pagination"
-    >
+    <nav class="pagination is-centered mt-4" role="navigation" aria-label="pagination">
       <a class="pagination-previous" @click="prevPage">Previous</a>
       <a class="pagination-next" @click="nextPage">Next</a>
       <ul class="pagination-list">
@@ -175,11 +140,7 @@
         </li>
         <!-- Current pages -->
         <li v-for="p in pagesToShow" :key="p">
-          <a
-            @click="goToPage(p)"
-            :class="{ 'pagination-link': true, 'is-current': p === page }"
-            >{{ p }}</a
-          >
+          <a @click="goToPage(p)" :class="{ 'pagination-link': true, 'is-current': p === page }">{{ p }}</a>
         </li>
         <!-- Last page -->
         <li v-if="!pagesToShow.includes(totalPages)">

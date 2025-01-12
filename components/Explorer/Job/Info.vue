@@ -15,16 +15,10 @@
       <tr>
         <td>Node</td>
         <td>
-          <span
-            v-if="props.job.node.toString() === '11111111111111111111111111111111'"
-          >
+          <span v-if="props.job.node.toString() === '11111111111111111111111111111111'">
             Unclaimed
           </span>
-          <nuxt-link
-            v-else
-            class="address is-family-monospace"
-            :to="`/account/${props.job.node}`"
-          >
+          <nuxt-link v-else class="address is-family-monospace" :to="`/nodes/${props.job.node}`">
             {{ props.job.node }}
           </nuxt-link>
         </td>
@@ -32,16 +26,11 @@
       <tr>
         <td>GPU Market</td>
         <td>
-          <nuxt-link
-            class="address is-family-monospace"
-            :to="`/markets/${props.job.market}`"
-          >
-            <span
-              v-if="
-                testgridMarkets &&
-                testgridMarkets.find((tgm: any) => tgm.address === props.job.market)
-              "
-            >
+          <nuxt-link class="address is-family-monospace" :to="`/markets/${props.job.market}`">
+            <span v-if="
+              testgridMarkets &&
+              testgridMarkets.find((tgm: any) => tgm.address === props.job.market)
+            ">
               {{ testgridMarkets.find((tgm: any) => tgm.address === props.job.market).name }}
             </span>
             <span v-else>{{ props.job.market }}</span>
@@ -51,7 +40,7 @@
       <tr>
         <td>Poster</td>
         <td>
-          <nuxt-link class="address is-family-monospace" :to="`/account/${props.job.project}`">
+          <nuxt-link class="address is-family-monospace" :to="`/posters/${props.job.project}`">
             <span>{{ props.job.project }}</span>
           </nuxt-link>
         </td>
@@ -103,33 +92,25 @@
           </button>
         </td>
       </tr>
-      <tr
-        v-if="
+      <tr v-if="
+        props.job.jobDefinition &&
+        props.job.jobDefinition.state &&
+        props.job.jobDefinition.state['nosana/job-type']
+      ">
+        <td>Source</td>
+        <td v-if="
           props.job.jobDefinition &&
           props.job.jobDefinition.state &&
-          props.job.jobDefinition.state['nosana/job-type']
-        "
-      >
-        <td>Source</td>
-        <td
-          v-if="
-            props.job.jobDefinition &&
-            props.job.jobDefinition.state &&
-            props.job.jobDefinition.state['nosana/job-type'] &&
-            (props.job.jobDefinition.state['nosana/job-type'] === 'Github' ||
-              props.job.jobDefinition.state['nosana/job-type'] === 'github-flow')
-          "
-        >
-          <a
-            v-if="
-              props.job.jobDefinition.state['input/repo'] &&
-              props.job.jobDefinition.state['input/commit-sha']
-            "
-            :href="props.job.jobDefinition.state['input/repo'].replace('.git', '') +
-              '/commit/' +
-              props.job.jobDefinition.state['input/commit-sha']"
-            target="_blank"
-          >
+          props.job.jobDefinition.state['nosana/job-type'] &&
+          (props.job.jobDefinition.state['nosana/job-type'] === 'Github' ||
+            props.job.jobDefinition.state['nosana/job-type'] === 'github-flow')
+        ">
+          <a v-if="
+            props.job.jobDefinition.state['input/repo'] &&
+            props.job.jobDefinition.state['input/commit-sha']
+          " :href="props.job.jobDefinition.state['input/repo'].replace('.git', '') +
+            '/commit/' +
+            props.job.jobDefinition.state['input/commit-sha']" target="_blank">
             {{ props.job.jobDefinition.state["input/commit-sha"] }}
           </a>
         </td>
@@ -209,19 +190,17 @@ const displayPrice = computed(() => {
       props.job.timeout ?? (market.jobTimeout || 0)
     );
     const priceInNos = (parseInt(props.job.price, 10) / 1e6) * usedTime;
-    return `${priceInNos.toFixed(6)} NOS ${
-      nosPrice ? `($${(nosPrice * priceInNos).toFixed(2)})` : ''
-    }`;
+    return `${priceInNos.toFixed(6)} NOS ${nosPrice ? `($${(nosPrice * priceInNos).toFixed(2)})` : ''
+      }`;
   }
 
   // Running / queued
   if (props.job.price) {
     const pricePerSecond = parseInt(props.job.price, 10) / 1e6;
-    return `${pricePerSecond} NOS/s ${
-      nosPrice
-        ? `($${((nosPrice * pricePerSecond) * 3600).toFixed(2)} / h)`
-        : ''
-    }`;
+    return `${pricePerSecond} NOS/s ${nosPrice
+      ? `($${((nosPrice * pricePerSecond) * 3600).toFixed(2)} / h)`
+      : ''
+      }`;
   }
 
   return 'Unknown';

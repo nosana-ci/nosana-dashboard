@@ -22,11 +22,8 @@
                 <tr v-if="testgridMarkets.find(m => m.address === marketId)">
                   <td>Market Address</td>
                   <td>
-                    <a
-                      target="_blank"
-                      class="address is-family-monospace"
-                      :href="'https://explorer.solana.com/address/' + marketId"
-                    >
+                    <a target="_blank" class="address is-family-monospace"
+                      :href="'https://explorer.solana.com/address/' + marketId">
                       {{ marketId }}
                     </a>
                   </td>
@@ -34,11 +31,8 @@
                 <tr>
                   <td>Authority</td>
                   <td>
-                    <a
-                      target="_blank"
-                      class="address is-family-monospace"
-                      :href="'https://explorer.solana.com/address/' + market.authority"
-                    >
+                    <a target="_blank" class="address is-family-monospace"
+                      :href="'https://explorer.solana.com/address/' + market.authority">
                       {{ market.authority }}
                     </a>
                   </td>
@@ -54,11 +48,8 @@
                 <tr>
                   <td>Node access key</td>
                   <td>
-                    <a
-                      target="_blank"
-                      class="address is-family-monospace"
-                      :href="'https://explorer.solana.com/address/' + market.nodeAccessKey.toString()"
-                    >
+                    <a target="_blank" class="address is-family-monospace"
+                      :href="'https://explorer.solana.com/address/' + market.nodeAccessKey.toString()">
                       {{ market.nodeAccessKey.toString() }}
                     </a>
                   </td>
@@ -101,18 +92,10 @@
                     </td>
                     <td>{{ totalNodes }}</td>
                     <td class="is-hidden-mobile">
-                      <progress 
-                        class="progress is-success is-small" 
-                        :value="totalNodes" 
-                        :max="totalNodes"
-                      ></progress>
+                      <progress class="progress is-success is-small" :value="totalNodes" :max="totalNodes"></progress>
                     </td>
                     <td>
-                      <button 
-                        class="button is-small"
-                        @click="toggleAllNodes"
-                        :disabled="!totalNodes"
-                      >
+                      <button class="button is-small" @click="toggleAllNodes" :disabled="!totalNodes">
                         {{ showAllNodes ? 'Hide' : 'Show' }}
                       </button>
                     </td>
@@ -122,7 +105,7 @@
                       <div class="p-3">
                         <ol class="ml-4">
                           <li v-for="node in allNodes" :key="node">
-                            <nuxt-link :to="`/account/${node}`" class="is-family-monospace">
+                            <nuxt-link :to="`/nodes/${node}`" class="is-family-monospace">
                               {{ node }}
                             </nuxt-link>
                           </li>
@@ -141,18 +124,11 @@
                     </td>
                     <td>{{ runningNodes.length }}</td>
                     <td class="is-hidden-mobile">
-                      <progress 
-                        class="progress is-info is-small" 
-                        :value="runningNodes.length" 
-                        :max="totalNodes"
-                      ></progress>
+                      <progress class="progress is-info is-small" :value="runningNodes.length"
+                        :max="totalNodes"></progress>
                     </td>
                     <td>
-                      <button 
-                        class="button is-small"
-                        @click="toggleRunningNodes"
-                        :disabled="!runningNodes.length"
-                      >
+                      <button class="button is-small" @click="toggleRunningNodes" :disabled="!runningNodes.length">
                         {{ showRunningNodes ? 'Hide' : 'Show' }}
                       </button>
                     </td>
@@ -162,7 +138,7 @@
                       <div class="p-3">
                         <ol class="ml-4">
                           <li v-for="node in runningNodes" :key="node">
-                            <nuxt-link :to="`/account/${node}`" class="is-family-monospace">
+                            <nuxt-link :to="`/nodes/${node}`" class="is-family-monospace">
                               {{ node }}
                             </nuxt-link>
                           </li>
@@ -181,18 +157,11 @@
                     </td>
                     <td>{{ queuedNodes.length }}</td>
                     <td class="is-hidden-mobile">
-                      <progress 
-                        class="progress is-warning is-small" 
-                        :value="queuedNodes.length" 
-                        :max="totalNodes"
-                      ></progress>
+                      <progress class="progress is-warning is-small" :value="queuedNodes.length"
+                        :max="totalNodes"></progress>
                     </td>
                     <td>
-                      <button 
-                        class="button is-small"
-                        @click="toggleQueuedNodes"
-                        :disabled="!queuedNodes.length"
-                      >
+                      <button class="button is-small" @click="toggleQueuedNodes" :disabled="!queuedNodes.length">
                         {{ showQueuedNodes ? 'Hide' : 'Show' }}
                       </button>
                     </td>
@@ -202,7 +171,7 @@
                       <div class="p-3">
                         <ol class="ml-4">
                           <li v-for="node in queuedNodes" :key="node">
-                            <nuxt-link :to="`/account/${node}`" class="is-family-monospace">
+                            <nuxt-link :to="`/nodes/${node}`" class="is-family-monospace">
                               {{ node }}
                             </nuxt-link>
                           </li>
@@ -221,18 +190,12 @@
                     </td>
                     <td>{{ availableNodesWithAccess.length }}</td>
                     <td class="is-hidden-mobile">
-                      <progress 
-                        class="progress is-dark is-small" 
-                        :value="availableNodesWithAccess.length" 
-                        :max="totalNodes"
-                      ></progress>
+                      <progress class="progress is-dark is-small" :value="availableNodesWithAccess.length"
+                        :max="totalNodes"></progress>
                     </td>
                     <td>
-                      <button 
-                        class="button is-small"
-                        :disabled="!availableNodesWithAccess.length"
-                        @click="toggleAccessNodes"
-                      >
+                      <button class="button is-small" :disabled="!availableNodesWithAccess.length"
+                        @click="toggleAccessNodes">
                         {{ showAccessNodes ? 'Hide' : 'Show' }}
                       </button>
                     </td>
@@ -242,7 +205,7 @@
                       <div class="p-3">
                         <ol class="ml-4">
                           <li v-for="node in availableNodesWithAccess" :key="node">
-                            <nuxt-link :to="`/account/${node}`" class="is-family-monospace">
+                            <nuxt-link :to="`/nodes/${node}`" class="is-family-monospace">
                               {{ node }}
                             </nuxt-link>
                           </li>
@@ -256,15 +219,9 @@
           </div>
         </div>
 
-        <ExplorerJobList
-          :per-page="limit"
-          :total-jobs="jobs ? jobs.totalJobs : null"
-          v-model:page="page"
-          v-model:state="state"
-          :loading-jobs="loadingJobs"
-          title="All Jobs in this market"
-          :jobs="jobs ? jobs.jobs : null"
-        >
+        <ExplorerJobList :per-page="limit" :total-jobs="jobs ? jobs.totalJobs : null" v-model:page="page"
+          v-model:state="state" :loading-jobs="loadingJobs" title="All Jobs in this market"
+          :jobs="jobs ? jobs.jobs : null">
         </ExplorerJobList>
       </div>
       <div v-else>Market not found</div>
@@ -280,7 +237,7 @@ interface TestgridMarket {
   name: string
 }
 
-const { data: testgridMarkets, pending: loadingTestgridMarkets } = useAPI('/api/markets', { 
+const { data: testgridMarkets, pending: loadingTestgridMarkets } = useAPI('/api/markets', {
   default: () => [] as TestgridMarket[],
 })
 const { params } = useRoute()
@@ -301,9 +258,8 @@ const jobStateMapping: any = {
 const limit = ref<number>(10)
 
 const jobsUrl = computed(() => {
-  return `/api/jobs?limit=${limit.value}&offset=${(page.value - 1) * limit.value}${
-    state.value !== null ? `&state=${jobStateMapping[state.value]}` : ''
-  }&market=${marketId.value}`
+  return `/api/jobs?limit=${limit.value}&offset=${(page.value - 1) * limit.value}${state.value !== null ? `&state=${jobStateMapping[state.value]}` : ''
+    }&market=${marketId.value}`
 })
 const { data: jobs, pending: loadingJobs } = useAPI(jobsUrl, { watch: [jobsUrl] })
 
@@ -393,26 +349,26 @@ const queuedNodes = computed(() => {
     const nodeStr = typeof node === 'string' ? node : node.toString()
     return !runningNodeSet.has(nodeStr)
   })
-  
+
   return filteredQueue
 })
 
 const totalNodes = computed(() => {
   const runningSet = new Set(runningNodes.value)
-  const queuedSet = new Set(queuedNodes.value.map((node: NodeLike | string) => 
+  const queuedSet = new Set(queuedNodes.value.map((node: NodeLike | string) =>
     typeof node === 'string' ? node : node.toString()
   ))
-  const accessSet = new Set(nodesWithAccess.value.map((node: NodeLike | string) => 
+  const accessSet = new Set(nodesWithAccess.value.map((node: NodeLike | string) =>
     typeof node === 'string' ? node : node.toString()
   ))
-  
+
   // Combine all sets
   const allNodesSet = new Set([
     ...runningSet,
     ...queuedSet,
     ...accessSet
   ])
-  
+
   return allNodesSet.size
 })
 
@@ -427,10 +383,10 @@ const allNodes = computed(() => {
 
 const availableNodesWithAccess = computed(() => {
   const runningNodeSet = new Set(runningNodes.value)
-  const queuedNodeSet = new Set(queuedNodes.value.map((node: NodeLike | string) => 
+  const queuedNodeSet = new Set(queuedNodes.value.map((node: NodeLike | string) =>
     typeof node === 'string' ? node : node.toString()
   ))
-  
+
   return nodesWithAccess.value.filter((node: NodeLike | string) => {
     const nodeStr = typeof node === 'string' ? node : node.toString()
     return !runningNodeSet.has(nodeStr) && !queuedNodeSet.has(nodeStr)
