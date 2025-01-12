@@ -291,11 +291,16 @@
                             </div>
                           </div>
                         </div>
-                        <a class="button is-small is-primary is-pulled-right mt-2"
+                        <div class="field has-addons has-addons-right mt-2">
+                          <p class="control">
+                            <a class="button is-small is-primary"
                           @click="!(op.args as OperationArgsMap['container/run']).resources ? (op.args as OperationArgsMap['container/run']).resources = [] : null; ((op.args as OperationArgsMap['container/run']).resources as any[]).push({type: 'S3', url: '', target: ''})">
                           <span>Add resource</span>
                           <span class="icon">+</span>
                         </a>
+                          </p>
+                        </div>
+
                       </div>
                     </div>
 
@@ -384,8 +389,10 @@
                     {{ template.description }}
                   </span>
                   <span v-else>The Nosana Job schema allows us to create a job definition and specify the parameters
-                    needed for our
-                    job.</span>
+                    needed for our job. Start writing your template from scratch or start with one of our many templates.
+                    <br><br>
+                    <nuxt-link to="/jobs/templates" class="button is-secondary">Pick a Template</nuxt-link>
+                  </span>
                 </p>
                 <p class="block">
                   <span v-if="!info">
