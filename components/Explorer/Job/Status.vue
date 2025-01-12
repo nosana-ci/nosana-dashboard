@@ -1,6 +1,6 @@
 <template>
   <div v-if="!imageOnly" class="tag is-outlined is-light" :class="{
-    'is-success': statusString === 'COMPLETED',
+    'is-success': statusString === 'SUCCESS',
     'is-info': statusString === 'RUNNING' || statusString === 'PENDING',
     'is-warning': statusString === 'QUEUED',
     'is-danger': statusString === 'FAILED' || statusString === 'YAML_ERROR',
@@ -44,7 +44,7 @@ const getIcon = (status: string) => {
     icon = 'queued';
   } else if (status === 'RUNNING') {
     icon = 'running';
-  } else if (status === 'COMPLETED') {
+  } else if (status === 'COMPLETED' || status === 'SUCCESS') {
     icon = 'done';
   } else if (status === 'FAILED' || status === 'YAML_ERROR') {
     icon = 'failed';

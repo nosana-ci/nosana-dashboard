@@ -7,13 +7,11 @@
       <div v-if="job">
         <div class="is-flex is-align-items-center is-justify-content-space-between mb-4">
           <div class="is-flex is-align-items-center">
-            <div
-              v-if="(isRunning(job.state))
-                     && job.jobDefinition 
-                     && job.jobDefinition.ops 
-                     && job.jobDefinition.ops[0] 
-                     && job.jobDefinition.ops[0].args.expose"
-              class="mr-4">
+            <div v-if="(isRunning(job.state))
+              && job.jobDefinition
+              && job.jobDefinition.ops
+              && job.jobDefinition.ops[0]
+              && job.jobDefinition.ops[0].args.expose" class="mr-4">
               <a :href="`https://${job.address}.node.k8s.prd.nos.ci`" target="_blank"
                 class="button is-medium is-outlined has-background-transparent visit-service-btn">
                 Visit Service
@@ -33,7 +31,9 @@
             </div>
           </div>
           <div>
-            <ExplorerJobStatus :status="job.state"></ExplorerJobStatus>
+            <ExplorerJobStatus
+              :status="job.state === 2 && job.jobStatus ? (job.jobStatus === 'success' ? 'SUCCESS' : 'FAILED') : job.state">
+            </ExplorerJobStatus>
           </div>
         </div>
 
@@ -79,8 +79,7 @@
                   <div v-for="(log, ik) in step.logs.split('\n')" :key="ik" class="row-count">
                     <div class="is-flex is-justify-content-space-between is-align-items-center">
                       <span class="pre" v-html="log.slice(0, 10000)" />
-                      <button v-if="log.includes('Error connecting to WebSocket')" 
-                        @click="checkAndConnectWebSocket" 
+                      <button v-if="log.includes('Error connecting to WebSocket')" @click="checkAndConnectWebSocket"
                         class="button is-info is-small ml-4">
                         <span class="icon">
                           <i class="fas fa-sync"></i>
@@ -106,10 +105,8 @@
             <div v-else-if="ipfsResult.results && ipfsResult.results[0] === 'nos/secret'">
               Results are secret
             </div>
-            <ExplorerJobResult 
-              v-else-if="(ipfsResult && job.state === 'COMPLETED') || getStateNumber(job.state) === 2"
-              :ipfs-result="ipfsResult" 
-              :ipfs-job="job.jobDefinition" />
+            <ExplorerJobResult v-else-if="(ipfsResult && job.state === 'COMPLETED') || getStateNumber(job.state) === 2"
+              :ipfs-result="ipfsResult" :ipfs-job="job.jobDefinition" />
           </div>
           <div v-show="activeTab === 'result'" class="p-1 py-4 has-background-white-bis">
             <div v-if="isRunning(job.state)" class="has-text-grey">

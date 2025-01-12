@@ -146,7 +146,10 @@
 
             </td>
             <td>
-              <ExplorerJobStatus :status="job.state" :image-only="small"></ExplorerJobStatus>
+              <ExplorerJobStatus
+                :status="job.state === 2 && job.jobStatus ? (job.jobStatus === 'success' ? 'SUCCESS' : 'FAILED') : job.state"
+                :image-only="small">
+              </ExplorerJobStatus>
             </td>
           </tr>
         </template>
