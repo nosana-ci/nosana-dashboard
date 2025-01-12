@@ -84,14 +84,6 @@
           <span v-if="maxDuration"> (max {{ Math.round(maxDuration / 60) }}m)</span>
         </td>
       </tr>
-      <tr>
-        <td>{{ isJobPoster ? 'Repost this job' : 'Post this job' }}</td>
-        <td>
-          <button @click="$emit('repost')" class="button is-primary is-small is-outlined">
-            {{ isJobPoster ? 'Repost' : 'Post' }}
-          </button>
-        </td>
-      </tr>
       <tr v-if="
         props.job.jobDefinition &&
         props.job.jobDefinition.state &&

@@ -12,32 +12,35 @@
               && job.jobDefinition.ops
               && job.jobDefinition.ops[0]
               && job.jobDefinition.ops[0].args.expose" class="mr-4">
-              <a :href="`https://${job.address}.node.k8s.prd.nos.ci`" target="_blank"
-                class="button is-medium is-outlined has-background-transparent visit-service-btn">
+              <a :href="`https://${job.address}.node.k8s.prd.nos.ci`" target="_blank" class="button is-success">
                 Visit Service
               </a>
             </div>
             <div v-if="isJobPoster && isRunning(job.state)" class="mr-4">
-              <button @click="stopJob" :class="{ 'is-loading': loading }"
-                class="button is-danger is-medium is-outlined">
+              <button @click="stopJob" :class="{ 'is-loading': loading }" class="button is-danger">
                 Stop Job
               </button>
             </div>
             <div v-if="isJobPoster && isRunning(job.state)" class="mr-4">
-              <button @click="openExtendModal" :class="{ 'is-loading': loadingExtend }"
-                class="button is-warning is-medium is-outlined">
+              <button @click="openExtendModal" :class="{ 'is-loading': loadingExtend }" class="button is-warning">
                 Extend Job
               </button>
             </div>
+
           </div>
-          <div>
+          <div class="is-flex is-align-items-center">
+            <div class="mr-4">
+              <button @click="repostJob" class="button is-primary is-small is-outlined">
+                Repost
+              </button>
+            </div>
             <ExplorerJobStatus
               :status="job.state === 2 && job.jobStatus ? (job.jobStatus === 'success' ? 'SUCCESS' : 'FAILED') : job.state">
             </ExplorerJobStatus>
           </div>
         </div>
 
-        <ExplorerJobInfo :job="job" :is-job-poster="isJobPoster" @repost="repostJob" />
+        <ExplorerJobInfo :job="job" :is-job-poster="isJobPoster" />
 
         <div v-if="job.node && job.node.toString() !== '11111111111111111111111111111111'" class="mt-4">
           <JobNodeInfo :address="job.node.toString()" />
@@ -785,17 +788,6 @@ const hasResultsRegex = computed(() => {
 
 .progress.is-primary::-moz-progress-bar {
   background-color: #00d1b2;
-}
-
-.visit-service-btn {
-  color: #10E80C !important;
-  border-color: #10E80C !important;
-  background: transparent !important;
-
-  &:hover {
-    background: #10E80C !important;
-    color: white !important;
-  }
 }
 
 .modal.is-active {
