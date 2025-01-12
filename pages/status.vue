@@ -96,37 +96,4 @@ checkAllServices();
 .status-cell {
   width: 150px;
 }
-
-.status-dot {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  margin-right: 8px;
-}
-
-.dot-checking {
-  background-color: $info;
-  animation: pulse 1.5s infinite;
-}
-
-.dot-online {
-  background-color: $success;
-}
-
-.dot-offline {
-  background-color: $danger;
-}
-
-@keyframes pulse {
-
-  0%,
-  100% {
-    opacity: 1;
-  }
-
-  50% {
-    opacity: 0.5;
-  }
-}
 </style>
