@@ -12,12 +12,12 @@
     <!-- Regular Log View -->
     <template v-else>
       <!-- Connection Status -->
-      <div v-if="isConnecting" class="has-text-info mb-4">
+      <div v-if="isConnecting" class="connecting-message">
         <span class="icon-text">
           <span class="icon">
             <i class="fas fa-sync fa-spin"></i>
           </span>
-          <span>Connecting to node...</span>
+          <span>Loading logs...</span>
         </span>
       </div>
 
@@ -140,7 +140,7 @@ defineExpose({
 <style lang="scss" scoped>
 .log-viewer {
   font-family: 'JetBrains Mono', monospace;
-  background-color: #0d1117;
+  background-color: #000000;
   color: #c9d1d9;
   padding: 1rem;
   border-radius: 4px;
@@ -161,37 +161,37 @@ defineExpose({
   font-size: 0.9rem;
 
   &.container-log {
-    color: #8b949e;
+    color: #e5e7eb;
     font-size: 0.85rem;
 
     :deep(.timestamp) {
-      color: #565f89;
+      color: #9ca3af;
       font-weight: normal;
     }
   }
 
   :deep(.download-status) {
-    color: #7ee787;
+    color: #4ade80;
     font-weight: 500;
   }
 
   :deep(.ansi-black-fg) { color: #484f58; }
-  :deep(.ansi-red-fg) { color: #ff7b72; }
-  :deep(.ansi-green-fg) { color: #7ee787; }
-  :deep(.ansi-yellow-fg) { color: #ffa657; }
-  :deep(.ansi-blue-fg) { color: #79c0ff; }
-  :deep(.ansi-magenta-fg) { color: #d2a8ff; }
-  :deep(.ansi-cyan-fg) { color: #56d4dd; }
-  :deep(.ansi-white-fg) { color: #c9d1d9; }
+  :deep(.ansi-red-fg) { color: #ff4444; }
+  :deep(.ansi-green-fg) { color: #4ade80; }
+  :deep(.ansi-yellow-fg) { color: #ffdd4a; }
+  :deep(.ansi-blue-fg) { color: #2f9fff; }
+  :deep(.ansi-magenta-fg) { color: #ff44ff; }
+  :deep(.ansi-cyan-fg) { color: #00ffff; }
+  :deep(.ansi-white-fg) { color: #ffffff; }
 
   :deep(.ansi-bright-black-fg) { color: #6e7681; }
-  :deep(.ansi-bright-red-fg) { color: #ffa198; }
-  :deep(.ansi-bright-green-fg) { color: #56d364; }
-  :deep(.ansi-bright-yellow-fg) { color: #ffca7a; }
-  :deep(.ansi-bright-blue-fg) { color: #a5d6ff; }
-  :deep(.ansi-bright-magenta-fg) { color: #e2c5ff; }
-  :deep(.ansi-bright-cyan-fg) { color: #79c0ff; }
-  :deep(.ansi-bright-white-fg) { color: #f0f6fc; }
+  :deep(.ansi-bright-red-fg) { color: #ff6b6b; }
+  :deep(.ansi-bright-green-fg) { color: #4dffb5; }
+  :deep(.ansi-bright-yellow-fg) { color: #ffe66d; }
+  :deep(.ansi-bright-blue-fg) { color: #5cb3ff; }
+  :deep(.ansi-bright-magenta-fg) { color: #ff77ff; }
+  :deep(.ansi-bright-cyan-fg) { color: #60ffff; }
+  :deep(.ansi-bright-white-fg) { color: #ffffff; }
 
   :deep(.ansi-bold) { font-weight: bold; }
 }
@@ -250,6 +250,16 @@ defineExpose({
     font-size: 0.9rem;
     max-width: 300px;
     line-height: 1.4;
+  }
+}
+
+.connecting-message {
+  color: #ffffff;
+  text-align: center;
+  padding: 1rem;
+  font-size: 0.9rem;
+  .icon {
+    margin-right: 0.5rem;
   }
 }
 </style> 

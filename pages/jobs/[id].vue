@@ -255,16 +255,14 @@ const isVerified = ref(storedAuthHeader.value !== null);
 
 const signMessage = async (forceNew = false) => {
   if (storedAuthHeader.value && !forceNew) {
-    const [storedKey] = storedAuthHeader.value.split(':');
-    if (storedKey === publicKey.value?.toString()) {
-      isVerified.value = true;
-      return storedAuthHeader.value;
-    }
+    isVerified.value = true;
+    return storedAuthHeader.value;
   }
 
   if (!connected.value || !publicKey.value || !wallet.value) {
     throw new Error('Wallet not connected or not found');
   }
+
   const message = "Hello Nosana Node!";
   const encodedMessage = new TextEncoder().encode(message);
   const adapter = wallet.value.adapter as MessageSignerWalletAdapter;
@@ -272,7 +270,7 @@ const signMessage = async (forceNew = false) => {
   if (!adapter.signMessage) {
     throw new Error("Wallet does not support message signing");
   }
-    
+
   const signedMessage = await adapter.signMessage(encodedMessage);
   const authHeader = `${message}:${base58.encode(signedMessage)}`;
 
@@ -293,13 +291,10 @@ const needsVerification = computed(() => {
 watch(
   publicKey,
   async (newPublicKey) => {
-    // if the new key does not match the stored one, clear it out
-    if (newPublicKey && storedAuthHeader.value) {
-      const [storedKey] = storedAuthHeader.value.split(':');
-      if (storedKey !== newPublicKey.toString()) {
-        storedAuthHeader.value = null;
-        isVerified.value = false;
-      }
+    // If you want to invalidate stored auth when wallet changes:
+    if (!newPublicKey) {
+      storedAuthHeader.value = null;
+      isVerified.value = false;
     }
   },
   { immediate: true }

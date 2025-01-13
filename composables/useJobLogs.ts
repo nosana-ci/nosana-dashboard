@@ -23,7 +23,7 @@ interface LogEntry {
 export function useJobLogs() {
   const logs = ref<LogEntry[]>([]);
   const progressBars = ref<Map<string, ProgressBar>>(new Map());
-  const isConnecting = ref(false);
+  const isConnecting = ref(true);
   const ansi = new AnsiUp();
 
   // Configure ansi_up
@@ -46,8 +46,17 @@ export function useJobLogs() {
       return;
     }
 
-    // Check if this is a container log (has timestamp prefix)
-    const isContainerLog = /^\[\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2},\d{3}\]/.test(content);
+    // Consider all logs as container logs except for specific system messages
+    const isContainerLog = !(
+      content.startsWith('Download complete:') ||
+      content.startsWith('Already exists:') ||
+      content.startsWith('Pull complete:') ||
+      content.startsWith('Pulled image') ||
+      content.startsWith('Creating network') ||
+      content.startsWith('Created network') ||
+      content.startsWith('Starting container') ||
+      content.startsWith('Running container')
+    );
 
     // Convert ANSI to HTML if it's not already HTML
     const processedContent = isHtml ? content : ansi.ansi_to_html(content);
@@ -112,6 +121,9 @@ export function useJobLogs() {
       const logData = outerData.data ? JSON.parse(outerData.data) : outerData;
       if (!logData) return;
 
+      // Set connecting to false when we receive any message
+      isConnecting.value = false;
+
       if ((logData.type === 'multi-process-bar-update' || logData.method === 'MultiProgressBarReporter.update') && logData.payload?.event) {
         handleProgressEvent(logData.payload.event);
         return;
@@ -128,6 +140,7 @@ export function useJobLogs() {
   function clearLogs() {
     logs.value = [];
     progressBars.value.clear();
+    isConnecting.value = true; // Reset to true when clearing logs
   }
 
   return {
