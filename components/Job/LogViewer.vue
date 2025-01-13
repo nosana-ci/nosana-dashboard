@@ -1,5 +1,5 @@
 <template>
-  <div class="log-viewer">
+  <div class="log-viewer" ref="logContainer" @scroll="handleScroll">
     <!-- Not Job Poster Message -->
     <div v-if="!isJobPoster" class="no-access">
       <div class="icon">
@@ -57,12 +57,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, watch, nextTick, onMounted } from 'vue';
 import { useJobLogs } from '~/composables/useJobLogs';
 
 const props = defineProps<{
   isJobPoster: boolean;
 }>();
+
+const logContainer = ref<HTMLElement | null>(null);
+const shouldAutoScroll = ref(true);
 
 const {
   logs,
@@ -96,6 +99,36 @@ const activeProgressBars = computed(() => {
   return Array.from(progressBars.value.values())
     .filter(bar => !bar.completed)
     .sort((a, b) => a.id.localeCompare(b.id));
+});
+
+function scrollToBottom() {
+  if (shouldAutoScroll.value && logContainer.value) {
+    nextTick(() => {
+      const container = logContainer.value!;
+      container.scrollTop = container.scrollHeight;
+    });
+  }
+}
+
+// Auto-scroll to bottom when new logs arrive
+watch([() => logs.value.length, () => activeProgressBars.value.length], () => {
+  scrollToBottom();
+});
+
+// Handle manual scrolling
+function handleScroll() {
+  if (!logContainer.value) return;
+  
+  const container = logContainer.value;
+  const { scrollTop, scrollHeight, clientHeight } = container;
+  
+  // If we're near the bottom (within 50px), enable auto-scroll
+  shouldAutoScroll.value = scrollHeight - (scrollTop + clientHeight) < 50;
+}
+
+// Initial scroll to bottom
+onMounted(() => {
+  scrollToBottom();
 });
 
 defineExpose({
