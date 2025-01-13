@@ -11,58 +11,30 @@
         <!-- Specifications -->
         <tr>
           <td>GPU</td>
-          <td>{{ nodeSpecs?.gpus?.[0]?.gpu || "-" }}</td>
+          <td>{{ combinedSpecs?.gpus?.[0]?.gpu || "-" }}</td>
         </tr>
         <tr>
           <td>CPU</td>
-          <td>{{ nodeSpecs?.cpu || "-" }}</td>
+          <td>{{ combinedSpecs?.cpu || "-" }}</td>
         </tr>
         <tr>
           <td>RAM</td>
-          <td>{{ nodeSpecs?.ram ? `${nodeSpecs.ram.toFixed(1)} GB` : "-" }}</td>
+          <td>{{ combinedSpecs?.ram ? `${combinedSpecs.ram} GB` : "-" }}</td>
         </tr>
         <tr>
           <td>Disk Space</td>
           <td>
-            {{
-              nodeSpecs?.diskSpace
-                ? `${nodeSpecs.diskSpace.toFixed(1)} GB`
-                : "-"
-            }}
+            {{ combinedSpecs?.diskSpace ? `${combinedSpecs.diskSpace} GB` : "-" }}
           </td>
         </tr>
         <tr>
           <td>Country</td>
-          <td>{{ nodeSpecs?.country || "-" }}</td>
-        </tr>
-        <tr>
-          <td>Ping</td>
-          <td>
-            {{
-              nodeSpecs?.bandwidth?.ping
-                ? `${nodeSpecs.bandwidth.ping.toFixed(1)} ms`
-                : "-"
-            }}
-          </td>
+          <td>{{ countryName || "-" }}</td>
         </tr>
         <tr>
           <td>Download Speed</td>
           <td>
-            {{
-              nodeSpecs?.bandwidth?.download
-                ? `${nodeSpecs.bandwidth.download.toFixed(1)} Mbps`
-                : "-"
-            }}
-          </td>
-        </tr>
-        <tr>
-          <td>Upload Speed</td>
-          <td>
-            {{
-              nodeSpecs?.bandwidth?.upload
-                ? `${nodeSpecs.bandwidth.upload.toFixed(1)} Mbps`
-                : "-"
-            }}
+            {{ genericBenchmarkResponse?.data?.[0]?.metrics?.internetSpeedDownload || "-" }} Mbps
           </td>
         </tr>
         <tr>
@@ -78,7 +50,11 @@
               </span>
             </span>
           </td>
-          <td v-if="!nodeRanking">-</td>
+          <td v-if="!nodeRanking">
+            <span class="has-tooltip-arrow" data-tooltip="This node hasn't completed enough jobs to be ranked yet">
+              unranked
+            </span>
+          </td>
           <td v-else>{{ nodeRanking.performanceRank }}</td>
         </tr>
         <tr>
@@ -94,7 +70,11 @@
               </span>
             </span>
           </td>
-          <td v-if="!nodeRanking">-</td>
+          <td v-if="!nodeRanking">
+            <span class="has-tooltip-arrow" data-tooltip="This node hasn't completed enough jobs to be ranked yet">
+              unranked
+            </span>
+          </td>
           <td v-else>{{ nodeRanking.stabilityRank }}</td>
         </tr>
       </tbody>
@@ -118,13 +98,77 @@ const { data: nodeSpecs, pending: loadingSpecs } = useAPI(
   }
 );
 
+const { data: nodeInfo, pending: loadingInfo } = useAPI(
+  `https://${props.address}.${useRuntimeConfig().public.nodeDomain}/node/info`,
+  {
+    // @ts-ignore
+    disableToastOnError: true,
+  }
+);
+
+/*************
+ * Node Benchmarks *
+ *************/
+const { data: genericBenchmarkResponse } = useAPI(
+  `/api/benchmarks/generic-benchmark-data?node=${props.address}`,
+  {
+    // @ts-ignore
+    disableToastOnError: true,
+  }
+);
+
+/*************
+ * Country Name *
+ *************/
+const countryName = computed(() => {
+  if (!combinedSpecs.value?.country) return null;
+  try {
+    return new Intl.DisplayNames(['en'], { type: 'region' }).of(combinedSpecs.value.country);
+  } catch (e) {
+    return combinedSpecs.value.country;
+  }
+});
+
+/*************
+ * Combined Node Specs *
+ *************/
+const combinedSpecs = computed(() => {
+  if (!nodeSpecs.value) return null;
+
+  const nodeInfoData = nodeInfo.value?.info;
+
+  return {
+    nodeAddress: props.address,
+    marketAddress: nodeSpecs.value.marketAddress,
+    ram: nodeInfoData?.ram_mb
+      ? Math.round(nodeInfoData.ram_mb / 1024)
+      : nodeSpecs.value.ram,
+    diskSpace: nodeInfoData?.disk_gb ?? nodeSpecs.value.diskSpace,
+    cpu: nodeInfoData?.cpu?.model ?? nodeSpecs.value.cpu,
+    country: nodeInfoData?.country ?? nodeSpecs.value.country,
+    bandwidth: nodeInfoData?.network?.download_mbps ?? nodeSpecs.value.bandwidth,
+    gpus: nodeInfoData?.gpus?.devices
+      ? nodeInfoData.gpus.devices.map((gpu: any) => ({
+          gpu: gpu.name,
+          memory: gpu.memory?.total_mb,
+          architecture: `${gpu.network_architecture?.major}.${gpu.network_architecture?.minor}`,
+        }))
+      : nodeSpecs.value.gpus,
+  };
+});
+
 // When specs are loaded, retrieve node ranking
 let rankingAPInstance: any = null;
 watch(nodeSpecs, (specs) => {
   if (specs?.marketAddress) {
     if (!rankingAPInstance) {
+      // Create new instance with data and execute it
       rankingAPInstance = useAPI(
-        `/api/benchmarks/node-ranking?market=${specs.marketAddress}`
+        `/api/benchmarks/node-ranking?market=${specs.marketAddress}`,
+        {
+          // @ts-ignore
+          disableToastOnError: true,
+        }
       );
     }
   }
