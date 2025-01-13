@@ -177,6 +177,14 @@ function isStopped(stateVal: string | number): boolean {
   return getStateNumber(stateVal) === 3;
 }
 
+const { params } = useRoute();
+const jobId = ref(String(params.id) || '');
+const loading = ref(false);
+const loadingExtend = ref(false);
+const activeTab = ref('logs');
+const logs = ref<any[] | null>(null);
+
+const { wallet, publicKey, connected } = useWallet();
 const toast = useToast();
 const { nosana } = useSDK();
 const ansi = new AnsiUp();
@@ -185,12 +193,6 @@ const router = useRouter();
 const storedAuthHeader = useLocalStorage<string | null>('nosanaAuthHeader', null);
 
 const ipfsResult = ref<{ results?: string[] }>({});
-const { params } = useRoute();
-const jobId = ref(String(params.id) || '');
-const loading = ref(false);
-const loadingExtend = ref(false);
-const activeTab = ref('logs');
-const logs = ref<any[] | null>(null);
 
 const { getIpfs } = useIpfs();
 const artifacts = ref(null);
@@ -243,8 +245,6 @@ watch(
   },
   { immediate: true, deep: true }
 );
-
-const { wallet, publicKey, connected } = useWallet();
 
 // Check if user is job poster
 const isJobPoster = computed(() => {

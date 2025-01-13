@@ -33,10 +33,11 @@ export function useJobLogs() {
     if (!bytes || isNaN(bytes)) return { value: 0, format: 'B' };
     const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
     const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    return {
+    const result = {
       value: Number((bytes / Math.pow(1024, i)).toFixed(2)),
       format: sizes[i]
     };
+    return result;
   }
 
   function addLogEntry(content: string, isHtml: boolean = false) {
@@ -93,8 +94,8 @@ export function useJobLogs() {
     if (['Downloading', 'Extracting'].includes(status)) {
       const current = progressDetail?.current || 0;
       const total = progressDetail?.total || 0;
-      const { value: currentValue, format } = formatSize(current);
-      const { value: totalValue } = formatSize(total);
+      const { value: currentValue } = formatSize(current);
+      const { value: totalValue, format } = formatSize(total);
 
       let bar = progressBars.value.get(layerId);
       if (!bar) {
@@ -111,6 +112,7 @@ export function useJobLogs() {
         bar.current = currentValue;
         bar.total = totalValue;
         bar.status = status;
+        bar.format = format;
       }
     }
   }
