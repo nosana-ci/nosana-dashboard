@@ -67,41 +67,8 @@
             <VueJsonPretty :data="job.jobDefinition" show-icon show-line-number />
           </div>
           <div v-show="activeTab === 'logs'" class="p-1 py-4 has-background-white-bis">
-            <div v-if="isRunning(job.state)"
-              class="is-family-monospace has-background-black has-text-white box light-mode">
-              <div v-if="isConnecting" class="has-text-info">
-                <span class="icon-text">
-                  <span class="icon">
-                    <i class="fas fa-sync fa-spin"></i>
-                  </span>
-                  <span>Connecting to node...</span>
-                </span>
-              </div>
-              <div v-else-if="logs && logs.length > 0" style="counter-reset: line">
-                <div v-for="step in logs" :key="step.id">
-                  <div v-for="(log, ik) in step.logs.split('\n')" :key="ik" class="row-count">
-                    <div class="is-flex is-justify-content-space-between is-align-items-center">
-                      <span class="pre" v-html="log.slice(0, 10000)" />
-                      <button v-if="log.includes('Error connecting to WebSocket')" @click="checkAndConnectWebSocket"
-                        class="button is-info is-small ml-4">
-                        <span class="icon">
-                          <i class="fas fa-sync"></i>
-                        </span>
-                        <span>Retry Connection</span>
-                      </button>
-                    </div>
-                  </div>
-                  <div v-if="step.progress" class="progress-bar mb-2">
-                    <div class="progress-text">
-                      {{ step.progress.status }} | {{ step.progress.id }} | {{ step.progress.sizeText }}
-                    </div>
-                    <progress class="progress is-primary" :value="step.progress.current" :max="step.progress.total">
-                      {{ step.progress.progress }}
-                    </progress>
-                  </div>
-                </div>
-              </div>
-              <span v-else>Waiting for logs...</span>
+            <div v-if="isRunning(job.state)">
+              <JobLogViewer ref="logViewer" :is-job-poster="isJobPoster" />
             </div>
             <div v-else-if="loading">Loading logs..</div>
             <div v-else-if="!ipfsResult">No logs</div>
@@ -184,6 +151,7 @@ import { useIpfs } from '~/composables/useIpfs';
 import { useRuntimeConfig } from '#imports';
 import { useMarkets } from '~/composables/useMarkets';
 import { useLocalStorage } from '@vueuse/core';
+import JobLogViewer from '~/components/Job/LogViewer.vue';
 
 /**
  * Helper to convert job state to a number, normalizing "RUNNING", "QUEUED", etc.
@@ -552,6 +520,89 @@ onActivated(() => {
   checkAndConnectWebSocket();
 });
 
+interface ProgressBar {
+  id: string;
+  current: number;
+  total: number;
+  status: string;
+  text: string;
+}
+
+interface LogEntry {
+  id: number;
+  type: 'log' | 'progress';
+  content: string;
+  ansi?: boolean;
+  progress?: ProgressBar;
+}
+
+const structuredLogs = ref<LogEntry[]>([]);
+const progressBarsMap = ref<Map<string, number>>(new Map());
+
+function formatSize(bytes: number): string {
+  if (!bytes || isNaN(bytes)) return '0B';
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`;
+}
+
+function addLogEntry(newEntry: LogEntry) {
+  const lastLog = structuredLogs.value[structuredLogs.value.length - 1];
+  if (lastLog?.content === newEntry.content) {
+    return;
+  }
+  structuredLogs.value.push(newEntry);
+}
+
+function handleProgressEvent(event: any) {
+  const { id: layerId, status, progressDetail } = event;
+
+  if (['Download complete', 'Pull complete', 'Already exists'].includes(status)) {
+    const existingIdx = progressBarsMap.value.get(layerId);
+    if (existingIdx !== undefined && existingIdx !== null) {
+      structuredLogs.value.splice(existingIdx, 1);
+      progressBarsMap.value.delete(layerId);
+    }
+    addLogEntry({
+      id: Date.now(),
+      type: 'log',
+      content: `${status}: ${layerId}`,
+    });
+    return;
+  }
+
+  if (['Downloading', 'Extracting'].includes(status)) {
+    const current = progressDetail?.current || 0;
+    const total = progressDetail?.total || 0;
+    const text = `${status} | ${layerId} | ${formatSize(current)}/${formatSize(total)}`;
+
+    const newProgressEntry: LogEntry = {
+      id: Date.now(),
+      type: 'progress',
+      content: text,
+      progress: {
+        id: layerId,
+        current,
+        total,
+        status,
+        text,
+      },
+    };
+
+    const existingIndex = progressBarsMap.value.get(layerId);
+    if (existingIndex !== undefined && existingIndex !== null) {
+      structuredLogs.value[existingIndex] = newProgressEntry;
+    } else {
+      structuredLogs.value.push(newProgressEntry);
+      progressBarsMap.value.set(layerId, structuredLogs.value.length - 1);
+    }
+  }
+}
+
+function handleWebSocketMessage(event: MessageEvent) {
+  logViewer.value?.handleWebSocketMessage(event);
+}
+
 const connectWebSocket = async () => {
   if (ws) {
     ws.close();
@@ -559,19 +610,17 @@ const connectWebSocket = async () => {
     isWebSocketConnected = false;
   }
 
-  if (logs.value) {
-    logs.value = logs.value.filter(
-      (log) => !log.logs.includes('Error connecting to WebSocket')
-    );
-  }
+  structuredLogs.value = structuredLogs.value.filter(
+    (entry) => !entry.content.includes('Error connecting to WebSocket')
+  );
 
   const nodeAddress = job.value.node.toString();
   const frpServer = useRuntimeConfig().public.nodeDomain;
-
   let authHeader = '';
+
   try {
     authHeader = await signMessage();
-  } catch (error) {
+  } catch {
     isConnecting.value = false;
     isWebSocketConnected = false;
     return;
@@ -590,9 +639,10 @@ const connectWebSocket = async () => {
         }
         isConnecting.value = false;
         isWebSocketConnected = false;
-        logs.value?.push({
+        addLogEntry({
           id: Date.now(),
-          logs: 'Could not establish WebSocket connection to get the logs. The node may be offline.'
+          type: 'log',
+          content: 'Could not establish WebSocket connection to get the logs. The node may be offline.',
         });
       }
     }, 10000);
@@ -601,118 +651,21 @@ const connectWebSocket = async () => {
       clearTimeout(connectionTimeout);
       isWebSocketConnected = true;
       isConnecting.value = false;
+
       const authMessage = {
         path: '/log',
         header: authHeader,
         body: {
           jobAddress: jobId.value,
-          address: job.value.project
-        }
+          address: job.value.project,
+        },
       };
       ws?.send(JSON.stringify(authMessage));
     };
 
     ws.onmessage = (event: MessageEvent) => {
       isConnecting.value = false;
-
-      try {
-        const outerData = JSON.parse(event.data);
-        let logData: any = outerData;
-
-        if (
-          !('type' in outerData || 'log' in outerData || 'method' in outerData) &&
-          outerData.data
-        ) {
-          logData = JSON.parse(outerData.data);
-        }
-
-        if (!logData) return;
-        const convertedLog = ansi.ansi_to_html(logData.log || '');
-
-        if (
-          (logData.type === 'multi-process-bar-update' ||
-            logData.method === 'MultiProgressBarReporter.update') &&
-          logData.payload?.event
-        ) {
-          const event = logData.payload.event;
-          const layerId = event.id;
-
-          if (
-            event.status === 'Download complete' ||
-            event.status === 'Pull complete' ||
-            event.status === 'Already exists'
-          ) {
-            if (progressBars.value[layerId]) {
-              const index = logs.value?.findIndex(
-                (item) => item.id === progressBars.value[layerId]
-              );
-              if (index !== undefined && index !== -1 && logs.value) {
-                logs.value.splice(index, 1);
-              }
-              delete progressBars.value[layerId];
-            }
-
-            const lastLog = logs.value?.[logs.value.length - 1]?.logs;
-            const newLog = `${event.status}: ${layerId}`;
-            if (newLog !== lastLog) {
-              logs.value?.push({
-                id: Date.now(),
-                logs: newLog
-              });
-            }
-            return;
-          }
-
-          if (event.status === 'Downloading' || event.status === 'Extracting') {
-            const current = event.progressDetail?.current || 0;
-            const total = event.progressDetail?.total || 0;
-
-            const formatSize = (bytes: number) => {
-              if (!bytes || isNaN(bytes)) return '0B';
-              const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-              const i = Math.floor(Math.log(bytes) / Math.log(1024));
-              return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`;
-            };
-
-            const progressText = `${event.status} | ${layerId} | ${formatSize(current)}/${formatSize(total)}`;
-            const progressObj = {
-              id: progressBars.value[layerId] || Date.now(),
-              logs: progressText,
-              progress: {
-                status: event.status,
-                id: layerId,
-                current: current,
-                total: total,
-                progress: progressText,
-                sizeText: `${formatSize(current)}/${formatSize(total)}`
-              }
-            };
-
-            if (progressBars.value[layerId]) {
-              const index = logs.value?.findIndex(
-                (item) => item.id === progressBars.value[layerId]
-              );
-              if (index !== undefined && index !== -1 && logs.value) {
-                logs.value[index] = progressObj;
-              }
-            } else {
-              logs.value?.push(progressObj);
-              progressBars.value[layerId] = progressObj.id;
-            }
-            return;
-          }
-        } else if (logData.log) {
-          const lastLog = logs.value?.[logs.value.length - 1]?.logs;
-          if (convertedLog !== lastLog) {
-            logs.value?.push({
-              id: Date.now(),
-              logs: convertedLog
-            });
-          }
-        }
-      } catch (err: any) {
-        toast.error('Error parsing log data: ' + err.toString());
-      }
+      handleWebSocketMessage(event);
     };
 
     ws.onclose = () => {
@@ -720,21 +673,23 @@ const connectWebSocket = async () => {
       ws = null;
       isWebSocketConnected = false;
       if (isConnecting.value) {
-        logs.value?.push({
+        addLogEntry({
           id: Date.now(),
-          logs: 'WebSocket connection closed. Could not establish connection to get the logs.'
+          type: 'log',
+          content: 'WebSocket connection closed. Could not establish connection to get the logs.',
         });
-        isConnecting.value = false;
       }
+      isConnecting.value = false;
     };
 
-    ws.onerror = (error) => {
+    ws.onerror = () => {
       clearTimeout(connectionTimeout);
       ws = null;
       isWebSocketConnected = false;
-      logs.value?.push({
+      addLogEntry({
         id: Date.now(),
-        logs: 'Error connecting to WebSocket. The node may be offline.'
+        type: 'log',
+        content: 'Error connecting to WebSocket. The node may be offline.',
       });
       isConnecting.value = false;
     };
@@ -742,21 +697,22 @@ const connectWebSocket = async () => {
     ws = null;
     isWebSocketConnected = false;
     isConnecting.value = false;
-    logs.value?.push({
+    addLogEntry({
       id: Date.now(),
-      logs: 'Failed to establish WebSocket connection. The node may be offline.'
+      type: 'log',
+      content: 'Failed to establish WebSocket connection. The node may be offline.',
     });
   }
 };
 
 onUnmounted(() => {
+  logViewer.value?.clearLogs();
   if (ws) {
     ws.close();
     ws = null;
   }
   isWebSocketConnected = false;
   isConnecting.value = false;
-  logs.value = null;
 });
 
 watch(
@@ -771,6 +727,8 @@ const hasResultsRegex = computed(() => {
   if (!job.value?.jobDefinition?.ops) return false;
   return job.value.jobDefinition.ops.some((op: any) => op.results);
 });
+
+const logViewer = ref<InstanceType<typeof JobLogViewer> | null>(null);
 </script>
 
 <style lang="scss" scoped>
@@ -797,5 +755,14 @@ const hasResultsRegex = computed(() => {
 .modal-card {
   max-width: 500px;
   width: 100%;
+}
+
+.progress-text {
+  margin-bottom: 0.5rem;
+  font-family: monospace;
+}
+
+.progress.is-primary {
+  margin-bottom: 1rem;
 }
 </style>
