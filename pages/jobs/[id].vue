@@ -167,6 +167,7 @@
 </template>
 
 <script setup lang="ts">
+import base58 from "bs58";
 import { onUnmounted, watch, ref, computed, onMounted, onActivated } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import VueJsonPretty from 'vue-json-pretty';
@@ -297,16 +298,16 @@ const signMessage = async (forceNew = false) => {
   if (!connected.value || !publicKey.value || !wallet.value) {
     throw new Error('Wallet not connected or not found');
   }
-  const message = 'Hello Nosana Node!';
+  const message = "Hello Nosana Node!";
   const encodedMessage = new TextEncoder().encode(message);
   const adapter = wallet.value.adapter as MessageSignerWalletAdapter;
+
   if (!adapter.signMessage) {
-    throw new Error('Wallet does not support message signing');
+    throw new Error("Wallet does not support message signing");
   }
+    
   const signedMessage = await adapter.signMessage(encodedMessage);
-  const signature = Buffer.from(signedMessage).toString('base64');
-  const publicKeyString = publicKey.value.toString();
-  const authHeader = `${publicKeyString}:${signature}`;
+  const authHeader = `${message}:${base58.encode(signedMessage)}`;
 
   storedAuthHeader.value = authHeader;
   isVerified.value = true;
