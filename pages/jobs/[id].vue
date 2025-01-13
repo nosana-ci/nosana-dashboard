@@ -234,10 +234,9 @@ const { data: job, pending: loadingJob, refresh: refreshJob } = useAPI(`/api/job
 
 const { pause: pauseJobPolling, resume: resumeJobPolling } = useIntervalFn(
   () => {
-    console.log('REFRESHING');
     refreshJob();
   },
-  30000,
+  3000,
   { immediate: false }
 );
 
