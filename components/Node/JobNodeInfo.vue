@@ -24,7 +24,9 @@
         <tr>
           <td>Disk Space</td>
           <td>
-            {{ combinedSpecs?.diskSpace ? `${combinedSpecs.diskSpace} GB` : "-" }}
+            {{
+              combinedSpecs?.diskSpace ? `${combinedSpecs.diskSpace} GB` : "-"
+            }}
           </td>
         </tr>
         <tr>
@@ -34,21 +36,36 @@
         <tr>
           <td>Download Speed</td>
           <td>
-            {{ genericBenchmarkResponse?.data?.[0]?.metrics?.internetSpeedDownload || "-" }} Mbps
+            {{
+              genericBenchmarkResponse?.data?.[0]?.metrics
+                ?.internetSpeedDownload
+                ? Number(
+                    genericBenchmarkResponse.data[0].metrics
+                      .internetSpeedDownload
+                  ).toFixed(2)
+                : "-"
+            }}
+            Mbps
           </td>
         </tr>
         <tr>
           <td>
             <span class="is-flex-inline">
               <span>Performance Rank</span>
-              <span class="has-tooltip-arrow ml-1" style="vertical-align: middle"
-                data-tooltip="An aggregated performance ranking based on all leaderboard positions of the node compared to all other nodes in the market.">
+              <span
+                class="has-tooltip-arrow ml-1"
+                style="vertical-align: middle"
+                data-tooltip="An aggregated performance ranking based on all leaderboard positions of the node compared to all other nodes in the market."
+              >
                 <img src="~/assets/img/icons/info.svg" />
               </span>
             </span>
           </td>
           <td v-if="!nodeRanking">
-            <span class="has-tooltip-arrow" data-tooltip="This node hasn't completed enough jobs to be ranked yet">
+            <span
+              class="has-tooltip-arrow"
+              data-tooltip="This node hasn't completed enough jobs to be ranked yet"
+            >
               unranked
             </span>
           </td>
@@ -58,14 +75,20 @@
           <td>
             <span class="">
               <span>Stability Rank</span>
-              <span class="has-tooltip-arrow ml-1" style="vertical-align: middle"
-                data-tooltip="An aggregated stability ranking based on the nodes performance variance. The less variance the better.">
+              <span
+                class="has-tooltip-arrow ml-1"
+                style="vertical-align: middle"
+                data-tooltip="An aggregated stability ranking based on the nodes performance variance. The less variance the better."
+              >
                 <img src="~/assets/img/icons/info.svg" />
               </span>
             </span>
           </td>
           <td v-if="!nodeRanking">
-            <span class="has-tooltip-arrow" data-tooltip="This node hasn't completed enough jobs to be ranked yet">
+            <span
+              class="has-tooltip-arrow"
+              data-tooltip="This node hasn't completed enough jobs to be ranked yet"
+            >
               unranked
             </span>
           </td>
@@ -117,7 +140,9 @@ const { data: genericBenchmarkResponse } = useAPI(
 const countryName = computed(() => {
   if (!combinedSpecs.value?.country) return null;
   try {
-    return new Intl.DisplayNames(['en'], { type: 'region' }).of(combinedSpecs.value.country);
+    return new Intl.DisplayNames(["en"], { type: "region" }).of(
+      combinedSpecs.value.country
+    );
   } catch (e) {
     return combinedSpecs.value.country;
   }
@@ -135,18 +160,22 @@ const combinedSpecs = computed(() => {
     nodeAddress: props.address,
     marketAddress: nodeSpecs.value.marketAddress,
     ram: nodeInfoData?.ram_mb
-      ? Math.round(nodeInfoData.ram_mb / 1024)
-      : nodeSpecs.value.ram,
-    diskSpace: nodeInfoData?.disk_gb ?? nodeSpecs.value.diskSpace,
+      ? Number(Math.round(nodeInfoData.ram_mb / 1024)).toFixed(2)
+      : Number(nodeSpecs.value.ram).toFixed(2),
+    diskSpace: nodeInfoData?.disk_gb
+      ? Number(nodeInfoData.disk_gb).toFixed(2)
+      : Number(nodeSpecs.value.diskSpace).toFixed(2),
     cpu: nodeInfoData?.cpu?.model ?? nodeSpecs.value.cpu,
     country: nodeInfoData?.country ?? nodeSpecs.value.country,
-    bandwidth: nodeInfoData?.network?.download_mbps ?? nodeSpecs.value.bandwidth,
+    bandwidth: nodeInfoData?.network?.download_mbps
+      ? Number(nodeInfoData.network.download_mbps).toFixed(2)
+      : Number(nodeSpecs.value.bandwidth).toFixed(2),
     gpus: nodeInfoData?.gpus?.devices
       ? nodeInfoData.gpus.devices.map((gpu: any) => ({
-        gpu: gpu.name,
-        memory: gpu.memory?.total_mb,
-        architecture: `${gpu.network_architecture?.major}.${gpu.network_architecture?.minor}`,
-      }))
+          gpu: gpu.name,
+          memory: gpu.memory?.total_mb,
+          architecture: `${gpu.network_architecture?.major}.${gpu.network_architecture?.minor}`,
+        }))
       : nodeSpecs.value.gpus,
   };
 });
@@ -164,18 +193,24 @@ interface NodeRanking {
 const { data: rankingData } = useAPI(
   computed(() => {
     const marketAddress = nodeSpecs.value?.marketAddress;
-    return marketAddress ? `/api/benchmarks/node-ranking?market=${marketAddress}` : '/api/benchmarks/node-ranking'
+    return marketAddress
+      ? `/api/benchmarks/node-ranking?market=${marketAddress}`
+      : "/api/benchmarks/node-ranking";
   }),
   {
     // @ts-ignore
     disableToastOnError: true,
-    enabled: computed(() => !!nodeSpecs.value?.marketAddress)
+    enabled: computed(() => !!nodeSpecs.value?.marketAddress),
   }
 );
 
 const nodeRanking = computed(() => {
   if (!rankingData.value) return null;
-  return rankingData.value.find((ranking: NodeRanking) => ranking.node === props.address) || null;
+  return (
+    rankingData.value.find(
+      (ranking: NodeRanking) => ranking.node === props.address
+    ) || null
+  );
 });
 </script>
 `
