@@ -165,7 +165,7 @@
                     </td>
                     <td>
                       <template v-if="market?.queueType === 0">
-                        <small>This is a job queue market</small>
+                        0
                       </template>
                       <template v-else>
                         {{ queuedNodes.length }}
