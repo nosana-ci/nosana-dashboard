@@ -6,8 +6,11 @@ interface ProgressBar {
   id: string;
   current: number;
   total: number;
+  currentDisplay: number;
+  totalDisplay: number;
   status: string;
-  format: string;
+  currentFormat: string;
+  totalFormat: string;
   completed: boolean;
 }
 
@@ -29,15 +32,23 @@ export function useJobLogs() {
   // Configure ansi_up
   ansi.use_classes = true;
 
-  function formatSize(bytes: number): { value: number; format: string } {
-    if (!bytes || isNaN(bytes)) return { value: 0, format: 'B' };
-    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    const result = {
-      value: Number((bytes / Math.pow(1024, i)).toFixed(2)),
-      format: sizes[i]
-    };
-    return result;
+  function convertFromBytes(
+    bytes: number,
+    toFormat?: 'gb' | 'mb' | 'kb',
+  ): { value: number; format: 'gb' | 'mb' | 'kb' } {
+    let value = bytes / 1024;
+
+    if ((value < 1024 && !toFormat) || toFormat === 'kb') {
+      return { value: Number(value.toFixed(2)), format: 'kb' };
+    }
+
+    value = value / 1024;
+
+    if ((value < 1024 && !toFormat) || toFormat === 'mb') {
+      return { value: Number(value.toFixed(2)), format: 'mb' };
+    }
+
+    return { value: Number((value / 1024).toFixed(2)), format: 'gb' };
   }
 
   function addLogEntry(content: string, isHtml: boolean = false) {
@@ -90,29 +101,35 @@ export function useJobLogs() {
       return;
     }
 
-    // Handle active download states
-    if (['Downloading', 'Extracting'].includes(status)) {
+    // Handle active download states, resource progress, and pulling layers
+    if (['Downloading', 'Extracting', 'Resource', 'Pulling fs layer'].includes(status)) {
       const current = progressDetail?.current || 0;
-      const total = progressDetail?.total || 0;
-      const { value: currentValue } = formatSize(current);
-      const { value: totalValue, format } = formatSize(total);
+      const total = progressDetail?.total || 1; // Use 1 as total for pulling layer to show indeterminate progress
+      const { value: currentValue, format: currentFormat } = convertFromBytes(current);
+      const { value: totalValue, format: totalFormat } = convertFromBytes(total);
 
       let bar = progressBars.value.get(layerId);
       if (!bar) {
         bar = {
           id: layerId,
-          current: currentValue,
-          total: totalValue,
+          current: status === 'Pulling fs layer' ? 0 : current,
+          total: status === 'Pulling fs layer' ? 1 : total,
+          currentDisplay: currentValue,
+          totalDisplay: totalValue,
           status,
-          format,
+          currentFormat: currentFormat.toUpperCase(),
+          totalFormat: totalFormat.toUpperCase(),
           completed: false
         };
         progressBars.value.set(layerId, bar);
       } else {
-        bar.current = currentValue;
-        bar.total = totalValue;
+        bar.current = status === 'Pulling fs layer' ? 0 : current;
+        bar.total = status === 'Pulling fs layer' ? 1 : total;
+        bar.currentDisplay = currentValue;
+        bar.totalDisplay = totalValue;
         bar.status = status;
-        bar.format = format;
+        bar.currentFormat = currentFormat.toUpperCase();
+        bar.totalFormat = totalFormat.toUpperCase();
       }
     }
   }

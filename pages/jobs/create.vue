@@ -250,15 +250,6 @@
                     </div>
 
                     <div class="field">
-                      <label class="label">Output</label>
-                      <div class="control">
-                        <input class="input" @focus="info = 'ops.args.output'"
-                          v-model="(op.args as OperationArgsMap['container/run']).output" type="text"
-                          placeholder="/output">
-                      </div>
-                    </div>
-
-                    <div class="field">
                       <label class="label">Resources</label>
                       <div class="control">
                         <div v-for="(resource, i) in (op.args as OperationArgsMap['container/run']).resources">

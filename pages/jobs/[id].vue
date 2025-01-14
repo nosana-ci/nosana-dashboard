@@ -552,11 +552,23 @@ interface LogEntry {
 const structuredLogs = ref<LogEntry[]>([]);
 const progressBarsMap = ref<Map<string, number>>(new Map());
 
-function formatSize(bytes: number): string {
-  if (!bytes || isNaN(bytes)) return '0B';
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(1024));
-  return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`;
+function convertFromBytes(
+  bytes: number,
+  toFormat?: 'gb' | 'mb' | 'kb',
+): { value: number; format: 'gb' | 'mb' | 'kb' } {
+  let value = bytes / 1024;
+
+  if ((value < 1024 && !toFormat) || toFormat === 'kb') {
+    return { value: Number(value.toFixed(2)), format: 'kb' };
+  }
+
+  value = value / 1024;
+
+  if ((value < 1024 && !toFormat) || toFormat === 'mb') {
+    return { value: Number(value.toFixed(2)), format: 'mb' };
+  }
+
+  return { value: Number((value / 1024).toFixed(2)), format: 'gb' };
 }
 
 function addLogEntry(newEntry: LogEntry) {
@@ -587,7 +599,9 @@ function handleProgressEvent(event: any) {
   if (['Downloading', 'Extracting'].includes(status)) {
     const current = progressDetail?.current || 0;
     const total = progressDetail?.total || 0;
-    const text = `${status} | ${layerId} | ${formatSize(current)}/${formatSize(total)}`;
+    const { value: currentValue, format: currentFormat } = convertFromBytes(current);
+    const { value: totalValue, format: totalFormat } = convertFromBytes(total);
+    const text = `${status} | ${layerId} | ${currentValue}${currentFormat.toUpperCase()}/${totalValue}${totalFormat.toUpperCase()}`;
 
     const newProgressEntry: LogEntry = {
       id: Date.now(),
