@@ -11,8 +11,10 @@
               && job.jobDefinition
               && job.jobDefinition.ops
               && job.jobDefinition.ops[0]
-              && job.jobDefinition.ops[0].args.expose" class="mr-4">
-              <a :href="`https://${job.address}.node.k8s.prd.nos.ci`" target="_blank" class="button is-success">
+              && job.jobDefinition.ops[0].args.expose
+              && (!job.jobDefinition.ops[0].args.private || isJobPoster)
+              && serviceUrl" class="mr-4">
+              <a :href="serviceUrl" target="_blank" class="button is-success">
                 Visit Service
               </a>
             </div>
@@ -594,9 +596,56 @@ function handleProgressEvent(event: any) {
   }
 }
 
+const serviceUrl = ref<string | null>(null);
+
+function stripAnsi(str: string): string {
+  return str.replace(/\u001b\[\d+m|\u001b\[\d+;\d+m|\u001b\[0m|\u001b\[1m|\u001b\[22m/g, '');
+}
+
 function handleWebSocketMessage(event: MessageEvent) {
   logViewer.value?.handleWebSocketMessage(event);
+  
+  // Check for service online message in logs
+  const data = event.data;
+  
+  try {
+    const jsonData = typeof data === 'string' ? JSON.parse(data) : data;
+    
+    if (jsonData.data) {
+      const innerData = typeof jsonData.data === 'string' ? JSON.parse(jsonData.data) : jsonData.data;
+      
+      // Check if this is a log message about service being exposed
+      if (innerData.log) {
+        const cleanLog = stripAnsi(innerData.log);
+        
+        // Try both URL formats
+        const exposedMatch = cleanLog.match(/Job .* is now exposed \((https:\/\/[^)]+)\)/) ||
+                           cleanLog.match(/Service exposed at: (https:\/\/[^)\s]+)/);
+        
+        if (exposedMatch) {
+          const url = exposedMatch[1];
+          serviceUrl.value = url;
+          toast.success('Service is online');
+        }
+      }
+    }
+  } catch (e) {
+    // Silently handle parsing errors
+  }
 }
+
+// Update the computed property for service URL
+watch(() => job.value?.address, (newAddress) => {
+  if (!newAddress) return;
+  
+  // Set default URL (for non-private jobs)
+  if (job.value?.jobDefinition?.ops?.[0]?.args?.expose) {
+    if (!job.value?.jobDefinition?.ops[0]?.args?.private) {
+      const url = `https://${newAddress}.node.k8s.prd.nos.ci`;
+      serviceUrl.value = url;
+    }
+  }
+}, { immediate: true });
 
 const connectWebSocket = async () => {
   if (ws) {

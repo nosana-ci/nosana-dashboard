@@ -5,8 +5,7 @@
       <div class="icon">
         <i class="fas fa-lock"></i>
       </div>
-      <h3>Access Restricted</h3>
-      <p>Only the job poster can view the live logs of a job.</p>
+      <h3>No Logs Available</h3>
     </div>
 
     <!-- Regular Log View -->
