@@ -45,7 +45,7 @@
             'is-warning': bar.status === 'Extracting',
             'is-success': bar.status === 'Resource'
           }">
-            {{ bar.status }} | {{ bar.id }} | {{ bar.current }}{{ bar.currentFormat }}/{{ bar.total }}{{ bar.totalFormat }}
+            {{ bar.status }} | {{ bar.id }} | {{ bar.currentDisplay }}{{ bar.currentFormat }}/{{ bar.totalDisplay }}{{ bar.totalFormat }}
           </div>
           <progress 
             class="progress" 

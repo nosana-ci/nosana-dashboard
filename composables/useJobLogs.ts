@@ -6,6 +6,8 @@ interface ProgressBar {
   id: string;
   current: number;
   total: number;
+  currentDisplay: number;
+  totalDisplay: number;
   status: string;
   currentFormat: string;
   totalFormat: string;
@@ -110,8 +112,10 @@ export function useJobLogs() {
       if (!bar) {
         bar = {
           id: layerId,
-          current: status === 'Pulling fs layer' ? 0 : currentValue,
-          total: status === 'Pulling fs layer' ? 1 : totalValue,
+          current: status === 'Pulling fs layer' ? 0 : current,
+          total: status === 'Pulling fs layer' ? 1 : total,
+          currentDisplay: currentValue,
+          totalDisplay: totalValue,
           status,
           currentFormat: currentFormat.toUpperCase(),
           totalFormat: totalFormat.toUpperCase(),
@@ -119,8 +123,10 @@ export function useJobLogs() {
         };
         progressBars.value.set(layerId, bar);
       } else {
-        bar.current = status === 'Pulling fs layer' ? 0 : currentValue;
-        bar.total = status === 'Pulling fs layer' ? 1 : totalValue;
+        bar.current = status === 'Pulling fs layer' ? 0 : current;
+        bar.total = status === 'Pulling fs layer' ? 1 : total;
+        bar.currentDisplay = currentValue;
+        bar.totalDisplay = totalValue;
         bar.status = status;
         bar.currentFormat = currentFormat.toUpperCase();
         bar.totalFormat = totalFormat.toUpperCase();
