@@ -4,7 +4,7 @@
     <div class="filters">
       <!-- Node Address Filter -->
       <div class="field">
-        <label class="label">Node Address</label>
+        <label class="label">Host Address</label>
         <div class="control">
           <input class="input" v-model="filters.node" placeholder="Enter Node Address" />
         </div>
@@ -94,7 +94,7 @@
       <thead>
         <tr>
           <!-- Non-sortable columns -->
-          <th>Node</th>
+          <th>Host</th>
           <th>GPU</th>
           <th>Framework</th>
           <th>Model</th>

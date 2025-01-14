@@ -28,7 +28,7 @@
             }, 0) + Object.values(runningJobs).reduce((a: any, b: any) => a + b.running, 0)
           }}</span>
           <br>
-          <span class="subtitle"> nodes available</span>
+          <span class="subtitle"> hosts available</span>
           <div class="is-flex is-justify-content-center doughnut-container">
             <Doughnut class="mt-4" :data="{
               labels: ['Available Hosts', 'Used Hosts'],
@@ -46,7 +46,7 @@
           </div>
         </template>
         <span v-else class="title">?<br>
-          <span class="subtitle"> nodes available</span>
+          <span class="subtitle"> hosts available</span>
         </span>
       </div>
     </div>
