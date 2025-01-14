@@ -43,7 +43,15 @@
                 </tr>
                 <tr>
                   <td>Price</td>
-                  <td>{{ market.jobPrice / 1e6 }} NOS/s</td>
+                  <td>
+                    <span v-if="loadingStats">...</span>
+                    <span v-else>
+                      {{ market.jobPrice / 1e6 }} NOS/s
+                      <span v-if="stats && stats[0] && stats[0].price">
+                        (${{ ((stats[0].price * (market.jobPrice / 1e6)) * 3600).toFixed(2) }} / h)
+                      </span>
+                    </span>
+                  </td>
                 </tr>
                 <tr>
                   <td>Access key</td>
@@ -247,9 +255,12 @@ const market = ref<Market | null>(null)
 const marketId = ref<string>(String(params.id))
 const loading = ref<boolean>(false)
 
+// Add stats API call
+const { data: stats, pending: loadingStats } = useAPI('/api/stats')
+
 const page = ref<number>(1)
 const state = ref<number | null>(null)
-const jobStateMapping: any = {
+const jobStateMapping: Record<number, string> = {
   0: 'QUEUED',
   1: 'RUNNING',
   2: 'COMPLETED',
@@ -258,8 +269,8 @@ const jobStateMapping: any = {
 const limit = ref<number>(10)
 
 const jobsUrl = computed(() => {
-  return `/api/jobs?limit=${limit.value}&offset=${(page.value - 1) * limit.value}${state.value !== null ? `&state=${jobStateMapping[state.value]}` : ''
-    }&market=${marketId.value}`
+  const stateStr = state.value !== null ? `&state=${jobStateMapping[state.value]}` : ''
+  return `/api/jobs?limit=${limit.value}&offset=${(page.value - 1) * limit.value}${stateStr}&market=${marketId.value}`
 })
 const { data: jobs, pending: loadingJobs } = useAPI(jobsUrl, { watch: [jobsUrl] })
 
@@ -294,8 +305,8 @@ const {
 
 const nodesWithAccess = computed(() => nodesWithAccessData.value || [])
 const runningNodes = computed(() => {
-  // Remove duplicates from running nodes array
-  return [...new Set(runningNodesData.value || [])]
+  // Remove duplicates from running nodes array and ensure string type
+  return [...new Set(runningNodesData.value?.map(node => String(node)) || [])]
 })
 
 const getMarket = async () => {
@@ -339,18 +350,29 @@ const toggleAccessNodes = () => {
 }
 
 interface NodeLike {
-  toString(): string
+  toString(): string;
+}
+
+interface Job {
+  totalJobs: number | null;
+  jobs: any[];
+}
+
+interface Node {
+  toString(): string;
 }
 
 const queuedNodes = computed(() => {
   const runningNodeSet = new Set(runningNodes.value)
-  // Filter out nodes that are already running from the queue
-  const filteredQueue = (market.value?.queue || []).filter((node: NodeLike | string) => {
+  // Filter out nodes that are already running from the queue and ensure string type
+  const filteredQueue = (market.value?.queue || []).filter((node: any) => {
     const nodeStr = typeof node === 'string' ? node : node.toString()
     return !runningNodeSet.has(nodeStr)
   })
 
-  return filteredQueue
+  return filteredQueue.map((node: any) => 
+    typeof node === 'string' ? node : node.toString()
+  )
 })
 
 const totalNodes = computed(() => {
@@ -376,8 +398,8 @@ const allNodes = computed(() => {
   // Combine all nodes and ensure they're strings
   return [...new Set([
     ...runningNodes.value,
-    ...queuedNodes.value.map((node: NodeLike | string) => typeof node === 'string' ? node : node.toString()),
-    ...nodesWithAccess.value.map((node: NodeLike | string) => typeof node === 'string' ? node : node.toString())
+    ...queuedNodes.value,
+    ...nodesWithAccess.value.map((node: any) => node.toString())
   ])].sort()
 })
 
