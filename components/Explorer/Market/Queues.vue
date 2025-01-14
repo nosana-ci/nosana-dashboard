@@ -28,7 +28,7 @@
           </td>
         </tr>
         <tr>
-          <td><b>Node Queue</b></td>
+          <td><b>Host Queue</b></td>
           <td>
             <span v-if="markets">
               {{

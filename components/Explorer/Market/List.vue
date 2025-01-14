@@ -81,7 +81,7 @@
                       </span>
                     </span>
                     <span>
-                      nodes</span>
+                      hosts</span>
                     <span><progress class="is-pulled-right progress is-secondary" :value="market.queue.length" :max="market.queue.length + (runningJobs[market.address] ?
                       runningJobs[market.address].running : 0)"></progress></span>
                   </template>
@@ -97,7 +97,7 @@
                       ?
                     </span>
                     <span>
-                      nodes</span>
+                      hosts</span>
                     <span><progress class="is-pulled-right progress is-secondary" :value="0" :max="(runningJobs[market.address] ?
                       runningJobs[market.address].running : 0)"></progress></span>
                   </span>

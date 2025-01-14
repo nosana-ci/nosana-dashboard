@@ -58,7 +58,7 @@
     <thead>
       <tr>
         <th>Address</th>
-        <th v-if="!small" class="is-hidden-touch">Node</th>
+        <th v-if="!small" class="is-hidden-touch">Host</th>
         <th>Started</th>
         <th class="is-hidden-mobile">Duration</th>
         <th v-if="!small" class="is-hidden-touch">Price</th>
