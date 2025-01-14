@@ -69,8 +69,11 @@
             <VueJsonPretty :data="job.jobDefinition" show-icon show-line-number />
           </div>
           <div v-show="activeTab === 'logs'" class="p-1 py-4 has-background-white-bis">
-            <div v-if="isRunning(job.state)">
+            <div v-if="isRunning(job.state) && connected">
               <JobLogViewer ref="logViewer" :is-job-poster="isJobPoster" />
+            </div>
+            <div v-else-if="isRunning(job.state)">
+              Please connect your wallet to view logs
             </div>
             <div v-else-if="loading">Loading logs..</div>
             <div v-else-if="!ipfsResult">No logs</div>
