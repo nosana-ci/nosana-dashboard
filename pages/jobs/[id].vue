@@ -70,7 +70,11 @@
           </div>
           <div v-show="activeTab === 'logs'" class="p-1 py-4 has-background-white-bis">
             <div v-if="isRunning(job.state) && connected">
-              <JobLogViewer ref="logViewer" :is-job-poster="isJobPoster" />
+              <div v-if="isConnecting">Loading logs..</div>
+              <div v-else-if="signMessageError">Failed to sign message. Please try again.</div>
+              <div v-else>
+                <JobLogViewer ref="logViewer" :is-job-poster="isJobPoster" />
+              </div>
             </div>
             <div v-else-if="isRunning(job.state)">
               Please connect your wallet to view logs
@@ -258,6 +262,8 @@ const isJobPoster = computed(() => {
 
 const isVerified = ref(storedAuthHeader.value !== null);
 
+const signMessageError = ref(false);
+
 const signMessage = async (forceNew = false) => {
   if (storedAuthHeader.value && !forceNew) {
     isVerified.value = true;
@@ -268,20 +274,27 @@ const signMessage = async (forceNew = false) => {
     throw new Error('Wallet not connected or not found');
   }
 
-  const message = "Hello Nosana Node!";
-  const encodedMessage = new TextEncoder().encode(message);
-  const adapter = wallet.value.adapter as MessageSignerWalletAdapter;
+  try {
+    signMessageError.value = false;
+    const message = "Hello Nosana Node!";
+    const encodedMessage = new TextEncoder().encode(message);
+    const adapter = wallet.value.adapter as MessageSignerWalletAdapter;
 
-  if (!adapter.signMessage) {
-    throw new Error("Wallet does not support message signing");
+    if (!adapter.signMessage) {
+      throw new Error("Wallet does not support message signing");
+    }
+
+    const signedMessage = await adapter.signMessage(encodedMessage);
+    const authHeader = `${message}:${base58.encode(signedMessage)}`;
+
+    storedAuthHeader.value = authHeader;
+    isVerified.value = true;
+    return authHeader;
+  } catch (error) {
+    signMessageError.value = true;
+    isVerified.value = false;
+    throw error;
   }
-
-  const signedMessage = await adapter.signMessage(encodedMessage);
-  const authHeader = `${message}:${base58.encode(signedMessage)}`;
-
-  storedAuthHeader.value = authHeader;
-  isVerified.value = true;
-  return authHeader;
 };
 
 const needsVerification = computed(() => {
