@@ -163,10 +163,19 @@
                       </span>
                       <span class="has-text-weight-medium">Queued</span>
                     </td>
-                    <td>{{ queuedNodes.length }}</td>
+                    <td>
+                      <template v-if="market?.queueType === 0">
+                        <small>This is a job queue market</small>
+                      </template>
+                      <template v-else>
+                        {{ queuedNodes.length }}
+                      </template>
+                    </td>
                     <td class="is-hidden-mobile">
-                      <progress class="progress is-warning is-small" :value="queuedNodes.length"
-                        :max="totalNodes"></progress>
+                      <template v-if="market?.queueType === 1">
+                        <progress class="progress is-warning is-small" :value="queuedNodes.length"
+                          :max="totalNodes"></progress>
+                      </template>
                     </td>
                     <td>
                       <button class="button is-small" @click="toggleQueuedNodes" :disabled="!queuedNodes.length">
@@ -363,6 +372,11 @@ interface Node {
 }
 
 const queuedNodes = computed(() => {
+  // If it's not a node queue market, return empty array
+  if (market.value?.queueType !== 1) {
+    return []
+  }
+
   const runningNodeSet = new Set(runningNodes.value)
   // Filter out nodes that are already running from the queue and ensure string type
   const filteredQueue = (market.value?.queue || []).filter((node: any) => {
