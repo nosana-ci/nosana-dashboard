@@ -39,11 +39,22 @@
 
         <!-- Active Progress Bars -->
         <div v-for="bar in activeProgressBars" :key="bar.id" class="progress-bar-container mb-4">
-          <div class="progress-text">
+          <div class="progress-text" :class="{
+            'is-primary': bar.status === 'Downloading',
+            'is-info': bar.status === 'Pulling fs layer',
+            'is-warning': bar.status === 'Extracting',
+            'is-success': bar.status === 'Resource'
+          }">
             {{ bar.status }} | {{ bar.id }} | {{ bar.current }}{{ bar.currentFormat }}/{{ bar.total }}{{ bar.totalFormat }}
           </div>
           <progress 
-            class="progress is-primary" 
+            class="progress" 
+            :class="{
+              'is-primary': bar.status === 'Downloading',
+              'is-info': bar.status === 'Pulling fs layer',
+              'is-warning': bar.status === 'Extracting',
+              'is-success': bar.status === 'Resource'
+            }"
             :value="bar.current" 
             :max="bar.total"
           >
@@ -203,21 +214,55 @@ defineExpose({
 }
 
 .progress-text {
-  color: #7ee787;
   margin-bottom: 0.5rem;
   font-size: 0.85rem;
+
+  &.is-primary {
+    color: #00d1b2;
+  }
+  &.is-info {
+    color: #3e8ed0;
+  }
+  &.is-warning {
+    color: #ffe08a;
+  }
+  &.is-success {
+    color: #48c78e;
+  }
 }
 
-.progress.is-primary {
+.progress {
   height: 0.5rem;
   &::-webkit-progress-bar {
     background-color: rgba(110, 118, 129, 0.1);
   }
-  &::-webkit-progress-value {
-    background-color: #7ee787;
+
+  &.is-primary::-webkit-progress-value {
+    background-color: #00d1b2;
   }
-  &::-moz-progress-bar {
-    background-color: #7ee787;
+  &.is-primary::-moz-progress-bar {
+    background-color: #00d1b2;
+  }
+
+  &.is-info::-webkit-progress-value {
+    background-color: #3e8ed0;
+  }
+  &.is-info::-moz-progress-bar {
+    background-color: #3e8ed0;
+  }
+
+  &.is-warning::-webkit-progress-value {
+    background-color: #ffe08a;
+  }
+  &.is-warning::-moz-progress-bar {
+    background-color: #ffe08a;
+  }
+
+  &.is-success::-webkit-progress-value {
+    background-color: #48c78e;
+  }
+  &.is-success::-moz-progress-bar {
+    background-color: #48c78e;
   }
 }
 

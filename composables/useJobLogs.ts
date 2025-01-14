@@ -99,10 +99,10 @@ export function useJobLogs() {
       return;
     }
 
-    // Handle active download states
-    if (['Downloading', 'Extracting'].includes(status)) {
+    // Handle active download states, resource progress, and pulling layers
+    if (['Downloading', 'Extracting', 'Resource', 'Pulling fs layer'].includes(status)) {
       const current = progressDetail?.current || 0;
-      const total = progressDetail?.total || 0;
+      const total = progressDetail?.total || 1; // Use 1 as total for pulling layer to show indeterminate progress
       const { value: currentValue, format: currentFormat } = convertFromBytes(current);
       const { value: totalValue, format: totalFormat } = convertFromBytes(total);
 
@@ -110,8 +110,8 @@ export function useJobLogs() {
       if (!bar) {
         bar = {
           id: layerId,
-          current: currentValue,
-          total: totalValue,
+          current: status === 'Pulling fs layer' ? 0 : currentValue,
+          total: status === 'Pulling fs layer' ? 1 : totalValue,
           status,
           currentFormat: currentFormat.toUpperCase(),
           totalFormat: totalFormat.toUpperCase(),
@@ -119,8 +119,8 @@ export function useJobLogs() {
         };
         progressBars.value.set(layerId, bar);
       } else {
-        bar.current = currentValue;
-        bar.total = totalValue;
+        bar.current = status === 'Pulling fs layer' ? 0 : currentValue;
+        bar.total = status === 'Pulling fs layer' ? 1 : totalValue;
         bar.status = status;
         bar.currentFormat = currentFormat.toUpperCase();
         bar.totalFormat = totalFormat.toUpperCase();
