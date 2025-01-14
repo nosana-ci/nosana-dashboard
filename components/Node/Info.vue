@@ -202,8 +202,8 @@
             ]" x-axis-label="Batch Size" />
         </div>
       </div>
-      <ExplorerJobList :per-page="limit" :total-jobs="jobs?.totalJobs" v-model:page="page"
-        v-model:state="state" :loading-jobs="loadingJobs" title="Jobs Ran" :jobs="jobs?.jobs"
+      <ExplorerJobList :per-page="limit" :total-jobs="totalJobs" v-model:page="page"
+        v-model:state="state" :loading-jobs="loadingJobs" title="Jobs Ran" :jobs="jobs.value?.jobs"
         :states="[1, 2]" />
     </div>
   </div>
@@ -283,9 +283,13 @@ const jobsUrl: ComputedRef<string> = computed(() => {
     }${state.value !== null ? `&state=${jobStateMapping[state.value]}` : ""}${"&node=" + props.address
     }`;
 });
-const { data: jobs, pending: loadingJobs } = useAPI(jobsUrl, {
-  watch: [jobsUrl],
-});
+
+interface JobsResponse {
+  totalJobs: number;
+  jobs: any[];
+}
+
+const { data: jobs, pending: loadingJobs } = useAPI<JobsResponse | null>(jobsUrl, { watch: [jobsUrl] });
 
 const hasRanJobs: ComputedRef<Boolean> = computed(() => {
   return jobs.value && jobs.value.jobs && jobs.value.jobs.length;
@@ -427,5 +431,9 @@ const nodeRanking: ComputedRef<NodeRanking | null> = computed(() => {
     );
   }
   return null;
+});
+
+const totalJobs = computed(() => {
+  return jobs.value?.totalJobs ?? undefined;
 });
 </script>
