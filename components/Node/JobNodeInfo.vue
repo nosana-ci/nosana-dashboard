@@ -5,7 +5,7 @@
       <tbody>
         <tr>
           <td colspan="2" class="has-background-light">
-            <h4 class="title is-5">Node Info</h4>
+            <h4 class="title is-5">Host Info</h4>
           </td>
         </tr>
         <!-- Specifications -->
@@ -41,11 +41,8 @@
           <td>
             <span class="is-flex-inline">
               <span>Performance Rank</span>
-              <span
-                class="has-tooltip-arrow ml-1"
-                style="vertical-align: middle"
-                data-tooltip="An aggregated performance ranking based on all leaderboard positions of the node compared to all other nodes in the market."
-              >
+              <span class="has-tooltip-arrow ml-1" style="vertical-align: middle"
+                data-tooltip="An aggregated performance ranking based on all leaderboard positions of the node compared to all other nodes in the market.">
                 <img src="~/assets/img/icons/info.svg" />
               </span>
             </span>
@@ -61,11 +58,8 @@
           <td>
             <span class="">
               <span>Stability Rank</span>
-              <span
-                class="has-tooltip-arrow ml-1"
-                style="vertical-align: middle"
-                data-tooltip="An aggregated stability ranking based on the nodes performance variance. The less variance the better."
-              >
+              <span class="has-tooltip-arrow ml-1" style="vertical-align: middle"
+                data-tooltip="An aggregated stability ranking based on the nodes performance variance. The less variance the better.">
                 <img src="~/assets/img/icons/info.svg" />
               </span>
             </span>
@@ -149,10 +143,10 @@ const combinedSpecs = computed(() => {
     bandwidth: nodeInfoData?.network?.download_mbps ?? nodeSpecs.value.bandwidth,
     gpus: nodeInfoData?.gpus?.devices
       ? nodeInfoData.gpus.devices.map((gpu: any) => ({
-          gpu: gpu.name,
-          memory: gpu.memory?.total_mb,
-          architecture: `${gpu.network_architecture?.major}.${gpu.network_architecture?.minor}`,
-        }))
+        gpu: gpu.name,
+        memory: gpu.memory?.total_mb,
+        architecture: `${gpu.network_architecture?.major}.${gpu.network_architecture?.minor}`,
+      }))
       : nodeSpecs.value.gpus,
   };
 });

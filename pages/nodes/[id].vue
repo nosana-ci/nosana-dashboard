@@ -1,5 +1,5 @@
 <template>
-  <TopBar :title="'Node Page'" :subtitle="'Details about this Nosana Node'">
+  <TopBar :title="'Host Page'" :subtitle="'Details about this Nosana Host'">
   </TopBar>
   <div class="box">
     <!-- General Account Info -->

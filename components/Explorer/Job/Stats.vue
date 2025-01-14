@@ -31,10 +31,12 @@
         </h2>
       </div>
       <div class="column is-one-fifth">
-        <h2 class="subtitle">Online GPU Nodes</h2>
+        <h2 class="subtitle">Online GPU Hosts</h2>
         <h2 class="title is-1 pt-2">
           <span v-if="loadingMarkets || loadingRunningJobs">...</span>
-          <CustomCountUp v-else-if="markets" :end-val="markets.reduce((a, b) => a + (b.queueType === 1 ? b.queue.length : 0), 0) + runningJobs.totalJobs"></CustomCountUp>
+          <CustomCountUp v-else-if="markets"
+            :end-val="markets.reduce((a, b) => a + (b.queueType === 1 ? b.queue.length : 0), 0) + runningJobs.totalJobs">
+          </CustomCountUp>
         </h2>
       </div>
     </div>

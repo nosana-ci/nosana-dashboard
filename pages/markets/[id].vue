@@ -17,7 +17,7 @@
               <tbody>
                 <tr>
                   <td>Market Size</td>
-                  <td>{{ totalNodes }} nodes</td>
+                  <td>{{ totalNodes }} hosts</td>
                 </tr>
                 <tr v-if="testgridMarkets.find(m => m.address === marketId)">
                   <td>Market Address</td>
@@ -46,7 +46,7 @@
                   <td>{{ market.jobPrice / 1e6 }} NOS/s</td>
                 </tr>
                 <tr>
-                  <td>Node access key</td>
+                  <td>Access key</td>
                   <td>
                     <a target="_blank" class="address is-family-monospace"
                       :href="'https://explorer.solana.com/address/' + market.nodeAccessKey.toString()">
@@ -66,7 +66,7 @@
         <div class="py-5">
           <div class="level mb-4">
             <div class="level-left">
-              <h2 class="title is-5 mb-0">Nodes Overview</h2>
+              <h2 class="title is-5 mb-0">Hosts Overview</h2>
             </div>
           </div>
 

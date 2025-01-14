@@ -29,7 +29,7 @@
             <td v-if="!queueInfo">
               <span v-if="loadingMarkets || loadingRuns">...</span>
               <span v-else>
-                <div v-if="nodeRuns && nodeRuns.length" data-tooltip="Node is running a job" style="width: fit-content"
+                <div v-if="nodeRuns && nodeRuns.length" data-tooltip="Host is running a job" style="width: fit-content"
                   class="is-flex">
                   <ExplorerJobStatus :status="'RUNNING'"></ExplorerJobStatus>
                 </div>
@@ -41,7 +41,7 @@
               </span>
             </td>
             <td v-else style="vertical-align: middle">
-              <div data-tooltip="Node is queued in market" style="width: fit-content" class="is-flex">
+              <div data-tooltip="Host is queued in market" style="width: fit-content" class="is-flex">
                 <ExplorerJobStatus :status="'QUEUED'"></ExplorerJobStatus>
               </div>
             </td>
@@ -104,7 +104,7 @@
             </td>
           </tr>
           <tr>
-            <td>Node Version</td>
+            <td>CLI Version</td>
             <td v-if="nodeInfo">v{{ nodeInfo.version }}</td>
             <td v-else-if="loadingInfo">...</td>
             <td v-else>Offline</td>
@@ -202,9 +202,8 @@
             ]" x-axis-label="Batch Size" />
         </div>
       </div>
-      <ExplorerJobList :per-page="limit" :total-jobs="totalJobs" v-model:page="page"
-        v-model:state="state" :loading-jobs="loadingJobs" title="Jobs Ran" :jobs="jobs?.value?.jobs || []"
-        :states="[1, 2]" />
+      <ExplorerJobList :per-page="limit" :total-jobs="totalJobs" v-model:page="page" v-model:state="state"
+        :loading-jobs="loadingJobs" title="Jobs Ran" :jobs="jobs?.value?.jobs || []" :states="[1, 2]" />
     </div>
   </div>
 </template>
@@ -375,12 +374,12 @@ const { data: genericBenchmarkResponse, execute: getNodeBenchmarks } = useAPI(
 function fetchAdditionalNodeData() {
   getNodeBenchmarks().catch((err) => {
     console.error(
-      "Could not fetch benchmark info. Possibly offline node:",
+      "Could not fetch benchmark info. Possibly offline host:",
       err
     );
   });
   getNodeInfo().catch((err) => {
-    console.error("Could not fetch node info. Possibly offline node:", err);
+    console.error("Could not fetch host info. Possibly offline host:", err);
   });
 }
 

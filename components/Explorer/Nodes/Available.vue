@@ -31,7 +31,7 @@
           <span class="subtitle"> nodes available</span>
           <div class="is-flex is-justify-content-center doughnut-container">
             <Doughnut class="mt-4" :data="{
-              labels: ['Available Nodes', 'Used Nodes'],
+              labels: ['Available Hosts', 'Used Hosts'],
               datasets: [
                 {
                   data: [markets.reduce((a, b) => {

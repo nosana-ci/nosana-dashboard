@@ -6,21 +6,21 @@
     <table class="table is-fullwidth is-striped">
       <tbody>
         <tr>
-          <td><b>Test Grid Job Queue</b></td>
+          <td><b>Job Queue</b></td>
           <td>
             <span v-if="markets">
               {{
-        markets
-          .filter((m) =>
-            testgridMarkets.find((tgm: any) =>
-              tgm.address === m.address.toString()
-            ),
-          )
-          .reduce(
-            (a, b) => a + (b.queueType === 0 ? b.queue.length : 0),
-            0,
-          )
-      }}
+                markets
+                  .filter((m) =>
+                    testgridMarkets.find((tgm: any) =>
+                      tgm.address === m.address.toString()
+                    ),
+                  )
+                  .reduce(
+                    (a, b) => a + (b.queueType === 0 ? b.queue.length : 0),
+                    0,
+                  )
+              }}
               jobs
             </span>
             <span v-else-if="loadingMarkets || loadingTestgridMarkets">...</span>
@@ -28,21 +28,21 @@
           </td>
         </tr>
         <tr>
-          <td><b>Testgrid Node Queue</b></td>
+          <td><b>Node Queue</b></td>
           <td>
             <span v-if="markets">
               {{
-        markets
-          .filter((m) =>
-            testgridMarkets.find((tgm: any) =>
-              tgm.address === m.address.toString()
-            )
-          )
-          .reduce(
-            (a, b) => a + (b.queueType === 1 ? b.queue.length : 0),
-            0,
-          )
-      }}
+                markets
+                  .filter((m) =>
+                    testgridMarkets.find((tgm: any) =>
+                      tgm.address === m.address.toString()
+                    )
+                  )
+                  .reduce(
+                    (a, b) => a + (b.queueType === 1 ? b.queue.length : 0),
+                    0,
+                  )
+              }}
               nodes
             </span>
             <span v-else-if="loadingMarkets || loadingTestgridMarkets">...</span>
@@ -50,7 +50,7 @@
           </td>
         </tr>
         <tr>
-          <td><b>Testgrid Jobs Running</b></td>
+          <td><b>Jobs Running</b></td>
           <td>
             <span v-if="jobs">
               {{ jobs.totalJobs }}
@@ -63,7 +63,8 @@
       </tbody>
     </table>
     <div v-if="!loadingMarkets && !markets">Could not load markets from blockchain</div>
-    <div v-if="!loadingTestgridMarkets && (!testgridMarkets || !testgridMarkets.length)">Could not load markets from testgrid</div>
+    <div v-if="!loadingTestgridMarkets && (!testgridMarkets || !testgridMarkets.length)">Could not load markets from
+      grid</div>
   </div>
 </template>
 
@@ -107,7 +108,7 @@ const queueData = computed<ChartData<'bar'>>(() => {
     ),
     datasets: [
       {
-        label: 'Nodes',
+        label: 'Hosts',
         borderWidth: 3,
         borderColor: '#2feb2b',
         backgroundColor: '#2feb2b45',
