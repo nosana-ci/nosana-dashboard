@@ -787,7 +787,18 @@ const postJob = async () => {
     await sleep(3);
     router.push('/jobs/' + response.job);
   } catch (e: any) {
-    toast.error(e.toString());
+    const errorMessage = e.toString();
+    const fullError = String(e);
+    if (errorMessage.includes('TransactionExpiredTimeoutError') || 
+        fullError.includes('Transaction was not confirmed in') ||
+        fullError.includes('TimeoutError')) {
+      toast.error('Solana is congested, try again or with a higher fee (Turbo/Ultra)');
+    } else if (errorMessage.includes('Unknown action') || 
+               fullError.includes('Unknown action')) {
+      toast.error('Not enough NOS balance for the transaction');
+    } else {
+      toast.error(errorMessage);
+    }
   }
   loading.value = false;
 }
