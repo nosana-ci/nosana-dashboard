@@ -157,23 +157,9 @@ const combinedSpecs = computed(() => {
   };
 });
 
-// When specs are loaded, retrieve node ranking
-let rankingAPInstance: any = null;
-watch(nodeSpecs, (specs) => {
-  if (specs?.marketAddress) {
-    if (!rankingAPInstance) {
-      // Create new instance with data and execute it
-      rankingAPInstance = useAPI(
-        `/api/benchmarks/node-ranking?market=${specs.marketAddress}`,
-        {
-          // @ts-ignore
-          disableToastOnError: true,
-        }
-      );
-    }
-  }
-}, { immediate: true });
-
+/*************
+ * Node Ranking *
+ *************/
 interface NodeRanking {
   node: string;
   performanceRank: number;
@@ -181,17 +167,21 @@ interface NodeRanking {
   participationRate: number;
 }
 
-const nodeRanking: ComputedRef<NodeRanking | null> = computed(() => {
-  if (
-    rankingAPInstance?.data?.value
-  ) {
-    return (
-      rankingAPInstance.data.value.find((ranking: NodeRanking) => {
-        return ranking.node === props.address;
-      }) || null
-    );
+const { data: rankingData } = useAPI(
+  computed(() => {
+    const marketAddress = nodeSpecs.value?.marketAddress;
+    return marketAddress ? `/api/benchmarks/node-ranking?market=${marketAddress}` : '/api/benchmarks/node-ranking'
+  }),
+  {
+    // @ts-ignore
+    disableToastOnError: true,
+    enabled: computed(() => !!nodeSpecs.value?.marketAddress)
   }
-  return null;
+);
+
+const nodeRanking = computed(() => {
+  if (!rankingData.value) return null;
+  return rankingData.value.find((ranking: NodeRanking) => ranking.node === props.address) || null;
 });
 </script>
 `

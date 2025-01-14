@@ -24,7 +24,7 @@
               </button>
             </div>
             <div v-if="isJobPoster && isRunning(job.state)" class="mr-4">
-              <button @click="openExtendModal" :class="{ 'is-loading': loadingExtend }" class="button is-warning">
+              <button disabled class="button is-warning has-tooltip-arrow" data-tooltip="Coming soon">
                 Extend Job
               </button>
             </div>
@@ -215,7 +215,7 @@ const { pause: pauseJobPolling, resume: resumeJobPolling } = useIntervalFn(
   () => {
     refreshJob();
   },
-  3000,
+  30000,
   { immediate: false }
 );
 
