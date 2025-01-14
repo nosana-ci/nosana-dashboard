@@ -203,7 +203,7 @@
         </div>
       </div>
       <ExplorerJobList :per-page="limit" :total-jobs="totalJobs" v-model:page="page"
-        v-model:state="state" :loading-jobs="loadingJobs" title="Jobs Ran" :jobs="jobs.value?.jobs"
+        v-model:state="state" :loading-jobs="loadingJobs" title="Jobs Ran" :jobs="jobs?.value?.jobs || []"
         :states="[1, 2]" />
     </div>
   </div>
@@ -292,7 +292,7 @@ interface JobsResponse {
 const { data: jobs, pending: loadingJobs } = useAPI<JobsResponse | null>(jobsUrl, { watch: [jobsUrl] });
 
 const hasRanJobs: ComputedRef<Boolean> = computed(() => {
-  return jobs.value && jobs.value.jobs && jobs.value.jobs.length;
+  return Boolean(jobs?.value?.jobs?.length);
 });
 
 /**********************
