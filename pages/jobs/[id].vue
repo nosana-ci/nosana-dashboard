@@ -215,7 +215,7 @@ const { pause: pauseJobPolling, resume: resumeJobPolling } = useIntervalFn(
   () => {
     refreshJob();
   },
-  3000,
+  30000,
   { immediate: false }
 );
 
