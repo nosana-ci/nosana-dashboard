@@ -96,7 +96,7 @@
                       <span class="icon has-text-success">
                         <i class="fas fa-users"></i>
                       </span>
-                      <span class="has-text-weight-medium">All nodes</span>
+                      <span class="has-text-weight-medium">All hosts</span>
                     </td>
                     <td>{{ totalNodes }}</td>
                     <td class="is-hidden-mobile">
