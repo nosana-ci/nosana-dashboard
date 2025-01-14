@@ -202,8 +202,8 @@
             ]" x-axis-label="Batch Size" />
         </div>
       </div>
-      <ExplorerJobList :per-page="limit" :total-jobs="jobs ? jobs.totalJobs : null" v-model:page="page"
-        v-model:state="state" :loading-jobs="loadingJobs" title="Jobs Ran" :jobs="jobs ? jobs.jobs : null"
+      <ExplorerJobList :per-page="limit" :total-jobs="totalJobs" v-model:page="page"
+        v-model:state="state" :loading-jobs="loadingJobs" title="Jobs Ran" :jobs="jobs?.value?.jobs || []"
         :states="[1, 2]" />
     </div>
   </div>
@@ -283,12 +283,16 @@ const jobsUrl: ComputedRef<string> = computed(() => {
     }${state.value !== null ? `&state=${jobStateMapping[state.value]}` : ""}${"&node=" + props.address
     }`;
 });
-const { data: jobs, pending: loadingJobs } = useAPI(jobsUrl, {
-  watch: [jobsUrl],
-});
+
+interface JobsResponse {
+  totalJobs: number;
+  jobs: any[];
+}
+
+const { data: jobs, pending: loadingJobs } = useAPI<JobsResponse | null>(jobsUrl, { watch: [jobsUrl] });
 
 const hasRanJobs: ComputedRef<Boolean> = computed(() => {
-  return jobs.value && jobs.value.jobs && jobs.value.jobs.length;
+  return Boolean(jobs?.value?.jobs?.length);
 });
 
 /**********************
@@ -397,13 +401,17 @@ let rankingAPInstance: any = null;
 watch(nodeSpecs, (specs) => {
   if (specs?.marketAddress) {
     if (!rankingAPInstance) {
-      // Disabled for performance reasons in production
+      // Create new instance with data and execute it
       rankingAPInstance = useAPI(
-        `/api/benchmarks/node-ranking?market=${specs.marketAddress}`
+        `/api/benchmarks/node-ranking?market=${specs.marketAddress}`,
+        {
+          // @ts-ignore
+          disableToastOnError: true,
+        }
       );
     }
   }
-});
+}, { immediate: true });
 
 interface NodeRanking {
   node: string;
@@ -411,11 +419,10 @@ interface NodeRanking {
   stabilityRank: number;
   participationRate: number;
 }
+
 const nodeRanking: ComputedRef<NodeRanking | null> = computed(() => {
   if (
-    rankingAPInstance &&
-    rankingAPInstance.data &&
-    rankingAPInstance.data.value
+    rankingAPInstance?.data?.value
   ) {
     return (
       rankingAPInstance.data.value.find((ranking: NodeRanking) => {
@@ -424,5 +431,9 @@ const nodeRanking: ComputedRef<NodeRanking | null> = computed(() => {
     );
   }
   return null;
+});
+
+const totalJobs = computed(() => {
+  return jobs.value?.totalJobs ?? undefined;
 });
 </script>
