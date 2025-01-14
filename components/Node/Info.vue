@@ -267,7 +267,7 @@
         v-model:state="state"
         :loading-jobs="loadingJobs"
         title="Jobs Ran"
-        :jobs="jobs?.value?.jobs || []"
+        :jobs="jobs?.jobs || []"
         :states="[1, 2]"
       />
     </div>
