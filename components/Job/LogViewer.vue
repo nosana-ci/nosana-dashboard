@@ -40,7 +40,7 @@
         <!-- Active Progress Bars -->
         <div v-for="bar in activeProgressBars" :key="bar.id" class="progress-bar-container mb-4">
           <div class="progress-text">
-            {{ bar.status }} | {{ bar.id }} | {{ bar.current }}{{ bar.format }}/{{ bar.total }}{{ bar.format }}
+            {{ bar.status }} | {{ bar.id }} | {{ bar.current }}{{ bar.currentFormat }}/{{ bar.total }}{{ bar.totalFormat }}
           </div>
           <progress 
             class="progress is-primary" 

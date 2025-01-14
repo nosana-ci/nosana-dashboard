@@ -7,7 +7,8 @@ interface ProgressBar {
   current: number;
   total: number;
   status: string;
-  format: string;
+  currentFormat: string;
+  totalFormat: string;
   completed: boolean;
 }
 
@@ -112,7 +113,8 @@ export function useJobLogs() {
           current: currentValue,
           total: totalValue,
           status,
-          format: `${currentFormat.toUpperCase()}/${totalFormat.toUpperCase()}`,
+          currentFormat: currentFormat.toUpperCase(),
+          totalFormat: totalFormat.toUpperCase(),
           completed: false
         };
         progressBars.value.set(layerId, bar);
@@ -120,7 +122,8 @@ export function useJobLogs() {
         bar.current = currentValue;
         bar.total = totalValue;
         bar.status = status;
-        bar.format = `${currentFormat.toUpperCase()}/${totalFormat.toUpperCase()}`;
+        bar.currentFormat = currentFormat.toUpperCase();
+        bar.totalFormat = totalFormat.toUpperCase();
       }
     }
   }
