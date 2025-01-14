@@ -16,7 +16,7 @@
         <template v-if="loadingRunningJobs">
           <span class="title">...</span>
           <br>
-          <span class="subtitle"> nodes available</span>
+          <span class="subtitle"> hosts available</span>
         </template>
 
         <template v-else-if="runningJobs">

@@ -2,7 +2,7 @@
   <div>
     <div v-if="!isNode">
       <div v-if="loadingJobs || loadingSpecs || loadingMarkets || loadingRuns">
-        Checking if account is node..
+        Checking if account is host..
       </div>
       <div v-else>
         <!-- Not a node-->

@@ -13,7 +13,7 @@
         </td>
       </tr>
       <tr>
-        <td>Node</td>
+        <td>Host</td>
         <td>
           <span v-if="props.job.node.toString() === '11111111111111111111111111111111'">
             Unclaimed
