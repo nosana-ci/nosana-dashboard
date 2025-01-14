@@ -29,15 +29,23 @@ export function useJobLogs() {
   // Configure ansi_up
   ansi.use_classes = true;
 
-  function formatSize(bytes: number): { value: number; format: string } {
-    if (!bytes || isNaN(bytes)) return { value: 0, format: 'B' };
-    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    const result = {
-      value: Number((bytes / Math.pow(1024, i)).toFixed(2)),
-      format: sizes[i]
-    };
-    return result;
+  function convertFromBytes(
+    bytes: number,
+    toFormat?: 'gb' | 'mb' | 'kb',
+  ): { value: number; format: 'gb' | 'mb' | 'kb' } {
+    let value = bytes / 1024;
+
+    if ((value < 1024 && !toFormat) || toFormat === 'kb') {
+      return { value: Number(value.toFixed(2)), format: 'kb' };
+    }
+
+    value = value / 1024;
+
+    if ((value < 1024 && !toFormat) || toFormat === 'mb') {
+      return { value: Number(value.toFixed(2)), format: 'mb' };
+    }
+
+    return { value: Number((value / 1024).toFixed(2)), format: 'gb' };
   }
 
   function addLogEntry(content: string, isHtml: boolean = false) {
@@ -94,8 +102,8 @@ export function useJobLogs() {
     if (['Downloading', 'Extracting'].includes(status)) {
       const current = progressDetail?.current || 0;
       const total = progressDetail?.total || 0;
-      const { value: currentValue } = formatSize(current);
-      const { value: totalValue, format } = formatSize(total);
+      const { value: currentValue, format: currentFormat } = convertFromBytes(current);
+      const { value: totalValue, format: totalFormat } = convertFromBytes(total);
 
       let bar = progressBars.value.get(layerId);
       if (!bar) {
@@ -104,7 +112,7 @@ export function useJobLogs() {
           current: currentValue,
           total: totalValue,
           status,
-          format,
+          format: `${currentFormat.toUpperCase()}/${totalFormat.toUpperCase()}`,
           completed: false
         };
         progressBars.value.set(layerId, bar);
@@ -112,7 +120,7 @@ export function useJobLogs() {
         bar.current = currentValue;
         bar.total = totalValue;
         bar.status = status;
-        bar.format = format;
+        bar.format = `${currentFormat.toUpperCase()}/${totalFormat.toUpperCase()}`;
       }
     }
   }
