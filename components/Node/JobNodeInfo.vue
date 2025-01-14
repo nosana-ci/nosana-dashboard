@@ -172,7 +172,7 @@ watch(nodeSpecs, (specs) => {
       );
     }
   }
-});
+}, { immediate: true });
 
 interface NodeRanking {
   node: string;
@@ -183,9 +183,7 @@ interface NodeRanking {
 
 const nodeRanking: ComputedRef<NodeRanking | null> = computed(() => {
   if (
-    rankingAPInstance &&
-    rankingAPInstance.data &&
-    rankingAPInstance.data.value
+    rankingAPInstance?.data?.value
   ) {
     return (
       rankingAPInstance.data.value.find((ranking: NodeRanking) => {
