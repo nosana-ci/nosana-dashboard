@@ -24,7 +24,7 @@
               </button>
             </div>
             <div v-if="isJobPoster && isRunning(job.state)" class="mr-4">
-              <button disabled class="button is-warning has-tooltip-arrow" data-tooltip="Coming soon">
+              <button @click="openExtendModal" :class="{ 'is-loading': loadingExtend }" class="button is-warning">
                 Extend Job
               </button>
             </div>
@@ -634,24 +634,24 @@ function stripAnsi(str: string): string {
 
 function handleWebSocketMessage(event: MessageEvent) {
   logViewer.value?.handleWebSocketMessage(event);
-  
+
   // Check for service online message in logs
   const data = event.data;
-  
+
   try {
     const jsonData = typeof data === 'string' ? JSON.parse(data) : data;
-    
+
     if (jsonData.data) {
       const innerData = typeof jsonData.data === 'string' ? JSON.parse(jsonData.data) : jsonData.data;
-      
+
       // Check if this is a log message about service being exposed
       if (innerData.log) {
         const cleanLog = stripAnsi(innerData.log);
-        
+
         // Try both URL formats
         const exposedMatch = cleanLog.match(/Job .* is now exposed \((https:\/\/[^)]+)\)/) ||
-                           cleanLog.match(/Service exposed at: (https:\/\/[^)\s]+)/);
-        
+          cleanLog.match(/Service exposed at: (https:\/\/[^)\s]+)/);
+
         if (exposedMatch) {
           const url = exposedMatch[1];
           serviceUrl.value = url;
@@ -667,7 +667,7 @@ function handleWebSocketMessage(event: MessageEvent) {
 // Update the computed property for service URL
 watch(() => job.value?.address, (newAddress) => {
   if (!newAddress) return;
-  
+
   // Set default URL (for non-private jobs)
   if (job.value?.jobDefinition?.ops?.[0]?.args?.expose) {
     if (!job.value?.jobDefinition?.ops[0]?.args?.private) {

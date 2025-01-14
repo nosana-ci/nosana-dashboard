@@ -27,15 +27,8 @@
         </tbody>
       </table>
 
-      <ExplorerJobList
-        :per-page="limit"
-        :total-jobs="jobs ? jobs.totalJobs : null"
-        v-model:page="page"
-        v-model:state="state"
-        :loading-jobs="loadingJobs"
-        title="Jobs Posted"
-        :jobs="jobs ? jobs.jobs : null"
-      />
+      <ExplorerJobList :per-page="limit" :total-jobs="jobs ? jobs.totalJobs : null" v-model:page="page"
+        v-model:state="state" :loading-jobs="loadingJobs" title="Jobs Posted" :jobs="jobs ? jobs.jobs : null" />
     </div>
   </div>
 </template>
@@ -71,7 +64,7 @@ const hasPostedJobs: ComputedRef<boolean> = computed(() => {
   return !!(jobs.value && jobs.value.jobs && jobs.value.jobs.length)
 });
 
-const isPoster: ComputedRef<boolean> = computed(() => {
-  return !loadingJobs.value && !!jobs.value
-});
+const isPoster: ComputedRef<Boolean> = computed(() => {
+  return hasPostedJobs.value
+})
 </script>
