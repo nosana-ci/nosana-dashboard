@@ -5,20 +5,20 @@
       <li class="steps-segment" :class="{ 'is-active': step === 'job-definition' }">
         <span class="steps-marker is-clickable" @click="step = 'job-definition'">1</span>
         <div class="steps-content">
-          <p class="is-size-4">Job Definition</p>
+          <h3 class="title is-size-7 mt-2">Define Job</h3>
         </div>
       </li>
       <li class="steps-segment" :class="{ 'is-active': step === 'pick-market' }">
         <span class="steps-marker" :class="{ 'is-clickable': step !== 'job-definition' }"
           @click="step !== 'job-definition' ? step = 'pick-market' : null">2</span>
         <div class="steps-content">
-          <p class="is-size-4">GPU Market</p>
+          <h3 class="title is-size-7 mt-2">Select Market</h3>
         </div>
       </li>
       <li class="steps-segment" :class="{ 'is-active': step === 'post-job' }">
         <span class="steps-marker">3</span>
         <div class="steps-content">
-          <p class="is-size-4">Post Job</p>
+          <h3 class="title is-size-7 mt-2">Post Job</h3>
         </div>
       </li>
     </ul>
@@ -570,6 +570,11 @@
     </div>
   </div>
 </template>
+<style>
+.steps .steps-marker {
+  z-index: 4;
+}
+</style>
 <script lang="ts" setup>
 import VueJsonPretty from "vue-json-pretty";
 import 'vue-json-pretty/lib/styles.css';
