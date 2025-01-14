@@ -388,6 +388,7 @@ const stopJob = async () => {
     // If job is completed (2) or stopped (3), no need to proceed
     if (numericState === 2 || numericState === 3) {
       toast.info(`Job is already ${numericState === 2 ? 'COMPLETED' : 'STOPPED'}`);
+      loading.value = false;
       return;
     }
 
@@ -404,6 +405,8 @@ const stopJob = async () => {
     // Otherwise, let the user know
     else {
       toast.error(`Job is not in QUEUED or RUNNING state (currently: ${job.value.state})`);
+      loading.value = false;
+      return;
     }
 
     // Wait 10 seconds before refreshing to allow backend to update
@@ -411,7 +414,17 @@ const stopJob = async () => {
     refreshJob();
   } catch (e) {
     const errorMessage = e instanceof Error ? e.message : String(e);
-    toast.error(`Error stopping job: ${errorMessage}`);
+    const fullError = String(e);
+    if (errorMessage.includes('TransactionExpiredTimeoutError') || 
+        fullError.includes('Transaction was not confirmed in') ||
+        fullError.includes('TimeoutError')) {
+      toast.error('Solana is congested, try again or with a higher fee (Turbo/Ultra)');
+    } else if (errorMessage.includes('Unknown action') || 
+               fullError.includes('Unknown action')) {
+      toast.error('Not enough NOS balance for the transaction');
+    } else {
+      toast.error(`Error stopping job: ${errorMessage}`);
+    }
     console.error('Stop job error:', e);
   } finally {
     loading.value = false;
@@ -465,7 +478,17 @@ const confirmExtend = async () => {
     refreshJob();
   } catch (e) {
     const errorMessage = e instanceof Error ? e.message : String(e);
-    toast.error(`Error extending job: ${errorMessage}`);
+    const fullError = String(e);
+    if (errorMessage.includes('TransactionExpiredTimeoutError') || 
+        fullError.includes('Transaction was not confirmed in') ||
+        fullError.includes('TimeoutError')) {
+      toast.error('Solana is congested, try again or with a higher fee (Turbo/Ultra)');
+    } else if (errorMessage.includes('Unknown action') || 
+               fullError.includes('Unknown action')) {
+      toast.error('Not enough NOS balance for the transaction');
+    } else {
+      toast.error(`Error extending job: ${errorMessage}`);
+    }
     console.error('Extend job error:', e);
   } finally {
     loadingExtend.value = false;
