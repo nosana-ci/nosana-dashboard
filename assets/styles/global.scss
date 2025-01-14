@@ -451,3 +451,7 @@
     opacity: 0.5;
   }
 }
+
+.dark-mode .has-tooltip-arrow img {
+  filter: invert(1);
+}

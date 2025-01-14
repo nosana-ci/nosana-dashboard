@@ -570,6 +570,11 @@
     </div>
   </div>
 </template>
+<style>
+.steps .steps-marker {
+  z-index: 4;
+}
+</style>
 <script lang="ts" setup>
 import VueJsonPretty from "vue-json-pretty";
 import 'vue-json-pretty/lib/styles.css';
