@@ -6,7 +6,11 @@
       <div class="field">
         <label class="label">Host Address</label>
         <div class="control">
-          <input class="input" v-model="filters.node" placeholder="Enter Node Address" />
+          <input
+            class="input"
+            v-model="filters.node"
+            placeholder="Enter Node Address"
+          />
         </div>
       </div>
 
@@ -17,7 +21,11 @@
           <div class="select is-fullwidth">
             <select v-model="filters.batchSize">
               <option :value="null">All Batch Sizes</option>
-              <option v-for="size in availableBatchSizes" :key="size" :value="size">
+              <option
+                v-for="size in availableBatchSizes"
+                :key="size"
+                :value="size"
+              >
                 {{ size }}
               </option>
             </select>
@@ -32,7 +40,11 @@
           <div class="select is-fullwidth">
             <select v-model="filters.model">
               <option value="">All Models</option>
-              <option v-for="model in availableModels" :key="model" :value="model">
+              <option
+                v-for="model in availableModels"
+                :key="model"
+                :value="model"
+              >
                 {{ model }}
               </option>
             </select>
@@ -47,7 +59,11 @@
           <div class="select is-fullwidth">
             <select v-model="filters.framework">
               <option value="">All Frameworks</option>
-              <option v-for="framework in availableFrameworks" :key="framework" :value="framework">
+              <option
+                v-for="framework in availableFrameworks"
+                :key="framework"
+                :value="framework"
+              >
                 {{ framework }}
               </option>
             </select>
@@ -87,47 +103,73 @@
     </div>
 
     <!-- Loading Bar -->
-    <progress v-if="loading" class="progress is-small is-info my-0" max="100"></progress>
+    <progress
+      v-if="loading"
+      class="progress is-small is-info my-0"
+      max="100"
+    ></progress>
 
     <!-- Leaderboard Table -->
-    <table v-else class="table is-fullwidth is-striped">
-      <thead>
-        <tr>
-          <!-- Non-sortable columns -->
-          <th>Host</th>
-          <th>GPU</th>
-          <th>Framework</th>
-          <th>Model</th>
-          <th>Batch Size</th>
-          <!-- Sortable column with sorting arrows -->
-          <th @click="sortBy('imagesPerSecond')" class="sortable">
-            Images/Sec
-            <span v-html="renderSortIcon('imagesPerSecond')"></span>
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        <nuxt-link v-for="item in leaderboardData" :key="generateRowKey(item)" :to="`/nodes/${item.node}`" custom>
-          <template #default="{ navigate }">
-            <tr class="is-clickable remove-greyscale-on-hover" @click="navigate">
-              <td>
-                <nuxt-link :to="`/nodes/${item.node}`" class="is-family-monospace address has-text-black">
-                  {{ item.node }}
-                </nuxt-link>
-              </td>
-              <td>{{ item.gpu }}</td>
-              <td>{{ item.framework }}</td>
-              <td>{{ item.modelName || "N/A" }}</td>
-              <td>{{ item.batchSize }}</td>
-              <td>{{ item.metrics.imagesPerSecond }}</td>
-            </tr>
-          </template>
-        </nuxt-link>
-      </tbody>
-    </table>
+    <div v-else class="table-responsive">
+      <table class="table is-fullwidth is-striped">
+        <thead>
+          <tr>
+            <!-- Non-sortable columns -->
+            <th>Host</th>
+            <th>GPU</th>
+            <th>Framework</th>
+            <th>Model</th>
+            <th>Batch Size</th>
+            <!-- Sortable column with sorting arrows -->
+            <th @click="sortBy('imagesPerSecond')" class="sortable">
+              Images/Sec
+              <span v-html="renderSortIcon('imagesPerSecond')"></span>
+            </th>
+            <th @click="sortBy('pricePerThousandImages')" class="sortable">
+              Price Per Thousand Images
+              <span v-html="renderSortIcon('pricePerThousandImages')"></span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <nuxt-link
+            v-for="item in leaderboardData"
+            :key="generateRowKey(item)"
+            :to="`/nodes/${item.node}`"
+            custom
+          >
+            <template #default="{ navigate }">
+              <tr
+                class="is-clickable remove-greyscale-on-hover"
+                @click="navigate"
+              >
+                <td>
+                  <nuxt-link
+                    :to="`/nodes/${item.node}`"
+                    class="is-family-monospace address has-text-black"
+                  >
+                    {{ item.node }}
+                  </nuxt-link>
+                </td>
+                <td>{{ item.gpu }}</td>
+                <td>{{ item.framework }}</td>
+                <td>{{ item.modelName || "N/A" }}</td>
+                <td>{{ item.batchSize }}</td>
+                <td>{{ item.metrics.imagesPerSecond }}</td>
+                <td>{{ item.metrics.pricePerThousandImages }}</td>
+              </tr>
+            </template>
+          </nuxt-link>
+        </tbody>
+      </table>
+    </div>
 
     <!-- Pagination with clickable page numbers -->
-    <nav class="pagination is-centered mt-4" role="navigation" aria-label="pagination">
+    <nav
+      class="pagination is-centered mt-4"
+      role="navigation"
+      aria-label="pagination"
+    >
       <a class="pagination-previous" @click="prevPage">Previous</a>
       <a class="pagination-next" @click="nextPage">Next</a>
       <ul class="pagination-list">
@@ -140,7 +182,11 @@
         </li>
         <!-- Current pages -->
         <li v-for="p in pagesToShow" :key="p">
-          <a @click="goToPage(p)" :class="{ 'pagination-link': true, 'is-current': p === page }">{{ p }}</a>
+          <a
+            @click="goToPage(p)"
+            :class="{ 'pagination-link': true, 'is-current': p === page }"
+            >{{ p }}</a
+          >
         </li>
         <!-- Last page -->
         <li v-if="!pagesToShow.includes(totalPages)">
@@ -172,8 +218,8 @@ const defaultFilters = {
 const filters = ref({ ...defaultFilters });
 
 const sort = ref({
-  orderBy: "imagesPerSecond",
-  order: "desc",
+  orderBy: "pricePerThousandImages",
+  order: "asc",
 });
 
 const page = ref(1);
@@ -266,8 +312,13 @@ const leaderboardUrl = computed(() => {
   }
 
   // Add sorting parameters
-  if (sort.value.orderBy) params.append("orderBy", sort.value.orderBy);
-  if (sort.value.order) params.append("order", sort.value.order);
+  type SortField = "pricePerThousandImages" | "imagesPerSecond";
+  const orderByMap: Record<SortField, string> = {
+    pricePerThousandImages: "pricePerThousandImages",
+    imagesPerSecond: "imagesPerSecond",
+  };
+  params.append("orderBy", orderByMap[sort.value.orderBy as SortField]);
+  params.append("order", sort.value.order);
 
   return `/api/benchmarks/image-gen-benchmark-data?${params.toString()}`;
 });
@@ -284,7 +335,14 @@ const leaderboardData = computed(() => {
 
   return leaderboardResponse.value.data.map((item) => ({
     ...item,
-    gpu: gpuAddressToSlug.value[item.gpu] || item.gpu, // Fall back to address if slug not found
+    gpu: gpuAddressToSlug.value[item.gpu] || item.gpu,
+    metrics: {
+      ...item.metrics,
+      imagesPerSecond: Number(item.metrics.imagesPerSecond).toFixed(2),
+      pricePerThousandImages: Number(
+        item.metrics.pricePerThousandImages
+      ).toFixed(2),
+    },
   }));
 });
 
@@ -302,11 +360,12 @@ const totalPages = computed(() => {
 
 // Implement sorting functionality
 function sortBy(field: string) {
-  if (field !== "imagesPerSecond") return;
+  if (field !== "imagesPerSecond" && field !== "pricePerThousandImages") return;
   if (sort.value.orderBy === field) {
     sort.value.order = sort.value.order === "asc" ? "desc" : "asc";
   } else {
     sort.value.orderBy = field;
+    sort.value.order = "asc";
   }
   page.value = 1;
 }
@@ -365,7 +424,7 @@ function resetFilters() {
 }
 </script>
 
-<style scoped>
+<style lang="scss" scoped>
 .filters {
   display: flex;
   flex-wrap: wrap;
@@ -446,5 +505,43 @@ td {
   .address {
     max-width: 70px;
   }
+}
+
+.table-responsive {
+  overflow-x: auto;
+  margin: 1rem -1rem;
+  padding: 0 1rem;
+
+  @include from($tablet) {
+    margin: 1rem 0;
+  }
+}
+
+.table {
+  min-width: 800px;
+  table-layout: fixed;
+  width: 100%;
+
+  td {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  th {
+    text-align: left;
+    white-space: normal;
+    vertical-align: bottom;
+    line-height: 1.2;
+  }
+}
+
+/* Update the existing address styles to be more specific */
+td .address {
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
 }
 </style>
