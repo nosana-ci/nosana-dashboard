@@ -23,7 +23,23 @@
       </div>
     </div>
   </div>
-
+  <div class="has-limited-width">
+    <p v-if="tab === 'premium'">
+      Tailored for mission-critical applications, the Premium Market provides access to top-tier GPUs from validated
+      providers. With a focus on reliability and performance, it's the go-to choice for high-demand, time-sensitive
+      workloads.
+    </p>
+    <p v-else-if="tab === 'community'">
+      Perfect for exploratory projects and cost-effective solutions, the Community Market connects clients with GPUs
+      from unvalidated hosts. Ideal for testing, prototyping, or non-critical workloads while supporting emerging
+      providers.
+    </p>
+    <p v-else-if="tab === 'all'">
+      The Nosana Network is an open platform, allowing anyone to create their own markets. This tab provides a
+      comprehensive list of all markets, including those not managed by Nosana. Ideal for users looking to explore
+      various options or set up private markets for their GPU nodes.
+    </p>
+  </div>
   <div class="table-container">
     <table class="table is-fullwidth is-striped is-hoverable" :class="{ 'is-narrow': select }">
       <thead>
