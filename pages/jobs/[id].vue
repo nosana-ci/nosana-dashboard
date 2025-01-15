@@ -80,6 +80,7 @@
               Please connect your wallet to view logs
             </div>
             <div v-else-if="loading">Loading logs..</div>
+            <div v-else-if="isCompleted(job.state) && (!job.ipfsResult || !ipfsResult)">The job was prematurely stopped so no logs are available</div>
             <div v-else-if="!ipfsResult">No logs</div>
             <div v-else-if="ipfsResult.results && ipfsResult.results[0] === 'nos/secret'">
               Results are secret
@@ -181,9 +182,6 @@ function isRunning(stateVal: string | number): boolean {
 }
 function isCompleted(stateVal: string | number): boolean {
   return getStateNumber(stateVal) === 2;
-}
-function isStopped(stateVal: string | number): boolean {
-  return getStateNumber(stateVal) === 3;
 }
 
 const { params } = useRoute();
