@@ -6,7 +6,11 @@
       <div class="field">
         <label class="label">Host Address</label>
         <div class="control">
-          <input class="input" v-model="filters.node" placeholder="Enter Node Address" />
+          <input
+            class="input"
+            v-model="filters.node"
+            placeholder="Enter Node Address"
+          />
         </div>
       </div>
 
@@ -32,7 +36,11 @@
           <div class="select is-fullwidth">
             <select v-model="filters.model">
               <option value="">All Models</option>
-              <option v-for="model in availableModels" :key="model" :value="model">
+              <option
+                v-for="model in availableModels"
+                :key="model"
+                :value="model"
+              >
                 {{ model }}
               </option>
             </select>
@@ -47,7 +55,11 @@
           <div class="select is-fullwidth">
             <select v-model="filters.framework">
               <option value="">All Frameworks</option>
-              <option v-for="framework in availableFrameworks" :key="framework" :value="framework">
+              <option
+                v-for="framework in availableFrameworks"
+                :key="framework"
+                :value="framework"
+              >
                 {{ framework }}
               </option>
             </select>
@@ -87,52 +99,73 @@
     </div>
 
     <!-- Loading Bar -->
-    <progress v-if="loading" class="progress is-small is-info my-0" max="100"></progress>
+    <progress
+      v-if="loading"
+      class="progress is-small is-info my-0"
+      max="100"
+    ></progress>
 
     <!-- Leaderboard Table -->
-    <table v-else class="table is-fullwidth is-striped">
-      <thead>
-        <tr>
-          <!-- Removed sorting functionality from these columns -->
-          <th>Host</th>
-          <th>GPU</th>
-          <th>Framework</th>
-          <th>Model</th>
-          <th>Concurrent Users (CU)</th>
-          <!-- Kept sorting functionality for these columns -->
-          <th @click="sortBy('averageTokensPerSecond')" class="sortable">
-            Avg Tokens/Sec
-            <span v-html="renderSortIcon('averageTokensPerSecond')"></span>
-          </th>
-          <th @click="sortBy('pricePerMillionTokens')" class="sortable">
-            Price per Million Tokens
-            <span v-html="renderSortIcon('pricePerMillionTokens')"></span>
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        <nuxt-link v-for="item in leaderboardData" :key="generateRowKey(item)" :to="`/nodes/${item.node}`" custom>
-          <template #default="{ navigate }">
-            <tr class="is-clickable remove-greyscale-on-hover" @click="navigate">
-              <td>
-                <nuxt-link :to="`/nodes/${item.node}`" class="is-family-monospace address has-text-black">
-                  {{ item.node }}
-                </nuxt-link>
-              </td>
-              <td>{{ item.gpu }}</td>
-              <td>{{ item.framework }}</td>
-              <td>{{ item.modelName }}</td>
-              <td>{{ item.cuCount }}</td>
-              <td>{{ item.metrics.averageTokensPerSecond }}</td>
-              <td>{{ item.metrics.pricePerMillionTokens.toFixed(2) }}</td>
-            </tr>
-          </template>
-        </nuxt-link>
-      </tbody>
-    </table>
+    <div v-else class="table-responsive">
+      <table class="table is-fullwidth is-striped">
+        <thead>
+          <tr>
+            <!-- Removed sorting functionality from these columns -->
+            <th>Host</th>
+            <th>GPU</th>
+            <th>Framework</th>
+            <th>Model</th>
+            <th>Concurrent Users (CU)</th>
+            <!-- Kept sorting functionality for these columns -->
+            <th @click="sortBy('averageTokensPerSecond')" class="sortable">
+              Avg Tokens/Sec
+              <span v-html="renderSortIcon('averageTokensPerSecond')"></span>
+            </th>
+            <th @click="sortBy('pricePerMillionTokens')" class="sortable">
+              Price per Million Tokens
+              <span v-html="renderSortIcon('pricePerMillionTokens')"></span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <nuxt-link
+            v-for="item in leaderboardData"
+            :key="generateRowKey(item)"
+            :to="`/nodes/${item.node}`"
+            custom
+          >
+            <template #default="{ navigate }">
+              <tr
+                class="is-clickable remove-greyscale-on-hover"
+                @click="navigate"
+              >
+                <td>
+                  <nuxt-link
+                    :to="`/nodes/${item.node}`"
+                    class="is-family-monospace address has-text-black"
+                  >
+                    {{ item.node }}
+                  </nuxt-link>
+                </td>
+                <td>{{ item.gpu }}</td>
+                <td>{{ item.framework }}</td>
+                <td>{{ item.modelName }}</td>
+                <td>{{ item.cuCount }}</td>
+                <td>{{ formatNumber(item.metrics.averageTokensPerSecond) }}</td>
+                <td>{{ formatNumber(item.metrics.pricePerMillionTokens) }}</td>
+              </tr>
+            </template>
+          </nuxt-link>
+        </tbody>
+      </table>
+    </div>
 
     <!-- Pagination with clickable page numbers -->
-    <nav class="pagination is-centered mt-4" role="navigation" aria-label="pagination">
+    <nav
+      class="pagination is-centered mt-4"
+      role="navigation"
+      aria-label="pagination"
+    >
       <a class="pagination-previous" @click="prevPage">Previous</a>
       <a class="pagination-next" @click="nextPage">Next</a>
       <ul class="pagination-list">
@@ -145,7 +178,11 @@
         </li>
         <!-- Current pages -->
         <li v-for="p in pagesToShow" :key="p">
-          <a @click="goToPage(p)" :class="{ 'pagination-link': true, 'is-current': p === page }">{{ p }}</a>
+          <a
+            @click="goToPage(p)"
+            :class="{ 'pagination-link': true, 'is-current': p === page }"
+            >{{ p }}</a
+          >
         </li>
         <!-- Last page -->
         <li v-if="!pagesToShow.includes(totalPages)">
@@ -370,9 +407,15 @@ const pagesToShow = computed(() => {
 function resetFilters() {
   filters.value = { ...defaultFilters };
 }
+
+function formatNumber(value: any) {
+  if (value === null || value === undefined) return "N/A";
+  const num = parseFloat(value);
+  return isNaN(num) ? "N/A" : num.toFixed(2);
+}
 </script>
 
-<style scoped>
+<style lang="scss" scoped>
 .pagination-container {
   display: flex;
   justify-content: space-between;
@@ -456,5 +499,19 @@ th {
   .address {
     max-width: 70px;
   }
+}
+
+.table-responsive {
+  overflow-x: auto;
+  margin: 1rem -1rem;
+  padding: 0 1rem;
+
+  @include from($tablet) {
+    margin: 1rem 0;
+  }
+}
+
+.table {
+  min-width: 800px;
 }
 </style>
