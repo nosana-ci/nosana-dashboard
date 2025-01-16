@@ -15,8 +15,16 @@
     </td>
   </tr>
   <tr>
+    <td>NVIDIA Driver</td>
+    <td>{{ specs.nvmlVersion || "-"}}</td>
+  </tr>
+  <tr>
+    <td>CUDA Version</td>
+    <td>{{ specs.cudaVersion  || "-"}}</td>
+  </tr>
+  <tr>
     <td>CPU</td>
-    <td>{{ specs.cpu }}</td>
+    <td>{{ specs.cpu || "-" }}</td>
   </tr>
   <tr>
     <td>RAM</td>
@@ -44,6 +52,8 @@ interface Specs {
     download: number;
     upload: number;
   };
+  cudaVersion: number;
+  nvmlVersion: string;
 }
 
 const props = defineProps<{

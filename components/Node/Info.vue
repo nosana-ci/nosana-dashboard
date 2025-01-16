@@ -432,6 +432,8 @@ const combinedSpecs = computed(() => {
           architecture: `${gpu.network_architecture?.major}.${gpu.network_architecture?.minor}`,
         }))
       : nodeSpecs.value.gpus,
+    cudaVersion: nodeInfoData?.gpus.cuda_driver_version,
+    nvmlVersion: nodeInfoData?.gpus.nvml_driver_version
   };
 });
 

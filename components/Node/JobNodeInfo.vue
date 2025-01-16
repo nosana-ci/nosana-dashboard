@@ -14,6 +14,14 @@
           <td>{{ combinedSpecs?.gpus?.[0]?.gpu || "-" }}</td>
         </tr>
         <tr>
+        <td>NVIDIA Driver</td>
+          <td>{{ combinedSpecs?.nvmlVersion || "-"}}</td>
+        </tr>
+        <tr>
+          <td>CUDA Version</td>
+          <td>{{ combinedSpecs?.cudaVersion  || "-"}}</td>
+        </tr>
+        <tr>
           <td>CPU</td>
           <td>{{ combinedSpecs?.cpu || "-" }}</td>
         </tr>
@@ -177,6 +185,8 @@ const combinedSpecs = computed(() => {
           architecture: `${gpu.network_architecture?.major}.${gpu.network_architecture?.minor}`,
         }))
       : nodeSpecs.value.gpus,
+    cudaVersion: nodeInfoData?.gpus.cuda_driver_version,
+    nvmlVersion: nodeInfoData?.gpus.nvml_driver_version
   };
 });
 
