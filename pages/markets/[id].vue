@@ -38,10 +38,6 @@
                   </td>
                 </tr>
                 <tr>
-                  <td>Job expiration</td>
-                  <td>{{ market.jobExpiration / 3600 }} hours</td>
-                </tr>
-                <tr>
                   <td>Price</td>
                   <td>
                     <span v-if="loadingStats">...</span>
