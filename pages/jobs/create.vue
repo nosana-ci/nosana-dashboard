@@ -207,10 +207,12 @@
                     <div class="field">
                       <label class="label">Entrypoint</label>
                       <div class="control">
-                        <div v-if="typeof (op.args as OperationArgsMap['container/run']).entrypoint === 'string' || !(op.args as OperationArgsMap['container/run']).entrypoint">
+                        <div
+                          v-if="typeof (op.args as OperationArgsMap['container/run']).entrypoint === 'string' || !(op.args as OperationArgsMap['container/run']).entrypoint">
                           <input @focus="info = 'ops.args.entrypoint'" class="input"
                             @change="(op.args as OperationArgsMap['container/run']).entrypoint === '' ? (op.args as OperationArgsMap['container/run']).entrypoint = undefined : null"
-                            v-model="(op.args as OperationArgsMap['container/run']).entrypoint" type="text" placeholder="/bin/sh">
+                            v-model="(op.args as OperationArgsMap['container/run']).entrypoint" type="text"
+                            placeholder="/bin/sh">
                           <p class="is-size-7">
                             <b>Shell</b> form<span class="ml-2"><a
                                 @click="(op.args as OperationArgsMap['container/run']).entrypoint = switchCmd((op.args as OperationArgsMap['container/run']).entrypoint, 'exec')">Switch
@@ -269,15 +271,15 @@
                             <div class="field">
                               <label class="label">URL</label>
                               <div class="control">
-                                <input class="input" @focus="info = 'ops.args.resources'"
-                                  v-model="resource.url" type="text" placeholder="s3://bucket/path">
+                                <input class="input" @focus="info = 'ops.args.resources'" v-model="resource.url"
+                                  type="text" placeholder="s3://bucket/path">
                               </div>
                             </div>
                             <div class="field">
                               <label class="label">Target</label>
                               <div class="control">
-                                <input class="input" @focus="info = 'ops.args.resources'"
-                                  v-model="resource.target" type="text" placeholder="/path/in/container">
+                                <input class="input" @focus="info = 'ops.args.resources'" v-model="resource.target"
+                                  type="text" placeholder="/path/in/container">
                               </div>
                             </div>
                           </div>
@@ -285,10 +287,10 @@
                         <div class="field has-addons has-addons-right mt-2">
                           <p class="control">
                             <a class="button is-small is-primary"
-                          @click="!(op.args as OperationArgsMap['container/run']).resources ? (op.args as OperationArgsMap['container/run']).resources = [] : null; ((op.args as OperationArgsMap['container/run']).resources as any[]).push({type: 'S3', url: '', target: ''})">
-                          <span>Add resource</span>
-                          <span class="icon">+</span>
-                        </a>
+                              @click="!(op.args as OperationArgsMap['container/run']).resources ? (op.args as OperationArgsMap['container/run']).resources = [] : null; ((op.args as OperationArgsMap['container/run']).resources as any[]).push({ type: 'S3', url: '', target: '' })">
+                              <span>Add resource</span>
+                              <span class="icon">+</span>
+                            </a>
                           </p>
                         </div>
 
@@ -304,13 +306,11 @@
                               <label class="label">{{ key }}</label>
                             </div>
                             <p class="control is-expanded">
-                              <input class="input" @focus="info = 'ops.results'"
-                                v-model="op.results![key]" type="text"
+                              <input class="input" @focus="info = 'ops.results'" v-model="op.results![key]" type="text"
                                 placeholder="regex pattern">
                             </p>
                             <p class="control">
-                              <a class="button"
-                                @click="info = 'ops.results'; delete op.results![key]">
+                              <a class="button" @click="info = 'ops.results'; delete op.results![key]">
                                 <span class="icon is-small">
                                   <TrashIcon />
                                 </span>
@@ -380,7 +380,8 @@
                     {{ template.description }}
                   </span>
                   <span v-else>The Nosana Job schema allows us to create a job definition and specify the parameters
-                    needed for our job. Start writing your template from scratch or start with one of our many templates.
+                    needed for our job. Start writing your template from scratch or start with one of our many
+                    templates.
                     <br><br>
                     <nuxt-link to="/jobs/templates" class="button is-secondary">Pick a Template</nuxt-link>
                   </span>
@@ -452,7 +453,7 @@
         </div>
       </form>
     </div>
-    <div v-else-if="step === 'pick-market'">
+    <div v-else-if="step === 'pick-market'" class="box">
       <h2 class="title is-4">Pick a market to post your job to</h2>
       <ExplorerMarketList :markets="markets" :select="true"
         @selectedMarket="(selectedMarket) => { market = selectedMarket }"></ExplorerMarketList>
@@ -789,12 +790,12 @@ const postJob = async () => {
   } catch (e: any) {
     const errorMessage = e.toString();
     const fullError = String(e);
-    if (errorMessage.includes('TransactionExpiredTimeoutError') || 
-        fullError.includes('Transaction was not confirmed in') ||
-        fullError.includes('TimeoutError')) {
+    if (errorMessage.includes('TransactionExpiredTimeoutError') ||
+      fullError.includes('Transaction was not confirmed in') ||
+      fullError.includes('TimeoutError')) {
       toast.error('Solana is congested, try again or with a higher fee (Turbo/Ultra)');
-    } else if (errorMessage.includes('Unknown action') || 
-               fullError.includes('Unknown action')) {
+    } else if (errorMessage.includes('Unknown action') ||
+      fullError.includes('Unknown action')) {
       toast.error('Not enough NOS balance for the transaction');
     } else {
       toast.error(errorMessage);
