@@ -61,6 +61,21 @@
             {{ (bar.current / bar.total * 100).toFixed(0) }}%
           </progress>
         </div>
+
+        <!-- New resource progress bar(s) -->
+        <div v-for="resBar in activeResourceProgressBars" :key="resBar.id" class="progress-bar-container mb-4">
+          <div class="progress-text is-link">
+            {{ resBar.status }} | {{ resBar.id }} | 
+            {{ resBar.current.toFixed(2) }}/{{ resBar.total.toFixed(2) }} (GB)
+          </div>
+          <progress 
+            class="progress is-link"
+            :value="resBar.current"
+            :max="resBar.total"
+          >
+            {{ (resBar.current / resBar.total * 100).toFixed(0) }}%
+          </progress>
+        </div>
       </div>
     </template>
   </div>
@@ -81,9 +96,12 @@ const {
   logs,
   progressBars,
   isConnecting,
-  handleWebSocketMessage,
+  handleWebSocketMessage: baseHandleWebSocketMessage,
   clearLogs
 } = useJobLogs();
+
+// A second map to track "process-bar" events for resource downloads
+const resourceProgressBars = ref<Map<string, any>>(new Map());
 
 // Format container logs to highlight timestamps
 function formatContainerLog(content: string, isContainerLog: boolean | undefined) {
@@ -104,12 +122,62 @@ function formatContainerLog(content: string, isContainerLog: boolean | undefined
   );
 }
 
-// Only show active (non-completed) progress bars
-const activeProgressBars = computed(() => {
-  return Array.from(progressBars.value.values())
-    .filter(bar => !bar.completed)
-    .sort((a, b) => a.id.localeCompare(b.id));
-});
+// Our custom handler extends baseHandleWebSocketMessage
+function handleWebSocketMessage(event: MessageEvent) {
+  baseHandleWebSocketMessage(event);
+
+  try {
+    const data = JSON.parse(event.data);
+    if (!data.data) return;
+    
+    const inner = JSON.parse(data.data);
+    if (!inner.method?.startsWith('ProgressBarReporter')) return;
+
+    switch (inner.method) {
+      case 'ProgressBarReporter.start': {
+        if (inner.type !== 'process-bar-start') return;
+        
+        resourceProgressBars.value.set('resource', {
+          id: 'resource',
+          status: 'Downloading Resource',
+          current: 0,
+          total: inner.payload?.total ?? 0,
+          completed: false,
+        });
+        break;
+      }
+      case 'ProgressBarReporter.update': {
+        if (inner.type !== 'process-bar-update') return;
+        
+        const bar = resourceProgressBars.value.get('resource');
+        if (bar && !bar.completed) {
+          bar.current = inner.payload?.current ?? bar.current;
+          if (bar.total && bar.current >= bar.total) {
+            bar.completed = true;
+          }
+        }
+        break;
+      }
+      case 'ProgressBarReporter.stop': {
+        if (inner.type !== 'process-bar-stop') return;
+        resourceProgressBars.value.delete('resource');
+        break;
+      }
+    }
+  } catch (error) {
+    console.error('Error processing WebSocket message:', error);
+  }
+}
+
+// A computed array of in-progress resource bars
+const activeResourceProgressBars = computed(() =>
+  Array.from(resourceProgressBars.value.values()).filter(b => !b.completed)
+);
+
+// Likewise, your existing multi-process container bars
+const activeProgressBars = computed(() =>
+  Array.from(progressBars.value.values()).filter(b => !b.completed)
+);
 
 function scrollToBottom() {
   if (shouldAutoScroll.value && logContainer.value) {
@@ -120,10 +188,17 @@ function scrollToBottom() {
   }
 }
 
-// Auto-scroll to bottom when new logs arrive
-watch([() => logs.value.length, () => activeProgressBars.value.length], () => {
-  scrollToBottom();
-});
+// Auto-scroll to bottom when new logs arrive or progress bars update
+watch(
+  [
+    () => logs.value.length, 
+    () => activeProgressBars.value.length,
+    () => activeResourceProgressBars.value.length
+  ], 
+  () => {
+    scrollToBottom();
+  }
+);
 
 // Handle manual scrolling
 function handleScroll() {
