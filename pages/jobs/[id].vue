@@ -571,83 +571,10 @@ interface LogEntry {
 }
 
 const structuredLogs = ref<LogEntry[]>([]);
-const progressBarsMap = ref<Map<string, number>>(new Map());
 
-function convertFromBytes(
-  bytes: number,
-  toFormat?: 'gb' | 'mb' | 'kb',
-): { value: number; format: 'gb' | 'mb' | 'kb' } {
-  let value = bytes / 1024;
-
-  if ((value < 1024 && !toFormat) || toFormat === 'kb') {
-    return { value: Number(value.toFixed(2)), format: 'kb' };
-  }
-
-  value = value / 1024;
-
-  if ((value < 1024 && !toFormat) || toFormat === 'mb') {
-    return { value: Number(value.toFixed(2)), format: 'mb' };
-  }
-
-  return { value: Number((value / 1024).toFixed(2)), format: 'gb' };
-}
-
-function addLogEntry(newEntry: LogEntry) {
-  const lastLog = structuredLogs.value[structuredLogs.value.length - 1];
-  if (lastLog?.content === newEntry.content) {
-    return;
-  }
-  structuredLogs.value.push(newEntry);
-}
-
-function handleProgressEvent(event: any) {
-  const { id: layerId, status, progressDetail } = event;
-
-  if (['Download complete', 'Pull complete', 'Already exists'].includes(status)) {
-    const existingIdx = progressBarsMap.value.get(layerId);
-    if (existingIdx !== undefined && existingIdx !== null) {
-      structuredLogs.value.splice(existingIdx, 1);
-      progressBarsMap.value.delete(layerId);
-    }
-    addLogEntry({
-      id: Date.now(),
-      type: 'log',
-      content: `${status}: ${layerId}`,
-    });
-    return;
-  }
-
-  if (['Downloading', 'Extracting'].includes(status)) {
-    const current = progressDetail?.current || 0;
-    const total = progressDetail?.total || 0;
-    const { value: currentValue, format: currentFormat } = convertFromBytes(current);
-    const { value: totalValue, format: totalFormat } = convertFromBytes(total);
-    const text = `${status} | ${layerId} | ${currentValue}${currentFormat.toUpperCase()}/${totalValue}${totalFormat.toUpperCase()}`;
-
-    const newProgressEntry: LogEntry = {
-      id: Date.now(),
-      type: 'progress',
-      content: text,
-      progress: {
-        id: layerId,
-        current,
-        total,
-        status,
-        text,
-      },
-    };
-
-    const existingIndex = progressBarsMap.value.get(layerId);
-    if (existingIndex !== undefined && existingIndex !== null) {
-      structuredLogs.value[existingIndex] = newProgressEntry;
-    } else {
-      structuredLogs.value.push(newProgressEntry);
-      progressBarsMap.value.set(layerId, structuredLogs.value.length - 1);
-    }
-  }
-}
 
 const serviceUrl = ref<string | null>(null);
+const hasShownServiceOnlineToast = ref(false);
 
 function stripAnsi(str: string): string {
   return str.replace(/\u001b\[\d+m|\u001b\[\d+;\d+m|\u001b\[0m|\u001b\[1m|\u001b\[22m/g, '');
@@ -673,10 +600,11 @@ function handleWebSocketMessage(event: MessageEvent) {
         const exposedMatch = cleanLog.match(/Job .* is now exposed \((https:\/\/[^)]+)\)/) ||
           cleanLog.match(/Service exposed at: (https:\/\/[^)\s]+)/);
 
-        if (exposedMatch) {
+        if (exposedMatch && !hasShownServiceOnlineToast.value) {
           const url = exposedMatch[1];
           serviceUrl.value = url;
           toast.success('Service is online');
+          hasShownServiceOnlineToast.value = true;
         }
       }
     }
