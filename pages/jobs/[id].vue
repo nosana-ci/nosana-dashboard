@@ -174,9 +174,6 @@ function getStateNumber(stateVal: string | number): number {
   return -1;
 }
 
-function isQueued(stateVal: string | number): boolean {
-  return getStateNumber(stateVal) === 0;
-}
 function isRunning(stateVal: string | number): boolean {
   return getStateNumber(stateVal) === 1;
 }
@@ -235,8 +232,6 @@ watch(
     }
 
     try {
-      loading.value = true;
-
       if (
         newJob.ipfsResult &&
         newJob.ipfsResult !== 'QmNLei78zWmzUdbeRB3CiUfAizWUrbeeZh5K1rhAQKCh51'
@@ -246,8 +241,6 @@ watch(
       }
     } catch (error) {
       toast.error(`Error fetching IPFS result: ${JSON.stringify(error)}`);
-    } finally {
-      loading.value = false;
     }
   },
   { immediate: true, deep: true }
@@ -386,7 +379,6 @@ const stopJob = async () => {
     // If job is completed (2) or stopped (3), no need to proceed
     if (numericState === 2 || numericState === 3) {
       toast.info(`Job is already ${numericState === 2 ? 'COMPLETED' : 'STOPPED'}`);
-      loading.value = false;
       return;
     }
 
@@ -399,16 +391,16 @@ const stopJob = async () => {
     else if (numericState === 1) {
       await nosana.value.jobs.end(jobId.value);
       toast.success('Job successfully ended!');
+      refreshJob();
     }
     // Otherwise, let the user know
     else {
       toast.error(`Job is not in QUEUED or RUNNING state (currently: ${job.value.state})`);
-      loading.value = false;
       return;
     }
 
-    // Wait 10 seconds before refreshing to allow backend to update
-    await new Promise(resolve => setTimeout(resolve, 10000));
+    // Wait 5 seconds before refreshing to allow backend to update
+    await new Promise(resolve => setTimeout(resolve, 5000));
     refreshJob();
   } catch (e) {
     const errorMessage = e instanceof Error ? e.message : String(e);
@@ -425,6 +417,7 @@ const stopJob = async () => {
     }
     console.error('Stop job error:', e);
   } finally {
+    // Only set loading to false after everything is complete
     loading.value = false;
   }
 };
@@ -473,7 +466,7 @@ const confirmExtend = async () => {
 
     // Wait 10 seconds before refreshing to allow backend to update
     await new Promise(resolve => setTimeout(resolve, 10000));
-    refreshJob();
+    await refreshJob();
   } catch (e) {
     const errorMessage = e instanceof Error ? e.message : String(e);
     const fullError = String(e);
@@ -495,7 +488,6 @@ const confirmExtend = async () => {
 
 const loadingRepost = ref(false);
 const { markets, getMarkets, loadingMarkets } = useMarkets();
-const { data: testgridMarkets } = await useAPI('/api/markets', { default: () => [] });
 
 if (!markets.value && !loadingMarkets.value) {
   getMarkets();
