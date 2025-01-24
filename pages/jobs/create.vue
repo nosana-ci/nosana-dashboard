@@ -618,7 +618,7 @@ const { balance, refreshBalance, loadingBalance, errorBalance } = useStake(publi
 const jobDefinition: Ref<JobDefinition> = useLocalStorage('job-definition', emptyJobDefinition)
 const envName: Ref<string[]> = ref([]);
 const resultsName: Ref<string[]> = ref([]);
-const jobTimeout: Ref<number> = ref(60); // Default 60 minutes
+const jobTimeout: Ref<number> = useLocalStorage('job-timeout', 60); // Default 60 minutes
 const nosPrice = ref(0);
 
 interface CachedPrice {
