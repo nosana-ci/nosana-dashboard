@@ -912,4 +912,17 @@ watchEffect(async () => {
     }
   }
 });
+
+// Sync step with URL
+watch(step, (newStep) => {
+  router.replace({ query: { ...route.query, step: newStep } });
+});
+
+// Initialize step from URL if present
+onMounted(() => {
+  const urlStep = route.query.step as string;
+  if (urlStep && ['job-definition', 'pick-market', 'post-job'].includes(urlStep)) {
+    step.value = urlStep;
+  }
+});
 </script>
