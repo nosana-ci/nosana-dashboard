@@ -913,16 +913,47 @@ watchEffect(async () => {
   }
 });
 
-// Sync step with URL
-watch(step, (newStep) => {
-  router.replace({ query: { ...route.query, step: newStep } });
-});
-
-// Initialize step from URL if present
+// Reload safely preserves "step" and selected "market"
 onMounted(() => {
   const urlStep = route.query.step as string;
-  if (urlStep && ['job-definition', 'pick-market', 'post-job'].includes(urlStep)) {
-    step.value = urlStep;
+  const urlMarket = route.query.market as string;
+
+  // Temporarily set the step from URL (fallback to "job-definition" if invalid)
+  step.value =
+    urlStep && ['job-definition', 'pick-market', 'post-job'].includes(urlStep)
+      ? urlStep
+      : 'job-definition';
+
+  // Attempt re-selecting market after markets load
+  const trySelectMarket = () => {
+    if (!markets.value?.length) return;
+    if (urlMarket) {
+      market.value =
+        markets.value.find((m) => m.address.toString() === urlMarket) || null;
+    }
+    // Fallback checks after we attempt to restore the market
+    if (!jobDefinition.value?.ops?.length && step.value !== 'job-definition') {
+      step.value = 'job-definition';
+    } else if (step.value === 'post-job' && !market.value) {
+      step.value = 'pick-market';
+    }
+  };
+
+  if (loadingMarkets.value) {
+    watch(
+      () => loadingMarkets.value,
+      (val) => !val && trySelectMarket()
+    );
+  } else {
+    trySelectMarket();
   }
+});
+
+// Keep URL in sync when step / market change
+watch(step, (newStep) => {
+  router.replace({ query: { ...route.query, step: newStep, market: market.value?.address.toString() } });
+});
+watch(market, (newMarket) => {
+  router.replace({ query: { ...route.query, step: step.value, market: newMarket?.address.toString() } });
 });
 </script>
