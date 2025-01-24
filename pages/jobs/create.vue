@@ -514,7 +514,7 @@
               </tr>
               <tr>
                 <td>Price per hour</td>
-                <td>{{ pricePerHour.toFixed(4) }} NOS/h (${{ (pricePerHour * nosPrice).toFixed(2) }}/h)</td>
+                <td>{{ pricePerHour.toFixed(4) }} NOS{{ nosPrice ? ` ($${(pricePerHour * nosPrice).toFixed(2)}/h)` : ' ($-/h)' }}</td>
               </tr>
               <tr>
                 <td>Job timeout <span class="has-text-danger">*</span></td>
@@ -528,15 +528,15 @@
               </tr>
               <tr>
                 <td>Max price</td>
-                <td>{{ maxPrice.toFixed(4) }} NOS (${{ (maxPrice * nosPrice).toFixed(2) }})</td>
+                <td>{{ maxPrice.toFixed(4) }} NOS{{ nosPrice ? ` ($${(maxPrice * nosPrice).toFixed(2)})` : ' ($-)' }}</td>
               </tr>
               <tr>
                 <td>Network fee <small>(10%)</small></td>
-                <td>{{ networkFee.toFixed(4) }} NOS (${{ (networkFee * nosPrice).toFixed(2) }})</td>
+                <td>{{ networkFee.toFixed(4) }} NOS{{ nosPrice ? ` ($${(networkFee * nosPrice).toFixed(2)})` : ' ($-)' }}</td>
               </tr>
               <tr>
                 <td><strong>Total price</strong></td>
-                <td class="has-text-white"><strong>{{ (maxPrice + networkFee).toFixed(4) }} NOS (${{ ((maxPrice + networkFee) * nosPrice).toFixed(2) }})</strong></td>
+                <td class="has-text-white"><strong>{{ (maxPrice + networkFee).toFixed(4) }} NOS{{ nosPrice ? ` ($${((maxPrice + networkFee) * nosPrice).toFixed(2)})` : ' ($-)' }}</strong></td>
               </tr>
             </tbody>
           </table>
@@ -624,6 +624,19 @@ const resultsName: Ref<string[]> = ref([]);
 const jobTimeout: Ref<number> = ref(60); // Default 60 minutes
 const nosPrice = ref(0);
 
+interface CachedPrice {
+  price: number;
+  timestamp: number;
+}
+
+const cachedNosPrice = useLocalStorage<CachedPrice>('nos-price-cache', { price: 0, timestamp: 0 });
+
+// Function to check if cache is valid (less than 1 hour old)
+const isCacheValid = () => {
+  const oneHour = 60 * 60 * 1000; // 1 hour in milliseconds
+  return Date.now() - cachedNosPrice.value.timestamp < oneHour;
+};
+
 const { data: nosPriceData } = await useAPI('https://api.coingecko.com/api/v3/simple/price?ids=nosana&vs_currencies=usd', {
   default: () => ({ nosana: { usd: 0 } })
 });
@@ -631,6 +644,16 @@ const { data: nosPriceData } = await useAPI('https://api.coingecko.com/api/v3/si
 watch(() => nosPriceData.value, (newPrice) => {
   if (newPrice?.nosana?.usd) {
     nosPrice.value = newPrice.nosana.usd;
+    // Update cache with new price and timestamp
+    cachedNosPrice.value = {
+      price: newPrice.nosana.usd,
+      timestamp: Date.now()
+    };
+  } else if (isCacheValid()) {
+    // Use cached price if available and valid
+    nosPrice.value = cachedNosPrice.value.price;
+  } else {
+    nosPrice.value = 0;
   }
 }, { immediate: true });
 
