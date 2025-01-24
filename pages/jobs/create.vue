@@ -458,23 +458,6 @@
       <ExplorerMarketList :markets="markets" :select="true"
         @selectedMarket="(selectedMarket) => { market = selectedMarket }"></ExplorerMarketList>
       <div v-if="!loadingMarkets && !markets">Could not load markets</div>
-      <div class="field">
-        <label class="label" v-if="balance !== null || loadingBalance">NOS Balance:</label>
-        <span>
-          <span v-if="loadingBalance">....... NOS</span>
-          <CustomCountUp v-else-if="balance !== null" class="is-clickable" @click="refreshBalance" :end-val="balance"
-            :decimal-places="2" :duration=".5">
-            <template #suffix>
-              <span> NOS</span>
-            </template>
-          </CustomCountUp>
-          <div v-if="errorBalance" class="has-text-danger">
-            <p>Error fetching balance: {{ errorBalance }}.
-              <a class="button is-small is-danger" @click.prevent="refreshBalance()"><u>retry</u></a>
-            </p>
-          </div>
-        </span>
-      </div>
       <form @submit.prevent="step = 'post-job'">
         <div class="field is-grouped is-grouped-right">
           <p class="control">
@@ -510,11 +493,25 @@
                   <span v-else class="is-family-monospace py-2 address">
                     {{ market.address.toString() }}
                   </span>
+                  <span class="ml-2">{{ nosPrice ? `$${(pricePerHour * nosPrice).toFixed(2)}/h` : '$-/h' }}</span>
                 </td>
               </tr>
               <tr>
-                <td>Price per hour</td>
-                <td>{{ pricePerHour.toFixed(4) }} NOS{{ nosPrice ? ` ($${(pricePerHour * nosPrice).toFixed(2)}/h)` : ' ($-/h)' }}</td>
+                <td>NOS Balance</td>
+                <td>
+                  <span v-if="loadingBalance">....... NOS</span>
+                  <CustomCountUp v-else-if="balance !== null" class="is-clickable" @click="refreshBalance" :end-val="balance"
+                    :decimal-places="2" :duration=".5">
+                    <template #suffix>
+                      <span> NOS{{ nosPrice ? ` ($${(balance * nosPrice).toFixed(2)})` : ' ($-)' }}</span>
+                    </template>
+                  </CustomCountUp>
+                  <div v-if="errorBalance" class="has-text-danger">
+                    <p>Error fetching balance: {{ errorBalance }}.
+                      <a class="button is-small is-danger" @click.prevent="refreshBalance()"><u>retry</u></a>
+                    </p>
+                  </div>
+                </td>
               </tr>
               <tr>
                 <td>Job timeout <span class="has-text-danger">*</span></td>
@@ -528,15 +525,15 @@
               </tr>
               <tr>
                 <td>Max price</td>
-                <td>{{ maxPrice.toFixed(4) }} NOS{{ nosPrice ? ` ($${(maxPrice * nosPrice).toFixed(2)})` : ' ($-)' }}</td>
+                <td>{{ nosPrice ? `$${(maxPrice * nosPrice).toFixed(2)}` : '$-' }}</td>
               </tr>
               <tr>
                 <td>Network fee <small>(10%)</small></td>
-                <td>{{ networkFee.toFixed(4) }} NOS{{ nosPrice ? ` ($${(networkFee * nosPrice).toFixed(2)})` : ' ($-)' }}</td>
+                <td>{{ nosPrice ? `$${(networkFee * nosPrice).toFixed(2)}` : '$-' }}</td>
               </tr>
               <tr>
                 <td><strong>Total price</strong></td>
-                <td class="has-text-white"><strong>{{ (maxPrice + networkFee).toFixed(4) }} NOS{{ nosPrice ? ` ($${((maxPrice + networkFee) * nosPrice).toFixed(2)})` : ' ($-)' }}</strong></td>
+                <td class="has-text-white"><strong>{{ nosPrice ? `$${((maxPrice + networkFee) * nosPrice).toFixed(2)}` : '$-' }}</strong></td>
               </tr>
             </tbody>
           </table>
