@@ -519,8 +519,11 @@
               <tr>
                 <td>Job timeout <span class="has-text-danger">*</span></td>
                 <td>
-                  <input v-model.number="jobTimeout" class="input" style="width: 100px" type="number" min="1"
-                    placeholder="Minutes" required>
+                  <div class="is-flex is-align-items-center">
+                    <input v-model.number="jobTimeout" class="input" style="width: 100px" type="number" min="1"
+                      placeholder="Minutes" required>
+                    <span class="ml-2">minutes</span>
+                  </div>
                 </td>
               </tr>
               <tr>
@@ -530,6 +533,10 @@
               <tr>
                 <td>Network fee <small>(10%)</small></td>
                 <td>{{ networkFee.toFixed(4) }} NOS (${{ (networkFee * nosPrice).toFixed(2) }})</td>
+              </tr>
+              <tr>
+                <td><strong>Total price</strong></td>
+                <td class="has-text-white"><strong>{{ (maxPrice + networkFee).toFixed(4) }} NOS (${{ ((maxPrice + networkFee) * nosPrice).toFixed(2) }})</strong></td>
               </tr>
             </tbody>
           </table>
