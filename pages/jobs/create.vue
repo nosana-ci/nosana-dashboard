@@ -458,23 +458,6 @@
       <ExplorerMarketList :markets="markets" :select="true"
         @selectedMarket="(selectedMarket) => { market = selectedMarket }"></ExplorerMarketList>
       <div v-if="!loadingMarkets && !markets">Could not load markets</div>
-      <div class="field">
-        <label class="label" v-if="balance !== null || loadingBalance">NOS Balance:</label>
-        <span>
-          <span v-if="loadingBalance">....... NOS</span>
-          <CustomCountUp v-else-if="balance !== null" class="is-clickable" @click="refreshBalance" :end-val="balance"
-            :decimal-places="2" :duration=".5">
-            <template #suffix>
-              <span> NOS</span>
-            </template>
-          </CustomCountUp>
-          <div v-if="errorBalance" class="has-text-danger">
-            <p>Error fetching balance: {{ errorBalance }}.
-              <a class="button is-small is-danger" @click.prevent="refreshBalance()"><u>retry</u></a>
-            </p>
-          </div>
-        </span>
-      </div>
       <form @submit.prevent="step = 'post-job'">
         <div class="field is-grouped is-grouped-right">
           <p class="control">
@@ -510,26 +493,47 @@
                   <span v-else class="is-family-monospace py-2 address">
                     {{ market.address.toString() }}
                   </span>
+                  <span class="ml-2">{{ nosPrice ? `$${(pricePerHour * nosPrice).toFixed(2)}/h` : '$-/h' }}</span>
                 </td>
               </tr>
               <tr>
-                <td>Price per hour</td>
-                <td>{{ pricePerHour.toFixed(4) }} NOS/h (${{ (pricePerHour * nosPrice).toFixed(2) }}/h)</td>
+                <td>NOS Balance</td>
+                <td>
+                  <span v-if="loadingBalance">....... NOS</span>
+                  <CustomCountUp v-else-if="balance !== null" class="is-clickable" @click="refreshBalance" :end-val="balance"
+                    :decimal-places="2" :duration=".5">
+                    <template #suffix>
+                      <span> NOS{{ nosPrice ? ` ($${(balance * nosPrice).toFixed(2)})` : ' ($-)' }}</span>
+                    </template>
+                  </CustomCountUp>
+                  <div v-if="errorBalance" class="has-text-danger">
+                    <p>Error fetching balance: {{ errorBalance }}.
+                      <a class="button is-small is-danger" @click.prevent="refreshBalance()"><u>retry</u></a>
+                    </p>
+                  </div>
+                </td>
               </tr>
               <tr>
                 <td>Job timeout <span class="has-text-danger">*</span></td>
                 <td>
-                  <input v-model.number="jobTimeout" class="input" style="width: 100px" type="number" min="1"
-                    placeholder="Minutes" required>
+                  <div class="is-flex is-align-items-center">
+                    <input v-model.number="jobTimeout" class="input" style="width: 100px" type="number" min="1"
+                      placeholder="Minutes" required>
+                    <span class="ml-2">minutes</span>
+                  </div>
                 </td>
               </tr>
               <tr>
                 <td>Max price</td>
-                <td>{{ maxPrice.toFixed(4) }} NOS (${{ (maxPrice * nosPrice).toFixed(2) }})</td>
+                <td>{{ nosPrice ? `$${(maxPrice * nosPrice).toFixed(2)}` : '$-' }}</td>
               </tr>
               <tr>
                 <td>Network fee <small>(10%)</small></td>
-                <td>{{ networkFee.toFixed(4) }} NOS (${{ (networkFee * nosPrice).toFixed(2) }})</td>
+                <td>{{ nosPrice ? `$${(networkFee * nosPrice).toFixed(2)}` : '$-' }}</td>
+              </tr>
+              <tr>
+                <td><strong>Total price</strong></td>
+                <td class="has-text-white"><strong>{{ nosPrice ? `$${((maxPrice + networkFee) * nosPrice).toFixed(2)}` : '$-' }}</strong></td>
               </tr>
             </tbody>
           </table>
@@ -614,8 +618,21 @@ const { balance, refreshBalance, loadingBalance, errorBalance } = useStake(publi
 const jobDefinition: Ref<JobDefinition> = useLocalStorage('job-definition', emptyJobDefinition)
 const envName: Ref<string[]> = ref([]);
 const resultsName: Ref<string[]> = ref([]);
-const jobTimeout: Ref<number> = ref(60); // Default 60 minutes
+const jobTimeout: Ref<number> = useLocalStorage('job-timeout', 60); // Default 60 minutes
 const nosPrice = ref(0);
+
+interface CachedPrice {
+  price: number;
+  timestamp: number;
+}
+
+const cachedNosPrice = useLocalStorage<CachedPrice>('nos-price-cache', { price: 0, timestamp: 0 });
+
+// Function to check if cache is valid (less than 1 hour old)
+const isCacheValid = () => {
+  const oneHour = 60 * 60 * 1000; // 1 hour in milliseconds
+  return Date.now() - cachedNosPrice.value.timestamp < oneHour;
+};
 
 const { data: nosPriceData } = await useAPI('https://api.coingecko.com/api/v3/simple/price?ids=nosana&vs_currencies=usd', {
   default: () => ({ nosana: { usd: 0 } })
@@ -624,6 +641,16 @@ const { data: nosPriceData } = await useAPI('https://api.coingecko.com/api/v3/si
 watch(() => nosPriceData.value, (newPrice) => {
   if (newPrice?.nosana?.usd) {
     nosPrice.value = newPrice.nosana.usd;
+    // Update cache with new price and timestamp
+    cachedNosPrice.value = {
+      price: newPrice.nosana.usd,
+      timestamp: Date.now()
+    };
+  } else if (isCacheValid()) {
+    // Use cached price if available and valid
+    nosPrice.value = cachedNosPrice.value.price;
+  } else {
+    nosPrice.value = 0;
   }
 }, { immediate: true });
 
@@ -904,5 +931,49 @@ watchEffect(async () => {
       loading.value = false;
     }
   }
+});
+
+// Reload safely preserves "step" and selected "market"
+onMounted(() => {
+  const urlStep = route.query.step as string;
+  const urlMarket = route.query.market as string;
+
+  // Temporarily set the step from URL (fallback to "job-definition" if invalid)
+  step.value =
+    urlStep && ['job-definition', 'pick-market', 'post-job'].includes(urlStep)
+      ? urlStep
+      : 'job-definition';
+
+  // Attempt re-selecting market after markets load
+  const trySelectMarket = () => {
+    if (!markets.value?.length) return;
+    if (urlMarket) {
+      market.value =
+        markets.value.find((m) => m.address.toString() === urlMarket) || null;
+    }
+    // Fallback checks after we attempt to restore the market
+    if (!jobDefinition.value?.ops?.length && step.value !== 'job-definition') {
+      step.value = 'job-definition';
+    } else if (step.value === 'post-job' && !market.value) {
+      step.value = 'pick-market';
+    }
+  };
+
+  if (loadingMarkets.value) {
+    watch(
+      () => loadingMarkets.value,
+      (val) => !val && trySelectMarket()
+    );
+  } else {
+    trySelectMarket();
+  }
+});
+
+// Keep URL in sync when step / market change
+watch(step, (newStep) => {
+  router.replace({ query: { ...route.query, step: newStep, market: market.value?.address.toString() } });
+});
+watch(market, (newMarket) => {
+  router.replace({ query: { ...route.query, step: step.value, market: newMarket?.address.toString() } });
 });
 </script>

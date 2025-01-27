@@ -250,16 +250,20 @@
     color: white;
   }
   .table:not(.light-mode) {
-    color: $table-background-color;
+    color: $white;
     background-color: $black-bis;
 
     thead th {
-      color: $table-background-color;
-      // background-color: $black-ter;
+      color: $white;
     }
     td,
     th {
       border-color: $grey-dark;
+      color: $white;
+      
+      strong {
+        color: $white;
+      }
     }
     &.is-hoverable {
       tbody {
@@ -278,6 +282,9 @@
           }
         }
       }
+    }
+    .has-text-white {
+      color: $white !important;
     }
   }
 
