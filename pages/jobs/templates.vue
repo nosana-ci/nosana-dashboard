@@ -142,18 +142,18 @@ const filterSubcategory: Ref<string> = ref('');
 const search: Ref<string> = ref('');
 
 const featuredTemplateIds = [
-  'r1-qwen-1.5b',
-  'r1-qwen-7b',
-  'r1-llama-8b',
-  'r1-qwen-32b',
+  'deepseek-r1-qwen-1.5b',
+  'deepseek-r1-qwen-7b',
+  'deepseek-r1-llama-8b',
+  'deepseek-r1-qwen-32b',
   'comfyui'
 ];
 
 const newTemplateIds = [
-  'r1-qwen-1.5b',
-  'r1-qwen-7b',
-  'r1-llama-8b',
-  'r1-qwen-32b'
+  'deepseek-r1-qwen-1.5b',
+  'deepseek-r1-qwen-7b',
+  'deepseek-r1-llama-8b',
+  'deepseek-r1-qwen-32b'
 ];
 
 const featuredTemplates = computed(() => {
