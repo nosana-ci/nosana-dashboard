@@ -70,9 +70,12 @@
                   <div class="template-content">
                     <div class="template-info">
                       <div class="mb-2">
-                        <h2 class="is-size-4 has-text-weight-semibold mb-0 has-text-black">
-                          {{ template.name }}
-                        </h2>
+                        <div class="is-flex is-align-items-center">
+                          <h2 class="is-size-4 has-text-weight-semibold mb-0 has-text-black">
+                            {{ template.name }}
+                          </h2>
+                          <span v-if="newTemplateIds.includes(String(template.id))" class="new-badge ml-2">New</span>
+                        </div>
                       </div>
                       <p>{{ template.description }}</p>
                     </div>
@@ -103,9 +106,12 @@
                 <div class="template-content">
                   <div class="template-info">
                     <div class="mb-2">
-                      <h2 class="is-size-4 has-text-weight-semibold mb-0 has-text-black">
-                        {{ template.name }}
-                      </h2>
+                      <div class="is-flex is-align-items-center">
+                        <h2 class="is-size-4 has-text-weight-semibold mb-0 has-text-black">
+                          {{ template.name }}
+                        </h2>
+                        <span v-if="newTemplateIds.includes(String(template.id))" class="new-badge ml-2">New</span>
+                      </div>
                     </div>
                     <p>{{ template.description }}</p>
                   </div>
@@ -136,16 +142,25 @@ const filterSubcategory: Ref<string> = ref('');
 const search: Ref<string> = ref('');
 
 const featuredTemplateIds = [
-  'AUTOMTIC1111-stable-diffusion',
-  'open-webui',
-  'hello-world'
+  'r1-qwen-1.5b',
+  'r1-qwen-7b',
+  'r1-llama-8b',
+  'r1-qwen-32b',
+  'comfyui'
+];
+
+const newTemplateIds = [
+  'r1-qwen-1.5b',
+  'r1-qwen-7b',
+  'r1-llama-8b',
+  'r1-qwen-32b'
 ];
 
 const featuredTemplates = computed(() => {
   if (!templates.value) return [];
-  return templates.value
-    .filter(t => featuredTemplateIds.includes(String(t.id)))
-    .sort((a, b) => (b.stargazers_count || 0) - (a.stargazers_count || 0));
+  return featuredTemplateIds
+    .map(id => templates.value.find(t => String(t.id) === id))
+    .filter(Boolean);
 });
 
 // Watch for changes in filterCategory to reset filterSubcategory
@@ -453,5 +468,15 @@ function templatesWithoutSubcategory(category: string): Template[] {
     height: 32px;
     padding: 4px;
   }
+}
+
+.new-badge {
+  background: $primary;
+  color: white;
+  padding: 0.2rem 0.5rem;
+  border-radius: 1rem;
+  font-size: 0.7rem;
+  font-weight: bold;
+  text-transform: uppercase;
 }
 </style>
