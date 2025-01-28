@@ -14,12 +14,12 @@
           <td>{{ combinedSpecs?.gpus?.[0]?.gpu || "-" }}</td>
         </tr>
         <tr>
-        <td>NVIDIA Driver</td>
-          <td>{{ combinedSpecs?.nvmlVersion || "-"}}</td>
+          <td>NVIDIA Driver</td>
+          <td>{{ combinedSpecs?.nvmlVersion || "-" }}</td>
         </tr>
         <tr>
           <td>CUDA Version</td>
-          <td>{{ combinedSpecs?.cudaVersion  || "-"}}</td>
+          <td>{{ combinedSpecs?.cudaVersion || "-" }}</td>
         </tr>
         <tr>
           <td>CPU</td>
@@ -186,7 +186,7 @@ const combinedSpecs = computed(() => {
         }))
       : nodeSpecs.value.gpus,
     cudaVersion: nodeInfoData?.gpus.cuda_driver_version,
-    nvmlVersion: nodeInfoData?.gpus.nvml_driver_version
+    nvmlVersion: nodeInfoData?.gpus.nvml_driver_version,
   };
 });
 
@@ -204,8 +204,8 @@ const { data: rankingData } = useAPI(
   computed(() => {
     const marketAddress = nodeSpecs.value?.marketAddress;
     return marketAddress
-      ? `/api/benchmarks/node-ranking?market=${marketAddress}`
-      : "/api/benchmarks/node-ranking";
+      ? `/api/benchmarks/node-report?market=${marketAddress}`
+      : "/api/benchmarks/node-report";
   }),
   {
     // @ts-ignore
