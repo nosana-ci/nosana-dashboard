@@ -144,8 +144,9 @@ const search: Ref<string> = ref('');
 const featuredTemplateIds = [
   'deepseek-r1-qwen-1.5b',
   'deepseek-r1-qwen-7b',
-  'deepseek-r1-llama-8b',
   'deepseek-r1-qwen-32b',
+  'deepseek-janus-pro-1b',
+  'deepseek-janus-pro-7b',
   'comfyui'
 ];
 
@@ -153,7 +154,11 @@ const newTemplateIds = [
   'deepseek-r1-qwen-1.5b',
   'deepseek-r1-qwen-7b',
   'deepseek-r1-llama-8b',
-  'deepseek-r1-qwen-32b'
+  'deepseek-r1-qwen-14b',
+  'deepseek-r1-qwen-32b',
+  'deepseek-r1-llama-70b-awq',
+  'deepseek-janus-pro-1b',
+  'deepseek-janus-pro-7b'
 ];
 
 const featuredTemplates = computed(() => {
@@ -216,7 +221,17 @@ const filteredTemplates = computed(() => {
     : [];
 
   // Sort the filtered templates by stargazers_count in descending order
-  return templatesList.sort((a, b) => (b.stargazers_count || 0) - (a.stargazers_count || 0));
+  return templatesList.sort((a, b) => {
+    // First sort by new status
+    const aIsNew = newTemplateIds.includes(String(a.id));
+    const bIsNew = newTemplateIds.includes(String(b.id));
+    
+    if (aIsNew && !bIsNew) return -1;
+    if (!aIsNew && bIsNew) return 1;
+    
+    // Then sort by star count
+    return (b.stargazers_count || 0) - (a.stargazers_count || 0);
+  });
 });
 const categories = computed(() => {
   const allCategories = templates.value
