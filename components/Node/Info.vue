@@ -188,7 +188,7 @@
           <tr>
             <td>
               <span class="is-flex-inline">
-                <span>Uptime</span>
+                <span>Availability</span>
                 <span
                   class="has-tooltip-arrow ml-1"
                   style="vertical-align: middle"
