@@ -186,6 +186,29 @@
             <td v-else>{{ nodeRanking.stabilityRank }}</td>
           </tr>
           <tr>
+            <td>
+              <span class="is-flex-inline">
+                <span>Uptime</span>
+                <span
+                  class="has-tooltip-arrow ml-1"
+                  style="vertical-align: middle"
+                  data-tooltip="The percentage of time this node has been available to process jobs while in queue"
+                >
+                  <img src="~/assets/img/icons/info.svg" />
+                </span>
+              </span>
+            </td>
+            <td v-if="!nodeRanking">
+              <span
+                class="has-tooltip-arrow"
+                data-tooltip="This node hasn't completed enough jobs to calculate uptime"
+              >
+                unranked
+              </span>
+            </td>
+            <td v-else>{{ nodeRanking.uptimePercentage.toFixed(1) }}%</td>
+          </tr>
+          <tr>
             <td>Average Download Speed (Mbps)</td>
             <td
               v-if="
@@ -433,7 +456,7 @@ const combinedSpecs = computed(() => {
         }))
       : nodeSpecs.value.gpus,
     cudaVersion: nodeInfoData?.gpus.cuda_driver_version,
-    nvmlVersion: nodeInfoData?.gpus.nvml_driver_version
+    nvmlVersion: nodeInfoData?.gpus.nvml_driver_version,
   };
 });
 
@@ -479,7 +502,7 @@ watch(
       if (!rankingAPInstance) {
         // Create new instance with data and execute it
         rankingAPInstance = useAPI(
-          `/api/benchmarks/node-ranking?node=${props.address}`,
+          `/api/benchmarks/node-report?node=${props.address}`,
           {
             // @ts-ignore
             disableToastOnError: true,
