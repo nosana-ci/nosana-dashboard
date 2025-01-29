@@ -150,7 +150,7 @@
             </td>
             <td v-else>{{ nodeRanking.stabilityRank }}</td>
           </tr>
-          <tr v-show="false">
+          <tr>
             <td>
               <span class="is-flex-inline">
                 <span>Availability</span>
