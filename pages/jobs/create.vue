@@ -564,6 +564,33 @@
         </div>
       </form>
     </div>
+
+    <!-- Swap Confirmation Modal -->
+    <div class="modal" :class="{ 'is-active': showSwapModal }">
+      <div class="modal-background" @click="showSwapModal = false"></div>
+      <div class="modal-card">
+        <header class="modal-card-head">
+          <p class="modal-card-title">Insufficient NOS Balance</p>
+          <button class="delete" aria-label="close" @click="showSwapModal = false"></button>
+        </header>
+        <section class="modal-card-body">
+          <p class="mb-4">
+            Additional NOS needed: {{ ((swapRequired || 0) - (balance || 0)).toFixed(2) }} NOS (${{ (((swapRequired || 0) - (balance || 0)) * (nosPrice || 0)).toFixed(2) }})
+            <br><br>
+            Your balance: {{ (balance || 0).toFixed(2) }} NOS (${{ ((balance || 0) * (nosPrice || 0)).toFixed(2) }})
+            <br>
+            Total needed: {{ (swapRequired || 0).toFixed(2) }} NOS (${{ ((swapRequired || 0) * (nosPrice || 0)).toFixed(2) }})
+          </p>
+          <p>Would you like to swap SOL for the additional amount of NOS({{ ((swapRequired || 0) - (balance || 0)).toFixed(2) }}) using Jupiter and then post the job?</p>
+        </section>
+        <footer class="modal-card-foot">
+          <button class="button is-primary" @click="showSwapModal = false; loading = true; submitJob()">
+            Yes, Swap and Post
+          </button>
+          <button class="button" @click="showSwapModal = false">Cancel</button>
+        </footer>
+      </div>
+    </div>
   </div>
 </template>
 <style>
@@ -803,32 +830,62 @@ const validator = (json: any): Array<ValidationError> => {
   return errors;
 }
 
+const showSwapModal = ref(false);
+const swapRequired = ref(0);
 
 const postJob = async () => {
   loading.value = true;
   if (!jobDefinition.value || !market.value || !jobTimeout.value) return;
+
+  try {
+    // Check if user has enough NOS balance (comparing NOS amounts)
+    const totalRequired = (maxPrice.value || 0) + (networkFee.value || 0);
+    if ((balance.value || 0) < totalRequired * 1.01) { // Add 10% buffer for fees
+      loading.value = false;
+      swapRequired.value = totalRequired;
+      showSwapModal.value = true;
+      return;
+    }
+
+    await submitJob();
+  } catch (e: any) {
+    handleJobError(e);
+  }
+  loading.value = false;
+}
+
+const submitJob = async () => {
   try {
     const ipfsHash = await nosana.value.ipfs.pin(jobDefinition.value);
     console.log('ipfs uploaded!', nosana.value.ipfs.config.gateway + ipfsHash);
-    const response = await nosana.value.jobs.list(ipfsHash, jobTimeout.value * 60, market.value!.address);
+    const response = await nosana.value.jobs.ensureNosAndListJob(ipfsHash, jobTimeout.value * 60, market.value!.address);
     toast.success(`Successfully created job ${response.job}`);
     await sleep(3);
     router.push('/jobs/' + response.job);
-  } catch (e: any) {
-    const errorMessage = e.toString();
-    const fullError = String(e);
-    if (errorMessage.includes('TransactionExpiredTimeoutError') ||
-      fullError.includes('Transaction was not confirmed in') ||
-      fullError.includes('TimeoutError')) {
-      toast.error('Solana is congested, try again or with a higher fee (Turbo/Ultra)');
-    } else if (errorMessage.includes('Unknown action') ||
-      fullError.includes('Unknown action')) {
-      toast.error('Not enough NOS balance for the transaction');
+  } catch (e) {
+    loading.value = false; // Reset loading state on error
+    if (e.toString().toLowerCase().includes('user rejected')) {
+      toast.info('Transaction was cancelled');
     } else {
-      toast.error(errorMessage);
+      throw e; // Re-throw other errors to be handled by handleJobError
     }
   }
-  loading.value = false;
+}
+
+const handleJobError = (e: any) => {
+  loading.value = false; // Ensure loading is reset for all error cases
+  const errorMessage = e.toString();
+  const fullError = String(e);
+  if (errorMessage.includes('TransactionExpiredTimeoutError') ||
+    fullError.includes('Transaction was not confirmed in') ||
+    fullError.includes('TimeoutError')) {
+    toast.error('Solana is congested, try again or with a higher fee (Turbo/Ultra)');
+  } else if (errorMessage.includes('Unknown action') ||
+    fullError.includes('Unknown action')) {
+    toast.error('Not enough NOS balance for the transaction');
+  } else {
+    toast.error(errorMessage);
+  }
 }
 
 watchEffect(async () => {

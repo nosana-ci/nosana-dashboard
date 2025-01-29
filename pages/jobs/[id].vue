@@ -523,6 +523,9 @@ let ws: WebSocket | null = null;
 let isWebSocketConnected = false;
 const isConnecting = ref(false);
 
+// Add a small ref to prevent infinite reconnect loops
+const hasRetried = ref(false);
+
 const checkAndConnectWebSocket = async () => {
   if (isWebSocketConnected || isConnecting.value) return;
 
@@ -538,32 +541,28 @@ const checkAndConnectWebSocket = async () => {
   }
 };
 
-onMounted(() => {
-  checkAndConnectWebSocket();
-});
-
-onActivated(() => {
-  checkAndConnectWebSocket();
-});
-
-interface ProgressBar {
-  id: string;
-  current: number;
-  total: number;
-  status: string;
-  text: string;
-}
-
-interface LogEntry {
-  id: number;
-  type: 'log' | 'progress';
-  content: string;
-  ansi?: boolean;
-  progress?: ProgressBar;
-}
+// Function to add log entries
+const addLogEntry = (entry: LogEntry) => {
+  structuredLogs.value.push(entry);
+  // If we have a log viewer component, forward the log
+  if (logViewer.value?.handleWebSocketMessage) {
+    const messageData = JSON.stringify({
+      data: JSON.stringify({
+        log: entry.content
+      })
+    });
+    const event = new MessageEvent('message', {
+      data: messageData,
+      origin: window.location.origin,
+      lastEventId: '',
+      source: window,
+      ports: []
+    });
+    logViewer.value.handleWebSocketMessage(event);
+  }
+};
 
 const structuredLogs = ref<LogEntry[]>([]);
-
 
 const serviceUrl = ref<string | null>(null);
 const hasShownServiceOnlineToast = ref(false);
@@ -614,7 +613,7 @@ watch(() => job.value?.address, (newAddress) => {
     if (!job.value?.jobDefinition?.ops[0]?.args?.private) {
       const url = `https://${newAddress}.node.k8s.prd.nos.ci`;
       serviceUrl.value = url;
-    }
+  }
   }
 }, { immediate: true });
 
@@ -697,7 +696,8 @@ const connectWebSocket = async () => {
       isConnecting.value = false;
     };
 
-    ws.onerror = () => {
+    // Here is the key update: if there's an error connecting, we re-sign the message once
+    ws.onerror = async () => {
       clearTimeout(connectionTimeout);
       ws = null;
       isWebSocketConnected = false;
@@ -707,6 +707,17 @@ const connectWebSocket = async () => {
         content: 'Error connecting to WebSocket. The node may be offline.',
       });
       isConnecting.value = false;
+
+      // Attempt re-signing (only once) if user is connected, is job poster, and job is running
+      if (!hasRetried.value && connected.value && isJobPoster.value && isRunning(job.value?.state)) {
+        hasRetried.value = true;
+        try {
+          await signMessage(true);
+          checkAndConnectWebSocket();
+        } catch (err) {
+          console.error('Re-sign message error:', err);
+        }
+      }
     };
   } catch (error) {
     ws = null;
@@ -720,6 +731,33 @@ const connectWebSocket = async () => {
   }
 };
 
+onMounted(() => {
+  checkAndConnectWebSocket();
+});
+
+onActivated(() => {
+  checkAndConnectWebSocket();
+});
+
+interface ProgressBar {
+  id: string;
+  current: number;
+  total: number;
+  status: string;
+  text: string;
+}
+
+interface LogEntry {
+  id: number;
+  type: 'log' | 'progress';
+  content: string;
+  ansi?: boolean;
+  progress?: ProgressBar;
+}
+
+const logViewer = ref<InstanceType<typeof JobLogViewer> | null>(null);
+
+// Reset hasRetried when component is unmounted
 onUnmounted(() => {
   logViewer.value?.clearLogs();
   if (ws) {
@@ -728,6 +766,7 @@ onUnmounted(() => {
   }
   isWebSocketConnected = false;
   isConnecting.value = false;
+  hasRetried.value = false;
 });
 
 watch(
@@ -742,8 +781,6 @@ const hasResultsRegex = computed(() => {
   if (!job.value?.jobDefinition?.ops) return false;
   return job.value.jobDefinition.ops.some((op: any) => op.results);
 });
-
-const logViewer = ref<InstanceType<typeof JobLogViewer> | null>(null);
 </script>
 
 <style lang="scss" scoped>
