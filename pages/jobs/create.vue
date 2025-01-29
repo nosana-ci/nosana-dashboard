@@ -883,6 +883,8 @@ const handleJobError = (e: any) => {
   } else if (errorMessage.includes('Unknown action') ||
     fullError.includes('Unknown action')) {
     toast.error('Not enough NOS balance for the transaction');
+  } else if (errorMessage.includes('Swap completed but balance is still insufficient')) {
+    toast.error('Swap completed but balance is still insufficient. Try again.');
   } else {
     toast.error(errorMessage);
   }

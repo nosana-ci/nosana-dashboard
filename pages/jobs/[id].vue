@@ -522,6 +522,7 @@ const repostJob = async () => {
 let ws: WebSocket | null = null;
 let isWebSocketConnected = false;
 const isConnecting = ref(false);
+const hasRetried = ref(false);
 
 const checkAndConnectWebSocket = async () => {
   if (isWebSocketConnected || isConnecting.value) return;
@@ -697,7 +698,7 @@ const connectWebSocket = async () => {
       isConnecting.value = false;
     };
 
-    ws.onerror = () => {
+    ws.onerror = async () => {
       clearTimeout(connectionTimeout);
       ws = null;
       isWebSocketConnected = false;
@@ -707,6 +708,17 @@ const connectWebSocket = async () => {
         content: 'Error connecting to WebSocket. The node may be offline.',
       });
       isConnecting.value = false;
+
+      // Only attempt re-signing if there are no logs yet
+      if (!hasRetried.value && connected.value && isJobPoster.value && isRunning(job.value?.state) && (!structuredLogs.value.length)) {
+        hasRetried.value = true;
+        try {
+          await signMessage(true);
+          checkAndConnectWebSocket();
+        } catch (err) {
+          console.error('Re-sign message error:', err);
+        }
+      }
     };
   } catch (error) {
     ws = null;
@@ -716,7 +728,7 @@ const connectWebSocket = async () => {
       id: Date.now(),
       type: 'log',
       content: 'Failed to establish WebSocket connection. The node may be offline.',
-});
+    });
   }
 };
 
