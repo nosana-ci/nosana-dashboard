@@ -619,6 +619,8 @@ watch(() => job.value?.address, (newAddress) => {
   }
 }, { immediate: true });
 
+const logViewer = ref<InstanceType<typeof JobLogViewer> | null>(null);
+
 const connectWebSocket = async () => {
   if (ws) {
     ws.close();
@@ -626,9 +628,8 @@ const connectWebSocket = async () => {
     isWebSocketConnected = false;
   }
 
-  structuredLogs.value = structuredLogs.value.filter(
-    (entry) => !entry.content.includes('Error connecting to WebSocket')
-  );
+  // Remove old error logs
+  logViewer.value?.clearLogs();
 
   const nodeAddress = job.value.node.toString();
   const frpServer = useRuntimeConfig().public.nodeDomain;
@@ -655,11 +656,10 @@ const connectWebSocket = async () => {
         }
         isConnecting.value = false;
         isWebSocketConnected = false;
-        addLogEntry({
-          id: Date.now(),
-          type: 'log',
-          content: 'Could not establish WebSocket connection to get the logs. The node may be offline.',
-        });
+        logViewer.value?.addLog(
+          'Could not establish WebSocket connection to get the logs. The node may be offline.',
+          false
+        );
       }
     }, 10000);
 
@@ -689,11 +689,10 @@ const connectWebSocket = async () => {
       ws = null;
       isWebSocketConnected = false;
       if (isConnecting.value) {
-        addLogEntry({
-          id: Date.now(),
-          type: 'log',
-          content: 'WebSocket connection closed. Could not establish connection to get the logs.',
-        });
+        logViewer.value?.addLog(
+          'WebSocket connection closed. Could not establish connection to get the logs.',
+          false
+        );
       }
       isConnecting.value = false;
     };
@@ -702,15 +701,14 @@ const connectWebSocket = async () => {
       clearTimeout(connectionTimeout);
       ws = null;
       isWebSocketConnected = false;
-      addLogEntry({
-        id: Date.now(),
-        type: 'log',
-        content: 'Error connecting to WebSocket. The node may be offline.',
-      });
+      logViewer.value?.addLog(
+        'Error connecting to WebSocket. The node may be offline.',
+        false
+      );
       isConnecting.value = false;
 
       // Only attempt re-signing if there are no logs yet
-      if (!hasRetried.value && connected.value && isJobPoster.value && isRunning(job.value?.state) && (!structuredLogs.value.length)) {
+      if (!hasRetried.value && connected.value && isJobPoster.value && isRunning(job.value?.state)) {
         hasRetried.value = true;
         try {
           await signMessage(true);
@@ -724,11 +722,10 @@ const connectWebSocket = async () => {
     ws = null;
     isWebSocketConnected = false;
     isConnecting.value = false;
-    addLogEntry({
-      id: Date.now(),
-      type: 'log',
-      content: 'Failed to establish WebSocket connection. The node may be offline.',
-    });
+    logViewer.value?.addLog(
+      'Failed to establish WebSocket connection. The node may be offline.',
+      false
+    );
   }
 };
 
@@ -754,8 +751,6 @@ const hasResultsRegex = computed(() => {
   if (!job.value?.jobDefinition?.ops) return false;
   return job.value.jobDefinition.ops.some((op: any) => op.results);
 });
-
-const logViewer = ref<InstanceType<typeof JobLogViewer> | null>(null);
 </script>
 
 <style lang="scss" scoped>

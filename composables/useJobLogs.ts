@@ -51,7 +51,7 @@ export function useJobLogs() {
     return { value: Number((value / 1024).toFixed(2)), format: 'gb' };
   }
 
-  function addLogEntry(content: string, isHtml: boolean = false) {
+  function addLog(content: string, isHtml: boolean = false) {
     // Don't add duplicate consecutive logs
     const lastLog = logs.value[logs.value.length - 1];
     if (lastLog?.type === 'log' && lastLog.content === content) {
@@ -97,7 +97,7 @@ export function useJobLogs() {
           progressBars.value.delete(layerId);
         }, 1000); // Remove completed bars after 1 second
       }
-      addLogEntry(`${status}: ${layerId}`);
+      addLog(`${status}: ${layerId}`);
       return;
     }
 
@@ -149,7 +149,7 @@ export function useJobLogs() {
       }
 
       if (logData.log) {
-        addLogEntry(logData.log);
+        addLog(logData.log);
       }
     } catch (err) {
       console.error('Error parsing log data:', err);
@@ -168,6 +168,6 @@ export function useJobLogs() {
     isConnecting,
     handleWebSocketMessage,
     clearLogs,
-    addLogEntry
+    addLog
   };
 } 
