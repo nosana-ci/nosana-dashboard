@@ -67,27 +67,28 @@
                 class="column is-4"
               >
                 <nuxt-link class="box template-card" :to="{ path: '/jobs/create', query: { templateId: template.id } }">
-                  <div class="template-content">
-                    <div class="template-info">
-                      <div class="mb-2">
-                        <div class="is-flex is-align-items-center">
-                          <h2 class="is-size-4 has-text-weight-semibold mb-0 has-text-black">
-                            {{ template.name }}
-                          </h2>
-                          <span v-if="newTemplateIds.includes(String(template.id))" class="new-badge ml-2">New</span>
+                  <div class="template-header">
+                    <div class="header-content">
+                      <div class="header-title">
+                        <span v-if="newTemplateIds.includes(String(template.id))" class="new-badge">New</span>
+                        <h2 class="is-size-4 has-text-weight-semibold mb-0 has-text-black">
+                          {{ template.name }}
+                        </h2>
+                      </div>
+                      <div class="header-meta">
+                        <span v-if="template.stargazers_count" class="has-text-grey is-size-7">
+                          <span class="has-text-warning mr-1" style="font-size: 12px;">★</span>
+                          <span class="ml-1">{{ String(template.stargazers_count) }}</span>
+                        </span>
+                        <span v-else class="star-placeholder"></span>
+                        <div v-if="template.icon || template.avatar_url" class="template-icon">
+                          <img :src="template.icon || template.avatar_url">
                         </div>
                       </div>
-                      <p>{{ template.description }}</p>
                     </div>
-                    <div class="template-meta">
-                      <span v-if="template.stargazers_count" class="has-text-grey is-size-7 mb-1">
-                        <span class="has-text-warning mr-1" style="font-size: 12px;">★</span>
-                        <span class="ml-1">{{ String(template.stargazers_count) }}</span>
-                      </span>
-                      <div v-if="template.icon || template.avatar_url" class="template-icon is-flex is-justify-content-center">
-                        <img :src="template.icon || template.avatar_url">
-                      </div>
-                    </div>
+                  </div>
+                  <div class="template-description">
+                    <p>{{ template.description }}</p>
                   </div>
                 </nuxt-link>
               </div>
@@ -103,27 +104,28 @@
               class="column is-4"
             >
               <nuxt-link class="box template-card" :to="{ path: '/jobs/create', query: { templateId: template.id } }">
-                <div class="template-content">
-                  <div class="template-info">
-                    <div class="mb-2">
-                      <div class="is-flex is-align-items-center">
-                        <h2 class="is-size-4 has-text-weight-semibold mb-0 has-text-black">
-                          {{ template.name }}
-                        </h2>
-                        <span v-if="newTemplateIds.includes(String(template.id))" class="new-badge ml-2">New</span>
+                <div class="template-header">
+                  <div class="header-content">
+                    <div class="header-title">
+                      <span v-if="newTemplateIds.includes(String(template.id))" class="new-badge">New</span>
+                      <h2 class="is-size-4 has-text-weight-semibold mb-0 has-text-black">
+                        {{ template.name }}
+                      </h2>
+                    </div>
+                    <div class="header-meta">
+                      <span v-if="template.stargazers_count" class="has-text-grey is-size-7">
+                        <span class="has-text-warning mr-1" style="font-size: 12px;">★</span>
+                        <span class="ml-1">{{ String(template.stargazers_count) }}</span>
+                      </span>
+                      <span v-else class="star-placeholder"></span>
+                      <div v-if="template.icon || template.avatar_url" class="template-icon">
+                        <img :src="template.icon || template.avatar_url">
                       </div>
                     </div>
-                    <p>{{ template.description }}</p>
                   </div>
-                  <div class="template-meta">
-                    <span v-if="template.stargazers_count" class="has-text-grey is-size-7 mb-1">
-                      <span class="has-text-warning mr-1" style="font-size: 12px;">★</span>
-                      <span class="ml-1">{{ String(template.stargazers_count) }}</span>
-                    </span>
-                    <div v-if="template.icon || template.avatar_url" class="template-icon is-flex is-justify-content-center">
-                      <img :src="template.icon || template.avatar_url">
-                    </div>
-                  </div>
+                </div>
+                <div class="template-description">
+                  <p>{{ template.description }}</p>
                 </div>
               </nuxt-link>
             </div>
@@ -401,42 +403,72 @@ function templatesWithoutSubcategory(category: string): Template[] {
 <style lang="scss" scoped>
 .template-card {
   height: 100%;
-  display: block;
-}
-
-.template-content {
   display: flex;
-  gap: 1rem;
-  height: 100%;
-  align-items: flex-start;
+  flex-direction: column;
+  padding: 1.25rem;
+  position: relative;
 }
 
-.template-info {
+.template-header {
+  margin-bottom: 1rem;
+  width: 100%;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.header-title {
   flex: 1;
   min-width: 0;
-  overflow-wrap: break-word;
-  word-wrap: break-word;
+  display: flex;
+  align-items: center;
+  margin-top: 0.8rem;
+  
+  h2 {
+    line-height: 1.2;
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+  }
 }
 
-.template-meta {
+.header-meta {
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 0.25rem;
   flex-shrink: 0;
-  margin-left: auto;
-  padding-left: 0.75rem;
-  min-width: 50px;
+  justify-content: center;
+  min-height: 56px;
+}
+
+.template-description {
+  width: 100%;
+  
+  p {
+    margin: 0;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+  }
 }
 
 .template-icon {
   background-color: #ffffff !important;
   border: 1px solid $grey-lighter;
-  width: 42px;
-  height: 42px;
+  width: 38px;
+  height: 38px;
   border-radius: 100%;
-  padding: 7px;
+  padding: 6px;
   flex-shrink: 0;
-  margin-top: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
   img {
     width: 100%;
@@ -447,45 +479,40 @@ function templatesWithoutSubcategory(category: string): Template[] {
 
 // Improve responsive behavior
 @media screen and (max-width: 768px) {
-  .template-content {
+  .header-content {
     gap: 0.5rem;
   }
   
-  .template-meta {
-    padding-left: 0.5rem;
-    min-width: 42px;
-  }
-  
   .template-icon {
-    width: 36px;
-    height: 36px;
+    width: 34px;
+    height: 34px;
     padding: 5px;
   }
 
-  .template-info h2 {
-    font-size: 1.25rem !important;
+  .header-title {
+    h2 {
+      font-size: 1.25rem !important;
+    }
   }
 }
 
 // Add this new media query for very small screens
 @media screen and (max-width: 480px) {
-  .template-content {
+  .header-content {
     gap: 0.25rem;
   }
   
-  .template-meta {
-    padding-left: 0.25rem;
-    min-width: 36px;
-  }
-  
   .template-icon {
-    width: 32px;
-    height: 32px;
+    width: 30px;
+    height: 30px;
     padding: 4px;
   }
 }
 
 .new-badge {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
   background: $primary;
   color: white;
   padding: 0.2rem 0.5rem;
@@ -493,5 +520,11 @@ function templatesWithoutSubcategory(category: string): Template[] {
   font-size: 0.7rem;
   font-weight: bold;
   text-transform: uppercase;
+  z-index: 1;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.star-placeholder {
+  height: 19px;
 }
 </style>

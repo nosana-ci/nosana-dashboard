@@ -26,14 +26,7 @@
           <div 
             class="log-entry" 
             :class="{ 'container-log': log.isContainerLog }"
-            v-if="log.html" 
             v-html="formatContainerLog(log.content, log.isContainerLog)">
-          </div>
-          <div 
-            class="log-entry"
-            :class="{ 'container-log': log.isContainerLog }"
-            v-else>
-            {{ formatContainerLog(log.content, log.isContainerLog) }}
           </div>
         </template>
 
@@ -97,14 +90,19 @@ const {
   progressBars,
   isConnecting,
   handleWebSocketMessage: baseHandleWebSocketMessage,
-  clearLogs
+  clearLogs,
+  addLog
 } = useJobLogs();
 
 // A second map to track "process-bar" events for resource downloads
 const resourceProgressBars = ref<Map<string, any>>(new Map());
 
-// Format container logs to highlight timestamps
+// Format container logs to highlight timestamps and handle ANSI codes
 function formatContainerLog(content: string, isContainerLog: boolean | undefined) {
+  if (!content) return '';
+  
+  let formattedContent = content;
+  
   if (!isContainerLog) {
     // Add color to download status lines
     if (content.startsWith('Download complete:') || 
@@ -112,14 +110,42 @@ function formatContainerLog(content: string, isContainerLog: boolean | undefined
         content.startsWith('Pull complete:')) {
       return `<span class="download-status">${content}</span>`;
     }
-    return content;
+  } else {
+    // Replace timestamp with styled version for container logs
+    formattedContent = content.replace(
+      /^\[(\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2},\d{3})\]/,
+      '<span class="timestamp">[$1]</span>'
+    );
   }
-  
-  // Replace timestamp with styled version
-  return content.replace(
-    /^\[(\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2},\d{3})\]/,
-    '<span class="timestamp">[$1]</span>'
-  );
+
+  // Process ANSI color codes
+  formattedContent = formattedContent
+    // Bold
+    .replace(/\u001b\[1m/g, '<span class="ansi-bold">')
+    // Colors
+    .replace(/\u001b\[30m/g, '<span class="ansi-black-fg">')
+    .replace(/\u001b\[31m/g, '<span class="ansi-red-fg">')
+    .replace(/\u001b\[32m/g, '<span class="ansi-green-fg">')
+    .replace(/\u001b\[33m/g, '<span class="ansi-yellow-fg">')
+    .replace(/\u001b\[34m/g, '<span class="ansi-blue-fg">')
+    .replace(/\u001b\[35m/g, '<span class="ansi-magenta-fg">')
+    .replace(/\u001b\[36m/g, '<span class="ansi-cyan-fg">')
+    .replace(/\u001b\[37m/g, '<span class="ansi-white-fg">')
+    // Bright colors
+    .replace(/\u001b\[90m/g, '<span class="ansi-bright-black-fg">')
+    .replace(/\u001b\[91m/g, '<span class="ansi-bright-red-fg">')
+    .replace(/\u001b\[92m/g, '<span class="ansi-bright-green-fg">')
+    .replace(/\u001b\[93m/g, '<span class="ansi-bright-yellow-fg">')
+    .replace(/\u001b\[94m/g, '<span class="ansi-bright-blue-fg">')
+    .replace(/\u001b\[95m/g, '<span class="ansi-bright-magenta-fg">')
+    .replace(/\u001b\[96m/g, '<span class="ansi-bright-cyan-fg">')
+    .replace(/\u001b\[97m/g, '<span class="ansi-bright-white-fg">')
+    // Reset
+    .replace(/\u001b\[0m/g, '</span>')
+    // Close any unclosed spans
+    .replace(/\u001b\[\d+m/g, '');
+
+  return formattedContent;
 }
 
 // Our custom handler extends baseHandleWebSocketMessage
@@ -218,7 +244,8 @@ onMounted(() => {
 
 defineExpose({
   handleWebSocketMessage,
-  clearLogs
+  clearLogs,
+  addLog
 });
 </script>
 

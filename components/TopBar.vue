@@ -28,26 +28,26 @@
           </p>
           <div class="field has-addons">
             <p class="control">
-              <button class="button is-medium is-primary" @click="prioFee = 0"
-                :class="{ 'is-outlined': prioFee !== 0 }">
-                <span>Disable</span>
+              <button class="button is-medium is-primary" @click="setPrioFeeConfig('low')"
+                :class="{ 'is-outlined': prioFee.strategy !== 'low' }">
+                <span>Slow</span>
               </button>
             </p>
             <p class="control">
-              <button class="button is-medium is-primary" @click="prioFee = 10000"
-                :class="{ 'is-outlined': prioFee !== 10000 }">
+              <button class="button is-medium is-primary" @click="setPrioFeeConfig('medium')"
+                :class="{ 'is-outlined': prioFee.strategy !== 'medium' }">
+                <span>Medium</span>
+              </button>
+            </p>
+            <p class="control">
+              <button class="button is-medium is-primary" @click="setPrioFeeConfig('high')"
+                :class="{ 'is-outlined': prioFee.strategy !== 'high' }">
                 <span>Fast</span>
               </button>
             </p>
             <p class="control">
-              <button class="button is-medium is-primary" @click="prioFee = 50000"
-                :class="{ 'is-outlined': prioFee !== 50000 }">
-                <span>Turbo</span>
-              </button>
-            </p>
-            <p class="control">
-              <button class="button is-medium is-primary" @click="prioFee = 100000"
-                :class="{ 'is-outlined': prioFee !== 100000 }">
+              <button class="button is-medium is-primary" @click="setPrioFeeConfig('veryHigh')"
+                :class="{ 'is-outlined': prioFee.strategy !== 'veryHigh' }">
                 <span>Ultra</span>
               </button>
             </p>
@@ -65,6 +65,47 @@
 import { WalletMultiButton } from "solana-wallets-vue";
 const showSettingsModal = ref(false);
 const { prioFee } = useSDK();
+
+interface PrioFeeConfig {
+  strategy: 'low' | 'medium' | 'high' | 'veryHigh';
+  staticFee: number;
+  dynamicPriorityFee: boolean;
+  maximumPriorityFee: number;
+}
+
+// Priority fee configuration mapping
+const PRIO_FEE_CONFIGS: Record<string, PrioFeeConfig> = {
+  low: {
+    strategy: 'low',
+    staticFee: 10000,
+    dynamicPriorityFee: true,
+    maximumPriorityFee: 1000000
+  },
+  medium: {
+    strategy: 'medium',
+    staticFee: 100000,
+    dynamicPriorityFee: true,
+    maximumPriorityFee: 15000000
+  },
+  high: {
+    strategy: 'high',
+    staticFee: 100000,
+    dynamicPriorityFee: true,
+    maximumPriorityFee: 15000000
+  },
+  veryHigh: {
+    strategy: 'veryHigh',
+    staticFee: 100000,
+    dynamicPriorityFee: true,
+    maximumPriorityFee: 15000000
+  }
+};
+
+const setPrioFeeConfig = (level: keyof typeof PRIO_FEE_CONFIGS) => {
+  const config = PRIO_FEE_CONFIGS[level];
+  prioFee.value = config;
+};
+
 defineProps({
   title: {
     type: String,
