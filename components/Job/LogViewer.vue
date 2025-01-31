@@ -90,7 +90,8 @@ const {
   progressBars,
   isConnecting,
   handleWebSocketMessage: baseHandleWebSocketMessage,
-  clearLogs
+  clearLogs,
+  addLog
 } = useJobLogs();
 
 // A second map to track "process-bar" events for resource downloads
@@ -243,7 +244,8 @@ onMounted(() => {
 
 defineExpose({
   handleWebSocketMessage,
-  clearLogs
+  clearLogs,
+  addLog
 });
 </script>
 
