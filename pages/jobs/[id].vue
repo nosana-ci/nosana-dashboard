@@ -18,7 +18,7 @@
                 Visit Service
               </a>
             </div>
-            <div v-if="isJobPoster && isRunning(job.state)" class="mr-4">
+            <div v-if="isJobPoster && (isRunning(job.state) || getStateNumber(job.state) === 0)" class="mr-4">
               <button @click="stopJob" :class="{ 'is-loading': loading }" class="button is-danger">
                 Stop Job
               </button>
