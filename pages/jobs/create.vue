@@ -891,8 +891,8 @@ const handleJobError = (e: any) => {
 }
 
 watchEffect(async () => {
-  // Check for repost parameters
-  if (route.query?.fromRepost === 'true' && route.query?.jobAddress) {
+  // Only run this effect when the repost parameters are present and haven't been handled yet
+  if (route.query?.fromRepost === 'true' && route.query?.jobAddress && !route.query?.repostHandled) {
     const address = route.query.jobAddress.toString();
 
     try {
@@ -958,12 +958,11 @@ watchEffect(async () => {
         );
         if (originalMarket) {
           market.value = originalMarket;
-          return; // Exit if we found the original market
         }
       }
 
-      // 8. Otherwise find first GPU market
-      if (markets.value?.length) {
+      // 8. If no original market found, find first GPU market
+      if (!market.value && markets.value?.length) {
         const gpuMarket = markets.value.find(m => {
           const market = m as ExtendedMarket;
           return m.jobPrice > 0 && (
@@ -980,6 +979,14 @@ watchEffect(async () => {
           toast.warning('No GPU market found. Please select a market manually.');
         }
       }
+
+      // Mark repost as handled by adding a flag to the query
+      router.replace({ 
+        query: { 
+          ...route.query, 
+          repostHandled: 'true'
+        }
+      });
 
     } catch (err: any) {
       toast.error('Error setting up reposted job: ' + err.toString());
