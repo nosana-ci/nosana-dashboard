@@ -29,8 +29,12 @@
             <td v-if="!queueInfo">
               <span v-if="loadingMarkets || loadingRuns">...</span>
               <span v-else>
-                <div v-if="nodeRuns && nodeRuns.length" data-tooltip="Host is running a job" style="width: fit-content"
-                  class="is-flex">
+                <div
+                  v-if="nodeRuns && nodeRuns.length"
+                  data-tooltip="Host is running a job"
+                  style="width: fit-content"
+                  class="is-flex"
+                >
                   <ExplorerJobStatus :status="'RUNNING'"></ExplorerJobStatus>
                 </div>
                 <div v-else>
@@ -41,7 +45,11 @@
               </span>
             </td>
             <td v-else style="vertical-align: middle">
-              <div data-tooltip="Host is queued in market" style="width: fit-content" class="is-flex">
+              <div
+                data-tooltip="Host is queued in market"
+                style="width: fit-content"
+                class="is-flex"
+              >
                 <ExplorerJobStatus :status="'QUEUED'"></ExplorerJobStatus>
               </div>
             </td>
@@ -49,22 +57,30 @@
           <tr v-if="nodeRuns && nodeRuns.length > 0">
             <td>Running job</td>
             <td>
-              <nuxt-link :to="`/jobs/${nodeRuns[0].account.job}`" class="address is-family-monospace">{{
-                nodeRuns[0].account.job }}</nuxt-link>
+              <nuxt-link
+                :to="`/jobs/${nodeRuns[0].account.job}`"
+                class="address is-family-monospace"
+                >{{ nodeRuns[0].account.job }}</nuxt-link
+              >
             </td>
           </tr>
           <tr>
             <td>GPU Market</td>
             <td v-if="queueInfo">
               <span>
-                <nuxt-link :to="`/markets/${queueInfo.market.address.toString()}`" class="address is-family-monospace">
-                  <span v-if="
-                    testgridMarkets &&
-                    testgridMarkets.find(
-                      (tgm: any) =>
-                        tgm.address === queueInfo!.market.address.toString()
-                    )
-                  ">
+                <nuxt-link
+                  :to="`/markets/${queueInfo.market.address.toString()}`"
+                  class="address is-family-monospace"
+                >
+                  <span
+                    v-if="
+                      testgridMarkets &&
+                      testgridMarkets.find(
+                        (tgm: any) =>
+                          tgm.address === queueInfo!.market.address.toString()
+                      )
+                    "
+                  >
                     {{
                       testgridMarkets.find(
                         (tgm: any) =>
@@ -79,13 +95,18 @@
             <td v-else>
               <span v-if="nodeSpecs">
                 <template v-if="nodeSpecs.marketAddress">
-                  <nuxt-link :to="`/markets/${nodeSpecs.marketAddress}`" class="address is-family-monospace">
-                    <span v-if="
-                      testgridMarkets &&
-                      testgridMarkets.find(
-                        (tgm: any) => tgm.address === nodeSpecs.marketAddress
-                      )
-                    ">
+                  <nuxt-link
+                    :to="`/markets/${nodeSpecs.marketAddress}`"
+                    class="address is-family-monospace"
+                  >
+                    <span
+                      v-if="
+                        testgridMarkets &&
+                        testgridMarkets.find(
+                          (tgm: any) => tgm.address === nodeSpecs.marketAddress
+                        )
+                      "
+                    >
                       {{
                         testgridMarkets.find(
                           (tgm: any) => tgm.address === nodeSpecs.marketAddress
@@ -105,8 +126,8 @@
           </tr>
           <tr>
             <td>CLI Version</td>
-            <td v-if="nodeInfo">v{{ nodeInfo.version }}</td>
-            <td v-else-if="loadingInfo">...</td>
+            <td v-if="combinedSpecs">v{{ combinedSpecs.nodeVersion }}</td>
+            <td v-else-if="loadingInfo || loadingSpecs">...</td>
             <td v-else>Offline</td>
           </tr>
           <NodeSpecification v-if="combinedSpecs" :specs="combinedSpecs" />
@@ -120,14 +141,21 @@
             <td>
               <span class="is-flex-inline">
                 <span>Performance Rank</span>
-                <span class="has-tooltip-arrow ml-1" style="vertical-align: middle" data-tooltip="An aggregated performance ranking based on all leaderboard
-                positions of the node compared to all other nodes in the market.">
+                <span
+                  class="has-tooltip-arrow ml-1"
+                  style="vertical-align: middle"
+                  data-tooltip="An aggregated performance ranking based on all leaderboard
+                positions of the node compared to all other nodes in the market."
+                >
                   <img src="~/assets/img/icons/info.svg" />
                 </span>
               </span>
             </td>
             <td v-if="!nodeRanking">
-              <span class="has-tooltip-arrow" data-tooltip="This node hasn't completed enough jobs to be ranked yet">
+              <span
+                class="has-tooltip-arrow"
+                data-tooltip="This node hasn't completed enough jobs to be ranked yet"
+              >
                 unranked
               </span>
             </td>
@@ -137,14 +165,21 @@
             <td>
               <span class="">
                 <span>Stability Rank</span>
-                <span class="has-tooltip-arrow ml-1" style="vertical-align: middle" data-tooltip="An aggregated stability ranking based on the nodes performance
-                  variance. The less variance the better.">
+                <span
+                  class="has-tooltip-arrow ml-1"
+                  style="vertical-align: middle"
+                  data-tooltip="An aggregated stability ranking based on the nodes performance
+                  variance. The less variance the better."
+                >
                   <img src="~/assets/img/icons/info.svg" />
                 </span>
               </span>
             </td>
             <td v-if="!nodeRanking">
-              <span class="has-tooltip-arrow" data-tooltip="This node hasn't completed enough jobs to be ranked yet">
+              <span
+                class="has-tooltip-arrow"
+                data-tooltip="This node hasn't completed enough jobs to be ranked yet"
+              >
                 unranked
               </span>
             </td>
@@ -154,15 +189,25 @@
             <td>
               <span class="is-flex-inline">
                 <span>Availability</span>
-                <span class="has-tooltip-arrow ml-1" style="vertical-align: middle"
-                  data-tooltip="The percentage of time this node has been available to process jobs while in queue">
+                <span
+                  class="has-tooltip-arrow ml-1"
+                  style="vertical-align: middle"
+                  data-tooltip="The percentage of time this node has been available to process jobs while in queue"
+                >
                   <img src="~/assets/img/icons/info.svg" />
                 </span>
               </span>
             </td>
-            <td v-if="!nodeRanking || typeof nodeRanking.uptimePercentage === 'undefined'">
-              <span class="has-tooltip-arrow"
-                data-tooltip="This node hasn't been online long enough to calculate availibily">
+            <td
+              v-if="
+                !nodeRanking ||
+                typeof nodeRanking.uptimePercentage === 'undefined'
+              "
+            >
+              <span
+                class="has-tooltip-arrow"
+                data-tooltip="This node hasn't been online long enough to calculate availibily"
+              >
                 unknown
               </span>
             </td>
@@ -170,10 +215,12 @@
           </tr>
           <tr>
             <td>Average Download Speed (Mbps)</td>
-            <td v-if="
-              !genericBenchmarkResponse ||
-              !genericBenchmarkResponse.data.length
-            ">
+            <td
+              v-if="
+                !genericBenchmarkResponse ||
+                !genericBenchmarkResponse.data.length
+              "
+            >
               -
             </td>
             <td v-else>
@@ -187,10 +234,12 @@
           </tr>
           <tr>
             <td>Average Upload Speed (Mbps)</td>
-            <td v-if="
-              !genericBenchmarkResponse ||
-              !genericBenchmarkResponse.data.length
-            ">
+            <td
+              v-if="
+                !genericBenchmarkResponse ||
+                !genericBenchmarkResponse.data.length
+              "
+            >
               -
             </td>
             <td v-else>
@@ -207,26 +256,48 @@
       <!-- Only render benchmark histograms if nodeSpecs & nodeSpecs.marketAddress are valid -->
       <div class="columns" v-if="nodeSpecs && nodeSpecs.marketAddress">
         <div class="column is-6">
-          <NodeBenchmarkHistogram title="LLM Performance" type="llm" :node-id="address"
-            :market-id="nodeSpecs.marketAddress" default-metric="averageTokensPerSecond" :metrics="[
+          <NodeBenchmarkHistogram
+            title="LLM Performance"
+            type="llm"
+            :node-id="address"
+            :market-id="nodeSpecs.marketAddress"
+            default-metric="averageTokensPerSecond"
+            :metrics="[
               { value: 'averageTokensPerSecond', label: 'Tokens / Second' },
               { value: 'avgClockSpeed', label: 'Clock Speed (MHz)' },
               { value: 'avgWattage', label: 'Power Usage (W)' },
               { value: 'avgTemperature', label: 'Temperature (°C)' },
-            ]" x-axis-label="Concurrent Users" />
+            ]"
+            x-axis-label="Concurrent Users"
+          />
         </div>
         <div class="column is-6">
-          <NodeBenchmarkHistogram title="Image Generation Performance" type="image-gen" :node-id="address"
-            :market-id="nodeSpecs.marketAddress" default-metric="imagesPerSecond" :metrics="[
+          <NodeBenchmarkHistogram
+            title="Image Generation Performance"
+            type="image-gen"
+            :node-id="address"
+            :market-id="nodeSpecs.marketAddress"
+            default-metric="imagesPerSecond"
+            :metrics="[
               { value: 'imagesPerSecond', label: 'Images / Second' },
               { value: 'avgClockSpeed', label: 'Clock Speed (MHz)' },
               { value: 'avgWattage', label: 'Power Usage (W)' },
               { value: 'avgTemperature', label: 'Temperature (°C)' },
-            ]" x-axis-label="Batch Size" />
+            ]"
+            x-axis-label="Batch Size"
+          />
         </div>
       </div>
-      <ExplorerJobList :per-page="limit" :total-jobs="totalJobs" v-model:page="page" v-model:state="state"
-        :loading-jobs="loadingJobs" title="Jobs Ran" :jobs="jobs?.jobs || []" :states="[1, 2]" />
+      <ExplorerJobList
+        :per-page="limit"
+        :total-jobs="totalJobs"
+        v-model:page="page"
+        v-model:state="state"
+        :loading-jobs="loadingJobs"
+        title="Jobs Ran"
+        :jobs="jobs?.jobs || []"
+        :states="[1, 2]"
+      />
     </div>
   </div>
 </template>
@@ -301,9 +372,11 @@ const jobStateMapping: any = {
 };
 const limit: Ref<number> = ref(10);
 const jobsUrl: ComputedRef<string> = computed(() => {
-  return `/api/jobs?limit=${limit.value}&offset=${(page.value - 1) * limit.value
-    }${state.value !== null ? `&state=${jobStateMapping[state.value]}` : ""}${"&node=" + props.address
-    }`;
+  return `/api/jobs?limit=${limit.value}&offset=${
+    (page.value - 1) * limit.value
+  }${state.value !== null ? `&state=${jobStateMapping[state.value]}` : ""}${
+    "&node=" + props.address
+  }`;
 });
 
 interface JobsResponse {
@@ -348,14 +421,11 @@ const {
   data: nodeInfo,
   pending: loadingInfo,
   execute: getNodeInfo,
-} = useAPI(
-  `https://${props.address}.${useRuntimeConfig().public.nodeDomain}/node/info`,
-  {
-    immediate: false,
-    // @ts-ignore
-    disableToastOnError: true,
-  }
-);
+} = useAPI(`https://${props.address}.node.k8s.dev.nos.ci/node/info`, {
+  immediate: false,
+  // @ts-ignore
+  disableToastOnError: true,
+});
 
 /*************
  * Fallback Node Specs *
@@ -371,24 +441,34 @@ const combinedSpecs = computed(() => {
     nodeAddress: props.address,
     marketAddress: nodeSpecs.value.marketAddress,
     ram: nodeInfoData?.ram_mb
-      ? Number(Math.round(nodeInfoData.ram_mb / 1024)).toFixed(2)
-      : Number(nodeSpecs.value.ram).toFixed(2),
+      ? Math.round(nodeInfoData.ram_mb)
+      : Math.round(Number(nodeSpecs.value.ram)),
     diskSpace: nodeInfoData?.disk_gb
-      ? Number(nodeInfoData.disk_gb).toFixed(2)
-      : Number(nodeSpecs.value.diskSpace).toFixed(2),
+      ? Math.round(Number(nodeInfoData.disk_gb))
+      : Math.round(Number(nodeSpecs.value.diskSpace)),
     cpu: nodeInfoData?.cpu?.model ?? nodeSpecs.value.cpu,
     country: nodeInfoData?.country ?? nodeSpecs.value.country,
     bandwidth:
       nodeInfoData?.network?.download_mbps ?? nodeSpecs.value.bandwidth,
     gpus: nodeInfoData?.gpus?.devices
       ? nodeInfoData.gpus.devices.map((gpu: any) => ({
-        gpu: gpu.name,
-        memory: gpu.memory?.total_mb,
-        architecture: `${gpu.network_architecture?.major}.${gpu.network_architecture?.minor}`,
-      }))
+          gpu: gpu.name,
+          memory: gpu.memory?.total_mb,
+          architecture: `${gpu.network_architecture?.major}.${gpu.network_architecture?.minor}`,
+        }))
       : nodeSpecs.value.gpus,
-    cudaVersion: nodeInfoData?.gpus.cuda_driver_version,
-    nvmlVersion: nodeInfoData?.gpus.nvml_driver_version,
+    cudaVersion:
+      nodeInfoData?.gpus?.cuda_driver_version ?? nodeSpecs.value.cudaVersion,
+    nvmlVersion:
+      nodeInfoData?.gpus?.nvml_driver_version ?? nodeSpecs.value.nvmlVersion,
+    nodeVersion: nodeInfoData?.version ?? nodeSpecs.value.nodeVersion,
+    systemEnvironment: nodeInfoData?.system_environment
+      ? nodeInfoData.system_environment.includes("WSL")
+        ? "WSL"
+        : "Linux"
+      : nodeSpecs.value.systemEnvironment?.includes("WSL")
+        ? "WSL"
+        : "Linux",
   };
 });
 
@@ -400,7 +480,7 @@ const { data: genericBenchmarkResponse, execute: getNodeBenchmarks } = useAPI(
   { immediate: false }
 );
 
-// Safely call node info + benchmark if it’s actually (or likely) a node
+// Safely call node info + benchmark if it's actually (or likely) a node
 function fetchAdditionalNodeData() {
   getNodeBenchmarks().catch((err) => {
     console.error(
