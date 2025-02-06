@@ -547,6 +547,15 @@
             </a>
           </p>
           <p class="control">
+            <button
+              class="button is-info is-large"
+              :disabled="loading"
+              @click="() => { console.log('Swap button clicked'); showSwapModal = true; }"
+            >
+              Swap for NOS
+            </button>
+          </p>
+          <p class="control">
             <ClientOnly>
               <wallet-modal-provider v-if="!connected" :dark="$colorMode.value === 'dark'">
                 <template #default="modalScope">
@@ -555,7 +564,7 @@
                   </a>
                 </template>
               </wallet-modal-provider>
-              <button v-else :disabled="!jobDefinition || !market ? true : undefined" :class="{ 'is-loading': loading }"
+              <button v-else :disabled="!jobDefinition || !market || !canPostJob" :class="{ 'is-loading': loading }"
                 class="button is-primary is-large" type="submit">
                 <span>Post Job</span>
               </button>
@@ -564,42 +573,85 @@
         </div>
       </form>
     </div>
+  </div>
 
-    <!-- Buttons to post job and to open the swap modal -->
-    <div class="buttons mt-4">
-      <button
-        class="button is-primary"
-        :disabled="!canPostJob || loading"
-        :class="{ 'is-loading': loading }"
-        @click="postJob"
-      >
-        Post Job
-      </button>
+  <!-- Modal component -->
+  <div v-if="showSwapModal" class="modal is-active">
+    <div class="modal-background" @click="showSwapModal = false"></div>
+    <div class="modal-card">
+      <header class="modal-card-head">
+        <p class="modal-card-title">Swap Tokens for NOS</p>
+        <button class="delete" aria-label="close" @click="showSwapModal = false"></button>
+      </header>
+      <section class="modal-card-body">
+        <!-- Show user's current balances -->
+        <div class="box">
+          <h5 class="title is-6">Current Balances</h5>
+          <p><strong>NOS:</strong> {{ userBalances.nos.toFixed(2) }}</p>
+          <p><strong>SOL:</strong> {{ userBalances.sol.toFixed(4) }}</p>
+          <p><strong>USDC:</strong> {{ userBalances.usdc.toFixed(4) }}</p>
+          <p><strong>USDT:</strong> {{ userBalances.usdt.toFixed(4) }}</p>
+        </div>
 
-      <button
-        class="button is-info"
-        :disabled="loading"
-        @click="showSwapModal = true"
-      >
-        Swap for NOS
-      </button>
+        <!-- Show how much NOS needed for this job -->
+        <div class="box">
+          <h5 class="title is-6">NOS Needed</h5>
+          <p>You need: {{ totalNosNeeded.toFixed(2) }} NOS</p>
+        </div>
+
+        <!-- Dropdown to pick source token -->
+        <div class="field">
+          <label class="label">Source Token</label>
+          <div class="control">
+            <div class="select is-fullwidth">
+              <select v-model="selectedSwapSource">
+                <option value="SOL">SOL</option>
+                <option value="USDC">USDC</option>
+                <option value="USDT">USDT</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Display approximate fee breakdown -->
+        <div v-if="swapSimulatedFee !== null" class="box">
+          <h5 class="title is-6">Estimated Fee</h5>
+          <div>
+            <p>~ {{ swapSimulatedFee.toFixed(6) }} {{ selectedSwapSource }}</p>
+            <div v-if="swapSimulatedFeeUsd !== null && !isNaN(swapSimulatedFeeUsd)">
+              <p>(≈ ${{ swapSimulatedFeeUsd.toFixed(4) }})</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Buttons -->
+        <div class="buttons mt-4">
+          <button
+            class="button is-info"
+            :class="{ 'is-loading': loadingQuote }"
+            @click="getSwapQuote"
+          >
+            Refresh Fee
+          </button>
+          <button
+            class="button is-primary"
+            :class="{ 'is-loading': loadingSwap }"
+            @click="confirmSwap"
+          >
+            Swap Now
+          </button>
+        </div>
+      </section>
     </div>
-
-    <!-- Modal component -->
-    <SwapModal
-      v-if="showSwapModal"
-      :showModal="showSwapModal"
-      :close="() => (showSwapModal = false)"
-      :nosNeeded="totalNosNeeded"
-      :balances="userBalances"
-      :jobSdk="nosana"
-      @onSwapSuccess="refreshBalance"
-    />
   </div>
 </template>
 <style>
 .steps .steps-marker {
   z-index: 4;
+}
+.modal-card {
+  width: 600px;
+  max-width: 90%;
 }
 </style>
 <script lang="ts" setup>
@@ -615,7 +667,6 @@ import { sleep, validateJobDefinition, type IValidation, type JobDefinition, typ
 import { WalletModalProvider, useWallet } from "solana-wallets-vue";
 import { useToast } from "vue-toastification";
 import type { LocationQueryValue } from 'vue-router';
-import SwapModal from '@/components/Create/SwapModal.vue';
 
 const { templates, emptyJobDefinition, loadingTemplates } = useTemplates();
 const route = useRoute();
@@ -653,6 +704,7 @@ const envName: Ref<string[]> = ref([]);
 const resultsName: Ref<string[]> = ref([]);
 const jobTimeout: Ref<number> = useLocalStorage('job-timeout', 60); // Default 60 minutes
 const nosPrice = ref(0);
+const showSwapModal = ref(false);
 
 interface CachedPrice {
   price: number;
@@ -836,7 +888,6 @@ const validator = (json: any): Array<ValidationError> => {
   return errors;
 }
 
-const showSwapModal = ref(false);
 const swapRequired = ref(0);
 
 const canPostJob = computed(() => {
@@ -852,7 +903,6 @@ const postJob = async () => {
   try {
     if (!canPostJob.value) {
       loading.value = false;
-      toast.error('You do not have enough NOS to post this job. Please Auto-Swap first.');
       return;
     }
 
@@ -1082,5 +1132,91 @@ const totalNosNeeded = computed<number>(() => {
   return (maxPrice.value + networkFee.value) * 1.05; // example
 });
 
+// Add debug watcher for nosana
+watch(nosana, (val) => {
+  console.log('Nosana SDK state:', {
+    hasValue: !!val?.value,
+    hasJobs: !!val?.value?.jobs,
+  });
+}, { immediate: true });
 
+// Add debug watcher for showSwapModal
+watch(showSwapModal, (val) => {
+  console.log('showSwapModal changed:', val);
+}, { immediate: true });
+
+// Add swap-related state
+const selectedSwapSource = ref<'SOL' | 'USDC' | 'USDT'>('SOL');
+const loadingQuote = ref(false);
+const loadingSwap = ref(false);
+const swapSimulatedFee = ref<number | null>(null);
+const swapSimulatedFeeUsd = ref<number | null>(null);
+
+// Add swap-related methods
+async function getSwapQuote() {
+  try {
+    if (!nosana.value?.jobs) {
+      console.error('Jobs SDK not available');
+      throw new Error('Swap functionality not initialized. Please try again in a moment.');
+    }
+    if (typeof nosana.value.jobs.swapToNos !== 'function') {
+      console.error('SwapToNos not available:', nosana.value.jobs);
+      throw new Error('Swap functionality not available. Please ensure your wallet is connected.');
+    }
+
+    loadingQuote.value = true;
+    const simulationResult = await nosana.value.jobs.swapToNos(
+      totalNosNeeded.value,
+      selectedSwapSource.value,
+      true // simulateOnly
+    );
+
+    swapSimulatedFee.value = simulationResult.totalFee;
+    
+    if (selectedSwapSource.value === 'SOL') {
+      const result = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd');
+      const json = await result.json();
+      const solPrice = json?.solana?.usd ?? 0;
+      swapSimulatedFeeUsd.value = swapSimulatedFee.value ? swapSimulatedFee.value * solPrice : 0;
+    } else if (selectedSwapSource.value === 'USDC' || selectedSwapSource.value === 'USDT') {
+      swapSimulatedFeeUsd.value = swapSimulatedFee.value ? swapSimulatedFee.value * 1.0 : 0;
+    }
+  } catch (error: any) {
+    toast.error(`Error getting fee quote: ${error}`);
+    console.error(error);
+  } finally {
+    loadingQuote.value = false;
+  }
+}
+
+async function confirmSwap() {
+  try {
+    if (!nosana.value?.jobs) {
+      console.error('Jobs SDK not available');
+      throw new Error('Swap functionality not initialized. Please try again in a moment.');
+    }
+    if (typeof nosana.value.jobs.swapToNos !== 'function') {
+      console.error('SwapToNos not available:', nosana.value.jobs);
+      throw new Error('Swap functionality not available. Please ensure your wallet is connected.');
+    }
+
+    loadingSwap.value = true;
+    await nosana.value.jobs.swapToNos(totalNosNeeded.value, selectedSwapSource.value, false);
+    toast.success('Swap completed!');
+    await refreshBalance();
+    showSwapModal.value = false;
+  } catch (error: any) {
+    console.error(error);
+    toast.error(`Swap error: ${error}`);
+  } finally {
+    loadingSwap.value = false;
+  }
+}
+
+// Get quote when modal opens
+watch(showSwapModal, (newVal) => {
+  if (newVal) {
+    getSwapQuote();
+  }
+});
 </script>
