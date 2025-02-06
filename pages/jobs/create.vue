@@ -565,32 +565,36 @@
       </form>
     </div>
 
-    <!-- Swap Confirmation Modal -->
-    <div class="modal" :class="{ 'is-active': showSwapModal }">
-      <div class="modal-background" @click="showSwapModal = false"></div>
-      <div class="modal-card">
-        <header class="modal-card-head">
-          <p class="modal-card-title">Insufficient NOS Balance</p>
-          <button class="delete" aria-label="close" @click="showSwapModal = false"></button>
-        </header>
-        <section class="modal-card-body">
-          <p class="mb-4">
-            Additional NOS needed: {{ ((swapRequired || 0) - (balance || 0)).toFixed(2) }} NOS (${{ (((swapRequired || 0) - (balance || 0)) * (nosPrice || 0)).toFixed(2) }})
-            <br><br>
-            Your balance: {{ (balance || 0).toFixed(2) }} NOS (${{ ((balance || 0) * (nosPrice || 0)).toFixed(2) }})
-            <br>
-            Total needed: {{ (swapRequired || 0).toFixed(2) }} NOS (${{ ((swapRequired || 0) * (nosPrice || 0)).toFixed(2) }})
-          </p>
-          <p>Would you like to swap SOL for the additional amount of NOS({{ ((swapRequired || 0) - (balance || 0)).toFixed(2) }}) using Jupiter and then post the job?</p>
-        </section>
-        <footer class="modal-card-foot">
-          <button class="button is-primary" @click="showSwapModal = false; loading = true; submitJob()">
-            Yes, Swap and Post
-          </button>
-          <button class="button" @click="showSwapModal = false">Cancel</button>
-        </footer>
-      </div>
+    <!-- Buttons to post job and to open the swap modal -->
+    <div class="buttons mt-4">
+      <button
+        class="button is-primary"
+        :disabled="!canPostJob || loading"
+        :class="{ 'is-loading': loading }"
+        @click="postJob"
+      >
+        Post Job
+      </button>
+
+      <button
+        class="button is-info"
+        :disabled="loading"
+        @click="showSwapModal = true"
+      >
+        Swap for NOS
+      </button>
     </div>
+
+    <!-- Modal component -->
+    <SwapModal
+      v-if="showSwapModal"
+      :showModal="showSwapModal"
+      :close="() => (showSwapModal = false)"
+      :nosNeeded="totalNosNeeded"
+      :balances="userBalances"
+      :jobSdk="nosana"
+      @onSwapSuccess="refreshBalance"
+    />
   </div>
 </template>
 <style>
@@ -611,6 +615,8 @@ import { sleep, validateJobDefinition, type IValidation, type JobDefinition, typ
 import { WalletModalProvider, useWallet } from "solana-wallets-vue";
 import { useToast } from "vue-toastification";
 import type { LocationQueryValue } from 'vue-router';
+import SwapModal from '@/components/Create/SwapModal.vue';
+
 const { templates, emptyJobDefinition, loadingTemplates } = useTemplates();
 const route = useRoute();
 const router = useRouter();
@@ -833,82 +839,93 @@ const validator = (json: any): Array<ValidationError> => {
 const showSwapModal = ref(false);
 const swapRequired = ref(0);
 
+const canPostJob = computed(() => {
+  const totalRequired = (maxPrice.value || 0) + (networkFee.value || 0);
+  return (balance.value || 0) >= totalRequired * 1.01;
+});
+
+
 const postJob = async () => {
   loading.value = true;
   if (!jobDefinition.value || !market.value || !jobTimeout.value) return;
 
   try {
-    // Check if user has enough NOS balance (comparing NOS amounts)
-    const totalRequired = (maxPrice.value || 0) + (networkFee.value || 0);
-    if ((balance.value || 0) < totalRequired * 1.01) { // Add 10% buffer for fees
+    if (!canPostJob.value) {
       loading.value = false;
-      swapRequired.value = totalRequired;
-      showSwapModal.value = true;
+      toast.error('You do not have enough NOS to post this job. Please Auto-Swap first.');
       return;
     }
 
     await submitJob();
   } catch (e: any) {
     handleJobError(e);
+  } finally {
+    loading.value = false;
   }
-  loading.value = false;
-}
+};
 
 const submitJob = async () => {
   try {
     const ipfsHash = await nosana.value.ipfs.pin(jobDefinition.value);
-    console.log('ipfs uploaded!', nosana.value.ipfs.config.gateway + ipfsHash);
-    const response = await nosana.value.jobs.ensureNosAndListJob(ipfsHash, jobTimeout.value * 60, market.value!.address);
+    console.log('IPFS uploaded at:', nosana.value.ipfs.config.gateway + ipfsHash);
+
+    const response = await nosana.value.jobs.list(
+      ipfsHash,
+      jobTimeout.value * 60,
+      market.value!.address
+    );
     toast.success(`Successfully created job ${response.job}`);
     await sleep(3);
+
     router.push('/jobs/' + response.job);
-  } catch (e) {
-    loading.value = false; // Reset loading state on error
-    if (e.toString().toLowerCase().includes('user rejected')) {
-      toast.info('Transaction was cancelled');
+  } catch (error) {
+    loading.value = false;
+    if (error.toString().toLowerCase().includes('user rejected')) {
+      toast.info('Transaction was cancelled.');
     } else {
-      throw e; // Re-throw other errors to be handled by handleJobError
+      throw error;
     }
   }
-}
+};
 
 const handleJobError = (e: any) => {
-  loading.value = false; // Ensure loading is reset for all error cases
+  loading.value = false;
   const errorMessage = e.toString();
   const fullError = String(e);
-  if (errorMessage.includes('TransactionExpiredTimeoutError') ||
+
+  if (
+    errorMessage.includes('TransactionExpiredTimeoutError') ||
     fullError.includes('Transaction was not confirmed in') ||
-    fullError.includes('TimeoutError')) {
-    toast.error('Solana is congested, try again or with a higher fee (Turbo/Ultra)');
-  } else if (errorMessage.includes('Unknown action') ||
-    fullError.includes('Unknown action')) {
-    toast.error('Not enough NOS balance for the transaction');
+    fullError.includes('TimeoutError')
+  ) {
+    toast.error('Solana is congested, try again or with a higher fee (Turbo/Ultra).');
+  } else if (
+    errorMessage.includes('Unknown action') ||
+    fullError.includes('Unknown action')
+  ) {
+    toast.error('Not enough NOS balance for the transaction.');
   } else if (errorMessage.includes('Swap completed but balance is still insufficient')) {
-    toast.error('Swap completed but balance is still insufficient. Reload page and try again.');
+    toast.error('Swap completed but balance is still insufficient. Reload and try again.');
   } else {
     toast.error(errorMessage);
   }
-}
+};
 
 watchEffect(async () => {
-  // Only run this effect when the repost parameters are present and haven't been handled yet
   if (route.query?.fromRepost === 'true' && route.query?.jobAddress && !route.query?.repostHandled) {
     const address = route.query.jobAddress.toString();
 
     try {
       loading.value = true;
 
-      // Set step to post-job immediately
-      if (route.query?.step === 'post-job') {
+      if (route.query.step === 'post-job') {
         step.value = 'post-job';
       }
 
-      // 1. If the query has a jobTimeout, set it first
-      if (route.query?.jobTimeout) {
+      if (route.query.jobTimeout) {
         jobTimeout.value = parseInt(route.query.jobTimeout.toString(), 10);
       }
 
-      // 2. Fetch the job using the same API endpoint
       const response = await fetch(
         `https://dashboard.k8s.prd.nos.ci/api/jobs/${address}`
       );
@@ -922,15 +939,12 @@ watchEffect(async () => {
         throw new Error('No job definition found in the job data');
       }
 
-      // 3. If no jobTimeout in query but job data has it, use that
-      if (!route.query?.jobTimeout && jobData.timeout) {
+      if (!route.query.jobTimeout && jobData.timeout) {
         jobTimeout.value = jobData.timeout;
       }
 
-      // 4. Set the job definition
       jobDefinition.value = jobData.jobDefinition;
 
-      // 5. Force GPU for container/run operations
       if (jobDefinition.value.ops?.length) {
         jobDefinition.value.ops.forEach((op) => {
           if (op.type === 'container/run') {
@@ -946,12 +960,10 @@ watchEffect(async () => {
         });
       }
 
-      // 6. Wait for markets to load if needed
       if (!markets.value && !loadingMarkets.value) {
         await getMarkets();
       }
 
-      // 7. Try to select the original market first
       if (jobData.market && markets.value) {
         const originalMarket = markets.value.find(
           m => m.address.toString() === jobData.market
@@ -961,7 +973,6 @@ watchEffect(async () => {
         }
       }
 
-      // 8. If no original market found, find first GPU market
       if (!market.value && markets.value?.length) {
         const gpuMarket = markets.value.find(m => {
           const market = m as ExtendedMarket;
@@ -980,7 +991,6 @@ watchEffect(async () => {
         }
       }
 
-      // Mark repost as handled by adding a flag to the query
       router.replace({ 
         query: { 
           ...route.query, 
@@ -991,7 +1001,6 @@ watchEffect(async () => {
     } catch (err: any) {
       toast.error('Error setting up reposted job: ' + err.toString());
       console.error('Repost setup error:', err);
-      // On error, reset step to first page
       step.value = 'job-definition';
     } finally {
       loading.value = false;
@@ -999,25 +1008,21 @@ watchEffect(async () => {
   }
 });
 
-// Reload safely preserves "step" and selected "market"
 onMounted(() => {
-  const urlStep = route.query.step as string;
-  const urlMarket = route.query.market as string;
+  const urlStep = route.query.step?.toString();
+  const urlMarket = route.query.market?.toString();
 
-  // Temporarily set the step from URL (fallback to "job-definition" if invalid)
   step.value =
     urlStep && ['job-definition', 'pick-market', 'post-job'].includes(urlStep)
       ? urlStep
       : 'job-definition';
 
-  // Attempt re-selecting market after markets load
   const trySelectMarket = () => {
     if (!markets.value?.length) return;
     if (urlMarket) {
       market.value =
         markets.value.find((m) => m.address.toString() === urlMarket) || null;
     }
-    // Fallback checks after we attempt to restore the market
     if (!jobDefinition.value?.ops?.length && step.value !== 'job-definition') {
       step.value = 'job-definition';
     } else if (step.value === 'post-job' && !market.value) {
@@ -1035,11 +1040,47 @@ onMounted(() => {
   }
 });
 
-// Keep URL in sync when step / market change
 watch(step, (newStep) => {
   router.replace({ query: { ...route.query, step: newStep, market: market.value?.address.toString() } });
 });
 watch(market, (newMarket) => {
   router.replace({ query: { ...route.query, step: step.value, market: newMarket?.address.toString() } });
 });
+
+// Example: track the user balances. Replace with your own composables if needed.
+const userBalances = ref({
+  nos: 0,
+  sol: 0,
+  usdc: 0,
+  usdt: 0,
+});
+
+// Update user balances
+watch([balance], async () => {
+  try {
+    // e.g. using your new methods:
+    const [nosBal, solBal] = await Promise.all([
+      nosana.value.jobs.getNosBalance(),
+      nosana.value.jobs.getSolBalance()
+    ])
+    const usdcBal = await nosana.value.jobs.getUsdcBalance()
+    const usdtBal = await nosana.value.jobs.getUsdtBalance()
+
+    userBalances.value.nos = nosBal?.uiAmount ?? 0
+    userBalances.value.sol = solBal / 1e9
+    userBalances.value.usdc = usdcBal?.uiAmount ?? 0
+    userBalances.value.usdt = usdtBal?.uiAmount ?? 0
+  } catch (error) {
+    console.error('Failed to refresh balances', error)
+  }
+}, { immediate: true });
+
+// The total NOS needed for the job (including fees) from your existing logic
+const totalNosNeeded = computed<number>(() => {
+  // e.g. maxPrice + networkFee, plus buffer
+  // your existing math if you do a 1.1 multipler, etc.
+  return (maxPrice.value + networkFee.value) * 1.05; // example
+});
+
+
 </script>
