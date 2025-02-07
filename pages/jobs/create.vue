@@ -994,6 +994,27 @@ const userBalances = ref<TokenBalance>({
   usdt: 0,
 });
 
+const refreshAllBalances = async () => {
+  try {
+    const [nosBal, solBal, usdcBal, usdtBal] = await Promise.all([
+      nosana.value.jobs.getNosBalance(),
+      nosana.value.jobs.getSolBalance(),
+      nosana.value.jobs.getUsdcBalance(),
+      nosana.value.jobs.getUsdtBalance()
+    ]);
+
+    userBalances.value = {
+      nos: nosBal?.uiAmount ?? 0,
+      sol: solBal / 1e9,
+      usdc: usdcBal?.uiAmount ?? 0,
+      usdt: usdtBal?.uiAmount ?? 0
+    };
+    await refreshBalance();
+  } catch (error) {
+    console.error('Failed to refresh balances', error);
+  }
+};
+
 const postJob = async () => {
   if (!jobDefinition.value || !market.value || !jobTimeout.value || !canPostJob.value) return;
   
@@ -1017,6 +1038,7 @@ const submitJob = async () => {
     );
     toast.success(`Successfully created job ${response.job}`);
     await sleep(3);
+    await refreshAllBalances();
     router.push('/jobs/' + response.job);
   } catch (error: any) {
     if (error.toString().toLowerCase().includes('user rejected')) {
@@ -1186,11 +1208,6 @@ watch([totalNosNeeded, () => userBalances.value.nos], () => {
   swapAmount.value = Math.max(0, totalNosNeeded.value - userBalances.value.nos);
 }, { immediate: true });
 
-const getSwapSourceAmount = () => {
-  const dollarValueNeeded = swapAmount.value * nosPrice.value;
-  const tokenPrice = getTokenPrice(selectedSwapSource.value);
-  return tokenPrice > 0 ? dollarValueNeeded / tokenPrice : 0;
-};
 
 async function confirmSwap() {
   if (!nosana.value?.jobs?.swapToNos) {
@@ -1206,9 +1223,8 @@ async function confirmSwap() {
   loadingSwap.value = true;
   try {
     const { txid } = await nosana.value.jobs.swapToNos(swapAmount.value, selectedSwapSource.value);
-    
     toast.success('Swap completed! Transaction: ' + txid.slice(0, 8) + '...');
-    await refreshBalance();
+    await refreshAllBalances();
     showSwapModal.value = false;
   } catch (error: any) {
     toast.error(`Swap error: ${error}`);
