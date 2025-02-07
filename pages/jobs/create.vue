@@ -579,59 +579,68 @@
   <!-- Modal component -->
   <div v-if="showSwapModal" class="modal is-active">
     <div class="modal-background" @click="showSwapModal = false"></div>
-    <div class="modal-card">
+    <div class="modal-card" style="width: 420px; max-width: 90%;">
       <header class="modal-card-head">
-        <p class="modal-card-title">Swap Tokens for NOS</p>
+        <p class="modal-card-title has-text-grey">Insufficient NOS balance</p>
         <button class="delete" aria-label="close" @click="showSwapModal = false"></button>
       </header>
+
       <section class="modal-card-body">
-        <!-- Show user's current balances -->
-        <div class="box">
-          <h5 class="title is-6">Current Balances</h5>
-          <p><strong>NOS:</strong> {{ userBalances.nos.toFixed(2) }}</p>
-          <p><strong>SOL:</strong> {{ userBalances.sol.toFixed(4) }}</p>
-          <p><strong>USDC:</strong> {{ userBalances.usdc.toFixed(4) }}</p>
-          <p><strong>USDT:</strong> {{ userBalances.usdt.toFixed(4) }}</p>
+        <div class="field mb-4">
+          <p class="has-text-grey">NOS needed for job:</p>
+          <p class="has-text-black">
+            {{ totalNosNeeded.toFixed(2) }} NOS 
+            ( ${{ (totalNosNeeded * nosPrice).toFixed(2) }} )
+          </p>
         </div>
 
-        <!-- Show how much NOS needed for this job -->
-        <div class="box">
-          <h5 class="title is-6">NOS Required</h5>
-          <p>Additional NOS needed: {{ Math.max(0, totalNosNeeded - userBalances.nos).toFixed(2) }} NOS</p>
-          <p class="is-size-7">Total job cost: {{ totalNosNeeded.toFixed(2) }} NOS</p>
+        <div class="field mb-4">
+          <p class="has-text-grey">Your balance:</p>
+          <p class="has-text-black">
+            {{ userBalances.nos.toFixed(2) }} NOS 
+            ( ${{ (userBalances.nos * nosPrice).toFixed(2) }} )
+          </p>
         </div>
 
-        <!-- Amount to swap -->
-        <div class="field">
-          <label class="label">Amount (NOS)</label>
-          <div class="control">
-            <input 
-              v-model.number="swapAmount" 
-              class="input" 
-              type="number" 
-              min="0" 
-              step="0.01"
-              placeholder="Amount of NOS to receive"
-            >
-          </div>
-          <p class="help">Enter the amount of NOS you want to receive</p>
+        <div class="field mb-4">
+          <p class="has-text-grey">Total needed:</p>
+          <p class="has-text-black">
+            {{ swapAmount.toFixed(2) }} NOS 
+            ( ${{ (swapAmount * nosPrice).toFixed(2) }} )
+          </p>
         </div>
 
-        <!-- Dropdown to pick source token -->
-        <div class="field">
-          <label class="label">Source Token</label>
+        <div class="field mb-4">
+          <p class="has-text-grey">Select token you want to swap with:</p>
           <div class="control">
             <div class="select is-fullwidth">
               <select v-model="selectedSwapSource">
-                <option value="SOL">SOL</option>
-                <option value="USDC">USDC</option>
-                <option value="USDT">USDT</option>
+                <option value="SOL">
+                  SOL (You have {{ userBalances.sol.toFixed(4) }})
+                  ~ ${{ (userBalances.sol * solPrice).toFixed(2) }}
+                </option>
+                <option value="USDC">
+                  USDC (You have {{ userBalances.usdc.toFixed(2) }})
+                  ~ ${{ (userBalances.usdc * usdcPrice).toFixed(2) }}
+                </option>
+                <option value="USDT">
+                  USDT (You have {{ userBalances.usdt.toFixed(2) }})
+                  ~ ${{ (userBalances.usdt * usdtPrice).toFixed(2) }}
+                </option>
               </select>
             </div>
           </div>
         </div>
 
-        <!-- Buttons -->
+        <div class="field mb-4">
+          <p class="has-text-grey">
+            Would you like to swap 
+            <b>{{ swapAmount.toFixed(2) }} {{ selectedSwapSource }}</b> 
+            for the additional amount of 
+            <b>{{ swapAmount.toFixed(2) }} NOS</b>?
+          </p>
+        </div>
+
         <div class="buttons mt-4">
           <button
             class="button is-primary is-fullwidth"
@@ -704,6 +713,9 @@ const envName: Ref<string[]> = ref([]);
 const resultsName: Ref<string[]> = ref([]);
 const jobTimeout: Ref<number> = useLocalStorage('job-timeout', 60); // Default 60 minutes
 const nosPrice = ref(0);
+const solPrice = ref(0);
+const usdcPrice = ref(0);
+const usdtPrice = ref(0);
 const showSwapModal = ref(false);
 
 interface CachedPrice {
@@ -719,11 +731,19 @@ const isCacheValid = () => {
   return Date.now() - cachedNosPrice.value.timestamp < oneHour;
 };
 
-const { data: nosPriceData } = await useAPI('https://api.coingecko.com/api/v3/simple/price?ids=nosana&vs_currencies=usd', {
-  default: () => ({ nosana: { usd: 0 } })
-});
+const { data: priceData } = await useAPI(
+  'https://api.coingecko.com/api/v3/simple/price?ids=nosana,solana,usd-coin,tether&vs_currencies=usd',
+  {
+    default: () => ({
+      nosana: { usd: 0 },
+      solana: { usd: 0 },
+      'usd-coin': { usd: 0 },
+      tether: { usd: 0 }
+    })
+  }
+);
 
-watch(() => nosPriceData.value, (newPrice) => {
+watch(() => priceData.value, (newPrice) => {
   if (newPrice?.nosana?.usd) {
     nosPrice.value = newPrice.nosana.usd;
     // Update cache with new price and timestamp
@@ -736,6 +756,15 @@ watch(() => nosPriceData.value, (newPrice) => {
     nosPrice.value = cachedNosPrice.value.price;
   } else {
     nosPrice.value = 0;
+  }
+  if (newPrice?.solana?.usd) {
+    solPrice.value = newPrice.solana.usd;
+  }
+  if (newPrice?.['usd-coin']?.usd) {
+    usdcPrice.value = newPrice['usd-coin'].usd;
+  }
+  if (newPrice?.tether?.usd) {
+    usdtPrice.value = newPrice.tether.usd;
   }
 }, { immediate: true });
 
@@ -1188,4 +1217,17 @@ async function confirmSwap() {
     loadingSwap.value = false;
   }
 }
+
+// Updated token price helper to use actual prices
+const getTokenPrice = (token: 'SOL' | 'USDC' | 'USDT') => {
+  switch (token) {
+    case 'SOL':
+      return solPrice.value;
+    case 'USDC':
+      return usdcPrice.value;
+    case 'USDT':
+      return usdtPrice.value;
+  }
+  return 0;
+};
 </script>
