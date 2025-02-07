@@ -606,7 +606,10 @@
           <p class="has-text-grey">Total needed:</p>
           <p class="has-text-black">
             <b>{{ swapAmount.toFixed(2) }} NOS </b>
-            <span class="has-text-grey">(${{ (swapAmount * nosPrice).toFixed(2) }})</span>
+            <span class="has-text-grey"></span>
+            for 
+            <b>{{ swapAmount.toFixed(2) }} NOS</b>
+            <span class="has-text-grey"></span>?
           </p>
         </div>
 
@@ -1202,8 +1205,7 @@ async function confirmSwap() {
 
   loadingSwap.value = true;
   try {
-    const sourceAmount = getSwapSourceAmount();
-    const { txid } = await nosana.value.jobs.swapToNos(sourceAmount, selectedSwapSource.value);
+    const { txid } = await nosana.value.jobs.swapToNos(swapAmount.value, selectedSwapSource.value);
     
     toast.success('Swap completed! Transaction: ' + txid.slice(0, 8) + '...');
     await refreshBalance();
