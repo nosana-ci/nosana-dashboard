@@ -616,7 +616,7 @@
             <div class="dropdown w-100" :class="{ 'is-active': isDropdownOpen }">
               <div class="dropdown-trigger w-100">
                 <button 
-                  class="button w-100" 
+                  class="button w-100 has-background-white-ter is-borderless" 
                   aria-haspopup="true"
                   aria-controls="token-dropdown-menu"
                   @click="isDropdownOpen = !isDropdownOpen"
@@ -625,14 +625,21 @@
                     <img :src="selectedToken.icon" alt="" style="height: 20px; width: auto;" />
                   </span>
                   <span>{{ selectedToken.label }}</span>
-                  <span class="icon is-small ml-auto">
-                    <i class="fas fa-angle-down" aria-hidden="true"></i>
+                  <span class="has-text-weight-bold ml-auto">
+                    ${{ (userBalances[selectedToken.value.toLowerCase()] * getTokenPrice(selectedToken.value)).toFixed(2) }}
+                  </span>
+                  <span class="icon is-small ml-2">
+                    <img
+                      :src="isDropdownOpen ? ArrowUp : ArrowDown"
+                      alt="arrow-icon"
+                      style="height: 8px;"
+                    />
                   </span>
                 </button>
               </div>
 
               <div class="dropdown-menu w-100" id="token-dropdown-menu" role="menu">
-                <div class="dropdown-content">
+                <div class="dropdown-content has-background-white-ter is-borderless">
                   <a
                     v-for="token in tokens"
                     :key="token.value"
@@ -643,6 +650,9 @@
                       <img :src="token.icon" alt="token-icon" style="height: 20px; width: auto;" />
                     </span>
                     <span>{{ token.label }}</span>
+                    <span class="has-text-weight-bold ml-auto">
+                      ${{ (userBalances[token.value.toLowerCase()] * getTokenPrice(token.value)).toFixed(2) }}
+                    </span>
                   </a>
                 </div>
               </div>
@@ -684,6 +694,10 @@
 .w-100 {
   width: 100%;
 }
+.is-borderless {
+  border: none !important;
+  box-shadow: none !important;
+}
 </style>
 <script lang="ts" setup>
 import VueJsonPretty from "vue-json-pretty";
@@ -701,6 +715,8 @@ import type { LocationQueryValue } from 'vue-router';
 import SolIcon from '@/assets/img/token_icons/solana-sol-logo.svg?url'
 import UsdcIcon from '@/assets/img/token_icons/usd-coin-usdc-logo.svg?url'
 import UsdtIcon from '@/assets/img/token_icons/tether-usdt-logo.svg?url'
+import ArrowDown from '@/assets/img/icons/arrow-down.svg?url'
+import ArrowUp from '@/assets/img/icons/arrow-up.svg?url'
 
 const { templates, emptyJobDefinition, loadingTemplates } = useTemplates();
 const route = useRoute();
@@ -1260,19 +1276,19 @@ const selectedSwapSource = ref<'SOL' | 'USDC' | 'USDT'>('SOL');
 const tokens = ref([
   {
     value: 'SOL',
-    label: 'Solana (SOL)',
+    label: 'SOL',
     icon: SolIcon,
     balanceKey: 'sol',
   },
   {
     value: 'USDC',
-    label: 'USD Coin (USDC)',
+    label: 'USDC',
     icon: UsdcIcon,
     balanceKey: 'usdc',
   },
   {
     value: 'USDT',
-    label: 'Tether (USDT)',
+    label: 'USDT',
     icon: UsdtIcon,
     balanceKey: 'usdt',
   },
