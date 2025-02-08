@@ -692,7 +692,7 @@
           <p>Would you like to swap 
             <b>{{ sourceTokenAmount.toFixed(selectedSwapSource === 'SOL' ? 4 : 2) }} {{ selectedSwapSource }}</b>
             <span class="has-text-grey"></span>
-            for 
+            for the required
             <b>{{ swapAmount.toFixed(2) }} NOS</b>
             <span class="has-text-grey"></span>?
           </p>

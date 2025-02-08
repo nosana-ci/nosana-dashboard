@@ -130,6 +130,61 @@
     background: white !important;
     color: black !important;
   }
+
+  .modal-card-head:not(.light-mode) {
+    background-color: $black-bis;
+    border-bottom-color: $grey-darker;
+
+    .modal-card-title strong {
+      color: $white !important;
+    }
+  }
+
+  .modal-card-body:not(.light-mode) {
+    background-color: $black-bis;
+    color: $white;
+
+    .has-text-black {
+      color: $white !important;
+    }
+
+    .has-text-weight-bold {
+      color: $white !important;
+    }
+
+    .button.has-background-white-ter {
+      background-color: $black-ter !important;
+
+      &:hover {
+        background-color: $grey-darker !important;
+        strong, .has-text-weight-bold {
+          color: $secondary !important;
+        }
+      }
+
+      strong, .has-text-weight-bold {
+        color: $white !important;
+      }
+    }
+
+    .dropdown-item {
+      &:hover {
+        background-color: $grey-darker;
+        
+        strong, .has-text-weight-bold {
+          color: $secondary !important;
+        }
+      }
+
+      strong, .has-text-weight-bold {
+        color: $white !important;
+      }
+    }
+
+    .dropdown-content {
+      background-color: $black-ter;
+    }
+  }
 }
 
 .swv-button {
@@ -173,16 +228,6 @@
   }
   body:not(.light-mode) {
     background-color: $body-background-color-dark;
-  }
-
-  .modal-card-head:not(.light-mode) {
-    background-color: $black-bis;
-    border-bottom-color: $grey-darker;
-  }
-
-  .modal-card-body:not(.light-mode) {
-    background-color: $black-bis;
-    color: $white;
   }
 
   .modal-card-foot:not(.light-mode) {
@@ -402,7 +447,7 @@
 
   .tabs:not(.light-mode) {
     ul {
-      border-bottom-color: $grey;
+      border-bottom: 3px solid $grey-darker;
     }
     li.is-active a {
       border-bottom-color: $primary-invert;
@@ -410,12 +455,14 @@
     }
 
     a {
-      border-bottom-color: $grey;
       color: $grey;
+      border-bottom-width: 3px;
+      border-bottom-color: transparent;
+      margin-bottom: -3px;
 
       &:hover {
+        color: $grey-light;
         border-bottom-color: $grey;
-        color: $grey;
       }
     }
   }
@@ -484,5 +531,14 @@ button[disabled][data-tooltip] {
   pointer-events: auto;
   &:hover {
     cursor: not-allowed;
+  }
+}
+
+/* Add before dark-mode styles */
+.dropdown-item {
+  &:hover {
+    strong, .has-text-weight-bold {
+      color: $secondary !important;
+    }
   }
 }

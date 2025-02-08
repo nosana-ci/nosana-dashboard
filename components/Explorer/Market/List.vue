@@ -201,7 +201,7 @@ const paginatedMarkets = computed(() => {
 
   ul {
     position: static;
-    border-bottom-color: transparent;
+    border-bottom: 3px solid $grey-lighter;
     margin-bottom: 0;
   }
 
@@ -210,7 +210,13 @@ const paginatedMarkets = computed(() => {
       display: inline-flex;
       align-items: center;
       gap: 0.25rem;
-      margin-bottom: 0;
+      margin-bottom: -3px;
+      border-bottom-width: 3px;
+      border-bottom-color: transparent;
+    }
+
+    &.is-active a {
+      border-bottom-color: $primary;
     }
   }
 }
