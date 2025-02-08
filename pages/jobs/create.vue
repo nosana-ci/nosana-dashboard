@@ -563,9 +563,11 @@
           <p class="control">
             <button
               class="button is-primary is-large"
-              :disabled="loading"
+              :disabled="canPostJob"
               type="button"
               @click="() => { showSwapModal = true; }"
+              :data-tooltip="canPostJob ? 'You have enough NOS for the job' : undefined"
+              data-position="top"
             >
               Swap
             </button>
