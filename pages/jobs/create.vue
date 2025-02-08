@@ -446,6 +446,13 @@
         <div class="field is-grouped is-grouped-right">
           <p class="control">
             <button :disabled="!jobDefinition ? true : undefined" :class="{ 'is-loading': loading }"
+              class="button is-primary is-large" type="submit"
+              v-if="!jobDefinition"
+              :data-tooltip="'Please define a job first'"
+              data-position="top">
+              <span>Next</span>
+            </button>
+            <button v-else :disabled="!jobDefinition ? true : undefined" :class="{ 'is-loading': loading }"
               class="button is-primary is-large" type="submit">
               <span>Next</span>
             </button>
@@ -456,6 +463,7 @@
     <div v-else-if="step === 'pick-market'" class="box">
       <h2 class="title is-4">Pick a market to post your job to</h2>
       <ExplorerMarketList :markets="markets" :select="true"
+        :initial-market="market"
         @selectedMarket="(selectedMarket) => { market = selectedMarket }"></ExplorerMarketList>
       <div v-if="!loadingMarkets && !markets">Could not load markets</div>
       <form @submit.prevent="step = 'post-job'">
@@ -467,7 +475,13 @@
             </a>
           </p>
           <p class="control">
-            <button :disabled="!jobDefinition || !market ? true : undefined" :class="{ 'is-loading': loading }"
+            <button v-if="!jobDefinition || !market" :disabled="true" :class="{ 'is-loading': loading }"
+              class="button is-primary is-large" type="submit"
+              :data-tooltip="!jobDefinition ? 'Please define a job first' : 'Please select a market'"
+              data-position="top">
+              <span>Next</span>
+            </button>
+            <button v-else :class="{ 'is-loading': loading }"
               class="button is-primary is-large" type="submit">
               <span>Next</span>
             </button>
@@ -565,7 +579,15 @@
                   </a>
                 </template>
               </wallet-modal-provider>
-              <button v-else :disabled="!jobDefinition || !market || !canPostJob" :class="{ 'is-loading': loading }"
+              <button v-else-if="!jobDefinition || !market || !canPostJob" :disabled="true" :class="{ 'is-loading': loading }"
+                class="button is-primary is-large" type="submit"
+                :data-tooltip="!jobDefinition ? 'Please define a job first' : 
+                             !market ? 'Please select a market' :
+                             !canPostJob ? 'Insufficient NOS balance' : ''"
+                data-position="top">
+                <span>Post Job</span>
+              </button>
+              <button v-else :class="{ 'is-loading': loading }"
                 class="button is-primary is-large" type="submit">
                 <span>Post Job</span>
               </button>
@@ -579,7 +601,7 @@
   <!-- Modal component -->
   <div v-if="showSwapModal" class="modal is-active">
     <div class="modal-background" @click="showSwapModal = false"></div>
-    <div class="modal-card" style="width: 420px; max-width: 90%;">
+    <div class="modal-card" style="width: 360px; max-width: 90%;">
       <header class="modal-card-head">
         <p class="modal-card-title">Insufficient <strong>NOS</strong> balance</p>
         <button class="delete" aria-label="close" @click="showSwapModal = false"></button>
@@ -606,10 +628,7 @@
           <p class="has-text-grey">Total needed:</p>
           <p class="has-text-black">
             <b>{{ swapAmount.toFixed(2) }} NOS </b>
-            <span class="has-text-grey"></span>
-            for 
-            <b>{{ swapAmount.toFixed(2) }} NOS</b>
-            <span class="has-text-grey"></span>?
+            <span class="has-text-grey">(${{ (swapAmount * nosPrice).toFixed(2) }})</span>
           </p>
         </div>
 
@@ -628,8 +647,11 @@
                     <img :src="selectedToken.icon" alt="" style="height: 20px; width: auto;" />
                   </span>
                   <span><strong>{{ selectedToken.label }}</strong></span>
+                  <span class="has-text-grey ml-2">
+                    {{ userBalances[selectedToken.balanceKey].toFixed(selectedToken.value === 'SOL' ? 4 : 2) }}
+                  </span>
                   <span class="has-text-weight-bold ml-auto">
-                    ${{ (userBalances[selectedToken.value.toLowerCase()] * getTokenPrice(selectedToken.value)).toFixed(2) }}
+                    ${{ (userBalances[selectedToken.balanceKey] * getTokenPrice(selectedToken.value)).toFixed(2) }}
                   </span>
                   <span class="icon is-small ml-2">
                     <img
@@ -653,8 +675,11 @@
                       <img :src="token.icon" alt="token-icon" style="height: 20px; width: auto;" />
                     </span>
                     <span><strong>{{ token.label }}</strong></span>
+                    <span class="has-text-grey ml-2">
+                      {{ userBalances[token.balanceKey].toFixed(token.value === 'SOL' ? 4 : 2) }}
+                    </span>
                     <span class="has-text-weight-bold ml-auto">
-                      ${{ (userBalances[token.value.toLowerCase()] * getTokenPrice(token.value)).toFixed(2) }}
+                      ${{ (userBalances[token.balanceKey] * getTokenPrice(token.value)).toFixed(2) }}
                     </span>
                   </a>
                 </div>

@@ -4,13 +4,34 @@
       <div class="tabs">
         <ul>
           <li :class="{ 'is-active': tab === 'premium' }">
-            <a @click="tab = 'premium'" class="is-justify-content-flex-start">PREMIUM</a>
+            <a @click="tab = 'premium'" class="is-justify-content-flex-start">
+              PREMIUM
+              <div class="tooltip-container">
+                <span class="has-tooltip-arrow has-text-grey no-underline" data-tooltip="Premium Market offers top-tier GPUs from validated providers for mission-critical and time-sensitive workloads.">
+                  <img src="~/assets/img/icons/info.svg" class="info-icon" />
+                </span>
+              </div>
+            </a>
           </li>
           <li :class="{ 'is-active': tab === 'community' }">
-            <a @click="tab = 'community'" class="is-justify-content-flex-start">COMMUNITY</a>
+            <a @click="tab = 'community'" class="is-justify-content-flex-start">
+              COMMUNITY
+              <div class="tooltip-container">
+                <span class="has-tooltip-arrow has-text-grey no-underline" data-tooltip="Community Market provides cost-effective GPU solutions from unvalidated hosts, ideal for testing and non-critical workloads.">
+                  <img src="~/assets/img/icons/info.svg" class="info-icon" />
+                </span>
+              </div>
+            </a>
           </li>
           <li :class="{ 'is-active': tab === 'all' }">
-            <a @click="tab = 'all'" class="is-justify-content-flex-start">ALL</a>
+            <a @click="tab = 'all'" class="is-justify-content-flex-start">
+              ALL
+              <div class="tooltip-container">
+                <span class="has-tooltip-arrow has-text-grey no-underline" data-tooltip="View all markets on the Nosana Network, including community-created and private markets.">
+                  <img src="~/assets/img/icons/info.svg" class="info-icon" />
+                </span>
+              </div>
+            </a>
           </li>
         </ul>
       </div>
@@ -22,23 +43,6 @@
         <span>{{ filteredMarkets.length }} markets</span>
       </div>
     </div>
-  </div>
-  <div class="has-limited-width">
-    <p v-if="tab === 'premium'">
-      Tailored for mission-critical applications, the Premium Market provides access to top-tier GPUs from validated
-      providers. With a focus on reliability and performance, it's the go-to choice for high-demand, time-sensitive
-      workloads.
-    </p>
-    <p v-else-if="tab === 'community'">
-      Perfect for exploratory projects and cost-effective solutions, the Community Market connects clients with GPUs
-      from unvalidated hosts. Ideal for testing, prototyping, or non-critical workloads while supporting emerging
-      providers.
-    </p>
-    <p v-else-if="tab === 'all'">
-      The Nosana Network is an open platform, allowing anyone to create their own markets. This tab provides a
-      comprehensive list of all markets, including those not managed by Nosana. Ideal for users looking to explore
-      various options or set up private markets for their GPU nodes.
-    </p>
   </div>
   <div class="table-container">
     <table class="table is-fullwidth is-striped is-hoverable" :class="{ 'is-narrow': select }">
@@ -148,10 +152,14 @@ const props = defineProps({
   select: {
     type: Boolean,
     default: false
+  },
+  initialMarket: {
+    type: Object as PropType<Market>,
+    default: null
   }
 });
 const emit = defineEmits(['selectedMarket'])
-const selectedMarket: Ref<Market | null> = ref(null);
+const selectedMarket: Ref<Market | null> = ref(props.initialMarket);
 
 watch(selectedMarket, (newValue: Market | null) => {
   emit('selectedMarket', newValue)
@@ -178,6 +186,52 @@ const paginatedMarkets = computed(() => {
 });
 </script>
 <style lang="scss" scoped>
+.columns {
+  position: static;
+}
+
+.column {
+  position: static;
+}
+
+.tabs {
+  position: static;
+  overflow: visible;
+  margin-bottom: 0;
+
+  ul {
+    position: static;
+    border-bottom-color: transparent;
+    margin-bottom: 0;
+  }
+
+  li {
+    a {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      margin-bottom: 0;
+    }
+  }
+}
+
+.has-tooltip-arrow {
+  &[data-tooltip] {
+    &::before,
+    &::after {
+      z-index: 99999 !important;
+    }
+  }
+}
+
+.info-icon {
+  width: 14px;
+  height: 14px;
+  vertical-align: -2px;
+  margin-left: 0.25rem;
+  opacity: 0.7;
+}
+
 td {
   vertical-align: middle;
 }
@@ -188,5 +242,21 @@ td {
   &::-webkit-progress-bar {
     background-color: lighten($secondary, 43%);
   }
+}
+
+.no-underline {
+  text-decoration: none !important;
+  border-bottom: none !important;
+}
+
+.info-container {
+  line-height: 1;
+  margin: 0;
+  padding: 0;
+  height: 20px;
+}
+
+.table-container {
+  margin-top: 0;
 }
 </style>

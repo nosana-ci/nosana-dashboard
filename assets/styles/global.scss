@@ -466,3 +466,23 @@
 .dark-mode .has-tooltip-arrow img {
   filter: invert(1);
 }
+
+.modal-card {
+  width: 420px;
+  max-width: 90%;
+}
+
+.modal-card-title {
+  font-family: $title-family;
+}
+
+.w-100 {
+  width: 100%;
+}
+
+button[disabled][data-tooltip] {
+  pointer-events: auto;
+  &:hover {
+    cursor: not-allowed;
+  }
+}
