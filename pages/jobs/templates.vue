@@ -76,7 +76,8 @@
                         </h2>
                       </div>
                       <div class="header-meta">
-                        <span v-if="template.stargazers_count" class="has-text-grey is-size-7">
+                        <span v-if="template.stargazers_count" class="github-stars">
+                          <img src="~/assets/img/icons/github.svg" class="github-icon" alt="GitHub">
                           <span class="has-text-warning mr-1" style="font-size: 12px;">★</span>
                           <span class="ml-1">{{ String(template.stargazers_count) }}</span>
                         </span>
@@ -113,7 +114,8 @@
                       </h2>
                     </div>
                     <div class="header-meta">
-                      <span v-if="template.stargazers_count" class="has-text-grey is-size-7">
+                      <span v-if="template.stargazers_count" class="github-stars">
+                        <img src="~/assets/img/icons/github.svg" class="github-icon" alt="GitHub">
                         <span class="has-text-warning mr-1" style="font-size: 12px;">★</span>
                         <span class="ml-1">{{ String(template.stargazers_count) }}</span>
                       </span>
@@ -407,6 +409,17 @@ function templatesWithoutSubcategory(category: string): Template[] {
   flex-direction: column;
   padding: 1.25rem;
   position: relative;
+
+  .github-stars {
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+  }
+
+  &:hover {
+    .github-stars {
+      opacity: 1;
+    }
+  }
 }
 
 .template-header {
@@ -526,5 +539,20 @@ function templatesWithoutSubcategory(category: string): Template[] {
 
 .star-placeholder {
   height: 19px;
+}
+
+.github-icon {
+  width: 12px;
+  height: 12px;
+  margin-right: 4px;
+  vertical-align: middle;
+  opacity: 0.7;
+}
+
+.github-stars {
+  display: inline-flex;
+  align-items: center;
+  color: $grey;
+  font-size: 0.875rem;
 }
 </style>
