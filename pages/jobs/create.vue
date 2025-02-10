@@ -31,12 +31,12 @@
             <div class="column is-7">
               <div class="tabs">
                 <ul>
+                  <li :class="{ 'is-active': tab === 'json' }">
+                    <a @click="info = null; tab = 'json'" class="is-justify-content-flex-start">JSON</a>
+                  </li>
                   <li :class="{ 'is-active': tab === 'builder' }">
                     <a :class="{ 'is-disabled': !jobDefinition }" @click="tab = 'builder'"
                       class="is-justify-content-flex-start">BUILDER</a>
-                  </li>
-                  <li :class="{ 'is-active': tab === 'json' }">
-                    <a @click="info = null; tab = 'json'" class="is-justify-content-flex-start">JSON</a>
                   </li>
                 </ul>
               </div>
@@ -785,7 +785,7 @@ if (!markets.value && !loadingMarkets.value) {
 }
 
 const step: Ref<string> = ref('job-definition');
-const tab: Ref<string> = ref('builder');
+const tab: Ref<string> = ref('json');
 const info: Ref<string | null> = ref(null);
 const market: Ref<Market | null> = ref(null);
 const loading: Ref<boolean> = ref(false);

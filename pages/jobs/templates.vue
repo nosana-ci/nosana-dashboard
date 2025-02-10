@@ -411,14 +411,14 @@ function templatesWithoutSubcategory(category: string): Template[] {
   position: relative;
 
   .github-stars {
-    opacity: 0;
-    transition: opacity 0.2s ease-in-out;
+    display: inline-flex;
+    align-items: center;
+    color: $grey;
+    font-size: 0.875rem;
   }
 
   &:hover {
-    .github-stars {
-      opacity: 1;
-    }
+    // Removed the github-stars opacity transition
   }
 }
 
