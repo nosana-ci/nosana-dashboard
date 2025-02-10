@@ -1024,10 +1024,10 @@ const userBalances = ref<TokenBalance>({
 const refreshAllBalances = async () => {
   try {
     const [nosBal, solBal, usdcBal, usdtBal] = await Promise.all([
-      nosana.value.jobs.getNosBalance(),
-      nosana.value.jobs.getSolBalance(),
-      nosana.value.jobs.getUsdcBalance(),
-      nosana.value.jobs.getUsdtBalance()
+      nosana.value.solana.getNosBalance(),
+      nosana.value.solana.getSolBalance(),
+      nosana.value.solana.getUsdcBalance(),
+      nosana.value.solana.getUsdtBalance()
     ]);
 
     userBalances.value = {
@@ -1209,10 +1209,10 @@ watch(step, (newStep) => {
 watch([balance], async () => {
   try {
     const [nosBal, solBal, usdcBal, usdtBal] = await Promise.all([
-      nosana.value.jobs.getNosBalance(),
-      nosana.value.jobs.getSolBalance(),
-      nosana.value.jobs.getUsdcBalance(),
-      nosana.value.jobs.getUsdtBalance()
+      nosana.value.solana.getNosBalance(),
+      nosana.value.solana.getSolBalance(),
+      nosana.value.solana.getUsdcBalance(),
+      nosana.value.solana.getUsdtBalance()
     ]);
 
     userBalances.value = {
@@ -1237,7 +1237,7 @@ watch([totalNosNeeded, () => userBalances.value.nos], () => {
 
 
 async function confirmSwap() {
-  if (!nosana.value?.jobs?.swapToNos) {
+  if (!nosana.value?.swap) {
     toast.error('Swap functionality not initialized. Please try again in a moment.');
     return;
   }
@@ -1249,8 +1249,9 @@ async function confirmSwap() {
 
   loadingSwap.value = true;
   try {
-    const { txid } = await nosana.value.jobs.swapToNos(swapAmount.value, selectedSwapSource.value);
-    toast.success('Swap completed! Transaction: ' + txid.slice(0, 8) + '...');
+    const txid = await nosana.value.swap.swapToNos(swapAmount.value, selectedSwapSource.value);
+    toast.success('Swap successfully completed');
+    await sleep(.2);
     await refreshAllBalances();
     showSwapModal.value = false;
   } catch (error: any) {
