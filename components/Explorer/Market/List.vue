@@ -203,6 +203,7 @@ const paginatedMarkets = computed(() => {
     position: static;
     border-bottom: 3px solid $grey-lighter;
     margin-bottom: 0;
+    width: 100%;
   }
 
   li {
