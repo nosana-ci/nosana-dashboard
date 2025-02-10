@@ -31,12 +31,12 @@
             <div class="column is-7">
               <div class="tabs">
                 <ul>
+                  <li :class="{ 'is-active': tab === 'json' }">
+                    <a @click="info = null; tab = 'json'" class="is-justify-content-flex-start">JSON</a>
+                  </li>
                   <li :class="{ 'is-active': tab === 'builder' }">
                     <a :class="{ 'is-disabled': !jobDefinition }" @click="tab = 'builder'"
                       class="is-justify-content-flex-start">BUILDER</a>
-                  </li>
-                  <li :class="{ 'is-active': tab === 'json' }">
-                    <a @click="info = null; tab = 'json'" class="is-justify-content-flex-start">JSON</a>
                   </li>
                 </ul>
               </div>
@@ -446,6 +446,13 @@
         <div class="field is-grouped is-grouped-right">
           <p class="control">
             <button :disabled="!jobDefinition ? true : undefined" :class="{ 'is-loading': loading }"
+              class="button is-primary is-large" type="submit"
+              v-if="!jobDefinition"
+              :data-tooltip="'Please define a job first'"
+              data-position="top">
+              <span>Next</span>
+            </button>
+            <button v-else :disabled="!jobDefinition ? true : undefined" :class="{ 'is-loading': loading }"
               class="button is-primary is-large" type="submit">
               <span>Next</span>
             </button>
@@ -456,6 +463,7 @@
     <div v-else-if="step === 'pick-market'" class="box">
       <h2 class="title is-4">Pick a market to post your job to</h2>
       <ExplorerMarketList :markets="markets" :select="true"
+        :initial-market="market"
         @selectedMarket="(selectedMarket) => { market = selectedMarket }"></ExplorerMarketList>
       <div v-if="!loadingMarkets && !markets">Could not load markets</div>
       <form @submit.prevent="step = 'post-job'">
@@ -467,7 +475,13 @@
             </a>
           </p>
           <p class="control">
-            <button :disabled="!jobDefinition || !market ? true : undefined" :class="{ 'is-loading': loading }"
+            <button v-if="!jobDefinition || !market" :disabled="true" :class="{ 'is-loading': loading }"
+              class="button is-primary is-large" type="submit"
+              :data-tooltip="!jobDefinition ? 'Please define a job first' : 'Please select a market'"
+              data-position="top">
+              <span>Next</span>
+            </button>
+            <button v-else :class="{ 'is-loading': loading }"
               class="button is-primary is-large" type="submit">
               <span>Next</span>
             </button>
@@ -547,6 +561,18 @@
             </a>
           </p>
           <p class="control">
+            <button
+              class="button is-primary is-large"
+              :disabled="canPostJob"
+              type="button"
+              @click="() => { showSwapModal = true; }"
+              :data-tooltip="canPostJob ? 'You have enough NOS for the job' : undefined"
+              data-position="top"
+            >
+              Swap
+            </button>
+          </p>
+          <p class="control">
             <ClientOnly>
               <wallet-modal-provider v-if="!connected" :dark="$colorMode.value === 'dark'">
                 <template #default="modalScope">
@@ -555,7 +581,15 @@
                   </a>
                 </template>
               </wallet-modal-provider>
-              <button v-else :disabled="!jobDefinition || !market ? true : undefined" :class="{ 'is-loading': loading }"
+              <button v-else-if="!jobDefinition || !market || !canPostJob" :disabled="true" :class="{ 'is-loading': loading }"
+                class="button is-primary is-large" type="submit"
+                :data-tooltip="!jobDefinition ? 'Please define a job first' : 
+                             !market ? 'Please select a market' :
+                             !canPostJob ? 'Insufficient NOS balance' : ''"
+                data-position="top">
+                <span>Post Job</span>
+              </button>
+              <button v-else :class="{ 'is-loading': loading }"
                 class="button is-primary is-large" type="submit">
                 <span>Post Job</span>
               </button>
@@ -564,38 +598,147 @@
         </div>
       </form>
     </div>
+  </div>
 
-    <!-- Swap Confirmation Modal -->
-    <div class="modal" :class="{ 'is-active': showSwapModal }">
-      <div class="modal-background" @click="showSwapModal = false"></div>
-      <div class="modal-card">
-        <header class="modal-card-head">
-          <p class="modal-card-title">Insufficient NOS Balance</p>
-          <button class="delete" aria-label="close" @click="showSwapModal = false"></button>
-        </header>
-        <section class="modal-card-body">
-          <p class="mb-4">
-            Additional NOS needed: {{ ((swapRequired || 0) - (balance || 0)).toFixed(2) }} NOS (${{ (((swapRequired || 0) - (balance || 0)) * (nosPrice || 0)).toFixed(2) }})
-            <br><br>
-            Your balance: {{ (balance || 0).toFixed(2) }} NOS (${{ ((balance || 0) * (nosPrice || 0)).toFixed(2) }})
-            <br>
-            Total needed: {{ (swapRequired || 0).toFixed(2) }} NOS (${{ ((swapRequired || 0) * (nosPrice || 0)).toFixed(2) }})
+  <!-- Modal component -->
+  <div v-if="showSwapModal" class="modal is-active">
+    <div class="modal-background" @click="showSwapModal = false"></div>
+    <div class="modal-card" style="width: 360px; max-width: 90%;">
+      <header class="modal-card-head">
+        <p class="modal-card-title">Insufficient <strong>NOS</strong> balance</p>
+        <button class="delete" aria-label="close" @click="showSwapModal = false"></button>
+      </header>
+
+      <section class="modal-card-body">
+        <div class="field mb-4">
+          <p class="has-text-grey">NOS needed for job:</p>
+          <p class="has-text-black">
+            <b>{{ totalNosNeeded.toFixed(2) }} NOS </b>
+            <span class="has-text-grey">(${{ (totalNosNeeded * nosPrice).toFixed(2) }})</span>
           </p>
-          <p>Would you like to swap SOL for the additional amount of NOS({{ ((swapRequired || 0) - (balance || 0)).toFixed(2) }}) using Jupiter and then post the job?</p>
-        </section>
-        <footer class="modal-card-foot">
-          <button class="button is-primary" @click="showSwapModal = false; loading = true; submitJob()">
-            Yes, Swap and Post
+        </div>
+
+        <div class="field mb-4">
+          <p class="has-text-grey">Your balance:</p>
+          <p class="has-text-black">
+            <b>{{ userBalances.nos.toFixed(2) }} NOS </b>
+            <span class="has-text-grey">(${{ (userBalances.nos * nosPrice).toFixed(2) }})</span>
+          </p>
+        </div>
+
+        <div class="field mb-4">
+          <p class="has-text-grey">Total needed:</p>
+          <p class="has-text-black">
+            <b>{{ swapAmount.toFixed(2) }} NOS </b>
+            <span class="has-text-grey">(${{ (swapAmount * nosPrice).toFixed(2) }})</span>
+          </p>
+        </div>
+
+        <div class="field mb-4">
+          <label class="label has-text-grey mb-2">Select token you want to swap with:</label>
+          <div class="control">
+            <div class="dropdown w-100" :class="{ 'is-active': isDropdownOpen }">
+              <div class="dropdown-trigger w-100">
+                <button 
+                  class="button w-100 has-background-white-ter is-borderless" 
+                  aria-haspopup="true"
+                  aria-controls="token-dropdown-menu"
+                  @click="isDropdownOpen = !isDropdownOpen"
+                >
+                  <span class="icon is-small mr-2">
+                    <img :src="selectedToken.icon" alt="" style="height: 20px; width: auto;" />
+                  </span>
+                  <span><strong>{{ selectedToken.label }}</strong></span>
+                  <span class="has-text-grey ml-2">
+                    {{ userBalances[selectedToken.balanceKey].toFixed(selectedToken.value === 'SOL' ? 4 : 2) }}
+                  </span>
+                  <span class="has-text-weight-bold ml-auto">
+                    ${{ (userBalances[selectedToken.balanceKey] * getTokenPrice(selectedToken.value)).toFixed(2) }}
+                  </span>
+                  <span class="icon is-small ml-2">
+                    <img
+                      :src="isDropdownOpen ? ArrowUp : ArrowDown"
+                      alt="arrow-icon"
+                      style="height: 8px;"
+                    />
+                  </span>
+                </button>
+              </div>
+
+              <div class="dropdown-menu w-100" id="token-dropdown-menu" role="menu">
+                <div class="dropdown-content has-background-white-ter is-borderless">
+                  <a
+                    v-for="token in tokens"
+                    :key="token.value"
+                    class="dropdown-item is-flex is-align-items-center"
+                    @click.prevent="selectToken(token)"
+                  >
+                    <span class="icon is-small mr-2">
+                      <img :src="token.icon" alt="token-icon" style="height: 20px; width: auto;" />
+                    </span>
+                    <span><strong>{{ token.label }}</strong></span>
+                    <span class="has-text-grey ml-2">
+                      {{ userBalances[token.balanceKey].toFixed(token.value === 'SOL' ? 4 : 2) }}
+                    </span>
+                    <span class="has-text-weight-bold ml-auto">
+                      ${{ (userBalances[token.balanceKey] * getTokenPrice(token.value)).toFixed(2) }}
+                    </span>
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="field mb-4">
+          <p>Would you like to swap 
+            <b>{{ sourceTokenAmount.toFixed(selectedSwapSource === 'SOL' ? 4 : 2) }} {{ selectedSwapSource }}</b>
+            <span class="has-text-grey"></span>
+            for the required
+            <b>{{ swapAmount.toFixed(2) }} NOS</b>
+            <span class="has-text-grey"></span>?
+          </p>
+        </div>
+
+        <div class="buttons mt-4">
+          <button
+            class="button is-primary is-fullwidth"
+            :class="{ 'is-loading': loadingSwap }"
+            @click="confirmSwap"
+          >
+            Swap Now
           </button>
-          <button class="button" @click="showSwapModal = false">Cancel</button>
-        </footer>
-      </div>
+        </div>
+      </section>
     </div>
   </div>
 </template>
 <style>
 .steps .steps-marker {
   z-index: 4;
+}
+.modal-card {
+  width: 420px;
+  max-width: 90%;
+}
+.w-100 {
+  width: 100%;
+}
+.is-borderless {
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Add these new styles */
+.dropdown-content {
+  max-height: none !important;
+  padding: 0;
+}
+.dropdown-item {
+  padding: 0.75rem 1rem;
+}
+.dropdown-item:hover {
+  background-color: #f5f5f5;
 }
 </style>
 <script lang="ts" setup>
@@ -611,6 +754,12 @@ import { sleep, validateJobDefinition, type IValidation, type JobDefinition, typ
 import { WalletModalProvider, useWallet } from "solana-wallets-vue";
 import { useToast } from "vue-toastification";
 import type { LocationQueryValue } from 'vue-router';
+import SolIcon from '@/assets/img/token_icons/solana-sol-logo.svg?url'
+import UsdcIcon from '@/assets/img/token_icons/usd-coin-usdc-logo.svg?url'
+import UsdtIcon from '@/assets/img/token_icons/tether-usdt-logo.svg?url'
+import ArrowDown from '@/assets/img/icons/arrow-down.svg?url'
+import ArrowUp from '@/assets/img/icons/arrow-up.svg?url'
+
 const { templates, emptyJobDefinition, loadingTemplates } = useTemplates();
 const route = useRoute();
 const router = useRouter();
@@ -636,7 +785,7 @@ if (!markets.value && !loadingMarkets.value) {
 }
 
 const step: Ref<string> = ref('job-definition');
-const tab: Ref<string> = ref('builder');
+const tab: Ref<string> = ref('json');
 const info: Ref<string | null> = ref(null);
 const market: Ref<Market | null> = ref(null);
 const loading: Ref<boolean> = ref(false);
@@ -647,6 +796,10 @@ const envName: Ref<string[]> = ref([]);
 const resultsName: Ref<string[]> = ref([]);
 const jobTimeout: Ref<number> = useLocalStorage('job-timeout', 60); // Default 60 minutes
 const nosPrice = ref(0);
+const solPrice = ref(0);
+const usdcPrice = ref(0);
+const usdtPrice = ref(0);
+const showSwapModal = ref(false);
 
 interface CachedPrice {
   price: number;
@@ -661,11 +814,19 @@ const isCacheValid = () => {
   return Date.now() - cachedNosPrice.value.timestamp < oneHour;
 };
 
-const { data: nosPriceData } = await useAPI('https://api.coingecko.com/api/v3/simple/price?ids=nosana&vs_currencies=usd', {
-  default: () => ({ nosana: { usd: 0 } })
-});
+const { data: priceData } = await useAPI(
+  'https://api.coingecko.com/api/v3/simple/price?ids=nosana,solana,usd-coin,tether&vs_currencies=usd',
+  {
+    default: () => ({
+      nosana: { usd: 0 },
+      solana: { usd: 0 },
+      'usd-coin': { usd: 0 },
+      tether: { usd: 0 }
+    })
+  }
+);
 
-watch(() => nosPriceData.value, (newPrice) => {
+watch(() => priceData.value, (newPrice) => {
   if (newPrice?.nosana?.usd) {
     nosPrice.value = newPrice.nosana.usd;
     // Update cache with new price and timestamp
@@ -678,6 +839,15 @@ watch(() => nosPriceData.value, (newPrice) => {
     nosPrice.value = cachedNosPrice.value.price;
   } else {
     nosPrice.value = 0;
+  }
+  if (newPrice?.solana?.usd) {
+    solPrice.value = newPrice.solana.usd;
+  }
+  if (newPrice?.['usd-coin']?.usd) {
+    usdcPrice.value = newPrice['usd-coin'].usd;
+  }
+  if (newPrice?.tether?.usd) {
+    usdtPrice.value = newPrice.tether.usd;
   }
 }, { immediate: true });
 
@@ -830,194 +1000,188 @@ const validator = (json: any): Array<ValidationError> => {
   return errors;
 }
 
-const showSwapModal = ref(false);
 const swapRequired = ref(0);
 
-const postJob = async () => {
-  loading.value = true;
-  if (!jobDefinition.value || !market.value || !jobTimeout.value) return;
+const canPostJob = computed(() => {
+  const totalRequired = (maxPrice.value || 0) + (networkFee.value || 0);
+  return (balance.value || 0) >= totalRequired * 1.01;
+});
 
+interface TokenBalance {
+  nos: number;
+  sol: number;
+  usdc: number;
+  usdt: number;
+}
+
+const userBalances = ref<TokenBalance>({
+  nos: 0,
+  sol: 0,
+  usdc: 0,
+  usdt: 0,
+});
+
+const refreshAllBalances = async () => {
   try {
-    // Check if user has enough NOS balance (comparing NOS amounts)
-    const totalRequired = (maxPrice.value || 0) + (networkFee.value || 0);
-    if ((balance.value || 0) < totalRequired * 1.01) { // Add 10% buffer for fees
-      loading.value = false;
-      swapRequired.value = totalRequired;
-      showSwapModal.value = true;
-      return;
-    }
+    const [nosBal, solBal, usdcBal, usdtBal] = await Promise.all([
+      nosana.value.solana.getNosBalance(),
+      nosana.value.solana.getSolBalance(),
+      nosana.value.solana.getUsdcBalance(),
+      nosana.value.solana.getUsdtBalance()
+    ]);
 
+    userBalances.value = {
+      nos: nosBal?.uiAmount ?? 0,
+      sol: solBal / 1e9,
+      usdc: usdcBal?.uiAmount ?? 0,
+      usdt: usdtBal?.uiAmount ?? 0
+    };
+    await refreshBalance();
+  } catch (error) {
+    console.error('Failed to refresh balances', error);
+  }
+};
+
+const postJob = async () => {
+  if (!jobDefinition.value || !market.value || !jobTimeout.value || !canPostJob.value) return;
+  
+  loading.value = true;
+  try {
     await submitJob();
   } catch (e: any) {
     handleJobError(e);
+  } finally {
+    loading.value = false;
   }
-  loading.value = false;
-}
+};
 
 const submitJob = async () => {
   try {
     const ipfsHash = await nosana.value.ipfs.pin(jobDefinition.value);
-    console.log('ipfs uploaded!', nosana.value.ipfs.config.gateway + ipfsHash);
-    const response = await nosana.value.jobs.ensureNosAndListJob(ipfsHash, jobTimeout.value * 60, market.value!.address);
+    const response = await nosana.value.jobs.list(
+      ipfsHash,
+      jobTimeout.value * 60,
+      market.value!.address
+    );
     toast.success(`Successfully created job ${response.job}`);
     await sleep(3);
+    await refreshAllBalances();
     router.push('/jobs/' + response.job);
-  } catch (e) {
-    loading.value = false; // Reset loading state on error
-    if (e.toString().toLowerCase().includes('user rejected')) {
-      toast.info('Transaction was cancelled');
+  } catch (error: any) {
+    if (error.toString().toLowerCase().includes('user rejected')) {
+      toast.info('Transaction was cancelled.');
     } else {
-      throw e; // Re-throw other errors to be handled by handleJobError
+      throw error;
     }
   }
-}
+};
 
-const handleJobError = (e: any) => {
-  loading.value = false; // Ensure loading is reset for all error cases
-  const errorMessage = e.toString();
-  const fullError = String(e);
-  if (errorMessage.includes('TransactionExpiredTimeoutError') ||
-    fullError.includes('Transaction was not confirmed in') ||
-    fullError.includes('TimeoutError')) {
-    toast.error('Solana is congested, try again or with a higher fee (Turbo/Ultra)');
-  } else if (errorMessage.includes('Unknown action') ||
-    fullError.includes('Unknown action')) {
-    toast.error('Not enough NOS balance for the transaction');
+const handleJobError = (error: Error) => {
+  const errorMessage = error.toString();
+  const fullError = String(error);
+
+  if (errorMessage.includes('TransactionExpiredTimeoutError') || 
+      fullError.includes('Transaction was not confirmed in') || 
+      fullError.includes('TimeoutError')) {
+    toast.error('Solana is congested, try again or with a higher fee (Turbo/Ultra).');
+  } else if (errorMessage.includes('Unknown action')) {
+    toast.error('Not enough NOS balance for the transaction.');
   } else if (errorMessage.includes('Swap completed but balance is still insufficient')) {
-    toast.error('Swap completed but balance is still insufficient. Reload page and try again.');
+    toast.error('Swap completed but balance is still insufficient. Reload and try again.');
   } else {
     toast.error(errorMessage);
   }
-}
+};
 
 watchEffect(async () => {
-  // Only run this effect when the repost parameters are present and haven't been handled yet
-  if (route.query?.fromRepost === 'true' && route.query?.jobAddress && !route.query?.repostHandled) {
-    const address = route.query.jobAddress.toString();
+  if (!route.query?.fromRepost || !route.query?.jobAddress || route.query?.repostHandled) return;
 
-    try {
-      loading.value = true;
+  const address = route.query.jobAddress.toString();
+  loading.value = true;
 
-      // Set step to post-job immediately
-      if (route.query?.step === 'post-job') {
-        step.value = 'post-job';
-      }
+  try {
+    if (route.query.step === 'post-job') {
+      step.value = 'post-job';
+    }
 
-      // 1. If the query has a jobTimeout, set it first
-      if (route.query?.jobTimeout) {
-        jobTimeout.value = parseInt(route.query.jobTimeout.toString(), 10);
-      }
+    if (route.query.jobTimeout) {
+      jobTimeout.value = parseInt(route.query.jobTimeout.toString(), 10);
+    }
 
-      // 2. Fetch the job using the same API endpoint
-      const response = await fetch(
-        `https://dashboard.k8s.prd.nos.ci/api/jobs/${address}`
-      );
+    const response = await fetch(`https://dashboard.k8s.prd.nos.ci/api/jobs/${address}`);
+    if (!response.ok) {
+      throw new Error(`Failed to load job with address ${address}`);
+    }
 
-      if (!response.ok) {
-        throw new Error(`Failed to load job with address ${address}`);
-      }
+    const jobData = await response.json();
+    if (!jobData?.jobDefinition) {
+      throw new Error('No job definition found in the job data');
+    }
 
-      const jobData = await response.json();
-      if (!jobData?.jobDefinition) {
-        throw new Error('No job definition found in the job data');
-      }
+    if (!route.query.jobTimeout && jobData.timeout) {
+      jobTimeout.value = jobData.timeout;
+    }
 
-      // 3. If no jobTimeout in query but job data has it, use that
-      if (!route.query?.jobTimeout && jobData.timeout) {
-        jobTimeout.value = jobData.timeout;
-      }
+    jobDefinition.value = jobData.jobDefinition;
 
-      // 4. Set the job definition
-      jobDefinition.value = jobData.jobDefinition;
-
-      // 5. Force GPU for container/run operations
-      if (jobDefinition.value.ops?.length) {
-        jobDefinition.value.ops.forEach((op) => {
-          if (op.type === 'container/run') {
-            if (!op.args) {
-              op.args = {
-                image: '',
-                gpu: true
-              };
-            } else {
-              op.args.gpu = true;
-            }
-          }
-        });
-      }
-
-      // 6. Wait for markets to load if needed
-      if (!markets.value && !loadingMarkets.value) {
-        await getMarkets();
-      }
-
-      // 7. Try to select the original market first
-      if (jobData.market && markets.value) {
-        const originalMarket = markets.value.find(
-          m => m.address.toString() === jobData.market
-        );
-        if (originalMarket) {
-          market.value = originalMarket;
-        }
-      }
-
-      // 8. If no original market found, find first GPU market
-      if (!market.value && markets.value?.length) {
-        const gpuMarket = markets.value.find(m => {
-          const market = m as ExtendedMarket;
-          return m.jobPrice > 0 && (
-            market.gpu ||
-            (market.requirements && market.requirements.gpu) ||
-            market.name?.toLowerCase().includes('gpu')
-          );
-        });
-
-        if (gpuMarket) {
-          market.value = gpuMarket;
-          toast.success('Selected GPU market automatically');
-        } else {
-          toast.warning('No GPU market found. Please select a market manually.');
-        }
-      }
-
-      // Mark repost as handled by adding a flag to the query
-      router.replace({ 
-        query: { 
-          ...route.query, 
-          repostHandled: 'true'
+    if (jobDefinition.value.ops?.length) {
+      jobDefinition.value.ops.forEach((operation: any) => {
+        if (operation.type === 'container/run') {
+          operation.args = { ...(operation.args || {}), gpu: true };
         }
       });
-
-    } catch (err: any) {
-      toast.error('Error setting up reposted job: ' + err.toString());
-      console.error('Repost setup error:', err);
-      // On error, reset step to first page
-      step.value = 'job-definition';
-    } finally {
-      loading.value = false;
     }
+
+    if (!markets.value && !loadingMarkets.value) {
+      await getMarkets();
+    }
+
+    if (jobData.market && markets.value) {
+      market.value = markets.value.find(m => m.address.toString() === jobData.market) || null;
+    }
+
+    if (!market.value && markets.value?.length) {
+      const gpuMarket = markets.value.find(m => {
+        const extendedMarket = m as ExtendedMarket;
+        return m.jobPrice > 0 && (
+          extendedMarket.gpu ||
+          (extendedMarket.requirements && extendedMarket.requirements.gpu) ||
+          extendedMarket.name?.toLowerCase().includes('gpu')
+        );
+      });
+
+      if (gpuMarket) {
+        market.value = gpuMarket;
+        toast.success('Selected GPU market automatically');
+      } else {
+        toast.warning('No GPU market found. Please select a market manually.');
+      }
+    }
+
+    router.replace({ query: { ...route.query, repostHandled: 'true' } });
+  } catch (err: any) {
+    toast.error('Error setting up reposted job: ' + err.toString());
+    step.value = 'job-definition';
+  } finally {
+    loading.value = false;
   }
 });
 
-// Reload safely preserves "step" and selected "market"
 onMounted(() => {
-  const urlStep = route.query.step as string;
-  const urlMarket = route.query.market as string;
+  const urlStep = route.query.step?.toString();
+  const urlMarket = route.query.market?.toString();
 
-  // Temporarily set the step from URL (fallback to "job-definition" if invalid)
-  step.value =
-    urlStep && ['job-definition', 'pick-market', 'post-job'].includes(urlStep)
-      ? urlStep
-      : 'job-definition';
+  step.value = urlStep && ['job-definition', 'pick-market', 'post-job'].includes(urlStep)
+    ? urlStep
+    : 'job-definition';
 
-  // Attempt re-selecting market after markets load
   const trySelectMarket = () => {
     if (!markets.value?.length) return;
+    
     if (urlMarket) {
-      market.value =
-        markets.value.find((m) => m.address.toString() === urlMarket) || null;
+      market.value = markets.value.find((m) => m.address.toString() === urlMarket) || null;
     }
-    // Fallback checks after we attempt to restore the market
+    
     if (!jobDefinition.value?.ops?.length && step.value !== 'job-definition') {
       step.value = 'job-definition';
     } else if (step.value === 'post-job' && !market.value) {
@@ -1026,20 +1190,113 @@ onMounted(() => {
   };
 
   if (loadingMarkets.value) {
-    watch(
-      () => loadingMarkets.value,
-      (val) => !val && trySelectMarket()
-    );
+    watch(() => loadingMarkets.value, (val) => !val && trySelectMarket());
   } else {
     trySelectMarket();
   }
 });
 
-// Keep URL in sync when step / market change
 watch(step, (newStep) => {
-  router.replace({ query: { ...route.query, step: newStep, market: market.value?.address.toString() } });
+  router.replace({ 
+    query: { 
+      ...route.query, 
+      step: newStep, 
+      market: market.value?.address.toString() 
+    } 
+  });
 });
-watch(market, (newMarket) => {
-  router.replace({ query: { ...route.query, step: step.value, market: newMarket?.address.toString() } });
+
+watch([balance], async () => {
+  try {
+    const [nosBal, solBal, usdcBal, usdtBal] = await Promise.all([
+      nosana.value.solana.getNosBalance(),
+      nosana.value.solana.getSolBalance(),
+      nosana.value.solana.getUsdcBalance(),
+      nosana.value.solana.getUsdtBalance()
+    ]);
+
+    userBalances.value = {
+      nos: nosBal?.uiAmount ?? 0,
+      sol: solBal / 1e9,
+      usdc: usdcBal?.uiAmount ?? 0,
+      usdt: usdtBal?.uiAmount ?? 0
+    };
+  } catch (error) {
+    console.error('Failed to refresh balances', error);
+  }
+}, { immediate: true });
+
+const totalNosNeeded = computed(() => (maxPrice.value + networkFee.value) * 1.05);
+
+const loadingSwap = ref(false);
+const swapAmount = ref(0);
+
+watch([totalNosNeeded, () => userBalances.value.nos], () => {
+  swapAmount.value = Math.max(0, totalNosNeeded.value - userBalances.value.nos);
+}, { immediate: true });
+
+
+async function confirmSwap() {
+  if (!nosana.value?.swap) {
+    toast.error('Swap functionality not initialized. Please try again in a moment.');
+    return;
+  }
+
+  if (swapAmount.value <= 0) {
+    toast.info('Please enter an amount greater than 0');
+    return;
+  }
+
+  loadingSwap.value = true;
+  try {
+    const txid = await nosana.value.swap.swapToNos(swapAmount.value, selectedSwapSource.value);
+    toast.success('Swap successfully completed');
+    await sleep(.2);
+    await refreshAllBalances();
+    showSwapModal.value = false;
+  } catch (error: any) {
+    toast.error(`Swap error: ${error}`);
+  } finally {
+    loadingSwap.value = false;
+  }
+}
+
+function getTokenPrice(token: 'SOL' | 'USDC' | 'USDT'): number {
+  const prices = {
+    SOL: solPrice.value,
+    USDC: usdcPrice.value,
+    USDT: usdtPrice.value
+  };
+  return prices[token] || 0;
+}
+
+const selectedSwapSource = ref<'SOL' | 'USDC' | 'USDT'>('SOL');
+
+interface Token {
+  value: 'SOL' | 'USDC' | 'USDT';
+  label: string;
+  icon: string;
+  balanceKey: 'sol' | 'usdc' | 'usdt';
+}
+
+const tokens = ref<Token[]>([
+  { value: 'SOL', label: 'SOL', icon: SolIcon, balanceKey: 'sol' },
+  { value: 'USDC', label: 'USDC', icon: UsdcIcon, balanceKey: 'usdc' },
+  { value: 'USDT', label: 'USDT', icon: UsdtIcon, balanceKey: 'usdt' }
+]);
+
+const isDropdownOpen = ref(false);
+
+const selectedToken = computed(() => tokens.value.find((t) => t.value === selectedSwapSource.value) || tokens.value[0]);
+
+function selectToken(token: Token) {
+  selectedSwapSource.value = token.value;
+  isDropdownOpen.value = false;
+}
+
+const sourceTokenAmount = computed(() => {
+  const usdNeeded = swapAmount.value * nosPrice.value;
+  const tokenPrice = getTokenPrice(selectedSwapSource.value);
+  return tokenPrice ? usdNeeded / tokenPrice : 0;
 });
 </script>
