@@ -549,6 +549,10 @@ function templatesWithoutSubcategory(category: string): Template[] {
   opacity: 0.7;
 }
 
+html.dark-mode .github-icon {
+  filter: invert(1);
+}
+
 .github-stars {
   display: inline-flex;
   align-items: center;
