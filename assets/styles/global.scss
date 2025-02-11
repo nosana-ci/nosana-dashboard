@@ -184,6 +184,12 @@
     .dropdown-content {
       background-color: $black-ter;
     }
+
+    .icon.is-medium {
+      &[style*="background: black"] {
+        background: white !important;
+      }
+    }
   }
 }
 
@@ -541,4 +547,68 @@ button[disabled][data-tooltip] {
       color: $secondary !important;
     }
   }
+}
+
+/* Dropdown styles */
+.dropdown {
+  position: relative;
+  width: 100%;
+
+  &-content {
+    max-height: none !important;
+    padding: 0;
+    background-color: var(--background-color, white);
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  &-item {
+    padding: 0.4rem 1rem;
+    display: flex;
+    align-items: center;
+    border-radius: 0;
+
+    &:first-child {
+      border-radius: 4px 4px 0 0;
+    }
+
+    &:last-child {
+      border-radius: 0 0 4px 4px;
+    }
+
+    &:hover {
+      background-color: #f5f5f5;
+    }
+  }
+
+  &-trigger button {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    justify-content: flex-start;
+    padding: 0.5rem 1rem;
+    height: auto;
+  }
+
+  &-menu {
+    width: 100%;
+    position: absolute;
+    left: 0;
+    margin-top: 2px;
+  }
+}
+
+.modal-card {
+  width: 360px;
+  max-width: 90%;
+
+  &-body {
+    overflow: visible !important;
+    padding-bottom: 1rem;
+  }
+}
+
+.is-borderless {
+  border: none !important;
+  box-shadow: none !important;
 }

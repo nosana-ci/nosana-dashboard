@@ -130,10 +130,21 @@
             <div class="control">
               <input class="input" type="number" v-model="extendTime" min="1" />
             </div>
+            <p class="help mt-2">
+              Cost: {{ extensionCost.toFixed(2) }} NOS
+              <span v-if="nosPrice" class="has-text-grey">(~${{ (extensionCost * nosPrice).toFixed(2) }})</span>
+            </p>
+            <p v-if="!hasEnoughBalance" class="help is-danger mt-2">
+              Insufficient NOS balance. You need {{ extensionCost.toFixed(2) }} NOS but have {{ userBalances.nos.toFixed(2) }} NOS.
+            </p>
           </div>
         </section>
         <footer class="modal-card-foot">
-          <button class="button is-success" @click="confirmExtend">
+          <button 
+            class="button is-success" 
+            @click="confirmExtend"
+            :disabled="!hasEnoughBalance"
+          >
             Extend
           </button>
           <button class="button" @click="showExtendModal = false">Cancel</button>
@@ -195,6 +206,45 @@ const ansi = new AnsiUp();
 const router = useRouter();
 
 const storedAuthHeader = useLocalStorage<string | null>('nosanaAuthHeader', null);
+
+const userBalances = ref({
+  nos: 0,
+  sol: 0,
+  usdc: 0,
+  usdt: 0
+});
+
+const nosPrice = ref(0);
+
+const { data: priceData } = await useAPI(
+  'https://api.coingecko.com/api/v3/simple/price?ids=nosana&vs_currencies=usd',
+  {
+    default: () => ({
+      nosana: { usd: 0 }
+    })
+  }
+);
+
+watch(() => priceData.value, (newPrice) => {
+  if (newPrice?.nosana?.usd) {
+    nosPrice.value = newPrice.nosana.usd;
+  }
+}, { immediate: true });
+
+const refreshAllBalances = async () => {
+  try {
+    const nosBal = await nosana.value.solana.getNosBalance();
+    userBalances.value.nos = nosBal?.uiAmount ?? 0;
+  } catch (error) {
+    console.error('Failed to refresh NOS balance', error);
+  }
+};
+
+watch(connected, async (isConnected) => {
+  if (isConnected) {
+    await refreshAllBalances();
+  }
+}, { immediate: true });
 
 const ipfsResult = ref<{ results?: string[] }>({});
 
@@ -385,13 +435,16 @@ const stopJob = async () => {
     // If job is queued (0), delist it
     if (numericState === 0) {
       await nosana.value.jobs.delist(jobId.value);
+      loading.value = false;
       toast.success('Job successfully delisted (canceled) from queue!');
+      refreshJob(); // Immediate refresh
     }
     // If job is running (1), end it
     else if (numericState === 1) {
       await nosana.value.jobs.end(jobId.value);
+      loading.value = false;
       toast.success('Job successfully ended!');
-      refreshJob();
+      refreshJob(); // Immediate refresh
     }
     // Otherwise, let the user know
     else {
@@ -399,9 +452,8 @@ const stopJob = async () => {
       return;
     }
 
-    // Wait 5 seconds before refreshing to allow backend to update
-    await new Promise(resolve => setTimeout(resolve, 5000));
-    refreshJob();
+    // Do another refresh after a short delay to ensure we have the latest state
+    setTimeout(() => refreshJob(), 2000);
   } catch (e) {
     const errorMessage = e instanceof Error ? e.message : String(e);
     const fullError = String(e);
@@ -417,7 +469,6 @@ const stopJob = async () => {
     }
     console.error('Stop job error:', e);
   } finally {
-    // Only set loading to false after everything is complete
     loading.value = false;
   }
 };
@@ -426,6 +477,26 @@ const stopJob = async () => {
 const showExtendModal = ref(false);
 // How many minutes to extend
 const extendTime = ref<number>(5);
+
+// Add computed property for extension cost
+const extensionCost = computed(() => {
+  if (!job.value?.market || !markets.value) return 0;
+  
+  const market = markets.value.find(m => m.address.toString() === job.value?.market);
+  if (!market) return 0;
+  
+  // Calculate cost: (market price per second * extension time in seconds) / 1e6 for NOS conversion
+  const basePrice = (market.jobPrice * extendTime.value * 60) / 1e6;
+  // Add 10% network fee
+  const networkFee = basePrice * 0.1;
+  
+  return basePrice + networkFee;
+});
+
+const hasEnoughBalance = computed(() => {
+  const balance = publicKey.value ? userBalances.value?.nos || 0 : 0;
+  return balance >= extensionCost.value;
+});
 
 // Open the modal
 const openExtendModal = () => {
@@ -444,9 +515,13 @@ const confirmExtend = async () => {
     return;
   }
 
+  if (!hasEnoughBalance.value) {
+    toast.error('Insufficient NOS balance for extension');
+    return;
+  }
+
   try {
     loadingExtend.value = true;
-    showExtendModal.value = false;  // Close modal immediately
 
     const numericState = getStateNumber(job.value.state);
 
@@ -462,11 +537,13 @@ const confirmExtend = async () => {
     const timeInSeconds = newTimeoutMinutes * 60;
 
     const result = await nosana.value.jobs.extend(job.value.address, timeInSeconds);
+    loadingExtend.value = false;
     toast.success(`Job has been extended! Transaction: ${result.tx}`);
+    refreshJob(); // Immediate refresh
+    showExtendModal.value = false;  // Close modal after successful extension
 
-    // Wait 10 seconds before refreshing to allow backend to update
-    await new Promise(resolve => setTimeout(resolve, 10000));
-    await refreshJob();
+    // Do another refresh after a short delay to ensure we have the latest state
+    setTimeout(() => refreshJob(), 2000);
   } catch (e) {
     const errorMessage = e instanceof Error ? e.message : String(e);
     const fullError = String(e);
