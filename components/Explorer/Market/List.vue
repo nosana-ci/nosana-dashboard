@@ -48,17 +48,17 @@
     <table class="table is-fullwidth is-striped is-hoverable" :class="{ 'is-narrow': select }">
       <thead>
         <tr>
-          <th>Name</th>
+          <th>GPU</th>
           <th>Price</th>
           <th>Availability</th>
         </tr>
       </thead>
       <tbody>
         <tr v-if="!filteredMarkets">
-          <td colspan="3">Loading markets..</td>
+          <td colspan="3">Loading GPUs..</td>
         </tr>
         <tr v-if="filteredMarkets && !filteredMarkets.length">
-          <td colspan="3">No markets</td>
+          <td colspan="3">No GPUs available</td>
         </tr>
         <nuxt-link v-for="market in paginatedMarkets" v-else :key="market.address.toString()"
           :to="`/markets/${market.address.toString()}`" custom>
@@ -76,7 +76,7 @@
                     {{
                       testgridMarkets.find(
                         (tgm: any) => tgm.address === market.address.toString()
-                      ).name
+                      ).slug?.toUpperCase() || market.address.toString()
                     }}
                   </span>
                   <span v-else class="is-family-monospace address">
@@ -88,7 +88,7 @@
                     {{
                       testgridMarkets.find(
                         (tgm: any) => tgm.address === market.address.toString()
-                      ).name
+                      ).slug?.toUpperCase() || market.address.toString()
                     }}
                   </span>
                   <span v-else class="is-family-monospace address">

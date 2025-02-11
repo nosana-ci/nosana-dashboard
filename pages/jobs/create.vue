@@ -12,7 +12,7 @@
         <span class="steps-marker" :class="{ 'is-clickable': step !== 'job-definition' }"
           @click="step !== 'job-definition' ? step = 'pick-market' : null">2</span>
         <div class="steps-content">
-          <h3 class="title is-size-7 mt-2">Select Market</h3>
+          <h3 class="title is-size-7 mt-2">Select GPU</h3>
         </div>
       </li>
       <li class="steps-segment" :class="{ 'is-active': step === 'post-job' }">
@@ -461,7 +461,7 @@
       </form>
     </div>
     <div v-else-if="step === 'pick-market'" class="box">
-      <h2 class="title is-4">Pick a market to post your job to</h2>
+      <h2 class="title is-4">Pick a GPU to run your job on</h2>
       <ExplorerMarketList 
         :markets="markets" 
         :select="true"
@@ -469,7 +469,7 @@
         :job-definition="jobDefinition"
         @selectedMarket="(selectedMarket) => { market = selectedMarket }"
       />
-      <div v-if="!loadingMarkets && !markets">Could not load markets</div>
+      <div v-if="!loadingMarkets && !markets">Could not load available GPUs</div>
       <form @submit.prevent="step = 'post-job'">
         <div class="field is-grouped is-grouped-right">
           <p class="control">
@@ -481,7 +481,7 @@
           <p class="control">
             <button v-if="!jobDefinition || !market" :disabled="true" :class="{ 'is-loading': loading }"
               class="button is-primary is-large" type="submit"
-              :data-tooltip="!jobDefinition ? 'Please define a job first' : 'Please select a market'"
+              :data-tooltip="!jobDefinition ? 'Please define a job first' : 'Please select a GPU'"
               data-position="top">
               <span>Next</span>
             </button>
@@ -569,7 +569,7 @@
               <button v-else-if="!jobDefinition || !market || !canPostJob" :disabled="true" :class="{ 'is-loading': loading }"
                 class="button is-primary is-large" type="submit"
                 :data-tooltip="!jobDefinition ? 'Please define a job first' : 
-                             !market ? 'Please select a market' :
+                             !market ? 'Please select a GPU' :
                              !canPostJob ? 'Insufficient NOS balance' : ''"
                 data-position="top">
                 <span>Post Job</span>
