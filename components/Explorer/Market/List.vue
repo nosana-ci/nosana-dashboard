@@ -158,9 +158,25 @@ import { type Market } from '@nosana/sdk';
 // Adjust or add more as needed.
 //
 const VRAM_CAPACITIES: Record<string, number> = {
+  'nvidia-3060': 12,
+  'nvidia-3070': 8,
+  'nvidia-3080': 10,
+  'nvidia-3090': 24,
+  'nvidia-4060': 8,
+  'nvidia-4070': 12,
+  'nvidia-4080': 16,
   'nvidia-4090': 24,
-  'nvidia-3060': 8,
-  'nvidia-4070': 12
+  'nvidia-5070': 12,
+  'nvidia-5080': 16,
+  'nvidia-5090': 32,
+  'nvidia-a4000': 16,
+  'nvidia-a5000': 24,
+  'nvidia-a6000': 48,
+  'nvidia-a40': 48,
+  'nvidia-a100-40gb': 40,
+  'nvidia-a100-80gb': 80,
+  'nvidia-h100': 80,
+  'nvidia-8x-a5000': 192,
 };
 
 const { data: testgridMarkets, pending: loadingTestgridMarkets } = await useAPI('/api/markets', { default: () => [] });
@@ -195,11 +211,11 @@ const selectedMarket: Ref<Market | null> = ref(props.initialMarket);
 
 //
 // Compute how much VRAM is required for this job definition.
-// Now checks the meta.system_requirments.required_vram field
+// Now checks the meta.system_requirements.required_vram field
 //
 const requiredVRAM = computed(() => {
-  if (!props.jobDefinition?.meta?.system_requirments?.required_vram) return 0;
-  return props.jobDefinition.meta.system_requirments.required_vram;
+  if (!props.jobDefinition?.meta?.system_requirements?.required_vram) return 0;
+  return props.jobDefinition.meta.system_requirements.required_vram;
 });
 
 watch(selectedMarket, (newValue: Market | null) => {
