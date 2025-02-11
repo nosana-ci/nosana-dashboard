@@ -516,6 +516,26 @@
                 </td>
               </tr>
               <tr>
+                <td>Selected GPU</td>
+                <td>
+                  <span v-if="market">
+                    <span v-if="testgridMarkets.find(m => m.address === market.address.toString())">
+                      {{ testgridMarkets.find(m => m.address === market.address.toString()).slug?.toUpperCase() }}
+                    </span>
+                    <span v-else>{{ market.address.toString() }}</span>
+                    ( 
+                    <span v-if="nosPrice">
+                      ${{ (((market.jobPrice / 1e6) * 3600) * nosPrice).toFixed(2) }}/h
+                    </span>
+                    <span v-else>
+                      {{ (market.jobPrice / 1e6) }} NOS/s
+                    </span>
+                    ) 
+                  </span>
+                  <span v-else>-</span>
+                </td>
+              </tr>
+              <tr>
                 <td>Job timeout <span class="has-text-danger">*</span></td>
                 <td>
                   <div class="is-flex is-align-items-center">
