@@ -184,6 +184,12 @@
     .dropdown-content {
       background-color: $black-ter;
     }
+
+    .icon.is-medium {
+      &[style*="background: black"] {
+        background: white !important;
+      }
+    }
   }
 }
 

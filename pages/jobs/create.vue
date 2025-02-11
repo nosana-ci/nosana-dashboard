@@ -618,14 +618,19 @@
         <div class="field mb-4">
           <p class="has-text-grey">Amount to swap:</p>
           <div class="control">
-            <input 
-              class="input"
-              type="number"
-              v-model.number="customSwapAmount"
-              :placeholder="swapAmount.toFixed(2)"
-              step="0.01"
-              min="0"
-            >
+            <div class="is-flex is-align-items-center">
+              <input 
+                class="input has-text-weight-bold"
+                type="number"
+                v-model.number="customSwapAmount"
+                :placeholder="swapAmount.toFixed(3)"
+                step="0.01"
+                min="0"
+              >
+              <span class="icon is-medium ml-2" :style="{ background: $colorMode.value === 'dark' ? 'white' : 'black', borderRadius: '50%', padding: '8px', height: '36px', width: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center' }">
+                <img src="@/assets/img/token_icons/nosana-nos-logo.svg" alt="NOS" style="height: 24px; width: auto;" />
+              </span>
+            </div>
             <p class="help">
               <span class="has-text-grey">NOS required for the selected job: {{ totalNosNeeded.toFixed(2) }} NOS</span>
               <span class="has-text-grey ml-2">(${{ (totalNosNeeded * nosPrice).toFixed(2) }})</span>
@@ -1283,10 +1288,14 @@ const sourceTokenAmount = computed(() => {
   return tokenPrice ? usdNeeded / tokenPrice : 0;
 });
 
-const customSwapAmount = ref(0);
+const customSwapAmount = ref(swapAmount.value);
+
+watch([swapAmount], () => {
+  customSwapAmount.value = Number(swapAmount.value.toFixed(3));
+}, { immediate: true });
 
 const displaySourceTokenAmount = computed(() => {
-  const usdNeeded = customSwapAmount.value * nosPrice.value;
+  const usdNeeded = Number(customSwapAmount.value.toFixed(3)) * nosPrice.value;
   const tokenPrice = getTokenPrice(selectedSwapSource.value);
   return tokenPrice ? usdNeeded / tokenPrice : 0;
 });
