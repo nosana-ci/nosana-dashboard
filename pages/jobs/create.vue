@@ -503,9 +503,8 @@
                 }"
                 @click="isMarketCompatible(market) && (select ? (selectedMarket = market) : navigate())"
               >
-                <td class="market-name"
+                <td class="market-name has-tooltip-arrow"
                     v-if="!isMarketCompatible(market)"
-                    class="has-tooltip-arrow"
                     data-tooltip="This GPU does not meet the required VRAM specifications for your job.">
                   <!-- ...Cell Content... -->
                 </td>

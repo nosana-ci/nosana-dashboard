@@ -70,25 +70,31 @@
                 'is-incompatible': !isMarketCompatible(market)
               }"
               @click="isMarketCompatible(market) && (select ? (selectedMarket = market) : navigate())">
-              <td>
-                <span 
-                  :class="{
-                    'has-tooltip-arrow': !isMarketCompatible(market)
-                  }"
-                  :data-tooltip="!isMarketCompatible(market)
-                    ? 'This GPU does not meet the required VRAM specifications for your job.'
-                    : null">
-                  <span v-if="testgridMarkets.find((tgm: any) => tgm.address === market.address.toString())" class="py-2">
+              <td class="py-2">
+                <div class="has-tooltip-arrow" v-if="!isMarketCompatible(market)" data-tooltip="This GPU does not meet the required VRAM specifications for your job.">
+                  <span v-if="testgridMarkets.find((tgm: any) => tgm.address === market.address.toString())">
                     {{
                       testgridMarkets.find(
                         (tgm: any) => tgm.address === market.address.toString()
                       ).name
                     }}
                   </span>
-                  <span v-else class="is-family-monospace py-2 address">
+                  <span v-else class="is-family-monospace address">
                     {{ market.address.toString() }}
                   </span>
-                </span>
+                </div>
+                <div v-else>
+                  <span v-if="testgridMarkets.find((tgm: any) => tgm.address === market.address.toString())">
+                    {{
+                      testgridMarkets.find(
+                        (tgm: any) => tgm.address === market.address.toString()
+                      ).name
+                    }}
+                  </span>
+                  <span v-else class="is-family-monospace address">
+                    {{ market.address.toString() }}
+                  </span>
+                </div>
               </td>
               <td class="py-3">
                 <span v-if="loadingStats">...</span>
@@ -195,11 +201,11 @@ const selectedMarket: Ref<Market | null> = ref(props.initialMarket);
 
 //
 // Compute how much VRAM is required for this job definition.
-// This example assumes the first container or any container with 'required_vram' set.
+// Now checks the meta.system_requirments.required_vram field
 //
 const requiredVRAM = computed(() => {
-  if (!props.jobDefinition?.ops?.length) return 0;
-  return props.jobDefinition.ops.find((op: { args?: { required_vram?: number } }) => op.args?.required_vram)?.args?.required_vram || 0;
+  if (!props.jobDefinition?.meta?.system_requirments?.required_vram) return 0;
+  return props.jobDefinition.meta.system_requirments.required_vram;
 });
 
 watch(selectedMarket, (newValue: Market | null) => {
@@ -285,6 +291,9 @@ const paginatedMarkets = computed(() => {
 }
 
 .has-tooltip-arrow {
+  width: 100%;
+  display: block;
+  
   &[data-tooltip] {
     &::before,
     &::after {
@@ -335,6 +344,10 @@ td {
   
   &:hover {
     background-color: inherit !important;
+  }
+
+  td {
+    position: relative;
   }
 }
 
