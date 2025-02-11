@@ -16,11 +16,11 @@
   </tr>
   <tr>
     <td>NVIDIA Driver</td>
-    <td>{{ specs.nvmlVersion || "-"}}</td>
+    <td>{{ specs.nvmlVersion || "-" }}</td>
   </tr>
   <tr>
     <td>CUDA Version</td>
-    <td>{{ specs.cudaVersion  || "-"}}</td>
+    <td>{{ specs.cudaVersion || "-" }}</td>
   </tr>
   <tr>
     <td>CPU</td>
@@ -28,7 +28,7 @@
   </tr>
   <tr>
     <td>RAM</td>
-    <td>{{ specs.ram }} GB</td>
+    <td>{{ specs.ram }} MB</td>
   </tr>
   <tr>
     <td>Disk Space</td>
@@ -37,6 +37,10 @@
   <tr>
     <td>Country</td>
     <td>{{ formatCountry(specs.country) }}</td>
+  </tr>
+  <tr>
+    <td>System Environment</td>
+    <td>{{ specs.systemEnvironment || "-" }}</td>
   </tr>
 </template>
 
@@ -54,6 +58,8 @@ interface Specs {
   };
   cudaVersion: number;
   nvmlVersion: string;
+  nodeVersion: string;
+  systemEnvironment: string;
 }
 
 const props = defineProps<{
