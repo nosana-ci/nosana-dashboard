@@ -37,11 +37,6 @@
       </div>
     </div>
     <div class="column is-narrow">
-      <div v-if="filteredMarkets && filteredMarkets.length" class="has-text-right">
-        <span v-if="filteredMarkets.length > perPage">{{ (page - 1) * perPage + 1 }} -
-          {{ Math.min(page * perPage, filteredMarkets.length) }} of </span>
-        <span>{{ filteredMarkets.length }} GPUs</span>
-      </div>
     </div>
   </div>
   <div class="table-container">
