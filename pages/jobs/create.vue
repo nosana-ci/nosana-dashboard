@@ -563,11 +563,8 @@
           <p class="control">
             <button
               class="button is-primary is-large"
-              :disabled="canPostJob"
               type="button"
               @click="() => { showSwapModal = true; }"
-              :data-tooltip="canPostJob ? 'You have enough NOS for the job' : undefined"
-              data-position="top"
             >
               Swap
             </button>
@@ -605,21 +602,13 @@
     <div class="modal-background" @click="showSwapModal = false"></div>
     <div class="modal-card" style="width: 360px; max-width: 90%;">
       <header class="modal-card-head">
-        <p class="modal-card-title">Insufficient <strong>NOS</strong> balance</p>
+        <p class="modal-card-title">Swap to <strong>NOS</strong></p>
         <button class="delete" aria-label="close" @click="showSwapModal = false"></button>
       </header>
 
       <section class="modal-card-body">
         <div class="field mb-4">
-          <p class="has-text-grey">NOS needed for job:</p>
-          <p class="has-text-black">
-            <b>{{ totalNosNeeded.toFixed(2) }} NOS </b>
-            <span class="has-text-grey">(${{ (totalNosNeeded * nosPrice).toFixed(2) }})</span>
-          </p>
-        </div>
-
-        <div class="field mb-4">
-          <p class="has-text-grey">Your balance:</p>
+          <p class="has-text-grey">NOS balance:</p>
           <p class="has-text-black">
             <b>{{ userBalances.nos.toFixed(2) }} NOS </b>
             <span class="has-text-grey">(${{ (userBalances.nos * nosPrice).toFixed(2) }})</span>
@@ -627,15 +616,25 @@
         </div>
 
         <div class="field mb-4">
-          <p class="has-text-grey">Total needed:</p>
-          <p class="has-text-black">
-            <b>{{ swapAmount.toFixed(2) }} NOS </b>
-            <span class="has-text-grey">(${{ (swapAmount * nosPrice).toFixed(2) }})</span>
-          </p>
+          <p class="has-text-grey">Amount to swap:</p>
+          <div class="control">
+            <input 
+              class="input"
+              type="number"
+              v-model.number="customSwapAmount"
+              :placeholder="swapAmount.toFixed(2)"
+              step="0.01"
+              min="0"
+            >
+            <p class="help">
+              <span class="has-text-grey">NOS required for the selected job: {{ totalNosNeeded.toFixed(2) }} NOS</span>
+              <span class="has-text-grey ml-2">(${{ (totalNosNeeded * nosPrice).toFixed(2) }})</span>
+            </p>
+          </div>
         </div>
 
         <div class="field mb-4">
-          <label class="label has-text-grey mb-2">Select token you want to swap with:</label>
+          <label class="label has-text-grey mb-2">Token to swap with:</label>
           <div class="control">
             <div class="dropdown w-100" :class="{ 'is-active': isDropdownOpen }">
               <div class="dropdown-trigger w-100">
@@ -692,10 +691,10 @@
 
         <div class="field mb-4">
           <p>Would you like to swap 
-            <b>{{ sourceTokenAmount.toFixed(selectedSwapSource === 'SOL' ? 4 : 2) }} {{ selectedSwapSource }}</b>
+            <b>{{ displaySourceTokenAmount.toFixed(selectedSwapSource === 'SOL' ? 4 : 2) }} {{ selectedSwapSource }}</b>
             <span class="has-text-grey"></span>
-            for the required
-            <b>{{ swapAmount.toFixed(2) }} NOS</b>
+            for
+            <b>{{ (customSwapAmount || swapAmount).toFixed(2) }} NOS</b>
             <span class="has-text-grey"></span>?
           </p>
         </div>
@@ -716,29 +715,6 @@
 <style>
 .steps .steps-marker {
   z-index: 4;
-}
-.modal-card {
-  width: 420px;
-  max-width: 90%;
-}
-.w-100 {
-  width: 100%;
-}
-.is-borderless {
-  border: none !important;
-  box-shadow: none !important;
-}
-
-/* Add these new styles */
-.dropdown-content {
-  max-height: none !important;
-  padding: 0;
-}
-.dropdown-item {
-  padding: 0.75rem 1rem;
-}
-.dropdown-item:hover {
-  background-color: #f5f5f5;
 }
 </style>
 <script lang="ts" setup>
@@ -1242,14 +1218,21 @@ async function confirmSwap() {
     return;
   }
 
-  if (swapAmount.value <= 0) {
+  const amountToSwap = customSwapAmount.value || swapAmount.value;
+
+  if (amountToSwap <= 0) {
     toast.info('Please enter an amount greater than 0');
+    return;
+  }
+
+  if (amountToSwap < swapAmount.value) {
+    toast.error(`Amount must be at least ${swapAmount.value.toFixed(2)} NOS`);
     return;
   }
 
   loadingSwap.value = true;
   try {
-    const txid = await nosana.value.swap.swapToNos(swapAmount.value, selectedSwapSource.value);
+    const txid = await nosana.value.swap.swapToNos(amountToSwap, selectedSwapSource.value);
     toast.success('Swap successfully completed');
     await sleep(.2);
     await refreshAllBalances();
@@ -1296,6 +1279,14 @@ function selectToken(token: Token) {
 
 const sourceTokenAmount = computed(() => {
   const usdNeeded = swapAmount.value * nosPrice.value;
+  const tokenPrice = getTokenPrice(selectedSwapSource.value);
+  return tokenPrice ? usdNeeded / tokenPrice : 0;
+});
+
+const customSwapAmount = ref(0);
+
+const displaySourceTokenAmount = computed(() => {
+  const usdNeeded = customSwapAmount.value * nosPrice.value;
   const tokenPrice = getTokenPrice(selectedSwapSource.value);
   return tokenPrice ? usdNeeded / tokenPrice : 0;
 });
