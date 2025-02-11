@@ -1223,7 +1223,9 @@ async function confirmSwap() {
     return;
   }
 
-  const amountToSwap = customSwapAmount.value || swapAmount.value;
+  // Use the user-entered customSwapAmount if set, else fallback 
+  let amountToSwap = customSwapAmount.value || (totalNosNeeded.value - userBalances.value.nos);
+  amountToSwap = amountToSwap < 0 ? 0 : amountToSwap;
 
   if (amountToSwap <= 0) {
     toast.info('Please enter an amount greater than 0');
@@ -1236,12 +1238,8 @@ async function confirmSwap() {
     toast.success('Swap successfully completed');
     await sleep(.2);
     await refreshAllBalances();
-    // Update the custom swap amount to reflect any remaining amount needed
     await nextTick();
-    customSwapAmount.value = Math.max(0, totalNosNeeded.value - userBalances.value.nos);
-    if (userBalances.value.nos >= totalNosNeeded.value) {
-      showSwapModal.value = false;
-    }
+    showSwapModal.value = false; // Always close
   } catch (error: any) {
     toast.error(`Swap error: ${error}`);
   } finally {

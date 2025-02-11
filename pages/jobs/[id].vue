@@ -522,7 +522,6 @@ const confirmExtend = async () => {
 
   try {
     loadingExtend.value = true;
-    showExtendModal.value = false;  // Close modal immediately
 
     const numericState = getStateNumber(job.value.state);
 
@@ -541,6 +540,7 @@ const confirmExtend = async () => {
     loadingExtend.value = false;
     toast.success(`Job has been extended! Transaction: ${result.tx}`);
     refreshJob(); // Immediate refresh
+    showExtendModal.value = false;  // Close modal after successful extension
 
     // Do another refresh after a short delay to ensure we have the latest state
     setTimeout(() => refreshJob(), 2000);
