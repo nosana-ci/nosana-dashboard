@@ -234,8 +234,10 @@ const filteredMarkets = computed(() => {
   
   return props.markets.filter((market) => {
     if (tab.value === 'premium') {
-      const isPremium = testgridMarkets.value.find((tgm: any) => tgm.address === market.address.toString() && tgm.type === 'PREMIUM');
-      if (!isPremium) return false;
+      const marketInfo = testgridMarkets.value.find((tgm: any) => tgm.address === market.address.toString());
+      const isNvidiaGpu = marketInfo?.slug?.toLowerCase().startsWith('nvidia');
+      const isPremium = marketInfo?.type === 'PREMIUM';
+      if (!isPremium || !isNvidiaGpu) return false;
     }
     if (tab.value === 'community') {
       const isCommunity = testgridMarkets.value.find((tgm: any) => tgm.address === market.address.toString() && tgm.type === 'COMMUNITY');
