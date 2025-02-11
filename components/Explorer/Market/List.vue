@@ -7,7 +7,7 @@
             <a @click="tab = 'premium'" class="is-justify-content-flex-start">
               PREMIUM
               <div class="tooltip-container">
-                <span class="has-tooltip-arrow has-text-grey no-underline" data-tooltip="Premium Market offers top-tier GPUs from validated providers for mission-critical and time-sensitive workloads.">
+                <span class="has-tooltip-arrow has-text-grey no-underline" data-tooltip="Premium GPUs offer top-tier hardware from validated providers for mission-critical and time-sensitive workloads.">
                   <img src="~/assets/img/icons/info.svg" class="info-icon" />
                 </span>
               </div>
@@ -17,7 +17,7 @@
             <a @click="tab = 'community'" class="is-justify-content-flex-start">
               COMMUNITY
               <div class="tooltip-container">
-                <span class="has-tooltip-arrow has-text-grey no-underline" data-tooltip="Community Market provides cost-effective GPU solutions from unvalidated hosts, ideal for testing and non-critical workloads.">
+                <span class="has-tooltip-arrow has-text-grey no-underline" data-tooltip="Community GPUs provide cost-effective solutions from unvalidated hosts, ideal for testing and non-critical workloads.">
                   <img src="~/assets/img/icons/info.svg" class="info-icon" />
                 </span>
               </div>
@@ -27,7 +27,7 @@
             <a @click="tab = 'all'" class="is-justify-content-flex-start">
               ALL
               <div class="tooltip-container">
-                <span class="has-tooltip-arrow has-text-grey no-underline" data-tooltip="View all markets on the Nosana Network, including community-created and private markets.">
+                <span class="has-tooltip-arrow has-text-grey no-underline" data-tooltip="View all available GPUs on the Nosana Network, including community-created and private options.">
                   <img src="~/assets/img/icons/info.svg" class="info-icon" />
                 </span>
               </div>
@@ -40,7 +40,7 @@
       <div v-if="filteredMarkets && filteredMarkets.length" class="has-text-right">
         <span v-if="filteredMarkets.length > perPage">{{ (page - 1) * perPage + 1 }} -
           {{ Math.min(page * perPage, filteredMarkets.length) }} of </span>
-        <span>{{ filteredMarkets.length }} markets</span>
+        <span>{{ filteredMarkets.length }} GPUs</span>
       </div>
     </div>
   </div>
