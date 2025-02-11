@@ -12,7 +12,7 @@
         <span class="steps-marker" :class="{ 'is-clickable': step !== 'job-definition' }"
           @click="step !== 'job-definition' ? step = 'pick-market' : null">2</span>
         <div class="steps-content">
-          <h3 class="title is-size-7 mt-2">Select Market</h3>
+          <h3 class="title is-size-7 mt-2">Select GPU</h3>
         </div>
       </li>
       <li class="steps-segment" :class="{ 'is-active': step === 'post-job' }">
@@ -461,11 +461,15 @@
       </form>
     </div>
     <div v-else-if="step === 'pick-market'" class="box">
-      <h2 class="title is-4">Pick a market to post your job to</h2>
-      <ExplorerMarketList :markets="markets" :select="true"
+      <h2 class="title is-4">Pick a GPU to run your job on</h2>
+      <ExplorerMarketList 
+        :markets="markets" 
+        :select="true"
         :initial-market="market"
-        @selectedMarket="(selectedMarket) => { market = selectedMarket }"></ExplorerMarketList>
-      <div v-if="!loadingMarkets && !markets">Could not load markets</div>
+        :job-definition="jobDefinition"
+        @selectedMarket="(selectedMarket) => { market = selectedMarket }"
+      />
+      <div v-if="!loadingMarkets && !markets">Could not load available GPUs</div>
       <form @submit.prevent="step = 'post-job'">
         <div class="field is-grouped is-grouped-right">
           <p class="control">
@@ -477,7 +481,7 @@
           <p class="control">
             <button v-if="!jobDefinition || !market" :disabled="true" :class="{ 'is-loading': loading }"
               class="button is-primary is-large" type="submit"
-              :data-tooltip="!jobDefinition ? 'Please define a job first' : 'Please select a market'"
+              :data-tooltip="!jobDefinition ? 'Please define a job first' : 'Please select a GPU'"
               data-position="top">
               <span>Next</span>
             </button>
@@ -495,22 +499,6 @@
           <table class="table is-fullwidth is-striped">
             <tbody>
               <tr>
-                <td>Selected market</td>
-                <td>
-                  <span v-if="
-                    testgridMarkets.find((tgm: any) => tgm.address === market!.address.toString())
-                  " class="py-2">
-                    {{
-                      testgridMarkets.find((tgm: any) => tgm.address === market!.address.toString()).name
-                    }}
-                  </span>
-                  <span v-else class="is-family-monospace py-2 address">
-                    {{ market.address.toString() }}
-                  </span>
-                  <span class="ml-2">{{ nosPrice ? `$${(pricePerHour * nosPrice).toFixed(2)}/h` : '$-/h' }}</span>
-                </td>
-              </tr>
-              <tr>
                 <td>NOS Balance</td>
                 <td>
                   <span v-if="loadingBalance">....... NOS</span>
@@ -525,6 +513,26 @@
                       <a class="button is-small is-danger" @click.prevent="refreshBalance()"><u>retry</u></a>
                     </p>
                   </div>
+                </td>
+              </tr>
+              <tr>
+                <td>Selected GPU</td>
+                <td>
+                  <span v-if="market">
+                    <span v-if="testgridMarkets.find(m => m.address === market.address.toString())">
+                      {{ testgridMarkets.find(m => m.address === market.address.toString()).slug?.toUpperCase() }}
+                    </span>
+                    <span v-else>{{ market.address.toString() }}</span>
+                    ( 
+                    <span v-if="nosPrice">
+                      ${{ (((market.jobPrice / 1e6) * 3600) * nosPrice).toFixed(2) }}/h
+                    </span>
+                    <span v-else>
+                      {{ (market.jobPrice / 1e6) }} NOS/s
+                    </span>
+                    ) 
+                  </span>
+                  <span v-else>-</span>
                 </td>
               </tr>
               <tr>
@@ -581,7 +589,7 @@
               <button v-else-if="!jobDefinition || !market || !canPostJob" :disabled="true" :class="{ 'is-loading': loading }"
                 class="button is-primary is-large" type="submit"
                 :data-tooltip="!jobDefinition ? 'Please define a job first' : 
-                             !market ? 'Please select a market' :
+                             !market ? 'Please select a GPU' :
                              !canPostJob ? 'Insufficient NOS balance' : ''"
                 data-position="top">
                 <span>Post Job</span>
@@ -696,10 +704,10 @@
 
         <div class="field mb-4">
           <p>Would you like to swap 
-            <b>{{ displaySourceTokenAmount.toFixed(selectedSwapSource === 'SOL' ? 4 : 2) }} {{ selectedSwapSource }}</b>
+            <b>{{ displaySourceTokenAmount.toFixed(selectedSwapSource === 'SOL' ? 5 : 3) }} {{ selectedSwapSource }}</b>
             <span class="has-text-grey"></span>
             for
-            <b>{{ (customSwapAmount || swapAmount).toFixed(2) }} NOS</b>
+            <b>{{ (customSwapAmount || swapAmount).toFixed(3) }} NOS</b>
             <span class="has-text-grey"></span>?
           </p>
         </div>

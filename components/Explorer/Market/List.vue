@@ -7,7 +7,7 @@
             <a @click="tab = 'premium'" class="is-justify-content-flex-start">
               PREMIUM
               <div class="tooltip-container">
-                <span class="has-tooltip-arrow has-text-grey no-underline" data-tooltip="Premium Market offers top-tier GPUs from validated providers for mission-critical and time-sensitive workloads.">
+                <span class="has-tooltip-arrow has-text-grey no-underline" data-tooltip="Premium GPUs offer top-tier hardware from validated providers for mission-critical and time-sensitive workloads.">
                   <img src="~/assets/img/icons/info.svg" class="info-icon" />
                 </span>
               </div>
@@ -17,7 +17,7 @@
             <a @click="tab = 'community'" class="is-justify-content-flex-start">
               COMMUNITY
               <div class="tooltip-container">
-                <span class="has-tooltip-arrow has-text-grey no-underline" data-tooltip="Community Market provides cost-effective GPU solutions from unvalidated hosts, ideal for testing and non-critical workloads.">
+                <span class="has-tooltip-arrow has-text-grey no-underline" data-tooltip="Community GPUs provide cost-effective solutions from unvalidated hosts, ideal for testing and non-critical workloads.">
                   <img src="~/assets/img/icons/info.svg" class="info-icon" />
                 </span>
               </div>
@@ -27,7 +27,7 @@
             <a @click="tab = 'all'" class="is-justify-content-flex-start">
               ALL
               <div class="tooltip-container">
-                <span class="has-tooltip-arrow has-text-grey no-underline" data-tooltip="View all markets on the Nosana Network, including community-created and private markets.">
+                <span class="has-tooltip-arrow has-text-grey no-underline" data-tooltip="View all available GPUs on the Nosana Network, including community-created and private options.">
                   <img src="~/assets/img/icons/info.svg" class="info-icon" />
                 </span>
               </div>
@@ -37,45 +37,59 @@
       </div>
     </div>
     <div class="column is-narrow">
-      <div v-if="filteredMarkets && filteredMarkets.length" class="has-text-right">
-        <span v-if="filteredMarkets.length > perPage">{{ (page - 1) * perPage + 1 }} -
-          {{ Math.min(page * perPage, filteredMarkets.length) }} of </span>
-        <span>{{ filteredMarkets.length }} markets</span>
-      </div>
     </div>
   </div>
   <div class="table-container">
     <table class="table is-fullwidth is-striped is-hoverable" :class="{ 'is-narrow': select }">
       <thead>
         <tr>
-          <th>Name</th>
+          <th>GPU</th>
           <th>Price</th>
           <th>Availability</th>
         </tr>
       </thead>
       <tbody>
         <tr v-if="!filteredMarkets">
-          <td colspan="3">Loading markets..</td>
+          <td colspan="3">Loading GPUs..</td>
         </tr>
         <tr v-if="filteredMarkets && !filteredMarkets.length">
-          <td colspan="3">No markets</td>
+          <td colspan="3">No GPUs available</td>
         </tr>
         <nuxt-link v-for="market in paginatedMarkets" v-else :key="market.address.toString()"
           :to="`/markets/${market.address.toString()}`" custom>
           <template #default="{ navigate }">
-            <tr class="is-clickable" :class="{ 'is-selected': selectedMarket === market }"
-              @click="select ? selectedMarket = market : navigate()">
-              <td>
-                <span v-if="
-                  testgridMarkets.find((tgm: any) => tgm.address === market.address.toString())
-                " class="py-2">
-                  {{
-                    testgridMarkets.find((tgm: any) => tgm.address === market.address.toString()).name
-                  }}
-                </span>
-                <span v-else class="is-family-monospace py-2 address">
-                  {{ market.address.toString() }}
-                </span>
+            <tr
+              class="is-clickable"
+              :class="{
+                'is-selected': selectedMarket === market,
+                'is-incompatible': !isMarketCompatible(market)
+              }"
+              @click="isMarketCompatible(market) && (select ? (selectedMarket = market) : navigate())">
+              <td class="py-2">
+                <div class="has-tooltip-arrow" v-if="!isMarketCompatible(market)" data-tooltip="This GPU does not meet the required VRAM specifications for your job.">
+                  <span v-if="testgridMarkets.find((tgm: any) => tgm.address === market.address.toString())">
+                    {{
+                      testgridMarkets.find(
+                        (tgm: any) => tgm.address === market.address.toString()
+                      ).slug?.toUpperCase() || market.address.toString()
+                    }}
+                  </span>
+                  <span v-else class="is-family-monospace address">
+                    {{ market.address.toString() }}
+                  </span>
+                </div>
+                <div v-else>
+                  <span v-if="testgridMarkets.find((tgm: any) => tgm.address === market.address.toString())">
+                    {{
+                      testgridMarkets.find(
+                        (tgm: any) => tgm.address === market.address.toString()
+                      ).slug?.toUpperCase() || market.address.toString()
+                    }}
+                  </span>
+                  <span v-else class="is-family-monospace address">
+                    {{ market.address.toString() }}
+                  </span>
+                </div>
               </td>
               <td class="py-3">
                 <span v-if="loadingStats">...</span>
@@ -139,11 +153,41 @@
 <script setup lang="ts">
 import { type Market } from '@nosana/sdk';
 
+//
+// Hardcoded VRAM capacities for certain GPU types.
+// Adjust or add more as needed.
+//
+const VRAM_CAPACITIES: Record<string, number> = {
+  'nvidia-3060': 12,
+  'nvidia-3070': 8,
+  'nvidia-3080': 10,
+  'nvidia-3090': 24,
+  'nvidia-4060': 8,
+  'nvidia-4070': 12,
+  'nvidia-4080': 16,
+  'nvidia-4090': 24,
+  'nvidia-5070': 12,
+  'nvidia-5080': 16,
+  'nvidia-5090': 32,
+  'nvidia-a4000': 16,
+  'nvidia-a5000': 24,
+  'nvidia-a6000': 48,
+  'nvidia-a40': 48,
+  'nvidia-a100-40gb': 40,
+  'nvidia-a100-80gb': 80,
+  'nvidia-h100': 80,
+  'nvidia-8x-a5000': 192,
+};
+
 const { data: testgridMarkets, pending: loadingTestgridMarkets } = await useAPI('/api/markets', { default: () => [] });
 const { data: runningJobs, pending: loadingRunningJobs } = await useAPI('/api/jobs/running');
 const { data: stats, pending: loadingStats } = await useAPI('/api/stats');
 const tab: Ref<string> = ref('premium');
 
+/**
+ * Props now accept a jobDefinition object (or similar structure)
+ * so we can read the required_vram from the jobDefinition's ops.
+ */
 const props = defineProps({
   markets: {
     type: Array<Market>,
@@ -156,10 +200,23 @@ const props = defineProps({
   initialMarket: {
     type: Object as PropType<Market>,
     default: null
+  },
+  jobDefinition: {
+    type: Object as PropType<any>,
+    default: null
   }
 });
 const emit = defineEmits(['selectedMarket'])
 const selectedMarket: Ref<Market | null> = ref(props.initialMarket);
+
+//
+// Compute how much VRAM is required for this job definition.
+// Now checks the meta.system_requirements.required_vram field
+//
+const requiredVRAM = computed(() => {
+  if (!props.jobDefinition?.meta?.system_requirements?.required_vram) return 0;
+  return props.jobDefinition.meta.system_requirements.required_vram;
+});
 
 watch(selectedMarket, (newValue: Market | null) => {
   emit('selectedMarket', newValue)
@@ -167,23 +224,84 @@ watch(selectedMarket, (newValue: Market | null) => {
 const page: Ref<number> = ref(1);
 const perPage: Ref<number> = ref(25);
 
+/**
+ * Filters the list of markets by:
+ * - The current tab (premium, community, all).
+ * - VRAM requirements, if set.
+ */
 const filteredMarkets = computed(() => {
   if (!props.markets || !props.markets.length) return props.markets;
-  return props.markets
-    .filter((market) => {
-      if (tab.value === 'premium') {
-        return testgridMarkets.value.find((tgm: any) => tgm.address === market.address.toString() && tgm.type === 'PREMIUM');
-      }
-      if (tab.value === 'community') {
-        return testgridMarkets.value.find((tgm: any) => tgm.address === market.address.toString() && tgm.type === 'COMMUNITY');
-      }
-      return true;
-    });
+  
+  return props.markets.filter((market) => {
+    if (tab.value === 'premium') {
+      const marketInfo = testgridMarkets.value.find((tgm: any) => tgm.address === market.address.toString());
+      const isNvidiaGpu = marketInfo?.slug?.toLowerCase().startsWith('nvidia');
+      const isPremium = marketInfo?.type === 'PREMIUM';
+      if (!isPremium || !isNvidiaGpu) return false;
+    }
+    if (tab.value === 'community') {
+      const isCommunity = testgridMarkets.value.find((tgm: any) => tgm.address === market.address.toString() && tgm.type === 'COMMUNITY');
+      if (!isCommunity) return false;
+    }
+    return true;
+  });
 });
+
+// New computed property to determine if a market is compatible
+const isMarketCompatible = (market: Market) => {
+  if (!requiredVRAM.value || requiredVRAM.value <= 0) return true;
+
+  const marketInfo = testgridMarkets.value.find((tgm: any) => tgm.address === market.address.toString());
+  if (!marketInfo) return true;
+  
+  const vramCapacity = VRAM_CAPACITIES[marketInfo.slug];
+  if (!vramCapacity) return true;
+  
+  return vramCapacity >= requiredVRAM.value;
+};
+
 const paginatedMarkets = computed(() => {
   if (!filteredMarkets.value || !filteredMarkets.value.length) return props.markets;
   return filteredMarkets.value.slice((page.value - 1) * perPage.value, page.value * perPage.value);
 });
+
+// Helper to get hourly price for a market
+const getMarketHourlyPrice = (market: Market) => {
+  if (!stats.value?.[0]?.price) return Number.MAX_VALUE;
+  return (stats.value[0].price * (parseInt(market.jobPrice) / 1e6)) * 3600;
+};
+
+// Helper to check if market has available GPUs
+const hasAvailableGPUs = (market: Market) => {
+  if (market.queueType !== 1) return false;
+  if (loadingRunningJobs.value) return false;
+  
+  const running = runningJobs.value?.[market.address]?.running || 0;
+  return market.queue.length > 0 && running > 0;
+};
+
+// Find the best market automatically when markets or job definition changes
+watch([() => props.markets, () => props.jobDefinition, runningJobs, stats], () => {
+  if (!props.select || !props.markets || !props.jobDefinition) return;
+
+  // Filter for premium markets that are compatible and have GPUs available
+  const compatibleMarkets = props.markets.filter(market => {
+    const isPremium = testgridMarkets.value.find(
+      (tgm: any) => tgm.address === market.address.toString() && tgm.type === 'PREMIUM'
+    );
+    return isPremium && isMarketCompatible(market) && hasAvailableGPUs(market);
+  });
+
+  // Sort by price and select the cheapest
+  const cheapestMarket = compatibleMarkets.sort(
+    (a, b) => getMarketHourlyPrice(a) - getMarketHourlyPrice(b)
+  )[0];
+
+  if (cheapestMarket) {
+    selectedMarket.value = cheapestMarket;
+    emit('selectedMarket', cheapestMarket);
+  }
+}, { immediate: true });
 </script>
 <style lang="scss" scoped>
 .columns {
@@ -223,6 +341,9 @@ const paginatedMarkets = computed(() => {
 }
 
 .has-tooltip-arrow {
+  width: 100%;
+  display: block;
+  
   &[data-tooltip] {
     &::before,
     &::after {
@@ -265,5 +386,45 @@ td {
 
 .table-container {
   margin-top: 0;
+}
+
+.is-incompatible {
+  opacity: 0.5;
+  cursor: not-allowed !important;
+  
+  &:hover {
+    background-color: inherit !important;
+  }
+
+  td {
+    position: relative;
+  }
+}
+
+.warning-icon {
+  filter: invert(73%) sepia(45%) saturate(5600%) hue-rotate(359deg) brightness(101%) contrast(106%);
+}
+
+.table {
+  [data-tooltip] {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+    text-decoration: none;
+    border-bottom: none;
+  }
+
+  [data-tooltip]::before,
+  [data-tooltip]::after {
+    position: absolute;
+    z-index: 100;
+  }
+}
+
+/* Add styles to remove dotted line from all tooltips in the component */
+[data-tooltip] {
+  text-decoration: none !important;
+  border-bottom: none !important;
+  cursor: pointer;
 }
 </style>

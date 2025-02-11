@@ -31,7 +31,7 @@
     "@creativebulma/bulma-tooltip": "^1.2.0",
     "@fortawesome/vue-fontawesome": "^3.0.8",
     "@metaplex-foundation/js": "^0.20.1",
-    "@nosana/sdk": "^0.3.69",
+    "@nosana/sdk": "^0.3.71",
     "@solana/wallet-adapter-wallets": "^0.19.25",
     "@vueuse/components": "^10.9.0",
     "@vueuse/integrations": "^10.9.0",
