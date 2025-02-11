@@ -190,7 +190,6 @@ const props = defineProps({
     type: Object as PropType<Market>,
     default: null
   },
-  // Add a new prop for the job definition if needed
   jobDefinition: {
     type: Object as PropType<any>,
     default: null
@@ -252,6 +251,44 @@ const paginatedMarkets = computed(() => {
   if (!filteredMarkets.value || !filteredMarkets.value.length) return props.markets;
   return filteredMarkets.value.slice((page.value - 1) * perPage.value, page.value * perPage.value);
 });
+
+// Helper to get hourly price for a market
+const getMarketHourlyPrice = (market: Market) => {
+  if (!stats.value?.[0]?.price) return Number.MAX_VALUE;
+  return (stats.value[0].price * (parseInt(market.jobPrice) / 1e6)) * 3600;
+};
+
+// Helper to check if market has available GPUs
+const hasAvailableGPUs = (market: Market) => {
+  if (market.queueType !== 1) return false;
+  if (loadingRunningJobs.value) return false;
+  
+  const running = runningJobs.value?.[market.address]?.running || 0;
+  return market.queue.length > 0 && running > 0;
+};
+
+// Find the best market automatically when markets or job definition changes
+watch([() => props.markets, () => props.jobDefinition, runningJobs, stats], () => {
+  if (!props.select || !props.markets || !props.jobDefinition) return;
+
+  // Filter for premium markets that are compatible and have GPUs available
+  const compatibleMarkets = props.markets.filter(market => {
+    const isPremium = testgridMarkets.value.find(
+      (tgm: any) => tgm.address === market.address.toString() && tgm.type === 'PREMIUM'
+    );
+    return isPremium && isMarketCompatible(market) && hasAvailableGPUs(market);
+  });
+
+  // Sort by price and select the cheapest
+  const cheapestMarket = compatibleMarkets.sort(
+    (a, b) => getMarketHourlyPrice(a) - getMarketHourlyPrice(b)
+  )[0];
+
+  if (cheapestMarket) {
+    selectedMarket.value = cheapestMarket;
+    emit('selectedMarket', cheapestMarket);
+  }
+}, { immediate: true });
 </script>
 <style lang="scss" scoped>
 .columns {
