@@ -495,21 +495,21 @@
         <div v-if="market" class="box">
           <table class="table is-fullwidth is-striped">
             <tbody>
-              <tr>
-                <td>Selected market</td>
-                <td>
-                  <span v-if="
-                    testgridMarkets.find((tgm: any) => tgm.address === market!.address.toString())
-                  " class="py-2">
-                    {{
-                      testgridMarkets.find((tgm: any) => tgm.address === market!.address.toString()).name
-                    }}
-                  </span>
-                  <span v-else class="is-family-monospace py-2 address">
-                    {{ market.address.toString() }}
-                  </span>
-                  <span class="ml-2">{{ nosPrice ? `$${(pricePerHour * nosPrice).toFixed(2)}/h` : '$-/h' }}</span>
+              <tr
+                class="is-clickable"
+                :class="{
+                  'is-selected': selectedMarket === market,
+                  'is-incompatible': !isMarketCompatible(market)
+                }"
+                @click="isMarketCompatible(market) && (select ? (selectedMarket = market) : navigate())"
+              >
+                <td class="market-name"
+                    v-if="!isMarketCompatible(market)"
+                    class="has-tooltip-arrow"
+                    data-tooltip="This GPU does not meet the required VRAM specifications for your job.">
+                  <!-- ...Cell Content... -->
                 </td>
+                <!-- The rest of your cells (price, availability, etc.) -->
               </tr>
               <tr>
                 <td>NOS Balance</td>
