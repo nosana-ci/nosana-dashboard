@@ -1230,18 +1230,18 @@ async function confirmSwap() {
     return;
   }
 
-  if (amountToSwap < swapAmount.value) {
-    toast.error(`Amount must be at least ${swapAmount.value.toFixed(2)} NOS`);
-    return;
-  }
-
   loadingSwap.value = true;
   try {
     const txid = await nosana.value.swap.swapToNos(amountToSwap, selectedSwapSource.value);
     toast.success('Swap successfully completed');
     await sleep(.2);
     await refreshAllBalances();
-    showSwapModal.value = false;
+    // Update the custom swap amount to reflect any remaining amount needed
+    await nextTick();
+    customSwapAmount.value = Math.max(0, totalNosNeeded.value - userBalances.value.nos);
+    if (userBalances.value.nos >= totalNosNeeded.value) {
+      showSwapModal.value = false;
+    }
   } catch (error: any) {
     toast.error(`Swap error: ${error}`);
   } finally {
