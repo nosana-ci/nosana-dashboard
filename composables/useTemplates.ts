@@ -2,9 +2,6 @@ import type { JobDefinition } from "@nosana/sdk"
 const emptyJobDefinition: JobDefinition = {
   "version": "0.1",
   "type": "container",
-  "meta": {
-    "trigger": "job-builder"
-  },
   "ops": [
     {
       "type": "container/run",

@@ -464,6 +464,7 @@
       <h2 class="title is-4">Pick a market to post your job to</h2>
       <ExplorerMarketList :markets="markets" :select="true"
         :initial-market="market"
+        :job-definition="jobDefinition"
         @selectedMarket="(selectedMarket) => { market = selectedMarket }"></ExplorerMarketList>
       <div v-if="!loadingMarkets && !markets">Could not load markets</div>
       <form @submit.prevent="step = 'post-job'">
@@ -696,10 +697,10 @@
 
         <div class="field mb-4">
           <p>Would you like to swap 
-            <b>{{ displaySourceTokenAmount.toFixed(selectedSwapSource === 'SOL' ? 4 : 2) }} {{ selectedSwapSource }}</b>
+            <b>{{ displaySourceTokenAmount.toFixed(selectedSwapSource === 'SOL' ? 5 : 3) }} {{ selectedSwapSource }}</b>
             <span class="has-text-grey"></span>
             for
-            <b>{{ (customSwapAmount || swapAmount).toFixed(2) }} NOS</b>
+            <b>{{ (customSwapAmount || swapAmount).toFixed(3) }} NOS</b>
             <span class="has-text-grey"></span>?
           </p>
         </div>

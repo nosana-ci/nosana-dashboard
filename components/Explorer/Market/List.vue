@@ -63,18 +63,31 @@
         <nuxt-link v-for="market in paginatedMarkets" v-else :key="market.address.toString()"
           :to="`/markets/${market.address.toString()}`" custom>
           <template #default="{ navigate }">
-            <tr class="is-clickable" :class="{ 'is-selected': selectedMarket === market }"
-              @click="select ? selectedMarket = market : navigate()">
+            <tr
+              class="is-clickable"
+              :class="{
+                'is-selected': selectedMarket === market,
+                'is-incompatible': !isMarketCompatible(market)
+              }"
+              @click="isMarketCompatible(market) && (select ? (selectedMarket = market) : navigate())">
               <td>
-                <span v-if="
-                  testgridMarkets.find((tgm: any) => tgm.address === market.address.toString())
-                " class="py-2">
-                  {{
-                    testgridMarkets.find((tgm: any) => tgm.address === market.address.toString()).name
-                  }}
-                </span>
-                <span v-else class="is-family-monospace py-2 address">
-                  {{ market.address.toString() }}
+                <span 
+                  :class="{
+                    'has-tooltip-arrow': !isMarketCompatible(market)
+                  }"
+                  :data-tooltip="!isMarketCompatible(market)
+                    ? 'This GPU does not meet the required VRAM specifications for your job.'
+                    : null">
+                  <span v-if="testgridMarkets.find((tgm: any) => tgm.address === market.address.toString())" class="py-2">
+                    {{
+                      testgridMarkets.find(
+                        (tgm: any) => tgm.address === market.address.toString()
+                      ).name
+                    }}
+                  </span>
+                  <span v-else class="is-family-monospace py-2 address">
+                    {{ market.address.toString() }}
+                  </span>
                 </span>
               </td>
               <td class="py-3">
@@ -139,11 +152,25 @@
 <script setup lang="ts">
 import { type Market } from '@nosana/sdk';
 
+//
+// Hardcoded VRAM capacities for certain GPU types.
+// Adjust or add more as needed.
+//
+const VRAM_CAPACITIES: Record<string, number> = {
+  'nvidia-4090': 24,
+  'nvidia-3060': 8,
+  'nvidia-4070': 12
+};
+
 const { data: testgridMarkets, pending: loadingTestgridMarkets } = await useAPI('/api/markets', { default: () => [] });
 const { data: runningJobs, pending: loadingRunningJobs } = await useAPI('/api/jobs/running');
 const { data: stats, pending: loadingStats } = await useAPI('/api/stats');
 const tab: Ref<string> = ref('premium');
 
+/**
+ * Props now accept a jobDefinition object (or similar structure)
+ * so we can read the required_vram from the jobDefinition's ops.
+ */
 const props = defineProps({
   markets: {
     type: Array<Market>,
@@ -156,10 +183,24 @@ const props = defineProps({
   initialMarket: {
     type: Object as PropType<Market>,
     default: null
+  },
+  // Add a new prop for the job definition if needed
+  jobDefinition: {
+    type: Object as PropType<any>,
+    default: null
   }
 });
 const emit = defineEmits(['selectedMarket'])
 const selectedMarket: Ref<Market | null> = ref(props.initialMarket);
+
+//
+// Compute how much VRAM is required for this job definition.
+// This example assumes the first container or any container with 'required_vram' set.
+//
+const requiredVRAM = computed(() => {
+  if (!props.jobDefinition?.ops?.length) return 0;
+  return props.jobDefinition.ops.find((op: { args?: { required_vram?: number } }) => op.args?.required_vram)?.args?.required_vram || 0;
+});
 
 watch(selectedMarket, (newValue: Market | null) => {
   emit('selectedMarket', newValue)
@@ -167,19 +208,40 @@ watch(selectedMarket, (newValue: Market | null) => {
 const page: Ref<number> = ref(1);
 const perPage: Ref<number> = ref(25);
 
+/**
+ * Filters the list of markets by:
+ * - The current tab (premium, community, all).
+ * - VRAM requirements, if set.
+ */
 const filteredMarkets = computed(() => {
   if (!props.markets || !props.markets.length) return props.markets;
-  return props.markets
-    .filter((market) => {
-      if (tab.value === 'premium') {
-        return testgridMarkets.value.find((tgm: any) => tgm.address === market.address.toString() && tgm.type === 'PREMIUM');
-      }
-      if (tab.value === 'community') {
-        return testgridMarkets.value.find((tgm: any) => tgm.address === market.address.toString() && tgm.type === 'COMMUNITY');
-      }
-      return true;
-    });
+  
+  return props.markets.filter((market) => {
+    if (tab.value === 'premium') {
+      const isPremium = testgridMarkets.value.find((tgm: any) => tgm.address === market.address.toString() && tgm.type === 'PREMIUM');
+      if (!isPremium) return false;
+    }
+    if (tab.value === 'community') {
+      const isCommunity = testgridMarkets.value.find((tgm: any) => tgm.address === market.address.toString() && tgm.type === 'COMMUNITY');
+      if (!isCommunity) return false;
+    }
+    return true;
+  });
 });
+
+// New computed property to determine if a market is compatible
+const isMarketCompatible = (market: Market) => {
+  if (!requiredVRAM.value || requiredVRAM.value <= 0) return true;
+
+  const marketInfo = testgridMarkets.value.find((tgm: any) => tgm.address === market.address.toString());
+  if (!marketInfo) return true;
+  
+  const vramCapacity = VRAM_CAPACITIES[marketInfo.slug];
+  if (!vramCapacity) return true;
+  
+  return vramCapacity >= requiredVRAM.value;
+};
+
 const paginatedMarkets = computed(() => {
   if (!filteredMarkets.value || !filteredMarkets.value.length) return props.markets;
   return filteredMarkets.value.slice((page.value - 1) * perPage.value, page.value * perPage.value);
@@ -265,5 +327,41 @@ td {
 
 .table-container {
   margin-top: 0;
+}
+
+.is-incompatible {
+  opacity: 0.5;
+  cursor: not-allowed !important;
+  
+  &:hover {
+    background-color: inherit !important;
+  }
+}
+
+.warning-icon {
+  filter: invert(73%) sepia(45%) saturate(5600%) hue-rotate(359deg) brightness(101%) contrast(106%);
+}
+
+.table {
+  [data-tooltip] {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+    text-decoration: none;
+    border-bottom: none;
+  }
+
+  [data-tooltip]::before,
+  [data-tooltip]::after {
+    position: absolute;
+    z-index: 100;
+  }
+}
+
+/* Add styles to remove dotted line from all tooltips in the component */
+[data-tooltip] {
+  text-decoration: none !important;
+  border-bottom: none !important;
+  cursor: pointer;
 }
 </style>
