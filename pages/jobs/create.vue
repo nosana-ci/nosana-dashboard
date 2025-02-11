@@ -462,10 +462,13 @@
     </div>
     <div v-else-if="step === 'pick-market'" class="box">
       <h2 class="title is-4">Pick a market to post your job to</h2>
-      <ExplorerMarketList :markets="markets" :select="true"
+      <ExplorerMarketList 
+        :markets="markets" 
+        :select="true"
         :initial-market="market"
         :job-definition="jobDefinition"
-        @selectedMarket="(selectedMarket) => { market = selectedMarket }"></ExplorerMarketList>
+        @selectedMarket="(selectedMarket) => { market = selectedMarket }"
+      />
       <div v-if="!loadingMarkets && !markets">Could not load markets</div>
       <form @submit.prevent="step = 'post-job'">
         <div class="field is-grouped is-grouped-right">
@@ -495,21 +498,6 @@
         <div v-if="market" class="box">
           <table class="table is-fullwidth is-striped">
             <tbody>
-              <tr
-                class="is-clickable"
-                :class="{
-                  'is-selected': selectedMarket === market,
-                  'is-incompatible': !isMarketCompatible(market)
-                }"
-                @click="isMarketCompatible(market) && (select ? (selectedMarket = market) : navigate())"
-              >
-                <td class="market-name has-tooltip-arrow"
-                    v-if="!isMarketCompatible(market)"
-                    data-tooltip="This GPU does not meet the required VRAM specifications for your job.">
-                  <!-- ...Cell Content... -->
-                </td>
-                <!-- The rest of your cells (price, availability, etc.) -->
-              </tr>
               <tr>
                 <td>NOS Balance</td>
                 <td>
