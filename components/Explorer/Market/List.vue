@@ -280,16 +280,18 @@ const hasAvailableGPUs = (market: Market) => {
   return market.queue.length > 0 && running > 0;
 };
 
-// Find the best market automatically when markets or job definition changes
-watch([() => props.markets, () => props.jobDefinition, runningJobs, stats], () => {
-  if (!props.select || !props.markets || !props.jobDefinition) return;
+// Extract market selection logic into a separate function
+const selectBestMarket = () => {
+  if (!props.select || !props.markets || !props.jobDefinition || !testgridMarkets.value) return;
 
-  // Filter for premium markets that are compatible and have GPUs available
+  // Filter for premium NVIDIA markets that are compatible and have GPUs available
   const compatibleMarkets = props.markets.filter(market => {
-    const isPremium = testgridMarkets.value.find(
-      (tgm: any) => tgm.address === market.address.toString() && tgm.type === 'PREMIUM'
+    const marketInfo = testgridMarkets.value.find(
+      (tgm: any) => tgm.address === market.address.toString()
     );
-    return isPremium && isMarketCompatible(market) && hasAvailableGPUs(market);
+    const isNvidiaGpu = marketInfo?.slug?.toLowerCase().startsWith('nvidia');
+    const isPremium = marketInfo?.type === 'PREMIUM';
+    return isPremium && isNvidiaGpu && isMarketCompatible(market) && hasAvailableGPUs(market);
   });
 
   // Sort by price and select the cheapest
@@ -301,7 +303,26 @@ watch([() => props.markets, () => props.jobDefinition, runningJobs, stats], () =
     selectedMarket.value = cheapestMarket;
     emit('selectedMarket', cheapestMarket);
   }
+};
+
+// Watch for changes in markets, job definition, running jobs, stats, and testgridMarkets
+watch([
+  () => props.markets, 
+  () => props.jobDefinition, 
+  runningJobs, 
+  stats,
+  () => testgridMarkets.value,
+  () => loadingTestgridMarkets.value
+], ([newMarkets, newJobDef, newRunningJobs, newStats, newTestgridMarkets, isLoadingTestgrid]) => {
+  if (!isLoadingTestgrid && newTestgridMarkets && newMarkets) {
+    selectBestMarket();
+  }
 }, { immediate: true });
+
+// Also trigger market selection when the tab changes
+watch(() => tab.value, () => {
+  selectBestMarket();
+});
 </script>
 <style lang="scss" scoped>
 .columns {
