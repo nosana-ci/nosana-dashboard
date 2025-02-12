@@ -233,16 +233,25 @@ const filteredMarkets = computed(() => {
   if (!props.markets || !props.markets.length) return props.markets;
   
   return props.markets.filter((market) => {
-    if (tab.value === 'premium') {
-      const marketInfo = testgridMarkets.value.find((tgm: any) => tgm.address === market.address.toString());
-      const isNvidiaGpu = marketInfo?.slug?.toLowerCase().startsWith('nvidia');
-      const isPremium = marketInfo?.type === 'PREMIUM';
-      if (!isPremium || !isNvidiaGpu) return false;
+    // Get market info regardless of type
+    const marketInfo = testgridMarkets.value.find((tgm: any) => tgm.address === market.address.toString());
+    
+    // For premium and community tabs, exclude markets without market info
+    if ((tab.value === 'premium' || tab.value === 'community') && !marketInfo) {
+      return false;
     }
-    if (tab.value === 'community') {
-      const isCommunity = testgridMarkets.value.find((tgm: any) => tgm.address === market.address.toString() && tgm.type === 'COMMUNITY');
-      if (!isCommunity) return false;
+
+    // Filter based on tab selection
+    if (tab.value === 'premium' && (marketInfo.type !== 'PREMIUM' || !marketInfo.slug?.toLowerCase().startsWith('nvidia'))) {
+      return false;
     }
+    if (tab.value === 'community' && marketInfo.type !== 'COMMUNITY') {
+      return false;
+    }
+    if (tab.value === 'all') {
+      return true;
+    }
+
     return true;
   });
 });
@@ -252,9 +261,11 @@ const isMarketCompatible = (market: Market) => {
   if (!requiredVRAM.value || requiredVRAM.value <= 0) return true;
 
   const marketInfo = testgridMarkets.value.find((tgm: any) => tgm.address === market.address.toString());
-  if (!marketInfo) return true;
+  if (!marketInfo?.slug) return true;
   
-  const vramCapacity = VRAM_CAPACITIES[marketInfo.slug];
+  // Extract the GPU model from the slug, handling both premium and community formats
+  const gpuModel = marketInfo.slug.toLowerCase().replace('-community', '');
+  const vramCapacity = VRAM_CAPACITIES[gpuModel];
   if (!vramCapacity) return true;
   
   return vramCapacity >= requiredVRAM.value;
