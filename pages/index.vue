@@ -18,7 +18,7 @@
           <ExplorerMarketQueues></ExplorerMarketQueues>
           <div class="has-text-right mt-auto pt-2">
             <nuxt-link to="/markets" class="button is-text">
-              <span>All markets</span>
+              <span>All host pools</span>
               <span class="icon"> &#8250; </span>
             </nuxt-link>
           </div>
