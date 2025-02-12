@@ -181,7 +181,7 @@ const displayPrice = computed(() => {
       props.job.timeEnd - props.job.timeStart,
       props.job.timeout ?? (market.jobTimeout || 0)
     );
-    const priceInNos = (parseInt(props.job.price, 10) / 1e6) * usedTime;
+    const priceInNos = (parseInt(props.job.price, 10) / 1e6) * usedTime * 1.1;
     return `${priceInNos.toFixed(6)} NOS ${nosPrice ? `($${(nosPrice * priceInNos).toFixed(2)})` : ''
       }`;
   }
@@ -189,8 +189,8 @@ const displayPrice = computed(() => {
   // Running / queued
   if (props.job.price) {
     const pricePerSecond = parseInt(props.job.price, 10) / 1e6;
-    return `${(pricePerSecond * 3600).toFixed(3)} NOS/h ${nosPrice
-      ? `($${((nosPrice * pricePerSecond) * 3600).toFixed(2)}/h)`
+    return `${(pricePerSecond * 3600 * 1.1).toFixed(3)} NOS/h ${nosPrice
+      ? `($${((nosPrice * pricePerSecond) * 3600 * 1.1).toFixed(2)}/h)`
       : ''
       }`;
   }

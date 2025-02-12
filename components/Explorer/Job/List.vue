@@ -61,7 +61,7 @@
         <th v-if="!small" class="is-hidden-touch">Host</th>
         <th>Started</th>
         <th class="is-hidden-mobile">Duration</th>
-        <th v-if="!small" class="is-hidden-touch">Price</th>
+        <th v-if="!small" class="is-hidden-touch">{{ select || title === 'Jobs Posted' ? 'Price' : 'Host payment' }}</th>
         <th v-if="!small" class="is-hidden-touch">Host pool</th>
         <th>Status</th>
       </tr>
@@ -106,29 +106,36 @@
               <span v-else> - </span>
             </td>
             <td v-if="!small" class="is-hidden-touch">
-              <span v-if="job.timeEnd && job.timeStart && !job.timeout">
-                <span v-if="stats && stats[0] && stats[0].price">
-                  $
-                  {{
-                    ((job.price / 1e6) * Math.min(job.timeEnd - job.timeStart, job.timeout ? job.timeout :
-                      7200) * stats[0].price).toFixed(2)
-                  }}
+              <span v-if="job.state === 1">
+                <!-- Running job - show hourly rate -->
+                <span v-if="nosPrice">
+                  ${{ ((getMarketPrice(job.market.toString()) / 1e6) * 3600 * nosPrice * (select || title === 'Jobs Posted' ? 1.1 : 1)).toFixed(2) }} / h
                 </span>
                 <span v-else>
-
-                  {{
-                    ((job.price / 1e6) * Math.min(job.timeEnd - job.timeStart, job.timeout ? job.timeout :
-                      7200)).toFixed(6)
-                  }}
-                  NOS</span>
+                  {{ ((getMarketPrice(job.market.toString()) / 1e6) * (select || title === 'Jobs Posted' ? 1.1 : 1)).toFixed(6) }}
+                  NOS/s
+                </span>
               </span>
               <span v-else>
-                <span v-if="stats && stats[0] && stats[0].price">
-                  ${{ ((job.price / 1e6) * 3600 * stats[0].price).toFixed(2) }} / h
+                <!-- Completed/Stopped job - show final price -->
+                <span v-if="job.timeEnd && job.timeStart">
+                  <span v-if="nosPrice">
+                    ${{ ((getMarketPrice(job.market.toString()) / 1e6) * Math.min(job.timeEnd - job.timeStart, job.timeout ? job.timeout : 7200) * nosPrice * (select || title === 'Jobs Posted' ? 1.1 : 1)).toFixed(2) }}
+                  </span>
+                  <span v-else>
+                    {{ ((getMarketPrice(job.market.toString()) / 1e6) * Math.min(job.timeEnd - job.timeStart, job.timeout ? job.timeout : 7200) * (select || title === 'Jobs Posted' ? 1.1 : 1)).toFixed(6) }}
+                    NOS
+                  </span>
                 </span>
                 <span v-else>
-                  {{ (job.price / 1e6) }}
-                  NOS/s
+                  <!-- Queued job - show hourly rate -->
+                  <span v-if="nosPrice">
+                    ${{ ((getMarketPrice(job.market.toString()) / 1e6) * 3600 * nosPrice * (select || title === 'Jobs Posted' ? 1.1 : 1)).toFixed(2) }} / h
+                  </span>
+                  <span v-else>
+                    {{ ((getMarketPrice(job.market.toString()) / 1e6) * (select || title === 'Jobs Posted' ? 1.1 : 1)).toFixed(6) }}
+                    NOS/s
+                  </span>
                 </span>
               </span>
             </td>
@@ -169,6 +176,19 @@ import { UseTimeAgo } from '@vueuse/components';
 const { data: testgridMarkets, pending: loadingTestgridMarkets } = await useAPI('/api/markets', { default: () => [] });
 
 const { data: stats, pending: loadingStats } = await useAPI('/api/stats');
+const nosPrice = computed(() => stats.value?.[0]?.price);
+
+const { markets, getMarkets, loadingMarkets } = useMarkets();
+if (!markets.value) {
+  getMarkets();
+}
+
+// Helper function to get market price
+const getMarketPrice = (marketAddress: string) => {
+  if (!markets.value) return 0;
+  const market = markets.value.find(m => m.address.toString() === marketAddress);
+  return market?.jobPrice || 0;
+};
 
 const timestamp = useTimestamp({ interval: 1000 });
 const fmtMSS = (s: number) => {
@@ -200,6 +220,10 @@ const props = defineProps({
     required: true,
   },
   loadingJobs: {
+    type: Boolean,
+    default: false,
+  },
+  select: {
     type: Boolean,
     default: false,
   },

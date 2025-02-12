@@ -38,15 +38,18 @@
                   </td>
                 </tr>
                 <tr>
-                  <td>Price</td>
+                  <td>Host payment</td>
                   <td>
-                    <span v-if="loadingStats">...</span>
-                    <span v-else>
-                      {{ ((market.jobPrice / 1e6) * 3600).toFixed(3) }} NOS/h
-                      <span v-if="stats && stats[0] && stats[0].price">
-                        (${{ ((stats[0].price * (market.jobPrice / 1e6)) * 3600).toFixed(2) }}/h)
+                    <div class="level-item">
+                      <div class="has-text-grey">Host payment</div>
+                      <span v-if="loadingStats">...</span>
+                      <span v-else>
+                        {{ ((market.jobPrice / 1e6)).toFixed(3) }} NOS/h
+                        <span v-if="stats && stats[0] && stats[0].price">
+                          (${{ ((stats[0].price * (market.jobPrice / 1e6))).toFixed(2) }}/h)
+                        </span>
                       </span>
-                    </span>
+                    </div>
                   </td>
                 </tr>
                 <tr>
@@ -233,7 +236,7 @@
         </div>
 
         <ExplorerJobList :per-page="limit" :total-jobs="jobs ? jobs.totalJobs : null" v-model:page="page"
-          v-model:state="state" :loading-jobs="loadingJobs" title="All Jobs in this market"
+          v-model:state="state" :loading-jobs="loadingJobs" title="All Jobs in this host pool"
           :jobs="jobs ? jobs.jobs : null">
         </ExplorerJobList>
       </div>

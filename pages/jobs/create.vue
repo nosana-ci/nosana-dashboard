@@ -525,10 +525,10 @@
                     <span v-else>{{ market.address.toString() }}</span>
                     ( 
                     <span v-if="nosPrice">
-                      ${{ (((market.jobPrice / 1e6) * 3600) * nosPrice).toFixed(2) }}/h
+                      ${{ (((market.jobPrice / 1e6) * 3600 * 1.1) * nosPrice).toFixed(2) }}/h
                     </span>
                     <span v-else>
-                      {{ (market.jobPrice / 1e6) }} NOS/s
+                      {{ ((market.jobPrice / 1e6) * 1.1).toFixed(6) }} NOS/s
                     </span>
                     ) 
                   </span>
@@ -547,7 +547,7 @@
               </tr>
               <tr>
                 <td><strong>Total price</strong></td>
-                <td class="has-text-white"><strong>{{ nosPrice ? `$${(maxPrice * nosPrice).toFixed(3)}` : '$-' }}</strong></td>
+                <td class="has-text-white"><strong>{{ nosPrice ? `$${totalPrice.toFixed(3)}` : '$-' }}</strong></td>
               </tr>
             </tbody>
           </table>
@@ -832,22 +832,26 @@ watch(() => priceData.value, (newPrice) => {
   }
 }, { immediate: true });
 
-const pricePerHour = computed(() => {
-  if (!market.value) return 0;
-  return (market.value.jobPrice * 3600) / 1e6; // Convert to NOS per hour
+
+
+const totalPrice = computed(() => {
+  if (!market.value || !jobTimeout.value || !nosPrice.value) return 0;
+  // Calculate total price in dollars: (hourly rate in dollars) * (timeout in hours)
+  return ((market.value.jobPrice * 3600 * 1.1) / 1e6) * nosPrice.value * (jobTimeout.value / 60);
 });
 
-const maxPrice = computed(() => {
+const requiredNos = computed(() => {
   if (!market.value || !jobTimeout.value) return 0;
-  return (market.value.jobPrice * jobTimeout.value * 60) / 1e6; // Convert to NOS
+  return (market.value.jobPrice * jobTimeout.value * 60 * 1.1) / 1e6; // Convert to NOS including 10% fee
 });
 
 const canPostJob = computed(() => {
-  const totalRequired = maxPrice.value;
-  return (balance.value || 0) >= totalRequired * 1.01;
+  return (balance.value || 0) >= requiredNos.value * 1.01;
 });
 
-const totalNosNeeded = computed(() => maxPrice.value * 1.05);
+const totalNosNeeded = computed(() => {
+  return requiredNos.value * 1.05;
+});
 
 if (template.value) {
   jobDefinition.value = template.value.jobDefinition;

@@ -44,7 +44,7 @@
       <thead>
         <tr>
           <th>GPU</th>
-          <th>Price</th>
+          <th>{{ select ? 'Price' : 'Host payment' }}</th>
           <th>Availability</th>
         </tr>
       </thead>
