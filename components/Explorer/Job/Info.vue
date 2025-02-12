@@ -24,7 +24,7 @@
         </td>
       </tr>
       <tr>
-        <td>GPU pool</td>
+        <td>Host pool</td>
         <td>
           <nuxt-link class="address is-family-monospace" :to="`/markets/${props.job.market}`">
             <span v-if="

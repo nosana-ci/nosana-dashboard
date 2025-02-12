@@ -14,7 +14,7 @@
       </div>
       <div class="column is-6">
         <div class="box is-flex is-flex-direction-column">
-          <h2 class="title is-5">GPU pools</h2>
+          <h2 class="title is-5">Host pools</h2>
           <ExplorerMarketQueues></ExplorerMarketQueues>
           <div class="has-text-right mt-auto pt-2">
             <nuxt-link to="/markets" class="button is-text">
