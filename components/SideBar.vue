@@ -62,7 +62,7 @@
             <span class="icon is-small mr-4">
               <BrowserIcon />
             </span>
-            <span>GPU Markets</span>
+            <span>GPU pools</span>
           </nuxt-link>
         </li>
         <li>

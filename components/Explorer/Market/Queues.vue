@@ -94,17 +94,18 @@ const queueData = computed<ChartData<'bar'>>(() => {
   const data: Array<any> = markets.value && testgridMarkets.value
     ? markets.value
       .filter((m) => m.queue.length)
-      .filter((m) =>
-        testgridMarkets.value.find((tgm: any) =>
+      .filter((m) => {
+        const marketInfo = testgridMarkets.value.find((tgm: any) =>
           tgm.address === m.address.toString()
-        ),
-      )
+        );
+        return marketInfo && marketInfo.type === 'PREMIUM' && marketInfo.slug?.toLowerCase().startsWith('nvidia');
+      })
     : [];
   return {
     labels: data.map(
       (m) =>
         testgridMarkets.value.find((tgm: any) => tgm.address === m.address.toString())
-          .slug,
+          .name,
     ),
     datasets: [
       {

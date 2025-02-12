@@ -1141,9 +1141,9 @@ watchEffect(async () => {
 
       if (gpuMarket) {
         market.value = gpuMarket;
-        toast.success('Selected GPU market automatically');
+        toast.success('Selected Nosana GPU automatically');
       } else {
-        toast.warning('No GPU market found. Please select a market manually.');
+        toast.warning('No Nosana GPU found. Please select one manually.');
       }
     }
 

@@ -65,7 +65,7 @@
             </td>
           </tr>
           <tr>
-            <td>GPU Market</td>
+            <td>GPU pool</td>
             <td v-if="queueInfo">
               <span>
                 <nuxt-link

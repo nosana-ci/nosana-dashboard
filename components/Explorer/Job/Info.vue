@@ -24,7 +24,7 @@
         </td>
       </tr>
       <tr>
-        <td>GPU Market</td>
+        <td>GPU pool</td>
         <td>
           <nuxt-link class="address is-family-monospace" :to="`/markets/${props.job.market}`">
             <span v-if="
@@ -167,7 +167,7 @@ const displayPrice = computed(() => {
   if (loadingMarkets.value || !apiMarkets.value || !props.job) {
     return 'Could not load market';
   }
-  // Find the job’s market in the /api/markets array
+  // Find the job's market in the /api/markets array
   const market = apiMarkets.value.find((m: any) => m.address === props.job.market);
   if (!market) {
     return 'Could not find market';
@@ -201,7 +201,7 @@ const displayPrice = computed(() => {
 // Max Duration
 const maxDuration = computed(() => {
   if (loadingMarkets.value || !apiMarkets.value || !props.job) return 0;
-  // find the job’s market in the /api/markets array
+  // find the job's market in the /api/markets array
   const market = apiMarkets.value.find((m: any) => m.address === props.job.market);
   return props.job && props.job.timeout ? props.job.timeout : (market?.jobTimeout ?? 0);
 });

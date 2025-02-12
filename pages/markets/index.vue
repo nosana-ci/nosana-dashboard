@@ -1,13 +1,13 @@
 <template>
   <div>
-    <TopBar :title="'Explorer'" :subtitle="'GPU Markets'"></TopBar>
+    <TopBar :title="'Explorer'" :subtitle="'GPU pools'"></TopBar>
     <div class="box has-background-white-ter">
       <ExplorerSearch />
     </div>
     <div class="box">
       <div class="columns">
         <div class="column is-2 has-text-centered">
-          <h1 class="title is-5">GPU Markets</h1>
+          <h1 class="title is-5">GPU pools</h1>
           <ExplorerNodesAvailable />
         </div>
         <div class="column is-10">
