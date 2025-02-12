@@ -189,8 +189,8 @@ const displayPrice = computed(() => {
   // Running / queued
   if (props.job.price) {
     const pricePerSecond = parseInt(props.job.price, 10) / 1e6;
-    return `${pricePerSecond} NOS/s ${nosPrice
-      ? `($${((nosPrice * pricePerSecond) * 3600).toFixed(2)} / h)`
+    return `${(pricePerSecond * 3600).toFixed(3)} NOS/h ${nosPrice
+      ? `($${((nosPrice * pricePerSecond) * 3600).toFixed(2)}/h)`
       : ''
       }`;
   }

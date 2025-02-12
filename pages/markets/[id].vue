@@ -16,11 +16,11 @@
             <table class="table is-fullwidth is-striped">
               <tbody>
                 <tr>
-                  <td>Market Size</td>
+                  <td>Host pool size</td>
                   <td>{{ totalNodes }} hosts</td>
                 </tr>
                 <tr v-if="testgridMarkets.find(m => m.address === marketId)">
-                  <td>Market Address</td>
+                  <td>Host pool address</td>
                   <td>
                     <a target="_blank" class="address is-family-monospace"
                       :href="'https://explorer.solana.com/address/' + marketId">
@@ -42,9 +42,9 @@
                   <td>
                     <span v-if="loadingStats">...</span>
                     <span v-else>
-                      {{ market.jobPrice / 1e6 }} NOS/s
+                      {{ ((market.jobPrice / 1e6) * 3600).toFixed(3) }} NOS/h
                       <span v-if="stats && stats[0] && stats[0].price">
-                        (${{ ((stats[0].price * (market.jobPrice / 1e6)) * 3600).toFixed(2) }} / h)
+                        (${{ ((stats[0].price * (market.jobPrice / 1e6)) * 3600).toFixed(2) }}/h)
                       </span>
                     </span>
                   </td>
