@@ -376,6 +376,64 @@ watch(() => props.jobDefinition, () => {
   }
 }
 
+// Add responsive tooltip styles for mobile
+@include touch {
+  .tabs {
+    li {
+      position: relative;
+
+      a {
+        flex-wrap: wrap;
+      }
+    }
+  }
+
+  .tooltip-container {
+    position: static;
+    
+    .has-tooltip-arrow {
+      &[data-tooltip] {
+        position: static;
+        
+        &::before,
+        &::after {
+          position: absolute !important;
+          opacity: 1 !important;
+          transform: none !important;
+          left: -16px !important;
+          right: -16px !important;
+          margin: 0 !important;
+          width: calc(100% + 32px) !important;
+          white-space: normal !important;
+          top: 100% !important;
+          padding: 0.75rem !important;
+          z-index: 99999 !important;
+          box-sizing: border-box !important;
+          max-width: calc(100vw - 32px) !important;
+          left: 50% !important;
+          transform: translateX(-50%) !important;
+        }
+
+        &::before {
+          background: $white !important;
+          border: 1px solid $grey-lighter !important;
+          border-radius: 4px !important;
+          color: $grey-dark !important;
+          font-size: 0.75rem !important;
+          display: block !important;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+          content: attr(data-tooltip) !important;
+          margin-top: 4px !important;
+        }
+
+        &::after {
+          display: none !important;
+        }
+      }
+    }
+  }
+}
+
 .info-icon {
   width: 14px;
   height: 14px;
