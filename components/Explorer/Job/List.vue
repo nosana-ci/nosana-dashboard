@@ -62,7 +62,7 @@
         <th>Started</th>
         <th class="is-hidden-mobile">Duration</th>
         <th v-if="!small" class="is-hidden-touch">Price</th>
-        <th v-if="!small" class="is-hidden-touch">Host pools</th>
+        <th v-if="!small" class="is-hidden-touch">Host pool</th>
         <th>Status</th>
       </tr>
     </thead>
