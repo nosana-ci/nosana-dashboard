@@ -71,7 +71,7 @@
                     {{
                       testgridMarkets.find(
                         (tgm: any) => tgm.address === market.address.toString()
-                      ).slug?.toUpperCase() || market.address.toString()
+                      ).name || market.address.toString()
                     }}
                   </span>
                   <span v-else class="is-family-monospace address">
@@ -83,7 +83,7 @@
                     {{
                       testgridMarkets.find(
                         (tgm: any) => tgm.address === market.address.toString()
-                      ).slug?.toUpperCase() || market.address.toString()
+                      ).name || market.address.toString()
                     }}
                   </span>
                   <span v-else class="is-family-monospace address">
