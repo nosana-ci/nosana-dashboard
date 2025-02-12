@@ -126,7 +126,9 @@
           </tr>
           <tr>
             <td>CLI Version</td>
-            <td v-if="combinedSpecs">v{{ combinedSpecs.nodeVersion }}</td>
+            <td v-if="combinedSpecs && combinedSpecs.nodeVersion">
+              v{{ combinedSpecs.nodeVersion }}
+            </td>
             <td v-else-if="loadingInfo || loadingSpecs">...</td>
             <td v-else>Offline</td>
           </tr>
@@ -254,13 +256,13 @@
       </table>
 
       <!-- Only render benchmark histograms if nodeSpecs & nodeSpecs.marketAddress are valid -->
-      <div class="columns" v-if="nodeSpecs && nodeSpecs.marketAddress">
+      <div class="columns" v-if="nodeSpecs && benchmarkMarketId">
         <div class="column is-6">
           <NodeBenchmarkHistogram
             title="LLM Performance"
             type="llm"
             :node-id="address"
-            :market-id="nodeSpecs.marketAddress"
+            :market-id="benchmarkMarketId"
             default-metric="averageTokensPerSecond"
             :metrics="[
               { value: 'averageTokensPerSecond', label: 'Tokens / Second' },
@@ -276,7 +278,7 @@
             title="Image Generation Performance"
             type="image-gen"
             :node-id="address"
-            :market-id="nodeSpecs.marketAddress"
+            :market-id="benchmarkMarketId"
             default-metric="imagesPerSecond"
             :metrics="[
               { value: 'imagesPerSecond', label: 'Images / Second' },
@@ -463,12 +465,16 @@ const combinedSpecs = computed(() => {
       nodeInfoData?.gpus?.nvml_driver_version ?? nodeSpecs.value.nvmlVersion,
     nodeVersion: nodeInfoData?.version ?? nodeSpecs.value.nodeVersion,
     systemEnvironment: nodeInfoData?.system_environment
-      ? nodeInfoData.system_environment.includes("WSL")
+      ? nodeInfoData.system_environment.toLowerCase().includes("wsl")
         ? "WSL"
-        : "Linux"
-      : nodeSpecs.value.systemEnvironment?.includes("WSL")
-        ? "WSL"
-        : "Linux",
+        : nodeInfoData.system_environment
+          ? "Linux"
+          : null
+      : nodeSpecs.value.systemEnvironment
+        ? nodeSpecs.value.systemEnvironment.toLowerCase().includes("wsl")
+          ? "WSL"
+          : "Linux"
+        : null,
   };
 });
 
@@ -547,5 +553,48 @@ const nodeRanking: ComputedRef<NodeRanking | null> = computed(() => {
 
 const totalJobs = computed(() => {
   return jobs.value?.totalJobs ?? undefined;
+});
+
+// Create a ref to store the market relation result.
+const marketRelationId = ref<string | null>(null);
+
+// Define a function to fetch the market relation
+async function fetchMarketRelation() {
+  if (
+    nodeSpecs.value?.status === "ONBOARDED" &&
+    nodeSpecs.value.marketAddress
+  ) {
+    try {
+      const { data } = await useAPI(
+        `/api/nodes/market-relation?market=${nodeSpecs.value.marketAddress}`
+      );
+      marketRelationId.value = data.value;
+    } catch (err) {
+      console.error("Error fetching market relation:", err);
+    }
+  }
+}
+
+watch(
+  nodeSpecs,
+  (newSpecs) => {
+    if (newSpecs && newSpecs.status === "ONBOARDED" && newSpecs.marketAddress) {
+      fetchMarketRelation();
+    }
+  },
+  { immediate: true }
+);
+
+const benchmarkMarketId = computed(() => {
+  if (!nodeSpecs.value || !nodeSpecs.value.marketAddress) {
+    return undefined;
+  }
+  if (nodeSpecs.value.status === "ONBOARDED") {
+    if (!marketRelationId.value) {
+      return undefined;
+    }
+    return marketRelationId.value;
+  }
+  return nodeSpecs.value.marketAddress;
 });
 </script>
