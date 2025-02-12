@@ -94,9 +94,22 @@
               <td class="py-3">
                 <span v-if="loadingStats">...</span>
                 <span v-else-if="stats && stats[0] && stats[0].price">
-                  ${{ ((stats[0].price * (parseInt(market.jobPrice) / 1e6)) * 3600).toFixed(2) }} / h
+                  <template v-if="select">
+                    ${{ ((stats[0].price * (parseInt(String(market.jobPrice)) / 1e6)) * 3600 * 1.1).toFixed(2) }}/h
+                  </template>
+                  <template v-else>
+                    {{ `${((parseInt(String(market.jobPrice)) / 1e6) * 3600).toFixed(3)} NOS/h` }}
+                    {{ `($${((stats[0].price * (parseInt(String(market.jobPrice)) / 1e6)) * 3600).toFixed(2)}/h)` }}
+                  </template>
                 </span>
-                <span v-else>{{ parseInt(market.jobPrice) / 1e6 }} NOS/s</span>
+                <span v-else>
+                  <template v-if="select">
+                    Price unavailable
+                  </template>
+                  <template v-else>
+                    {{ `${((parseInt(String(market.jobPrice)) / 1e6) * 3600).toFixed(3)} NOS/h` }}
+                  </template>
+                </span>
               </td>
               <td class="py-3">
                 <span v-if="market.queueType === 1">
@@ -279,7 +292,7 @@ const paginatedMarkets = computed(() => {
 // Helper to get hourly price for a market
 const getMarketHourlyPrice = (market: Market) => {
   if (!stats.value?.[0]?.price) return Number.MAX_VALUE;
-  return (stats.value[0].price * (parseInt(market.jobPrice) / 1e6)) * 3600;
+  return (stats.value[0].price * (parseInt(String(market.jobPrice)) / 1e6)) * 3600;
 };
 
 // Helper to check if market has available GPUs

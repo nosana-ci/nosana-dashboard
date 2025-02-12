@@ -520,7 +520,7 @@
                 <td>
                   <span v-if="market">
                     <span v-if="testgridMarkets.find(m => m.address === market.address.toString())">
-                      {{ testgridMarkets.find(m => m.address === market.address.toString()).slug?.toUpperCase() }}
+                      {{ testgridMarkets.find(m => m.address === market.address.toString()).name }}
                     </span>
                     <span v-else>{{ market.address.toString() }}</span>
                     ( 
@@ -546,16 +546,8 @@
                 </td>
               </tr>
               <tr>
-                <td>Max price</td>
-                <td>{{ nosPrice ? `$${(maxPrice * nosPrice).toFixed(2)}` : '$-' }}</td>
-              </tr>
-              <tr>
-                <td>Network fee <small>(10%)</small></td>
-                <td>{{ nosPrice ? `$${(networkFee * nosPrice).toFixed(2)}` : '$-' }}</td>
-              </tr>
-              <tr>
                 <td><strong>Total price</strong></td>
-                <td class="has-text-white"><strong>{{ nosPrice ? `$${((maxPrice + networkFee) * nosPrice).toFixed(2)}` : '$-' }}</strong></td>
+                <td class="has-text-white"><strong>{{ nosPrice ? `$${(maxPrice * nosPrice).toFixed(3)}` : '$-' }}</strong></td>
               </tr>
             </tbody>
           </table>
@@ -850,9 +842,12 @@ const maxPrice = computed(() => {
   return (market.value.jobPrice * jobTimeout.value * 60) / 1e6; // Convert to NOS
 });
 
-const networkFee = computed(() => {
-  return maxPrice.value * 0.1;
+const canPostJob = computed(() => {
+  const totalRequired = maxPrice.value;
+  return (balance.value || 0) >= totalRequired * 1.01;
 });
+
+const totalNosNeeded = computed(() => maxPrice.value * 1.05);
 
 if (template.value) {
   jobDefinition.value = template.value.jobDefinition;
@@ -990,11 +985,6 @@ const validator = (json: any): Array<ValidationError> => {
 }
 
 const swapRequired = ref(0);
-
-const canPostJob = computed(() => {
-  const totalRequired = (maxPrice.value || 0) + (networkFee.value || 0);
-  return (balance.value || 0) >= totalRequired * 1.01;
-});
 
 interface TokenBalance {
   nos: number;
@@ -1214,8 +1204,6 @@ watch([balance], async () => {
     console.error('Failed to refresh balances', error);
   }
 }, { immediate: true });
-
-const totalNosNeeded = computed(() => (maxPrice.value + networkFee.value) * 1.05);
 
 const loadingSwap = ref(false);
 const swapAmount = ref(0);
