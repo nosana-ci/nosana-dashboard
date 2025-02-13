@@ -40,7 +40,20 @@
                   </li>
                 </ul>
               </div>
-              <div v-if="tab === 'builder'">
+            </div>
+            <div class="column is-5">
+              <div class="tabs">
+                <ul>
+                  <li class="is-active">
+                    <a class="is-justify-content-flex-start">TEMPLATE</a>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div class="columns is-align-items-stretch">
+            <div class="column is-7">
+              <div v-if="tab === 'builder'" class="h-100">
                 <div v-for="(op, i) in jobDefinition.ops" class="box has-background-white-ter">
                   <a v-if="jobDefinition.ops.length > 1" class="is-pulled-right"
                     @click="jobDefinition.ops.splice(i, 1)">remove</a>
@@ -357,7 +370,7 @@
                   </p>
                 </div>
               </div>
-              <div v-else-if="tab === 'json'">
+              <div v-else-if="tab === 'json'" class="h-100">
                 <div class="field">
                   <div class="control" :class="{ 'is-loading': loading }">
                     <JsonEditorVue :onRenderMenu="onRenderMenu" :validator="validator"
@@ -368,65 +381,69 @@
               </div>
             </div>
             <div class="column is-5">
-              <div class="box has-background-white-ter">
-                <h2 class="title is-5">
-                  <span v-if="template">
-                    {{ template.name }}
-                  </span>
-                  <span v-else>Information</span>
-                </h2>
-                <p class="block">
-                  <span v-if="template">
-                    {{ template.description }}
-                  </span>
-                  <span v-else>The Nosana Job schema allows us to create a job definition and specify the parameters
-                    needed for our job. Start writing your template from scratch or start with one of our many
-                    templates.
-                    <br><br>
-                    <nuxt-link to="/jobs/templates" class="button is-secondary">Pick a Template</nuxt-link>
-                  </span>
-                </p>
-                <p class="block">
-                  <span v-if="!info">
-                    <i v-if="tab === 'builder'">Click on a field to get more information about it</i>
-                    <a v-else href="https://docs.nosana.io/inference/writing_a_job.html#job-schema-specification"
-                      target="_blank">View Job Schema Specification ⯈</a>
-                  </span>
-                  <span v-else-if="info === 'ops.id'">
-                    <b>id:</b> A unique identifier for the operation.
-                  </span>
-                  <span v-else-if="info === 'ops.type'">
-                    <b>type:</b> Specifies the operation type. For instance, "container/run" indicates a containerized
-                    operation.
-                  </span>
-                  <span v-else-if="info === 'ops.args.image'">
-                    <b>image:</b> The Docker image to be used for the container.
-                  </span>
-                  <span v-else-if="info === 'ops.args.cmd'">
-                    <b>cmd:</b> The command(s) to be executed in the container.<br>
-                    <a href="https://www.docker.com/blog/docker-best-practices-choosing-between-run-cmd-and-entrypoint/"
-                      target="_blank">Learn more about docker CMD</a>
-                  </span>
-                  <span v-else-if="info === 'ops.args.expose'">
-                    <b>expose:</b> A number representing the application port that needs to be exposed via the Nosana
-                    Service Endpoint.
-                  </span>
-                  <span v-else-if="info === 'ops.args.gpu'">
-                    <b>gpu:</b> A boolean indicating whether GPU resources are required.
-                  </span>
-                  <span v-else-if="info === 'ops.args.private'">
-                    <b>private:</b> A boolean indicating whether the job definition file, exposed service and the
-                    results
-                    should be private.
-                  </span>
-                  <span v-else-if="info === 'ops.args.name'">
-                    <b>name:</b> Volume name of the docker volume that will be created.
-                  </span>
-                  <span v-else-if="info === 'ops.args.env'">
-                    <b>env:</b> Key value map for environment variables in the container.
-                  </span>
-                </p>
-                <MarkdownFile v-if="template" :name="'README.md'" :raw-markdown="template.readme" />
+              <div class="box has-background-white-ter h-100">
+                <div class="template-info">
+                  <h2 class="title is-5">
+                    <span v-if="template">
+                      {{ template.name }}
+                    </span>
+                    <span v-else>Information</span>
+                  </h2>
+                  <p class="block">
+                    <span v-if="template">
+                      {{ template.description }}
+                    </span>
+                    <span v-else>The Nosana Job schema allows us to create a job definition and specify the parameters
+                      needed for our job. Start writing your template from scratch or start with one of our many
+                      templates.
+                      <br><br>
+                      <nuxt-link to="/jobs/templates" class="button is-secondary">Pick a Template</nuxt-link>
+                    </span>
+                  </p>
+                  <p class="block">
+                    <span v-if="!info">
+                      <i v-if="tab === 'builder'">Click on a field to get more information about it</i>
+                      <a v-else href="https://docs.nosana.io/inference/writing_a_job.html#job-schema-specification"
+                        target="_blank">View Job Schema Specification ⯈</a>
+                    </span>
+                    <span v-else-if="info === 'ops.id'">
+                      <b>id:</b> A unique identifier for the operation.
+                    </span>
+                    <span v-else-if="info === 'ops.type'">
+                      <b>type:</b> Specifies the operation type. For instance, "container/run" indicates a containerized
+                      operation.
+                    </span>
+                    <span v-else-if="info === 'ops.args.image'">
+                      <b>image:</b> The Docker image to be used for the container.
+                    </span>
+                    <span v-else-if="info === 'ops.args.cmd'">
+                      <b>cmd:</b> The command(s) to be executed in the container.<br>
+                      <a href="https://www.docker.com/blog/docker-best-practices-choosing-between-run-cmd-and-entrypoint/"
+                        target="_blank">Learn more about docker CMD</a>
+                    </span>
+                    <span v-else-if="info === 'ops.args.expose'">
+                      <b>expose:</b> A number representing the application port that needs to be exposed via the Nosana
+                      Service Endpoint.
+                    </span>
+                    <span v-else-if="info === 'ops.args.gpu'">
+                      <b>gpu:</b> A boolean indicating whether GPU resources are required.
+                    </span>
+                    <span v-else-if="info === 'ops.args.private'">
+                      <b>private:</b> A boolean indicating whether the job definition file, exposed service and the
+                      results
+                      should be private.
+                    </span>
+                    <span v-else-if="info === 'ops.args.name'">
+                      <b>name:</b> Volume name of the docker volume that will be created.
+                    </span>
+                    <span v-else-if="info === 'ops.args.env'">
+                      <b>env:</b> Key value map for environment variables in the container.
+                    </span>
+                  </p>
+                  <div class="markdown-content">
+                    <MarkdownFile v-if="template" :name="'README.md'" :raw-markdown="template.readme" :view="tab" />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -720,6 +737,56 @@
 <style>
 .steps .steps-marker {
   z-index: 4;
+}
+
+.h-100 {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.columns.is-align-items-stretch {
+  display: flex;
+  flex-wrap: wrap;
+  min-height: 100%;
+}
+
+.columns.is-align-items-stretch > .column {
+  display: flex;
+  flex-direction: column;
+}
+
+.columns.is-align-items-stretch .box {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.box.has-background-white-ter.h-100 {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.template-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+}
+
+.template-info .block {
+  flex: 0 0 auto;
+}
+
+.template-info .markdown-content {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 </style>
 <script lang="ts" setup>

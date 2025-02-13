@@ -40,9 +40,18 @@
                 <tr>
                   <td>Price</td>
                   <td>
+                    {{ ((market.jobPrice / 1e6) * 3600 * 1.1).toFixed(3) }} NOS/h
+                    <span v-if="stats && stats[0] && stats[0].price">
+                      (${{ ((stats[0].price * (market.jobPrice / 1e6)) * 3600 * 1.1).toFixed(3) }}/h)
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Host payment</td>
+                  <td>
                     {{ ((market.jobPrice / 1e6) * 3600).toFixed(3) }} NOS/h
                     <span v-if="stats && stats[0] && stats[0].price">
-                      (${{ ((stats[0].price * (market.jobPrice / 1e6)) * 3600).toFixed(2) }}/h)
+                      (${{ ((stats[0].price * (market.jobPrice / 1e6)) * 3600).toFixed(3) }}/h)
                     </span>
                   </td>
                 </tr>
@@ -54,10 +63,6 @@
                       {{ market.nodeAccessKey.toString() }}
                     </a>
                   </td>
-                </tr>
-                <tr>
-                  <td>Minimum Stake</td>
-                  <td>{{ market.nodeXnosMinimum / 1e6 }} NOS</td>
                 </tr>
               </tbody>
             </table>
@@ -230,7 +235,7 @@
         </div>
 
         <ExplorerJobList :per-page="limit" :total-jobs="jobs ? jobs.totalJobs : null" v-model:page="page"
-          v-model:state="state" :loading-jobs="loadingJobs" title="All Deployments in this host pool"
+          v-model:state="state" :loading-jobs="loadingJobs" title="All Deployments for this GPU"
           :jobs="jobs ? jobs.jobs : null">
         </ExplorerJobList>
       </div>

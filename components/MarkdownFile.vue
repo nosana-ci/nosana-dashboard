@@ -19,6 +19,10 @@ const props = defineProps({
     type: String,
     required: true
   },
+  view: {
+    type: String,
+    default: 'json'
+  }
 });
 const expand: Ref<boolean> = ref(false);
 const markdown = computed(() => {
@@ -27,9 +31,20 @@ const markdown = computed(() => {
 </script>
 
 <style scoped lang="scss">
-.markdown {
-  max-height: 200px;
+.box {
+  position: relative;
   overflow: hidden;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.markdown {
+  overflow: hidden;
+  transition: max-height 0.5s ease-out;
+  position: relative;
+  flex: 1;
+  max-height: v-bind('view === "json" ? "250px" : "600px"');
 
   &.expanded {
     max-height: none;
@@ -56,27 +71,36 @@ const markdown = computed(() => {
 }
 
 .fade {
-  border-radius: 15px;
-  transition: all 0.2s ease;
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
-  height: 200px;
+  height: 100px;
   display: flex;
   align-items: flex-end;
   justify-content: center;
   padding-bottom: 15px;
-  background: linear-gradient(0deg, $white 0%, rgba($white, 0) 100%);
+  background: linear-gradient(180deg, rgba($white, 0) 0%, $white 100%);
+  transition: opacity 0.2s ease;
+  pointer-events: none;
 
   &.dark-mode {
-    background: linear-gradient(0deg, $black-bis 0%, rgba($black-bis, 0) 100%);
+    background: linear-gradient(180deg, rgba($black-bis, 0) 0%, $black-bis 100%);
   }
 
   span {
     font-size: .9rem;
     cursor: pointer;
     z-index: 1;
+    background: $white;
+    padding: 4px 12px;
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    pointer-events: auto;
+
+    .dark-mode & {
+      background: $black-bis;
+    }
 
     i {
       font-size: .8rem;
@@ -84,10 +108,12 @@ const markdown = computed(() => {
   }
 
   &.expanded {
-    position: relative;
     background: none;
-    height: auto;
-    padding-bottom: 0px;
+    
+    span {
+      position: relative;
+      top: 20px;
+    }
   }
 }
 </style>

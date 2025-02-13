@@ -44,7 +44,7 @@
       <thead>
         <tr>
           <th>GPU</th>
-          <th>{{ select ? 'Price' : 'Host payment' }}</th>
+          <th>Price</th>
           <th>Availability</th>
         </tr>
       </thead>
@@ -98,8 +98,8 @@
                     ${{ ((stats[0].price * (parseInt(String(market.jobPrice)) / 1e6)) * 3600 * 1.1).toFixed(2) }}/h
                   </template>
                   <template v-else>
-                    {{ `${((parseInt(String(market.jobPrice)) / 1e6) * 3600).toFixed(3)} NOS/h` }}
-                    {{ `($${((stats[0].price * (parseInt(String(market.jobPrice)) / 1e6)) * 3600).toFixed(2)}/h)` }}
+                    {{ `${((parseInt(String(market.jobPrice)) / 1e6) * 3600 * 1.1).toFixed(3)} NOS/h` }}
+                    {{ `($${((stats[0].price * (parseInt(String(market.jobPrice)) / 1e6)) * 3600 * 1.1).toFixed(2)}/h)` }}
                   </template>
                 </span>
                 <span v-else>
@@ -107,7 +107,7 @@
                     Price unavailable
                   </template>
                   <template v-else>
-                    {{ `${((parseInt(String(market.jobPrice)) / 1e6) * 3600).toFixed(3)} NOS/h` }}
+                    {{ `${((parseInt(String(market.jobPrice)) / 1e6) * 3600 * 1.1).toFixed(3)} NOS/h` }}
                   </template>
                 </span>
               </td>
