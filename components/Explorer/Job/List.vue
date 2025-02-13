@@ -2,13 +2,13 @@
   <div class="columns is-mobile is-vcentered">
     <div class="column">
       <h2 class="title" :class="{ 'is-5': small, 'is-4': !small }">
-        {{ title ? title : 'Jobs' }}
+        {{ title ? title : 'Deployments' }}
       </h2>
     </div>
     <div v-if="jobs && jobs.length && (!small || (totalJobs && totalJobs > perPage))" class="column has-text-right">
       <span v-if="totalJobs && totalJobs > perPage">{{ (page - 1) * perPage + 1 }} -
         {{ Math.min(page * perPage, totalJobs) }} of</span>
-      {{ totalJobs }} jobs
+      {{ totalJobs }} deployments
     </div>
   </div>
   <div class="is-flex is-flex-wrap-wrap state-filter">
@@ -61,17 +61,17 @@
         <th v-if="!small" class="is-hidden-touch">Host</th>
         <th>Started</th>
         <th class="is-hidden-mobile">Duration</th>
-        <th v-if="!small" class="is-hidden-touch">{{ select || title === 'Jobs Posted' ? 'Price' : 'Host payment' }}</th>
-        <th v-if="!small" class="is-hidden-touch">Host pool</th>
+        <th v-if="!small" class="is-hidden-touch">Price</th>
+        <th v-if="!small" class="is-hidden-touch">GPU</th>
         <th>Status</th>
       </tr>
     </thead>
     <tbody>
       <tr v-if="!jobs">
-        <td colspan="5">Loading jobs..</td>
+        <td colspan="5">Loading deployments..</td>
       </tr>
       <tr v-else-if="!jobs.length">
-        <td colspan="5">No jobs</td>
+        <td colspan="5">No deployments</td>
       </tr>
       <nuxt-link v-for="job in jobs" v-else :key="job.address" :to="`/jobs/${job.address}`" custom>
         <template #default="{ navigate }">

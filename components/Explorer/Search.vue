@@ -4,7 +4,7 @@
       <input v-model="address" autofocus type="text" class="input" style="
           padding-top: 1.4rem !important;
           padding-bottom: 1.4rem !important;
-        " placeholder="Search for jobs, nodes, Host pools and accounts" :disabled="checkingIfJob" />
+        " placeholder="Search for deployements, hosts, GPUs and accounts" :disabled="checkingIfJob" />
       <span class="icon pt-1 is-left" v-if="!checkingIfJob">
         <SearchIcon style="width:1.5em; height: 1.5em" />
       </span>

@@ -1,6 +1,6 @@
 <template>
   <div>
-    <TopBar :title="'Job Page'" :subtitle="'Find information about your job here'">
+    <TopBar :title="'Deployment Page'" :subtitle="'Find information about your deployment here'">
     </TopBar>
 
     <div class="box">
@@ -20,12 +20,12 @@
             </div>
             <div v-if="isJobPoster && (isRunning(job.state) || getStateNumber(job.state) === 0)" class="mr-4">
               <button @click="stopJob" :class="{ 'is-loading': loading }" class="button is-danger">
-                Stop Job
+                Stop Deployment
               </button>
             </div>
             <div v-if="isJobPoster && isRunning(job.state)" class="mr-4">
               <button @click="openExtendModal" :class="{ 'is-loading': loadingExtend }" class="button is-warning">
-                Extend Job
+                Extend Deployment
               </button>
             </div>
 
@@ -570,30 +570,17 @@ if (!markets.value && !loadingMarkets.value) {
   getMarkets();
 }
 
-const repostJob = async () => {
-  if (!job.value?.address) {
-    toast.error('No valid job address to repost.');
-    return;
-  }
-
-  const theTimeout = job.value.timeout ? Math.floor(job.value.timeout / 60) : 60;
-
-  try {
-    loadingRepost.value = true;
-    router.push({
-      path: '/jobs/create',
-      query: {
-        fromRepost: 'true',
-        step: 'post-job',
-        jobAddress: job.value.address,
-        jobTimeout: theTimeout
-      }
-    });
-  } catch (error: any) {
-    toast.error(`Error preparing repost: ${error.toString()}`);
-  } finally {
-    loadingRepost.value = false;
-  }
+const repostJob = () => {
+  router.push({
+    path: '/jobs/create',
+    query: {
+      fromRepost: 'true',
+      jobAddress: job.value.address,
+      jobTimeout: (job.value.timeout / 3600).toFixed(2),
+      step: 'deploy-model',
+      marketAddress: job.value.market.toString()
+    }
+  });
 };
 
 let ws: WebSocket | null = null;

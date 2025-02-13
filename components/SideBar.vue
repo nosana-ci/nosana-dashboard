@@ -46,7 +46,7 @@
             <span class="icon is-small mr-4">
               <JobBuilderIcon />
             </span>
-            <span>Create a Job</span>
+            <span>Deploy Model</span>
           </nuxt-link>
         </li>
         <li>
@@ -54,7 +54,7 @@
             <span class="icon is-small mr-4">
               <BrowserIcon />
             </span>
-            <span>Host pools</span>
+            <span>GPUs</span>
           </nuxt-link>
         </li>
         <li>

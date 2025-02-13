@@ -6,7 +6,7 @@
     <table class="table is-fullwidth is-striped">
       <tbody>
         <tr>
-          <td><b>Job Queue</b></td>
+          <td><b>Deployment Queue</b></td>
           <td>
             <span v-if="markets">
               {{
@@ -21,7 +21,7 @@
                     0,
                   )
               }}
-              jobs
+              deployments
             </span>
             <span v-else-if="loadingMarkets || loadingTestgridMarkets">...</span>
             <span v-else>-</span>
@@ -43,18 +43,18 @@
                     0,
                   )
               }}
-              nodes
+              hosts
             </span>
             <span v-else-if="loadingMarkets || loadingTestgridMarkets">...</span>
             <span v-else>-</span>
           </td>
         </tr>
         <tr>
-          <td><b>Jobs Running</b></td>
+          <td><b>Deployments Running</b></td>
           <td>
             <span v-if="jobs">
               {{ jobs.totalJobs }}
-              jobs
+              deployments
             </span>
             <span v-else-if="loadingJobs">...</span>
             <span v-else>-</span>
@@ -62,8 +62,8 @@
         </tr>
       </tbody>
     </table>
-    <div v-if="!loadingMarkets && !markets">Could not load markets from blockchain</div>
-    <div v-if="!loadingTestgridMarkets && (!testgridMarkets || !testgridMarkets.length)">Could not load markets from
+    <div v-if="!loadingMarkets && !markets">Could not load GPUs from blockchain</div>
+    <div v-if="!loadingTestgridMarkets && (!testgridMarkets || !testgridMarkets.length)">Could not load GPUs from
       grid</div>
   </div>
 </template>

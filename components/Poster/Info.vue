@@ -2,10 +2,10 @@
   <div>
     <div v-if="!isPoster">
       <div v-if="loadingJobs">
-        Checking if account is job poster..
+        Checking if account is the model deployer..
       </div>
       <div v-else>
-        <!-- Not a job poster-->
+        <!-- Not a deployer-->
       </div>
     </div>
     <div v-else>
@@ -13,22 +13,22 @@
         <tbody>
           <tr>
             <td colspan="2" class="has-background-light">
-              <h4 class="title is-5">Job Poster Info</h4>
+              <h4 class="title is-5">Deployment Info</h4>
             </td>
           </tr>
           <tr>
-            <td>Jobs posted</td>
+            <td>Deployments</td>
             <td v-if="loadingJobs">...</td>
             <td v-else-if="jobs">
               <span>{{ jobs.totalJobs }}</span>
             </td>
-            <td v-else class="has-text-danger">Could not retrieve jobs</td>
+            <td v-else class="has-text-danger">Could not retrieve deployments</td>
           </tr>
         </tbody>
       </table>
 
       <ExplorerJobList :per-page="limit" :total-jobs="jobs ? jobs.totalJobs : null" v-model:page="page"
-        v-model:state="state" :loading-jobs="loadingJobs" title="Jobs Posted" :jobs="jobs ? jobs.jobs : null" />
+        v-model:state="state" :loading-jobs="loadingJobs" title="Deployments" :jobs="jobs ? jobs.jobs : null" />
     </div>
   </div>
 </template>

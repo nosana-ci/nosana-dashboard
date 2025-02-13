@@ -81,7 +81,7 @@
             {{ fmtMSS(Math.floor(timestamp / 1000) - props.job.timeStart) }}
           </span>
           <span v-else> - </span>
-          <span v-if="maxDuration"> (max {{ Math.round(maxDuration / 60) }}m)</span>
+          <span v-if="maxDuration"> (max {{ (maxDuration / 3600).toFixed(2) }}h)</span>
         </td>
       </tr>
       <tr v-if="
@@ -159,7 +159,19 @@ const { data: stats } = useAPI('/api/stats');
 
 const timestamp = useTimestamp({ interval: 1000 });
 const fmtMSS = (s: number) => {
-  return (s - (s %= 60)) / 60 + (s > 9 ? "m:" : "m:0") + s + "s";
+  const hours = Math.floor(s / 3600);
+  const minutes = Math.floor((s % 3600) / 60);
+  const seconds = s % 60;
+  
+  let result = '';
+  if (hours > 0) {
+    result += `${hours}h `;
+  }
+  if (minutes > 0 || hours > 0) {
+    result += `${minutes}m `;
+  }
+  result += `${seconds}s`;
+  return result;
 };
 
 // Price
@@ -182,7 +194,7 @@ const displayPrice = computed(() => {
       props.job.timeout ?? (market.jobTimeout || 0)
     );
     const priceInNos = (parseInt(props.job.price, 10) / 1e6) * usedTime * 1.1;
-    return `${priceInNos.toFixed(6)} NOS ${nosPrice ? `($${(nosPrice * priceInNos).toFixed(2)})` : ''
+    return `${priceInNos.toFixed(6)} NOS ${nosPrice ? `($${(nosPrice * priceInNos).toFixed(3)})` : ''
       }`;
   }
 
@@ -190,7 +202,7 @@ const displayPrice = computed(() => {
   if (props.job.price) {
     const pricePerSecond = parseInt(props.job.price, 10) / 1e6;
     return `${(pricePerSecond * 3600 * 1.1).toFixed(3)} NOS/h ${nosPrice
-      ? `($${((nosPrice * pricePerSecond) * 3600 * 1.1).toFixed(2)}/h)`
+      ? `($${((nosPrice * pricePerSecond) * 3600 * 1.1).toFixed(3)}/h)`
       : ''
       }`;
   }

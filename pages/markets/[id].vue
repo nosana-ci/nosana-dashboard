@@ -16,11 +16,11 @@
             <table class="table is-fullwidth is-striped">
               <tbody>
                 <tr>
-                  <td>Host pool size</td>
+                  <td>GPU size</td>
                   <td>{{ totalNodes }} hosts</td>
                 </tr>
                 <tr v-if="testgridMarkets.find(m => m.address === marketId)">
-                  <td>Host pool address</td>
+                  <td>GPU address</td>
                   <td>
                     <a target="_blank" class="address is-family-monospace"
                       :href="'https://explorer.solana.com/address/' + marketId">
@@ -38,18 +38,12 @@
                   </td>
                 </tr>
                 <tr>
-                  <td>Host payment</td>
+                  <td>Price</td>
                   <td>
-                    <div class="level-item">
-                      <div class="has-text-grey">Host payment</div>
-                      <span v-if="loadingStats">...</span>
-                      <span v-else>
-                        {{ ((market.jobPrice / 1e6)).toFixed(3) }} NOS/h
-                        <span v-if="stats && stats[0] && stats[0].price">
-                          (${{ ((stats[0].price * (market.jobPrice / 1e6))).toFixed(2) }}/h)
-                        </span>
-                      </span>
-                    </div>
+                    {{ ((market.jobPrice / 1e6) * 3600).toFixed(3) }} NOS/h
+                    <span v-if="stats && stats[0] && stats[0].price">
+                      (${{ ((stats[0].price * (market.jobPrice / 1e6)) * 3600).toFixed(2) }}/h)
+                    </span>
                   </td>
                 </tr>
                 <tr>
@@ -236,7 +230,7 @@
         </div>
 
         <ExplorerJobList :per-page="limit" :total-jobs="jobs ? jobs.totalJobs : null" v-model:page="page"
-          v-model:state="state" :loading-jobs="loadingJobs" title="All Jobs in this host pool"
+          v-model:state="state" :loading-jobs="loadingJobs" title="All Deployments in this host pool"
           :jobs="jobs ? jobs.jobs : null">
         </ExplorerJobList>
       </div>

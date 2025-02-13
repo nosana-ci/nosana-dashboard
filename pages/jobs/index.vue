@@ -1,6 +1,6 @@
 <template>
   <div>
-    <TopBar :title="'Explorer'" :subtitle="'Jobs'"></TopBar>
+    <TopBar :title="'Explorer'" :subtitle="'Deployments'"></TopBar>
     <div class="box has-background-white-ter">
       <ExplorerSearch />
     </div>
@@ -9,7 +9,7 @@
         <span class="icon">
           <JobBuilderIcon />
         </span>
-        <span>Create Job</span>
+        <span>Create Deployment</span>
       </nuxt-link>
     </div>
     <div class="box">

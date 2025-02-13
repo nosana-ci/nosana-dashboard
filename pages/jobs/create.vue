@@ -1,11 +1,11 @@
 <template>
   <div>
-    <TopBar :title="'Create Job'" :subtitle="'Create and deploy job definition files'"></TopBar>
+    <TopBar :title="'Deploy Model'" :subtitle="'Create and deploy deployment definition files'"></TopBar>
     <ul class="steps has-content-centered has-gaps">
       <li class="steps-segment" :class="{ 'is-active': step === 'job-definition' }">
         <span class="steps-marker is-clickable" @click="step = 'job-definition'">1</span>
         <div class="steps-content">
-          <h3 class="title is-size-7 mt-2">Define Job</h3>
+          <h3 class="title is-size-7 mt-2">Define Deployment</h3>
         </div>
       </li>
       <li class="steps-segment" :class="{ 'is-active': step === 'pick-market' }">
@@ -15,10 +15,10 @@
           <h3 class="title is-size-7 mt-2">Select GPU</h3>
         </div>
       </li>
-      <li class="steps-segment" :class="{ 'is-active': step === 'post-job' }">
+      <li class="steps-segment" :class="{ 'is-active': step === 'deploy-model' }">
         <span class="steps-marker">3</span>
         <div class="steps-content">
-          <h3 class="title is-size-7 mt-2">Post Job</h3>
+          <h3 class="title is-size-7 mt-2">Deploy model</h3>
         </div>
       </li>
     </ul>
@@ -448,7 +448,7 @@
             <button :disabled="!jobDefinition ? true : undefined" :class="{ 'is-loading': loading }"
               class="button is-primary is-large" type="submit"
               v-if="!jobDefinition"
-              :data-tooltip="'Please define a job first'"
+              :data-tooltip="'Please define a deployment first'"
               data-position="top">
               <span>Next</span>
             </button>
@@ -461,7 +461,7 @@
       </form>
     </div>
     <div v-else-if="step === 'pick-market'" class="box">
-      <h2 class="title is-4">Pick a GPU to run your job on</h2>
+      <h2 class="title is-4">Pick a GPU to run your model on</h2>
       <ExplorerMarketList 
         :markets="markets" 
         :select="true"
@@ -470,7 +470,7 @@
         @selectedMarket="(selectedMarket) => { market = selectedMarket }"
       />
       <div v-if="!loadingMarkets && !markets">Could not load available GPUs</div>
-      <form @submit.prevent="step = 'post-job'">
+      <form @submit.prevent="step = 'deploy-model'">
         <div class="field is-grouped is-grouped-right">
           <p class="control">
             <a @click="step = 'job-definition'" :class="{ 'is-loading': loading }"
@@ -481,7 +481,7 @@
           <p class="control">
             <button v-if="!jobDefinition || !market" :disabled="true" :class="{ 'is-loading': loading }"
               class="button is-primary is-large" type="submit"
-              :data-tooltip="!jobDefinition ? 'Please define a job first' : 'Please select a GPU'"
+              :data-tooltip="!jobDefinition ? 'Please define a deployment first' : 'Please select a GPU'"
               data-position="top">
               <span>Next</span>
             </button>
@@ -493,8 +493,8 @@
         </div>
       </form>
     </div>
-    <div v-else-if="step === 'post-job'">
-      <form @submit.prevent="postJob">
+    <div v-else-if="step === 'deploy-model'">
+      <form @submit.prevent="deployModel">
         <div v-if="market" class="box">
           <table class="table is-fullwidth is-striped">
             <tbody>
@@ -536,12 +536,12 @@
                 </td>
               </tr>
               <tr>
-                <td>Job timeout <span class="has-text-danger">*</span></td>
+                <td>Auto-shutdown timeout <span class="has-text-danger">*</span></td>
                 <td>
                   <div class="is-flex is-align-items-center">
                     <input v-model.number="jobTimeout" class="input" style="width: 100px" type="number" min="1"
-                      placeholder="Minutes" required>
-                    <span class="ml-2">minutes</span>
+                      placeholder="Hours" required>
+                    <span class="ml-2">hours</span>
                   </div>
                 </td>
               </tr>
@@ -580,15 +580,15 @@
               </wallet-modal-provider>
               <button v-else-if="!jobDefinition || !market || !canPostJob" :disabled="true" :class="{ 'is-loading': loading }"
                 class="button is-primary is-large" type="submit"
-                :data-tooltip="!jobDefinition ? 'Please define a job first' : 
+                :data-tooltip="!jobDefinition ? 'Please define a deployment first' : 
                              !market ? 'Please select a GPU' :
                              !canPostJob ? 'Insufficient NOS balance' : ''"
                 data-position="top">
-                <span>Post Job</span>
+                <span>Deploy model</span>
               </button>
               <button v-else :class="{ 'is-loading': loading }"
                 class="button is-primary is-large" type="submit">
-                <span>Post Job</span>
+                <span>Deploy model</span>
               </button>
             </ClientOnly>
           </p>
@@ -632,7 +632,7 @@
               </span>
             </div>
             <p class="help">
-              <span class="has-text-grey">NOS required for the selected job: {{ totalNosNeeded.toFixed(2) }} NOS</span>
+              <span class="has-text-grey">NOS required for the selected deployment: {{ totalNosNeeded.toFixed(2) }} NOS</span>
               <span class="has-text-grey ml-2">(${{ (totalNosNeeded * nosPrice).toFixed(2) }})</span>
             </p>
           </div>
@@ -775,7 +775,7 @@ const { balance, refreshBalance, loadingBalance, errorBalance } = useStake(publi
 const jobDefinition: Ref<JobDefinition> = useLocalStorage('job-definition', emptyJobDefinition)
 const envName: Ref<string[]> = ref([]);
 const resultsName: Ref<string[]> = ref([]);
-const jobTimeout: Ref<number> = useLocalStorage('job-timeout', 60); // Default 60 minutes
+const jobTimeout: Ref<number> = useLocalStorage('job-timeout', 1); // Default 1 hour
 const nosPrice = ref(0);
 const solPrice = ref(0);
 const usdcPrice = ref(0);
@@ -837,12 +837,12 @@ watch(() => priceData.value, (newPrice) => {
 const totalPrice = computed(() => {
   if (!market.value || !jobTimeout.value || !nosPrice.value) return 0;
   // Calculate total price in dollars: (hourly rate in dollars) * (timeout in hours)
-  return ((market.value.jobPrice * 3600 * 1.1) / 1e6) * nosPrice.value * (jobTimeout.value / 60);
+  return ((market.value.jobPrice * 3600 * 1.1) / 1e6) * nosPrice.value * jobTimeout.value;
 });
 
 const requiredNos = computed(() => {
   if (!market.value || !jobTimeout.value) return 0;
-  return (market.value.jobPrice * jobTimeout.value * 60 * 1.1) / 1e6; // Convert to NOS including 10% fee
+  return (market.value.jobPrice * jobTimeout.value * 3600 * 1.1) / 1e6; // Convert to NOS including 10% fee
 });
 
 const canPostJob = computed(() => {
@@ -1025,7 +1025,7 @@ const refreshAllBalances = async () => {
   }
 };
 
-const postJob = async () => {
+const deployModel = async () => {
   if (!jobDefinition.value || !market.value || !jobTimeout.value || !canPostJob.value) return;
   
   loading.value = true;
@@ -1046,7 +1046,7 @@ const submitJob = async () => {
       jobTimeout.value * 60,
       market.value!.address
     );
-    toast.success(`Successfully created job ${response.job}`);
+    toast.success(`Successfully created deployment ${response.job}`);
     await sleep(3);
     await refreshAllBalances();
     router.push('/jobs/' + response.job);
@@ -1083,22 +1083,22 @@ watchEffect(async () => {
   loading.value = true;
 
   try {
-    if (route.query.step === 'post-job') {
-      step.value = 'post-job';
+    if (route.query.step === 'deploy-model') {
+      step.value = 'deploy-model';
     }
 
     if (route.query.jobTimeout) {
-      jobTimeout.value = parseInt(route.query.jobTimeout.toString(), 10);
+      jobTimeout.value = parseFloat(route.query.jobTimeout.toString());
     }
 
     const response = await fetch(`https://dashboard.k8s.prd.nos.ci/api/jobs/${address}`);
     if (!response.ok) {
-      throw new Error(`Failed to load job with address ${address}`);
+      throw new Error(`Failed to load deployment with address ${address}`);
     }
 
     const jobData = await response.json();
     if (!jobData?.jobDefinition) {
-      throw new Error('No job definition found in the job data');
+      throw new Error('No deployment definition found in the job data');
     }
 
     if (!route.query.jobTimeout && jobData.timeout) {
@@ -1143,7 +1143,7 @@ watchEffect(async () => {
 
     router.replace({ query: { ...route.query, repostHandled: 'true' } });
   } catch (err: any) {
-    toast.error('Error setting up reposted job: ' + err.toString());
+    toast.error('Error setting up reposted deployment: ' + err.toString());
     step.value = 'job-definition';
   } finally {
     loading.value = false;
@@ -1152,22 +1152,38 @@ watchEffect(async () => {
 
 onMounted(() => {
   const urlStep = route.query.step?.toString();
-  const urlMarket = route.query.market?.toString();
+  const urlMarket = route.query.marketAddress?.toString() || route.query.market?.toString();
+  const fromRepost = route.query.fromRepost === 'true';
 
-  step.value = urlStep && ['job-definition', 'pick-market', 'post-job'].includes(urlStep)
-    ? urlStep
-    : 'job-definition';
+  // If coming from repost and we have a job definition, allow going directly to deploy-model
+  if (fromRepost && jobDefinition.value?.ops?.length) {
+    step.value = urlStep && ['job-definition', 'pick-market', 'deploy-model'].includes(urlStep)
+      ? urlStep
+      : 'job-definition';
+  } else {
+    // For normal flow, always start at job-definition if no job definition exists
+    step.value = !jobDefinition.value?.ops?.length 
+      ? 'job-definition'
+      : (urlStep && ['job-definition', 'pick-market', 'deploy-model'].includes(urlStep)
+          ? urlStep 
+          : 'job-definition');
+  }
 
   const trySelectMarket = () => {
     if (!markets.value?.length) return;
     
     if (urlMarket) {
       market.value = markets.value.find((m) => m.address.toString() === urlMarket) || null;
+      
+      // If we have both market and job definition from repost, go to deploy-model
+      if (fromRepost && market.value && jobDefinition.value?.ops?.length) {
+        step.value = 'deploy-model';
+      }
     }
     
     if (!jobDefinition.value?.ops?.length && step.value !== 'job-definition') {
       step.value = 'job-definition';
-    } else if (step.value === 'post-job' && !market.value) {
+    } else if (step.value === 'deploy-model' && !market.value) {
       step.value = 'pick-market';
     }
   };

@@ -5,7 +5,7 @@
         <div class="box">
           <div class="is-flex is-align-items-center">
             <h2 class="title is-5 mb-0">
-              Jobs
+              Deployments
               <span class="has-text-weight-bold ml-2">
                 <count-up v-if="timestamps"
                   :end-val="chartData.datasets[0].data.reduce((n, { y }) => n + y, 0)"></count-up>
@@ -136,7 +136,7 @@ const chartData = computed<ChartData<'line'>>(() => {
       {
         fill: true,
         cubicInterpolationMode: 'monotone',
-        label: 'Jobs',
+        label: 'Deployments',
         borderColor: '#2feb2b',
         showLine: true,
         backgroundColor: '#2feb2b45',
