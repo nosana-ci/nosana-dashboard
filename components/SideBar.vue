@@ -46,15 +46,7 @@
             <span class="icon is-small mr-4">
               <JobBuilderIcon />
             </span>
-            <span>Create a Job</span>
-          </nuxt-link>
-        </li>
-        <li>
-          <nuxt-link to="/jobs" active-class="is-active" @click="showMenu = false">
-            <span class="icon is-small mr-4">
-              <BlocksIcon />
-            </span>
-            <span>Jobs</span>
+            <span>Deploy Model</span>
           </nuxt-link>
         </li>
         <li>
@@ -62,7 +54,7 @@
             <span class="icon is-small mr-4">
               <BrowserIcon />
             </span>
-            <span>GPU Markets</span>
+            <span>GPUs</span>
           </nuxt-link>
         </li>
         <li>
@@ -111,7 +103,6 @@
 const showMenu = ref(false);
 import JobBuilderIcon from '@/assets/img/icons/sidebar/job-builder.svg?component';
 import TemplateIcon from '@/assets/img/icons/sidebar/template.svg?component';
-import BlocksIcon from '@/assets/img/icons/sidebar/blocks.svg?component';
 import ExplorerIcon from '@/assets/img/icons/sidebar/explorer.svg?component';
 import UserIcon from '@/assets/img/icons/sidebar/user.svg?component';
 import BrowserIcon from '@/assets/img/icons/sidebar/browser.svg?component';

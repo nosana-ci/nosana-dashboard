@@ -16,11 +16,11 @@
             <table class="table is-fullwidth is-striped">
               <tbody>
                 <tr>
-                  <td>Market Size</td>
+                  <td>GPU size</td>
                   <td>{{ totalNodes }} hosts</td>
                 </tr>
                 <tr v-if="testgridMarkets.find(m => m.address === marketId)">
-                  <td>Market Address</td>
+                  <td>GPU address</td>
                   <td>
                     <a target="_blank" class="address is-family-monospace"
                       :href="'https://explorer.solana.com/address/' + marketId">
@@ -40,12 +40,18 @@
                 <tr>
                   <td>Price</td>
                   <td>
-                    <span v-if="loadingStats">...</span>
-                    <span v-else>
-                      {{ market.jobPrice / 1e6 }} NOS/s
-                      <span v-if="stats && stats[0] && stats[0].price">
-                        (${{ ((stats[0].price * (market.jobPrice / 1e6)) * 3600).toFixed(2) }} / h)
-                      </span>
+                    {{ ((market.jobPrice / 1e6) * 3600 * 1.1).toFixed(3) }} NOS/h
+                    <span v-if="stats && stats[0] && stats[0].price">
+                      (${{ ((stats[0].price * (market.jobPrice / 1e6)) * 3600 * 1.1).toFixed(3) }}/h)
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Host payment</td>
+                  <td>
+                    {{ ((market.jobPrice / 1e6) * 3600).toFixed(3) }} NOS/h
+                    <span v-if="stats && stats[0] && stats[0].price">
+                      (${{ ((stats[0].price * (market.jobPrice / 1e6)) * 3600).toFixed(3) }}/h)
                     </span>
                   </td>
                 </tr>
@@ -57,10 +63,6 @@
                       {{ market.nodeAccessKey.toString() }}
                     </a>
                   </td>
-                </tr>
-                <tr>
-                  <td>Minimum Stake</td>
-                  <td>{{ market.nodeXnosMinimum / 1e6 }} NOS</td>
                 </tr>
               </tbody>
             </table>
@@ -233,7 +235,7 @@
         </div>
 
         <ExplorerJobList :per-page="limit" :total-jobs="jobs ? jobs.totalJobs : null" v-model:page="page"
-          v-model:state="state" :loading-jobs="loadingJobs" title="All Jobs in this market"
+          v-model:state="state" :loading-jobs="loadingJobs" title="All Deployments for this GPU"
           :jobs="jobs ? jobs.jobs : null">
         </ExplorerJobList>
       </div>

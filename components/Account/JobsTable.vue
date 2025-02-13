@@ -3,14 +3,14 @@
     <div class="columns is-multiline">
       <div class="column" v-if="hasRanJobs" :class="{ 'is-6': hasRanJobs && hasPostedJobs }">
         <ExplorerJobList :small="hasPostedJobs" :per-page="limit" :total-jobs="nodeJobs ? nodeJobs.totalJobs : null"
-          v-model:page="pageJobsRun" v-model:state="state" :loading-jobs="loadingJobs" title="Jobs Ran"
+          v-model:page="pageJobsRun" v-model:state="state" :loading-jobs="loadingJobs" title="Deployments Ran"
           :jobs="nodeJobs ? nodeJobs.jobs : null">
         </ExplorerJobList>
       </div>
       <div class="column" v-if="hasPostedJobs" :class="{ 'is-6': hasRanJobs && hasPostedJobs }">
         <ExplorerJobList :small="hasRanJobs" :per-page="limit" :total-jobs="postedJobs ? postedJobs.totalJobs : null"
           v-model:page="pageJobsPosted" v-model:state="statePosted" :loading-jobs="loadingPostedJobs"
-          title="Jobs Posted" :jobs="postedJobs ? postedJobs.jobs : null">
+          title="Deployments Posted" :jobs="postedJobs ? postedJobs.jobs : null">
         </ExplorerJobList>
       </div>
     </div>

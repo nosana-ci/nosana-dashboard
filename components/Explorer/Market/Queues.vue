@@ -6,7 +6,7 @@
     <table class="table is-fullwidth is-striped">
       <tbody>
         <tr>
-          <td><b>Job Queue</b></td>
+          <td><b>Deployment Queue</b></td>
           <td>
             <span v-if="markets">
               {{
@@ -21,7 +21,7 @@
                     0,
                   )
               }}
-              jobs
+              deployments
             </span>
             <span v-else-if="loadingMarkets || loadingTestgridMarkets">...</span>
             <span v-else>-</span>
@@ -43,18 +43,18 @@
                     0,
                   )
               }}
-              nodes
+              hosts
             </span>
             <span v-else-if="loadingMarkets || loadingTestgridMarkets">...</span>
             <span v-else>-</span>
           </td>
         </tr>
         <tr>
-          <td><b>Jobs Running</b></td>
+          <td><b>Deployments Running</b></td>
           <td>
             <span v-if="jobs">
               {{ jobs.totalJobs }}
-              jobs
+              deployments
             </span>
             <span v-else-if="loadingJobs">...</span>
             <span v-else>-</span>
@@ -62,8 +62,8 @@
         </tr>
       </tbody>
     </table>
-    <div v-if="!loadingMarkets && !markets">Could not load markets from blockchain</div>
-    <div v-if="!loadingTestgridMarkets && (!testgridMarkets || !testgridMarkets.length)">Could not load markets from
+    <div v-if="!loadingMarkets && !markets">Could not load GPUs from blockchain</div>
+    <div v-if="!loadingTestgridMarkets && (!testgridMarkets || !testgridMarkets.length)">Could not load GPUs from
       grid</div>
   </div>
 </template>
@@ -94,17 +94,18 @@ const queueData = computed<ChartData<'bar'>>(() => {
   const data: Array<any> = markets.value && testgridMarkets.value
     ? markets.value
       .filter((m) => m.queue.length)
-      .filter((m) =>
-        testgridMarkets.value.find((tgm: any) =>
+      .filter((m) => {
+        const marketInfo = testgridMarkets.value.find((tgm: any) =>
           tgm.address === m.address.toString()
-        ),
-      )
+        );
+        return marketInfo && marketInfo.type === 'PREMIUM' && marketInfo.slug?.toLowerCase().startsWith('nvidia');
+      })
     : [];
   return {
     labels: data.map(
       (m) =>
         testgridMarkets.value.find((tgm: any) => tgm.address === m.address.toString())
-          .slug,
+          .name,
     ),
     datasets: [
       {
@@ -115,7 +116,7 @@ const queueData = computed<ChartData<'bar'>>(() => {
         data: data.map((m: any) => (m.queueType === 1 ? m.queue.length : 0)),
       },
       {
-        label: 'Jobs',
+        label: 'Deployments',
         borderWidth: 3,
         borderColor: '#f9d54b',
         backgroundColor: '#f9d54b45',

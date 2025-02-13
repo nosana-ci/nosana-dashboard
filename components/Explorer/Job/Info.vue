@@ -3,17 +3,17 @@
     <tbody>
       <tr>
         <td colspan="2" class="has-background-light">
-          <h4 class="title is-5">Job Info</h4>
+          <h4 class="title is-5">Deployment Info</h4>
         </td>
       </tr>
       <tr>
-        <td>Job</td>
+        <td>Deployments Solana address</td>
         <td>
           <span class="address is-family-monospace">{{ props.job.address }}</span>
         </td>
       </tr>
       <tr>
-        <td>Host</td>
+        <td>Host address</td>
         <td>
           <span v-if="props.job.node.toString() === '11111111111111111111111111111111'">
             Unclaimed
@@ -24,7 +24,7 @@
         </td>
       </tr>
       <tr>
-        <td>GPU Market</td>
+        <td>GPU</td>
         <td>
           <nuxt-link class="address is-family-monospace" :to="`/markets/${props.job.market}`">
             <span v-if="
@@ -38,7 +38,7 @@
         </td>
       </tr>
       <tr>
-        <td>Poster</td>
+        <td>Deployer address</td>
         <td>
           <nuxt-link class="address is-family-monospace" :to="`/posters/${props.job.project}`">
             <span>{{ props.job.project }}</span>
@@ -81,7 +81,7 @@
             {{ fmtMSS(Math.floor(timestamp / 1000) - props.job.timeStart) }}
           </span>
           <span v-else> - </span>
-          <span v-if="maxDuration"> (max {{ Math.round(maxDuration / 60) }}m)</span>
+          <span v-if="maxDuration"> (max {{ (maxDuration / 3600).toFixed(2) }}h)</span>
         </td>
       </tr>
       <tr v-if="
@@ -159,7 +159,19 @@ const { data: stats } = useAPI('/api/stats');
 
 const timestamp = useTimestamp({ interval: 1000 });
 const fmtMSS = (s: number) => {
-  return (s - (s %= 60)) / 60 + (s > 9 ? "m:" : "m:0") + s + "s";
+  const hours = Math.floor(s / 3600);
+  const minutes = Math.floor((s % 3600) / 60);
+  const seconds = s % 60;
+  
+  let result = '';
+  if (hours > 0) {
+    result += `${hours}h `;
+  }
+  if (minutes > 0 || hours > 0) {
+    result += `${minutes}m `;
+  }
+  result += `${seconds}s`;
+  return result;
 };
 
 // Price
@@ -167,7 +179,7 @@ const displayPrice = computed(() => {
   if (loadingMarkets.value || !apiMarkets.value || !props.job) {
     return 'Could not load market';
   }
-  // Find the job’s market in the /api/markets array
+  // Find the job's market in the /api/markets array
   const market = apiMarkets.value.find((m: any) => m.address === props.job.market);
   if (!market) {
     return 'Could not find market';
@@ -181,16 +193,16 @@ const displayPrice = computed(() => {
       props.job.timeEnd - props.job.timeStart,
       props.job.timeout ?? (market.jobTimeout || 0)
     );
-    const priceInNos = (parseInt(props.job.price, 10) / 1e6) * usedTime;
-    return `${priceInNos.toFixed(6)} NOS ${nosPrice ? `($${(nosPrice * priceInNos).toFixed(2)})` : ''
+    const priceInNos = (parseInt(props.job.price, 10) / 1e6) * usedTime * 1.1;
+    return `${priceInNos.toFixed(6)} NOS ${nosPrice ? `($${(nosPrice * priceInNos).toFixed(3)})` : ''
       }`;
   }
 
   // Running / queued
   if (props.job.price) {
     const pricePerSecond = parseInt(props.job.price, 10) / 1e6;
-    return `${pricePerSecond} NOS/s ${nosPrice
-      ? `($${((nosPrice * pricePerSecond) * 3600).toFixed(2)} / h)`
+    return `${(pricePerSecond * 3600 * 1.1).toFixed(3)} NOS/h ${nosPrice
+      ? `($${((nosPrice * pricePerSecond) * 3600 * 1.1).toFixed(3)}/h)`
       : ''
       }`;
   }
@@ -201,7 +213,7 @@ const displayPrice = computed(() => {
 // Max Duration
 const maxDuration = computed(() => {
   if (loadingMarkets.value || !apiMarkets.value || !props.job) return 0;
-  // find the job’s market in the /api/markets array
+  // find the job's market in the /api/markets array
   const market = apiMarkets.value.find((m: any) => m.address === props.job.market);
   return props.job && props.job.timeout ? props.job.timeout : (market?.jobTimeout ?? 0);
 });

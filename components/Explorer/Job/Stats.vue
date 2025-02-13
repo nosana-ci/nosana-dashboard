@@ -3,21 +3,21 @@
     <h2 class="title is-5">Statistics</h2>
     <div class="columns">
       <div class="column is-one-fifth">
-        <h2 class="subtitle">Completed jobs</h2>
+        <h2 class="subtitle">Completed deployments</h2>
         <h2 class="title is-1 pt-2">
           <span v-if="loadingStats">...</span>
           <CustomCountUp v-else :end-val="stats.completed"></CustomCountUp>
         </h2>
       </div>
       <div class="column is-one-fifth">
-        <h2 class="subtitle">Running jobs</h2>
+        <h2 class="subtitle">Running deployments</h2>
         <h2 class="title is-1 pt-2">
           <span v-if="loadingRunningJobs">...</span>
           <CustomCountUp v-else :end-val="runningJobs.totalJobs"></CustomCountUp>
         </h2>
       </div>
       <div class="column is-one-fifth">
-        <h2 class="subtitle">Queued jobs</h2>
+        <h2 class="subtitle">Queued deployments</h2>
         <h2 class="title is-1 pt-2">
           <span v-if="loadingQueuedJobs">...</span>
           <CustomCountUp v-else :end-val="queuedJobs.totalJobs"></CustomCountUp>

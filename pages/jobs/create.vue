@@ -1,11 +1,11 @@
 <template>
   <div>
-    <TopBar :title="'Create Job'" :subtitle="'Create and deploy job definition files'"></TopBar>
+    <TopBar :title="'Deploy Model'" :subtitle="'Create and deploy a model'"></TopBar>
     <ul class="steps has-content-centered has-gaps">
       <li class="steps-segment" :class="{ 'is-active': step === 'job-definition' }">
         <span class="steps-marker is-clickable" @click="step = 'job-definition'">1</span>
         <div class="steps-content">
-          <h3 class="title is-size-7 mt-2">Define Job</h3>
+          <h3 class="title is-size-7 mt-2">Define Deployment</h3>
         </div>
       </li>
       <li class="steps-segment" :class="{ 'is-active': step === 'pick-market' }">
@@ -15,10 +15,10 @@
           <h3 class="title is-size-7 mt-2">Select GPU</h3>
         </div>
       </li>
-      <li class="steps-segment" :class="{ 'is-active': step === 'post-job' }">
+      <li class="steps-segment" :class="{ 'is-active': step === 'deploy-model' }">
         <span class="steps-marker">3</span>
         <div class="steps-content">
-          <h3 class="title is-size-7 mt-2">Post Job</h3>
+          <h3 class="title is-size-7 mt-2">Deploy model</h3>
         </div>
       </li>
     </ul>
@@ -40,7 +40,20 @@
                   </li>
                 </ul>
               </div>
-              <div v-if="tab === 'builder'">
+            </div>
+            <div class="column is-5">
+              <div class="tabs">
+                <ul>
+                  <li class="is-active">
+                    <a class="is-justify-content-flex-start">TEMPLATE</a>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div class="columns is-align-items-stretch">
+            <div class="column is-7">
+              <div v-if="tab === 'builder'" class="h-100">
                 <div v-for="(op, i) in jobDefinition.ops" class="box has-background-white-ter">
                   <a v-if="jobDefinition.ops.length > 1" class="is-pulled-right"
                     @click="jobDefinition.ops.splice(i, 1)">remove</a>
@@ -357,7 +370,7 @@
                   </p>
                 </div>
               </div>
-              <div v-else-if="tab === 'json'">
+              <div v-else-if="tab === 'json'" class="h-100">
                 <div class="field">
                   <div class="control" :class="{ 'is-loading': loading }">
                     <JsonEditorVue :onRenderMenu="onRenderMenu" :validator="validator"
@@ -368,65 +381,69 @@
               </div>
             </div>
             <div class="column is-5">
-              <div class="box has-background-white-ter">
-                <h2 class="title is-5">
-                  <span v-if="template">
-                    {{ template.name }}
-                  </span>
-                  <span v-else>Information</span>
-                </h2>
-                <p class="block">
-                  <span v-if="template">
-                    {{ template.description }}
-                  </span>
-                  <span v-else>The Nosana Job schema allows us to create a job definition and specify the parameters
-                    needed for our job. Start writing your template from scratch or start with one of our many
-                    templates.
-                    <br><br>
-                    <nuxt-link to="/jobs/templates" class="button is-secondary">Pick a Template</nuxt-link>
-                  </span>
-                </p>
-                <p class="block">
-                  <span v-if="!info">
-                    <i v-if="tab === 'builder'">Click on a field to get more information about it</i>
-                    <a v-else href="https://docs.nosana.io/inference/writing_a_job.html#job-schema-specification"
-                      target="_blank">View Job Schema Specification ⯈</a>
-                  </span>
-                  <span v-else-if="info === 'ops.id'">
-                    <b>id:</b> A unique identifier for the operation.
-                  </span>
-                  <span v-else-if="info === 'ops.type'">
-                    <b>type:</b> Specifies the operation type. For instance, "container/run" indicates a containerized
-                    operation.
-                  </span>
-                  <span v-else-if="info === 'ops.args.image'">
-                    <b>image:</b> The Docker image to be used for the container.
-                  </span>
-                  <span v-else-if="info === 'ops.args.cmd'">
-                    <b>cmd:</b> The command(s) to be executed in the container.<br>
-                    <a href="https://www.docker.com/blog/docker-best-practices-choosing-between-run-cmd-and-entrypoint/"
-                      target="_blank">Learn more about docker CMD</a>
-                  </span>
-                  <span v-else-if="info === 'ops.args.expose'">
-                    <b>expose:</b> A number representing the application port that needs to be exposed via the Nosana
-                    Service Endpoint.
-                  </span>
-                  <span v-else-if="info === 'ops.args.gpu'">
-                    <b>gpu:</b> A boolean indicating whether GPU resources are required.
-                  </span>
-                  <span v-else-if="info === 'ops.args.private'">
-                    <b>private:</b> A boolean indicating whether the job definition file, exposed service and the
-                    results
-                    should be private.
-                  </span>
-                  <span v-else-if="info === 'ops.args.name'">
-                    <b>name:</b> Volume name of the docker volume that will be created.
-                  </span>
-                  <span v-else-if="info === 'ops.args.env'">
-                    <b>env:</b> Key value map for environment variables in the container.
-                  </span>
-                </p>
-                <MarkdownFile v-if="template" :name="'README.md'" :raw-markdown="template.readme" />
+              <div class="box has-background-white-ter h-100">
+                <div class="template-info">
+                  <h2 class="title is-5">
+                    <span v-if="template">
+                      {{ template.name }}
+                    </span>
+                    <span v-else>Information</span>
+                  </h2>
+                  <p class="block">
+                    <span v-if="template">
+                      {{ template.description }}
+                    </span>
+                    <span v-else>The Nosana Job schema allows us to create a job definition and specify the parameters
+                      needed for our job. Start writing your template from scratch or start with one of our many
+                      templates.
+                      <br><br>
+                      <nuxt-link to="/jobs/templates" class="button is-secondary">Pick a Template</nuxt-link>
+                    </span>
+                  </p>
+                  <p class="block">
+                    <span v-if="!info">
+                      <i v-if="tab === 'builder'">Click on a field to get more information about it</i>
+                      <a v-else href="https://docs.nosana.io/inference/writing_a_job.html#job-schema-specification"
+                        target="_blank">View Job Schema Specification ⯈</a>
+                    </span>
+                    <span v-else-if="info === 'ops.id'">
+                      <b>id:</b> A unique identifier for the operation.
+                    </span>
+                    <span v-else-if="info === 'ops.type'">
+                      <b>type:</b> Specifies the operation type. For instance, "container/run" indicates a containerized
+                      operation.
+                    </span>
+                    <span v-else-if="info === 'ops.args.image'">
+                      <b>image:</b> The Docker image to be used for the container.
+                    </span>
+                    <span v-else-if="info === 'ops.args.cmd'">
+                      <b>cmd:</b> The command(s) to be executed in the container.<br>
+                      <a href="https://www.docker.com/blog/docker-best-practices-choosing-between-run-cmd-and-entrypoint/"
+                        target="_blank">Learn more about docker CMD</a>
+                    </span>
+                    <span v-else-if="info === 'ops.args.expose'">
+                      <b>expose:</b> A number representing the application port that needs to be exposed via the Nosana
+                      Service Endpoint.
+                    </span>
+                    <span v-else-if="info === 'ops.args.gpu'">
+                      <b>gpu:</b> A boolean indicating whether GPU resources are required.
+                    </span>
+                    <span v-else-if="info === 'ops.args.private'">
+                      <b>private:</b> A boolean indicating whether the job definition file, exposed service and the
+                      results
+                      should be private.
+                    </span>
+                    <span v-else-if="info === 'ops.args.name'">
+                      <b>name:</b> Volume name of the docker volume that will be created.
+                    </span>
+                    <span v-else-if="info === 'ops.args.env'">
+                      <b>env:</b> Key value map for environment variables in the container.
+                    </span>
+                  </p>
+                  <div class="markdown-content">
+                    <MarkdownFile v-if="template" :name="'README.md'" :raw-markdown="template.readme" :view="tab" />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -448,7 +465,7 @@
             <button :disabled="!jobDefinition ? true : undefined" :class="{ 'is-loading': loading }"
               class="button is-primary is-large" type="submit"
               v-if="!jobDefinition"
-              :data-tooltip="'Please define a job first'"
+              :data-tooltip="'Please define a deployment first'"
               data-position="top">
               <span>Next</span>
             </button>
@@ -461,7 +478,7 @@
       </form>
     </div>
     <div v-else-if="step === 'pick-market'" class="box">
-      <h2 class="title is-4">Pick a GPU to run your job on</h2>
+      <h2 class="title is-4">Pick a GPU to run your model on</h2>
       <ExplorerMarketList 
         :markets="markets" 
         :select="true"
@@ -470,7 +487,7 @@
         @selectedMarket="(selectedMarket) => { market = selectedMarket }"
       />
       <div v-if="!loadingMarkets && !markets">Could not load available GPUs</div>
-      <form @submit.prevent="step = 'post-job'">
+      <form @submit.prevent="step = 'deploy-model'">
         <div class="field is-grouped is-grouped-right">
           <p class="control">
             <a @click="step = 'job-definition'" :class="{ 'is-loading': loading }"
@@ -481,7 +498,7 @@
           <p class="control">
             <button v-if="!jobDefinition || !market" :disabled="true" :class="{ 'is-loading': loading }"
               class="button is-primary is-large" type="submit"
-              :data-tooltip="!jobDefinition ? 'Please define a job first' : 'Please select a GPU'"
+              :data-tooltip="!jobDefinition ? 'Please define a deployment first' : 'Please select a GPU'"
               data-position="top">
               <span>Next</span>
             </button>
@@ -493,8 +510,8 @@
         </div>
       </form>
     </div>
-    <div v-else-if="step === 'post-job'">
-      <form @submit.prevent="postJob">
+    <div v-else-if="step === 'deploy-model'">
+      <form @submit.prevent="deployModel">
         <div v-if="market" class="box">
           <table class="table is-fullwidth is-striped">
             <tbody>
@@ -520,15 +537,15 @@
                 <td>
                   <span v-if="market">
                     <span v-if="testgridMarkets.find(m => m.address === market.address.toString())">
-                      {{ testgridMarkets.find(m => m.address === market.address.toString()).slug?.toUpperCase() }}
+                      {{ testgridMarkets.find(m => m.address === market.address.toString()).name }}
                     </span>
                     <span v-else>{{ market.address.toString() }}</span>
                     ( 
                     <span v-if="nosPrice">
-                      ${{ (((market.jobPrice / 1e6) * 3600) * nosPrice).toFixed(2) }}/h
+                      ${{ (((market.jobPrice / 1e6) * 3600 * 1.1) * nosPrice).toFixed(2) }}/h
                     </span>
                     <span v-else>
-                      {{ (market.jobPrice / 1e6) }} NOS/s
+                      {{ ((market.jobPrice / 1e6) * 1.1).toFixed(6) }} NOS/s
                     </span>
                     ) 
                   </span>
@@ -536,26 +553,18 @@
                 </td>
               </tr>
               <tr>
-                <td>Job timeout <span class="has-text-danger">*</span></td>
+                <td>Auto-shutdown timeout <span class="has-text-danger">*</span></td>
                 <td>
                   <div class="is-flex is-align-items-center">
                     <input v-model.number="jobTimeout" class="input" style="width: 100px" type="number" min="1"
-                      placeholder="Minutes" required>
-                    <span class="ml-2">minutes</span>
+                      placeholder="Hours" required>
+                    <span class="ml-2">hours</span>
                   </div>
                 </td>
               </tr>
               <tr>
-                <td>Max price</td>
-                <td>{{ nosPrice ? `$${(maxPrice * nosPrice).toFixed(2)}` : '$-' }}</td>
-              </tr>
-              <tr>
-                <td>Network fee <small>(10%)</small></td>
-                <td>{{ nosPrice ? `$${(networkFee * nosPrice).toFixed(2)}` : '$-' }}</td>
-              </tr>
-              <tr>
                 <td><strong>Total price</strong></td>
-                <td class="has-text-white"><strong>{{ nosPrice ? `$${((maxPrice + networkFee) * nosPrice).toFixed(2)}` : '$-' }}</strong></td>
+                <td class="has-text-white"><strong>{{ nosPrice ? `$${totalPrice.toFixed(3)}` : '$-' }}</strong></td>
               </tr>
             </tbody>
           </table>
@@ -588,15 +597,15 @@
               </wallet-modal-provider>
               <button v-else-if="!jobDefinition || !market || !canPostJob" :disabled="true" :class="{ 'is-loading': loading }"
                 class="button is-primary is-large" type="submit"
-                :data-tooltip="!jobDefinition ? 'Please define a job first' : 
+                :data-tooltip="!jobDefinition ? 'Please define a deployment first' : 
                              !market ? 'Please select a GPU' :
                              !canPostJob ? 'Insufficient NOS balance' : ''"
                 data-position="top">
-                <span>Post Job</span>
+                <span>Deploy model</span>
               </button>
               <button v-else :class="{ 'is-loading': loading }"
                 class="button is-primary is-large" type="submit">
-                <span>Post Job</span>
+                <span>Deploy model</span>
               </button>
             </ClientOnly>
           </p>
@@ -640,7 +649,7 @@
               </span>
             </div>
             <p class="help">
-              <span class="has-text-grey">NOS required for the selected job: {{ totalNosNeeded.toFixed(2) }} NOS</span>
+              <span class="has-text-grey">NOS required for the selected deployment: {{ totalNosNeeded.toFixed(2) }} NOS</span>
               <span class="has-text-grey ml-2">(${{ (totalNosNeeded * nosPrice).toFixed(2) }})</span>
             </p>
           </div>
@@ -729,6 +738,56 @@
 .steps .steps-marker {
   z-index: 4;
 }
+
+.h-100 {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.columns.is-align-items-stretch {
+  display: flex;
+  flex-wrap: wrap;
+  min-height: 100%;
+}
+
+.columns.is-align-items-stretch > .column {
+  display: flex;
+  flex-direction: column;
+}
+
+.columns.is-align-items-stretch .box {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.box.has-background-white-ter.h-100 {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.template-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+}
+
+.template-info .block {
+  flex: 0 0 auto;
+}
+
+.template-info .markdown-content {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
 </style>
 <script lang="ts" setup>
 import VueJsonPretty from "vue-json-pretty";
@@ -783,7 +842,7 @@ const { balance, refreshBalance, loadingBalance, errorBalance } = useStake(publi
 const jobDefinition: Ref<JobDefinition> = useLocalStorage('job-definition', emptyJobDefinition)
 const envName: Ref<string[]> = ref([]);
 const resultsName: Ref<string[]> = ref([]);
-const jobTimeout: Ref<number> = useLocalStorage('job-timeout', 60); // Default 60 minutes
+const jobTimeout: Ref<number> = useLocalStorage('job-timeout', 1); // Default 1 hour
 const nosPrice = ref(0);
 const solPrice = ref(0);
 const usdcPrice = ref(0);
@@ -840,18 +899,25 @@ watch(() => priceData.value, (newPrice) => {
   }
 }, { immediate: true });
 
-const pricePerHour = computed(() => {
-  if (!market.value) return 0;
-  return (market.value.jobPrice * 3600) / 1e6; // Convert to NOS per hour
+
+
+const totalPrice = computed(() => {
+  if (!market.value || !jobTimeout.value || !nosPrice.value) return 0;
+  // Calculate total price in dollars: (hourly rate in dollars) * (timeout in hours)
+  return ((market.value.jobPrice * 3600 * 1.1) / 1e6) * nosPrice.value * jobTimeout.value;
 });
 
-const maxPrice = computed(() => {
+const requiredNos = computed(() => {
   if (!market.value || !jobTimeout.value) return 0;
-  return (market.value.jobPrice * jobTimeout.value * 60) / 1e6; // Convert to NOS
+  return (market.value.jobPrice * jobTimeout.value * 3600 * 1.1) / 1e6; // Convert to NOS including 10% fee
 });
 
-const networkFee = computed(() => {
-  return maxPrice.value * 0.1;
+const canPostJob = computed(() => {
+  return (balance.value || 0) >= requiredNos.value * 1.01;
+});
+
+const totalNosNeeded = computed(() => {
+  return requiredNos.value * 1.05;
 });
 
 if (template.value) {
@@ -991,11 +1057,6 @@ const validator = (json: any): Array<ValidationError> => {
 
 const swapRequired = ref(0);
 
-const canPostJob = computed(() => {
-  const totalRequired = (maxPrice.value || 0) + (networkFee.value || 0);
-  return (balance.value || 0) >= totalRequired * 1.01;
-});
-
 interface TokenBalance {
   nos: number;
   sol: number;
@@ -1031,7 +1092,7 @@ const refreshAllBalances = async () => {
   }
 };
 
-const postJob = async () => {
+const deployModel = async () => {
   if (!jobDefinition.value || !market.value || !jobTimeout.value || !canPostJob.value) return;
   
   loading.value = true;
@@ -1052,7 +1113,7 @@ const submitJob = async () => {
       jobTimeout.value * 60,
       market.value!.address
     );
-    toast.success(`Successfully created job ${response.job}`);
+    toast.success(`Successfully created deployment ${response.job}`);
     await sleep(3);
     await refreshAllBalances();
     router.push('/jobs/' + response.job);
@@ -1089,22 +1150,22 @@ watchEffect(async () => {
   loading.value = true;
 
   try {
-    if (route.query.step === 'post-job') {
-      step.value = 'post-job';
+    if (route.query.step === 'deploy-model') {
+      step.value = 'deploy-model';
     }
 
     if (route.query.jobTimeout) {
-      jobTimeout.value = parseInt(route.query.jobTimeout.toString(), 10);
+      jobTimeout.value = parseFloat(route.query.jobTimeout.toString());
     }
 
     const response = await fetch(`https://dashboard.k8s.prd.nos.ci/api/jobs/${address}`);
     if (!response.ok) {
-      throw new Error(`Failed to load job with address ${address}`);
+      throw new Error(`Failed to load deployment with address ${address}`);
     }
 
     const jobData = await response.json();
     if (!jobData?.jobDefinition) {
-      throw new Error('No job definition found in the job data');
+      throw new Error('No deployment definition found in the job data');
     }
 
     if (!route.query.jobTimeout && jobData.timeout) {
@@ -1141,15 +1202,15 @@ watchEffect(async () => {
 
       if (gpuMarket) {
         market.value = gpuMarket;
-        toast.success('Selected GPU market automatically');
+        toast.success('Selected Nosana GPU automatically');
       } else {
-        toast.warning('No GPU market found. Please select a market manually.');
+        toast.warning('No Nosana GPU found. Please select one manually.');
       }
     }
 
     router.replace({ query: { ...route.query, repostHandled: 'true' } });
   } catch (err: any) {
-    toast.error('Error setting up reposted job: ' + err.toString());
+    toast.error('Error setting up reposted deployment: ' + err.toString());
     step.value = 'job-definition';
   } finally {
     loading.value = false;
@@ -1158,22 +1219,38 @@ watchEffect(async () => {
 
 onMounted(() => {
   const urlStep = route.query.step?.toString();
-  const urlMarket = route.query.market?.toString();
+  const urlMarket = route.query.marketAddress?.toString() || route.query.market?.toString();
+  const fromRepost = route.query.fromRepost === 'true';
 
-  step.value = urlStep && ['job-definition', 'pick-market', 'post-job'].includes(urlStep)
-    ? urlStep
-    : 'job-definition';
+  // If coming from repost and we have a job definition, allow going directly to deploy-model
+  if (fromRepost && jobDefinition.value?.ops?.length) {
+    step.value = urlStep && ['job-definition', 'pick-market', 'deploy-model'].includes(urlStep)
+      ? urlStep
+      : 'job-definition';
+  } else {
+    // For normal flow, always start at job-definition if no job definition exists
+    step.value = !jobDefinition.value?.ops?.length 
+      ? 'job-definition'
+      : (urlStep && ['job-definition', 'pick-market', 'deploy-model'].includes(urlStep)
+          ? urlStep 
+          : 'job-definition');
+  }
 
   const trySelectMarket = () => {
     if (!markets.value?.length) return;
     
     if (urlMarket) {
       market.value = markets.value.find((m) => m.address.toString() === urlMarket) || null;
+      
+      // If we have both market and job definition from repost, go to deploy-model
+      if (fromRepost && market.value && jobDefinition.value?.ops?.length) {
+        step.value = 'deploy-model';
+      }
     }
     
     if (!jobDefinition.value?.ops?.length && step.value !== 'job-definition') {
       step.value = 'job-definition';
-    } else if (step.value === 'post-job' && !market.value) {
+    } else if (step.value === 'deploy-model' && !market.value) {
       step.value = 'pick-market';
     }
   };
@@ -1214,8 +1291,6 @@ watch([balance], async () => {
     console.error('Failed to refresh balances', error);
   }
 }, { immediate: true });
-
-const totalNosNeeded = computed(() => (maxPrice.value + networkFee.value) * 1.05);
 
 const loadingSwap = ref(false);
 const swapAmount = ref(0);

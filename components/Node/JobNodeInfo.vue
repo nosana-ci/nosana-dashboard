@@ -10,16 +10,27 @@
         </tr>
         <!-- Specifications -->
         <tr>
+          <td>Country</td>
+          <td>{{ countryName || "-" }}</td>
+        </tr>
+        <tr>
+          <td>Internet Speed</td>
+          <td>
+            {{
+              genericBenchmarkResponse?.data?.[0]?.metrics
+                ?.internetSpeedDownload
+                ? Number(
+                    genericBenchmarkResponse.data[0].metrics
+                      .internetSpeedDownload
+                  ).toFixed(2)
+                : "-"
+            }}
+            Mbps
+          </td>
+        </tr>
+        <tr>
           <td>GPU</td>
           <td>{{ combinedSpecs?.gpus?.[0]?.gpu || "-" }}</td>
-        </tr>
-        <tr>
-          <td>NVIDIA Driver</td>
-          <td>{{ combinedSpecs?.nvmlVersion || "-" }}</td>
-        </tr>
-        <tr>
-          <td>CUDA Version</td>
-          <td>{{ combinedSpecs?.cudaVersion || "-" }}</td>
         </tr>
         <tr>
           <td>CPU</td>
@@ -38,23 +49,12 @@
           </td>
         </tr>
         <tr>
-          <td>Country</td>
-          <td>{{ countryName || "-" }}</td>
+          <td>NVIDIA Driver</td>
+          <td>{{ combinedSpecs?.nvmlVersion || "-" }}</td>
         </tr>
         <tr>
-          <td>Download Speed</td>
-          <td>
-            {{
-              genericBenchmarkResponse?.data?.[0]?.metrics
-                ?.internetSpeedDownload
-                ? Number(
-                    genericBenchmarkResponse.data[0].metrics
-                      .internetSpeedDownload
-                  ).toFixed(2)
-                : "-"
-            }}
-            Mbps
-          </td>
+          <td>CUDA Driver</td>
+          <td>{{ combinedSpecs?.cudaVersion || "-" }}</td>
         </tr>
         <tr>
           <td>
@@ -78,29 +78,6 @@
             </span>
           </td>
           <td v-else>{{ nodeRanking.performanceRank }}</td>
-        </tr>
-        <tr>
-          <td>
-            <span class="">
-              <span>Stability Rank</span>
-              <span
-                class="has-tooltip-arrow ml-1"
-                style="vertical-align: middle"
-                data-tooltip="An aggregated stability ranking based on the nodes performance variance. The less variance the better."
-              >
-                <img src="~/assets/img/icons/info.svg" />
-              </span>
-            </span>
-          </td>
-          <td v-if="!nodeRanking">
-            <span
-              class="has-tooltip-arrow"
-              data-tooltip="This node hasn't completed enough jobs to be ranked yet"
-            >
-              unranked
-            </span>
-          </td>
-          <td v-else>{{ nodeRanking.stabilityRank }}</td>
         </tr>
       </tbody>
     </table>

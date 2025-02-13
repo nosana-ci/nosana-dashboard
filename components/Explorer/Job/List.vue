@@ -2,13 +2,13 @@
   <div class="columns is-mobile is-vcentered">
     <div class="column">
       <h2 class="title" :class="{ 'is-5': small, 'is-4': !small }">
-        {{ title ? title : 'Jobs' }}
+        {{ title ? title : 'Deployments' }}
       </h2>
     </div>
     <div v-if="jobs && jobs.length && (!small || (totalJobs && totalJobs > perPage))" class="column has-text-right">
       <span v-if="totalJobs && totalJobs > perPage">{{ (page - 1) * perPage + 1 }} -
         {{ Math.min(page * perPage, totalJobs) }} of</span>
-      {{ totalJobs }} jobs
+      {{ totalJobs }} deployments
     </div>
   </div>
   <div class="is-flex is-flex-wrap-wrap state-filter">
@@ -62,16 +62,16 @@
         <th>Started</th>
         <th class="is-hidden-mobile">Duration</th>
         <th v-if="!small" class="is-hidden-touch">Price</th>
-        <th v-if="!small" class="is-hidden-touch">Market</th>
+        <th v-if="!small" class="is-hidden-touch">GPU</th>
         <th>Status</th>
       </tr>
     </thead>
     <tbody>
       <tr v-if="!jobs">
-        <td colspan="5">Loading jobs..</td>
+        <td colspan="5">Loading deployments..</td>
       </tr>
       <tr v-else-if="!jobs.length">
-        <td colspan="5">No jobs</td>
+        <td colspan="5">No deployments</td>
       </tr>
       <nuxt-link v-for="job in jobs" v-else :key="job.address" :to="`/jobs/${job.address}`" custom>
         <template #default="{ navigate }">
@@ -106,29 +106,36 @@
               <span v-else> - </span>
             </td>
             <td v-if="!small" class="is-hidden-touch">
-              <span v-if="job.timeEnd && job.timeStart && !job.timeout">
-                <span v-if="stats && stats[0] && stats[0].price">
-                  $
-                  {{
-                    ((job.price / 1e6) * Math.min(job.timeEnd - job.timeStart, job.timeout ? job.timeout :
-                      7200) * stats[0].price).toFixed(2)
-                  }}
+              <span v-if="job.state === 1">
+                <!-- Running job - show hourly rate -->
+                <span v-if="nosPrice">
+                  ${{ ((getMarketPrice(job.market.toString()) / 1e6) * 3600 * nosPrice * (select || title === 'Jobs Posted' ? 1.1 : 1)).toFixed(2) }} / h
                 </span>
                 <span v-else>
-
-                  {{
-                    ((job.price / 1e6) * Math.min(job.timeEnd - job.timeStart, job.timeout ? job.timeout :
-                      7200)).toFixed(6)
-                  }}
-                  NOS</span>
+                  {{ ((getMarketPrice(job.market.toString()) / 1e6) * (select || title === 'Jobs Posted' ? 1.1 : 1)).toFixed(6) }}
+                  NOS/s
+                </span>
               </span>
               <span v-else>
-                <span v-if="stats && stats[0] && stats[0].price">
-                  ${{ ((job.price / 1e6) * 3600 * stats[0].price).toFixed(2) }} / h
+                <!-- Completed/Stopped job - show final price -->
+                <span v-if="job.timeEnd && job.timeStart">
+                  <span v-if="nosPrice">
+                    ${{ ((getMarketPrice(job.market.toString()) / 1e6) * Math.min(job.timeEnd - job.timeStart, job.timeout ? job.timeout : 7200) * nosPrice * (select || title === 'Jobs Posted' ? 1.1 : 1)).toFixed(2) }}
+                  </span>
+                  <span v-else>
+                    {{ ((getMarketPrice(job.market.toString()) / 1e6) * Math.min(job.timeEnd - job.timeStart, job.timeout ? job.timeout : 7200) * (select || title === 'Jobs Posted' ? 1.1 : 1)).toFixed(6) }}
+                    NOS
+                  </span>
                 </span>
                 <span v-else>
-                  {{ (job.price / 1e6) }}
-                  NOS/s
+                  <!-- Queued job - show hourly rate -->
+                  <span v-if="nosPrice">
+                    ${{ ((getMarketPrice(job.market.toString()) / 1e6) * 3600 * nosPrice * (select || title === 'Jobs Posted' ? 1.1 : 1)).toFixed(2) }} / h
+                  </span>
+                  <span v-else>
+                    {{ ((getMarketPrice(job.market.toString()) / 1e6) * (select || title === 'Jobs Posted' ? 1.1 : 1)).toFixed(6) }}
+                    NOS/s
+                  </span>
                 </span>
               </span>
             </td>
@@ -169,6 +176,19 @@ import { UseTimeAgo } from '@vueuse/components';
 const { data: testgridMarkets, pending: loadingTestgridMarkets } = await useAPI('/api/markets', { default: () => [] });
 
 const { data: stats, pending: loadingStats } = await useAPI('/api/stats');
+const nosPrice = computed(() => stats.value?.[0]?.price);
+
+const { markets, getMarkets, loadingMarkets } = useMarkets();
+if (!markets.value) {
+  getMarkets();
+}
+
+// Helper function to get market price
+const getMarketPrice = (marketAddress: string) => {
+  if (!markets.value) return 0;
+  const market = markets.value.find(m => m.address.toString() === marketAddress);
+  return market?.jobPrice || 0;
+};
 
 const timestamp = useTimestamp({ interval: 1000 });
 const fmtMSS = (s: number) => {
@@ -200,6 +220,10 @@ const props = defineProps({
     required: true,
   },
   loadingJobs: {
+    type: Boolean,
+    default: false,
+  },
+  select: {
     type: Boolean,
     default: false,
   },

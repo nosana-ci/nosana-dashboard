@@ -71,7 +71,7 @@
                     {{
                       testgridMarkets.find(
                         (tgm: any) => tgm.address === market.address.toString()
-                      ).slug?.toUpperCase() || market.address.toString()
+                      ).name || market.address.toString()
                     }}
                   </span>
                   <span v-else class="is-family-monospace address">
@@ -83,7 +83,7 @@
                     {{
                       testgridMarkets.find(
                         (tgm: any) => tgm.address === market.address.toString()
-                      ).slug?.toUpperCase() || market.address.toString()
+                      ).name || market.address.toString()
                     }}
                   </span>
                   <span v-else class="is-family-monospace address">
@@ -94,9 +94,22 @@
               <td class="py-3">
                 <span v-if="loadingStats">...</span>
                 <span v-else-if="stats && stats[0] && stats[0].price">
-                  ${{ ((stats[0].price * (parseInt(market.jobPrice) / 1e6)) * 3600).toFixed(2) }} / h
+                  <template v-if="select">
+                    ${{ ((stats[0].price * (parseInt(String(market.jobPrice)) / 1e6)) * 3600 * 1.1).toFixed(2) }}/h
+                  </template>
+                  <template v-else>
+                    {{ `${((parseInt(String(market.jobPrice)) / 1e6) * 3600 * 1.1).toFixed(3)} NOS/h` }}
+                    {{ `($${((stats[0].price * (parseInt(String(market.jobPrice)) / 1e6)) * 3600 * 1.1).toFixed(2)}/h)` }}
+                  </template>
                 </span>
-                <span v-else>{{ parseInt(market.jobPrice) / 1e6 }} NOS/s</span>
+                <span v-else>
+                  <template v-if="select">
+                    Price unavailable
+                  </template>
+                  <template v-else>
+                    {{ `${((parseInt(String(market.jobPrice)) / 1e6) * 3600 * 1.1).toFixed(3)} NOS/h` }}
+                  </template>
+                </span>
               </td>
               <td class="py-3">
                 <span v-if="market.queueType === 1">
@@ -136,7 +149,7 @@
                       runningJobs[market.address].running : 0)"></progress></span>
                   </span>
                   <br>
-                  <small v-if="market.queueType === 0">{{ market.queue.length }} jobs queued</small>
+                  <small v-if="market.queueType === 0">{{ market.queue.length }} deployments queued</small>
                 </span>
               </td>
             </tr>
@@ -233,16 +246,25 @@ const filteredMarkets = computed(() => {
   if (!props.markets || !props.markets.length) return props.markets;
   
   return props.markets.filter((market) => {
-    if (tab.value === 'premium') {
-      const marketInfo = testgridMarkets.value.find((tgm: any) => tgm.address === market.address.toString());
-      const isNvidiaGpu = marketInfo?.slug?.toLowerCase().startsWith('nvidia');
-      const isPremium = marketInfo?.type === 'PREMIUM';
-      if (!isPremium || !isNvidiaGpu) return false;
+    // Get market info regardless of type
+    const marketInfo = testgridMarkets.value.find((tgm: any) => tgm.address === market.address.toString());
+    
+    // For premium and community tabs, exclude markets without market info
+    if ((tab.value === 'premium' || tab.value === 'community') && !marketInfo) {
+      return false;
     }
-    if (tab.value === 'community') {
-      const isCommunity = testgridMarkets.value.find((tgm: any) => tgm.address === market.address.toString() && tgm.type === 'COMMUNITY');
-      if (!isCommunity) return false;
+
+    // Filter based on tab selection
+    if (tab.value === 'premium' && (marketInfo.type !== 'PREMIUM' || !marketInfo.slug?.toLowerCase().startsWith('nvidia'))) {
+      return false;
     }
+    if (tab.value === 'community' && marketInfo.type !== 'COMMUNITY') {
+      return false;
+    }
+    if (tab.value === 'all') {
+      return true;
+    }
+
     return true;
   });
 });
@@ -252,9 +274,11 @@ const isMarketCompatible = (market: Market) => {
   if (!requiredVRAM.value || requiredVRAM.value <= 0) return true;
 
   const marketInfo = testgridMarkets.value.find((tgm: any) => tgm.address === market.address.toString());
-  if (!marketInfo) return true;
+  if (!marketInfo?.slug) return true;
   
-  const vramCapacity = VRAM_CAPACITIES[marketInfo.slug];
+  // Extract the GPU model from the slug, handling both premium and community formats
+  const gpuModel = marketInfo.slug.toLowerCase().replace('-community', '');
+  const vramCapacity = VRAM_CAPACITIES[gpuModel];
   if (!vramCapacity) return true;
   
   return vramCapacity >= requiredVRAM.value;
@@ -268,7 +292,7 @@ const paginatedMarkets = computed(() => {
 // Helper to get hourly price for a market
 const getMarketHourlyPrice = (market: Market) => {
   if (!stats.value?.[0]?.price) return Number.MAX_VALUE;
-  return (stats.value[0].price * (parseInt(market.jobPrice) / 1e6)) * 3600;
+  return (stats.value[0].price * (parseInt(String(market.jobPrice)) / 1e6)) * 3600;
 };
 
 // Helper to check if market has available GPUs
