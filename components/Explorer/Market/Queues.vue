@@ -116,7 +116,7 @@ const queueData = computed<ChartData<'bar'>>(() => {
         data: data.map((m: any) => (m.queueType === 1 ? m.queue.length : 0)),
       },
       {
-        label: 'Jobs',
+        label: 'Deployments',
         borderWidth: 3,
         borderColor: '#f9d54b',
         backgroundColor: '#f9d54b45',

@@ -3,17 +3,17 @@
     <tbody>
       <tr>
         <td colspan="2" class="has-background-light">
-          <h4 class="title is-5">Job Info</h4>
+          <h4 class="title is-5">Deployment Info</h4>
         </td>
       </tr>
       <tr>
-        <td>Job</td>
+        <td>Deployments Solana address</td>
         <td>
           <span class="address is-family-monospace">{{ props.job.address }}</span>
         </td>
       </tr>
       <tr>
-        <td>Host</td>
+        <td>Host address</td>
         <td>
           <span v-if="props.job.node.toString() === '11111111111111111111111111111111'">
             Unclaimed
@@ -24,7 +24,7 @@
         </td>
       </tr>
       <tr>
-        <td>Host pool</td>
+        <td>GPU</td>
         <td>
           <nuxt-link class="address is-family-monospace" :to="`/markets/${props.job.market}`">
             <span v-if="
@@ -38,7 +38,7 @@
         </td>
       </tr>
       <tr>
-        <td>Poster</td>
+        <td>Deployer address</td>
         <td>
           <nuxt-link class="address is-family-monospace" :to="`/posters/${props.job.project}`">
             <span>{{ props.job.project }}</span>

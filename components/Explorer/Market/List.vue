@@ -149,7 +149,7 @@
                       runningJobs[market.address].running : 0)"></progress></span>
                   </span>
                   <br>
-                  <small v-if="market.queueType === 0">{{ market.queue.length }} jobs queued</small>
+                  <small v-if="market.queueType === 0">{{ market.queue.length }} deployments queued</small>
                 </span>
               </td>
             </tr>

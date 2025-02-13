@@ -1,6 +1,6 @@
 <template>
   <div>
-    <TopBar :title="'Deploy Model'" :subtitle="'Create and deploy deployment definition files'"></TopBar>
+    <TopBar :title="'Deploy Model'" :subtitle="'Create and deploy a model'"></TopBar>
     <ul class="steps has-content-centered has-gaps">
       <li class="steps-segment" :class="{ 'is-active': step === 'job-definition' }">
         <span class="steps-marker is-clickable" @click="step = 'job-definition'">1</span>
