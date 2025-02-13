@@ -23,11 +23,11 @@
               </div>
             </a>
           </li>
-          <li :class="{ 'is-active': tab === 'all' }">
-            <a @click="tab = 'all'" class="is-justify-content-flex-start">
-              ALL
+          <li :class="{ 'is-active': tab === 'other' }">
+            <a @click="tab = 'other'" class="is-justify-content-flex-start">
+              OTHER
               <div class="tooltip-container">
-                <span class="has-tooltip-arrow has-text-grey no-underline" data-tooltip="View all available GPUs on the Nosana Network, including community-created and private options.">
+                <span class="has-tooltip-arrow has-text-grey no-underline" data-tooltip="View other GPUs on the Nosana Network that are not categorized as premium or community.">
                   <img src="~/assets/img/icons/info.svg" class="info-icon" />
                 </span>
               </div>
@@ -239,7 +239,7 @@ const perPage: Ref<number> = ref(25);
 
 /**
  * Filters the list of markets by:
- * - The current tab (premium, community, all).
+ * - The current tab (premium, community, other).
  * - VRAM requirements, if set.
  */
 const filteredMarkets = computed(() => {
@@ -261,8 +261,12 @@ const filteredMarkets = computed(() => {
     if (tab.value === 'community' && marketInfo.type !== 'COMMUNITY') {
       return false;
     }
-    if (tab.value === 'all') {
-      return true;
+    if (tab.value === 'other') {
+      // Only show markets that are not premium or community
+      if (!marketInfo || (marketInfo.type !== 'PREMIUM' && marketInfo.type !== 'COMMUNITY')) {
+        return true;
+      }
+      return false;
     }
 
     return true;

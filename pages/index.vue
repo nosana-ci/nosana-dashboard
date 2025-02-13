@@ -4,6 +4,9 @@
     <div class="box has-background-white-ter">
       <ExplorerSearch />
     </div>
+    <div class="box">
+      <ExplorerNodesWorldMap />
+    </div>
     <ExplorerJobStats />
     <ExplorerJobTimestamps />
     <div class="columns mt-4 is-multiline">
@@ -29,4 +32,5 @@
 </template>
 
 <script lang="ts" setup>
+import ExplorerNodesWorldMap from '~/components/Explorer/Nodes/WorldMap.vue'
 </script>
