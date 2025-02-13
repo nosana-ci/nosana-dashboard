@@ -24,7 +24,7 @@
         </h2>
       </div>
       <div class="column is-one-fifth">
-        <h2 class="subtitle">Total inference hours</h2>
+        <h2 class="subtitle">Total deployment hours</h2>
         <h2 class="title is-1 pt-2">
           <span v-if="loadingStats">...</span>
           <CustomCountUp v-else :end-val="Math.round(stats.duration / 3600)"></CustomCountUp>
