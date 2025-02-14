@@ -29,131 +29,220 @@
         <div class="box">
           <div class="columns">
             <div class="column is-7">
-              <div class="box">
-                <div class="tabs">
-                  <ul>
-                    <li :class="{ 'is-active': tab === 'json' }">
-                      <a @click="info = null; tab = 'json'" class="is-justify-content-flex-start">JSON</a>
-                    </li>
-                    <li :class="{ 'is-active': tab === 'builder' }">
-                      <a :class="{ 'is-disabled': !jobDefinition }" @click="tab = 'builder'"
-                        class="is-justify-content-flex-start">BUILDER</a>
-                    </li>
-                  </ul>
-                </div>
-                <div v-if="tab === 'builder'" class="h-100">
-                  <div v-for="(op, i) in jobDefinition.ops" class="box has-background-white-ter">
-                    <a v-if="jobDefinition.ops.length > 1" class="is-pulled-right"
-                      @click="jobDefinition.ops.splice(i, 1)">remove</a>
-                    <div class="field" v-if="op">
-                      <label class="label">Operation Identifier <span class="has-text-danger">*</span></label>
+              <div class="tabs">
+                <ul>
+                  <li :class="{ 'is-active': tab === 'json' }">
+                    <a @click="info = null; tab = 'json'" class="is-justify-content-flex-start">JSON</a>
+                  </li>
+                  <li :class="{ 'is-active': tab === 'builder' }">
+                    <a :class="{ 'is-disabled': !jobDefinition }" @click="tab = 'builder'"
+                      class="is-justify-content-flex-start">BUILDER</a>
+                  </li>
+                </ul>
+              </div>
+            </div>
+            <div class="column is-5">
+              <div class="tabs">
+                <ul>
+                  <li class="is-active">
+                    <a class="is-justify-content-flex-start">TEMPLATE</a>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div class="columns is-align-items-stretch">
+            <div class="column is-7">
+              <div v-if="tab === 'builder'" class="h-100">
+                <div v-for="(op, i) in jobDefinition.ops" class="box has-background-white-ter">
+                  <a v-if="jobDefinition.ops.length > 1" class="is-pulled-right"
+                    @click="jobDefinition.ops.splice(i, 1)">remove</a>
+                  <div class="field" v-if="op">
+                    <label class="label">Operation Identifier <span class="has-text-danger">*</span></label>
+                    <div class="control">
+                      <input @focus="info = 'ops.id'" required class="input" v-model="op.id" type="text"
+                        placeholder="id">
+                    </div>
+                  </div>
+
+                  <div class="field">
+                    <label class="label">Type <span class="has-text-danger">*</span></label>
+                    <div class="control">
+                      <div class="select">
+                        <select v-model="op.type" required @focus="info = 'ops.type'" @change="
+                          op.type === 'container/create-volume' ? op.args = { name: 'volume-name-' + (i + 1) } :
+                            op.type === 'container/run' ? op.args = { image: 'ubuntu', gpu: true } : null">
+                          <option value="container/run">Docker command</option>
+                          <option value="container/create-volume">Create volume</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                  <div v-if="op.type === 'container/run'">
+                    <div class="field">
+                      <label class="label">Docker Image <span class="has-text-danger">*</span></label>
+                      <div class="control has-icons-left has-icons-right">
+                        <input class="input" @focus="info = 'ops.args.image'" required
+                          v-model="(op.args as OperationArgsMap['container/run']).image" type="text"
+                          placeholder="image">
+                        <span class="icon is-small is-left">
+                          <img src="/img/icons/type/docker.svg" width="20px" />
+                        </span>
+                        <span class="icon is-small is-right" style="pointer-events: all;">
+                          <a :href="`https://hub.docker.com/search?q=${(op.args as OperationArgsMap['container/run']).image}&type=image`"
+                            target="_blank">
+                            <img src="~assets/img/icons/external.png" width="15px" />
+                          </a>
+                        </span>
+                      </div>
+                    </div>
+                    <div class="field">
+                      <label class="label">Command</label>
                       <div class="control">
-                        <input @focus="info = 'ops.id'" required class="input" v-model="op.id" type="text"
-                          placeholder="id">
+                        <div
+                          v-if="typeof (op.args as OperationArgsMap['container/run']).cmd === 'string' || !(op.args as OperationArgsMap['container/run']).cmd">
+                          <input @focus="info = 'ops.args.cmd'" class="input"
+                            @change="(op.args as OperationArgsMap['container/run']).cmd === '' ? (op.args as OperationArgsMap['container/run']).cmd = undefined : null"
+                            v-model="(op.args as OperationArgsMap['container/run']).cmd" type="text" placeholder="cmd">
+                          <p class="is-size-7">
+                            <b>Shell</b> form<span class="ml-2"><a
+                                @click="(op.args as OperationArgsMap['container/run']).cmd = switchCmd((op.args as OperationArgsMap['container/run']).cmd, 'exec')">Switch
+                                to exec form</a></span>
+                          </p>
+                        </div>
+                        <div v-else-if="Array.isArray((op.args as OperationArgsMap['container/run']).cmd)">
+                          <div v-for="(cmd, i) in (op.args as OperationArgsMap['container/run']).cmd">
+                            <div class="field has-addons">
+                              <p class="control is-expanded">
+                                <input class="input" @focus="info = 'ops.args.cmd'"
+                                  v-model="(op.args as OperationArgsMap['container/run']).cmd![i]" type="text"
+                                  placeholder="cmd">
+                              </p>
+                              <p class="control">
+                                <a class="button"
+                                  @click="info = 'ops.args.cmd'; ((op.args as OperationArgsMap['container/run']).cmd! as string[]).splice(i, 1)">
+                                  <span class="icon is-small">
+                                    <TrashIcon />
+                                  </span>
+                                </a>
+                              </p>
+                            </div>
+                          </div>
+                          <a class="button is-small is-primary is-pulled-right mt-2"
+                            @click="info = 'ops.args.cmd'; ((op.args as OperationArgsMap['container/run']).cmd! as string[]).push('')">
+                            <span>Add cmd</span>
+                            <span class="icon">+</span>
+                          </a>
+                          <p class="is-size-7">
+                            <b>Exec</b> form<span class="ml-2"><a
+                                @click="(op.args as OperationArgsMap['container/run']).cmd = switchCmd((op.args as OperationArgsMap['container/run']).cmd, 'shell')">Switch
+                                to shell form</a></span>
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="field">
+                      <label class="label">Expose port</label>
+                      <div class="control">
+                        <input class="input" @focus="info = 'ops.args.expose'"
+                          @change="(op.args as OperationArgsMap['container/run']).expose === '' ? (op.args as OperationArgsMap['container/run']).expose = undefined : null"
+                          v-model.number="(op.args as OperationArgsMap['container/run']).expose" type="number"
+                          placeholder="80">
+                      </div>
+                    </div>
+                    <div class="field">
+                      <label class="label">Environment variables</label>
+                      <div class="control">
+                        <div v-for="(env, i) in (op.args as OperationArgsMap['container/run']).env">
+                          <div class="field has-addons is-horizontal">
+                            <div class="field-label is-normal">
+                              <label class="label">{{ i }}</label>
+                            </div>
+                            <p class="control is-expanded">
+                              <input class="input" @focus="info = 'ops.args.env'"
+                                v-model="(op.args as OperationArgsMap['container/run']).env![i]" type="text"
+                                placeholder="value">
+                            </p>
+                            <p class="control">
+                              <a class="button"
+                                @click="info = 'ops.args.env'; delete ((op.args as OperationArgsMap['container/run']).env! as any)[i]">
+                                <span class="icon is-small">
+                                  <TrashIcon />
+                                </span>
+                              </a>
+                            </p>
+                          </div>
+                        </div>
+                        <div class="field has-addons has-addons-right mt-2">
+                          <p class="control">
+                            <input class="input is-small" @focus="info = 'ops.args.env'" v-model="envName[i]"
+                              type="text" placeholder="env name">
+                          </p>
+                          <p class="control">
+                            <a class="button is-primary is-small"
+                              :class="{ 'is-disabled': !envName[i] || !envName[i].length }"
+                              @click="info = 'ops.args.env'; !(op.args as OperationArgsMap['container/run']).env ? (op.args as OperationArgsMap['container/run']).env = {} : null; ((op.args as OperationArgsMap['container/run']).env!)[envName[i]] = ''; envName[i] = null">
+                              <span>Add env</span>
+                              <span class="icon">+</span>
+                            </a>
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="field">
+                      <div class="control">
+                        <label class="checkbox">
+                          <input type="checkbox" @focus="info = 'ops.args.gpu'"
+                            v-model="(op.args as OperationArgsMap['container/run']).gpu" />
+                          Enable GPU
+                        </label>
+                      </div>
+                    </div>
+                    <div class="field">
+                      <div class="control">
+                        <label class="checkbox">
+                          <input type="checkbox" @focus="info = 'ops.args.private'"
+                            v-model="(op.args as OperationArgsMap['container/run']).private" />
+                          Private
+                        </label>
                       </div>
                     </div>
 
                     <div class="field">
-                      <label class="label">Type <span class="has-text-danger">*</span></label>
+                      <label class="label">Working Directory</label>
                       <div class="control">
-                        <div class="select">
-                          <select v-model="op.type" required @focus="info = 'ops.type'" @change="
-                            op.type === 'container/create-volume' ? op.args = { name: 'volume-name-' + (i + 1) } :
-                              op.type === 'container/run' ? op.args = { image: 'ubuntu', gpu: true } : null">
-                            <option value="container/run">Docker command</option>
-                            <option value="container/create-volume">Create volume</option>
-                          </select>
-                        </div>
+                        <input class="input" @focus="info = 'ops.args.work_dir'"
+                          v-model="(op.args as OperationArgsMap['container/run']).work_dir" type="text"
+                          placeholder="/app">
                       </div>
                     </div>
-                    <div v-if="op.type === 'container/run'">
-                      <div class="field">
-                        <label class="label">Docker Image <span class="has-text-danger">*</span></label>
-                        <div class="control has-icons-left has-icons-right">
-                          <input class="input" @focus="info = 'ops.args.image'" required
-                            v-model="(op.args as OperationArgsMap['container/run']).image" type="text"
-                            placeholder="image">
-                          <span class="icon is-small is-left">
-                            <img src="/img/icons/type/docker.svg" width="20px" />
-                          </span>
-                          <span class="icon is-small is-right" style="pointer-events: all;">
-                            <a :href="`https://hub.docker.com/search?q=${(op.args as OperationArgsMap['container/run']).image}&type=image`"
-                              target="_blank">
-                              <img src="~assets/img/icons/external.png" width="15px" />
-                            </a>
-                          </span>
+
+                    <div class="field">
+                      <label class="label">Entrypoint</label>
+                      <div class="control">
+                        <div
+                          v-if="typeof (op.args as OperationArgsMap['container/run']).entrypoint === 'string' || !(op.args as OperationArgsMap['container/run']).entrypoint">
+                          <input @focus="info = 'ops.args.entrypoint'" class="input"
+                            @change="(op.args as OperationArgsMap['container/run']).entrypoint === '' ? (op.args as OperationArgsMap['container/run']).entrypoint = undefined : null"
+                            v-model="(op.args as OperationArgsMap['container/run']).entrypoint" type="text"
+                            placeholder="/bin/sh">
+                          <p class="is-size-7">
+                            <b>Shell</b> form<span class="ml-2"><a
+                                @click="(op.args as OperationArgsMap['container/run']).entrypoint = switchCmd((op.args as OperationArgsMap['container/run']).entrypoint, 'exec')">Switch
+                                to exec form</a></span>
+                          </p>
                         </div>
-                      </div>
-                      <div class="field">
-                        <label class="label">Command</label>
-                        <div class="control">
-                          <div
-                            v-if="typeof (op.args as OperationArgsMap['container/run']).cmd === 'string' || !(op.args as OperationArgsMap['container/run']).cmd">
-                            <input @focus="info = 'ops.args.cmd'" class="input"
-                              @change="(op.args as OperationArgsMap['container/run']).cmd === '' ? (op.args as OperationArgsMap['container/run']).cmd = undefined : null"
-                              v-model="(op.args as OperationArgsMap['container/run']).cmd" type="text" placeholder="cmd">
-                            <p class="is-size-7">
-                              <b>Shell</b> form<span class="ml-2"><a
-                                  @click="(op.args as OperationArgsMap['container/run']).cmd = switchCmd((op.args as OperationArgsMap['container/run']).cmd, 'exec')">Switch
-                                  to exec form</a></span>
-                            </p>
-                          </div>
-                          <div v-else-if="Array.isArray((op.args as OperationArgsMap['container/run']).cmd)">
-                            <div v-for="(cmd, i) in (op.args as OperationArgsMap['container/run']).cmd">
-                              <div class="field has-addons">
-                                <p class="control is-expanded">
-                                  <input class="input" @focus="info = 'ops.args.cmd'"
-                                    v-model="(op.args as OperationArgsMap['container/run']).cmd![i]" type="text"
-                                    placeholder="cmd">
-                                </p>
-                                <p class="control">
-                                  <a class="button"
-                                    @click="info = 'ops.args.cmd'; ((op.args as OperationArgsMap['container/run']).cmd! as string[]).splice(i, 1)">
-                                    <span class="icon is-small">
-                                      <TrashIcon />
-                                    </span>
-                                  </a>
-                                </p>
-                              </div>
-                            </div>
-                            <a class="button is-small is-primary is-pulled-right mt-2"
-                              @click="info = 'ops.args.cmd'; ((op.args as OperationArgsMap['container/run']).cmd! as string[]).push('')">
-                              <span>Add cmd</span>
-                              <span class="icon">+</span>
-                            </a>
-                            <p class="is-size-7">
-                              <b>Exec</b> form<span class="ml-2"><a
-                                  @click="(op.args as OperationArgsMap['container/run']).cmd = switchCmd((op.args as OperationArgsMap['container/run']).cmd, 'shell')">Switch
-                                  to shell form</a></span>
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                      <div class="field">
-                        <label class="label">Expose port</label>
-                        <div class="control">
-                          <input class="input" @focus="info = 'ops.args.expose'"
-                            @change="(op.args as OperationArgsMap['container/run']).expose === '' ? (op.args as OperationArgsMap['container/run']).expose = undefined : null"
-                            v-model.number="(op.args as OperationArgsMap['container/run']).expose" type="number"
-                            placeholder="80">
-                        </div>
-                      </div>
-                      <div class="field">
-                        <label class="label">Environment variables</label>
-                        <div class="control">
-                          <div v-for="(env, i) in (op.args as OperationArgsMap['container/run']).env">
-                            <div class="field has-addons is-horizontal">
-                              <div class="field-label is-normal">
-                                <label class="label">{{ i }}</label>
-                              </div>
+                        <div v-else-if="Array.isArray((op.args as OperationArgsMap['container/run']).entrypoint)">
+                          <div v-for="(entry, i) in (op.args as OperationArgsMap['container/run']).entrypoint">
+                            <div class="field has-addons">
                               <p class="control is-expanded">
-                                <input class="input" @focus="info = 'ops.args.env'"
-                                  v-model="(op.args as OperationArgsMap['container/run']).env![i]" type="text"
-                                  placeholder="value">
+                                <input class="input" @focus="info = 'ops.args.entrypoint'"
+                                  v-model="(op.args as OperationArgsMap['container/run']).entrypoint![i]" type="text"
+                                  placeholder="entrypoint">
                               </p>
                               <p class="control">
                                 <a class="button"
-                                  @click="info = 'ops.args.env'; delete ((op.args as OperationArgsMap['container/run']).env! as any)[i]">
+                                  @click="info = 'ops.args.entrypoint'; ((op.args as OperationArgsMap['container/run']).entrypoint! as string[]).splice(i, 1)">
                                   <span class="icon is-small">
                                     <TrashIcon />
                                   </span>
@@ -161,223 +250,138 @@
                               </p>
                             </div>
                           </div>
-                          <div class="field has-addons has-addons-right mt-2">
-                            <p class="control">
-                              <input class="input is-small" @focus="info = 'ops.args.env'" v-model="envName[i]"
-                                type="text" placeholder="env name">
-                            </p>
-                            <p class="control">
-                              <a class="button is-primary is-small"
-                                :class="{ 'is-disabled': !envName[i] || !envName[i].length }"
-                                @click="info = 'ops.args.env'; !(op.args as OperationArgsMap['container/run']).env ? (op.args as OperationArgsMap['container/run']).env = {} : null; ((op.args as OperationArgsMap['container/run']).env!)[envName[i]] = ''; envName[i] = null">
-                                <span>Add env</span>
-                                <span class="icon">+</span>
-                              </a>
-                            </p>
-                          </div>
+                          <a class="button is-small is-primary is-pulled-right mt-2"
+                            @click="info = 'ops.args.entrypoint'; ((op.args as OperationArgsMap['container/run']).entrypoint! as string[]).push('')">
+                            <span>Add entrypoint</span>
+                            <span class="icon">+</span>
+                          </a>
+                          <p class="is-size-7">
+                            <b>Exec</b> form<span class="ml-2"><a
+                                @click="(op.args as OperationArgsMap['container/run']).entrypoint = switchCmd((op.args as OperationArgsMap['container/run']).entrypoint, 'shell')">Switch
+                                to shell form</a></span>
+                          </p>
                         </div>
                       </div>
-                      <div class="field">
-                        <div class="control">
-                          <label class="checkbox">
-                            <input type="checkbox" @focus="info = 'ops.args.gpu'"
-                              v-model="(op.args as OperationArgsMap['container/run']).gpu" />
-                            Enable GPU
-                          </label>
-                        </div>
-                      </div>
-                      <div class="field">
-                        <div class="control">
-                          <label class="checkbox">
-                            <input type="checkbox" @focus="info = 'ops.args.private'"
-                              v-model="(op.args as OperationArgsMap['container/run']).private" />
-                            Private
-                          </label>
-                        </div>
-                      </div>
+                    </div>
 
-                      <div class="field">
-                        <label class="label">Working Directory</label>
-                        <div class="control">
-                          <input class="input" @focus="info = 'ops.args.work_dir'"
-                            v-model="(op.args as OperationArgsMap['container/run']).work_dir" type="text"
-                            placeholder="/app">
-                        </div>
-                      </div>
-
-                      <div class="field">
-                        <label class="label">Entrypoint</label>
-                        <div class="control">
-                          <div
-                            v-if="typeof (op.args as OperationArgsMap['container/run']).entrypoint === 'string' || !(op.args as OperationArgsMap['container/run']).entrypoint">
-                            <input @focus="info = 'ops.args.entrypoint'" class="input"
-                              @change="(op.args as OperationArgsMap['container/run']).entrypoint === '' ? (op.args as OperationArgsMap['container/run']).entrypoint = undefined : null"
-                              v-model="(op.args as OperationArgsMap['container/run']).entrypoint" type="text"
-                              placeholder="/bin/sh">
-                            <p class="is-size-7">
-                              <b>Shell</b> form<span class="ml-2"><a
-                                  @click="(op.args as OperationArgsMap['container/run']).entrypoint = switchCmd((op.args as OperationArgsMap['container/run']).entrypoint, 'exec')">Switch
-                                  to exec form</a></span>
-                            </p>
-                          </div>
-                          <div v-else-if="Array.isArray((op.args as OperationArgsMap['container/run']).entrypoint)">
-                            <div v-for="(entry, i) in (op.args as OperationArgsMap['container/run']).entrypoint">
-                              <div class="field has-addons">
-                                <p class="control is-expanded">
-                                  <input class="input" @focus="info = 'ops.args.entrypoint'"
-                                    v-model="(op.args as OperationArgsMap['container/run']).entrypoint![i]" type="text"
-                                    placeholder="entrypoint">
-                                </p>
-                                <p class="control">
-                                  <a class="button"
-                                    @click="info = 'ops.args.entrypoint'; ((op.args as OperationArgsMap['container/run']).entrypoint! as string[]).splice(i, 1)">
-                                    <span class="icon is-small">
-                                      <TrashIcon />
-                                    </span>
-                                  </a>
-                                </p>
+                    <div class="field">
+                      <label class="label">Resources</label>
+                      <div class="control">
+                        <div v-for="(resource, i) in (op.args as OperationArgsMap['container/run']).resources">
+                          <div class="box has-background-white-bis">
+                            <a class="is-pulled-right"
+                              @click="((op.args as OperationArgsMap['container/run']).resources as any[]).splice(i, 1)">remove</a>
+                            <div class="field">
+                              <label class="label">Type</label>
+                              <div class="control">
+                                <div class="select">
+                                  <select v-model="resource.type" @focus="info = 'ops.args.resources'">
+                                    <option value="S3">S3</option>
+                                  </select>
+                                </div>
                               </div>
                             </div>
-                            <a class="button is-small is-primary is-pulled-right mt-2"
-                              @click="info = 'ops.args.entrypoint'; ((op.args as OperationArgsMap['container/run']).entrypoint! as string[]).push('')">
-                              <span>Add entrypoint</span>
+                            <div class="field">
+                              <label class="label">URL</label>
+                              <div class="control">
+                                <input class="input" @focus="info = 'ops.args.resources'" v-model="resource.url"
+                                  type="text" placeholder="s3://bucket/path">
+                              </div>
+                            </div>
+                            <div class="field">
+                              <label class="label">Target</label>
+                              <div class="control">
+                                <input class="input" @focus="info = 'ops.args.resources'" v-model="resource.target"
+                                  type="text" placeholder="/path/in/container">
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="field has-addons has-addons-right mt-2">
+                          <p class="control">
+                            <a class="button is-small is-primary"
+                              @click="!(op.args as OperationArgsMap['container/run']).resources ? (op.args as OperationArgsMap['container/run']).resources = [] : null; ((op.args as OperationArgsMap['container/run']).resources as any[]).push({ type: 'S3', url: '', target: '' })">
+                              <span>Add resource</span>
                               <span class="icon">+</span>
                             </a>
-                            <p class="is-size-7">
-                              <b>Exec</b> form<span class="ml-2"><a
-                                  @click="(op.args as OperationArgsMap['container/run']).entrypoint = switchCmd((op.args as OperationArgsMap['container/run']).entrypoint, 'shell')">Switch
-                                  to shell form</a></span>
-                            </p>
-                          </div>
+                          </p>
                         </div>
-                      </div>
 
-                      <div class="field">
-                        <label class="label">Resources</label>
-                        <div class="control">
-                          <div v-for="(resource, i) in (op.args as OperationArgsMap['container/run']).resources">
-                            <div class="box has-background-white-bis">
-                              <a class="is-pulled-right"
-                                @click="((op.args as OperationArgsMap['container/run']).resources as any[]).splice(i, 1)">remove</a>
-                              <div class="field">
-                                <label class="label">Type</label>
-                                <div class="control">
-                                  <div class="select">
-                                    <select v-model="resource.type" @focus="info = 'ops.args.resources'">
-                                      <option value="S3">S3</option>
-                                    </select>
-                                  </div>
-                                </div>
-                              </div>
-                              <div class="field">
-                                <label class="label">URL</label>
-                                <div class="control">
-                                  <input class="input" @focus="info = 'ops.args.resources'" v-model="resource.url"
-                                    type="text" placeholder="s3://bucket/path">
-                                </div>
-                              </div>
-                              <div class="field">
-                                <label class="label">Target</label>
-                                <div class="control">
-                                  <input class="input" @focus="info = 'ops.args.resources'" v-model="resource.target"
-                                    type="text" placeholder="/path/in/container">
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                          <div class="field has-addons has-addons-right mt-2">
-                            <p class="control">
-                              <a class="button is-small is-primary"
-                                @click="!(op.args as OperationArgsMap['container/run']).resources ? (op.args as OperationArgsMap['container/run']).resources = [] : null; ((op.args as OperationArgsMap['container/run']).resources as any[]).push({ type: 'S3', url: '', target: '' })">
-                                <span>Add resource</span>
-                                <span class="icon">+</span>
-                              </a>
-                            </p>
-                          </div>
-
-                        </div>
-                      </div>
-
-                      <div class="field">
-                        <label class="label">Results</label>
-                        <div class="control">
-                          <div v-for="(pattern, key) in op.results || {}">
-                            <div class="field has-addons is-horizontal">
-                              <div class="field-label is-normal">
-                                <label class="label">{{ key }}</label>
-                              </div>
-                              <p class="control is-expanded">
-                                <input class="input" @focus="info = 'ops.results'" v-model="op.results![key]" type="text"
-                                  placeholder="regex pattern">
-                              </p>
-                              <p class="control">
-                                <a class="button" @click="info = 'ops.results'; delete op.results![key]">
-                                  <span class="icon is-small">
-                                    <TrashIcon />
-                                  </span>
-                                </a>
-                              </p>
-                            </div>
-                          </div>
-                          <div class="field has-addons has-addons-right mt-2">
-                            <p class="control">
-                              <input class="input is-small" @focus="info = 'ops.results'" v-model="resultsName[i]"
-                                type="text" placeholder="result name">
-                            </p>
-                            <p class="control">
-                              <a class="button is-primary is-small"
-                                :class="{ 'is-disabled': !resultsName[i] || !resultsName[i].length }"
-                                @click="info = 'ops.results'; !op.results ? op.results = {} : null; op.results[resultsName[i]] = ''; resultsName[i] = ''">
-                                <span>Add result</span>
-                                <span class="icon">+</span>
-                              </a>
-                            </p>
-                          </div>
-                        </div>
                       </div>
                     </div>
-                    <div v-else-if="op.type === 'container/create-volume'">
-                      <div class="field">
-                        <label class="label">Name <span class="has-text-danger">*</span></label>
-                        <div class="control">
-                          <input class="input" @focus="info = 'ops.args.name'" required
-                            v-model="(op.args as OperationArgsMap['container/create-volume']).name" type="text"
-                            placeholder="Name">
+
+                    <div class="field">
+                      <label class="label">Results</label>
+                      <div class="control">
+                        <div v-for="(pattern, key) in op.results || {}">
+                          <div class="field has-addons is-horizontal">
+                            <div class="field-label is-normal">
+                              <label class="label">{{ key }}</label>
+                            </div>
+                            <p class="control is-expanded">
+                              <input class="input" @focus="info = 'ops.results'" v-model="op.results![key]" type="text"
+                                placeholder="regex pattern">
+                            </p>
+                            <p class="control">
+                              <a class="button" @click="info = 'ops.results'; delete op.results![key]">
+                                <span class="icon is-small">
+                                  <TrashIcon />
+                                </span>
+                              </a>
+                            </p>
+                          </div>
+                        </div>
+                        <div class="field has-addons has-addons-right mt-2">
+                          <p class="control">
+                            <input class="input is-small" @focus="info = 'ops.results'" v-model="resultsName[i]"
+                              type="text" placeholder="result name">
+                          </p>
+                          <p class="control">
+                            <a class="button is-primary is-small"
+                              :class="{ 'is-disabled': !resultsName[i] || !resultsName[i].length }"
+                              @click="info = 'ops.results'; !op.results ? op.results = {} : null; op.results[resultsName[i]] = ''; resultsName[i] = ''">
+                              <span>Add result</span>
+                              <span class="icon">+</span>
+                            </a>
+                          </p>
                         </div>
                       </div>
                     </div>
                   </div>
-                  <div class="field is-grouped is-grouped-right">
-                    <p class="control">
-                      <a class="button is-primary is-small" @click="jobDefinition.ops.push({
-                        id: 'operation-' + (jobDefinition.ops.length + 1), type: 'container/run', args: { image: 'ubuntu', gpu: true }
-                      })">
-                        <span>Add operation</span>
-                        <span class="icon">+</span>
-                      </a>
-                    </p>
+                  <div v-else-if="op.type === 'container/create-volume'">
+                    <div class="field">
+                      <label class="label">Name <span class="has-text-danger">*</span></label>
+                      <div class="control">
+                        <input class="input" @focus="info = 'ops.args.name'" required
+                          v-model="(op.args as OperationArgsMap['container/create-volume']).name" type="text"
+                          placeholder="Name">
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <div v-else-if="tab === 'json'" class="h-100">
-                  <div class="field">
-                    <div class="control" :class="{ 'is-loading': loading }">
-                      <JsonEditorVue :onRenderMenu="onRenderMenu" :validator="validator"
-                        :class="{ 'jse-theme-dark': $colorMode.value === 'dark' }" v-model="jobDefinition"
-                        :mode="Mode.text" :mainMenuBar="true" :stringified="false" />
-                    </div>
+                <div class="field is-grouped is-grouped-right">
+                  <p class="control">
+                    <a class="button is-primary is-small" @click="jobDefinition.ops.push({
+                      id: 'operation-' + (jobDefinition.ops.length + 1), type: 'container/run', args: { image: 'ubuntu', gpu: true }
+                    })">
+                      <span>Add operation</span>
+                      <span class="icon">+</span>
+                    </a>
+                  </p>
+                </div>
+              </div>
+              <div v-else-if="tab === 'json'" class="h-100">
+                <div class="field">
+                  <div class="control" :class="{ 'is-loading': loading }">
+                    <JsonEditorVue :onRenderMenu="onRenderMenu" :validator="validator"
+                      :class="{ 'jse-theme-dark': $colorMode.value === 'dark' }" v-model="jobDefinition"
+                      :mode="Mode.text" :mainMenuBar="true" :stringified="false" />
                   </div>
                 </div>
               </div>
             </div>
             <div class="column is-5">
-              <div class="box">
-                <div class="tabs">
-                  <ul>
-                    <li class="is-active">
-                      <a class="is-justify-content-flex-start">TEMPLATE</a>
-                    </li>
-                  </ul>
-                </div>
+              <div class="box has-background-white-ter h-100">
                 <div class="template-info">
                   <h2 class="title is-5">
                     <span v-if="template">
@@ -544,16 +548,16 @@
                       {{ ((market.jobPrice / 1e6) * 1.1).toFixed(6) }} NOS/s
                     </span>
                     ) 
-                </span>
-                <span v-else>-</span>
+                  </span>
+                  <span v-else>-</span>
                 </td>
               </tr>
               <tr>
                 <td>Auto-shutdown timeout <span class="has-text-danger">*</span></td>
                 <td>
                   <div class="is-flex is-align-items-center">
-                    <input v-model.number="jobTimeout" class="input" style="width: 100px" type="number"
-                      placeholder="Hours" required step="0.1">
+                    <input v-model.number="jobTimeout" class="input" style="width: 100px" type="number" min="1"
+                      placeholder="Hours" required>
                     <span class="ml-2">hours</span>
                   </div>
                 </td>
@@ -759,37 +763,10 @@
   height: 100%;
 }
 
-.box {
+.box.has-background-white-ter.h-100 {
   display: flex;
   flex-direction: column;
   height: 100%;
-}
-
-.box .tabs {
-  flex: 0 0 auto;
-}
-
-.box .h-100,
-.box .template-info {
-  flex: 1 1 auto;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  overflow-y: auto;
-}
-
-@media screen and (max-width: 768px) {
-  .columns {
-    margin: 0;
-  }
-  
-  .column {
-    padding: 0.75rem;
-  }
-  
-  .box {
-    margin-bottom: 1rem;
-  }
 }
 
 .template-info {

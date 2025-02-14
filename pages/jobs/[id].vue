@@ -20,12 +20,12 @@
             </div>
             <div v-if="isJobPoster && (isRunning(job.state) || getStateNumber(job.state) === 0)" class="mr-4">
               <button @click="stopJob" :class="{ 'is-loading': loading }" class="button is-danger">
-                Stop
+                Stop Deployment
               </button>
             </div>
             <div v-if="isJobPoster && isRunning(job.state)" class="mr-4">
               <button @click="openExtendModal" :class="{ 'is-loading': loadingExtend }" class="button is-warning">
-                Extend
+                Extend Deployment
               </button>
             </div>
 
@@ -815,168 +815,6 @@ const hasResultsRegex = computed(() => {
   if (!job.value?.jobDefinition?.ops) return false;
   return job.value.jobDefinition.ops.some((op: any) => op.results);
 });
-
-// Add new WebSocket variables for state
-let wsState: WebSocket | null = null;
-let isWebSocketStateConnected = false;
-const isConnectingState = ref(false);
-const hasRetriedState = ref(false);
-
-function handleStateWebSocketMessage(event: MessageEvent) {
-  try {
-    const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
-    const parsedData = typeof data.data === 'string' ? JSON.parse(data.data) : data.data;
-
-    // Check if this is a container success message
-    if (parsedData.status === 'service-url-ready' && 
-        !parsedData.state.image.includes('frpc') && // Ignore frpc container
-        job.value?.jobDefinition?.ops?.[0]?.args?.expose && 
-        (!job.value?.jobDefinition?.ops[0]?.args?.private || isJobPoster.value)) {
-      
-      // Set the service URL if not already set
-      if (!serviceUrl.value) {
-        const jobAddress = job.value.address;
-        serviceUrl.value = `https://${jobAddress}.node.k8s.prd.nos.ci`;
-      }
-
-      // Show toast only if we haven't shown it yet
-      if (!hasShownServiceOnlineToast.value) {
-        toast.success('Service is online');
-        hasShownServiceOnlineToast.value = true;
-      }
-    }
-  } catch (e) {
-    console.error('Error parsing state WebSocket message:', e);
-  }
-}
-
-const connectStateWebSocket = async () => {
-  if (wsState) {
-    wsState.close();
-    wsState = null;
-    isWebSocketStateConnected = false;
-  }
-
-  const nodeAddress = job.value.node.toString();
-  const frpServer = useRuntimeConfig().public.nodeDomain;
-  let authHeader = '';
-
-  try {
-    authHeader = await signMessage();
-  } catch {
-    isConnectingState.value = false;
-    isWebSocketStateConnected = false;
-    return;
-  }
-
-  const wsUrl = `wss://${nodeAddress}.${frpServer}/status`;
-
-  try {
-    wsState = new WebSocket(wsUrl);
-
-    const connectionTimeout = setTimeout(() => {
-      if (!isWebSocketStateConnected) {
-        if (wsState) {
-          wsState.close();
-          wsState = null;
-        }
-        isConnectingState.value = false;
-        isWebSocketStateConnected = false;
-      }
-    }, 10000);
-
-    wsState.onopen = () => {
-      clearTimeout(connectionTimeout);
-      isWebSocketStateConnected = true;
-      isConnectingState.value = false;
-
-      const authMessage = {
-        path: '/status',
-        header: authHeader,
-        body: {
-          jobAddress: jobId.value,
-          address: job.value.project,
-        },
-      };
-      wsState?.send(JSON.stringify(authMessage));
-    };
-
-    wsState.onmessage = (event: MessageEvent) => {
-      isConnectingState.value = false;
-      handleStateWebSocketMessage(event);
-    };
-
-    wsState.onclose = () => {
-      clearTimeout(connectionTimeout);
-      wsState = null;
-      isWebSocketStateConnected = false;
-      isConnectingState.value = false;
-    };
-
-    wsState.onerror = async () => {
-      clearTimeout(connectionTimeout);
-      wsState = null;
-      isWebSocketStateConnected = false;
-      isConnectingState.value = false;
-
-      if (!hasRetriedState.value && connected.value && isJobPoster.value && isRunning(job.value?.state)) {
-        hasRetriedState.value = true;
-        try {
-          await signMessage(true);
-          checkAndConnectStateWebSocket();
-        } catch (err) {
-          console.error('Re-sign message error:', err);
-        }
-      }
-    };
-  } catch (error) {
-    wsState = null;
-    isWebSocketStateConnected = false;
-    isConnectingState.value = false;
-  }
-};
-
-const checkAndConnectStateWebSocket = async () => {
-  if (isWebSocketStateConnected || isConnectingState.value) return;
-
-  if (
-    job.value &&
-    isRunning(job.value.state) &&
-    isJobPoster.value &&
-    isVerified.value &&
-    connected.value
-  ) {
-    isConnectingState.value = true;
-    await connectStateWebSocket();
-  }
-};
-
-// Update existing onUnmounted to include state WebSocket cleanup
-onUnmounted(() => {
-  logViewer.value?.clearLogs();
-  if (ws) {
-    ws.close();
-    ws = null;
-  }
-  if (wsState) {
-    wsState.close();
-    wsState = null;
-  }
-  isWebSocketConnected = false;
-  isWebSocketStateConnected = false;
-  isConnecting.value = false;
-  isConnectingState.value = false;
-});
-
-// Add state WebSocket connection to existing watch
-watch(
-  [() => job.value?.state, () => connected.value, () => isVerified.value, () => isJobPoster.value],
-  async () => {
-    await checkAndConnectWebSocket();
-    await checkAndConnectStateWebSocket();
-  },
-  { immediate: true }
-);
 </script>
 
 <style lang="scss" scoped>
