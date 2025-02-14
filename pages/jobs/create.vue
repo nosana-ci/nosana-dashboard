@@ -544,8 +544,8 @@
                       {{ ((market.jobPrice / 1e6) * 1.1).toFixed(6) }} NOS/s
                     </span>
                     ) 
-                  </span>
-                  <span v-else>-</span>
+                </span>
+                <span v-else>-</span>
                 </td>
               </tr>
               <tr>
@@ -553,7 +553,7 @@
                 <td>
                   <div class="is-flex is-align-items-center">
                     <input v-model.number="jobTimeout" class="input" style="width: 100px" type="number"
-                      placeholder="Hours" required>
+                      placeholder="Hours" required step="0.1">
                     <span class="ml-2">hours</span>
                   </div>
                 </td>
