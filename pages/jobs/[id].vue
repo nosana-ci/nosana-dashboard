@@ -828,7 +828,7 @@ function handleStateWebSocketMessage(event: MessageEvent) {
     const parsedData = typeof data.data === 'string' ? JSON.parse(data.data) : data.data;
 
     // Check if this is a container success message
-    if (parsedData.status === 'running-container-success' && 
+    if (parsedData.status === 'service-url-ready' && 
         !parsedData.state.image.includes('frpc') && // Ignore frpc container
         job.value?.jobDefinition?.ops?.[0]?.args?.expose && 
         (!job.value?.jobDefinition?.ops[0]?.args?.private || isJobPoster.value)) {
