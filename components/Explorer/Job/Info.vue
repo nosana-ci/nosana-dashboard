@@ -185,7 +185,7 @@ const displayPrice = computed(() => {
     return 'Could not find market';
   }
   // If you also want a price in $ using some stats
-  const nosPrice = stats.value?.[0]?.price ?? 0;
+  const nosPrice = stats.value?.price ?? 0;
 
   // Completed case
   if (props.job.state === 'COMPLETED' || props.job.state === 2) {

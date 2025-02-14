@@ -41,8 +41,8 @@
                   <td>Price</td>
                   <td>
                     {{ ((market.jobPrice / 1e6) * 3600 * 1.1).toFixed(3) }} NOS/h
-                    <span v-if="stats && stats[0] && stats[0].price">
-                      (${{ ((stats[0].price * (market.jobPrice / 1e6)) * 3600 * 1.1).toFixed(3) }}/h)
+                    <span v-if="stats && stats.price">
+                      (${{ ((stats.price * (market.jobPrice / 1e6)) * 3600 * 1.1).toFixed(3) }}/h)
                     </span>
                   </td>
                 </tr>
@@ -50,8 +50,8 @@
                   <td>Host payment</td>
                   <td>
                     {{ ((market.jobPrice / 1e6) * 3600).toFixed(3) }} NOS/h
-                    <span v-if="stats && stats[0] && stats[0].price">
-                      (${{ ((stats[0].price * (market.jobPrice / 1e6)) * 3600).toFixed(3) }}/h)
+                    <span v-if="stats && stats.price">
+                      (${{ ((stats.price * (market.jobPrice / 1e6)) * 3600).toFixed(3) }}/h)
                     </span>
                   </td>
                 </tr>
