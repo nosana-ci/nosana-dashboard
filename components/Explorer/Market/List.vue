@@ -23,11 +23,11 @@
               </div>
             </a>
           </li>
-          <li :class="{ 'is-active': tab === 'all' }">
-            <a @click="tab = 'all'" class="is-justify-content-flex-start">
-              ALL
+          <li :class="{ 'is-active': tab === 'other' }">
+            <a @click="tab = 'other'" class="is-justify-content-flex-start">
+              OTHER
               <div class="tooltip-container">
-                <span class="has-tooltip-arrow has-text-grey no-underline" data-tooltip="View all available GPUs on the Nosana Network, including community-created and private options.">
+                <span class="has-tooltip-arrow has-text-grey no-underline" data-tooltip="View other available GPUs on the Nosana Network that are not part of premium or community offerings.">
                   <img src="~/assets/img/icons/info.svg" class="info-icon" />
                 </span>
               </div>
@@ -93,21 +93,13 @@
               </td>
               <td class="py-3">
                 <span v-if="loadingStats">...</span>
-                <span v-else-if="stats && stats[0] && stats[0].price">
-                  <template v-if="select">
-                    ${{ ((stats[0].price * (parseInt(String(market.jobPrice)) / 1e6)) * 3600 * 1.1).toFixed(2) }}/h
-                  </template>
-                  <template v-else>
-                    {{ `${((parseInt(String(market.jobPrice)) / 1e6) * 3600 * 1.1).toFixed(3)} NOS/h` }}
-                    {{ `($${((stats[0].price * (parseInt(String(market.jobPrice)) / 1e6)) * 3600 * 1.1).toFixed(2)}/h)` }}
-                  </template>
-                </span>
                 <span v-else>
                   <template v-if="select">
-                    Price unavailable
+                    ${{ ((stats?.price * (parseInt(String(market.jobPrice)) / 1e6)) * 3600 * 1.1).toFixed(2) }}/h
                   </template>
                   <template v-else>
                     {{ `${((parseInt(String(market.jobPrice)) / 1e6) * 3600 * 1.1).toFixed(3)} NOS/h` }}
+                    {{ `($${((stats?.price * (parseInt(String(market.jobPrice)) / 1e6)) * 3600 * 1.1).toFixed(2)}/h)` }}
                   </template>
                 </span>
               </td>
@@ -194,7 +186,7 @@ const VRAM_CAPACITIES: Record<string, number> = {
 
 const { data: testgridMarkets, pending: loadingTestgridMarkets } = await useAPI('/api/markets', { default: () => [] });
 const { data: runningJobs, pending: loadingRunningJobs } = await useAPI('/api/jobs/running');
-const { data: stats, pending: loadingStats } = await useAPI('/api/stats');
+const { data: stats, pending: loadingStats } = await useAPI('/api/stats', { default: () => ({ price: 0 }) });
 const tab: Ref<string> = ref('premium');
 
 /**
@@ -239,7 +231,7 @@ const perPage: Ref<number> = ref(25);
 
 /**
  * Filters the list of markets by:
- * - The current tab (premium, community, all).
+ * - The current tab (premium, community, other).
  * - VRAM requirements, if set.
  */
 const filteredMarkets = computed(() => {
@@ -261,8 +253,9 @@ const filteredMarkets = computed(() => {
     if (tab.value === 'community' && marketInfo.type !== 'COMMUNITY') {
       return false;
     }
-    if (tab.value === 'all') {
-      return true;
+    if (tab.value === 'other') {
+      // Show markets that are not premium or community
+      return !marketInfo || (marketInfo.type !== 'PREMIUM' && marketInfo.type !== 'COMMUNITY');
     }
 
     return true;
@@ -291,8 +284,8 @@ const paginatedMarkets = computed(() => {
 
 // Helper to get hourly price for a market
 const getMarketHourlyPrice = (market: Market) => {
-  if (!stats.value?.[0]?.price) return Number.MAX_VALUE;
-  return (stats.value[0].price * (parseInt(String(market.jobPrice)) / 1e6)) * 3600;
+  if (!stats.value?.price) return Number.MAX_VALUE;
+  return (stats.value.price * (parseInt(String(market.jobPrice)) / 1e6)) * 3600;
 };
 
 // Helper to check if market has available GPUs
