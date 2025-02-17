@@ -176,7 +176,7 @@ import { UseTimeAgo } from '@vueuse/components';
 const { data: testgridMarkets, pending: loadingTestgridMarkets } = await useAPI('/api/markets', { default: () => [] });
 
 const { data: stats, pending: loadingStats } = await useAPI('/api/stats');
-const nosPrice = computed(() => stats.value?.[0]?.price);
+const nosPrice = computed(() => stats.value?.price);
 
 const { markets, getMarkets, loadingMarkets } = useMarkets();
 if (!markets.value) {
