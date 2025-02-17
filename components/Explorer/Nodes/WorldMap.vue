@@ -275,7 +275,7 @@ const chartOptions = computed(() => {
   };
 
   return {
-    backgroundColor: 'transparent',
+    backgroundColor: '#f9f9f9',  // Light gray tint for the sea
     tooltip: {
       trigger: 'item',
       formatter: tooltipFormatter,
@@ -291,7 +291,7 @@ const chartOptions = computed(() => {
         formatter: tooltipFormatter
       },
       itemStyle: {
-        areaColor: '#f3f3f3',
+        areaColor: '#e8e8e8',  // Lighter gray for unselected countries
         borderColor: '#ddd'
       },
       emphasis: {
@@ -318,7 +318,7 @@ const chartOptions = computed(() => {
         data: seriesData.value,
         symbolSize: (val: any) => {
           const nodeCount = Array.isArray(val) ? val[2] : 0;
-          const size = Math.sqrt(nodeCount) * 5;
+          const size = Math.sqrt(nodeCount) * 3;
           return size < 5 ? 5 : size;
         },
         itemStyle: {
