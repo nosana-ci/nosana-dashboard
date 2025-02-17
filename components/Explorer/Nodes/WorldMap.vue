@@ -263,25 +263,24 @@ const chartOptions = computed(() => {
     const data = seriesData.value.find(item => item.name === name);
     if (data) {
       return `
-        <div style="background-color: black; padding: 8px; border-radius: 4px;">
-          <div style="color: #888888;">${name}</div>
-          <div style="margin-top: 4px; display: flex; align-items: center;">
-            <img src="${NosanaLogo}" width="22" height="22" style="filter: brightness(0) saturate(100%) invert(89%) sepia(11%) saturate(6356%) hue-rotate(55deg) brightness(97%) contrast(108%);" />
-            <span style="color: white; font-size: 24px; margin-left: 8px;">${data.activeNodes}</span>
+        <div style="background-color: black; padding: 12px 20px; border-radius: 4px;">
+          <div style="color: #888888; margin-bottom: 0;">${name}</div>
+          <div style="margin-top: 0; display: flex; align-items: center;">
+            <img src="${NosanaLogo}" width="18" height="18" style="filter: brightness(0) saturate(100%) invert(89%) sepia(11%) saturate(6356%) hue-rotate(55deg) brightness(97%) contrast(108%);" />
+            <span style="color: white; font-size: 20px; margin-left: 8px;">${data.activeNodes}</span>
           </div>
         </div>
       `;
     }
-    // For countries without hosts, just show the name
     return `
-      <div style="background-color: black; padding: 8px; border-radius: 4px;">
+      <div style="background-color: black; padding: 12px 20px; border-radius: 4px;">
         <div style="color: #888888;">${name}</div>
       </div>
     `;
   };
 
   return {
-    backgroundColor: '#f9f9f9',  // Light gray tint for the sea
+    backgroundColor: '#f9f9f9',
     tooltip: {
       trigger: 'item',
       formatter: tooltipFormatter,
@@ -296,17 +295,21 @@ const chartOptions = computed(() => {
       scaleLimit: { min: 1, max: 10 },
       left: 0,
       right: 0,
-      top: 30,
-      bottom: 30,
-      aspectScale: 1.6,
-      boundingCoords: [[-180, 80], [180, -50]],
+      top: 0,
+      bottom: 0,
+      aspectScale: 0.75,  // Adjusted to show full globe
+      boundingCoords: [[-180, 105], [180, -75]],  // Show entire globe
+      projection: {
+        type: 'mercator',
+        center: [0, 0],  // Center at equator
+      },
       tooltip: {
         show: true,
         trigger: 'item',
         formatter: tooltipFormatter
       },
       itemStyle: {
-        areaColor: '#d4d4d4',  // Changed from #e8e8e8 to a darker gray
+        areaColor: '#d4d4d4',
         borderColor: '#ffffff'
       },
       emphasis: {
@@ -405,7 +408,7 @@ const handleMouseOut = (params: any) => {
   position: relative;
   width: 100%;
   height: 100%;
-  margin: 0 auto;
+  margin: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -414,7 +417,8 @@ const handleMouseOut = (params: any) => {
 .aspect-ratio-container {
   position: relative;
   width: 100%;
-  padding-top: 50%;
+  height: 100%;
+  padding-top: 0;
 }
 
 .aspect-ratio-container > * {
@@ -429,6 +433,7 @@ const handleMouseOut = (params: any) => {
   background: none;
   box-shadow: none;
   height: 100%;
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;

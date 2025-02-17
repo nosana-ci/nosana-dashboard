@@ -9,15 +9,20 @@
     <div class="content-wrapper">
       <!-- Top Left -->
       <div class="left-content">
-        <h1 class="title is-2 has-text-white">Login</h1>
-        <h2 class="subtitle is-4 has-text-white mb-6">Launch the dashboard</h2>
+        <h1 class="title is-2 has-text-black">Login</h1>
+        <h2 class="subtitle is-4 has-text-black mb-6">Launch the dashboard</h2>
         <button class="button is-primary is-large">Login to launch</button>
         
         <!-- Bottom Stats -->
         <div class="hosts-stats">
-          <div class="has-text-white is-size-5">
-            <span class="has-text-weight-bold is-size-3 mr-2">{{ totalHosts }}</span>
-            Online Hosts
+          <div class="stats-box">
+            <span class="icon mr-3">
+              <RocketIcon class="rocket-icon" />
+            </span>
+            <div class="stats-text">
+              <div class="has-text-grey is-size-6">Available GPUs</div>
+              <div class="has-text-weight-bold is-size-4">{{ totalHosts }}/{{ totalHosts + 50 }}</div>
+            </div>
           </div>
         </div>
       </div>
@@ -91,6 +96,7 @@ import { WalletMultiButton } from "solana-wallets-vue";
 import { useAPI } from '~/composables/useAPI';
 import { useSDK } from '~/composables/useSDK';
 import WorldMap from '~/components/Explorer/Nodes/WorldMap.vue';
+import RocketIcon from '~/assets/img/icons/rocket.svg?component';
 
 const { data: nodeStats } = await useAPI('/api/stats/nodes-country');
 const showSettingsModal = ref(false);
@@ -161,6 +167,24 @@ const setPrioFeeConfig = (level: keyof typeof PRIO_FEE_CONFIGS) => {
   :deep(.box) {
     width: 100%;
     height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  :deep(.world-map-container) {
+    width: 100%;
+    height: 100%;
+  }
+
+  :deep(.aspect-ratio-container) {
+    width: 100%;
+    height: 100%;
+  }
+
+  :deep(.v-chart) {
+    width: 100% !important;
+    height: 100% !important;
   }
 }
 
@@ -200,6 +224,28 @@ const setPrioFeeConfig = (level: keyof typeof PRIO_FEE_CONFIGS) => {
   margin-top: auto;
   padding-bottom: 2rem;
   pointer-events: auto;
+  z-index: 3;
+}
+
+.stats-box {
+  background: white;
+  border-radius: 8px;
+  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.stats-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.rocket-icon {
+  width: 28px;
+  height: 28px;
+  fill: #10E80C;
 }
 
 :deep(.button.is-primary) {
