@@ -91,8 +91,16 @@ const specialCases = {
   CN: 'China',
   HK: 'Hong Kong',
   TW: 'Taiwan',
-  TR: 'Turkey'
+  TR: 'Turkey',
+  NO: 'Norway',
+  VN: 'Vietnam'
 } as const;
+
+// Special coordinates for certain countries
+const specialCoordinates: Record<string, [number, number]> = {
+  Norway: [8, 62],  // Adjusted coordinates for Norway
+  Vietnam: [108, 15]  // Adjusted coordinates for Vietnam, moved lower right
+};
 
 function getEchartsCountryName(iso2: string): string {
   const name = countries.getName(iso2, 'en');
@@ -108,57 +116,112 @@ console.log('Available country names in ECharts map:', Array.from(echartsCountry
 
 // Convert country name to coordinates
 const getCountryCoordinates = (countryName: string): [number, number] | null => {
+  // First check if we have special coordinates for this country
+  if (countryName in specialCoordinates) {
+    return specialCoordinates[countryName];
+  }
+
   const feature = worldJson.features.find(f => f.properties.name === countryName);
   if (!feature) return null;
   
-  // First try to use the centroid coordinates if available
+  // First try to use the centroid coordinates if available and valid
   if (feature.properties.cp) {
-    return feature.properties.cp as [number, number];
+    const [lon, lat] = feature.properties.cp as [number, number];
+    // Verify the coordinates are within the country's bounds
+    if (isCoordinateWithinFeature(lon, lat, feature)) {
+      return [lon, lat];
+    }
   }
   
-  // If no centroid, calculate the center of the largest polygon
+  // Calculate centroid for the largest polygon
   if (feature.geometry && feature.geometry.coordinates && feature.geometry.coordinates.length > 0) {
     if (feature.geometry.type === 'Polygon') {
-      const coords = feature.geometry.coordinates[0] as [number, number][];
-      const lats = coords.map(c => c[1]);
-      const longs = coords.map(c => c[0]);
-      const centerLat = (Math.min(...lats) + Math.max(...lats)) / 2;
-      const centerLong = (Math.min(...longs) + Math.max(...longs)) / 2;
-      return [centerLong, centerLat];
+      return calculatePolygonCentroid(feature.geometry.coordinates[0] as [number, number][]);
     } else if (feature.geometry.type === 'MultiPolygon') {
-      // Find the largest polygon by area (approximated by number of coordinates)
+      // Find the largest polygon by area
       let largestPolygon: [number, number][] | null = null;
-      let maxSize = 0;
+      let maxArea = 0;
       
       for (const polygon of feature.geometry.coordinates) {
         if (!Array.isArray(polygon) || !Array.isArray(polygon[0])) continue;
-        const currentSize = polygon[0].length;
-        if (currentSize > maxSize) {
-          maxSize = currentSize;
-          largestPolygon = polygon[0] as [number, number][];
+        const coords = polygon[0] as [number, number][];
+        const area = calculatePolygonArea(coords);
+        if (area > maxArea) {
+          maxArea = area;
+          largestPolygon = coords;
         }
       }
       
-      if (!largestPolygon) return null;
-      
-      const lats = largestPolygon.map(c => c[1]);
-      const longs = largestPolygon.map(c => c[0]);
-      const centerLat = (Math.min(...lats) + Math.max(...lats)) / 2;
-      const centerLong = (Math.min(...longs) + Math.max(...longs)) / 2;
-      
-      // Handle cases where the largest polygon might cross the international date line
-      if (Math.abs(Math.max(...longs) - Math.min(...longs)) > 180) {
-        // Adjust coordinates that are on the other side of the date line
-        const adjustedLongs = longs.map(lon => lon < 0 ? lon + 360 : lon);
-        const centerLongAdjusted = (Math.min(...adjustedLongs) + Math.max(...adjustedLongs)) / 2;
-        return [centerLongAdjusted > 180 ? centerLongAdjusted - 360 : centerLongAdjusted, centerLat];
+      if (largestPolygon) {
+        return calculatePolygonCentroid(largestPolygon);
       }
-      
-      return [centerLong, centerLat];
     }
   }
   
   return null;
+};
+
+// Helper function to calculate polygon area using the shoelace formula
+const calculatePolygonArea = (coords: [number, number][]): number => {
+  let area = 0;
+  for (let i = 0; i < coords.length; i++) {
+    const j = (i + 1) % coords.length;
+    area += coords[i][0] * coords[j][1];
+    area -= coords[j][0] * coords[i][1];
+  }
+  return Math.abs(area) / 2;
+};
+
+// Helper function to calculate the true centroid of a polygon
+const calculatePolygonCentroid = (coords: [number, number][]): [number, number] => {
+  let area = 0;
+  let cx = 0;
+  let cy = 0;
+  
+  for (let i = 0; i < coords.length; i++) {
+    const j = (i + 1) % coords.length;
+    const factor = (coords[i][0] * coords[j][1] - coords[j][0] * coords[i][1]);
+    area += factor;
+    cx += (coords[i][0] + coords[j][0]) * factor;
+    cy += (coords[i][1] + coords[j][1]) * factor;
+  }
+  
+  area /= 2;
+  const areaFactor = 1 / (6 * area);
+  
+  return [
+    cx * areaFactor,
+    cy * areaFactor
+  ];
+};
+
+// Helper function to check if a point is within a feature
+const isCoordinateWithinFeature = (lon: number, lat: number, feature: any): boolean => {
+  if (feature.geometry.type === 'Polygon') {
+    return isPointInPolygon([lon, lat], feature.geometry.coordinates[0]);
+  } else if (feature.geometry.type === 'MultiPolygon') {
+    return feature.geometry.coordinates.some((polygon: any) => 
+      isPointInPolygon([lon, lat], polygon[0])
+    );
+  }
+  return false;
+};
+
+// Helper function to check if a point is within a polygon using ray casting algorithm
+const isPointInPolygon = (point: [number, number], polygon: [number, number][]): boolean => {
+  const [x, y] = point;
+  let inside = false;
+  
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const [xi, yi] = polygon[i];
+    const [xj, yj] = polygon[j];
+    
+    const intersect = ((yi > y) !== (yj > y))
+        && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+    if (intersect) inside = !inside;
+  }
+  
+  return inside;
 };
 
 const seriesData = computed(() => {
@@ -194,12 +257,19 @@ const chartOptions = computed(() => {
 
   const tooltipFormatter = (params: any) => {
     const { name } = params;
-    const data = seriesData.value.find(item => item.name === name) || params.data;
-    if (!data) return '';
+    const data = seriesData.value.find(item => item.name === name);
+    if (data) {
+      return `
+        <div class="has-text-left">
+          <strong>${name}</strong><br />
+          Hosts: ${data.activeNodes}
+        </div>
+      `;
+    }
+    // For countries without hosts, just show the name
     return `
       <div class="has-text-left">
-        <strong>${name}</strong><br />
-        Hosts: ${data.activeNodes || 0}
+        <strong>${name}</strong>
       </div>
     `;
   };
@@ -208,7 +278,8 @@ const chartOptions = computed(() => {
     backgroundColor: 'transparent',
     tooltip: {
       trigger: 'item',
-      formatter: tooltipFormatter
+      formatter: tooltipFormatter,
+      show: true
     },
     geo: {
       map: 'world',
