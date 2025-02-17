@@ -8,6 +8,14 @@
     </div>
     <div class="menu">
       <ul class="menu-list is-size-5">
+        <li>
+          <nuxt-link to="/login" active-class="is-active" @click="showMenu = false">
+            <span class="icon is-small mr-4">
+              <UserIcon />
+            </span>
+            <span>Login</span>
+          </nuxt-link>
+        </li>
         <li v-if="connected">
           <nuxt-link :to="`/account/${publicKey}`" active-class="is-active " class="is-primary"
             @click="showMenu = false">
