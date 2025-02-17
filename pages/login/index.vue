@@ -154,45 +154,13 @@ const setPrioFeeConfig = (level: keyof typeof PRIO_FEE_CONFIGS) => {
   right: 0;
   bottom: 0;
   z-index: 1;
-  pointer-events: all;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
   :deep(.box) {
-    background: none;
-    box-shadow: none;
-    padding: 0;
-    margin: 0;
+    width: 100%;
     height: 100%;
-    border-radius: 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-
-    .aspect-ratio-container {
-      padding-top: 0 !important;
-      height: 60%;
-      position: relative;
-      pointer-events: all;
-    }
-
-    .v-chart {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: all;
-    }
-  }
-
-  :deep(.title.is-5) {
-    display: none;
-  }
-
-  :deep(.world-map-container) {
-    height: 100%;
-    display: flex;
-    align-items: center;
-    pointer-events: all;
   }
 }
 
@@ -207,27 +175,31 @@ const setPrioFeeConfig = (level: keyof typeof PRIO_FEE_CONFIGS) => {
   display: flex;
   justify-content: space-between;
   pointer-events: none;
-
-  > * {
-    pointer-events: all;
-  }
 }
 
 .left-content {
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
+  pointer-events: auto;
 }
 
 .right-content {
   display: flex;
   align-items: flex-start;
   gap: 1rem;
+  pointer-events: none;
+
+  .button, :deep(.wallet-adapter-button) {
+    pointer-events: auto;
+    background-color: rgba(42, 42, 42, 0.8) !important;
+  }
 }
 
 .hosts-stats {
   margin-top: auto;
   padding-bottom: 2rem;
+  pointer-events: auto;
 }
 
 :deep(.button.is-primary) {

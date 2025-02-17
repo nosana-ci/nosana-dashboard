@@ -1,6 +1,5 @@
 <template>
   <div class="box p-0">
-    <h2 class="title is-5 p-4 mb-0">Global Host Distribution</h2>
     <div class="world-map-container">
       <div class="aspect-ratio-container">
         <v-chart
@@ -405,13 +404,17 @@ const handleMouseOut = (params: any) => {
 .world-map-container {
   position: relative;
   width: 100%;
+  height: 100%;
   margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .aspect-ratio-container {
   position: relative;
   width: 100%;
-  padding-top: 50%; /* Reduced from 65% to make it wider relative to height */
+  padding-top: 50%;
 }
 
 .aspect-ratio-container > * {
@@ -420,5 +423,17 @@ const handleMouseOut = (params: any) => {
   left: 0;
   width: 100%;
   height: 100%;
+}
+
+.box {
+  background: none;
+  box-shadow: none;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  border-radius: 0;
 }
 </style> 
