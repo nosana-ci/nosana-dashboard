@@ -285,14 +285,20 @@ const chartOptions = computed(() => {
       map: 'world',
       roam: true,
       scaleLimit: { min: 1, max: 10 },
+      left: 0,
+      right: 0,
+      top: 30,
+      bottom: 30,
+      aspectScale: 1.2,
+      boundingCoords: [[-180, 80], [180, -55]],
       tooltip: {
         show: true,
         trigger: 'item',
         formatter: tooltipFormatter
       },
       itemStyle: {
-        areaColor: '#e8e8e8',  // Lighter gray for unselected countries
-        borderColor: '#ddd'
+        areaColor: '#e8e8e8',
+        borderColor: '#ffffff'
       },
       emphasis: {
         itemStyle: {
@@ -361,7 +367,7 @@ const chartOptions = computed(() => {
 .aspect-ratio-container {
   position: relative;
   width: 100%;
-  padding-top: 56.25%; /* 16:9 Aspect Ratio */
+  padding-top: 65%; /* Increased from 45% to make it taller */
 }
 
 .aspect-ratio-container > * {
