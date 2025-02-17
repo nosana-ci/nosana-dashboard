@@ -35,9 +35,8 @@ import countries from 'i18n-iso-countries';
 import en from 'i18n-iso-countries/langs/en.json';
 import NosanaLogo from '~/assets/img/token_icons/nosana-nos-logo.svg';
 
-// Initialize the library with English translations
+// Initialize libraries
 countries.registerLocale(en);
-
 echarts.use([
   TitleComponent,
   TooltipComponent,
@@ -48,42 +47,12 @@ echarts.use([
   EffectScatterChart,
   CanvasRenderer
 ]);
-
-// Register world map with type assertion
 echarts.registerMap('world', worldJson as any);
 
+// Fetch node statistics
 const { data: nodeStats } = await useAPI('/api/stats/nodes-country');
 
-// Get all country names from the world map data for comparison
-const echartsCountryNames = new Set(worldJson.features.map(f => f.properties.name));
-
-// Debug function to check country name mappings
-const debugCountryMappings = () => {
-  if (!nodeStats.value || !Array.isArray(nodeStats.value)) return;
-  
-  console.log('Checking country mappings...');
-  nodeStats.value
-    .filter(item => item.country && 
-            typeof item.country === 'string' && 
-            item.country.length === 2 && 
-            countries.isValid(item.country))
-    .forEach(item => {
-      const iso2 = item.country;
-      const standardName = countries.getName(iso2, 'en');
-      if (!echartsCountryNames.has(standardName)) {
-        console.log(`Mismatch for ${iso2}:`, {
-          iso2,
-          standardName,
-          hasNodes: item.totalNodes > 0
-        });
-      }
-    });
-};
-
-// Run the debug check
-debugCountryMappings();
-
-// Special cases where ECharts map names differ from standard English names
+// Country name mappings for ECharts
 const specialCases = {
   US: 'United States',
   GB: 'United Kingdom',
@@ -99,27 +68,21 @@ const specialCases = {
   VN: 'Vietnam'
 } as const;
 
-// Special coordinates for certain countries
+// Special coordinates for countries that need adjustment
 const specialCoordinates: Record<string, [number, number]> = {
-  Norway: [8, 62],  // Adjusted coordinates for Norway
-  Vietnam: [108, 15]  // Adjusted coordinates for Vietnam, moved lower right
+  Norway: [8, 62],
+  Vietnam: [108, 15]
 };
 
+// Convert ISO2 country code to ECharts country name
 function getEchartsCountryName(iso2: string): string {
   const name = countries.getName(iso2, 'en');
   if (!name) return '';
-  if (iso2 in specialCases) {
-    return specialCases[iso2 as keyof typeof specialCases];
-  }
-  return name;
+  return specialCases[iso2 as keyof typeof specialCases] || name;
 }
 
-// Debug: Print all available country names in ECharts map
-console.log('Available country names in ECharts map:', Array.from(echartsCountryNames));
-
-// Convert country name to coordinates
+// Get coordinates for a country
 const getCountryCoordinates = (countryName: string): [number, number] | null => {
-  // First check if we have special coordinates for this country
   if (countryName in specialCoordinates) {
     return specialCoordinates[countryName];
   }
@@ -127,34 +90,18 @@ const getCountryCoordinates = (countryName: string): [number, number] | null => 
   const feature = worldJson.features.find(f => f.properties.name === countryName);
   if (!feature) return null;
   
-  // First try to use the centroid coordinates if available and valid
   if (feature.properties.cp) {
     const [lon, lat] = feature.properties.cp as [number, number];
-    // Verify the coordinates are within the country's bounds
     if (isCoordinateWithinFeature(lon, lat, feature)) {
       return [lon, lat];
     }
   }
   
-  // Calculate centroid for the largest polygon
-  if (feature.geometry && feature.geometry.coordinates && feature.geometry.coordinates.length > 0) {
+  if (feature.geometry?.coordinates?.length > 0) {
     if (feature.geometry.type === 'Polygon') {
       return calculatePolygonCentroid(feature.geometry.coordinates[0] as [number, number][]);
     } else if (feature.geometry.type === 'MultiPolygon') {
-      // Find the largest polygon by area
-      let largestPolygon: [number, number][] | null = null;
-      let maxArea = 0;
-      
-      for (const polygon of feature.geometry.coordinates) {
-        if (!Array.isArray(polygon) || !Array.isArray(polygon[0])) continue;
-        const coords = polygon[0] as [number, number][];
-        const area = calculatePolygonArea(coords);
-        if (area > maxArea) {
-          maxArea = area;
-          largestPolygon = coords;
-        }
-      }
-      
+      const largestPolygon = findLargestPolygon(feature.geometry.coordinates);
       if (largestPolygon) {
         return calculatePolygonCentroid(largestPolygon);
       }
@@ -164,7 +111,25 @@ const getCountryCoordinates = (countryName: string): [number, number] | null => 
   return null;
 };
 
-// Helper function to calculate polygon area using the shoelace formula
+// Helper function to find the largest polygon by area
+const findLargestPolygon = (polygons: any[]): [number, number][] | null => {
+  let largestPolygon: [number, number][] | null = null;
+  let maxArea = 0;
+  
+  for (const polygon of polygons) {
+    if (!Array.isArray(polygon) || !Array.isArray(polygon[0])) continue;
+    const coords = polygon[0] as [number, number][];
+    const area = calculatePolygonArea(coords);
+    if (area > maxArea) {
+      maxArea = area;
+      largestPolygon = coords;
+    }
+  }
+  
+  return largestPolygon;
+};
+
+// Calculate polygon area using the shoelace formula
 const calculatePolygonArea = (coords: [number, number][]): number => {
   let area = 0;
   for (let i = 0; i < coords.length; i++) {
@@ -175,7 +140,7 @@ const calculatePolygonArea = (coords: [number, number][]): number => {
   return Math.abs(area) / 2;
 };
 
-// Helper function to calculate the true centroid of a polygon
+// Calculate the centroid of a polygon
 const calculatePolygonCentroid = (coords: [number, number][]): [number, number] => {
   let area = 0;
   let cx = 0;
@@ -192,13 +157,10 @@ const calculatePolygonCentroid = (coords: [number, number][]): [number, number] 
   area /= 2;
   const areaFactor = 1 / (6 * area);
   
-  return [
-    cx * areaFactor,
-    cy * areaFactor
-  ];
+  return [cx * areaFactor, cy * areaFactor];
 };
 
-// Helper function to check if a point is within a feature
+// Check if a point is within a feature's boundaries
 const isCoordinateWithinFeature = (lon: number, lat: number, feature: any): boolean => {
   if (feature.geometry.type === 'Polygon') {
     return isPointInPolygon([lon, lat], feature.geometry.coordinates[0]);
@@ -210,7 +172,7 @@ const isCoordinateWithinFeature = (lon: number, lat: number, feature: any): bool
   return false;
 };
 
-// Helper function to check if a point is within a polygon using ray casting algorithm
+// Check if a point is within a polygon using ray casting
 const isPointInPolygon = (point: [number, number], polygon: [number, number][]): boolean => {
   const [x, y] = point;
   let inside = false;
@@ -227,6 +189,7 @@ const isPointInPolygon = (point: [number, number], polygon: [number, number][]):
   return inside;
 };
 
+// Prepare data for the map visualization
 const seriesData = computed(() => {
   if (!nodeStats.value || !Array.isArray(nodeStats.value)) return [];
   
@@ -236,7 +199,7 @@ const seriesData = computed(() => {
       typeof item.country === 'string' &&
       item.country.length === 2 &&
       countries.isValid(item.country) &&
-      item.activeNodes > 0  // Only include countries with active hosts
+      item.activeNodes > 0
     )
     .map(item => {
       const countryName = getEchartsCountryName(item.country);
@@ -245,7 +208,7 @@ const seriesData = computed(() => {
       
       return {
         name: countryName,
-        value: [...coords, item.activeNodes],  // No need for || 0 since we filtered for > 0
+        value: [...coords, item.activeNodes],
         totalNodes: item.totalNodes || 0,
         activeNodes: item.activeNodes,
         offlineNodes: item.offlineNodes || 0,
@@ -254,7 +217,7 @@ const seriesData = computed(() => {
     .filter(item => item !== null);
 });
 
-// UPDATED chartOptions for scatter-based styling
+// Chart configuration
 const chartOptions = computed(() => {
   if (!seriesData.value.length) return null;
 
@@ -297,11 +260,11 @@ const chartOptions = computed(() => {
       right: 0,
       top: 0,
       bottom: 0,
-      aspectScale: 0.75,  // Adjusted to show full globe
-      boundingCoords: [[-180, 105], [180, -75]],  // Show entire globe
+      aspectScale: 0.75,
+      boundingCoords: [[-180, 105], [180, -75]],
       projection: {
         type: 'mercator',
-        center: [0, 0],  // Center at equator
+        center: [0, 0],
       },
       tooltip: {
         show: true,
@@ -376,29 +339,24 @@ const chartOptions = computed(() => {
 
 const chartRef = ref();
 
+// Event handlers for map interactions
 const handleMouseOver = (params: any) => {
   if (params.componentSubType === 'scatter') {
-    const chart = chartRef.value?.chart;
-    if (chart) {
-      chart.dispatchAction({
-        type: 'highlight',
-        geoIndex: 0,
-        name: params.name
-      });
-    }
+    chartRef.value?.chart?.dispatchAction({
+      type: 'highlight',
+      geoIndex: 0,
+      name: params.name
+    });
   }
 };
 
 const handleMouseOut = (params: any) => {
   if (params.componentSubType === 'scatter') {
-    const chart = chartRef.value?.chart;
-    if (chart) {
-      chart.dispatchAction({
-        type: 'downplay',
-        geoIndex: 0,
-        name: params.name
-      });
-    }
+    chartRef.value?.chart?.dispatchAction({
+      type: 'downplay',
+      geoIndex: 0,
+      name: params.name
+    });
   }
 };
 </script>
