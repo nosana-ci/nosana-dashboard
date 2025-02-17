@@ -307,7 +307,7 @@ const chartOptions = computed(() => {
         formatter: tooltipFormatter
       },
       itemStyle: {
-        areaColor: '#e8e8e8',
+        areaColor: '#d4d4d4',  // Changed from #e8e8e8 to a darker gray
         borderColor: '#ffffff'
       },
       emphasis: {
