@@ -5,7 +5,10 @@
       <div class="aspect-ratio-container">
         <v-chart
           v-if="chartOptions"
+          ref="chartRef"
           :option="chartOptions"
+          @mouseover="handleMouseOver"
+          @mouseout="handleMouseOut"
           :autoresize="true"
           style="width: 100%; height: 100%;"
         />
@@ -16,7 +19,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useAPI } from '~/composables/useAPI';
 import VChart from 'vue-echarts';
 import * as echarts from 'echarts/core';
@@ -326,7 +329,7 @@ const chartOptions = computed(() => {
     series: [
       {
         name: 'Hosts',
-        type: 'effectScatter',
+        type: 'scatter',
         coordinateSystem: 'geo',
         data: seriesData.value,
         symbolSize: (val: any) => {
@@ -335,34 +338,67 @@ const chartOptions = computed(() => {
           return size < 5 ? 5 : size;
         },
         itemStyle: {
-          color: '#10E80C'
+          color: '#10E80C',
+          borderColor: '#10E80C',
+          borderWidth: 2,
+          shadowBlur: 10,
+          shadowColor: '#10E80C'
         },
-        rippleEffect: {
-          period: 4,
-          scale: 3,
-          brushType: 'stroke'
-        },
-        showEffectOn: 'render',
-        silent: true,
+        silent: false,
         emphasis: {
-          disabled: true,
           scale: false,
-          focus: 'none',
           itemStyle: {
-            opacity: 1
+            opacity: 0,
+            shadowBlur: 0
           }
         },
+        focus: 'none',
+        select: {
+          disabled: true
+        },
+        selectedMode: false,
         label: {
           show: false
         },
         hoverAnimation: false,
         tooltip: {
-          show: false
-        }
+          show: true,
+          formatter: tooltipFormatter
+        },
+        triggerEvent: true,
+        geoIndex: 0
       }
     ]
   };
 });
+
+const chartRef = ref();
+
+const handleMouseOver = (params: any) => {
+  if (params.componentSubType === 'scatter') {
+    const chart = chartRef.value?.chart;
+    if (chart) {
+      chart.dispatchAction({
+        type: 'highlight',
+        geoIndex: 0,
+        name: params.name
+      });
+    }
+  }
+};
+
+const handleMouseOut = (params: any) => {
+  if (params.componentSubType === 'scatter') {
+    const chart = chartRef.value?.chart;
+    if (chart) {
+      chart.dispatchAction({
+        type: 'downplay',
+        geoIndex: 0,
+        name: params.name
+      });
+    }
+  }
+};
 </script>
 
 <style scoped>
