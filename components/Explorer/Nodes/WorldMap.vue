@@ -31,6 +31,7 @@ import { CanvasRenderer } from 'echarts/renderers';
 import worldJson from '~/assets/world.json';
 import countries from 'i18n-iso-countries';
 import en from 'i18n-iso-countries/langs/en.json';
+import NosanaLogo from '~/assets/img/token_icons/nosana-nos-logo.svg';
 
 // Initialize the library with English translations
 countries.registerLocale(en);
@@ -260,16 +261,19 @@ const chartOptions = computed(() => {
     const data = seriesData.value.find(item => item.name === name);
     if (data) {
       return `
-        <div class="has-text-left">
-          <strong>${name}</strong><br />
-          Hosts: ${data.activeNodes}
+        <div style="background-color: black; padding: 8px; border-radius: 4px;">
+          <div style="color: #888888;">${name}</div>
+          <div style="margin-top: 4px; display: flex; align-items: center;">
+            <img src="${NosanaLogo}" width="22" height="22" style="filter: brightness(0) saturate(100%) invert(89%) sepia(11%) saturate(6356%) hue-rotate(55deg) brightness(97%) contrast(108%);" />
+            <span style="color: white; font-size: 24px; margin-left: 8px;">${data.activeNodes}</span>
+          </div>
         </div>
       `;
     }
     // For countries without hosts, just show the name
     return `
-      <div class="has-text-left">
-        <strong>${name}</strong>
+      <div style="background-color: black; padding: 8px; border-radius: 4px;">
+        <div style="color: #888888;">${name}</div>
       </div>
     `;
   };
@@ -279,7 +283,10 @@ const chartOptions = computed(() => {
     tooltip: {
       trigger: 'item',
       formatter: tooltipFormatter,
-      show: true
+      show: true,
+      backgroundColor: 'transparent',
+      borderWidth: 0,
+      padding: 0
     },
     geo: {
       map: 'world',
@@ -289,7 +296,7 @@ const chartOptions = computed(() => {
       right: 0,
       top: 30,
       bottom: 30,
-      aspectScale: 1.2,
+      aspectScale: 1.6,
       boundingCoords: [[-180, 80], [180, -55]],
       tooltip: {
         show: true,
@@ -319,7 +326,7 @@ const chartOptions = computed(() => {
     series: [
       {
         name: 'Hosts',
-        type: 'scatter',
+        type: 'effectScatter',
         coordinateSystem: 'geo',
         data: seriesData.value,
         symbolSize: (val: any) => {
@@ -330,16 +337,17 @@ const chartOptions = computed(() => {
         itemStyle: {
           color: '#10E80C'
         },
+        rippleEffect: {
+          period: 4,
+          scale: 3,
+          brushType: 'stroke'
+        },
+        showEffectOn: 'render',
         silent: true,
         emphasis: {
           disabled: true,
           scale: false,
           focus: 'none',
-          itemStyle: {
-            opacity: 1
-          }
-        },
-        blur: {
           itemStyle: {
             opacity: 1
           }
