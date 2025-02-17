@@ -297,7 +297,7 @@ const chartOptions = computed(() => {
       top: 30,
       bottom: 30,
       aspectScale: 1.6,
-      boundingCoords: [[-180, 80], [180, -55]],
+      boundingCoords: [[-180, 80], [180, -50]],
       tooltip: {
         show: true,
         trigger: 'item',
@@ -375,7 +375,7 @@ const chartOptions = computed(() => {
 .aspect-ratio-container {
   position: relative;
   width: 100%;
-  padding-top: 65%; /* Increased from 45% to make it taller */
+  padding-top: 50%; /* Reduced from 65% to make it wider relative to height */
 }
 
 .aspect-ratio-container > * {
