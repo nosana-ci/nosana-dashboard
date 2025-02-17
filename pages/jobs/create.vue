@@ -1110,7 +1110,7 @@ const submitJob = async () => {
     const ipfsHash = await nosana.value.ipfs.pin(jobDefinition.value);
     const response = await nosana.value.jobs.list(
       ipfsHash,
-      jobTimeout.value * 60,
+      jobTimeout.value * 3600,
       market.value!.address
     );
     toast.success(`Successfully created deployment ${response.job}`);
