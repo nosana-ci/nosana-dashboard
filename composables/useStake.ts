@@ -12,14 +12,22 @@ export function useStake(publicKey: any) {
     async () => {
       errorStake.value = null;
       if (publicKey.value) {
-        const stakeAccount = await nosana.value.stake.get(publicKey.value);
-        return {
-          xnos: stakeAccount.xnos.toString(),
-          address: stakeAccount.authority.toString(),
-          time_unstake: stakeAccount.timeUnstake.toString(),
-          amount: stakeAccount.amount.toString(),
-          duration: stakeAccount.duration.toString(),
-        };
+        try {
+          const stakeAccount = await nosana.value.stake.get(publicKey.value);
+          return {
+            xnos: stakeAccount.xnos.toString(),
+            address: stakeAccount.authority.toString(),
+            time_unstake: stakeAccount.timeUnstake.toString(),
+            amount: stakeAccount.amount.toString(),
+            duration: stakeAccount.duration.toString(),
+          };
+        } catch (error: any) {
+          if (!error.message.includes("Account does not exist")) {
+            throw new Error(error.message);
+          } else {
+            return null;
+          }
+        }
       }
     },
     {
