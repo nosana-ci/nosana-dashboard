@@ -199,7 +199,7 @@ const seriesData = computed(() => {
       typeof item.country === 'string' &&
       item.country.length === 2 &&
       countries.isValid(item.country) &&
-      item.activeNodes > 0
+      (item.running + item.queue) > 0  // Check if there are any active nodes (running + queue)
     )
     .map(item => {
       const countryName = getEchartsCountryName(item.country);
@@ -208,10 +208,11 @@ const seriesData = computed(() => {
       
       return {
         name: countryName,
-        value: [...coords, item.activeNodes],
-        totalNodes: item.totalNodes || 0,
-        activeNodes: item.activeNodes,
-        offlineNodes: item.offlineNodes || 0,
+        value: [...coords, item.running + item.queue], // Use sum of running and queue for visualization
+        total: item.total,
+        running: item.running,
+        queue: item.queue,
+        offline: item.offline
       };
     })
     .filter(item => item !== null);
@@ -228,9 +229,18 @@ const chartOptions = computed(() => {
       return `
         <div style="background-color: black; padding: 12px 20px; border-radius: 4px;">
           <div style="color: #888888; margin-bottom: 0;">${name}</div>
-          <div style="margin-top: 0; display: flex; align-items: center;">
-            <img src="${NosanaLogo}" width="18" height="18" style="filter: brightness(0) saturate(100%) invert(89%) sepia(11%) saturate(6356%) hue-rotate(55deg) brightness(97%) contrast(108%);" />
-            <span style="color: white; font-size: 20px; margin-left: 8px;">${data.activeNodes}</span>
+          <div style="margin-top: 4px; display: flex; flex-direction: column; gap: 4px;">
+            <div style="display: flex; align-items: center;">
+              <img src="${NosanaLogo}" width="18" height="18" style="filter: brightness(0) saturate(100%) invert(89%) sepia(11%) saturate(6356%) hue-rotate(55deg) brightness(97%) contrast(108%);" />
+              <span style="color: white; font-size: 20px; margin-left: 8px;">${data.running + data.queue}</span>
+              <span style="color: #888888; margin-left: 8px;">active nodes</span>
+            </div>
+            <div style="color: #10E80C; font-size: 14px;">
+              ${data.running} running • ${data.queue} queued
+            </div>
+            <div style="color: #888888; font-size: 14px;">
+              ${data.offline} offline
+            </div>
           </div>
         </div>
       `;

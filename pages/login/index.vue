@@ -21,7 +21,7 @@
             </span>
             <div class="stats-text">
               <div class="has-text-grey is-size-6">Available GPUs</div>
-              <div class="has-text-weight-bold is-size-4">{{ totalHosts }}/{{ totalHosts + 50 }}</div>
+              <div class="has-text-weight-bold is-size-4">{{ totalHosts }}/{{ totalCapacity }}</div>
             </div>
           </div>
         </div>
@@ -105,7 +105,13 @@ const { prioFee } = useSDK();
 // Calculate total hosts
 const totalHosts = computed(() => {
   if (!nodeStats.value || !Array.isArray(nodeStats.value)) return 0;
-  return nodeStats.value.reduce((sum, item) => sum + (item.activeNodes || 0), 0);
+  return nodeStats.value.reduce((sum, item) => sum + (item.running + item.queue || 0), 0);
+});
+
+// Calculate total capacity (including offline nodes)
+const totalCapacity = computed(() => {
+  if (!nodeStats.value || !Array.isArray(nodeStats.value)) return 0;
+  return nodeStats.value.reduce((sum, item) => sum + (item.total || 0), 0);
 });
 
 // Priority fee configuration mapping

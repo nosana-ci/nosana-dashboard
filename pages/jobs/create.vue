@@ -556,8 +556,8 @@
                 <td>Auto-shutdown timeout <span class="has-text-danger">*</span></td>
                 <td>
                   <div class="is-flex is-align-items-center">
-                    <input v-model.number="jobTimeout" class="input" style="width: 100px" type="number" min="1"
-                      placeholder="Hours" required>
+                    <input v-model.number="jobTimeout" class="input" style="width: 100px" type="number"
+                      step="any" placeholder="Hours" required>
                     <span class="ml-2">hours</span>
                   </div>
                 </td>
