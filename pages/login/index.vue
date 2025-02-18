@@ -20,8 +20,8 @@
               <RocketIcon class="rocket-icon" />
             </span>
             <div class="stats-text">
-              <div class="has-text-grey is-size-6">Available GPUs</div>
-              <div class="has-text-weight-bold is-size-4">{{ totalHosts }}/{{ totalCapacity }}</div>
+              <div class="has-text-grey is-size-6">GPUs in Queue</div>
+              <div class="has-text-weight-bold is-size-4">{{ queuedHosts }}/{{ activeHosts }}</div>
             </div>
           </div>
         </div>
@@ -98,20 +98,63 @@ import { useSDK } from '~/composables/useSDK';
 import WorldMap from '~/components/Explorer/Nodes/WorldMap.vue';
 import RocketIcon from '~/assets/img/icons/rocket.svg?component';
 
-const { data: nodeStats } = await useAPI('/api/stats/nodes-country');
+const { data: nodeStatsResponse } = await useAPI('/api/stats/nodes-country');
+console.log('Raw API Response:', JSON.stringify(nodeStatsResponse.value, null, 2));
 const showSettingsModal = ref(false);
 const { prioFee } = useSDK();
 
-// Calculate total hosts
-const totalHosts = computed(() => {
-  if (!nodeStats.value || !Array.isArray(nodeStats.value)) return 0;
-  return nodeStats.value.reduce((sum, item) => sum + (item.running + item.queue || 0), 0);
+// Calculate queued hosts
+const queuedHosts = computed(() => {
+  if (!nodeStatsResponse.value?.data || !Array.isArray(nodeStatsResponse.value.data)) return 0;
+  
+  console.log('=== Analyzing Queued Nodes ===');
+  console.log('API reported total queued:', nodeStatsResponse.value.totals?.totalQueued);
+  
+  let total = 0;
+  // Group by country and sum up queues
+  nodeStatsResponse.value.data.forEach(item => {
+    if (item.queue > 0) {
+      const country = item.country || 'unknown';
+      console.log(`Country: ${country}, Queue: ${item.queue}`);
+      total += item.queue;
+    }
+  });
+  
+  console.log('Our calculated total queued:', total);
+  
+  // Use API's total if available, otherwise use our calculation
+  return nodeStatsResponse.value.totals?.totalQueued ?? total;
 });
 
-// Calculate total capacity (including offline nodes)
-const totalCapacity = computed(() => {
-  if (!nodeStats.value || !Array.isArray(nodeStats.value)) return 0;
-  return nodeStats.value.reduce((sum, item) => sum + (item.total || 0), 0);
+// Calculate active hosts (queued + running)
+const activeHosts = computed(() => {
+  if (!nodeStatsResponse.value?.data || !Array.isArray(nodeStatsResponse.value.data)) return 0;
+  
+  console.log('=== Analyzing Active Nodes ===');
+  console.log('API reported totals:', {
+    running: nodeStatsResponse.value.totals?.totalRunning,
+    queued: nodeStatsResponse.value.totals?.totalQueued
+  });
+  
+  let totalRunning = 0;
+  let totalQueued = 0;
+  
+  nodeStatsResponse.value.data.forEach(item => {
+    totalRunning += item.running || 0;
+    totalQueued += item.queue || 0;
+  });
+  
+  console.log('Our calculated totals:', {
+    running: totalRunning,
+    queued: totalQueued,
+    active: totalRunning + totalQueued
+  });
+  
+  // Use API's totals if available, otherwise use our calculations
+  if (nodeStatsResponse.value.totals) {
+    return nodeStatsResponse.value.totals.totalRunning + nodeStatsResponse.value.totals.totalQueued;
+  }
+  return totalRunning + totalQueued;
 });
 
 // Priority fee configuration mapping

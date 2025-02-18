@@ -50,7 +50,7 @@ echarts.use([
 echarts.registerMap('world', worldJson as any);
 
 // Fetch node statistics
-const { data: nodeStats } = await useAPI('/api/stats/nodes-country');
+const { data: nodeStatsResponse } = await useAPI('/api/stats/nodes-country');
 
 // Country name mappings for ECharts
 const specialCases = {
@@ -191,9 +191,9 @@ const isPointInPolygon = (point: [number, number], polygon: [number, number][]):
 
 // Prepare data for the map visualization
 const seriesData = computed(() => {
-  if (!nodeStats.value || !Array.isArray(nodeStats.value)) return [];
+  if (!nodeStatsResponse.value?.data || !Array.isArray(nodeStatsResponse.value.data)) return [];
   
-  return nodeStats.value
+  return nodeStatsResponse.value.data
     .filter(item =>
       item.country &&
       typeof item.country === 'string' &&
@@ -233,13 +233,10 @@ const chartOptions = computed(() => {
             <div style="display: flex; align-items: center;">
               <img src="${NosanaLogo}" width="18" height="18" style="filter: brightness(0) saturate(100%) invert(89%) sepia(11%) saturate(6356%) hue-rotate(55deg) brightness(97%) contrast(108%);" />
               <span style="color: white; font-size: 20px; margin-left: 8px;">${data.running + data.queue}</span>
-              <span style="color: #888888; margin-left: 8px;">active nodes</span>
+              <span style="color: #888888; margin-left: 8px;">active hosts</span>
             </div>
             <div style="color: #10E80C; font-size: 14px;">
               ${data.running} running • ${data.queue} queued
-            </div>
-            <div style="color: #888888; font-size: 14px;">
-              ${data.offline} offline
             </div>
           </div>
         </div>
