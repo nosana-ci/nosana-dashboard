@@ -39,9 +39,11 @@
             </svg>
           </span>
         </button>
-        <ClientOnly>
-          <wallet-multi-button :dark="true" />
-        </ClientOnly>
+        <div class="wallet-container">
+          <ClientOnly>
+            <wallet-multi-button :dark="true" />
+          </ClientOnly>
+        </div>
       </div>
     </div>
 
@@ -178,7 +180,15 @@ const setPrioFeeConfig = (level: keyof typeof PRIO_FEE_CONFIGS) => {
   width: calc(100vw - 280px); // Full width minus sidebar
   height: 100vh;
   overflow: hidden;
-  background-color: #1a1a1a;
+  background-color: #1a1a1a !important;
+
+  :deep(.title) {
+    color: black !important;
+  }
+
+  :deep(.subtitle) {
+    color: black !important;
+  }
 }
 
 .world-map-wrapper {
@@ -233,7 +243,18 @@ const setPrioFeeConfig = (level: keyof typeof PRIO_FEE_CONFIGS) => {
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  pointer-events: auto;
+  align-items: flex-start;
+  pointer-events: none;
+
+  .title, .subtitle {
+    pointer-events: none;
+  }
+
+  .button {
+    pointer-events: auto;
+    position: relative;
+    z-index: 3;
+  }
 }
 
 .right-content {
@@ -242,9 +263,32 @@ const setPrioFeeConfig = (level: keyof typeof PRIO_FEE_CONFIGS) => {
   gap: 1rem;
   pointer-events: none;
 
-  .button, :deep(.wallet-adapter-button) {
+  .button {
     pointer-events: auto;
     background-color: rgba(42, 42, 42, 0.8) !important;
+    position: relative;
+    z-index: 3;
+  }
+}
+
+.wallet-container {
+  pointer-events: auto;
+  position: relative;
+  z-index: 999;
+
+  :deep(.wallet-adapter-button) {
+    background-color: rgba(42, 42, 42, 0.8) !important;
+    color: white !important;
+  }
+
+  :deep(.wallet-adapter-dropdown) {
+    position: relative;
+  }
+
+  :deep(.wallet-adapter-dropdown-list) {
+    position: absolute;
+    top: 100%;
+    right: 0;
   }
 }
 
@@ -252,22 +296,25 @@ const setPrioFeeConfig = (level: keyof typeof PRIO_FEE_CONFIGS) => {
   margin-top: auto;
   padding-bottom: 2rem;
   pointer-events: auto;
+  position: relative;
   z-index: 3;
 }
 
 .stats-box {
-  background: white;
+  background: white !important;
   border-radius: 8px;
   padding: 1rem 1.5rem;
   display: flex;
   align-items: center;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
 
-.stats-text {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  .has-text-grey {
+    color: #7a7a7a !important;
+  }
+
+  .has-text-weight-bold {
+    color: black !important;
+  }
 }
 
 .rocket-icon {
@@ -277,23 +324,24 @@ const setPrioFeeConfig = (level: keyof typeof PRIO_FEE_CONFIGS) => {
 }
 
 :deep(.button.is-primary) {
-  background-color: #10E80C;
-  border-color: transparent;
-  color: #1a1a1a;
-  font-weight: bold;
+  background-color: #10E80C !important;
+  border-color: transparent !important;
+  color: #1a1a1a !important;
+  font-weight: bold !important;
 
   &:hover {
-    background-color: darken(#10E80C, 5%);
+    background-color: darken(#10E80C, 5%) !important;
+  }
+
+  &.is-outlined {
+    background-color: transparent !important;
+    border-color: #10E80C !important;
+    color: #10E80C !important;
   }
 }
 
-:deep(.wallet-adapter-button) {
-  background-color: #2a2a2a !important;
-  color: white !important;
-}
-
 .button.is-text {
-  color: white;
+  color: white !important;
 }
 
 @include touch {
