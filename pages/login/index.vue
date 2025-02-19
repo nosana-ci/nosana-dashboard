@@ -102,6 +102,17 @@ const { data: nodeStatsResponse } = await useAPI('/api/stats/nodes-country');
 const showSettingsModal = ref(false);
 const { prioFee } = useSDK();
 
+// Get running nodes from jobs API
+const { data: runningNodesData } = useAPI('/api/jobs/running', {
+  transform: (data: any) => {
+    if (!data) return { total: 0 };
+    return {
+      total: Object.values(data).reduce((sum: number, market: any) => sum + (market.running || 0), 0)
+    };
+  },
+  default: () => ({ total: 0 }),
+});
+
 // Calculate queued hosts
 const queuedHosts = computed(() => {
   if (!nodeStatsResponse.value?.data || !Array.isArray(nodeStatsResponse.value.data)) return 0;
@@ -118,23 +129,11 @@ const queuedHosts = computed(() => {
   return nodeStatsResponse.value.totals?.totalQueued ?? total;
 });
 
-// Calculate active hosts (queued + running)
+// Calculate active hosts using running nodes from jobs API
 const activeHosts = computed(() => {
-  if (!nodeStatsResponse.value?.data || !Array.isArray(nodeStatsResponse.value.data)) return 0;
-  
-  let totalRunning = 0;
-  let totalQueued = 0;
-  
-  nodeStatsResponse.value.data.forEach(item => {
-    totalRunning += item.running || 0;
-    totalQueued += item.queue || 0;
-  });
-  
-  // Use API's totals if available, otherwise use our calculations
-  if (nodeStatsResponse.value.totals) {
-    return nodeStatsResponse.value.totals.totalRunning + nodeStatsResponse.value.totals.totalQueued;
-  }
-  return totalRunning + totalQueued;
+  const runningCount = runningNodesData.value?.total || 0;
+  const queuedCount = queuedHosts.value;
+  return runningCount + queuedCount;
 });
 
 // Priority fee configuration mapping
