@@ -350,4 +350,39 @@ const setPrioFeeConfig = (level: keyof typeof PRIO_FEE_CONFIGS) => {
     width: 100vw;
   }
 }
+
+.modal-content {
+  position: relative;
+  z-index: 2;
+
+  .box {
+    .title,
+    .subtitle,
+    .has-text-weight-bold,
+    p,
+    span,
+    h2,
+    h3 {
+      color: black !important;
+    }
+  }
+}
+
+.dark-mode {
+  .modal-content {
+    .box {
+      background-color: $black-bis;
+
+      .title,
+      .subtitle,
+      .has-text-weight-bold,
+      p,
+      span,
+      h2,
+      h3 {
+        color: white !important;
+      }
+    }
+  }
+}
 </style> 
