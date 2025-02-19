@@ -99,7 +99,6 @@ import WorldMap from '~/components/Explorer/Nodes/WorldMap.vue';
 import RocketIcon from '~/assets/img/icons/rocket.svg?component';
 
 const { data: nodeStatsResponse } = await useAPI('/api/stats/nodes-country');
-console.log('Raw API Response:', JSON.stringify(nodeStatsResponse.value, null, 2));
 const showSettingsModal = ref(false);
 const { prioFee } = useSDK();
 
@@ -107,20 +106,13 @@ const { prioFee } = useSDK();
 const queuedHosts = computed(() => {
   if (!nodeStatsResponse.value?.data || !Array.isArray(nodeStatsResponse.value.data)) return 0;
   
-  console.log('=== Analyzing Queued Nodes ===');
-  console.log('API reported total queued:', nodeStatsResponse.value.totals?.totalQueued);
-  
   let total = 0;
   // Group by country and sum up queues
   nodeStatsResponse.value.data.forEach(item => {
     if (item.queue > 0) {
-      const country = item.country || 'unknown';
-      console.log(`Country: ${country}, Queue: ${item.queue}`);
       total += item.queue;
     }
   });
-  
-  console.log('Our calculated total queued:', total);
   
   // Use API's total if available, otherwise use our calculation
   return nodeStatsResponse.value.totals?.totalQueued ?? total;
@@ -130,24 +122,12 @@ const queuedHosts = computed(() => {
 const activeHosts = computed(() => {
   if (!nodeStatsResponse.value?.data || !Array.isArray(nodeStatsResponse.value.data)) return 0;
   
-  console.log('=== Analyzing Active Nodes ===');
-  console.log('API reported totals:', {
-    running: nodeStatsResponse.value.totals?.totalRunning,
-    queued: nodeStatsResponse.value.totals?.totalQueued
-  });
-  
   let totalRunning = 0;
   let totalQueued = 0;
   
   nodeStatsResponse.value.data.forEach(item => {
     totalRunning += item.running || 0;
     totalQueued += item.queue || 0;
-  });
-  
-  console.log('Our calculated totals:', {
-    running: totalRunning,
-    queued: totalQueued,
-    active: totalRunning + totalQueued
   });
   
   // Use API's totals if available, otherwise use our calculations
