@@ -20,7 +20,7 @@
               <RocketIcon class="rocket-icon" />
             </span>
             <div class="stats-text">
-              <div class="has-text-grey is-size-6">GPUs in Queue</div>
+              <div class="has-text-grey is-size-6">GPUs Available</div>
               <div class="has-text-weight-bold is-size-4">{{ queuedHosts }}/{{ activeHosts }}</div>
             </div>
           </div>
