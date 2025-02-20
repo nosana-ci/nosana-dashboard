@@ -813,7 +813,6 @@ const route = useRoute();
 const router = useRouter();
 const templateId: Ref<LocationQueryValue> = ref(route.query.templateId as LocationQueryValue);
 
-// Create a computed for the unique localStorage key
 const localStorageKey = computed(() => {
   if (route.query.fromRepost) {
     const address = route.query.jobAddress || 'repost';
@@ -823,6 +822,34 @@ const localStorageKey = computed(() => {
     return `job-definition-${route.query.randKey}`;
   }
   return 'job-definition-default';
+});
+
+interface StoredJobDefinition {
+  jobDefinition: JobDefinition;
+  t: number;
+}
+
+// Use a single localStorage object that includes a nested jobDefinition and a timestamp
+const localStorageData = useLocalStorage<StoredJobDefinition>(localStorageKey, {
+  jobDefinition: emptyJobDefinition,
+  t: Date.now(),
+});
+
+// Point jobDefinition at the nested value
+const jobDefinition = ref<JobDefinition>(localStorageData.value.jobDefinition);
+
+// Keep them in sync and update timestamp
+watch(jobDefinition, (newValue) => {
+  if (newValue === "") {
+    nextTick(() => {
+      jobDefinition.value = template.value ? template.value.jobDefinition : emptyJobDefinition;
+    });
+  } else {
+    localStorageData.value = {
+      jobDefinition: newValue,
+      t: Date.now()
+    };
+  }
 });
 
 const template: ComputedRef<Template | undefined> = computed(() => {
@@ -852,9 +879,6 @@ const market: Ref<Market | null> = ref(null);
 const loading: Ref<boolean> = ref(false);
 const { connected, publicKey } = useWallet();
 const { balance, refreshBalance, loadingBalance, errorBalance } = useStake(publicKey);
-
-// Use the computed localStorageKey for jobDefinition storage
-const jobDefinition: Ref<JobDefinition> = useLocalStorage(localStorageKey, emptyJobDefinition)
 
 const envName: Ref<string[]> = ref([]);
 const resultsName: Ref<string[]> = ref([]);
@@ -944,16 +968,6 @@ watch(() => template.value, async (newValue: Template | undefined) => {
     jobDefinition.value = newValue.jobDefinition;
   }
 })
-watch(() => jobDefinition.value, async (newValue: any) => {
-  if (newValue === "") {
-    await nextTick();
-    jobDefinition.value = template.value ? template.value.jobDefinition : emptyJobDefinition;
-  }
-  // Add timestamp to stored job definition
-  if (newValue && typeof newValue === 'object') {
-    (newValue as any)._t = Date.now();
-  }
-});
 
 const { open: openFile, reset: resetFile, onChange: onFileUpload } = useFileDialog({
   accept: 'application/json', // Set to accept only json files
@@ -1271,9 +1285,9 @@ onMounted(() => {
         try {
           const item = localStorage.getItem(key);
           if (item) {
-            const data = JSON.parse(item);
+            const data = JSON.parse(item) as StoredJobDefinition;
             // If the item is newer than 24 hours, keep it
-            if (data._t && data._t > oneDayAgo) {
+            if (data.t && data.t > oneDayAgo) {
               keysToKeep.add(key);
             }
           }
