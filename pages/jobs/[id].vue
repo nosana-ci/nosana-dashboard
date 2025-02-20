@@ -188,6 +188,12 @@ function getStateNumber(stateVal: string | number): number {
 function isRunning(stateVal: string | number): boolean {
   return getStateNumber(stateVal) === 1;
 }
+
+function isActive(stateVal: string | number): boolean {
+  const state = getStateNumber(stateVal);
+  return state === 0 || state === 1;
+}
+
 function isCompleted(stateVal: string | number): boolean {
   return getStateNumber(stateVal) === 2;
 }
@@ -341,7 +347,7 @@ const signMessage = async (forceNew = false) => {
 const needsVerification = computed(() => {
   return (
     job.value &&
-    isRunning(job.value.state) &&
+    isActive(job.value.state) &&
     isJobPoster.value &&
     !isVerified.value
   );
@@ -367,6 +373,7 @@ watch(
         await signMessage(true);
         toast.success('Wallet verified successfully');
         refreshJob();
+        // Only initialize logs if job is in running state
         if (job.value && isRunning(job.value.state)) {
           logs.value = [];
         }
@@ -391,6 +398,7 @@ watch(
 watch(
   connected,
   async (newConnected) => {
+    // Only initialize logs if job is in running state
     if (newConnected && job.value && isRunning(job.value.state)) {
       logs.value = [];
     } else if (!newConnected) {
@@ -591,6 +599,7 @@ const hasRetried = ref(false);
 const checkAndConnectWebSocket = async () => {
   if (isWebSocketConnected || isConnecting.value) return;
 
+  // Only connect websocket if job is in running state
   if (
     job.value &&
     isRunning(job.value.state) &&

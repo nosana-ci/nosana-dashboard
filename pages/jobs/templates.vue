@@ -66,7 +66,13 @@
                 :key="template.id"
                 class="column is-4"
               >
-                <nuxt-link class="box template-card" :to="{ path: '/jobs/create', query: { templateId: template.id } }">
+                <nuxt-link class="box template-card" :to="{ 
+                  path: '/jobs/create', 
+                  query: { 
+                    templateId: template.id,
+                    randKey: makeRandomKey()
+                  } 
+                }">
                   <div class="template-header">
                     <div class="header-content">
                       <div class="header-title">
@@ -104,7 +110,13 @@
               :key="template.id"
               class="column is-4"
             >
-              <nuxt-link class="box template-card" :to="{ path: '/jobs/create', query: { templateId: template.id } }">
+              <nuxt-link class="box template-card" :to="{ 
+                path: '/jobs/create', 
+                query: { 
+                  templateId: template.id,
+                  randKey: makeRandomKey()
+                } 
+              }">
                 <div class="template-header">
                   <div class="header-content">
                     <div class="header-title">
@@ -144,6 +156,11 @@ const { templates, loadingTemplates } = useTemplates();
 const filterCategory: Ref<string> = ref('');
 const filterSubcategory: Ref<string> = ref('');
 const search: Ref<string> = ref('');
+
+// Add function to generate random key
+function makeRandomKey() {
+  return Math.random().toString(36).slice(2);
+}
 
 const featuredTemplateIds = [
   'deepseek-r1-qwen-1.5b',

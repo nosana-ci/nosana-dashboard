@@ -812,6 +812,19 @@ const { templates, emptyJobDefinition, loadingTemplates } = useTemplates();
 const route = useRoute();
 const router = useRouter();
 const templateId: Ref<LocationQueryValue> = ref(route.query.templateId as LocationQueryValue);
+
+// Create a computed for the unique localStorage key
+const localStorageKey = computed(() => {
+  if (route.query.fromRepost) {
+    const address = route.query.jobAddress || 'repost';
+    return `job-definition-${address}`;
+  }
+  if (route.query.randKey) {
+    return `job-definition-${route.query.randKey}`;
+  }
+  return 'job-definition-default';
+});
+
 const template: ComputedRef<Template | undefined> = computed(() => {
   return templates.value ? templates.value.find(t => t.id === templateId.value) : undefined;
 })
@@ -839,7 +852,10 @@ const market: Ref<Market | null> = ref(null);
 const loading: Ref<boolean> = ref(false);
 const { connected, publicKey } = useWallet();
 const { balance, refreshBalance, loadingBalance, errorBalance } = useStake(publicKey);
-const jobDefinition: Ref<JobDefinition> = useLocalStorage('job-definition', emptyJobDefinition)
+
+// Use the computed localStorageKey for jobDefinition storage
+const jobDefinition: Ref<JobDefinition> = useLocalStorage(localStorageKey, emptyJobDefinition)
+
 const envName: Ref<string[]> = ref([]);
 const resultsName: Ref<string[]> = ref([]);
 const jobTimeout: Ref<number> = useLocalStorage('job-timeout', 1); // Default 1 hour
@@ -932,6 +948,10 @@ watch(() => jobDefinition.value, async (newValue: any) => {
   if (newValue === "") {
     await nextTick();
     jobDefinition.value = template.value ? template.value.jobDefinition : emptyJobDefinition;
+  }
+  // Add timestamp to stored job definition
+  if (newValue && typeof newValue === 'object') {
+    (newValue as any)._t = Date.now();
   }
 });
 
@@ -1221,6 +1241,60 @@ onMounted(() => {
   const urlStep = route.query.step?.toString();
   const urlMarket = route.query.marketAddress?.toString() || route.query.market?.toString();
   const fromRepost = route.query.fromRepost === 'true';
+
+  // If no randKey is present and we're not reposting, add one
+  if (!route.query.fromRepost && !route.query.randKey && !templateId.value) {
+    const newRand = Math.random().toString(36).slice(2);
+    router.replace({
+      query: {
+        ...route.query,
+        randKey: newRand
+      }
+    });
+  }
+
+  // Clean up old localStorage entries
+  const cleanupOldEntries = () => {
+    const keysToKeep = new Set<string>();
+    
+    // Add current key to keep
+    keysToKeep.add(localStorageKey.value);
+    
+    // Keep repost keys for a day
+    const repostPrefix = 'job-definition-';
+    const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000);
+    
+    // Iterate through localStorage
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith(repostPrefix)) {
+        try {
+          const item = localStorage.getItem(key);
+          if (item) {
+            const data = JSON.parse(item);
+            // If the item is newer than 24 hours, keep it
+            if (data._t && data._t > oneDayAgo) {
+              keysToKeep.add(key);
+            }
+          }
+        } catch (e) {
+          // If we can't parse the item, remove it
+          if (key) localStorage.removeItem(key);
+        }
+      }
+    }
+    
+    // Remove all job definition entries not in keysToKeep
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i);
+      if (key?.startsWith(repostPrefix) && !keysToKeep.has(key)) {
+        localStorage.removeItem(key);
+      }
+    }
+  };
+
+  // Run cleanup on mount
+  cleanupOldEntries();
 
   // If coming from repost and we have a job definition, allow going directly to deploy-model
   if (fromRepost && jobDefinition.value?.ops?.length) {
