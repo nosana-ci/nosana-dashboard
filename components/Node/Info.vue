@@ -13,16 +13,16 @@
         <tbody>
           <tr>
             <td colspan="2" class="has-background-light">
-              <h4 class="title is-5">Node Info</h4>
+              <h4 class="title is-5">Host Info</h4>
             </td>
           </tr>
           <tr>
-            <td>Jobs ran</td>
+            <td>Deployments ran</td>
             <td v-if="loadingJobs">...</td>
             <td v-else-if="jobs">
               <span>{{ jobs.totalJobs }}</span>
             </td>
-            <td v-else class="has-text-danger">Could not retrieve jobs</td>
+            <td v-else class="has-text-danger">Could not retrieve deployments</td>
           </tr>
           <tr>
             <td>Status</td>
@@ -31,7 +31,7 @@
               <span v-else>
                 <div
                   v-if="nodeRuns && nodeRuns.length"
-                  data-tooltip="Host is running a job"
+                  data-tooltip="Host is running a deployment"
                   style="width: fit-content"
                   class="is-flex"
                 >
@@ -55,7 +55,7 @@
             </td>
           </tr>
           <tr v-if="nodeRuns && nodeRuns.length > 0">
-            <td>Running job</td>
+            <td>Running deployment</td>
             <td>
               <nuxt-link
                 :to="`/jobs/${nodeRuns[0].account.job}`"
@@ -133,7 +133,7 @@
             <td v-else>Offline</td>
           </tr>
           <tr>
-            <td>Node API Status</td>
+            <td>Host API Status</td>
             <td>
               <span v-if="nodeInfo">Online</span>
               <span v-else-if="loadingInfo">...</span>
@@ -155,7 +155,7 @@
                   class="has-tooltip-arrow ml-1"
                   style="vertical-align: middle"
                   data-tooltip="An aggregated performance ranking based on all leaderboard
-                positions of the node compared to all other nodes in the market."
+                positions of the host compared to all other hosts in the market."
                 >
                   <img src="~/assets/img/icons/info.svg" />
                 </span>
@@ -164,7 +164,7 @@
             <td v-if="!nodeRanking">
               <span
                 class="has-tooltip-arrow"
-                data-tooltip="This node hasn't completed enough jobs to be ranked yet"
+                data-tooltip="This host hasn't completed enough deployments to be ranked yet"
               >
                 unranked
               </span>
@@ -178,7 +178,7 @@
                 <span
                   class="has-tooltip-arrow ml-1"
                   style="vertical-align: middle"
-                  data-tooltip="An aggregated stability ranking based on the nodes performance
+                  data-tooltip="An aggregated stability ranking based on the hosts performance
                   variance. The less variance the better."
                 >
                   <img src="~/assets/img/icons/info.svg" />
@@ -188,7 +188,7 @@
             <td v-if="!nodeRanking">
               <span
                 class="has-tooltip-arrow"
-                data-tooltip="This node hasn't completed enough jobs to be ranked yet"
+                data-tooltip="This host hasn't completed enough deployments to be ranked yet"
               >
                 unranked
               </span>
@@ -202,7 +202,7 @@
                 <span
                   class="has-tooltip-arrow ml-1"
                   style="vertical-align: middle"
-                  data-tooltip="The percentage of time this node has been available to process jobs while in queue"
+                  data-tooltip="The percentage of time this host has been available to process deployments while in queue"
                 >
                   <img src="~/assets/img/icons/info.svg" />
                 </span>
@@ -216,7 +216,7 @@
             >
               <span
                 class="has-tooltip-arrow"
-                data-tooltip="This node hasn't been online long enough to calculate availibily"
+                data-tooltip="This host hasn't been online long enough to calculate availibily"
               >
                 unknown
               </span>
@@ -304,7 +304,7 @@
         v-model:page="page"
         v-model:state="state"
         :loading-jobs="loadingJobs"
-        title="Jobs Ran"
+        title="Deployments Ran"
         :jobs="jobs?.jobs || []"
         :states="[1, 2]"
       />
