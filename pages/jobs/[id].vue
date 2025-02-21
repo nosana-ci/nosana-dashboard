@@ -669,7 +669,7 @@ function handleWebSocketMessage(event: MessageEvent) {
         if (exposedMatch && !hasShownServiceOnlineToast.value) {
           const url = exposedMatch[1];
           serviceUrl.value = url;
-          toast.success('Service is online');
+          // toast.success('Service is online');
           hasShownServiceOnlineToast.value = true;
         }
       }
