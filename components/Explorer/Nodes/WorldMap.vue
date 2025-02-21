@@ -18,7 +18,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, onMounted, watch } from 'vue';
 import { useAPI } from '~/composables/useAPI';
 import VChart from 'vue-echarts';
 import * as echarts from 'echarts/core';
@@ -48,6 +48,23 @@ echarts.use([
   CanvasRenderer
 ]);
 echarts.registerMap('world', worldJson as any);
+
+// Add reactive dark mode state
+const darkMode = ref(false);
+
+// Update dark mode state and watch for changes
+onMounted(() => {
+  const updateDarkMode = () => {
+    darkMode.value = document.documentElement.classList.contains('dark-mode');
+  };
+  
+  // Initial state
+  updateDarkMode();
+  
+  // Watch for class changes
+  const observer = new MutationObserver(updateDarkMode);
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+});
 
 // Fetch node statistics
 const { data: nodeStatsResponse } = await useAPI('/api/stats/nodes-country');
@@ -227,7 +244,7 @@ const chartOptions = computed(() => {
     const data = seriesData.value.find(item => item.name === name);
     if (data) {
       return `
-        <div style="background-color: black; padding: 12px 20px; border-radius: 4px;">
+        <div style="background-color: ${darkMode.value ? '#1a1a1a' : 'black'}; padding: 12px 20px; border-radius: 4px;">
           <div style="color: #888888; margin-bottom: 0;">${name}</div>
           <div style="margin-top: 4px; display: flex; flex-direction: column; gap: 4px;">
             <div style="display: flex; align-items: center;">
@@ -243,14 +260,14 @@ const chartOptions = computed(() => {
       `;
     }
     return `
-      <div style="background-color: black; padding: 12px 20px; border-radius: 4px;">
+      <div style="background-color: ${darkMode.value ? '#1a1a1a' : 'black'}; padding: 12px 20px; border-radius: 4px;">
         <div style="color: #888888;">${name}</div>
       </div>
     `;
   };
 
   return {
-    backgroundColor: '#f9f9f9',
+    backgroundColor: darkMode.value ? '#121212' : '#f9f9f9',
     tooltip: {
       trigger: 'item',
       formatter: tooltipFormatter,
@@ -279,8 +296,8 @@ const chartOptions = computed(() => {
         formatter: tooltipFormatter
       },
       itemStyle: {
-        areaColor: '#d4d4d4',
-        borderColor: '#ffffff'
+        areaColor: darkMode.value ? '#2c2c2c' : '#d4d4d4',
+        borderColor: darkMode.value ? '#3a3a3a' : '#ffffff'
       },
       emphasis: {
         itemStyle: {
@@ -377,6 +394,7 @@ const handleMouseOut = (params: any) => {
   display: flex;
   align-items: center;
   justify-content: center;
+  background: transparent;
 }
 
 .aspect-ratio-container {
@@ -384,6 +402,7 @@ const handleMouseOut = (params: any) => {
   width: 100%;
   height: 100%;
   padding-top: 0;
+  background: transparent;
 }
 
 .aspect-ratio-container > * {
@@ -392,10 +411,11 @@ const handleMouseOut = (params: any) => {
   left: 0;
   width: 100%;
   height: 100%;
+  background: transparent;
 }
 
 .box {
-  background: none;
+  background: transparent !important;
   box-shadow: none;
   height: 100%;
   width: 100%;
@@ -405,5 +425,9 @@ const handleMouseOut = (params: any) => {
   margin: 0;
   padding: 0;
   border-radius: 0;
+}
+
+:deep(.echarts) {
+  background: transparent !important;
 }
 </style> 
