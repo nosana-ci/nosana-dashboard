@@ -23,11 +23,11 @@
               </div>
             </a>
           </li>
-          <li :class="{ 'is-active': tab === 'other' }">
-            <a @click="tab = 'other'" class="is-justify-content-flex-start">
-              OTHER
+          <li :class="{ 'is-active': tab === 'others' }">
+            <a @click="tab = 'others'" class="is-justify-content-flex-start">
+              OTHERS
               <div class="tooltip-container">
-                <span class="has-tooltip-arrow has-text-grey no-underline" data-tooltip="View other GPUs on the Nosana Network that are not categorized as premium or community.">
+                <span class="has-tooltip-arrow has-text-grey no-underline" data-tooltip="View other GPUs on the Nosana Network that are not categorized as Premium or Community.">
                   <img src="~/assets/img/icons/info.svg" class="info-icon" />
                 </span>
               </div>
@@ -239,7 +239,7 @@ const perPage: Ref<number> = ref(25);
 
 /**
  * Filters the list of markets by:
- * - The current tab (premium, community, other).
+ * - The current tab (premium, community, others).
  * - VRAM requirements, if set.
  */
 const filteredMarkets = computed(() => {
@@ -249,24 +249,27 @@ const filteredMarkets = computed(() => {
     // Get market info regardless of type
     const marketInfo = testgridMarkets.value.find((tgm: any) => tgm.address === market.address.toString());
     
-    // For premium and community tabs, exclude markets without market info
-    if ((tab.value === 'premium' || tab.value === 'community') && !marketInfo) {
-      return false;
+    // If no market info exists, it goes to others
+    if (!marketInfo) {
+      return tab.value === 'others';
     }
 
-    // Filter based on tab selection
-    if (tab.value === 'premium' && (marketInfo.type !== 'PREMIUM' || !marketInfo.slug?.toLowerCase().startsWith('nvidia'))) {
-      return false;
+    // Check if it's an nvidia GPU
+    const isNvidiaGpu = marketInfo.slug?.toLowerCase().startsWith('nvidia');
+    
+    // For premium tab - only show nvidia GPUs marked as PREMIUM
+    if (tab.value === 'premium') {
+      return isNvidiaGpu && marketInfo.type === 'PREMIUM';
     }
-    if (tab.value === 'community' && marketInfo.type !== 'COMMUNITY') {
-      return false;
+    
+    // For community tab - only show nvidia GPUs marked as COMMUNITY
+    if (tab.value === 'community') {
+      return isNvidiaGpu && marketInfo.type === 'COMMUNITY';
     }
-    if (tab.value === 'other') {
-      // Only show markets that are not premium or community
-      if (!marketInfo || (marketInfo.type !== 'PREMIUM' && marketInfo.type !== 'COMMUNITY')) {
-        return true;
-      }
-      return false;
+    
+    // For others tab - show all non-nvidia GPUs and any that don't fit in other categories
+    if (tab.value === 'others') {
+      return !isNvidiaGpu || (marketInfo.type !== 'PREMIUM' && marketInfo.type !== 'COMMUNITY');
     }
 
     return true;

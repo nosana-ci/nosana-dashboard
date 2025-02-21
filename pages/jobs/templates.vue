@@ -13,52 +13,49 @@
             </div>
           </div>
           <div class="field">
-            <div class="control">
-              <label class="label">Category</label>
-              <span v-if="!templates">...</span>
-              <div class="menu" v-else>
-                <ul class="menu-list">
-                  <li>
-                    <a :class="{ 'is-active': filterCategory === '' }" @click="filterCategory = ''">
-                      <span>All Templates</span>
-                      <span class="ml-auto is-size-7">({{ templates.length }})</span>
-                    </a>
-                  </li>
-                  <li v-for="category in categories" :key="category">
-                    <a :class="{ 'is-active': filterCategory === category }" 
-                       @click="() => {
-                         filterSubcategory = '';  // Reset subcategory first
-                         filterCategory = category;
-                       }">
-                      <span>{{ category === 'API Only' ? 'API' : category }}</span>
-                      <span class="ml-auto is-size-7">({{ templates.filter(t =>
-                        (Array.isArray(t.category) ? t.category : t.category.split("|")).includes(category)).length }})</span>
-                    </a>
-                    <ul v-if="filterCategory === category && subcategories.length" class="pl-4 mt-2">
-                      <li v-for="subcategory in subcategories" :key="subcategory">
-                        <a
-                          :class="{ 'is-active': filterSubcategory === subcategory }"
-                          @click="filterSubcategory = subcategory"
-                        >
-                          <span>{{ subcategory }}</span>
-                          <span class="ml-auto is-size-7">
-                            ({{
-                              templatesInCategoryAndSubcategory(category, subcategory).length
-                            }})
-                          </span>
-                        </a>
-                      </li>
-                    </ul>
-                  </li>
-                </ul>
+
+            <div class="category-filters">
+              <!-- Main categories -->
+              <div class="filter-section">
+                <h3 class="is-size-6 mb-2 has-text-weight-semibold">Template Type</h3>
+                <label class="checkbox mb-2 is-block" v-for="category in ALL_CATEGORIES" :key="category">
+                  <input type="checkbox" 
+                         v-model="selectedCategories" 
+                         :value="category">
+                  <span class="ml-2">{{ category }}</span>
+                </label>
               </div>
+
+              <!-- Interface categories -->
+              <div class="filter-section mt-4">
+                <h3 class="is-size-6 mb-2 has-text-weight-semibold">Interface Type</h3>
+                <label class="checkbox mb-2 is-block" v-for="category in INTERFACE_CATEGORIES" :key="category">
+                  <input type="checkbox" 
+                         v-model="selectedCategories" 
+                         :value="category">
+                  <span class="ml-2">{{ category }}</span>
+                </label>
+              </div>
+
+              <!-- Other categories if any -->
+              <template v-if="otherCategories.length > 0">
+                <div class="filter-section mt-4">
+                  <h3 class="is-size-6 mb-2 has-text-weight-semibold">Other</h3>
+                  <label class="checkbox mb-2 is-block" v-for="category in otherCategories" :key="category">
+                    <input type="checkbox" 
+                           v-model="selectedCategories" 
+                           :value="category">
+                    <span class="ml-2">{{ category }}</span>
+                  </label>
+                </div>
+              </template>
             </div>
           </div>
         </div>
       </div>
       <div class="column is-9">
         <div class="box has-background-white-ter">
-          <template v-if="filterCategory === ''">
+          <template v-if="!selectedCategories.length">
             <h2 class="title is-4 mb-4">Featured Templates</h2>
             <div class="columns is-multiline mb-6">
               <div
@@ -66,11 +63,17 @@
                 :key="template.id"
                 class="column is-4"
               >
-                <nuxt-link class="box template-card" :to="{ path: '/jobs/create', query: { templateId: template.id } }">
+                <nuxt-link class="box template-card" :to="{ 
+                  path: '/jobs/create', 
+                  query: { 
+                    templateId: template.id,
+                    randKey: makeRandomKey()
+                  } 
+                }">
                   <div class="template-header">
                     <div class="header-content">
                       <div class="header-title">
-                        <span v-if="newTemplateIds.includes(String(template.id))" class="new-badge">New</span>
+                        <span v-if="template.category?.includes('New')" class="new-badge">New</span>
                         <h2 class="is-size-4 has-text-weight-semibold mb-0 has-text-black">
                           {{ template.name }}
                         </h2>
@@ -90,6 +93,18 @@
                   </div>
                   <div class="template-description">
                     <p>{{ template.description }}</p>
+                    <div class="template-tags mt-3">
+                      <span v-for="cat in (Array.isArray(template.category) ? template.category.filter(c => !['Featured', 'New'].includes(c)) : [])" 
+                            :key="cat" 
+                            class="tag" 
+                            :class="{
+                              'is-api': cat === 'API',
+                              'is-llm': cat === 'LLM',
+                              'is-image': cat === 'Image Generation'
+                            }">
+                        {{ cat }}
+                      </span>
+                    </div>
                   </div>
                 </nuxt-link>
               </div>
@@ -104,11 +119,17 @@
               :key="template.id"
               class="column is-4"
             >
-              <nuxt-link class="box template-card" :to="{ path: '/jobs/create', query: { templateId: template.id } }">
+              <nuxt-link class="box template-card" :to="{ 
+                path: '/jobs/create', 
+                query: { 
+                  templateId: template.id,
+                  randKey: makeRandomKey()
+                } 
+              }">
                 <div class="template-header">
                   <div class="header-content">
                     <div class="header-title">
-                      <span v-if="newTemplateIds.includes(String(template.id))" class="new-badge">New</span>
+                      <span v-if="template.category?.includes('New')" class="new-badge">New</span>
                       <h2 class="is-size-4 has-text-weight-semibold mb-0 has-text-black">
                         {{ template.name }}
                       </h2>
@@ -128,6 +149,18 @@
                 </div>
                 <div class="template-description">
                   <p>{{ template.description }}</p>
+                  <div class="template-tags mt-3">
+                    <span v-for="cat in (Array.isArray(template.category) ? template.category.filter(c => !['Featured', 'New'].includes(c)) : [])" 
+                          :key="cat" 
+                          class="tag" 
+                          :class="{
+                            'is-api': cat === 'API',
+                            'is-llm': cat === 'LLM',
+                            'is-image': cat === 'Image Generation'
+                          }">
+                      {{ cat }}
+                    </span>
+                  </div>
                 </div>
               </nuxt-link>
             </div>
@@ -140,267 +173,107 @@
 </template>
 
 <script lang="ts" setup>
+interface Template {
+  id: string | number;
+  name: string;
+  description: string;
+  category: string[];
+  icon?: string;
+  avatar_url?: string;
+  stargazers_count?: number;
+  jobDefinition: any;
+  readme?: string;
+}
+
 const { templates, loadingTemplates } = useTemplates();
-const filterCategory: Ref<string> = ref('');
-const filterSubcategory: Ref<string> = ref('');
+const selectedCategories = ref<string[]>([]);
 const search: Ref<string> = ref('');
 
-const featuredTemplateIds = [
-  'deepseek-r1-qwen-1.5b',
-  'deepseek-r1-qwen-7b',
-  'deepseek-r1-qwen-32b',
-  'deepseek-janus-pro-1b',
-  'deepseek-janus-pro-7b',
-  'comfyui'
-];
+// Predefined categories in desired order
+const ALL_CATEGORIES = [
+  'LLM',
+  'LLM Fine-tuning',
+  'Image Generation',
+  'Image Generation Fine-tuning'
+] as const;
 
-const newTemplateIds = [
-  'deepseek-r1-qwen-1.5b',
-  'deepseek-r1-qwen-7b',
-  'deepseek-r1-llama-8b',
-  'deepseek-r1-qwen-14b',
-  'deepseek-r1-qwen-32b',
-  'deepseek-r1-llama-70b-awq',
-  'deepseek-janus-pro-1b',
-  'deepseek-janus-pro-7b'
-];
+const INTERFACE_CATEGORIES = ['API', 'Website'] as const;
+
+type CategoryType = typeof ALL_CATEGORIES[number] | typeof INTERFACE_CATEGORIES[number];
+
+// Add function to generate random key
+function makeRandomKey() {
+  return Math.random().toString(36).slice(2);
+}
 
 const featuredTemplates = computed(() => {
   if (!templates.value) return [];
-  return featuredTemplateIds
-    .map(id => templates.value.find(t => String(t.id) === id))
-    .filter(Boolean);
+  return templates.value
+    .filter(t => Array.isArray(t.category) && t.category.includes('Featured'));
 });
 
-// Watch for changes in filterCategory to reset filterSubcategory
-watch(filterCategory, (newVal, oldVal) => {
-  if (newVal !== oldVal) {
-    filterSubcategory.value = '';
-  }
+const allCategories = computed(() => {
+  if (!templates.value) return [];
+  const categories = new Set<string>();
+  
+  templates.value.forEach(template => {
+    if (Array.isArray(template.category)) {
+      template.category.forEach(cat => {
+        if (!['Featured', 'New'].includes(cat)) {
+          categories.add(cat);
+        }
+      });
+    }
+  });
+  
+  return Array.from(categories);
+});
+
+const otherCategories = computed(() => {
+  return allCategories.value.filter(cat => 
+    ![...ALL_CATEGORIES, ...INTERFACE_CATEGORIES].includes(cat as CategoryType)
+  );
 });
 
 const filteredTemplates = computed(() => {
-  const templatesList = templates.value
-    ? templates.value.filter((t) => {
-        if (filterCategory.value === '' && featuredTemplateIds.includes(String(t.id))) {
-          return false;
-        }
+  if (!templates.value) return [];
+  
+  let templatesList = templates.value;
 
-        let found = true;
-        let inCategory = true;
-        let inSubcategory = true;
+  // Filter by search term
+  if (search.value) {
+    const searchTerm = search.value.toLowerCase();
+    templatesList = templatesList.filter(t => 
+      t.name.toLowerCase().includes(searchTerm) ||
+      t.description.toLowerCase().includes(searchTerm)
+    );
+  }
 
-        if (search.value !== '') {
-          const searchTerm = search.value.toLowerCase();
-          found = Boolean(
-            t.name.toLowerCase().includes(searchTerm) ||
-            t.description.toLowerCase().includes(searchTerm) ||
-            (t.readme && t.readme.toLowerCase().includes(searchTerm))
-          );
-        }
+  // Filter by selected categories
+  if (selectedCategories.value.length > 0) {
+    templatesList = templatesList.filter(t => 
+      Array.isArray(t.category) && selectedCategories.value.some(cat => t.category.includes(cat))
+    );
+  }
 
-        if (filterCategory.value !== '') {
-          const templateCategories = Array.isArray(t.category)
-            ? t.category
-            : t.category.split("|");
-          inCategory = templateCategories.includes(filterCategory.value);
+  // Remove featured templates from main list if no category filter is active
+  if (selectedCategories.value.length === 0) {
+    templatesList = templatesList.filter(t => 
+      !(Array.isArray(t.category) && t.category.includes('Featured'))
+    );
+  }
 
-          if (filterSubcategory.value !== '') {
-            const templateSubcategories = t.subcategory
-              ? Array.isArray(t.subcategory)
-                ? t.subcategory
-                : t.subcategory.split("|")
-              : [];
-            inSubcategory = templateSubcategories.includes(filterSubcategory.value);
-          } else {
-            inSubcategory = true;
-          }
-        } else {
-          inCategory = true;
-          inSubcategory = true;
-        }
-
-        return found && inCategory && inSubcategory;
-      })
-    : [];
-
-  // Sort the filtered templates by stargazers_count in descending order
+  // Sort by new status and then by star count
   return templatesList.sort((a, b) => {
-    // First sort by new status
-    const aIsNew = newTemplateIds.includes(String(a.id));
-    const bIsNew = newTemplateIds.includes(String(b.id));
+    const aIsNew = Array.isArray(a.category) && a.category.includes('New');
+    const bIsNew = Array.isArray(b.category) && b.category.includes('New');
     
     if (aIsNew && !bIsNew) return -1;
     if (!aIsNew && bIsNew) return 1;
     
-    // Then sort by star count
     return (b.stargazers_count || 0) - (a.stargazers_count || 0);
   });
 });
-const categories = computed(() => {
-  const allCategories = templates.value
-    ? templates.value.flatMap((t) => {
-        const cats = Array.isArray(t.category)
-          ? t.category
-          : t.category.split("|");
-        return cats.map((c) => c.trim());
-      })
-    : [];
-  const categoryIds = [...new Set(allCategories)];
-
-  const desiredCategoryOrder = ['Featured', 'Web UI', 'API Only'];
-
-  // Lowercase versions for comparison
-  const desiredCategoryOrderNormalized = desiredCategoryOrder.map((c) => c.toLowerCase());
-
-  return categoryIds.sort((a, b) => {
-    const normalizedA = a.toLowerCase();
-    const normalizedB = b.toLowerCase();
-
-    const indexA = desiredCategoryOrderNormalized.indexOf(normalizedA);
-    const indexB = desiredCategoryOrderNormalized.indexOf(normalizedB);
-
-    if (indexA !== -1 && indexB !== -1) {
-      return indexA - indexB;
-    } else if (indexA !== -1) {
-      return -1;
-    } else if (indexB !== -1) {
-      return 1;
-    } else {
-      return normalizedA.localeCompare(normalizedB);
-    }
-  });
-});
-const subcategories = computed(() => {
-  if (!filterCategory.value) return [];
-  const allSubcategories = templates.value
-    ? templates.value.flatMap((t) => {
-        const templateCategories = Array.isArray(t.category)
-          ? t.category
-          : t.category.split("|");
-        if (templateCategories.includes(filterCategory.value) && t.subcategory) {
-          return Array.isArray(t.subcategory)
-            ? t.subcategory
-            : t.subcategory.split("|");
-        }
-        return [];
-      })
-    : [];
-  const uniqueSubcategories = [...new Set(allSubcategories)].map((sub) => sub.trim());
-
-  // Define the desired order for subcategories
-  const desiredOrder = [
-    'Featured',
-    'LLM',
-    'LLM Fine-tuning',
-    'Image Generation',
-    'Image Generation Fine-tuning'
-  ];
-
-  return uniqueSubcategories.sort((a, b) => {
-    const indexA = desiredOrder.indexOf(a);
-    const indexB = desiredOrder.indexOf(b);
-
-    if (indexA !== -1 && indexB !== -1) {
-      return indexA - indexB;
-    } else if (indexA !== -1) {
-      return -1;
-    } else if (indexB !== -1) {
-      return 1;
-    } else {
-      return a.localeCompare(b);
-    }
-  });
-});
-
-function subcategoriesForCategory(category: string): string[] {
-  const allSubcategories = filteredTemplates.value
-    .filter((t) => {
-      const templateCategories = Array.isArray(t.category)
-        ? t.category
-        : t.category.split("|");
-      return templateCategories.includes(category);
-    })
-    .flatMap((t) => {
-      const templateSubcategories = t.subcategory
-        ? Array.isArray(t.subcategory)
-          ? t.subcategory
-          : t.subcategory.split("|")
-        : [];
-      return templateSubcategories.map((sub) => sub.trim());
-    });
-
-  // Remove duplicates and normalize subcategory names
-  const uniqueSubcategories = [...new Set(allSubcategories)];
-
-  // Desired order with proper casing for display
-  const desiredOrder = [
-    'LLM',
-    'LLM Fine-tuning',
-    'Image Generation',
-    'Image Generation Fine-tuning',
-    'Featured',
-  ];
-
-  // Lowercase versions for comparison
-  const desiredOrderNormalized = desiredOrder.map((sub) => sub.toLowerCase());
-
-  return uniqueSubcategories.sort((a, b) => {
-    const normalizedA = a.trim().toLowerCase();
-    const normalizedB = b.trim().toLowerCase();
-
-    const indexA = desiredOrderNormalized.indexOf(normalizedA);
-    const indexB = desiredOrderNormalized.indexOf(normalizedB);
-
-    if (indexA !== -1 && indexB !== -1) {
-      // Both subcategories are in desiredOrder
-      return indexA - indexB;
-    } else if (indexA !== -1) {
-      // Only 'a' is in desiredOrder
-      return -1;
-    } else if (indexB !== -1) {
-      // Only 'b' is in desiredOrder
-      return 1;
-    } else {
-      // Neither subcategory is in desiredOrder; sort alphabetically
-      return normalizedA.localeCompare(normalizedB);
-    }
-  });
-}
-
-function templatesInCategoryAndSubcategory(category: string, subcategory: string): Template[] {
-  return templates.value
-    ? templates.value.filter((t) => {
-        const templateCategories = Array.isArray(t.category)
-          ? t.category
-          : t.category.split("|");
-        const inCategory = templateCategories.includes(category);
-
-        const templateSubcategories = t.subcategory
-          ? Array.isArray(t.subcategory)
-            ? t.subcategory
-            : t.subcategory.split("|")
-          : [];
-        const inSubcategory = templateSubcategories.includes(subcategory);
-
-        return inCategory && inSubcategory;
-      })
-    : [];
-}
-
-function templatesWithoutSubcategory(category: string): Template[] {
-  return filteredTemplates.value
-    .filter((t) => {
-      const templateCategories = Array.isArray(t.category)
-        ? t.category
-        : t.category.split("|");
-      const inCategory = templateCategories.includes(category);
-
-      const hasSubcategory = t.subcategory && t.subcategory.length > 0;
-
-      return inCategory && !hasSubcategory;
-    });
-}
 </script>
 <style lang="scss" scoped>
 .template-card {
@@ -477,16 +350,26 @@ function templatesWithoutSubcategory(category: string): Template[] {
   width: 38px;
   height: 38px;
   border-radius: 100%;
-  padding: 6px;
+  padding: 4px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
 
   img {
-    width: 100%;
-    height: 100%;
-    object-fit: scale-down;
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+}
+
+.dark-mode {
+  .template-icon {
+    background-color: $black-bis !important;
+    border-color: $grey-darker;
   }
 }
 
@@ -558,5 +441,54 @@ html.dark-mode .github-icon {
   align-items: center;
   color: $grey;
   font-size: 0.875rem;
+}
+
+.template-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+
+  .tag {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 1rem;
+    font-weight: 500;
+    background-color: $grey-lighter;
+    color: $grey-dark;
+
+    &.is-api {
+      background-color: rgba($info, 0.1);
+      color: $info;
+    }
+
+    &.is-llm {
+      background-color: rgba($primary, 0.1);
+      color: $primary;
+    }
+
+    &.is-image {
+      background-color: rgba($success, 0.1);
+      color: $success;
+    }
+  }
+}
+
+.category-filters {
+  .filter-section {
+    &:not(:first-child) {
+      border-top: 1px solid $grey-lighter;
+      padding-top: 1rem;
+    }
+  }
+
+  .checkbox {
+    cursor: pointer;
+    user-select: none;
+    
+    &:hover {
+      color: $primary;
+    }
+  }
 }
 </style>
