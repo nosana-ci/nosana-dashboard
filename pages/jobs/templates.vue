@@ -350,16 +350,26 @@ const filteredTemplates = computed(() => {
   width: 38px;
   height: 38px;
   border-radius: 100%;
-  padding: 6px;
+  padding: 4px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
 
   img {
-    width: 100%;
-    height: 100%;
-    object-fit: scale-down;
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+}
+
+.dark-mode {
+  .template-icon {
+    background-color: $black-bis !important;
+    border-color: $grey-darker;
   }
 }
 
