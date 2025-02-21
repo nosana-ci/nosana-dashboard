@@ -132,6 +132,14 @@
             <td v-else-if="loadingInfo || loadingSpecs">...</td>
             <td v-else>Offline</td>
           </tr>
+          <tr>
+            <td>Node API Status</td>
+            <td>
+              <span v-if="nodeInfo">Online</span>
+              <span v-else-if="loadingInfo">...</span>
+              <span v-else>Offline</span>
+            </td>
+          </tr>
           <NodeSpecification v-if="combinedSpecs" :specs="combinedSpecs" />
           <!-- Performance Section -->
           <tr>
