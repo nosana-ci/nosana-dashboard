@@ -383,66 +383,44 @@
             <div class="column is-5">
               <div class="box has-background-white-ter h-100">
                 <div class="template-info">
-                  <h2 class="title is-5">
-                    <span v-if="template">
-                      {{ template.name }}
-                    </span>
-                    <span v-else>Information</span>
-                  </h2>
-                  <p class="block">
-                    <span v-if="template">
-                      {{ template.description }}
-                    </span>
-                    <span v-else>The Nosana Job schema allows us to create a job definition and specify the parameters
-                      needed for our job. Start writing your template from scratch or start with one of our many
-                      templates.
-                      <br><br>
-                      <nuxt-link to="/jobs/templates" class="button is-secondary">Pick a Template</nuxt-link>
-                    </span>
-                  </p>
-                  <p class="block">
-                    <span v-if="!info">
-                      <i v-if="tab === 'builder'">Click on a field to get more information about it</i>
-                      <a v-else href="https://docs.nosana.io/inference/writing_a_job.html#job-schema-specification"
-                        target="_blank">View Job Schema Specification ⯈</a>
-                    </span>
-                    <span v-else-if="info === 'ops.id'">
-                      <b>id:</b> A unique identifier for the operation.
-                    </span>
-                    <span v-else-if="info === 'ops.type'">
-                      <b>type:</b> Specifies the operation type. For instance, "container/run" indicates a containerized
-                      operation.
-                    </span>
-                    <span v-else-if="info === 'ops.args.image'">
-                      <b>image:</b> The Docker image to be used for the container.
-                    </span>
-                    <span v-else-if="info === 'ops.args.cmd'">
-                      <b>cmd:</b> The command(s) to be executed in the container.<br>
-                      <a href="https://www.docker.com/blog/docker-best-practices-choosing-between-run-cmd-and-entrypoint/"
-                        target="_blank">Learn more about docker CMD</a>
-                    </span>
-                    <span v-else-if="info === 'ops.args.expose'">
-                      <b>expose:</b> A number representing the application port that needs to be exposed via the Nosana
-                      Service Endpoint.
-                    </span>
-                    <span v-else-if="info === 'ops.args.gpu'">
-                      <b>gpu:</b> A boolean indicating whether GPU resources are required.
-                    </span>
-                    <span v-else-if="info === 'ops.args.private'">
-                      <b>private:</b> A boolean indicating whether the job definition file, exposed service and the
-                      results
-                      should be private.
-                    </span>
-                    <span v-else-if="info === 'ops.args.name'">
-                      <b>name:</b> Volume name of the docker volume that will be created.
-                    </span>
-                    <span v-else-if="info === 'ops.args.env'">
-                      <b>env:</b> Key value map for environment variables in the container.
-                    </span>
-                  </p>
-                  <div class="markdown-content">
-                    <MarkdownFile v-if="template" :name="'README.md'" :raw-markdown="template.readme" :view="tab" />
-                  </div>
+                  <template v-if="template">
+                    <div class="template-header">
+                      <div class="header-content">
+                        <div class="header-title">
+                          <span v-if="template.category?.includes('New')" class="new-badge">New</span>
+
+                          <h2 class="is-size-4 has-text-weight-semibold mb-0 has-text-black">
+                            {{ template.name }}
+                          </h2>
+                        </div>
+
+                        <div class="header-meta">
+                          <span v-if="template.stargazers_count" class="github-stars">
+                            <img src="~/assets/img/icons/github.svg" class="github-icon" alt="GitHub">
+                            <span class="has-text-warning mr-1" style="font-size: 12px;">★</span>
+                            <span class="ml-1">{{ String(template.stargazers_count) }}</span>
+                          </span>
+                          <span v-else class="star-placeholder"></span>
+
+                          <div v-if="template.icon || template.avatar_url" class="template-icon">
+                            <img :src="template.icon || template.avatar_url">
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="markdown-content">
+                      <MarkdownFile :raw-markdown="template.readme" />
+                    </div>
+                  </template>
+
+                  <span v-else>
+                    The Nosana Job schema allows us to create a job definition and specify the parameters
+                    needed for our job. Start writing your template from scratch or start with one of our many
+                    templates.
+                    <br><br>
+                    <nuxt-link to="/jobs/templates" class="button is-secondary">Pick a Template</nuxt-link>
+                  </span>
                 </div>
               </div>
             </div>
@@ -787,6 +765,83 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
+}
+
+.template-header {
+  margin-bottom: 1rem;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.header-title {
+  position: relative;
+  h2 {
+    line-height: 1.2;
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.new-badge {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.header-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.github-stars {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.875rem;
+  .github-icon {
+    width: 12px;
+    height: 12px;
+    margin-right: 4px;
+    opacity: 0.7;
+  }
+}
+
+.star-placeholder {
+  height: 19px;
+}
+
+.template-icon {
+  background-color: #ffffff !important;
+  border: 1px solid $grey-lighter;
+  width: 38px;
+  height: 38px;
+  border-radius: 100%;
+  padding: 6px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: scale-down;
+  }
+}
+
+.dark-mode {
+  .template-icon {
+    background-color: $black-bis !important;
+    border-color: $grey-darker;
+  }
 }
 </style>
 <script lang="ts" setup>
@@ -1355,7 +1410,7 @@ watch(step, (newStep) => {
     query: { 
       ...route.query, 
       step: newStep, 
-      market: market.value?.address.toString() 
+      market: market.value?.address 
     } 
   });
 });
