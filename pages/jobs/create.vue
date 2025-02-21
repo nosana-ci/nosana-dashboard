@@ -387,8 +387,6 @@
                     <div class="template-header">
                       <div class="header-content">
                         <div class="header-title">
-                          <span v-if="template.category?.includes('New')" class="new-badge">New</span>
-
                           <h2 class="is-size-4 has-text-weight-semibold mb-0 has-text-black">
                             {{ template.name }}
                           </h2>
@@ -787,12 +785,6 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-}
-
-.new-badge {
-  position: absolute;
-  top: 0;
-  left: 0;
 }
 
 .header-meta {

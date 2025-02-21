@@ -70,10 +70,10 @@
                     randKey: makeRandomKey()
                   } 
                 }">
+                  <span v-if="getCategoryArray(template.category).includes('New')" class="new-badge">New</span>
                   <div class="template-header">
                     <div class="header-content">
                       <div class="header-title">
-                        <span v-if="template.category?.includes('New')" class="new-badge">New</span>
                         <h2 class="is-size-4 has-text-weight-semibold mb-0 has-text-black">
                           {{ template.name }}
                         </h2>
@@ -94,14 +94,9 @@
                   <div class="template-description">
                     <p>{{ template.description }}</p>
                     <div class="template-tags mt-3">
-                      <span v-for="cat in (Array.isArray(template.category) ? template.category.filter(c => !['Featured', 'New'].includes(c)) : [])" 
+                      <span v-for="cat in getCategoryArray(template.category).filter(c => !['Featured', 'New'].includes(c))" 
                             :key="cat" 
-                            class="tag" 
-                            :class="{
-                              'is-api': cat === 'API',
-                              'is-llm': cat === 'LLM',
-                              'is-image': cat === 'Image Generation'
-                            }">
+                            class="tag">
                         {{ cat }}
                       </span>
                     </div>
@@ -126,10 +121,10 @@
                   randKey: makeRandomKey()
                 } 
               }">
+                <span v-if="getCategoryArray(template.category).includes('New')" class="new-badge">New</span>
                 <div class="template-header">
                   <div class="header-content">
                     <div class="header-title">
-                      <span v-if="template.category?.includes('New')" class="new-badge">New</span>
                       <h2 class="is-size-4 has-text-weight-semibold mb-0 has-text-black">
                         {{ template.name }}
                       </h2>
@@ -150,14 +145,9 @@
                 <div class="template-description">
                   <p>{{ template.description }}</p>
                   <div class="template-tags mt-3">
-                    <span v-for="cat in (Array.isArray(template.category) ? template.category.filter(c => !['Featured', 'New'].includes(c)) : [])" 
+                    <span v-for="cat in getCategoryArray(template.category).filter(c => !['Featured', 'New'].includes(c))" 
                           :key="cat" 
-                          class="tag" 
-                          :class="{
-                            'is-api': cat === 'API',
-                            'is-llm': cat === 'LLM',
-                            'is-image': cat === 'Image Generation'
-                          }">
+                          class="tag">
                       {{ cat }}
                     </span>
                   </div>
@@ -206,26 +196,37 @@ function makeRandomKey() {
   return Math.random().toString(36).slice(2);
 }
 
+const getCategoryArray = (category: string | string[] | undefined): string[] => {
+  if (!category) return [];
+  if (Array.isArray(category)) {
+    return category.map(cat => cat === 'Web UI' ? 'Website' : cat);
+  }
+  return category.split('|').map(cat => cat === 'Web UI' ? 'Website' : cat);
+};
+
 const featuredTemplates = computed(() => {
   if (!templates.value) return [];
   return templates.value
-    .filter(t => Array.isArray(t.category) && t.category.includes('Featured'));
+    .filter(t => getCategoryArray(t.category).includes('Featured'));
 });
 
 const allCategories = computed(() => {
   if (!templates.value) return [];
+  console.log('Raw templates:', templates.value);
+  
   const categories = new Set<string>();
   
   templates.value.forEach(template => {
-    if (Array.isArray(template.category)) {
-      template.category.forEach(cat => {
-        if (!['Featured', 'New'].includes(cat)) {
-          categories.add(cat);
-        }
-      });
-    }
+    console.log('Processing template:', template.name, 'Categories:', template.category);
+    const categoryArray = getCategoryArray(template.category);
+    categoryArray.forEach(cat => {
+      if (!['Featured', 'New'].includes(cat)) {
+        categories.add(cat);
+      }
+    });
   });
   
+  console.log('All unique categories:', Array.from(categories));
   return Array.from(categories);
 });
 
@@ -239,6 +240,7 @@ const filteredTemplates = computed(() => {
   if (!templates.value) return [];
   
   let templatesList = templates.value;
+  console.log('Filtering templates. Selected categories:', selectedCategories.value);
 
   // Filter by search term
   if (search.value) {
@@ -251,22 +253,24 @@ const filteredTemplates = computed(() => {
 
   // Filter by selected categories
   if (selectedCategories.value.length > 0) {
-    templatesList = templatesList.filter(t => 
-      Array.isArray(t.category) && selectedCategories.value.some(cat => t.category.includes(cat))
-    );
+    templatesList = templatesList.filter(t => {
+      const categoryArray = getCategoryArray(t.category);
+      return selectedCategories.value.some(cat => categoryArray.includes(cat));
+    });
   }
 
   // Remove featured templates from main list if no category filter is active
   if (selectedCategories.value.length === 0) {
-    templatesList = templatesList.filter(t => 
-      !(Array.isArray(t.category) && t.category.includes('Featured'))
-    );
+    templatesList = templatesList.filter(t => {
+      const categoryArray = getCategoryArray(t.category);
+      return !categoryArray.includes('Featured');
+    });
   }
 
-  // Sort by new status and then by star count
+  console.log('Filtered templates:', templatesList.map(t => ({ name: t.name, categories: t.category })));
   return templatesList.sort((a, b) => {
-    const aIsNew = Array.isArray(a.category) && a.category.includes('New');
-    const bIsNew = Array.isArray(b.category) && b.category.includes('New');
+    const aIsNew = getCategoryArray(a.category).includes('New');
+    const bIsNew = getCategoryArray(b.category).includes('New');
     
     if (aIsNew && !bIsNew) return -1;
     if (!aIsNew && bIsNew) return 1;
@@ -407,17 +411,24 @@ const filteredTemplates = computed(() => {
 
 .new-badge {
   position: absolute;
-  top: 1rem;
-  left: 1rem;
+  top: 0.75rem;
+  left: .5rem;
   background: $primary;
   color: white;
-  padding: 0.2rem 0.5rem;
-  border-radius: 1rem;
-  font-size: 0.7rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 0.75rem;
+  font-size: 0.65rem;
   font-weight: bold;
   text-transform: uppercase;
   z-index: 1;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  width: fit-content;
+  height: fit-content;
+  letter-spacing: 0.02em;
 }
 
 .star-placeholder {
@@ -454,23 +465,8 @@ html.dark-mode .github-icon {
     padding: 0.25rem 0.75rem;
     border-radius: 1rem;
     font-weight: 500;
-    background-color: $grey-lighter;
+    background-color: rgba($grey, 0.1);
     color: $grey-dark;
-
-    &.is-api {
-      background-color: rgba($info, 0.1);
-      color: $info;
-    }
-
-    &.is-llm {
-      background-color: rgba($primary, 0.1);
-      color: $primary;
-    }
-
-    &.is-image {
-      background-color: rgba($success, 0.1);
-      color: $success;
-    }
   }
 }
 
