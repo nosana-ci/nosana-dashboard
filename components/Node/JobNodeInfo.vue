@@ -56,29 +56,6 @@
           <td>CUDA Driver</td>
           <td>{{ combinedSpecs?.cudaVersion || "-" }}</td>
         </tr>
-        <tr>
-          <td>
-            <span class="is-flex-inline">
-              <span>Performance Rank</span>
-              <span
-                class="has-tooltip-arrow ml-1"
-                style="vertical-align: middle"
-                data-tooltip="An aggregated performance ranking based on all leaderboard positions of the node compared to all other nodes in the market."
-              >
-                <img src="~/assets/img/icons/info.svg" />
-              </span>
-            </span>
-          </td>
-          <td v-if="!nodeRanking">
-            <span
-              class="has-tooltip-arrow"
-              data-tooltip="This node hasn't completed enough jobs to be ranked yet"
-            >
-              unranked
-            </span>
-          </td>
-          <td v-else>{{ nodeRanking.performanceRank }}</td>
-        </tr>
       </tbody>
     </table>
   </div>
@@ -165,39 +142,6 @@ const combinedSpecs = computed(() => {
     cudaVersion: nodeInfoData?.gpus.cuda_driver_version,
     nvmlVersion: nodeInfoData?.gpus.nvml_driver_version,
   };
-});
-
-/*************
- * Node Ranking *
- *************/
-interface NodeRanking {
-  node: string;
-  performanceRank: number;
-  stabilityRank: number;
-  participationRate: number;
-}
-
-const { data: rankingData } = useAPI(
-  computed(() => {
-    const marketAddress = nodeSpecs.value?.marketAddress;
-    return marketAddress
-      ? `/api/benchmarks/node-report?market=${marketAddress}`
-      : "/api/benchmarks/node-report";
-  }),
-  {
-    // @ts-ignore
-    disableToastOnError: true,
-    enabled: computed(() => !!nodeSpecs.value?.marketAddress),
-  }
-);
-
-const nodeRanking = computed(() => {
-  if (!rankingData.value) return null;
-  return (
-    rankingData.value.find(
-      (ranking: NodeRanking) => ranking.node === props.address
-    ) || null
-  );
 });
 </script>
 `

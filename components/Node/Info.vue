@@ -22,7 +22,9 @@
             <td v-else-if="jobs">
               <span>{{ jobs.totalJobs }}</span>
             </td>
-            <td v-else class="has-text-danger">Could not retrieve deployments</td>
+            <td v-else class="has-text-danger">
+              Could not retrieve deployments
+            </td>
           </tr>
           <tr>
             <td>Status</td>
@@ -146,54 +148,6 @@
             <td colspan="2" class="has-background-light">
               <h4 class="title is-5 mb-0">Performance</h4>
             </td>
-          </tr>
-          <tr>
-            <td>
-              <span class="is-flex-inline">
-                <span>Performance Rank</span>
-                <span
-                  class="has-tooltip-arrow ml-1"
-                  style="vertical-align: middle"
-                  data-tooltip="An aggregated performance ranking based on all leaderboard
-                positions of the host compared to all other hosts in the market."
-                >
-                  <img src="~/assets/img/icons/info.svg" />
-                </span>
-              </span>
-            </td>
-            <td v-if="!nodeRanking">
-              <span
-                class="has-tooltip-arrow"
-                data-tooltip="This host hasn't completed enough deployments to be ranked yet"
-              >
-                unranked
-              </span>
-            </td>
-            <td v-else>{{ nodeRanking.performanceRank }}</td>
-          </tr>
-          <tr>
-            <td>
-              <span class="">
-                <span>Stability Rank</span>
-                <span
-                  class="has-tooltip-arrow ml-1"
-                  style="vertical-align: middle"
-                  data-tooltip="An aggregated stability ranking based on the hosts performance
-                  variance. The less variance the better."
-                >
-                  <img src="~/assets/img/icons/info.svg" />
-                </span>
-              </span>
-            </td>
-            <td v-if="!nodeRanking">
-              <span
-                class="has-tooltip-arrow"
-                data-tooltip="This host hasn't completed enough deployments to be ranked yet"
-              >
-                unranked
-              </span>
-            </td>
-            <td v-else>{{ nodeRanking.stabilityRank }}</td>
           </tr>
           <tr>
             <td>
@@ -542,8 +496,6 @@ watch(
 
 interface NodeRanking {
   node: string;
-  performanceRank: number;
-  stabilityRank: number;
   participationRate: number;
   uptimePercentage: number;
 }
