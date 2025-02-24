@@ -25,6 +25,14 @@
             <span>My Account</span>
           </nuxt-link>
         </li>
+        <li v-if="connected">
+          <nuxt-link to="/dashboard" active-class="is-active" @click="showMenu = false">
+            <span class="icon is-small mr-4">
+              <DashboardIcon />
+            </span>
+            <span>Dashboard</span>
+          </nuxt-link>
+        </li>
         <li>
           <nuxt-link to="/" active-class="is-active" @click="showMenu = false">
             <span class="icon is-small mr-4">
@@ -117,6 +125,7 @@ import BrowserIcon from '@/assets/img/icons/sidebar/browser.svg?component';
 import CoinsIcon from '@/assets/img/icons/sidebar/coins.svg?component';
 import SupportIcon from '@/assets/img/icons/sidebar/support.svg?component';
 import LeaderboardIcon from '@/assets/img/icons/sidebar/leaderboard.svg?component';
+import DashboardIcon from '@/assets/img/icons/sidebar/dashboard.svg?component';
 import { useWallet } from "solana-wallets-vue";
 const { connected, publicKey } = useWallet();
 </script>
