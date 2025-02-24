@@ -9,7 +9,9 @@
       <tr>
         <td>Deployments Solana address</td>
         <td>
-          <span class="address is-family-monospace">{{ props.job.address }}</span>
+          <a :href="`https://solscan.io/account/${props.job.address}`" target="_blank" class="address is-family-monospace">
+            {{ props.job.address }}
+          </a>
         </td>
       </tr>
       <tr>
@@ -24,6 +26,14 @@
         </td>
       </tr>
       <tr>
+        <td>Deployer address</td>
+        <td>
+          <nuxt-link class="address is-family-monospace" :to="`/posters/${props.job.project}`">
+            <span>{{ props.job.project }}</span>
+          </nuxt-link>
+        </td>
+      </tr>
+      <tr>
         <td>GPU</td>
         <td>
           <nuxt-link class="address is-family-monospace" :to="`/markets/${props.job.market}`">
@@ -34,14 +44,6 @@
               {{ testgridMarkets.find((tgm: any) => tgm.address === props.job.market).name }}
             </span>
             <span v-else>{{ props.job.market }}</span>
-          </nuxt-link>
-        </td>
-      </tr>
-      <tr>
-        <td>Deployer address</td>
-        <td>
-          <nuxt-link class="address is-family-monospace" :to="`/posters/${props.job.project}`">
-            <span>{{ props.job.project }}</span>
           </nuxt-link>
         </td>
       </tr>
