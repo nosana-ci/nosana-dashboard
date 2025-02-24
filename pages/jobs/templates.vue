@@ -465,6 +465,14 @@ html.dark-mode .github-icon {
   }
 }
 
+.dark-mode {
+  .template-tags {
+    .tag {
+      color: white;
+    }
+  }
+}
+
 .category-filters {
   .filter-section {
     &:not(:first-child) {
