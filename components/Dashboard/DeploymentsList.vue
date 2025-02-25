@@ -14,8 +14,8 @@
               </option>
             </select>
           </div>
-          <nuxt-link to="/jobs/create" class="button has-background-white has-text-black" style="border: 1px solid black;">
-            <span style="font-size: 18px; margin-right: 0.5rem; color: black; line-height: 0;">+</span>
+          <nuxt-link to="/jobs/create" class="button has-background-white has-text-black" style="border: 1px solid black; transition: all 0.2s ease;">
+            <span style="font-size: 18px; margin-right: 0.5rem; line-height: 0;">+</span>
             <span>Deploy Model</span>
           </nuxt-link>
         </div>
@@ -531,5 +531,10 @@ const isGHCR = (image: string) => {
 
 .dark-mode .tag img[src*="status/stopped.svg"] {
   filter: brightness(100) !important;
+}
+
+.button:hover {
+  color: #10E80C !important;
+  border-color: #10E80C !important;
 }
 </style> 

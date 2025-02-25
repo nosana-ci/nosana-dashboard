@@ -34,7 +34,7 @@
                 </span>
                 <span v-else>-</span>
                 <nuxt-link to="/stake" class="ml-2">
-                  <span class="container-icon" style="background-color: white; border: 1px solid #dbdbdb; width: 24px; height: 24px; border-radius: 4px; display: flex; align-items: center; justify-content: center;">
+                  <span class="container-icon" style="background-color: white; border: 1px solid #dbdbdb; width: 24px; height: 24px; border-radius: 4px; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease;">
                     <span style="font-size: 18px; color: black; line-height: 0;">+</span>
                   </span>
                 </nuxt-link>
@@ -291,5 +291,13 @@ onMounted(() => {
 
 .box .content {
   flex: 1;
+}
+
+.container-icon:hover {
+  border-color: #10E80C !important;
+}
+
+.container-icon:hover span {
+  color: #10E80C !important;
 }
 </style> 
