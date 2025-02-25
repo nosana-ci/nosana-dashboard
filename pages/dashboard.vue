@@ -54,22 +54,42 @@
         <div class="columns">
           <div class="column is-4">
             <h3 class="title is-4 mb-4">Welcome to Nosana</h3>
-            <div class="box">
-              <div class="content">
-                <p>Get started with Nosana by exploring our features:</p>
-                <ul>
-                  <li>Deploy AI models</li>
-                  <li>Stake NOS tokens</li>
-                  <li>Earn rewards</li>
-                  <li>Monitor your deployments</li>
-                </ul>
-              </div>
+            <div class="equal-height-boxes">
+              <a href="https://docs.nosana.com/inference/quick_start.html" target="_blank" class="box has-text-black p-2 mb-2 is-block">
+                <div class="is-flex is-align-items-start" style="margin: 0 8px;">
+                  <RocketIcon style="width: 16px; height: 16px; fill: #10E80C; margin-right: 0.5rem; margin-top: 4px;" />
+                  <div>
+                    <h4 class="title is-6 mb-0">Getting Started</h4>
+                    <p class="is-size-6 mb-0" style="line-height: 1.2;">Start your journey by deploying your first AI model on Nosana.</p>
+                  </div>
+                </div>
+              </a>
+
+              <a href="https://docs.nosana.com/about/intro.html" target="_blank" class="box has-text-black p-2 mb-2 is-block">
+                <div class="is-flex is-align-items-start" style="margin: 0 8px;">
+                  <ExplorerIcon class="nosana-icon" style="width: 16px; height: 16px; margin-right: 0.5rem; margin-top: 4px;" />
+                  <div>
+                    <h4 class="title is-6 mb-0">Documentation</h4>
+                    <p class="is-size-6 mb-0" style="line-height: 1.2;">Explore our comprehensive guides and API documentation.</p>
+                  </div>
+                </div>
+              </a>
+
+              <nuxt-link to="/support" class="box has-text-black p-2 is-block">
+                <div class="is-flex is-align-items-start" style="margin: 0 8px;">
+                  <SupportIcon class="nosana-icon" style="width: 16px; height: 16px; margin-right: 0.5rem; margin-top: 4px;" />
+                  <div>
+                    <h4 class="title is-6 mb-0">Help and Support</h4>
+                    <p class="is-size-6 mb-0" style="line-height: 1.2;">Connect with our community and support team for assistance.</p>
+                  </div>
+                </div>
+              </nuxt-link>
             </div>
           </div>
           
           <div class="column is-4">
             <h3 class="title is-4 mb-4">Cost and Usage</h3>
-            <div class="box">
+            <div class="box" style="height: 100%;">
               <div class="content">
                 <p>Track your resource consumption:</p>
                 <ul>
@@ -84,7 +104,7 @@
           
           <div class="column is-4">
             <h3 class="title is-4 mb-4" style="visibility: hidden; height: 0; margin: 0; padding: 0;">Quick Actions</h3>
-            <div class="box" style="margin-top: 2.7rem;">
+            <div class="box" style="margin-top: 2.7rem; height: 100%;">
               <div class="content">
                 <p>Common tasks you can perform:</p>
                 <ul>
@@ -110,6 +130,8 @@ import DashboardDeploymentsList from '~/components/Dashboard/DeploymentsList.vue
 import { useWallet } from 'solana-wallets-vue';
 import { useStake } from '~/composables/useStake';
 import RocketIcon from '@/assets/img/icons/rocket.svg?component';
+import ExplorerIcon from '@/assets/img/icons/sidebar/explorer.svg?component';
+import SupportIcon from '@/assets/img/icons/sidebar/support.svg?component';
 
 const { connected, publicKey } = useWallet();
 const { nosana } = useSDK();
@@ -232,5 +254,42 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.nosana-icon {
+  color: #10E80C;
+}
+
+.nosana-icon :deep(path) {
+  fill: #10E80C;
+}
+
+.equal-height-boxes {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.equal-height-boxes .box {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.equal-height-boxes .box:not(:last-child) {
+  margin-bottom: 0.5rem;
+}
+
+.equal-height-boxes .box > div {
+  height: 100%;
+}
+
+.box {
+  display: flex;
+  flex-direction: column;
+}
+
+.box .content {
+  flex: 1;
 }
 </style> 
