@@ -55,28 +55,28 @@
           <div class="column is-4">
             <h3 class="title is-4 mb-4">Welcome to Nosana</h3>
             <div class="equal-height-boxes">
-              <a href="https://docs.nosana.com/inference/quick_start.html" target="_blank" class="box has-text-black p-2 mb-2 is-block">
-                <div class="is-flex is-align-items-start" style="margin: 0 8px;">
+              <nuxt-link to="/jobs/create" class="box has-text-black p-2 mb-2 is-block">
+                <div class="is-flex is-align-items-start" style="margin: 8px 8px 0 8px;">
                   <RocketIcon style="width: 16px; height: 16px; fill: #10E80C; margin-right: 0.5rem; margin-top: 4px;" />
                   <div>
                     <h4 class="title is-6 mb-0">Getting Started</h4>
                     <p class="is-size-6 mb-0" style="line-height: 1.2;">Start your journey by deploying your first AI model on Nosana.</p>
                   </div>
                 </div>
-              </a>
+              </nuxt-link>
 
               <a href="https://docs.nosana.com/about/intro.html" target="_blank" class="box has-text-black p-2 mb-2 is-block">
-                <div class="is-flex is-align-items-start" style="margin: 0 8px;">
+                <div class="is-flex is-align-items-start" style="margin: 8px 8px 0 8px;">
                   <ExplorerIcon class="nosana-icon" style="width: 16px; height: 16px; margin-right: 0.5rem; margin-top: 4px;" />
                   <div>
                     <h4 class="title is-6 mb-0">Documentation</h4>
-                    <p class="is-size-6 mb-0" style="line-height: 1.2;">Explore our comprehensive guides and API documentation.</p>
+                    <p class="is-size-6 mb-0" style="line-height: 1.2;">Explore our comprehensive guides and how the network works.</p>
                   </div>
                 </div>
               </a>
 
               <nuxt-link to="/support" class="box has-text-black p-2 is-block">
-                <div class="is-flex is-align-items-start" style="margin: 0 8px;">
+                <div class="is-flex is-align-items-start" style="margin: 8px 8px 0 8px;">
                   <SupportIcon class="nosana-icon" style="width: 16px; height: 16px; margin-right: 0.5rem; margin-top: 4px;" />
                   <div>
                     <h4 class="title is-6 mb-0">Help and Support</h4>
