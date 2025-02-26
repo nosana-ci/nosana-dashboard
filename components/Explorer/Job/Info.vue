@@ -140,6 +140,7 @@ interface Job {
   state: string | number;
   jobDefinition: JobDefinition;
   jobResult: any;
+  usdRewardPerHour?: number;
 }
 
 const props = defineProps({

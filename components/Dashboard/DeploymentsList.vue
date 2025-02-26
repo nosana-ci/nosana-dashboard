@@ -271,21 +271,39 @@ const getMarketPrice = (marketAddress: string) => {
 };
 
 const formatPrice = (job: any) => {
+  // Running job - show hourly rate
   if (job.state === 1) {
-    // Running job - show hourly rate
     if (nosPrice.value) {
       return `$${((getMarketPrice(job.market.toString()) / 1e6) * 3600 * nosPrice.value * 1.1).toFixed(2)}/h`;
     }
     return `${((getMarketPrice(job.market.toString()) / 1e6) * 1.1).toFixed(6)} NOS/s`;
+
+  // Completed or Stopped job - show final price
   } else if (job.timeEnd && job.timeStart) {
-    // Completed/Stopped job - show final price
-    const usedTime = Math.min(job.timeEnd - job.timeStart, job.timeout || 7200);
-    if (nosPrice.value) {
-      return `$${((getMarketPrice(job.market.toString()) / 1e6) * usedTime * nosPrice.value * 1.1).toFixed(2)}`;
+    const usedTime = Math.min(job.timeEnd - job.timeStart, job.timeout || 7200); // in seconds
+    const usedHours = usedTime / 3600;
+
+    // If usdRewardPerHour is provided, multiply by used time. Otherwise, fall back.
+    if (job.usdRewardPerHour != null) {
+      return `$${(job.usdRewardPerHour * usedHours).toFixed(2)}`;
+    } else {
+      if (nosPrice.value) {
+        return `$${(
+          (getMarketPrice(job.market.toString()) / 1e6) *
+          usedTime *
+          nosPrice.value *
+          1.1
+        ).toFixed(2)}`;
+      }
+      return `${(
+        (getMarketPrice(job.market.toString()) / 1e6) *
+        usedTime *
+        1.1
+      ).toFixed(6)} NOS`;
     }
-    return `${((getMarketPrice(job.market.toString()) / 1e6) * usedTime * 1.1).toFixed(6)} NOS`;
+
+  // Queued job - show hourly rate
   } else {
-    // Queued job - show hourly rate
     if (nosPrice.value) {
       return `$${((getMarketPrice(job.market.toString()) / 1e6) * 3600 * nosPrice.value * 1.1).toFixed(2)}/h`;
     }
