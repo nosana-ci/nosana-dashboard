@@ -8,7 +8,7 @@
     </div>
     <div class="menu">
       <ul class="menu-list is-size-5">
-        <li>
+        <li v-if="!connected">
           <nuxt-link to="/login" active-class="is-active" @click="showMenu = false">
             <span class="icon is-small mr-4">
               <UserIcon />
@@ -17,47 +17,14 @@
           </nuxt-link>
         </li>
         <li v-if="connected">
-          <nuxt-link :to="`/account/${publicKey}`" active-class="is-active " class="is-primary"
-            @click="showMenu = false">
+          <nuxt-link to="/dashboard" active-class="is-active" @click="showMenu = false">
             <span class="icon is-small mr-4">
               <UserIcon />
             </span>
-            <span>My Account</span>
+            <span>Profile</span>
           </nuxt-link>
         </li>
         <li v-if="connected">
-          <nuxt-link to="/dashboard" active-class="is-active" @click="showMenu = false">
-            <span class="icon is-small mr-4">
-              <DashboardIcon />
-            </span>
-            <span>Dashboard</span>
-          </nuxt-link>
-        </li>
-        <li>
-          <nuxt-link to="/" active-class="is-active" @click="showMenu = false">
-            <span class="icon is-small mr-4">
-              <ExplorerIcon />
-            </span>
-            <span>Explorer</span>
-          </nuxt-link>
-        </li>
-        <li>
-          <nuxt-link to="/stake" active-class="is-active" @click="showMenu = false">
-            <span class="icon is-small mr-4">
-              <CoinsIcon />
-            </span>
-            <span>Staking</span>
-          </nuxt-link>
-        </li>
-        <li>
-          <nuxt-link to="/jobs/templates" active-class="is-active" @click="showMenu = false">
-            <span class="icon is-small mr-4">
-              <TemplateIcon />
-            </span>
-            <span>Templates</span>
-          </nuxt-link>
-        </li>
-        <li>
           <nuxt-link to="/jobs/create" active-class="is-active" @click="showMenu = false">
             <span class="icon is-small mr-4">
               <JobBuilderIcon />
@@ -65,24 +32,45 @@
             <span>Deploy Model</span>
           </nuxt-link>
         </li>
-        <li>
-          <nuxt-link to="/markets" active-class="is-active" @click="showMenu = false">
-            <span class="icon is-small mr-4">
-              <BrowserIcon />
-            </span>
-            <span>GPUs</span>
-          </nuxt-link>
+        <li class="has-dropdown">
+          <a class="menu-list-link sidebar-link" @click="toggleExplorer">
+            <div class="is-flex is-align-items-center" style="width: 100%; padding-left: 0.7rem;">
+              <span class="icon is-small mr-4">
+                <ExplorerIcon style="opacity: 0.7;" />
+              </span>
+              <nuxt-link to="/explorer" style="opacity: 0.7; color: inherit; text-decoration: none;">Explorer</nuxt-link>
+              <span class="icon is-small ml-auto">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="chevron" :class="{ 'is-active': showExplorerDropdown }">
+                  <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                </svg>
+              </span>
+            </div>
+          </a>
+          <ul class="submenu" :class="{ 'is-active': showExplorerDropdown }">
+            <li>
+              <nuxt-link to="/explorer" active-class="is-active" @click="showMenu = false">
+                Explorer
+              </nuxt-link>
+            </li>
+            <li>
+              <nuxt-link to="/jobs/templates" active-class="is-active" @click="showMenu = false">
+                Templates
+              </nuxt-link>
+            </li>
+            <li>
+              <nuxt-link to="/markets" active-class="is-active" @click="showMenu = false">
+                GPUs
+              </nuxt-link>
+            </li>
+            <li>
+              <nuxt-link to="/leaderboards" active-class="is-active" @click="showMenu = false">
+                Host Leaderboard
+              </nuxt-link>
+            </li>
+          </ul>
         </li>
         <li>
-          <nuxt-link to="/leaderboards" active-class="is-active" @click="showMenu = false">
-            <span class="icon is-small mr-4">
-              <LeaderboardIcon />
-            </span>
-            <span>Leaderboards</span>
-          </nuxt-link>
-        </li>
-        <li>
-          <nuxt-link active-class="is-active" @click="showMenu = false" to="/support">
+          <nuxt-link active-class="is-active" @click="showMenu = false" to="/support" style="padding-left: 1.3rem;">
             <span class="icon is-small mr-4">
               <SupportIcon />
             </span>
@@ -101,7 +89,7 @@
   </aside>
   <nav class="navbar is-hidden-desktop is-fixed-top has-shadow">
     <div class="navbar-brand">
-      <nuxt-link to="/" class="navbar-item" @click="showMenu = false">
+      <nuxt-link to="/explorer" class="navbar-item" @click="showMenu = false">
         <logo width="135px" :animated="true" class="light-only" />
         <logo width="135px" :white="true" class="dark-only" :animated="true" />
       </nuxt-link>
@@ -117,17 +105,18 @@
 
 <script lang="ts" setup>
 const showMenu = ref(false);
+const showExplorerDropdown = ref(false);
 import JobBuilderIcon from '@/assets/img/icons/sidebar/job-builder.svg?component';
-import TemplateIcon from '@/assets/img/icons/sidebar/template.svg?component';
 import ExplorerIcon from '@/assets/img/icons/sidebar/explorer.svg?component';
 import UserIcon from '@/assets/img/icons/sidebar/user.svg?component';
-import BrowserIcon from '@/assets/img/icons/sidebar/browser.svg?component';
-import CoinsIcon from '@/assets/img/icons/sidebar/coins.svg?component';
 import SupportIcon from '@/assets/img/icons/sidebar/support.svg?component';
-import LeaderboardIcon from '@/assets/img/icons/sidebar/leaderboard.svg?component';
-import DashboardIcon from '@/assets/img/icons/sidebar/dashboard.svg?component';
 import { useWallet } from "solana-wallets-vue";
+import { computed } from 'vue';
 const { connected, publicKey } = useWallet();
+
+const toggleExplorer = () => {
+  showExplorerDropdown.value = !showExplorerDropdown.value;
+};
 </script>
 
 <style lang="scss" scoped>
@@ -164,9 +153,73 @@ const { connected, publicKey } = useWallet();
   }
 }
 
+.has-dropdown {
+  margin-bottom: 15px !important;
+  
+  .sidebar-link {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem;
+    color: inherit;
+    text-decoration: none;
+    cursor: pointer;
 
+    &:hover {
+      .icon, span {
+        opacity: 1 !important;
+      }
+    }
 
+    &.is-active {
+      .icon, span {
+        opacity: 1 !important;
+      }
+    }
+  }
 
+  .chevron {
+    width: 16px;
+    height: 16px;
+    transition: transform 0.2s ease;
+
+    &.is-active {
+      transform: rotate(-180deg);
+    }
+  }
+}
+
+.submenu {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.2s ease-out;
+  margin-left: 2.5rem;
+  margin-bottom: -10px;
+
+  &.is-active {
+    max-height: 200px;
+  }
+
+  li {
+    margin: 0.5rem 0;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+    font-size: 0.9em;
+    padding: 0.25rem 0.5rem;
+    display: block;
+
+    &:hover {
+      opacity: 1;
+    }
+
+    &.is-active {
+      opacity: 1;
+      color: white;
+    }
+  }
+}
 
 @include touch {
   .sidebar {

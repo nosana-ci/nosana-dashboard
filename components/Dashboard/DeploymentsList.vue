@@ -15,7 +15,7 @@
             </select>
           </div>
           <nuxt-link to="/jobs/create" class="button has-background-white has-text-black" style="border: 1px solid black; transition: all 0.2s ease;">
-            <span style="font-size: 18px; margin-right: 0.5rem; line-height: 0;">+</span>
+            <PlusSymbolIcon class="plus-icon" style="width: 14px; height: 14px; margin-right: 0.5rem; transition: fill 0.2s ease;" />
             <span>Deploy Model</span>
           </nuxt-link>
         </div>
@@ -131,6 +131,7 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
 import { useWallet } from 'solana-wallets-vue';
+import PlusSymbolIcon from '@/assets/img/icons/plus_symbol.svg?component';
 
 const router = useRouter();
 const { publicKey: walletPublicKey } = useWallet();
@@ -554,5 +555,17 @@ const isGHCR = (image: string) => {
 .button:hover {
   color: #10E80C !important;
   border-color: #10E80C !important;
+}
+
+.plus-icon {
+  display: inline-flex;
+  align-items: center;
+  fill: currentColor;
+  position: relative;
+  top: -1px;
+}
+
+.button:hover .plus-icon {
+  fill: #10E80C;
 }
 </style> 

@@ -1,36 +1,11 @@
 <template>
   <div>
-    <TopBar :title="'Explorer'" :subtitle="'Overview'"></TopBar>
-    <div class="box has-background-white-ter">
-      <ExplorerSearch />
-    </div>
-    <div class="box">
-      <ExplorerNodesWorldMap />
-    </div>
-    <ExplorerJobStats />
-    <ExplorerJobTimestamps />
-    <div class="columns mt-4 is-multiline">
-      <div class="column is-6">
-        <div class="box is-flex is-flex-direction-column">
-          <ExplorerJobLatest />
-        </div>
-      </div>
-      <div class="column is-6">
-        <div class="box is-flex is-flex-direction-column">
-          <h2 class="title is-5">GPUs</h2>
-          <ExplorerMarketQueues></ExplorerMarketQueues>
-          <div class="has-text-right mt-auto pt-2">
-            <nuxt-link to="/markets" class="button is-text">
-              <span>All GPUs</span>
-              <span class="icon"> &#8250; </span>
-            </nuxt-link>
-          </div>
-        </div>
-      </div>
-    </div>
+    <ClientOnly>
+      <TopBar :title="'Login'" :subtitle="'Welcome'"></TopBar>
+      <Login />
+    </ClientOnly>
   </div>
 </template>
 
 <script lang="ts" setup>
-import ExplorerNodesWorldMap from '~/components/Explorer/Nodes/WorldMap.vue'
-</script>
+</script> 
