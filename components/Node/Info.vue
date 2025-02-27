@@ -385,11 +385,14 @@ const {
   data: nodeInfo,
   pending: loadingInfo,
   execute: getNodeInfo,
-} = useAPI(`https://${props.address}.node.k8s.dev.nos.ci/node/info`, {
-  immediate: false,
-  // @ts-ignore
-  disableToastOnError: true,
-});
+} = useAPI(
+  `https://${props.address}.${useRuntimeConfig().public.nodeDomain}/node/info`,
+  {
+    immediate: false,
+    // @ts-ignore
+    disableToastOnError: true,
+  }
+);
 
 /*************
  * Fallback Node Specs *
