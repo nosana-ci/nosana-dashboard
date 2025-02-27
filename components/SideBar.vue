@@ -35,7 +35,7 @@
         <li class="has-dropdown">
           <a class="menu-list-link sidebar-link" @click="toggleExplorer">
             <div class="is-flex is-align-items-center" style="width: 100%; padding-left: 0.7rem;">
-              <span class="icon is-small mr-4">
+              <span class="icon is-small mr-0">
                 <ExplorerIcon style="opacity: 0.7;" />
               </span>
               <nuxt-link to="/explorer" style="opacity: 0.7; color: inherit; text-decoration: none;">Explorer</nuxt-link>
@@ -70,7 +70,7 @@
           </ul>
         </li>
         <li>
-          <nuxt-link active-class="is-active" @click="showMenu = false" to="/support" style="padding-left: 1.3rem;">
+          <nuxt-link active-class="is-active" @click="showMenu = false" to="/support" style="padding-left: 1.4rem;">
             <span class="icon is-small mr-4">
               <SupportIcon />
             </span>
