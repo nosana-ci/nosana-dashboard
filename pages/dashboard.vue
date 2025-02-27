@@ -90,14 +90,24 @@
           <div class="column is-4">
             <h3 class="title is-4 mb-4">Cost and Usage</h3>
             <div class="box" style="height: 100%;">
-              <div class="content">
-                <p>Track your resource consumption:</p>
-                <ul>
-                  <li>Total compute hours: 0h</li>
-                  <li>Monthly spend: $0.00</li>
-                  <li>Active deployments: 0</li>
-                  <li>Available GPU types: 4</li>
-                </ul>
+              <div class="content is-flex is-flex-direction-column" style="height: 100%; padding: 2rem 0;">
+                <div class="is-flex-grow-1 is-flex is-flex-direction-column is-justify-content-center has-text-centered">
+                  <p class="heading">Current month cost</p>
+                  <p class="title mb-0" v-if="monthSpend && !loadingSpend">
+                    ${{ monthSpend.spentThisMonth.toFixed(2) }}
+                  </p>
+                  <p class="title mb-0" v-else>-</p>
+                </div>
+                <div class="is-flex is-justify-content-center my-4">
+                  <div style="width: 220px; height: 2px; background-color: #dbdbdb;"></div>
+                </div>
+                <div class="is-flex-grow-1 is-flex is-flex-direction-column is-justify-content-center has-text-centered">
+                  <p class="heading">Forecasted month end cost</p>
+                  <p class="title mb-0" v-if="monthSpend && !loadingSpend">
+                    ${{ monthSpend.forecast.toFixed(2) }}
+                  </p>
+                  <p class="title mb-0" v-else>-</p>
+                </div>
               </div>
             </div>
           </div>
@@ -129,6 +139,8 @@
 import DashboardDeploymentsList from '~/components/Dashboard/DeploymentsList.vue';
 import { useWallet } from 'solana-wallets-vue';
 import { useStake } from '~/composables/useStake';
+import { useAPI } from '~/composables/useAPI';
+import { computed, ref, onMounted, watch } from 'vue';
 import RocketIcon from '@/assets/img/icons/rocket.svg?component';
 import ExplorerIcon from '@/assets/img/icons/sidebar/explorer.svg?component';
 import SupportIcon from '@/assets/img/icons/sidebar/support.svg?component';
@@ -194,6 +206,27 @@ watch(() => publicKey.value, () => {
 
 onMounted(() => {
   checkBalances();
+});
+
+// 1) Setup for "getSpendThisMonth"
+const spendEndpoint = computed(() => {
+  if (!publicKey.value) return null; // Only call if we have an address
+  return `/api/stats/spend-this-month?address=${publicKey.value.toString()}`;
+});
+
+const { data: monthSpend, pending: loadingSpend } = useAPI(spendEndpoint, {
+  default: () => ({ spentThisMonth: 0, breakdown: [], forecast: 0 })
+});
+
+// 2) You can also watch the public key to refresh whenever the user changes wallets
+watch(() => publicKey.value, () => {
+  // The composable will automatically fetch again if spendEndpoint changes
+});
+
+// 3) Example onMounted if you'd like a one-time fetch
+onMounted(() => {
+  // do nothing special if `useAPI` is set to watch: [spendEndpoint],
+  // otherwise you can manually refresh here
 });
 </script>
 
