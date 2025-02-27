@@ -49,9 +49,9 @@
           </div>
         </div>
         <h3 class="title is-4 mb-7">Deployments</h3>
-        <DashboardDeploymentsList :items-per-page="10" class="mb-6" />
+        <DashboardDeploymentsList :items-per-page="10" class="mb-6 deployments-list" />
         
-        <div class="columns">
+        <div class="columns mt-6">
           <div class="column is-4">
             <h3 class="title is-4 mb-4">Welcome to Nosana</h3>
             <div class="equal-height-boxes">
@@ -605,6 +605,11 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* Deployments section */
+.deployments-list {
+  margin-bottom: 3rem !important;
+}
+
 .container {
   max-width: 1200px;
   margin: 0 auto;
@@ -630,6 +635,20 @@ onMounted(() => {
   flex-direction: column;
   justify-content: center;
   max-height: 280px;
+}
+
+/* Exclude DeploymentsList from the height restriction */
+.deployments-list > .box {
+  max-height: none;
+  height: auto;
+  overflow: visible;
+}
+
+.deployments-list > .box .columns,
+.deployments-list > .box .column,
+.deployments-list > .box .table-container {
+  height: auto;
+  max-height: none;
 }
 
 /* Special handling for Cost and Usage and Monthly History boxes */

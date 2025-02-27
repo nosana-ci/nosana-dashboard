@@ -1,5 +1,5 @@
 <template>
-  <div class="box" style="margin-top: 1rem;">
+  <div class="box" style="margin-top: 1rem; height: auto; max-height: none;">
     <div class="columns is-multiline">
       <div class="column is-12">
         <div class="is-flex is-justify-content-space-between is-align-items-center mb-4">
