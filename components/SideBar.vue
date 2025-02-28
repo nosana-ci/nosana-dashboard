@@ -35,10 +35,10 @@
         <li class="has-dropdown">
           <a class="menu-list-link sidebar-link" @click="toggleExplorer">
             <div class="is-flex is-align-items-center" style="width: 100%; padding-left: 0.7rem;">
-              <span class="icon is-small mr-0">
-                <ExplorerIcon style="opacity: 0.7;" />
+              <span class="icon is-small mr-4">
+                <ExplorerIcon />
               </span>
-              <nuxt-link to="/explorer" style="opacity: 0.7; color: inherit; text-decoration: none;">Explorer</nuxt-link>
+              <span style="opacity: 0.7;">Explorer</span>
               <span class="icon is-small ml-auto">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="chevron" :class="{ 'is-active': showExplorerDropdown }">
                   <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
@@ -48,22 +48,22 @@
           </a>
           <ul class="submenu" :class="{ 'is-active': showExplorerDropdown }">
             <li>
-              <nuxt-link to="/explorer" active-class="is-active" @click="showMenu = false">
+              <nuxt-link to="/explorer" active-class="is-active" class="submenu-link" @click="showMenu = false">
                 Explorer
               </nuxt-link>
             </li>
             <li>
-              <nuxt-link to="/jobs/templates" active-class="is-active" @click="showMenu = false">
+              <nuxt-link to="/jobs/templates" active-class="is-active" class="submenu-link" @click="showMenu = false">
                 Templates
               </nuxt-link>
             </li>
             <li>
-              <nuxt-link to="/markets" active-class="is-active" @click="showMenu = false">
-                GPUs
+              <nuxt-link to="/markets" active-class="is-active" class="submenu-link" @click="showMenu = false">
+                Markets
               </nuxt-link>
             </li>
             <li>
-              <nuxt-link to="/leaderboards" active-class="is-active" @click="showMenu = false">
+              <nuxt-link to="/leaderboards" active-class="is-active" class="submenu-link" @click="showMenu = false">
                 Host Leaderboard
               </nuxt-link>
             </li>
@@ -141,8 +141,18 @@ const toggleExplorer = () => {
     pointer-events: none;
   }
 
+  a, span {
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+
   .icon {
     opacity: 0.5;
+    transition: opacity 0.2s ease;
   }
 
   .is-active {
@@ -150,6 +160,8 @@ const toggleExplorer = () => {
       color: $secondary;
       opacity: 1;
     }
+    opacity: 1;
+    color: $secondary;
   }
 }
 
@@ -173,6 +185,7 @@ const toggleExplorer = () => {
     &.is-active {
       .icon, span {
         opacity: 1 !important;
+        color: $secondary;
       }
     }
   }
@@ -181,6 +194,7 @@ const toggleExplorer = () => {
     width: 16px;
     height: 16px;
     transition: transform 0.2s ease;
+    opacity: 0.5;
 
     &.is-active {
       transform: rotate(-180deg);
@@ -202,21 +216,38 @@ const toggleExplorer = () => {
   li {
     margin: 0.5rem 0;
   }
+}
 
-  a {
-    color: inherit;
-    text-decoration: none;
-    font-size: 0.9em;
-    padding: 0.25rem 0.5rem;
-    display: block;
+.submenu-link {
+  opacity: 0.7 !important;
+  transition: opacity 0.2s ease !important;
+  color: #4a4a4a !important;
+  text-decoration: none !important;
+  font-size: 1em !important;
+  padding: 0.25rem 0.5rem !important;
+  display: block !important;
+
+  &:hover {
+    opacity: 1 !important;
+    color: #4a4a4a !important;
+  }
+
+  &.is-active {
+    opacity: 1 !important;
+    color: $secondary !important;
+  }
+}
+
+.dark-mode {
+  .submenu-link {
+    color: white !important;
 
     &:hover {
-      opacity: 1;
+      color: white !important;
     }
 
     &.is-active {
-      opacity: 1;
-      color: white;
+      color: $secondary !important;
     }
   }
 }
