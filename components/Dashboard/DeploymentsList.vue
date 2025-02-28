@@ -98,7 +98,7 @@
                     'has-background-white has-text-black': job.state === 3,
                     'is-light': job.state !== 3
                   }" :style="job.state === 3 ? 'border: 1px solid black;' : ''">
-                    <img class="mr-2" :src="`/img/icons/status/${getStatusIcon(job.state)}.svg`" :style="job.state === 3 ? 'filter: brightness(0);' : ''" />
+                    <img class="mr-2 status-icon" :src="`/img/icons/status/${getStatusIcon(job.state)}.svg`" :style="job.state === 3 ? 'filter: brightness(0);' : ''" />
                     <span>{{ getStatusText(job.state) }}</span>
                   </div>
                 </td>
@@ -567,5 +567,14 @@ const isGHCR = (image: string) => {
 
 .button:hover .plus-icon {
   fill: #10E80C;
+}
+
+.status-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.dark-mode .tag img[src*="status/stopped.svg"] {
+  filter: brightness(100) !important;
 }
 </style> 

@@ -337,31 +337,28 @@ const { data: marketsData } = useAPI('/api/markets', { default: () => [] });
 
 // Predefined colors for different GPU types with distinct color scheme
 const GPU_COLORS = {
-  // 3000 Series
-  'NVIDIA 3060':      '#0166FF', // (Mandated)
-  'NVIDIA 3070':      '#D32F2F', // Red 700
-  'NVIDIA 3080':      '#C2185B', // Pink 700
-  'NVIDIA 3090':      '#7B1FA2', // Purple 700
-
+// 3000 Series
+'NVIDIA 3060':     '#16C47F',
+  'NVIDIA 3070':     '#FFD65A',
+  'NVIDIA 3080':     '#FF9D23',
+  'NVIDIA 3090':     '#F93827',
   // 4000 Series
-  'NVIDIA 4060':      '#512DA8', // Deep Purple 700
-  'NVIDIA 4070':      '#303F9F', // Indigo 700
-  'NVIDIA 4080':      '#0097A7', // Cyan 700
-  'NVIDIA 4090':      '#04DE01', // (Mandated)
-
+  'NVIDIA 4060':     '#26355D',
+  'NVIDIA 4070':     '#AF47D2',
+  'NVIDIA 4080':     '#FF8F00',
+  'NVIDIA 4090':     '#FFDB00',
   // 5000 Series
-  'NVIDIA 5070':      '#00796B', // Teal 700
-  'NVIDIA 5080':      '#388E3C', // Green 700
-  'NVIDIA 5090':      '#AFB42B', // Lime 700
-
+  'NVIDIA 5070':     '#6420AA',
+  'NVIDIA 5080':     '#FF3EA5',
+  'NVIDIA 5090':     '#FF7ED4',
   // Professional Series
-  'NVIDIA 4000/A4000': '#FBC02D', // Yellow 700
-  'NVIDIA 5000/A5000': '#FFA000', // Amber 700
-  'NVIDIA 6000/A6000': '#E64A19', // Deep Orange 700
-  'NVIDIA A40':        '#5D4037', // Brown 700
-  'NVIDIA A100 40GB':  '#455A64', // Blue Grey 700
-  'NVIDIA A100 80GB':  '#FF8E00', // (Mandated)
-  'NVIDIA H100':       '#616161', // Grey 700
+  'NVIDIA 4000/A4000':  '#3F0071',
+  'NVIDIA 5000/A5000':  '#FB2576',
+  'NVIDIA 6000/A6000':  '#332FD0',
+  'NVIDIA A40':       '#00FFAB',
+  'NVIDIA A100 40GB':  '#14C38E',
+  'NVIDIA A100 80GB':  '#B8F1B0',
+  'NVIDIA H100':      '#E3FCBF',
 };
 
 
@@ -481,7 +478,10 @@ const chartData = computed(() => {
       stack: 'totalSpent',
       communityData: dataPoints.map(d => d.community),
       premiumData: dataPoints.map(d => d.premium),
-      showInLegend: top3GPUs.includes(baseName)
+      showInLegend: top3GPUs.includes(baseName),
+      borderWidth: 1,
+      borderColor: 'white',
+      hoverBorderColor: 'white'
     });
   });
 
@@ -593,7 +593,15 @@ const chartOptions = {
         maxTicksLimit: 4
       }
     }
-  }
+  },
+  elements: {
+    bar: {
+      borderRadius: 4,
+      borderSkipped: false
+    }
+  },
+  barSpacing: 2,
+  categorySpacing: 0.3
 };
 
 onMounted(() => {
