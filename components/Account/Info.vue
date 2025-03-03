@@ -23,16 +23,6 @@
             </td>
           </tr>
           <tr>
-            <td>NOS Staked</td>
-            <td>
-              <span v-if="nosStaked && nosStaked.amount"
-                >{{ (nosStaked.amount / 1e6).toFixed(4) }} NOS</span
-              >
-              <span v-else-if="loading">...</span>
-              <span v-else>-</span>
-            </td>
-          </tr>
-          <tr>
             <td>SOL Balance</td>
             <td>
               <span v-if="solBalance"
