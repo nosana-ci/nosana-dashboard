@@ -59,12 +59,12 @@
             </li>
             <li>
               <nuxt-link to="/markets" active-class="is-active" class="submenu-link" @click="showMenu = false">
-                Markets
+                GPUs
               </nuxt-link>
             </li>
             <li>
               <nuxt-link to="/leaderboards" active-class="is-active" class="submenu-link" @click="showMenu = false">
-                Host Leaderboard
+                Leaderboard
               </nuxt-link>
             </li>
           </ul>
@@ -166,7 +166,7 @@ const toggleExplorer = () => {
 }
 
 .has-dropdown {
-  margin-bottom: 15px !important;
+  margin-bottom: 10px !important;
   
   .sidebar-link {
     display: flex;
@@ -176,15 +176,30 @@ const toggleExplorer = () => {
     text-decoration: none;
     cursor: pointer;
 
+    div {
+      color: $menu-item-color;
+      opacity: 0.7;
+      transition: opacity 0.2s ease;
+    }
+
     &:hover {
+      div {
+        opacity: 1;
+      }
+      
       .icon, span {
-        opacity: 1 !important;
+        opacity: 1;
       }
     }
 
     &.is-active {
+      div {
+        opacity: 1;
+        color: $secondary;
+      }
+      
       .icon, span {
-        opacity: 1 !important;
+        opacity: 1;
         color: $secondary;
       }
     }
@@ -205,31 +220,26 @@ const toggleExplorer = () => {
 .submenu {
   max-height: 0;
   overflow: hidden;
-  transition: max-height 0.2s ease-out;
+  transition: max-height 0.3s ease-out;
   margin-left: 2.5rem;
-  margin-bottom: -10px;
+  margin-bottom: 0;
 
   &.is-active {
-    max-height: 200px;
-  }
-
-  li {
-    margin: 0.5rem 0;
+    max-height: 300px;
   }
 }
 
 .submenu-link {
   opacity: 0.7 !important;
   transition: opacity 0.2s ease !important;
-  color: #4a4a4a !important;
   text-decoration: none !important;
   font-size: 1em !important;
-  padding: 0.25rem 0.5rem !important;
-  display: block !important;
+  display: flex !important;
+  align-items: center !important;
+  height: 32px !important;
 
   &:hover {
     opacity: 1 !important;
-    color: #4a4a4a !important;
   }
 
   &.is-active {
@@ -239,11 +249,21 @@ const toggleExplorer = () => {
 }
 
 .dark-mode {
-  .submenu-link {
-    color: white !important;
+  .sidebar-link {
+    color: $grey-lighter;
 
     &:hover {
-      color: white !important;
+      color: $grey-lighter;
+    }
+
+    &.is-active {
+      color: $secondary;
+    }
+  }
+
+  .submenu-link {
+    &:hover {
+      opacity: 1 !important;
     }
 
     &.is-active {
