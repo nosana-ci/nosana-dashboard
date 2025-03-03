@@ -38,7 +38,7 @@
               <span class="icon is-small mr-4">
                 <ExplorerIcon />
               </span>
-              <span style="opacity: 0.7;">Explorer</span>
+              <span style="opacity: 1;">Explorer</span>
               <span class="icon is-small ml-auto">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="chevron" :class="{ 'is-active': showExplorerDropdown }">
                   <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
