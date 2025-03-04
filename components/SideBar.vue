@@ -142,7 +142,7 @@ const toggleExplorer = () => {
   }
 
   a, span {
-    opacity: 0.7;
+    opacity: 0.9;
     transition: opacity 0.2s ease;
 
     &:hover {
@@ -151,7 +151,7 @@ const toggleExplorer = () => {
   }
 
   .icon {
-    opacity: 0.5;
+    opacity: 0.9;
     transition: opacity 0.2s ease;
   }
 
@@ -178,7 +178,7 @@ const toggleExplorer = () => {
 
     div {
       color: $menu-item-color;
-      opacity: 0.7;
+      opacity: 0.9;
       transition: opacity 0.2s ease;
     }
 
@@ -209,7 +209,7 @@ const toggleExplorer = () => {
     width: 16px;
     height: 16px;
     transition: transform 0.2s ease;
-    opacity: 0.5;
+    opacity: 0.9;
 
     &.is-active {
       transform: rotate(-180deg);
@@ -230,7 +230,7 @@ const toggleExplorer = () => {
 }
 
 .submenu-link {
-  opacity: 0.7 !important;
+  opacity: 0.9 !important;
   transition: opacity 0.2s ease !important;
   text-decoration: none !important;
   font-size: 1em !important;
@@ -258,6 +258,22 @@ const toggleExplorer = () => {
 
     &.is-active {
       color: $secondary;
+    }
+  }
+
+  .menu-list-link {
+    div {
+      color: $grey-lighter !important;
+    }
+    
+    .icon, span {
+      opacity: 0.9;
+    }
+    
+    &:hover {
+      .icon, span {
+        opacity: 1;
+      }
     }
   }
 
