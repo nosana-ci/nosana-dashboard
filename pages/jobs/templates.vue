@@ -212,10 +212,12 @@ const featuredTemplates = computed(() => {
 
 const allCategories = computed(() => {
   if (!templates.value) return [];
+  console.log('Raw templates:', templates.value);
   
   const categories = new Set<string>();
   
   templates.value.forEach(template => {
+    console.log('Processing template:', template.name, 'Categories:', template.category);
     const categoryArray = getCategoryArray(template.category);
     categoryArray.forEach(cat => {
       if (!['Featured', 'New'].includes(cat)) {
@@ -224,6 +226,7 @@ const allCategories = computed(() => {
     });
   });
   
+  console.log('All unique categories:', Array.from(categories));
   return Array.from(categories);
 });
 
@@ -237,6 +240,7 @@ const filteredTemplates = computed(() => {
   if (!templates.value) return [];
   
   let templatesList = templates.value;
+  console.log('Filtering templates. Selected categories:', selectedCategories.value);
 
   // Filter by search term
   if (search.value) {
@@ -263,6 +267,7 @@ const filteredTemplates = computed(() => {
     });
   }
 
+  console.log('Filtered templates:', templatesList.map(t => ({ name: t.name, categories: t.category })));
   return templatesList.sort((a, b) => {
     const aIsNew = getCategoryArray(a.category).includes('New');
     const bIsNew = getCategoryArray(b.category).includes('New');
@@ -462,14 +467,6 @@ html.dark-mode .github-icon {
     font-weight: 500;
     background-color: rgba($grey, 0.1);
     color: $grey-dark;
-  }
-}
-
-.dark-mode {
-  .template-tags {
-    .tag {
-      color: white;
-    }
   }
 }
 

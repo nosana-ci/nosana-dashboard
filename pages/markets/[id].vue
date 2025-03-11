@@ -282,6 +282,7 @@ const jobsUrl = computed(() => {
 const { data: jobs, pending: loadingJobs } = useAPI(jobsUrl, { watch: [jobsUrl] })
 
 watch(jobsUrl, () => {
+  console.log('resetting jobs..')
   jobs.value = null
 })
 

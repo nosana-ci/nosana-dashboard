@@ -119,10 +119,7 @@
               <span v-else>
                 <!-- Completed/Stopped job - show final price -->
                 <span v-if="job.timeEnd && job.timeStart">
-                  <span v-if="job.usdRewardPerHour != null">
-                    ${{ (job.usdRewardPerHour * ((job.timeEnd - job.timeStart) / 3600)).toFixed(2) }}
-                  </span>
-                  <span v-else-if="nosPrice">
+                  <span v-if="nosPrice">
                     ${{ ((getMarketPrice(job.market.toString()) / 1e6) * Math.min(job.timeEnd - job.timeStart, job.timeout ? job.timeout : 7200) * nosPrice * (select || title === 'Jobs Posted' ? 1.1 : 1)).toFixed(2) }}
                   </span>
                   <span v-else>
