@@ -1,5 +1,8 @@
 <template>
-  <aside class="column has-background-white sidebar has-overflow-scroll" :class="{ 'is-hidden-touch': !showMenu }">
+  <aside
+    class="column has-background-white sidebar has-overflow-scroll"
+    :class="{ 'is-hidden-touch': !showMenu }"
+  >
     <div class="mb-6 is-hidden-touch">
       <nuxt-link to="/">
         <logo width="160px" :animated="true" class="light-only" />
@@ -8,7 +11,7 @@
     </div>
     <div class="menu">
       <ul class="menu-list is-size-5">
-        <li v-if="!connected">
+        <!-- <li v-if="!connected">
           <nuxt-link to="/login" active-class="is-active" @click="showMenu = false">
             <span class="icon is-small mr-4">
               <UserIcon />
@@ -31,46 +34,82 @@
             </span>
             <span>Deploy Model</span>
           </nuxt-link>
-        </li>
+        </li> -->
         <li class="has-dropdown">
           <a class="menu-list-link sidebar-link" @click="toggleExplorer">
-            <div class="is-flex is-align-items-center" style="width: 100%; padding-left: 0.7rem;">
+            <div
+              class="is-flex is-align-items-center"
+              style="width: 100%; padding-left: 0.7rem"
+            >
               <span class="icon is-small mr-4">
                 <ExplorerIcon />
               </span>
-              <span style="opacity: 1;">Explorer</span>
+              <span style="opacity: 1">Explorer</span>
               <span class="icon is-small ml-auto">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="chevron" :class="{ 'is-active': showExplorerDropdown }">
-                  <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  class="chevron"
+                  :class="{ 'is-active': showExplorerDropdown }"
+                >
+                  <path
+                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                  />
                 </svg>
               </span>
             </div>
           </a>
           <ul class="submenu" :class="{ 'is-active': showExplorerDropdown }">
             <li>
-              <nuxt-link to="/explorer" active-class="is-active" class="submenu-link" @click="showMenu = false">
+              <nuxt-link
+                to="/explorer"
+                active-class="is-active"
+                class="submenu-link"
+                @click="showMenu = false"
+              >
                 Explorer
               </nuxt-link>
             </li>
             <li>
-              <nuxt-link to="/jobs/templates" active-class="is-active" class="submenu-link" @click="showMenu = false">
+              <nuxt-link
+                to="/jobs/templates"
+                active-class="is-active"
+                class="submenu-link"
+                @click="showMenu = false"
+              >
                 Templates
               </nuxt-link>
             </li>
             <li>
-              <nuxt-link to="/markets" active-class="is-active" class="submenu-link" @click="showMenu = false">
+              <nuxt-link
+                to="/markets"
+                active-class="is-active"
+                class="submenu-link"
+                @click="showMenu = false"
+              >
                 GPUs
               </nuxt-link>
             </li>
             <li>
-              <nuxt-link to="/leaderboards" active-class="is-active" class="submenu-link" @click="showMenu = false">
+              <nuxt-link
+                to="/leaderboards"
+                active-class="is-active"
+                class="submenu-link"
+                @click="showMenu = false"
+              >
                 Leaderboard
               </nuxt-link>
             </li>
           </ul>
         </li>
         <li>
-          <nuxt-link active-class="is-active" @click="showMenu = false" to="/support" style="padding-left: 1.4rem;">
+          <nuxt-link
+            active-class="is-active"
+            @click="showMenu = false"
+            to="/support"
+            style="padding-left: 1.4rem"
+          >
             <span class="icon is-small mr-4">
               <SupportIcon />
             </span>
@@ -79,9 +118,12 @@
         </li>
       </ul>
     </div>
-    <div class="is-flex is-justify-content-space-between is-align-items-center mt-auto has-text-right">
+    <div
+      class="is-flex is-justify-content-space-between is-align-items-center mt-auto has-text-right"
+    >
       <nuxt-link to="/status" @click="showMenu = false">
-        <div class="status-dot dot-online"></div> Healthy
+        <div class="status-dot dot-online"></div>
+        Healthy
       </nuxt-link>
 
       <ColorModeSwitcher />
@@ -94,7 +136,12 @@
         <logo width="135px" :white="true" class="dark-only" :animated="true" />
       </nuxt-link>
 
-      <a role="button" class="navbar-burger" :class="{ 'is-active': showMenu }" @click="showMenu = !showMenu">
+      <a
+        role="button"
+        class="navbar-burger"
+        :class="{ 'is-active': showMenu }"
+        @click="showMenu = !showMenu"
+      >
         <span aria-hidden="true"></span>
         <span aria-hidden="true"></span>
         <span aria-hidden="true"></span>
@@ -106,12 +153,12 @@
 <script lang="ts" setup>
 const showMenu = ref(false);
 const showExplorerDropdown = ref(false);
-import JobBuilderIcon from '@/assets/img/icons/sidebar/job-builder.svg?component';
-import ExplorerIcon from '@/assets/img/icons/sidebar/explorer.svg?component';
-import UserIcon from '@/assets/img/icons/sidebar/user.svg?component';
-import SupportIcon from '@/assets/img/icons/sidebar/support.svg?component';
+import JobBuilderIcon from "@/assets/img/icons/sidebar/job-builder.svg?component";
+import ExplorerIcon from "@/assets/img/icons/sidebar/explorer.svg?component";
+import UserIcon from "@/assets/img/icons/sidebar/user.svg?component";
+import SupportIcon from "@/assets/img/icons/sidebar/support.svg?component";
 import { useWallet } from "solana-wallets-vue";
-import { computed } from 'vue';
+import { computed } from "vue";
 const { connected, publicKey } = useWallet();
 
 const toggleExplorer = () => {
@@ -141,7 +188,8 @@ const toggleExplorer = () => {
     pointer-events: none;
   }
 
-  a, span {
+  a,
+  span {
     opacity: 0.9;
     transition: opacity 0.2s ease;
 
@@ -167,7 +215,7 @@ const toggleExplorer = () => {
 
 .has-dropdown {
   margin-bottom: 10px !important;
-  
+
   .sidebar-link {
     display: flex;
     align-items: center;
@@ -186,8 +234,9 @@ const toggleExplorer = () => {
       div {
         opacity: 1;
       }
-      
-      .icon, span {
+
+      .icon,
+      span {
         opacity: 1;
       }
     }
@@ -197,8 +246,9 @@ const toggleExplorer = () => {
         opacity: 1;
         color: $secondary;
       }
-      
-      .icon, span {
+
+      .icon,
+      span {
         opacity: 1;
         color: $secondary;
       }
@@ -265,13 +315,15 @@ const toggleExplorer = () => {
     div {
       color: $grey-lighter !important;
     }
-    
-    .icon, span {
+
+    .icon,
+    span {
       opacity: 0.9;
     }
-    
+
     &:hover {
-      .icon, span {
+      .icon,
+      span {
         opacity: 1;
       }
     }
