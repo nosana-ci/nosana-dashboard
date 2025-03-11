@@ -10,7 +10,9 @@
           </tr>
           <tr>
             <td>Account</td>
-            <td><span class="address">{{ publicKey }}</span></td>
+            <td>
+              <span class="address">{{ publicKey }}</span>
+            </td>
           </tr>
           <tr>
             <td>NOS Balance</td>
@@ -23,7 +25,9 @@
           <tr>
             <td>NOS Staked</td>
             <td>
-              <span v-if="nosStaked && nosStaked.amount">{{ (nosStaked.amount / 1e6).toFixed(4) }} NOS</span>
+              <span v-if="nosStaked && nosStaked.amount && !parseInt(nosStaked.timeUnstake)"
+                >{{ (nosStaked.amount / 1e6).toFixed(4) }} NOS</span
+              >
               <span v-else-if="loading">...</span>
               <span v-else>-</span>
             </td>
@@ -31,7 +35,9 @@
           <tr>
             <td>SOL Balance</td>
             <td>
-              <span v-if="solBalance">{{ (solBalance / 1e9).toFixed(4) }} SOL</span>
+              <span v-if="solBalance"
+                >{{ (solBalance / 1e9).toFixed(4) }} SOL</span
+              >
               <span v-else-if="loading">...</span>
               <span v-else>-</span>
             </td>
@@ -40,9 +46,7 @@
       </table>
     </div>
     <div v-else>
-      <div v-if="loading">
-        Loading..
-      </div>
+      <div v-if="loading">Loading..</div>
       <div v-else class="notification is-danger">
         Account {{ address }} not found
       </div>
@@ -57,13 +61,6 @@ interface Props {
   address: string;
 }
 const props = defineProps<Props>();
-
-interface NodeRanking {
-  node: string;
-  performanceRank: number;
-  stabilityRank: number;
-  participationRate: number;
-}
 
 const { nosana } = useSDK();
 
@@ -81,7 +78,9 @@ const checkAddressAndBalance = async () => {
 
     try {
       balance.value = await nosana.value.solana.getNosBalance(publicKey.value);
-      solBalance.value = await nosana.value.solana.getSolBalance(publicKey.value);
+      solBalance.value = await nosana.value.solana.getSolBalance(
+        publicKey.value
+      );
       try {
         nosStaked.value = await nosana.value.stake.get(publicKey.value);
       } catch (error) {
@@ -96,7 +95,7 @@ const checkAddressAndBalance = async () => {
     publicKey.value = null;
   }
   loading.value = false;
-}
+};
 
 checkAddressAndBalance();
 </script>
