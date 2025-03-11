@@ -25,7 +25,11 @@
           </nuxt-link>
         </li>
         <li>
-          <nuxt-link to="/" active-class="is-active" @click="showMenu = false">
+          <nuxt-link
+            to="/explorer"
+            active-class="is-active"
+            @click="showMenu = false"
+          >
             <span class="icon is-small mr-4">
               <ExplorerIcon />
             </span>
