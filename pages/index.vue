@@ -5,6 +5,10 @@
       <WorldMap />
     </div>
 
+    <div class="world-map-mobile-image">
+      <img src="~/assets/img/world-map.png" alt="World Map" />
+    </div>
+
     <!-- Main Content -->
     <div class="content-wrapper">
       <!-- Top Left -->
@@ -233,6 +237,22 @@ const isDarkMode = computed(() =>
   }
 }
 
+.world-map-mobile-image {
+  display: none;
+  @media screen and (max-width: 1024px) {
+    display: block !important;
+    margin-top: 100px;
+    width: 100%;
+    overflow-x: scroll;
+    white-space: nowrap;
+    img {
+      height: 600px;
+      width: auto;
+      max-width: none;
+    }
+  }
+}
+
 .world-map-wrapper {
   position: absolute;
   top: 0;
@@ -245,6 +265,11 @@ const isDarkMode = computed(() =>
   justify-content: center;
   background: #f9f9f9;
   transition: background-color 0.3s ease;
+
+  // hide for now on mobile
+  @media screen and (max-width: 1024px) {
+    display: none !important;
+  }
 
   :deep(.box) {
     width: 100%;
