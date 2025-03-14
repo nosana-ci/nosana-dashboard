@@ -9,31 +9,33 @@
           @mouseover="handleMouseOver"
           @mouseout="handleMouseOut"
           :autoresize="true"
-          style="width: 100%; height: 100%;"
+          style="width: 100%; height: 100%"
         />
-        <div v-else class="has-text-centered p-4">Loading world map data...</div>
+        <div v-else class="has-text-centered p-4">
+          Loading world map data...
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, watch } from 'vue';
-import { useAPI } from '~/composables/useAPI';
-import VChart from 'vue-echarts';
-import * as echarts from 'echarts/core';
-import { MapChart, ScatterChart, EffectScatterChart } from 'echarts/charts';
+import { computed, ref, onMounted, watch } from "vue";
+import { useAPI } from "~/composables/useAPI";
+import VChart from "vue-echarts";
+import * as echarts from "echarts/core";
+import { MapChart, ScatterChart, EffectScatterChart } from "echarts/charts";
 import {
   TitleComponent,
   TooltipComponent,
   GeoComponent,
-  VisualMapComponent
-} from 'echarts/components';
-import { CanvasRenderer } from 'echarts/renderers';
-import worldJson from '~/assets/world.json';
-import countries from 'i18n-iso-countries';
-import en from 'i18n-iso-countries/langs/en.json';
-import NosanaLogo from '~/assets/img/token_icons/nosana-nos-logo.svg';
+  VisualMapComponent,
+} from "echarts/components";
+import { CanvasRenderer } from "echarts/renderers";
+import worldJson from "~/assets/world.json";
+import countries from "i18n-iso-countries";
+import en from "i18n-iso-countries/langs/en.json";
+import NosanaLogo from "~/assets/img/token_icons/nosana-nos-logo.svg";
 
 // Initialize libraries
 countries.registerLocale(en);
@@ -45,9 +47,9 @@ echarts.use([
   MapChart,
   ScatterChart,
   EffectScatterChart,
-  CanvasRenderer
+  CanvasRenderer,
 ]);
-echarts.registerMap('world', worldJson as any);
+echarts.registerMap("world", worldJson as any);
 
 // Add reactive dark mode state
 const darkMode = ref(false);
@@ -55,76 +57,85 @@ const darkMode = ref(false);
 // Update dark mode state and watch for changes
 onMounted(() => {
   const updateDarkMode = () => {
-    darkMode.value = document.documentElement.classList.contains('dark-mode');
+    darkMode.value = document.documentElement.classList.contains("dark-mode");
   };
-  
+
   // Initial state
   updateDarkMode();
-  
+
   // Watch for class changes
   const observer = new MutationObserver(updateDarkMode);
-  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ["class"],
+  });
 });
 
 // Fetch node statistics
-const { data: nodeStatsResponse } = await useAPI('/api/stats/nodes-country');
+const { data: nodeStatsResponse } = await useAPI("/api/stats/nodes-country");
 
 // Country name mappings for ECharts
 const specialCases = {
-  US: 'United States',
-  GB: 'United Kingdom',
-  RU: 'Russia',
-  CZ: 'Czech Rep.',
-  KR: 'Korea',
-  IR: 'Iran',
-  CN: 'China',
-  HK: 'Hong Kong',
-  TW: 'Taiwan',
-  TR: 'Turkey',
-  NO: 'Norway',
-  VN: 'Vietnam'
+  US: "United States",
+  GB: "United Kingdom",
+  RU: "Russia",
+  CZ: "Czech Rep.",
+  KR: "Korea",
+  IR: "Iran",
+  CN: "China",
+  HK: "Hong Kong",
+  TW: "Taiwan",
+  TR: "Turkey",
+  NO: "Norway",
+  VN: "Vietnam",
 } as const;
 
 // Special coordinates for countries that need adjustment
 const specialCoordinates: Record<string, [number, number]> = {
   Norway: [8, 62],
-  Vietnam: [108, 15]
+  Vietnam: [108, 15],
 };
 
 // Convert ISO2 country code to ECharts country name
 function getEchartsCountryName(iso2: string): string {
-  const name = countries.getName(iso2, 'en');
-  if (!name) return '';
+  const name = countries.getName(iso2, "en");
+  if (!name) return "";
   return specialCases[iso2 as keyof typeof specialCases] || name;
 }
 
 // Get coordinates for a country
-const getCountryCoordinates = (countryName: string): [number, number] | null => {
+const getCountryCoordinates = (
+  countryName: string
+): [number, number] | null => {
   if (countryName in specialCoordinates) {
     return specialCoordinates[countryName];
   }
 
-  const feature = worldJson.features.find(f => f.properties.name === countryName);
+  const feature = worldJson.features.find(
+    (f) => f.properties.name === countryName
+  );
   if (!feature) return null;
-  
+
   if (feature.properties.cp) {
     const [lon, lat] = feature.properties.cp as [number, number];
     if (isCoordinateWithinFeature(lon, lat, feature)) {
       return [lon, lat];
     }
   }
-  
+
   if (feature.geometry?.coordinates?.length > 0) {
-    if (feature.geometry.type === 'Polygon') {
-      return calculatePolygonCentroid(feature.geometry.coordinates[0] as [number, number][]);
-    } else if (feature.geometry.type === 'MultiPolygon') {
+    if (feature.geometry.type === "Polygon") {
+      return calculatePolygonCentroid(
+        feature.geometry.coordinates[0] as [number, number][]
+      );
+    } else if (feature.geometry.type === "MultiPolygon") {
       const largestPolygon = findLargestPolygon(feature.geometry.coordinates);
       if (largestPolygon) {
         return calculatePolygonCentroid(largestPolygon);
       }
     }
   }
-  
+
   return null;
 };
 
@@ -132,7 +143,7 @@ const getCountryCoordinates = (countryName: string): [number, number] | null => 
 const findLargestPolygon = (polygons: any[]): [number, number][] | null => {
   let largestPolygon: [number, number][] | null = null;
   let maxArea = 0;
-  
+
   for (const polygon of polygons) {
     if (!Array.isArray(polygon) || !Array.isArray(polygon[0])) continue;
     const coords = polygon[0] as [number, number][];
@@ -142,7 +153,7 @@ const findLargestPolygon = (polygons: any[]): [number, number][] | null => {
       largestPolygon = coords;
     }
   }
-  
+
   return largestPolygon;
 };
 
@@ -158,31 +169,37 @@ const calculatePolygonArea = (coords: [number, number][]): number => {
 };
 
 // Calculate the centroid of a polygon
-const calculatePolygonCentroid = (coords: [number, number][]): [number, number] => {
+const calculatePolygonCentroid = (
+  coords: [number, number][]
+): [number, number] => {
   let area = 0;
   let cx = 0;
   let cy = 0;
-  
+
   for (let i = 0; i < coords.length; i++) {
     const j = (i + 1) % coords.length;
-    const factor = (coords[i][0] * coords[j][1] - coords[j][0] * coords[i][1]);
+    const factor = coords[i][0] * coords[j][1] - coords[j][0] * coords[i][1];
     area += factor;
     cx += (coords[i][0] + coords[j][0]) * factor;
     cy += (coords[i][1] + coords[j][1]) * factor;
   }
-  
+
   area /= 2;
   const areaFactor = 1 / (6 * area);
-  
+
   return [cx * areaFactor, cy * areaFactor];
 };
 
 // Check if a point is within a feature's boundaries
-const isCoordinateWithinFeature = (lon: number, lat: number, feature: any): boolean => {
-  if (feature.geometry.type === 'Polygon') {
+const isCoordinateWithinFeature = (
+  lon: number,
+  lat: number,
+  feature: any
+): boolean => {
+  if (feature.geometry.type === "Polygon") {
     return isPointInPolygon([lon, lat], feature.geometry.coordinates[0]);
-  } else if (feature.geometry.type === 'MultiPolygon') {
-    return feature.geometry.coordinates.some((polygon: any) => 
+  } else if (feature.geometry.type === "MultiPolygon") {
+    return feature.geometry.coordinates.some((polygon: any) =>
       isPointInPolygon([lon, lat], polygon[0])
     );
   }
@@ -190,49 +207,57 @@ const isCoordinateWithinFeature = (lon: number, lat: number, feature: any): bool
 };
 
 // Check if a point is within a polygon using ray casting
-const isPointInPolygon = (point: [number, number], polygon: [number, number][]): boolean => {
+const isPointInPolygon = (
+  point: [number, number],
+  polygon: [number, number][]
+): boolean => {
   const [x, y] = point;
   let inside = false;
-  
+
   for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
     const [xi, yi] = polygon[i];
     const [xj, yj] = polygon[j];
-    
-    const intersect = ((yi > y) !== (yj > y))
-        && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+
+    const intersect =
+      yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi;
     if (intersect) inside = !inside;
   }
-  
+
   return inside;
 };
 
 // Prepare data for the map visualization
 const seriesData = computed(() => {
-  if (!nodeStatsResponse.value?.data || !Array.isArray(nodeStatsResponse.value.data)) return [];
-  
+  if (
+    !nodeStatsResponse.value?.data ||
+    !Array.isArray(nodeStatsResponse.value.data)
+  )
+    return [];
+
   return nodeStatsResponse.value.data
-    .filter(item =>
-      item.country &&
-      typeof item.country === 'string' &&
-      item.country.length === 2 &&
-      countries.isValid(item.country) &&
-      (item.running + item.queue) > 0  // Check if there are any active nodes (running + queue)
+    .filter(
+      (item) =>
+        item.country &&
+        typeof item.country === "string" &&
+        item.country.length === 2 &&
+        countries.isValid(item.country) &&
+        item.running + item.queue > 0 // Check if there are any active nodes (running + queue)
     )
-    .map(item => {
+    .map((item) => {
       const countryName = getEchartsCountryName(item.country);
       const coords = getCountryCoordinates(countryName);
       if (!coords) return null;
-      
+
       return {
         name: countryName,
         value: [...coords, item.running + item.queue], // Use sum of running and queue for visualization
         total: item.total,
         running: item.running,
         queue: item.queue,
-        offline: item.offline
+        offline: item.offline,
       };
     })
-    .filter(item => item !== null);
+    .filter((item) => item !== null);
 });
 
 // Chart configuration
@@ -241,10 +266,10 @@ const chartOptions = computed(() => {
 
   const tooltipFormatter = (params: any) => {
     const { name } = params;
-    const data = seriesData.value.find(item => item.name === name);
+    const data = seriesData.value.find((item) => item.name === name);
     if (data) {
       return `
-        <div style="background-color: ${darkMode.value ? '#1a1a1a' : 'black'}; padding: 12px 20px; border-radius: 4px;">
+        <div style="background-color: ${darkMode.value ? "#1a1a1a" : "black"}; padding: 12px 20px; border-radius: 4px;">
           <div style="color: #888888; margin-bottom: 0;">${name}</div>
           <div style="margin-top: 4px; display: flex; flex-direction: column; gap: 4px;">
             <div style="display: flex; align-items: center;">
@@ -260,24 +285,24 @@ const chartOptions = computed(() => {
       `;
     }
     return `
-      <div style="background-color: ${darkMode.value ? '#1a1a1a' : 'black'}; padding: 12px 20px; border-radius: 4px;">
+      <div style="background-color: ${darkMode.value ? "#1a1a1a" : "black"}; padding: 12px 20px; border-radius: 4px;">
         <div style="color: #888888;">${name}</div>
       </div>
     `;
   };
 
   return {
-    backgroundColor: darkMode.value ? '#121212' : '#f9f9f9',
+    backgroundColor: darkMode.value ? "#121212" : "#f9f9f9",
     tooltip: {
-      trigger: 'item',
+      trigger: "item",
       formatter: tooltipFormatter,
       show: true,
-      backgroundColor: 'transparent',
+      backgroundColor: "transparent",
       borderWidth: 0,
-      padding: 0
+      padding: 0,
     },
     geo: {
-      map: 'world',
+      map: "world",
       roam: true,
       scaleLimit: { min: 1, max: 10 },
       left: 0,
@@ -285,41 +310,40 @@ const chartOptions = computed(() => {
       top: 0,
       bottom: 0,
       aspectScale: 0.75,
-      boundingCoords: [[-180, 105], [180, -75]],
-      projection: {
-        type: 'mercator',
-        center: [0, 0],
-      },
+      boundingCoords: [
+        [-180, 105],
+        [180, -75],
+      ],
       tooltip: {
         show: true,
-        trigger: 'item',
-        formatter: tooltipFormatter
+        trigger: "item",
+        formatter: tooltipFormatter,
       },
       itemStyle: {
-        areaColor: darkMode.value ? '#2c2c2c' : '#d4d4d4',
-        borderColor: darkMode.value ? '#3a3a3a' : '#ffffff'
+        areaColor: darkMode.value ? "#2c2c2c" : "#d4d4d4",
+        borderColor: darkMode.value ? "#3a3a3a" : "#ffffff",
       },
       emphasis: {
         itemStyle: {
-          areaColor: '#10E80C',
-          opacity: 1
+          areaColor: "#10E80C",
+          opacity: 1,
         },
         label: {
-          show: false
-        }
+          show: false,
+        },
       },
       label: {
-        show: false
+        show: false,
       },
       select: {
-        disabled: true
-      }
+        disabled: true,
+      },
     },
     series: [
       {
-        name: 'Hosts',
-        type: 'scatter',
-        coordinateSystem: 'geo',
+        name: "Hosts",
+        type: "scatter",
+        coordinateSystem: "geo",
         data: seriesData.value,
         symbolSize: (val: any) => {
           const nodeCount = Array.isArray(val) ? val[2] : 0;
@@ -327,37 +351,37 @@ const chartOptions = computed(() => {
           return size < 5 ? 5 : size;
         },
         itemStyle: {
-          color: '#10E80C',
-          borderColor: '#10E80C',
+          color: "#10E80C",
+          borderColor: "#10E80C",
           borderWidth: 2,
           shadowBlur: 10,
-          shadowColor: '#10E80C'
+          shadowColor: "#10E80C",
         },
         silent: false,
         emphasis: {
           scale: false,
           itemStyle: {
             opacity: 0,
-            shadowBlur: 0
-          }
+            shadowBlur: 0,
+          },
         },
-        focus: 'none',
+        focus: "none",
         select: {
-          disabled: true
+          disabled: true,
         },
         selectedMode: false,
         label: {
-          show: false
+          show: false,
         },
         hoverAnimation: false,
         tooltip: {
           show: true,
-          formatter: tooltipFormatter
+          formatter: tooltipFormatter,
         },
         triggerEvent: true,
-        geoIndex: 0
-      }
-    ]
+        geoIndex: 0,
+      },
+    ],
   };
 });
 
@@ -365,21 +389,21 @@ const chartRef = ref();
 
 // Event handlers for map interactions
 const handleMouseOver = (params: any) => {
-  if (params.componentSubType === 'scatter') {
+  if (params.componentSubType === "scatter") {
     chartRef.value?.chart?.dispatchAction({
-      type: 'highlight',
+      type: "highlight",
       geoIndex: 0,
-      name: params.name
+      name: params.name,
     });
   }
 };
 
 const handleMouseOut = (params: any) => {
-  if (params.componentSubType === 'scatter') {
+  if (params.componentSubType === "scatter") {
     chartRef.value?.chart?.dispatchAction({
-      type: 'downplay',
+      type: "downplay",
       geoIndex: 0,
-      name: params.name
+      name: params.name,
     });
   }
 };
@@ -430,4 +454,4 @@ const handleMouseOut = (params: any) => {
 :deep(.echarts) {
   background: transparent !important;
 }
-</style> 
+</style>
