@@ -27,7 +27,7 @@
             </span>
             <div class="stats-text">
               <div class="has-text-grey is-size-6">GPUs Available</div>
-              <div class="has-text-weight-bold is-size-4">
+              <div class="has-text-black has-text-weight-bold is-size-4">
                 {{ queuedHosts }}/{{ activeHosts }}
               </div>
             </div>
@@ -56,7 +56,7 @@
             </svg>
           </span>
         </button>
-        <div class="wallet-container" :class="{ 'light-wallet': !isDarkMode, 'dark-wallet': isDarkMode }">
+        <div class="wallet-container">
           <ClientOnly>
             <wallet-multi-button :dark="isDarkMode" />
           </ClientOnly>
@@ -334,18 +334,6 @@ const isDarkMode = computed(() =>
   z-index: 999;
 }
 
-.light-wallet :deep(.wallet-adapter-button) {
-  background-color: white !important;
-  color: black !important;
-  border: 1px solid #dbdbdb;
-}
-
-.dark-wallet :deep(.wallet-adapter-button) {
-  background-color: black !important;
-  color: white !important;
-  border: 1px solid #363636;
-}
-
 .hosts-stats {
   margin-top: auto;
   padding-bottom: 2rem;
@@ -355,20 +343,11 @@ const isDarkMode = computed(() =>
 }
 
 .stats-box {
-  background: white !important;
   border-radius: 8px;
   padding: 1rem 1.5rem;
   display: flex;
   align-items: center;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-
-  .has-text-grey {
-    color: #7a7a7a !important;
-  }
-
-  .has-text-weight-bold {
-    color: black !important;
-  }
 }
 
 .rocket-icon {

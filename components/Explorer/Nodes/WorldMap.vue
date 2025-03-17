@@ -420,7 +420,7 @@ onMounted(() => {
       // Set fixed size to ensure the map doesn't resize with the viewport
       chartRef.value.chart.resize({
         width: 1800,
-        height: 900
+        height: 997
       });
       
       // Configure for better touch interaction
@@ -491,7 +491,7 @@ const handleMouseOut = (params: any) => {
   position: relative;
   width: 1800px;
   min-width: 1800px;
-  height: 900px;
+  height: 997px;
   background: transparent;
   overflow: hidden;
   touch-action: none; /* Prevent browser handling of touch gestures */
