@@ -8,7 +8,7 @@
           :option="chartOptions"
           @mouseover="handleMouseOver"
           @mouseout="handleMouseOut"
-          :autoresize="true"
+          :autoresize="false"
           style="width: 100%; height: 100%"
         />
         <div v-else class="has-text-centered p-4">
@@ -20,7 +20,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, watch } from "vue";
+import { computed, ref, onMounted, watch, nextTick } from "vue";
 import { useAPI } from "~/composables/useAPI";
 import VChart from "vue-echarts";
 import * as echarts from "echarts/core";
@@ -226,6 +226,24 @@ const isPointInPolygon = (
   return inside;
 };
 
+// Define types for node statistics
+interface NodeStatsItem {
+  country: string;
+  running: number;
+  queue: number;
+  offline: number;
+  total: number;
+}
+
+interface NodeSeriesItem {
+  name: string;
+  value: [number, number, number]; // [longitude, latitude, count]
+  total: number;
+  running: number;
+  queue: number;
+  offline: number;
+}
+
 // Prepare data for the map visualization
 const seriesData = computed(() => {
   if (
@@ -236,14 +254,14 @@ const seriesData = computed(() => {
 
   return nodeStatsResponse.value.data
     .filter(
-      (item) =>
+      (item: NodeStatsItem) =>
         item.country &&
         typeof item.country === "string" &&
         item.country.length === 2 &&
         countries.isValid(item.country) &&
         item.running + item.queue > 0 // Check if there are any active nodes (running + queue)
     )
-    .map((item) => {
+    .map((item: NodeStatsItem) => {
       const countryName = getEchartsCountryName(item.country);
       const coords = getCountryCoordinates(countryName);
       if (!coords) return null;
@@ -255,9 +273,9 @@ const seriesData = computed(() => {
         running: item.running,
         queue: item.queue,
         offline: item.offline,
-      };
+      } as NodeSeriesItem;
     })
-    .filter((item) => item !== null);
+    .filter((item: NodeSeriesItem | null) => item !== null);
 });
 
 // Chart configuration
@@ -266,7 +284,7 @@ const chartOptions = computed(() => {
 
   const tooltipFormatter = (params: any) => {
     const { name } = params;
-    const data = seriesData.value.find((item) => item.name === name);
+    const data = seriesData.value.find((item: NodeSeriesItem) => item.name === name);
     if (data) {
       return `
         <div style="background-color: ${darkMode.value ? "#1a1a1a" : "black"}; padding: 12px 20px; border-radius: 4px;">
@@ -309,11 +327,12 @@ const chartOptions = computed(() => {
       right: 0,
       top: 0,
       bottom: 0,
-      aspectScale: 0.75,
+      aspectScale: 1,
       boundingCoords: [
-        [-180, 105],
-        [180, -75],
+        [-180, 90],
+        [180, -60],
       ],
+      silent: false,
       tooltip: {
         show: true,
         trigger: "item",
@@ -387,6 +406,25 @@ const chartOptions = computed(() => {
 
 const chartRef = ref();
 
+// Initialize chart with fixed size
+onMounted(() => {
+  // Wait for the chart to be mounted
+  nextTick(() => {
+    if (chartRef.value?.chart) {
+      // Set fixed size to ensure the map doesn't resize with the viewport
+      chartRef.value.chart.resize({
+        width: 1800,
+        height: 900 // 42% of 2000px
+      });
+      
+      // Disable the resize observer to prevent automatic resizing
+      chartRef.value.chart.setOption({
+        animation: false
+      });
+    }
+  });
+});
+
 // Event handlers for map interactions
 const handleMouseOver = (params: any) => {
   if (params.componentSubType === "scatter") {
@@ -419,14 +457,17 @@ const handleMouseOut = (params: any) => {
   align-items: center;
   justify-content: center;
   background: transparent;
+  overflow: hidden;
 }
 
 .aspect-ratio-container {
   position: relative;
-  width: 100%;
-  height: 100%;
-  padding-top: 0;
+  width: 1800px;
+  min-width: 1800px;
+  height: 900px;
   background: transparent;
+  overflow: hidden;
+
 }
 
 .aspect-ratio-container > * {
@@ -449,9 +490,11 @@ const handleMouseOut = (params: any) => {
   margin: 0;
   padding: 0;
   border-radius: 0;
+  overflow: hidden;
 }
 
 :deep(.echarts) {
   background: transparent !important;
+  overflow: hidden;
 }
 </style>

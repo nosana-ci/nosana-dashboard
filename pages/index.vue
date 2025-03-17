@@ -5,10 +5,6 @@
       <WorldMap />
     </div>
 
-    <div class="world-map-mobile-image">
-      <img src="~/assets/img/world-map.png" alt="World Map" />
-    </div>
-
     <!-- Main Content -->
     <div class="content-wrapper">
       <!-- Top Left -->
@@ -154,6 +150,15 @@ const { data: runningNodesData } = useAPI("/api/jobs/running", {
   default: () => ({ total: 0 }),
 });
 
+// Define interface for node stats item
+interface NodeStatsItem {
+  country: string;
+  running: number;
+  queue: number;
+  offline: number;
+  total: number;
+}
+
 // Calculate queued hosts
 const queuedHosts = computed(() => {
   if (
@@ -164,7 +169,7 @@ const queuedHosts = computed(() => {
 
   let total = 0;
   // Group by country and sum up queues
-  nodeStatsResponse.value.data.forEach((item) => {
+  nodeStatsResponse.value.data.forEach((item: NodeStatsItem) => {
     if (item.queue > 0) {
       total += item.queue;
     }
@@ -237,22 +242,6 @@ const isDarkMode = computed(() =>
   }
 }
 
-.world-map-mobile-image {
-  display: none;
-  @media screen and (max-width: 1024px) {
-    display: block !important;
-    margin-top: 100px;
-    width: 100%;
-    overflow-x: scroll;
-    white-space: nowrap;
-    img {
-      height: 600px;
-      width: auto;
-      max-width: none;
-    }
-  }
-}
-
 .world-map-wrapper {
   position: absolute;
   top: 0;
@@ -265,11 +254,7 @@ const isDarkMode = computed(() =>
   justify-content: center;
   background: #f9f9f9;
   transition: background-color 0.3s ease;
-
-  // hide for now on mobile
-  @media screen and (max-width: 1024px) {
-    display: none !important;
-  }
+  overflow: hidden;
 
   :deep(.box) {
     width: 100%;
@@ -277,21 +262,25 @@ const isDarkMode = computed(() =>
     display: flex;
     align-items: center;
     justify-content: center;
+    overflow: hidden;
   }
 
   :deep(.world-map-container) {
     width: 100%;
     height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
   }
 
   :deep(.aspect-ratio-container) {
-    width: 100%;
-    height: 100%;
+    /* No max-width to allow the map to be cut off at the sides */
+    overflow: hidden;
   }
 
   :deep(.v-chart) {
-    width: 100% !important;
-    height: 100% !important;
+    overflow: hidden;
   }
 }
 
@@ -334,7 +323,6 @@ const isDarkMode = computed(() =>
 
   .button {
     pointer-events: auto;
-    // background-color: rgba(42, 42, 42, 0.8) !important;
     position: relative;
     z-index: 3;
   }
