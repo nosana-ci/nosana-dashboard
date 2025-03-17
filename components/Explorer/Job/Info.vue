@@ -1,5 +1,5 @@
 <template>
-  <table class="table is-fullwidth is-striped">
+  <table class="table is-fullwidth is-striped two-column-labels">
     <tbody>
       <tr>
         <td colspan="2" class="has-background-light">
