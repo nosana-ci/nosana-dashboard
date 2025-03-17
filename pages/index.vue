@@ -299,6 +299,11 @@ const isDarkMode = computed(() =>
     top: 50px;
     padding: 1rem;
   }
+  
+  @media screen and (max-width: 450px) {
+    flex-direction: column;
+    padding: 0.75rem;
+  }
 }
 
 .left-content {
@@ -313,6 +318,18 @@ const isDarkMode = computed(() =>
     position: relative;
     z-index: 3;
   }
+  
+  @media screen and (max-width: 450px) {
+    h1.title {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .button {
+      font-size: 0.85rem;
+      padding: 0.5em 0.75em;
+    }
+  }
 }
 
 .right-content {
@@ -326,12 +343,54 @@ const isDarkMode = computed(() =>
     position: relative;
     z-index: 3;
   }
+  
+  @media screen and (max-width: 450px) {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    gap: 0.5rem;
+    align-items: center;
+    
+    .button {
+      padding: 0.25rem;
+      height: auto;
+      display: flex;
+      align-items: center;
+      
+      .icon {
+        width: 1.5rem;
+        height: 1.5rem;
+        
+        svg {
+          width: 1.5rem;
+          height: 1.5rem;
+        }
+      }
+    }
+  }
 }
 
 .wallet-container {
   pointer-events: auto;
   position: relative;
   z-index: 999;
+  
+  @media screen and (max-width: 450px) {
+    transform: scale(0.85);
+    transform-origin: right center;
+    
+    :deep(.wallet-adapter-button) {
+      font-size: 0.7rem;
+      padding: 0 0.5rem;
+      height: 1.75rem;
+      
+      .wallet-adapter-button-start-icon {
+        margin-right: 4px;
+        width: 16px;
+        height: 16px;
+      }
+    }
+  }
 }
 
 .hosts-stats {
@@ -340,6 +399,10 @@ const isDarkMode = computed(() =>
   pointer-events: auto;
   position: relative;
   z-index: 3;
+  
+  @media screen and (max-width: 450px) {
+    padding-bottom: 1rem;
+  }
 }
 
 .stats-box {
@@ -348,12 +411,29 @@ const isDarkMode = computed(() =>
   display: flex;
   align-items: center;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  
+  @media screen and (max-width: 450px) {
+    padding: 0.75rem 1rem;
+    
+    .is-size-4 {
+      font-size: 1.25rem !important;
+    }
+    
+    .is-size-6 {
+      font-size: 0.8rem !important;
+    }
+  }
 }
 
 .rocket-icon {
   width: 28px;
   height: 28px;
   fill: #10e80c;
+  
+  @media screen and (max-width: 450px) {
+    width: 20px;
+    height: 20px;
+  }
 }
 
 .left-content :deep(.button.is-primary) {

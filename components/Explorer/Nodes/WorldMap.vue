@@ -328,7 +328,7 @@ const chartOptions = computed(() => {
     geo: {
       map: "world",
       roam: true,
-      scaleLimit: { min: 1, max: 10 },
+      scaleLimit: { min: 0.5, max: 10 },
       left: 0,
       right: 0,
       top: 0,
