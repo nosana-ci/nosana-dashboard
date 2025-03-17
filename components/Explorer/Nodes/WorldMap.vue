@@ -30,6 +30,9 @@ import {
   TooltipComponent,
   GeoComponent,
   VisualMapComponent,
+  GridComponent,
+  LegendComponent,
+  ToolboxComponent,
 } from "echarts/components";
 import { CanvasRenderer } from "echarts/renderers";
 import worldJson from "~/assets/world.json";
@@ -44,6 +47,9 @@ echarts.use([
   TooltipComponent,
   GeoComponent,
   VisualMapComponent,
+  GridComponent,
+  LegendComponent,
+  ToolboxComponent,
   MapChart,
   ScatterChart,
   EffectScatterChart,
@@ -406,7 +412,7 @@ const chartOptions = computed(() => {
 
 const chartRef = ref();
 
-// Initialize chart with fixed size
+// Initialize chart with fixed size and enable touch interactions
 onMounted(() => {
   // Wait for the chart to be mounted
   nextTick(() => {
@@ -414,13 +420,33 @@ onMounted(() => {
       // Set fixed size to ensure the map doesn't resize with the viewport
       chartRef.value.chart.resize({
         width: 1800,
-        height: 900 // 42% of 2000px
+        height: 900
       });
       
-      // Disable the resize observer to prevent automatic resizing
+      // Configure for better touch interaction
       chartRef.value.chart.setOption({
-        animation: false
+        animation: false,
+        // Improve touch interaction behavior
+        geo: {
+          // Keep existing geo settings
+          roam: true,
+          // Add touch interaction settings
+          silent: false,
+          // Adjust pan sensitivity for touch
+          roamSensitivity: 1.5
+        }
       });
+      
+      // Add touch event listeners to improve mobile interaction
+      const chartDom = chartRef.value.chart.getDom();
+      if (chartDom) {
+        // Prevent default touch behavior to avoid page scrolling while panning the map
+        chartDom.addEventListener('touchmove', (e: TouchEvent) => {
+          if (e.touches.length > 0) {
+            e.preventDefault();
+          }
+        }, { passive: false });
+      }
     }
   });
 });
@@ -458,6 +484,7 @@ const handleMouseOut = (params: any) => {
   justify-content: center;
   background: transparent;
   overflow: hidden;
+  touch-action: none; /* Prevent browser handling of touch gestures */
 }
 
 .aspect-ratio-container {
@@ -467,7 +494,7 @@ const handleMouseOut = (params: any) => {
   height: 900px;
   background: transparent;
   overflow: hidden;
-
+  touch-action: none; /* Prevent browser handling of touch gestures */
 }
 
 .aspect-ratio-container > * {
@@ -477,6 +504,7 @@ const handleMouseOut = (params: any) => {
   width: 100%;
   height: 100%;
   background: transparent;
+  touch-action: none; /* Prevent browser handling of touch gestures */
 }
 
 .box {
@@ -491,10 +519,12 @@ const handleMouseOut = (params: any) => {
   padding: 0;
   border-radius: 0;
   overflow: hidden;
+  touch-action: none; /* Prevent browser handling of touch gestures */
 }
 
 :deep(.echarts) {
   background: transparent !important;
   overflow: hidden;
+  touch-action: none; /* Prevent browser handling of touch gestures */
 }
 </style>
