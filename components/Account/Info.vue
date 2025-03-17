@@ -11,7 +11,7 @@
           <tr>
             <td>Account</td>
             <td>
-              <span class="address">{{ publicKey }}</span>
+              <span class="account-address">{{ publicKey }}</span>
             </td>
           </tr>
           <tr>
@@ -99,3 +99,12 @@ const checkAddressAndBalance = async () => {
 
 checkAddressAndBalance();
 </script>
+
+<style scoped>
+.account-address {
+  word-break: break-all;
+  white-space: normal;
+  display: inline-block;
+  width: 100%;
+}
+</style>
