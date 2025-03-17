@@ -60,9 +60,9 @@
             </svg>
           </span>
         </button>
-        <div class="wallet-container">
+        <div class="wallet-container" :class="{ 'light-wallet': !isDarkMode, 'dark-wallet': isDarkMode }">
           <ClientOnly>
-            <wallet-multi-button :dark="true" />
+            <wallet-multi-button :dark="isDarkMode" />
           </ClientOnly>
         </div>
       </div>
@@ -344,21 +344,18 @@ const isDarkMode = computed(() =>
   pointer-events: auto;
   position: relative;
   z-index: 999;
+}
 
-  :deep(.wallet-adapter-button) {
-    background-color: rgba(42, 42, 42, 0.8) !important;
-    color: white !important;
-  }
+.light-wallet :deep(.wallet-adapter-button) {
+  background-color: white !important;
+  color: black !important;
+  border: 1px solid #dbdbdb;
+}
 
-  :deep(.wallet-adapter-dropdown) {
-    position: relative;
-  }
-
-  :deep(.wallet-adapter-dropdown-list) {
-    position: absolute;
-    top: 100%;
-    right: 0;
-  }
+.dark-wallet :deep(.wallet-adapter-button) {
+  background-color: black !important;
+  color: white !important;
+  border: 1px solid #363636;
 }
 
 .hosts-stats {
@@ -392,7 +389,7 @@ const isDarkMode = computed(() =>
   fill: #10e80c;
 }
 
-:deep(.button.is-primary) {
+.left-content :deep(.button.is-primary) {
   background-color: #10e80c !important;
   border-color: transparent !important;
   color: #1a1a1a !important;
