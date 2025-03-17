@@ -9,7 +9,7 @@
       </div>
     </div>
     <div v-else>
-      <table class="table is-fullwidth">
+      <table class="table is-fullwidth two-column-labels">
         <tbody>
           <tr>
             <td colspan="2" class="has-background-light">
