@@ -283,7 +283,7 @@ onMounted(() => {
 // 1) Setup for "getSpendThisMonth"
 const spendEndpoint = computed(() => {
   if (!publicKey.value) return null; // Only call if we have an address
-  return `/api/stats/spend-this-month?address=${publicKey.value.toString()}`;
+  return `/api/stats/spend-this-month/${publicKey.value.toString()}`;
 });
 
 const { data: monthSpend, pending: loadingSpend } = useAPI(spendEndpoint, {
