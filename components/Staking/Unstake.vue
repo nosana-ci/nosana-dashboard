@@ -68,6 +68,7 @@
           </vue-countdown>
           <div v-if="countdownFinished">
             <h3 v-if="vaultBalance" class="title is-4 has-text-weight-semibold">Claim back your tokens:</h3>
+            <h3 v-else class="title is-4 has-text-weight-semibold">All tokens claimed</h3>
             <button v-if="vaultBalance" class="button is-fullwidth is-primary mt-2" :class="{ 'is-loading': loading }" @click.prevent="close">
               Claim <span >&nbsp;{{ Math.floor(vaultBalance) }}&nbsp;</span> NOS
             </button>
