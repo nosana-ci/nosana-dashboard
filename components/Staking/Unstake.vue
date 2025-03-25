@@ -67,9 +67,12 @@
             </div>
           </vue-countdown>
           <div v-if="countdownFinished">
-            <h3 class="title is-4 has-text-weight-semibold">Claim back your tokens:</h3>
-            <button class="button is-fullwidth is-primary mt-2" :class="{ 'is-loading': loading }" @click.prevent="close">
-              Claim <span v-if="vaultBalance">&nbsp;{{ Math.floor(vaultBalance) }}&nbsp;</span> NOS
+            <h3 v-if="vaultBalance" class="title is-4 has-text-weight-semibold">Claim back your tokens:</h3>
+            <button v-if="vaultBalance" class="button is-fullwidth is-primary mt-2" :class="{ 'is-loading': loading }" @click.prevent="close">
+              Claim <span >&nbsp;{{ Math.floor(vaultBalance) }}&nbsp;</span> NOS
+            </button>
+            <button v-else class="button is-fullwidth is-primary mt-2" :class="{ 'is-loading': loading }" @click.prevent="closeWithoutWithdraw">
+              Close Stake Account
             </button>
           </div>
         </div>
@@ -195,6 +198,22 @@ const close = async () => {
     await refreshBalance();
     console.log('close', close);
     toast.success('Succesfully claimed & closed staking account');
+  } catch (e: any) {
+    console.error('cant close', e);
+    toast.error(e.toString());
+  }
+  loading.value = false;
+}
+
+// Only called when vault is empty
+const closeWithoutWithdraw = async () => {
+  loading.value = true;
+  try {
+    const close = await nosana.value.stake.close(false);
+    await refreshStake();
+    await refreshBalance();
+    console.log('close', close);
+    toast.success('Succesfully closed staking account');
   } catch (e: any) {
     console.error('cant close', e);
     toast.error(e.toString());
