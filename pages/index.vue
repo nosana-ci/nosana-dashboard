@@ -5,10 +5,6 @@
       <WorldMap />
     </div>
 
-    <div class="world-map-mobile-image">
-      <img src="~/assets/img/world-map.png" alt="World Map" />
-    </div>
-
     <!-- Main Content -->
     <div class="content-wrapper">
       <!-- Top Left -->
@@ -31,7 +27,7 @@
             </span>
             <div class="stats-text">
               <div class="has-text-grey is-size-6">GPUs Available</div>
-              <div class="has-text-weight-bold is-size-4">
+              <div class="has-text-black has-text-weight-bold is-size-4">
                 {{ queuedHosts }}/{{ activeHosts }}
               </div>
             </div>
@@ -62,7 +58,7 @@
         </button>
         <div class="wallet-container">
           <ClientOnly>
-            <wallet-multi-button :dark="true" />
+            <wallet-multi-button :dark="isDarkMode" />
           </ClientOnly>
         </div>
       </div>
@@ -154,6 +150,15 @@ const { data: runningNodesData } = useAPI("/api/jobs/running", {
   default: () => ({ total: 0 }),
 });
 
+// Define interface for node stats item
+interface NodeStatsItem {
+  country: string;
+  running: number;
+  queue: number;
+  offline: number;
+  total: number;
+}
+
 // Calculate queued hosts
 const queuedHosts = computed(() => {
   if (
@@ -164,7 +169,7 @@ const queuedHosts = computed(() => {
 
   let total = 0;
   // Group by country and sum up queues
-  nodeStatsResponse.value.data.forEach((item) => {
+  nodeStatsResponse.value.data.forEach((item: NodeStatsItem) => {
     if (item.queue > 0) {
       total += item.queue;
     }
@@ -237,22 +242,6 @@ const isDarkMode = computed(() =>
   }
 }
 
-.world-map-mobile-image {
-  display: none;
-  @media screen and (max-width: 1024px) {
-    display: block !important;
-    margin-top: 100px;
-    width: 100%;
-    overflow-x: scroll;
-    white-space: nowrap;
-    img {
-      height: 600px;
-      width: auto;
-      max-width: none;
-    }
-  }
-}
-
 .world-map-wrapper {
   position: absolute;
   top: 0;
@@ -265,11 +254,7 @@ const isDarkMode = computed(() =>
   justify-content: center;
   background: #f9f9f9;
   transition: background-color 0.3s ease;
-
-  // hide for now on mobile
-  @media screen and (max-width: 1024px) {
-    display: none !important;
-  }
+  overflow: hidden;
 
   :deep(.box) {
     width: 100%;
@@ -277,21 +262,25 @@ const isDarkMode = computed(() =>
     display: flex;
     align-items: center;
     justify-content: center;
+    overflow: hidden;
   }
 
   :deep(.world-map-container) {
     width: 100%;
     height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
   }
 
   :deep(.aspect-ratio-container) {
-    width: 100%;
-    height: 100%;
+    /* No max-width to allow the map to be cut off at the sides */
+    overflow: hidden;
   }
 
   :deep(.v-chart) {
-    width: 100% !important;
-    height: 100% !important;
+    overflow: hidden;
   }
 }
 
@@ -310,6 +299,11 @@ const isDarkMode = computed(() =>
     top: 50px;
     padding: 1rem;
   }
+  
+  @media screen and (max-width: 450px) {
+    flex-direction: column;
+    padding: 0.75rem;
+  }
 }
 
 .left-content {
@@ -324,6 +318,18 @@ const isDarkMode = computed(() =>
     position: relative;
     z-index: 3;
   }
+  
+  @media screen and (max-width: 450px) {
+    h1.title {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .button {
+      font-size: 0.85rem;
+      padding: 0.5em 0.75em;
+    }
+  }
 }
 
 .right-content {
@@ -334,9 +340,33 @@ const isDarkMode = computed(() =>
 
   .button {
     pointer-events: auto;
-    // background-color: rgba(42, 42, 42, 0.8) !important;
     position: relative;
     z-index: 3;
+  }
+  
+  @media screen and (max-width: 450px) {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    gap: 0.5rem;
+    align-items: center;
+    
+    .button {
+      padding: 0.25rem;
+      height: auto;
+      display: flex;
+      align-items: center;
+      
+      .icon {
+        width: 1.5rem;
+        height: 1.5rem;
+        
+        svg {
+          width: 1.5rem;
+          height: 1.5rem;
+        }
+      }
+    }
   }
 }
 
@@ -344,20 +374,22 @@ const isDarkMode = computed(() =>
   pointer-events: auto;
   position: relative;
   z-index: 999;
-
-  :deep(.wallet-adapter-button) {
-    background-color: rgba(42, 42, 42, 0.8) !important;
-    color: white !important;
-  }
-
-  :deep(.wallet-adapter-dropdown) {
-    position: relative;
-  }
-
-  :deep(.wallet-adapter-dropdown-list) {
-    position: absolute;
-    top: 100%;
-    right: 0;
+  
+  @media screen and (max-width: 450px) {
+    transform: scale(0.85);
+    transform-origin: right center;
+    
+    :deep(.wallet-adapter-button) {
+      font-size: 0.7rem;
+      padding: 0 0.5rem;
+      height: 1.75rem;
+      
+      .wallet-adapter-button-start-icon {
+        margin-right: 4px;
+        width: 16px;
+        height: 16px;
+      }
+    }
   }
 }
 
@@ -367,22 +399,29 @@ const isDarkMode = computed(() =>
   pointer-events: auto;
   position: relative;
   z-index: 3;
+  
+  @media screen and (max-width: 450px) {
+    padding-bottom: 1rem;
+  }
 }
 
 .stats-box {
-  background: white !important;
   border-radius: 8px;
   padding: 1rem 1.5rem;
   display: flex;
   align-items: center;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-
-  .has-text-grey {
-    color: #7a7a7a !important;
-  }
-
-  .has-text-weight-bold {
-    color: black !important;
+  
+  @media screen and (max-width: 450px) {
+    padding: 0.75rem 1rem;
+    
+    .is-size-4 {
+      font-size: 1.25rem !important;
+    }
+    
+    .is-size-6 {
+      font-size: 0.8rem !important;
+    }
   }
 }
 
@@ -390,9 +429,14 @@ const isDarkMode = computed(() =>
   width: 28px;
   height: 28px;
   fill: #10e80c;
+  
+  @media screen and (max-width: 450px) {
+    width: 20px;
+    height: 20px;
+  }
 }
 
-:deep(.button.is-primary) {
+.left-content :deep(.button.is-primary) {
   background-color: #10e80c !important;
   border-color: transparent !important;
   color: #1a1a1a !important;

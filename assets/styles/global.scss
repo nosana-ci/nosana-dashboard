@@ -3,6 +3,13 @@
 @import "bulma-o-steps/bulma-steps.css";
 @import "@creativebulma/bulma-tooltip";
 
+// Table column alignment for consistent two-column tables
+.table.two-column-labels tbody tr td:first-child {
+  width: 40%;
+  min-width: 226px;
+  white-space: nowrap;
+}
+
 .button {
   &.is-wide {
     min-width: 140px;
