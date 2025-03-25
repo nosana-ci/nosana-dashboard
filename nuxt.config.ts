@@ -7,9 +7,6 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   ssr: false,
   css: ["~/assets/styles/global.scss"],
-  devServer: {
-    port: 3002
-  },
   dir: {
     public: 'static',
   },
