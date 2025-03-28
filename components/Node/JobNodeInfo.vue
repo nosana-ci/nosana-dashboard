@@ -1,6 +1,6 @@
 `
 <template>
-  <div>
+  <div class="mt-4">
     <table class="table is-fullwidth two-column-labels">
       <tbody>
         <tr>
@@ -69,13 +69,10 @@ const props = defineProps<{
 /**********************
  * Node Specification *
  **********************/
-const { data: nodeSpecs, pending: loadingSpecs } = useAPI(
-  `/api/nodes/${props.address}/specs`,
-  {
-    // @ts-ignore TODO: add to useAPI opts type
-    disableToastOnError: true,
-  }
-);
+const { data: nodeSpecs } = useAPI(`/api/nodes/${props.address}/specs`, {
+  // @ts-ignore TODO: add to useAPI opts type
+  disableToastOnError: true,
+});
 
 const { data: nodeInfo, pending: loadingInfo } = useAPI(
   `https://${props.address}.${useRuntimeConfig().public.nodeDomain}/node/info`,

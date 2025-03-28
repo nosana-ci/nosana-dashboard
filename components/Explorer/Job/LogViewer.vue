@@ -1,12 +1,6 @@
 <template>
   <div class="log-viewer" ref="logContainer" @scroll="handleScroll">
-    <!-- Not Job Poster Message -->
-    <div v-if="!isJobPoster" class="no-access">
-      <div class="icon">
-        <i class="fas fa-lock"></i>
-      </div>
-      <h3>No Logs Available</h3>
-    </div>
+    <div v-if="signMessageError">Failed to sign message. Please try again.</div>
 
     <!-- Regular Log View -->
     <template v-else>
@@ -23,50 +17,63 @@
       <!-- Log Entries and Progress Bars -->
       <div class="log-content">
         <template v-for="log in logs" :key="log.id">
-          <div 
-            class="log-entry" 
+          <div
+            class="log-entry"
             :class="{ 'container-log': log.isContainerLog }"
-            v-html="formatContainerLog(log.content, log.isContainerLog)">
-          </div>
+            v-html="formatContainerLog(log.content, log.isContainerLog)"
+          ></div>
         </template>
 
         <!-- Active Progress Bars -->
-        <div v-for="bar in activeProgressBars" :key="bar.id" class="progress-bar-container mb-4">
-          <div class="progress-text" :class="{
-            'is-primary': bar.status === 'Downloading',
-            'is-info': bar.status === 'Pulling fs layer',
-            'is-warning': bar.status === 'Extracting',
-            'is-success': bar.status === 'Resource'
-          }">
-            {{ bar.status }} | {{ bar.id }} | {{ bar.currentDisplay }}{{ bar.currentFormat }}/{{ bar.totalDisplay }}{{ bar.totalFormat }}
-          </div>
-          <progress 
-            class="progress" 
+        <div
+          v-for="bar in activeProgressBars"
+          :key="bar.id"
+          class="progress-bar-container mb-4"
+        >
+          <div
+            class="progress-text"
             :class="{
               'is-primary': bar.status === 'Downloading',
               'is-info': bar.status === 'Pulling fs layer',
               'is-warning': bar.status === 'Extracting',
-              'is-success': bar.status === 'Resource'
+              'is-success': bar.status === 'Resource',
             }"
-            :value="bar.current" 
+          >
+            {{ bar.status }} | {{ bar.id }} | {{ bar.currentDisplay
+            }}{{ bar.currentFormat }}/{{ bar.totalDisplay
+            }}{{ bar.totalFormat }}
+          </div>
+          <progress
+            class="progress"
+            :class="{
+              'is-primary': bar.status === 'Downloading',
+              'is-info': bar.status === 'Pulling fs layer',
+              'is-warning': bar.status === 'Extracting',
+              'is-success': bar.status === 'Resource',
+            }"
+            :value="bar.current"
             :max="bar.total"
           >
-            {{ (bar.current / bar.total * 100).toFixed(0) }}%
+            {{ ((bar.current / bar.total) * 100).toFixed(0) }}%
           </progress>
         </div>
 
         <!-- New resource progress bar(s) -->
-        <div v-for="resBar in activeResourceProgressBars" :key="resBar.id" class="progress-bar-container mb-4">
+        <div
+          v-for="resBar in activeResourceProgressBars"
+          :key="resBar.id"
+          class="progress-bar-container mb-4"
+        >
           <div class="progress-text is-link">
-            {{ resBar.status }} | {{ resBar.id }} | 
+            {{ resBar.status }} | {{ resBar.id }} |
             {{ resBar.current.toFixed(2) }}/{{ resBar.total.toFixed(2) }} (GB)
           </div>
-          <progress 
+          <progress
             class="progress is-link"
             :value="resBar.current"
             :max="resBar.total"
           >
-            {{ (resBar.current / resBar.total * 100).toFixed(0) }}%
+            {{ ((resBar.current / resBar.total) * 100).toFixed(0) }}%
           </progress>
         </div>
       </div>
@@ -75,39 +82,42 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, nextTick, onMounted } from 'vue';
-import { useJobLogs } from '~/composables/useJobLogs';
+import { computed, ref, watch, nextTick } from "vue";
 
-const props = defineProps<{
-  isJobPoster: boolean;
-}>();
+import type { LogEntry, ProgressBar } from "~/composables/jobs/useJobLogs";
+
+interface Props {
+  isConnecting: boolean;
+  logs: LogEntry[];
+  progressBars: Map<string, ProgressBar>;
+  resourceProgressBars: Map<string, any>;
+}
+
+const { isConnecting, logs, progressBars, resourceProgressBars } =
+  defineProps<Props>();
+
+// TODO: MOVE TO HOOKS
+const signMessageError = ref(false);
 
 const logContainer = ref<HTMLElement | null>(null);
 const shouldAutoScroll = ref(true);
 
-const {
-  logs,
-  progressBars,
-  isConnecting,
-  handleWebSocketMessage: baseHandleWebSocketMessage,
-  clearLogs,
-  addLog
-} = useJobLogs();
-
-// A second map to track "process-bar" events for resource downloads
-const resourceProgressBars = ref<Map<string, any>>(new Map());
-
 // Format container logs to highlight timestamps and handle ANSI codes
-function formatContainerLog(content: string, isContainerLog: boolean | undefined) {
-  if (!content) return '';
-  
+function formatContainerLog(
+  content: string,
+  isContainerLog: boolean | undefined
+) {
+  if (!content) return "";
+
   let formattedContent = content;
-  
+
   if (!isContainerLog) {
     // Add color to download status lines
-    if (content.startsWith('Download complete:') || 
-        content.startsWith('Already exists:') || 
-        content.startsWith('Pull complete:')) {
+    if (
+      content.startsWith("Download complete:") ||
+      content.startsWith("Already exists:") ||
+      content.startsWith("Pull complete:")
+    ) {
       return `<span class="download-status">${content}</span>`;
     }
   } else {
@@ -141,68 +151,21 @@ function formatContainerLog(content: string, isContainerLog: boolean | undefined
     .replace(/\u001b\[96m/g, '<span class="ansi-bright-cyan-fg">')
     .replace(/\u001b\[97m/g, '<span class="ansi-bright-white-fg">')
     // Reset
-    .replace(/\u001b\[0m/g, '</span>')
+    .replace(/\u001b\[0m/g, "</span>")
     // Close any unclosed spans
-    .replace(/\u001b\[\d+m/g, '');
+    .replace(/\u001b\[\d+m/g, "");
 
   return formattedContent;
 }
 
-// Our custom handler extends baseHandleWebSocketMessage
-function handleWebSocketMessage(event: MessageEvent) {
-  baseHandleWebSocketMessage(event);
-
-  try {
-    const data = JSON.parse(event.data);
-    if (!data.data) return;
-    
-    const inner = JSON.parse(data.data);
-    if (!inner.method?.startsWith('ProgressBarReporter')) return;
-
-    switch (inner.method) {
-      case 'ProgressBarReporter.start': {
-        if (inner.type !== 'process-bar-start') return;
-        
-        resourceProgressBars.value.set('resource', {
-          id: 'resource',
-          status: 'Downloading Resource',
-          current: 0,
-          total: inner.payload?.total ?? 0,
-          completed: false,
-        });
-        break;
-      }
-      case 'ProgressBarReporter.update': {
-        if (inner.type !== 'process-bar-update') return;
-        
-        const bar = resourceProgressBars.value.get('resource');
-        if (bar && !bar.completed) {
-          bar.current = inner.payload?.current ?? bar.current;
-          if (bar.total && bar.current >= bar.total) {
-            bar.completed = true;
-          }
-        }
-        break;
-      }
-      case 'ProgressBarReporter.stop': {
-        if (inner.type !== 'process-bar-stop') return;
-        resourceProgressBars.value.delete('resource');
-        break;
-      }
-    }
-  } catch (error) {
-    console.error('Error processing WebSocket message:', error);
-  }
-}
-
 // A computed array of in-progress resource bars
 const activeResourceProgressBars = computed(() =>
-  Array.from(resourceProgressBars.value.values()).filter(b => !b.completed)
+  Array.from(resourceProgressBars.values()).filter((b) => !b.completed)
 );
 
 // Likewise, your existing multi-process container bars
 const activeProgressBars = computed(() =>
-  Array.from(progressBars.value.values()).filter(b => !b.completed)
+  Array.from(progressBars.values()).filter((b) => !b.completed)
 );
 
 function scrollToBottom() {
@@ -214,13 +177,13 @@ function scrollToBottom() {
   }
 }
 
-// Auto-scroll to bottom when new logs arrive or progress bars update
+// // Auto-scroll to bottom when new logs arrive or progress bars update
 watch(
   [
-    () => logs.value.length, 
+    () => logs.length,
     () => activeProgressBars.value.length,
-    () => activeResourceProgressBars.value.length
-  ], 
+    () => activeResourceProgressBars.value.length,
+  ],
   () => {
     scrollToBottom();
   }
@@ -229,29 +192,18 @@ watch(
 // Handle manual scrolling
 function handleScroll() {
   if (!logContainer.value) return;
-  
+
   const container = logContainer.value;
   const { scrollTop, scrollHeight, clientHeight } = container;
-  
+
   // If we're near the bottom (within 50px), enable auto-scroll
   shouldAutoScroll.value = scrollHeight - (scrollTop + clientHeight) < 50;
 }
-
-// Initial scroll to bottom
-onMounted(() => {
-  scrollToBottom();
-});
-
-defineExpose({
-  handleWebSocketMessage,
-  clearLogs,
-  addLog
-});
 </script>
 
 <style lang="scss" scoped>
 .log-viewer {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
   background-color: #000000;
   color: #c9d1d9;
   padding: 1rem;
@@ -287,25 +239,59 @@ defineExpose({
     font-weight: 500;
   }
 
-  :deep(.ansi-black-fg) { color: #484f58; }
-  :deep(.ansi-red-fg) { color: #ff4444; }
-  :deep(.ansi-green-fg) { color: #4ade80; }
-  :deep(.ansi-yellow-fg) { color: #ffdd4a; }
-  :deep(.ansi-blue-fg) { color: #2f9fff; }
-  :deep(.ansi-magenta-fg) { color: #ff44ff; }
-  :deep(.ansi-cyan-fg) { color: #00ffff; }
-  :deep(.ansi-white-fg) { color: #ffffff; }
+  :deep(.ansi-black-fg) {
+    color: #484f58;
+  }
+  :deep(.ansi-red-fg) {
+    color: #ff4444;
+  }
+  :deep(.ansi-green-fg) {
+    color: #4ade80;
+  }
+  :deep(.ansi-yellow-fg) {
+    color: #ffdd4a;
+  }
+  :deep(.ansi-blue-fg) {
+    color: #2f9fff;
+  }
+  :deep(.ansi-magenta-fg) {
+    color: #ff44ff;
+  }
+  :deep(.ansi-cyan-fg) {
+    color: #00ffff;
+  }
+  :deep(.ansi-white-fg) {
+    color: #ffffff;
+  }
 
-  :deep(.ansi-bright-black-fg) { color: #6e7681; }
-  :deep(.ansi-bright-red-fg) { color: #ff6b6b; }
-  :deep(.ansi-bright-green-fg) { color: #4dffb5; }
-  :deep(.ansi-bright-yellow-fg) { color: #ffe66d; }
-  :deep(.ansi-bright-blue-fg) { color: #5cb3ff; }
-  :deep(.ansi-bright-magenta-fg) { color: #ff77ff; }
-  :deep(.ansi-bright-cyan-fg) { color: #60ffff; }
-  :deep(.ansi-bright-white-fg) { color: #ffffff; }
+  :deep(.ansi-bright-black-fg) {
+    color: #6e7681;
+  }
+  :deep(.ansi-bright-red-fg) {
+    color: #ff6b6b;
+  }
+  :deep(.ansi-bright-green-fg) {
+    color: #4dffb5;
+  }
+  :deep(.ansi-bright-yellow-fg) {
+    color: #ffe66d;
+  }
+  :deep(.ansi-bright-blue-fg) {
+    color: #5cb3ff;
+  }
+  :deep(.ansi-bright-magenta-fg) {
+    color: #ff77ff;
+  }
+  :deep(.ansi-bright-cyan-fg) {
+    color: #60ffff;
+  }
+  :deep(.ansi-bright-white-fg) {
+    color: #ffffff;
+  }
 
-  :deep(.ansi-bold) { font-weight: bold; }
+  :deep(.ansi-bold) {
+    font-weight: bold;
+  }
 }
 
 .progress-bar-container {
@@ -408,4 +394,4 @@ defineExpose({
     margin-right: 0.5rem;
   }
 }
-</style> 
+</style>
