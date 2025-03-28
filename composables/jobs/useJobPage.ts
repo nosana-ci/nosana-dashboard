@@ -2,13 +2,13 @@ import { useWallet } from "solana-wallets-vue";
 
 import { useJob } from "./useJob";
 import { useNosPrice } from "./useNosPrice";
-import { useExtendModal } from "./useExtendModal";
+import { useModal } from "./useModal";
 
 export function useJobPage(id: string) {
   const { connected, publicKey } = useWallet();
 
   const { job, endpoints, loading } = useJob(id);
-  const modal = useExtendModal();
+  const modal = useModal();
   const nosPrice = useNosPrice();
 
   // Check if user is job poster

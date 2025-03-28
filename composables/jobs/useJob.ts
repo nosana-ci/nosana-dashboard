@@ -1,4 +1,9 @@
-import { getJobExposeIdHash, type Job, type JobDefinition } from "@nosana/sdk";
+import {
+  getJobExposedServices,
+  getJobExposeIdHash,
+  type Job,
+  type JobDefinition,
+} from "@nosana/sdk";
 import { useToast } from "vue-toastification";
 
 /**
@@ -37,6 +42,10 @@ export type Endpoints = Map<
   string,
   {
     url: string;
+    port: number;
+    opIndex: number;
+    opId: string;
+    hasHealthCheck: boolean;
     status: "ONLINE" | "OFFLINE" | "UNKNOWN";
     setStatus: (status: "ONLINE" | "OFFLINE") => void;
   }
@@ -141,15 +150,19 @@ export function useJob(jobId: string) {
         endpoints.value = new Map(endpoints.value);
       };
 
-      const services = getJobExposeIdHash(job.jobDefinition, jobId);
-      for (const service of services) {
-        const url = `https://${service}.${useRuntimeConfig().public.nodeDomain}`;
+      const services = getJobExposedServices(job.jobDefinition, jobId);
+      for (const { hash, port, opId, opIndex, hasHealthCheck } of services) {
+        const url = `https://${hash}.${useRuntimeConfig().public.nodeDomain}`;
 
-        if (endpoints.value.has(url) || service === "private") continue;
+        if (endpoints.value.has(url) || hash === "private") continue;
 
         endpoints.value.set(url, {
           status: "UNKNOWN",
           url,
+          opId,
+          opIndex,
+          port,
+          hasHealthCheck,
           setStatus: (status: "ONLINE" | "OFFLINE") => {
             setEndpointStatus(url, status);
           },
