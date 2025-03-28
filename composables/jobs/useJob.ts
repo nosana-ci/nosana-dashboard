@@ -44,6 +44,7 @@ export type Endpoints = Map<
 
 export function useJob(jobId: string) {
   const job = ref<UseJob | null>(null);
+  const loading = ref(true);
   const endpoints = ref<Endpoints>(new Map() as Endpoints);
 
   const toast = useToast();
@@ -155,11 +156,12 @@ export function useJob(jobId: string) {
         });
       }
     }
+    loading.value = false;
   });
 
   return {
     job,
     endpoints,
-    loading: pending,
+    loading,
   };
 }
