@@ -8,16 +8,15 @@ const config = useRuntimeConfig();
 let wallet: Ref<AnchorWallet | undefined>;
 
 const prioFee = useLocalStorage("prio-fee", {
-  strategy: 'medium',
+  strategy: "medium",
   staticFee: 100000,
   dynamicPriorityFee: true,
-  maxPriorityFee: 15000000
+  maxPriorityFee: 15000000,
 });
 
 const nosana = computed(() => {
-  const { publicKey } = useWallet();
   // TODO: publicKey.value needed to trigger change in creating SDK on reconnect
-  console.log("publicKey", publicKey.value);
+  // const { publicKey } = useWallet();
   try {
     wallet = useAnchorWallet();
   } catch (error) {}
@@ -27,11 +26,16 @@ const nosana = computed(() => {
       network: config.public.rpcUrl,
       priority_fee: prioFee.value.staticFee,
       dynamicPriorityFee: prioFee.value.dynamicPriorityFee,
-      priorityFeeStrategy: prioFee.value.strategy === 'disable' ? 'medium' : prioFee.value.strategy
+      // @ts-ignore - Todo: fix config typing
+      priorityFeeStrategy:
+        prioFee.value.strategy === "disable"
+          ? "medium"
+          : prioFee.value.strategy,
     },
   };
 
   return new Client(
+    // @ts-ignore - Todo: fix config typing
     config.public.network,
     wallet ? wallet.value : undefined,
     clientConfig
