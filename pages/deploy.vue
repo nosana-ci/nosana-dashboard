@@ -436,12 +436,7 @@
                 <!-- Available Hosts -->
                 <div class="mt-4">
                   <h4 class="title is-6 mb-3">Available GPUs</h4>
-                  <div v-if="loadingHosts" class="has-text-centered">
-                    <span class="icon is-large">
-                      <i class="fas fa-spinner fa-pulse"></i>
-                    </span>
-                  </div>
-                  <div v-else-if="availableHosts.length === 0" class="has-text-centered has-text-grey">
+                  <div v-if="availableHosts.length === 0 && !loadingHosts" class="has-text-centered has-text-grey">
                     No GPUs found matching your criteria
                   </div>
                   <transition-group name="gpu-list-transition" tag="div" class="gpu-list">
