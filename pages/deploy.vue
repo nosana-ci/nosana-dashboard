@@ -436,15 +436,10 @@
                 <!-- Available Hosts -->
                 <div class="mt-4">
                   <h4 class="title is-6 mb-3">Available GPUs</h4>
-                  <div v-if="loadingHosts" class="has-text-centered">
-                    <span class="icon is-large">
-                      <i class="fas fa-spinner fa-pulse"></i>
-                    </span>
-                  </div>
-                  <div v-else-if="availableHosts.length === 0" class="has-text-centered has-text-grey">
+                  <div v-if="availableHosts.length === 0 && !loadingHosts" class="has-text-centered has-text-grey">
                     No GPUs found matching your criteria
                   </div>
-                  <div v-else class="gpu-list">
+                  <transition-group name="gpu-list-transition" tag="div" class="gpu-list">
                     <div v-for="host in availableHosts" 
                         :key="host.host_address" 
                         class="gpu-box"
@@ -477,7 +472,7 @@
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </transition-group>
                 </div>
               </div>
             </div>
@@ -1348,7 +1343,7 @@ const debouncedSearch = useDebounceFn(async () => {
     
     // Process host data
     if (data.hosts) {
-      availableHosts.value = data.hosts
+      const processedHosts = data.hosts
         .map((host: any) => {
           // Normalize host data
           if (host.specs && host.specs.RAM_MB) {
@@ -1367,15 +1362,25 @@ const debouncedSearch = useDebounceFn(async () => {
         })
         // Sort by price (low to high)
         .sort((a: any, b: any) => a.USD_per_hour - b.USD_per_hour);
+      
+      // Wait a small delay before updating to ensure smooth transition
+      setTimeout(() => {
+        availableHosts.value = processedHosts;
+        loadingHosts.value = false;
+      }, 100);
     } else {
-      availableHosts.value = [];
+      setTimeout(() => {
+        availableHosts.value = [];
+        loadingHosts.value = false;
+      }, 100);
     }
   } catch (error) {
     console.error('Error fetching hosts:', error);
     toast.error('Failed to fetch available GPUs');
-    availableHosts.value = [];
-  } finally {
-    loadingHosts.value = false;
+    setTimeout(() => {
+      availableHosts.value = [];
+      loadingHosts.value = false;
+    }, 100);
   }
 }, 300);
 
@@ -2101,5 +2106,19 @@ html.dark-mode .github-icon {
 
 .flex-wrap {
   flex-wrap: wrap;
+}
+
+/* GPU list transitions */
+.gpu-list-transition-enter-active,
+.gpu-list-transition-leave-active {
+  transition: all 0.3s ease;
+}
+.gpu-list-transition-enter-from,
+.gpu-list-transition-leave-to {
+  opacity: 0;
+  transform: translateY(10px);
+}
+.gpu-list-transition-move {
+  transition: transform 0.3s ease;
 }
 </style> 
