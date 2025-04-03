@@ -4,7 +4,7 @@
     :endpoints="endpoints"
     :isVerifed="false"
     :isJobPoster="isJobPoster"
-    :openExtendModal="modal.openExtendModal"
+    :openExtendModal="modal.open"
   />
   <ExplorerJobInfo
     :address="job.address"
@@ -37,10 +37,10 @@
     :resourceProgressBars="resourceProgressBars"
   />
   <ExtendModal
-    v-if="modal.extendModal.value && job"
+    v-if="modal.isOpen.value && job"
     :job="job"
     :nosPrice="nosPrice"
-    :closeExtendModal="modal.closeExtendModal"
+    :closeExtendModal="modal.close"
     :userBalances="userBalances"
   />
   <LogSubscription
@@ -56,10 +56,11 @@ import JobToolbar from "~/components/Explorer/Job/JobToolbar.vue";
 import ExtendModal from "~/components/Explorer/Job/Modals/Extend.vue";
 import ExplorerJobInfo from "~/components/Explorer/Job/Info.vue";
 
-import type { Endpoints, UseJob } from "~/composables/jobs/useJob";
-import type { UseModal } from "~/composables/jobs/useExtendModal";
-import { useJobLogs } from "~/composables/jobs/useJobLogs";
 import LogSubscription from "./LogSubscription.vue";
+import { useJobLogs } from "~/composables/jobs/useJobLogs";
+
+import type { UseModal } from "~/composables/jobs/useModal";
+import type { Endpoints, UseJob } from "~/composables/jobs/useJob";
 
 interface Props {
   job: UseJob;

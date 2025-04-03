@@ -4,19 +4,8 @@
   >
     <div class="is-flex is-align-items-center">
       <template v-if="isJobPoster && job.isRunning">
-        <div
-          v-if="
-            endpoints.size && [...endpoints.values()][0].status !== 'UNKNOWN'
-          "
-          class="mr-4"
-        >
-          <a
-            :href="[...endpoints.values()][0].url"
-            target="_blank"
-            class="button is-success"
-          >
-            Visit Service
-          </a>
+        <div class="mr-4">
+          <EndpointsModal v-if="endpoints.size" :endpoints="endpoints" />
         </div>
         <div class="mr-4">
           <button
@@ -63,8 +52,11 @@
 
 <script setup lang="ts">
 import { useToast } from "vue-toastification";
-import { type Endpoints, type UseJob } from "~/composables/jobs/useJob";
+
+import EndpointsModal from "~/components/Explorer/Job/Modals/Endpoints.vue";
 import { useNosanaWallet } from "~/composables/useNosanaWallet";
+
+import { type Endpoints, type UseJob } from "~/composables/jobs/useJob";
 
 interface Props {
   job: UseJob;
