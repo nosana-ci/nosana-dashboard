@@ -6,7 +6,7 @@
         {{ subtitle }}
       </h3>
     </div>
-    <button class="button ml-auto mr-2 is-rounded is-large is-text" @click="showSettingsModal = true">
+    <button v-if="!hideButtons" class="button ml-auto mr-2 is-rounded is-large is-text" @click="updateShowSettingsModal(true)">
       <span class="icon">
         <svg width="32" height="32" viewBox="0 0 16 17" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path
@@ -15,8 +15,8 @@
         </svg>
       </span>
     </button>
-    <div class="modal" :class="{ 'is-active': showSettingsModal }">
-      <div class="modal-background" @click="showSettingsModal = false"></div>
+    <div class="modal" :class="{ 'is-active': modelValue }">
+      <div class="modal-background" @click="updateShowSettingsModal(false)"></div>
       <div class="modal-content">
         <div class="box">
           <h2 class="title mb-5 has-text-weight-bold">Settings</h2>
@@ -54,16 +54,15 @@
           </div>
         </div>
       </div>
-      <button class="modal-close is-large" @click="showSettingsModal = false" aria-label="close"></button>
+      <button class="modal-close is-large" @click="updateShowSettingsModal(false)" aria-label="close"></button>
     </div>
-    <ClientOnly>
+    <ClientOnly v-if="!hideButtons">
       <wallet-multi-button :dark="$colorMode.value === 'dark'"></wallet-multi-button>
     </ClientOnly>
   </div>
 </template>
 <script lang="ts" setup>
 import { WalletMultiButton } from "solana-wallets-vue";
-const showSettingsModal = ref(false);
 const { prioFee } = useSDK();
 
 interface PrioFeeConfig {
@@ -106,7 +105,7 @@ const setPrioFeeConfig = (level: keyof typeof PRIO_FEE_CONFIGS) => {
   prioFee.value = config;
 };
 
-defineProps({
+const props = defineProps({
   title: {
     type: String,
     required: true
@@ -115,5 +114,19 @@ defineProps({
     type: String,
     required: false
   },
+  hideButtons: {
+    type: Boolean,
+    default: false
+  },
+  modelValue: {
+    type: Boolean,
+    default: false
+  }
 });
+
+const emit = defineEmits(['update:modelValue']);
+
+const updateShowSettingsModal = (value: boolean) => {
+  emit('update:modelValue', value);
+};
 </script>

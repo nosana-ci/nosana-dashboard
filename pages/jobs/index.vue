@@ -5,7 +5,7 @@
       <ExplorerSearch />
     </div>
     <div class="has-text-right mb-2">
-      <nuxt-link class="button is-primary is-outlined" to="/jobs/create">
+      <nuxt-link class="button is-primary is-outlined" to="/deploy">
         <span class="icon">
           <JobBuilderIcon />
         </span>

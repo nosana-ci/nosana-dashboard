@@ -1,6 +1,6 @@
 <template>
   <div>
-    <TopBar :title="'Dashboard'" :subtitle="'Your personal overview'">
+    <TopBar :title="'My Account'" :subtitle="'Your personal overview'">
     </TopBar>
     <div class="container">
       <div v-if="connected">
@@ -44,7 +44,12 @@
           <div v-if="pendingRewards > 0" class="column is-3">
             <div class="box has-text-centered">
               <p class="heading">Pending Rewards</p>
-              <p class="title">{{ pendingRewards.toFixed(2) }} NOS</p>
+              <p class="title is-flex is-align-items-center is-justify-content-center">
+                {{ pendingRewards.toFixed(2) }} NOS
+                <button @click="claimRewards" class="ml-2 button is-small is-primary" :class="{ 'is-loading': claimingRewards }">
+                  Claim
+                </button>
+              </p>
             </div>
           </div>
         </div>
@@ -55,7 +60,7 @@
           <div class="column is-4">
             <h3 class="title is-4 mb-4">Welcome to Nosana</h3>
             <div class="equal-height-boxes">
-              <nuxt-link to="/jobs/create" class="box has-text-black p-2 mb-2 is-block">
+              <nuxt-link to="/deploy" class="box has-text-black p-2 mb-2 is-block">
                 <div class="is-flex is-align-items-start" style="margin: 8px 8px 0 8px;">
                   <RocketIcon style="width: 16px; height: 16px; fill: #10E80C; margin-right: 0.5rem; margin-top: 4px;" />
                   <div>
@@ -93,14 +98,14 @@
               <div class="content is-flex is-flex-direction-column is-justify-content-center" style="height: 100%;">
                 <div class="is-flex is-flex-direction-column" style="flex: 1; display: flex; justify-content: center;">
                   <p class="heading mb-1" style="font-size: 0.7rem;">Current month cost</p>
-                  <p class="title is-4 mb-1" v-if="monthSpend && !loadingSpend">
-                    ${{ monthSpend.spentThisMonth.toFixed(2) }}
+                  <p class="title is-4 mb-1" v-if="!loadingSpending">
+                    ${{ spentThisMonth.toFixed(2) }}
                   </p>
                   <p class="title is-4 mb-1" v-else>-</p>
 
-                  <p class="has-text-grey is-size-7 mb-0" v-if="monthSpend && monthSpend.pctChangeSoFar != null">
+                  <p class="has-text-grey is-size-7 mb-0" v-if="pctChangeSoFar != null">
                     <ArrowUpIcon
-                      v-if="monthSpend.pctChangeSoFar >= 0"
+                      v-if="pctChangeSoFar >= 0"
                       class="icon is-small mr-1"
                       style="width: 10px; height: 10px; fill: #48c78e;"
                     />
@@ -109,9 +114,8 @@
                       class="icon is-small mr-1"
                       style="width: 10px; height: 10px; fill: #f14668;"
                     />
-                    {{ monthSpend.pctChangeSoFar.toFixed(2) }}% compared to last month for same period
+                    {{ pctChangeSoFar.toFixed(2) }}% compared to last month for same period
                   </p>
-                  <p v-else class="has-text-grey is-size-7 mb-0">No comparison data</p>
                 </div>
 
                 <div class="is-flex is-justify-content-center my-3">
@@ -120,14 +124,14 @@
 
                 <div class="is-flex is-flex-direction-column" style="flex: 1; display: flex; justify-content: center;">
                   <p class="heading mb-1" style="font-size: 0.7rem;">Forecasted month end cost</p>
-                  <p class="title is-4 mb-1" v-if="monthSpend && !loadingSpend">
-                    ${{ monthSpend.forecast.toFixed(2) }}
+                  <p class="title is-4 mb-1" v-if="!loadingSpending">
+                    ${{ forecastAmount.toFixed(2) }}
                   </p>
                   <p class="title is-4 mb-1" v-else>-</p>
 
-                  <p class="has-text-grey is-size-7 mb-0" v-if="monthSpend && monthSpend.pctChangeForecastFromLastMonth != null">
+                  <p class="has-text-grey is-size-7 mb-0" v-if="pctChangeForecastFromLastMonth != null">
                     <ArrowUpIcon
-                      v-if="monthSpend.pctChangeForecastFromLastMonth >= 0"
+                      v-if="pctChangeForecastFromLastMonth >= 0"
                       class="icon is-small mr-1"
                       style="width: 10px; height: 10px; fill: #48c78e;"
                     />
@@ -136,9 +140,8 @@
                       class="icon is-small mr-1"
                       style="width: 10px; height: 10px; fill: #f14668;"
                     />
-                    {{ monthSpend.pctChangeForecastFromLastMonth.toFixed(2) }}% compared to last month's total cost
+                    {{ pctChangeForecastFromLastMonth.toFixed(2) }}% compared to last month's total cost
                   </p>
-                  <p v-else class="has-text-grey is-size-7 mb-0">No forecast comparison</p>
                 </div>
               </div>
             </div>
@@ -152,16 +155,16 @@
                   <div class="control">
                     <div class="buttons has-addons">
                       <button 
-                        v-for="period in ['3', '6', '12', 'all']" 
+                        v-for="period in ['3', '6', '12']" 
                         :key="period"
                         class="button is-small"
                         :class="{ 'is-primary': selectedMonths === period }"
                         @click="() => {
-                          selectedMonths = period as '3' | '6' | '12' | 'all';
-                          refreshHistory();
+                          selectedMonths = period as '3' | '6' | '12';
+                          refreshSpendingHistory();
                         }"
                       >
-                        {{ period === 'all' ? 'All' : `${period}M` }}
+                        {{ `${period}M` }}
                       </button>
                     </div>
                   </div>
@@ -171,6 +174,7 @@
                     v-if="chartData && chartData.labels.length"
                     :data="chartData"
                     :options="chartOptions"
+                    style="padding-top: 10px"
                   />
                 </div>
                 <progress
@@ -186,7 +190,7 @@
         </div>
       </div>
       <div v-else class="notification is-warning">
-        Please connect your wallet to view the dashboard
+        Please connect your wallet to view your account
       </div>
     </div>
   </div>
@@ -204,6 +208,7 @@ import SupportIcon from '@/assets/img/icons/sidebar/support.svg?component';
 import ArrowUpIcon from '@/assets/img/icons/arrow-up.svg?component';
 import ArrowDownIcon from '@/assets/img/icons/arrow-down.svg?component';
 import PlusSymbolIcon from '@/assets/img/icons/plus_symbol.svg?component';
+import { useToast } from "vue-toastification";
 import { Bar } from 'vue-chartjs';
 import {
   Chart as ChartJS,
@@ -217,8 +222,18 @@ import {
 
 ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale);
 
+const toast = useToast();
 const { connected, publicKey } = useWallet();
 const { nosana } = useSDK();
+const claimingRewards = ref(false);
+
+// Define type for spending history results item
+interface MonthlyResult {
+  period: string;
+  total_usd: number;
+  breakdown: Array<{ market: string; totalSpent: number }>;
+  daily_breakdown?: Record<string, Record<string, number>>;
+}
 
 // Get balances
 const balance = ref<any | null>(null);
@@ -230,7 +245,7 @@ const { data: stats } = useAPI('/api/stats');
 const nosPrice = computed(() => stats.value?.price || null);
 
 // Get staking info
-const { activeStake, rewardsInfo, poolInfo } = useStake(publicKey);
+const { activeStake, rewardsInfo, poolInfo, refreshStake, refreshBalance } = useStake(publicKey);
 const timestamp = useTimestamp({ interval: 1000 });
 
 // Calculate pending rewards
@@ -280,65 +295,98 @@ onMounted(() => {
   checkBalances();
 });
 
-// 1) Setup for "getSpendThisMonth"
-const spendEndpoint = computed(() => {
-  if (!publicKey.value) return null; // Only call if we have an address
-  return `/api/stats/spend-this-month/${publicKey.value.toString()}`;
-});
+// Modify API calls to use a single endpoint
+const selectedMonths = ref<'3' | '6' | '12'>('3');
 
-const { data: monthSpend, pending: loadingSpend } = useAPI(spendEndpoint, {
-  default: () => ({
-    spentThisMonth: 0,
-    breakdown: [],
-    forecast: 0,
-    sameDayLastMonthSpent: 0,
-    pctChangeSoFar: null,
-    lastMonthTotalSpent: 0,
-    pctChangeForecastFromLastMonth: null
-  })
-});
-
-// 2) You can also watch the public key to refresh whenever the user changes wallets
-watch(() => publicKey.value, () => {
-  // The composable will automatically fetch again if spendEndpoint changes
-});
-
-// 3) Example onMounted if you'd like a one-time fetch
-onMounted(() => {
-  // do nothing special if `useAPI` is set to watch: [spendEndpoint],
-  // otherwise you can manually refresh here
-});
-
-// ------------------------
-// 2) Monthly History API
-// ------------------------
-const selectedMonths = ref<'3' | '6' | '12' | 'all'>('3');
-
-const monthlyHistoryEndpoint = computed(() => {
+const spendingHistoryEndpoint = computed(() => {
   if (!publicKey.value) return null;
-  // e.g. /api/stats/monthly-history?address=xxx&months=3
-  return `/api/stats/monthly-history?address=${publicKey.value.toString()}&months=${selectedMonths.value}`;
+  
+  // Create date based on selected months
+  const today = new Date();
+  let startDate: Date;
+  
+  // Use the selected number of months
+  const monthsAgo = parseInt(selectedMonths.value);
+  startDate = new Date(today.getFullYear(), today.getMonth() - monthsAgo, 1);
+  
+  // Format date as YYYY-MM-DD
+  const formatDate = (date: Date) => {
+    return date.toISOString().split('T')[0];
+  };
+  
+  return `/api/stats/spending-history?address=${publicKey.value.toString()}&start_date=${formatDate(startDate)}&group_by=month`;
 });
 
 const {
-  data: monthlyHistory,
-  pending: loadingHistory,
-  refresh: refreshHistory
-} = useAPI(monthlyHistoryEndpoint, {
+  data: spendingHistory,
+  pending: loadingSpending,
+  refresh: refreshSpendingHistory
+} = useAPI(() => spendingHistoryEndpoint.value || '', {
   default: () => ({
     userAddress: '',
-    period: '',
-    data: []
+    startDate: '',
+    endDate: '',
+    groupBy: '',
+    results: [],
+    forecast: 0,
+    comparison: null,
+    sameDayComparison: null
   })
 });
+
+// Compute values for Cost and Usage section
+const spentThisMonth = computed(() => {
+  if (!spendingHistory.value?.results) return 0;
+
+  const today = new Date();
+  const currentYear = today.getFullYear();
+  // getMonth() is 0-indexed, so add 1. Pad with '0' if needed.
+  const currentMonthFormatted = (today.getMonth() + 1).toString().padStart(2, '0');
+  const currentPeriod = `${currentYear}-${currentMonthFormatted}`; // Format: "YYYY-MM"
+
+  const currentMonthData = spendingHistory.value.results.find(
+    (item: any) => item.period === currentPeriod
+  );
+
+  return currentMonthData ? currentMonthData.total_usd : 0;
+});
+
+const monthBreakdown = computed(() => {
+  const currentMonth = spendingHistory.value?.results?.[0];
+  return currentMonth ? currentMonth.breakdown : [];
+});
+
+const forecastAmount = computed(() => {
+  return spendingHistory.value?.forecast || 0;
+});
+
+const pctChangeSoFar = computed(() => {
+  return spendingHistory.value?.sameDayComparison?.pctChangeSoFar ?? null;
+});
+
+const pctChangeForecastFromLastMonth = computed(() => {
+  return spendingHistory.value?.comparison?.pctChange ?? null;
+});
+
+// Watch changes to refresh data
+watch(
+  [() => publicKey.value, () => selectedMonths.value],
+  () => {
+    refreshSpendingHistory();
+  }
+);
+
+// Pass monthly history data to chart
+const monthlyHistory = computed(() => spendingHistory.value);
+const loadingHistory = computed(() => loadingSpending.value);
 
 // Get markets data for name mapping
 const { data: marketsData } = useAPI('/api/markets', { default: () => [] });
 
 // Predefined colors for different GPU types with distinct color scheme
-const GPU_COLORS = {
-// 3000 Series
-'NVIDIA 3060':     '#16C47F',
+const GPU_COLORS: Record<string, string> = {
+  // 3000 Series
+  'NVIDIA 3060':     '#16C47F',
   'NVIDIA 3070':     '#FFD65A',
   'NVIDIA 3080':     '#FF9D23',
   'NVIDIA 3090':     '#F93827',
@@ -362,6 +410,7 @@ const GPU_COLORS = {
 };
 
 
+
 // Create a mapping of market addresses to names and group info
 const marketAddressToInfo = computed(() => {
   if (!marketsData.value) return {};
@@ -380,39 +429,63 @@ const marketAddressToInfo = computed(() => {
 watch(
   () => publicKey.value,
   () => {
-    refreshHistory();
+    refreshSpendingHistory();
   }
 );
 
 // ------------------------
 // 3) Transform monthly history for stacked bar chart
 // ------------------------
-/**
- * monthlyHistory.data is shaped like:
- * [
- *   {
- *     month: "2023-08",
- *     breakdown: [
- *       { market: "MarketA", totalSpent: 12.3 },
- *       { market: "MarketB", totalSpent: 4.5 },
- *       ...
- *     ]
- *   },
- *   ...
- * ]
- * 
- * We'll produce a stacked bar series for each market across different months.
- */
 const chartData = computed(() => {
-  if (!monthlyHistory.value?.data || !monthlyHistory.value.data.length) {
+  if (!spendingHistory.value?.results && !loadingSpending.value) {
+    // Handle case where there are no results at all, even if not loading
+    return { labels: [], datasets: [] };
+  }
+  if (!spendingHistory.value?.startDate) {
+    // Need start date to generate full range if results are empty
     return { labels: [], datasets: [] };
   }
 
-  // Group markets by base name (without Community suffix)
+  // --- Generate Full Date Range Labels ---
+  const today = new Date();
+  let chartStartDate: Date;
+
+  // Calculate start date based on selection
+  const monthsAgo = parseInt(selectedMonths.value);
+  chartStartDate = new Date(today.getFullYear(), today.getMonth() - monthsAgo + 1, 1); // +1 because we want *inclusive* months
+  
+  const allMonthLabels: string[] = [];
+  const periodToIndexMap: { [key: string]: number } = {};
+  let currentDate = new Date(chartStartDate);
+  let index = 0;
+
+  // Ensure loop ends correctly by comparing month and year
+  while (
+    currentDate.getFullYear() < today.getFullYear() ||
+    (currentDate.getFullYear() === today.getFullYear() && currentDate.getMonth() <= today.getMonth())
+  ) {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth(); // 0-indexed
+
+    // Remove year from the label
+    const label = currentDate.toLocaleDateString('en-US', { month: 'short' }).replace(',', '');
+    allMonthLabels.push(label);
+
+    const periodKey = `${year}-${(month + 1).toString().padStart(2, '0')}`; // YYYY-MM
+    periodToIndexMap[periodKey] = index;
+
+    // Move to the next month
+    currentDate.setMonth(currentDate.getMonth() + 1);
+    index++;
+  }
+  // --- End Generate Full Date Range Labels ---
+
+
+  // Group markets and calculate usage (same as before)
   const marketGroups = new Map<string, Set<string>>();
   const gpuUsageCounts = new Map<string, number>();
 
-  monthlyHistory.value.data.forEach((monthItem: any) => {
+  (spendingHistory.value?.results || []).forEach((monthItem: MonthlyResult) => {
     monthItem.breakdown.forEach((b: any) => {
       const marketInfo = marketAddressToInfo.value[b.market];
       if (marketInfo) {
@@ -422,106 +495,157 @@ const chartData = computed(() => {
           gpuUsageCounts.set(baseName, 0);
         }
         marketGroups.get(baseName)?.add(b.market);
+        // Note: Use total_usd from the *month* for ranking, not breakdown totalSpent
+        // to handle cases where breakdown might be incomplete? Check API logic.
+        // Let's stick to summing breakdown for now as it seems intended for usage calc.
         gpuUsageCounts.set(baseName, (gpuUsageCounts.get(baseName) || 0) + b.totalSpent);
       }
     });
   });
 
-  // Get top 3 most used GPUs
+  // Get top 3 most used GPUs (same as before)
   const top3GPUs = Array.from(gpuUsageCounts.entries())
     .sort((a, b) => b[1] - a[1])
     .slice(0, 3)
     .map(([name]) => name);
 
-  const sortedData = [...monthlyHistory.value.data].sort(
-    (a, b) => (a.month < b.month ? -1 : 1)
-  );
-
-  const labels = sortedData.map((m) => {
-    const date = new Date(m.month);
-    return date.toLocaleDateString('en-US', { month: 'short' }).replace(',', '') + 
-           "'" + date.getFullYear().toString().slice(-2);
-  });
-
+  // --- Build Datasets with Full Month Range ---
   const datasetArray: any[] = [];
 
   marketGroups.forEach((addresses, baseName) => {
-    const dataPoints: Array<{ total: number, community: number, premium: number }> = [];
+    // Initialize data arrays with zeros for all months in the range
+    const dataPoints = new Array(allMonthLabels.length).fill(0);
+    const communityDataPoints = new Array(allMonthLabels.length).fill(0);
+    const premiumDataPoints = new Array(allMonthLabels.length).fill(0);
 
-    sortedData.forEach((monthItem) => {
-      let communityTotal = 0;
-      let premiumTotal = 0;
+    // Iterate through API results and place data in the correct index
+    (spendingHistory.value?.results || []).forEach((monthItem: MonthlyResult) => {
+      const monthIndex = periodToIndexMap[monthItem.period];
+      // Only process if the period from API is within our generated range
+      if (monthIndex !== undefined) {
+        let communityTotal = 0;
+        let premiumTotal = 0;
 
-      addresses.forEach(market => {
-        const marketData = monthItem.breakdown.find((b: any) => b.market === market);
-        if (marketData) {
-          if (marketAddressToInfo.value[market].isCommunity) {
-            communityTotal += marketData.totalSpent;
-          } else {
-            premiumTotal += marketData.totalSpent;
+        addresses.forEach(market => {
+          const marketData = monthItem.breakdown.find((b: any) => b.market === market);
+          if (marketData) {
+            const marketInfo = marketAddressToInfo.value[market];
+            // Ensure marketInfo exists before accessing properties
+            if (marketInfo) {
+              if (marketInfo.isCommunity) {
+                communityTotal += marketData.totalSpent;
+              } else {
+                premiumTotal += marketData.totalSpent;
+              }
+            }
           }
-        }
-      });
+        });
 
-      dataPoints.push({
-        total: communityTotal + premiumTotal,
-        community: communityTotal,
-        premium: premiumTotal
-      });
+        // Update the data arrays at the calculated index
+        dataPoints[monthIndex] = communityTotal + premiumTotal;
+        communityDataPoints[monthIndex] = communityTotal;
+        premiumDataPoints[monthIndex] = premiumTotal;
+      }
     });
 
+    // Create the dataset object (same as before, but uses the full-length data arrays)
     const formattedName = baseName.toUpperCase();
     datasetArray.push({
       label: baseName,
-      data: dataPoints.map(d => d.total),
-      backgroundColor: GPU_COLORS[formattedName] || getColorForMarket(baseName),
+      data: dataPoints,
+      backgroundColor: GPU_COLORS[formattedName] || getColorForMarket(baseName, true),
       stack: 'totalSpent',
-      communityData: dataPoints.map(d => d.community),
-      premiumData: dataPoints.map(d => d.premium),
+      communityData: communityDataPoints,
+      premiumData: premiumDataPoints,
       showInLegend: top3GPUs.includes(baseName),
       borderWidth: 1,
-      borderColor: 'white',
-      hoverBorderColor: 'white'
+      borderColor: 'rgba(255, 255, 255, 0.7)',
+      hoverBorderColor: 'white',
+      hoverBackgroundColor: GPU_COLORS[formattedName] ? 
+        makeColorBrighter(GPU_COLORS[formattedName]) :
+        makeColorBrighter(getColorForMarket(baseName, true))
     });
   });
 
-  // Sort datasets by GPU name for consistent legend ordering
+  // Sort datasets by GPU name (same as before)
   datasetArray.sort((a, b) => a.label.localeCompare(b.label));
 
   return {
-    labels,
+    labels: allMonthLabels, // Use the generated full list of labels
     datasets: datasetArray
   };
 });
 
 // Simple helper to assign color per market
-function getColorForMarket(market: string) {
+function getColorForMarket(market: string, vibrant = false): string {
   // For real usage, store a color map, or generate random but consistent color.
   // E.g. a quick hash from the market address:
   const hashVal = Array.from(market)
     .map((char) => char.charCodeAt(0))
     .reduce((acc, cur) => acc + cur, 0);
+  
   const hue = hashVal % 360;
+  
+  // More vibrant colors with higher saturation
+  if (vibrant) {
+    return `hsl(${hue}, 70%, 55%)`;
+  }
+  
+  // Original color version
   return `hsl(${hue}, 50%, 50%)`;
+}
+
+// Helper function to make colors more vibrant for hover state
+function makeColorBrighter(color: string): string {
+  // For HSL colors
+  if (color.startsWith('hsl')) {
+    // Extract the hue, saturation, and lightness values
+    const match = color.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
+    if (match) {
+      const h = parseInt(match[1]);
+      const s = parseInt(match[2]);
+      const l = parseInt(match[3]);
+      
+      // Increase lightness for hover (max 65% to avoid washing out)
+      const newL = Math.min(l + 10, 65);
+      return `hsl(${h}, ${s}%, ${newL}%)`;
+    }
+  }
+  
+  // For hex colors - fallback to original if can't process
+  return color;
 }
 
 const chartOptions = {
   responsive: true,
   maintainAspectRatio: false,
+  devicePixelRatio: 2,
+  layout: {
+    padding: {
+      left: 5,
+      right: 10,
+      top: 20,
+      bottom: 5
+    }
+  },
   plugins: {
     legend: {
       display: true,
       position: 'bottom' as const,
       align: 'start' as const,
       labels: {
-        boxWidth: 8,
-        boxHeight: 8,
+        boxWidth: 10,
+        boxHeight: 10,
         padding: 15,
         usePointStyle: true,
         pointStyle: 'circle',
         font: {
-          size: 11
+          family: "'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif",
+          size: 12,
+          weight: 'normal' as const,
+          lineHeight: 1.2
         },
+        color: '#000000',
         filter: (legendItem: any) => {
           return legendItem.datasetIndex !== undefined && 
                  chartData.value.datasets[legendItem.datasetIndex]?.showInLegend;
@@ -529,29 +653,44 @@ const chartOptions = {
       }
     },
     tooltip: {
+      backgroundColor: 'rgba(0, 0, 0, 0.8)',
+      titleFont: {
+        family: "'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif",
+        size: 14,
+        weight: 'normal' as const,
+        lineHeight: 1.4
+      },
+      titleColor: '#ffffff',
+      bodyFont: {
+        family: "'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif",
+        size: 13,
+        lineHeight: 1.4
+      },
+      bodyColor: '#ffffff',
+      padding: 12,
+      cornerRadius: 4,
+      displayColors: true,
+      boxPadding: 4,
       callbacks: {
+        title: function(tooltipItems: any) {
+          const index = tooltipItems[0].dataIndex;
+          const labels = chartData.value.labels;
+          // Calculate the total for this month
+          let monthTotal = 0;
+          chartData.value.datasets.forEach((dataset: any) => {
+            monthTotal += dataset.data[index] || 0;
+          });
+          
+          const formattedTotal = '$' + monthTotal.toFixed(2);
+          return `${labels[index]} - Total: ${formattedTotal}`;
+        },
         label: function(context: any) {
           const dataset = context.dataset;
           const index = context.dataIndex;
           const total = dataset.data[index];
-          const community = dataset.communityData[index];
-          const premium = dataset.premiumData[index];
           
-          const lines = [
-            `${dataset.label}: $${total.toFixed(2)}`
-          ];
-          
-          // Only add breakdown if either value is non-zero
-          if (premium > 0 || community > 0) {
-            if (premium > 0) {
-              lines.push(`  Premium: $${premium.toFixed(2)}`);
-            }
-            if (community > 0) {
-              lines.push(`  Community: $${community.toFixed(2)}`);
-            }
-          }
-          
-          return lines;
+          // Only return the GPU name and total amount, no premium/community breakdown
+          return `${dataset.label}: $${total.toFixed(2)}`;
         }
       }
     },
@@ -567,8 +706,17 @@ const chartOptions = {
       },
       ticks: {
         font: {
-          size: 11
-        }
+          family: "'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif",
+          size: 13,
+          weight: 'normal' as const,
+          lineHeight: 1.2
+        },
+        color: '#000000',
+        padding: 8
+      },
+      border: {
+        width: 0,
+        color: 'transparent'
       }
     },
     y: {
@@ -581,35 +729,81 @@ const chartOptions = {
         display: true,
         drawTicks: true,
         drawOnChartArea: true,
-        count: 4
+        count: 5
+      },
+      border: {
+        width: 0,
+        color: 'transparent'
       },
       ticks: {
         callback: function(value: any) {
           return '$' + value;
         },
         font: {
-          size: 11
+          family: "'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif",
+          size: 12,
+          weight: 'normal' as const,
+          lineHeight: 1.2
         },
-        maxTicksLimit: 4
+        color: '#000000',
+        maxTicksLimit: 5,
+        padding: 10
       }
     }
   },
   elements: {
     bar: {
       borderRadius: 4,
-      borderSkipped: false
+      borderSkipped: false,
+      borderWidth: 1
     }
   },
-  barSpacing: 2,
-  categorySpacing: 0.3
+  barPercentage: 0.95,
+  categoryPercentage: 0.95,
+  animation: {
+    duration: 800
+  },
+  font: {
+    family: "'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif"
+  }
 };
 
 onMounted(() => {
   // If not automatically fetching, do so
   if (publicKey.value) {
-    refreshHistory();
+    refreshSpendingHistory();
   }
+  
+  // Add CSS to improve text rendering
+  const style = document.createElement('style');
+  style.textContent = `
+    canvas {
+      text-rendering: optimizeLegibility;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+  `;
+  document.head.appendChild(style);
 });
+
+// Claim rewards function
+const claimRewards = async () => {
+  if (!activeStake.value || !pendingRewards.value || pendingRewards.value <= 0) return;
+  
+  claimingRewards.value = true;
+  try {
+    const claim = await nosana.value.stake.claimRewards();
+    await refreshStake();
+    await refreshBalance();
+    console.log('claim', claim);
+    toast.success('Succesfully claimed rewards');
+  } catch (error: any) {
+    console.error('Cannot claim rewards', error);
+    toast.error(error.toString());
+  } finally {
+    claimingRewards.value = false;
+  }
+};
 </script>
 
 <style scoped>
@@ -620,7 +814,7 @@ onMounted(() => {
 
 .container {
   max-width: 1200px;
-  margin: 0 auto;
+  margin: 0 auto 0 0;
   padding: 1.5rem;
 }
 

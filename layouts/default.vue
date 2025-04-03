@@ -15,12 +15,16 @@
 </template>
 
 <script setup lang="ts">
+import { useWalletRedirect } from '~/composables/useWalletRedirect';
+
+// Initialize wallet redirect to handle navigation on connect/disconnect
+useWalletRedirect();
 </script>
 
 <style lang="scss" scoped>
 #content {
   min-height: 100vh;
-  max-width: 1400px;
+  max-width: 1600px;
   min-width: 0;
 }
 </style>

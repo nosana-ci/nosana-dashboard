@@ -98,12 +98,12 @@
 
 ::-webkit-scrollbar-track-piece {
   border-radius: 6px;
-  background: rgba(0, 0, 0, 0.1);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
   border-radius: 6px;
-  background: $secondary;
+  background: #e4e4e4;
 }
 
 ::-webkit-scrollbar {
@@ -556,6 +556,27 @@ button[disabled][data-tooltip] {
   }
 }
 
+/* Market indicator styles */
+.market-select-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid #e0e0e0;
+  margin-right: 10px;
+  vertical-align: middle;
+}
+
+.market-select-indicator.selected:before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: $secondary;
+}
+
 /* Dropdown styles */
 .dropdown {
   position: relative;
@@ -708,6 +729,39 @@ button[disabled][data-tooltip] {
           color: $white !important;
           border-color: $white;
         }
+      }
+    }
+  }
+}
+
+/* Filter button styles */
+.button-filter {
+  &.button {
+    &:hover,
+    &:focus,
+    &:active {
+      background-color: inherit !important;
+      border-color: inherit !important;
+      color: inherit !important;
+    }
+
+    &.is-primary {
+      &:hover,
+      &:focus,
+      &:active {
+        background-color: $primary !important;
+        border-color: $primary !important;
+        color: $primary-invert !important;
+      }
+    }
+
+    &.is-outlined {
+      &:hover,
+      &:focus,
+      &:active {
+        background-color: transparent !important;
+        border-color: inherit !important;
+        color: inherit !important;
       }
     }
   }

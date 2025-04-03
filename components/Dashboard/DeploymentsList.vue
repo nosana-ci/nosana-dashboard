@@ -8,104 +8,105 @@
               <option v-for="filterState in filterStates" 
                 :key="filterState.value" 
                 :value="filterState.value"
-                :class="getStatusOptionClass(filterState.value)"
               >
                 {{ filterState.label }}
               </option>
             </select>
           </div>
-          <nuxt-link to="/jobs/create" class="button has-background-white has-text-black" style="border: 1px solid black; transition: all 0.2s ease;">
+          <nuxt-link to="/deploy" class="button has-background-white has-text-black" style="border: 1px solid black; transition: all 0.2s ease;">
             <PlusSymbolIcon class="plus-icon" style="width: 14px; height: 14px; margin-right: 0.5rem; transition: fill 0.2s ease;" />
             <span>Deploy Model</span>
           </nuxt-link>
         </div>
 
-        <table class="table is-fullwidth is-striped is-hoverable">
-          <thead>
-            <tr>
-              <th>GPU</th>
-              <th>Image</th>
-              <th>Country</th>
-              <th>Started</th>
-              <th class="is-hidden-mobile">Duration</th>
-              <th class="is-hidden-touch">Price</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="loadingJobs || loadingNodeJobs">
-              <td colspan="7" class="has-text-centered">Loading deployments...</td>
-            </tr>
-            <tr v-else-if="(!postedJobs || !postedJobs.jobs || postedJobs.jobs.length === 0) && (!nodeJobs || !nodeJobs.jobs || nodeJobs.jobs.length === 0)">
-              <td colspan="7" class="has-text-centered">No deployments found</td>
-            </tr>
-            <template v-else>
-              <tr v-for="job in combinedJobs" :key="job.address" class="is-clickable" @click="navigateToJob(job.address)">
-                <td>
-                  <div class="is-flex is-align-items-center">
-                    <img src="@/assets/img/icons/nvidia.svg" alt="Nvidia" class="mr-2" style="width: 20px; height: 20px;">
-                    <span v-if="testgridMarkets && testgridMarkets.find((tgm: any) => tgm.address === job.market.toString())">
-                      {{ testgridMarkets.find((tgm: any) => tgm.address === job.market.toString()).name }}
-                    </span>
-                    <span v-else class="is-family-monospace">{{ job.market.toString() }}</span>
-                  </div>
-                </td>
-                <td>
-                  <div class="is-flex is-align-items-center">
-                    <template v-if="getTemplateForJob(job)">
-                      <div class="template-icon mr-2">
-                        <img :src="getTemplateForJob(job)?.icon" :alt="getTemplateForJob(job)?.name">
-                      </div>
-                      <span>{{ getTemplateForJob(job)?.name }}</span>
-                    </template>
-                    <template v-else>
-                      <template v-if="isGHCR(getJobImage(job))">
-                        <div class="container-icon mr-2">
-                          <img src="@/assets/img/icons/github.svg" alt="GitHub" class="github-icon" style="width: 16px; height: 16px;">
+        <div :class="{'min-height-container': loadingJobs || loadingNodeJobs}">
+          <table class="table is-fullwidth is-striped is-hoverable">
+            <thead>
+              <tr>
+                <th>GPU</th>
+                <th>Image</th>
+                <th>Country</th>
+                <th>Started</th>
+                <th class="is-hidden-mobile">Duration</th>
+                <th class="is-hidden-touch">Price</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-if="loadingJobs || loadingNodeJobs">
+                <td colspan="7" class="has-text-centered loading-cell">Loading deployments...</td>
+              </tr>
+              <tr v-else-if="(!postedJobs || !postedJobs.jobs || postedJobs.jobs.length === 0) && (!nodeJobs || !nodeJobs.jobs || nodeJobs.jobs.length === 0)">
+                <td colspan="7" class="has-text-centered">No deployments found</td>
+              </tr>
+              <template v-else>
+                <tr v-for="job in combinedJobs" :key="job.address" class="is-clickable" @click="navigateToJob(job.address)">
+                  <td>
+                    <div class="is-flex is-align-items-center">
+                      <img src="@/assets/img/icons/nvidia.svg" alt="Nvidia" class="mr-2" style="width: 20px; height: 20px;">
+                      <span v-if="testgridMarkets && testgridMarkets.find((tgm: any) => tgm.address === job.market.toString())">
+                        {{ testgridMarkets.find((tgm: any) => tgm.address === job.market.toString()).name }}
+                      </span>
+                      <span v-else class="is-family-monospace">{{ job.market.toString() }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="is-flex is-align-items-center">
+                      <template v-if="getTemplateForJob(job)">
+                        <div class="template-icon mr-2">
+                          <img :src="getTemplateForJob(job)?.icon" :alt="getTemplateForJob(job)?.name">
                         </div>
+                        <span>{{ getTemplateForJob(job)?.name }}</span>
                       </template>
                       <template v-else>
-                        <div class="container-icon mr-2">
-                          <img src="/img/icons/type/docker.svg" alt="Docker" class="docker-icon" style="width: 16px; height: 16px;">
-                        </div>
+                        <template v-if="isGHCR(getJobImage(job))">
+                          <div class="container-icon mr-2">
+                            <img src="@/assets/img/icons/github.svg" alt="GitHub" class="github-icon" style="width: 16px; height: 16px;">
+                          </div>
+                        </template>
+                        <template v-else>
+                          <div class="container-icon mr-2">
+                            <img src="/img/icons/type/docker.svg" alt="Docker" class="docker-icon" style="width: 16px; height: 16px;">
+                          </div>
+                        </template>
+                        <span class="is-family-monospace">{{ getJobImage(job) }}</span>
                       </template>
-                      <span class="is-family-monospace">{{ getJobImage(job) }}</span>
-                    </template>
-                  </div>
-                </td>
-                <td>
-                  <span v-if="nodeSpecs[job.node]">{{ formatCountry(nodeSpecs[job.node].country) }}</span>
-                  <span v-else>-</span>
-                </td>
-                <td>
-                  <span v-if="job.timeStart">{{ formatTimeAgo(job.timeStart) }}</span>
-                  <span v-else>-</span>
-                </td>
-                <td class="is-hidden-mobile">
-                  <span v-if="job.timeStart && job.timeEnd">
-                    {{ formatDuration(job.timeEnd - job.timeStart) }}
-                  </span>
-                  <span v-else>-</span>
-                </td>
-                <td class="is-hidden-touch">
-                  {{ formatPrice(job) }}
-                </td>
-                <td>
-                  <div class="tag is-outlined" :class="{
-                    'is-success': job.state === 2,
-                    'is-info': job.state === 1,
-                    'is-warning': job.state === 0,
-                    'has-background-white has-text-black': job.state === 3,
-                    'is-light': job.state !== 3
-                  }" :style="job.state === 3 ? 'border: 1px solid black;' : ''">
-                    <img class="mr-2 status-icon" :src="`/img/icons/status/${getStatusIcon(job.state)}.svg`" :style="job.state === 3 ? 'filter: brightness(0);' : ''" />
-                    <span>{{ getStatusText(job.state) }}</span>
-                  </div>
-                </td>
-              </tr>
-            </template>
-          </tbody>
-        </table>
+                    </div>
+                  </td>
+                  <td>
+                    <span v-if="nodeSpecs[job.node]">{{ formatCountry(nodeSpecs[job.node].country) }}</span>
+                    <span v-else>-</span>
+                  </td>
+                  <td>
+                    <span v-if="job.timeStart">{{ formatTimeAgo(job.timeStart) }}</span>
+                    <span v-else>-</span>
+                  </td>
+                  <td class="is-hidden-mobile">
+                    <span v-if="job.timeStart && job.timeEnd">
+                      {{ formatDuration(job.timeEnd - job.timeStart) }}
+                    </span>
+                    <span v-else>-</span>
+                  </td>
+                  <td class="is-hidden-touch">
+                    {{ formatPrice(job) }}
+                  </td>
+                  <td>
+                    <div class="tag is-outlined" :class="{
+                      'is-success': job.state === 2,
+                      'is-info': job.state === 1,
+                      'is-warning': job.state === 0,
+                      'has-background-white has-text-black': job.state === 3,
+                      'is-light': job.state !== 3
+                    }" :style="job.state === 3 ? 'border: 1px solid black;' : ''">
+                      <img class="mr-2 status-icon" :src="`/img/icons/status/${getStatusIcon(job.state)}.svg`" :style="job.state === 3 ? 'filter: brightness(0);' : ''" />
+                      <span>{{ getStatusText(job.state) }}</span>
+                    </div>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
 
         <nav v-if="totalPages > 1" class="pagination is-centered mt-4" role="navigation">
           <a class="pagination-previous" :class="{ 'is-disabled': currentPage === 1 }" @click="currentPage > 1 && changePage(currentPage - 1)">Previous</a>
@@ -132,9 +133,12 @@
 import { useRouter } from 'vue-router';
 import { useWallet } from 'solana-wallets-vue';
 import PlusSymbolIcon from '@/assets/img/icons/plus_symbol.svg?component';
+import { useTemplates } from '~/composables/useTemplates';
+import { useMarkets } from '~/composables/useMarkets';
 
 const router = useRouter();
 const { publicKey: walletPublicKey } = useWallet();
+const { templates } = useTemplates();
 
 const props = defineProps({
   itemsPerPage: {
@@ -146,12 +150,13 @@ const props = defineProps({
 const currentPage = ref(1);
 const currentState = ref<number | null>(null);
 
+// Fix the type issue with filterStates
 const filterStates = [
-  { label: 'All', value: null },
-  { label: 'Completed', value: 2 },
-  { label: 'Running', value: 1 },
-  { label: 'Queued', value: 0 },
-  { label: 'Stopped', value: 3 }
+  { label: 'All', value: null as null },
+  { label: 'Completed', value: 2 as number },
+  { label: 'Running', value: 1 as number },
+  { label: 'Queued', value: 0 as number },
+  { label: 'Stopped', value: 3 as number }
 ];
 
 const jobStateMapping: Record<number, string> = {
@@ -164,20 +169,27 @@ const jobStateMapping: Record<number, string> = {
 // URL for posted jobs
 const postedJobsUrl = computed(() => {
   const address = walletPublicKey.value?.toString();
-  if (!address) return null;
+  if (!address) return '';
   return `/api/jobs?limit=${props.itemsPerPage}&offset=${(currentPage.value - 1) * props.itemsPerPage}${currentState.value !== null ? `&state=${jobStateMapping[currentState.value as keyof typeof jobStateMapping]}` : ''}&poster=${address}`;
 });
 
 // URL for node jobs
 const nodeJobsUrl = computed(() => {
   const address = walletPublicKey.value?.toString();
-  if (!address) return null;
+  if (!address) return '';
   return `/api/jobs?limit=${props.itemsPerPage}&offset=${(currentPage.value - 1) * props.itemsPerPage}${currentState.value !== null ? `&state=${jobStateMapping[currentState.value as keyof typeof jobStateMapping]}` : ''}&node=${address}`;
 });
 
-// Fetch both posted and node jobs
-const { data: postedJobs, pending: loadingJobs } = useAPI(postedJobsUrl, { watch: [postedJobsUrl] });
-const { data: nodeJobs, pending: loadingNodeJobs } = useAPI(nodeJobsUrl, { watch: [nodeJobsUrl] });
+// Fetch jobs API calls
+const { data: postedJobs, pending: loadingJobs, refresh: refreshPostedJobs } = useAPI(() => 
+  walletPublicKey.value ? postedJobsUrl.value : '', { 
+  default: () => ({ jobs: [], totalJobs: 0 })
+});
+
+const { data: nodeJobs, pending: loadingNodeJobs, refresh: refreshNodeJobs } = useAPI(() => 
+  walletPublicKey.value ? nodeJobsUrl.value : '', { 
+  default: () => ({ jobs: [], totalJobs: 0 })
+});
 
 // Combine jobs and remove duplicates
 const combinedJobs = computed(() => {
@@ -366,19 +378,6 @@ const navigateToJob = (address: string) => {
   router.push(`/jobs/${address}`);
 };
 
-const getStatusOptionClass = (state: number | null) => {
-  switch (state) {
-    case null: return '';
-    case 2: return 'has-text-success';
-    case 1: return 'has-text-info';
-    case 0: return 'has-text-warning';
-    case 3: return 'has-text-dark';
-    default: return '';
-  }
-};
-
-const { templates } = useTemplates();
-
 // Store node specifications
 const nodeSpecs = ref<Record<string, any>>({});
 
@@ -416,20 +415,33 @@ watch([combinedJobs, currentPage], async ([jobs]) => {
   const nodeAddresses = [...new Set(jobs.map(job => job.node))]
     .filter(address => !nodeSpecs.value[address] && address !== '11111111111111111111111111111111');
   
-  console.log('Fetching specs for nodes:', nodeAddresses);
-  
   // Fetch specs for each node in parallel
   const specsPromises = nodeAddresses.map(async (nodeAddress) => {
     const specs = await fetchNodeSpecs(nodeAddress);
-    console.log(`Specs for ${nodeAddress}:`, specs);
     if (specs) {
       nodeSpecs.value[nodeAddress] = specs;
     }
   });
   
   await Promise.all(specsPromises);
-  console.log('Current nodeSpecs:', nodeSpecs.value);
 }, { immediate: true });
+
+// Add watcher for status filter changes
+watch(() => currentState.value, () => {
+  // Reset to first page when filter changes
+  currentPage.value = 1;
+  
+  // Refresh the data
+  refreshPostedJobs();
+  refreshNodeJobs();
+}, { immediate: false });
+
+// Add watcher for page changes
+watch(() => currentPage.value, () => {
+  // Refresh the data when page changes
+  refreshPostedJobs();
+  refreshNodeJobs();
+}, { immediate: false });
 
 // Helper function to get job image from job definition
 const getJobImage = (job: any) => {
@@ -576,5 +588,18 @@ const isGHCR = (image: string) => {
 
 .dark-mode .tag img[src*="status/stopped.svg"] {
   filter: brightness(100) !important;
+}
+
+.loading-cell {
+  padding: 2rem 0;
+}
+
+.min-height-container {
+  min-height: 430px;
+}
+
+/* Fix for option key type error */
+select option {
+  value: any;
 }
 </style> 

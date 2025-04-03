@@ -20,7 +20,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, watch, nextTick } from "vue";
+import { computed, ref, onMounted, watch, nextTick, onUnmounted } from "vue";
 import { useAPI } from "~/composables/useAPI";
 import VChart from "vue-echarts";
 import * as echarts from "echarts/core";
@@ -411,31 +411,60 @@ const chartOptions = computed(() => {
 });
 
 const chartRef = ref();
+const is4K = ref(false);
+
+// Check if screen is 4K
+const check4KScreen = () => {
+  is4K.value = window.innerWidth >= 3840;
+};
 
 // Initialize chart with fixed size and enable touch interactions
 onMounted(() => {
+  // Check for 4K screen
+  check4KScreen();
+  window.addEventListener('resize', check4KScreen);
+
   // Wait for the chart to be mounted
   nextTick(() => {
     if (chartRef.value?.chart) {
-      // Set fixed size to ensure the map doesn't resize with the viewport
-      chartRef.value.chart.resize({
-        width: 1800,
-        height: 997
-      });
-      
-      // Configure for better touch interaction
-      chartRef.value.chart.setOption({
-        animation: false,
-        // Improve touch interaction behavior
-        geo: {
-          // Keep existing geo settings
-          roam: true,
-          // Add touch interaction settings
-          silent: false,
-          // Adjust pan sensitivity for touch
-          roamSensitivity: 1.5
-        }
-      });
+      // Set size based on screen resolution
+      if (is4K.value) {
+        // For 4K screens, use full viewport dimensions
+        const width = window.innerWidth - 280; // Account for sidebar
+        const height = window.innerHeight;
+        chartRef.value.chart.resize({
+          width,
+          height
+        });
+        
+        // Higher zoom level for 4K
+        chartRef.value.chart.setOption({
+          animation: false,
+          geo: {
+            roam: true,
+            zoom: 1.01,
+            silent: false,
+            roamSensitivity: 1.5
+          }
+        });
+      } else {
+        // Default size for non-4K screens
+        chartRef.value.chart.resize({
+          width: 1800,
+          height: 997
+        });
+        
+        // Configure for better touch interaction
+        chartRef.value.chart.setOption({
+          animation: false,
+          geo: {
+            roam: true,
+            zoom: 1,
+            silent: false,
+            roamSensitivity: 1.5
+          }
+        });
+      }
       
       // Add touch event listeners to improve mobile interaction
       const chartDom = chartRef.value.chart.getDom();
@@ -449,6 +478,46 @@ onMounted(() => {
       }
     }
   });
+});
+
+// Handle window resize for 4K screens
+watch(is4K, (newValue) => {
+  if (chartRef.value?.chart) {
+    if (newValue) {
+      // For 4K screens, use full viewport dimensions
+      const width = window.innerWidth - 280; // Account for sidebar
+      const height = window.innerHeight;
+      chartRef.value.chart.resize({
+        width,
+        height
+      });
+      
+      // Higher zoom level for 4K
+      chartRef.value.chart.setOption({
+        geo: {
+          zoom: 1.2
+        }
+      });
+    } else {
+      // Default size for non-4K screens
+      chartRef.value.chart.resize({
+        width: 1800,
+        height: 997
+      });
+      
+      // Default zoom level
+      chartRef.value.chart.setOption({
+        geo: {
+          zoom: 0.95
+        }
+      });
+    }
+  }
+});
+
+// Clean up event listener
+onUnmounted(() => {
+  window.removeEventListener('resize', check4KScreen);
 });
 
 // Event handlers for map interactions
@@ -495,6 +564,14 @@ const handleMouseOut = (params: any) => {
   background: transparent;
   overflow: hidden;
   touch-action: none; /* Prevent browser handling of touch gestures */
+}
+
+@media screen and (min-width: 3840px) {
+  .aspect-ratio-container {
+    width: 100%;
+    min-width: 100%;
+    height: 100%;
+  }
 }
 
 .aspect-ratio-container > * {

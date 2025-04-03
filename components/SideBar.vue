@@ -11,96 +11,134 @@
     </div>
     <div class="menu">
       <ul class="menu-list is-size-5">
-        <li v-if="connected">
-          <nuxt-link
-            :to="`/account/${publicKey}`"
-            active-class="is-active "
-            class="is-primary"
-            @click="showMenu = false"
+        <li v-if="connected" class="has-dropdown">
+          <a class="menu-list-link sidebar-link" @click="toggleProfile"
+            :class="{ 'is-active': $route.path === '/dashboard' || $route.path === '/stake' }"
           >
-            <span class="icon is-small mr-4">
-              <UserIcon />
-            </span>
-            <span>My Account</span>
-          </nuxt-link>
+            <div
+              class="is-flex is-align-items-center"
+              style="width: 100%; padding-left: 0.6rem;"
+            >
+              <span class="icon is-small mr-4">
+                <UserIcon />
+              </span>
+              <span style="opacity: 1">Profile</span>
+              <span class="icon is-small ml-auto">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  class="chevron"
+                  :class="{ 'is-active': showProfileDropdown }"
+                >
+                  <path
+                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                  />
+                </svg>
+              </span>
+            </div>
+          </a>
+          <ul class="submenu" :class="{ 'is-active': showProfileDropdown }">
+            <li>
+              <nuxt-link
+                to="/dashboard"
+                active-class="is-active"
+                class="submenu-link"
+                @click="showMenu = false"
+              >
+                My Account
+              </nuxt-link>
+            </li>
+            <li>
+              <nuxt-link
+                to="/stake"
+                active-class="is-active"
+                class="submenu-link"
+                @click="showMenu = false"
+              >
+                Staking
+              </nuxt-link>
+            </li>
+          </ul>
         </li>
         <li>
           <nuxt-link
-            to="/explorer"
+            to="/deploy"
             active-class="is-active"
             @click="showMenu = false"
           >
             <span class="icon is-small mr-4">
-              <ExplorerIcon />
-            </span>
-            <span>Explorer</span>
-          </nuxt-link>
-        </li>
-        <li>
-          <nuxt-link
-            to="/stake"
-            active-class="is-active"
-            @click="showMenu = false"
-          >
-            <span class="icon is-small mr-4">
-              <CoinsIcon />
-            </span>
-            <span>Staking</span>
-          </nuxt-link>
-        </li>
-        <li>
-          <nuxt-link
-            to="/jobs/templates"
-            active-class="is-active"
-            @click="showMenu = false"
-          >
-            <span class="icon is-small mr-4">
-              <TemplateIcon />
-            </span>
-            <span>Templates</span>
-          </nuxt-link>
-        </li>
-        <li>
-          <nuxt-link
-            to="/jobs/create"
-            active-class="is-active"
-            @click="showMenu = false"
-          >
-            <span class="icon is-small mr-4">
-              <JobBuilderIcon />
+              <JobBuilderIcon  />
             </span>
             <span>Deploy Model</span>
           </nuxt-link>
         </li>
-        <li>
-          <nuxt-link
-            to="/markets"
-            active-class="is-active"
-            @click="showMenu = false"
+        <li class="has-dropdown">
+          <a class="menu-list-link sidebar-link" @click="toggleExplorer"
+            :class="{ 'is-active': $route.path === '/explorer' || $route.path.includes('/markets') || $route.path === '/leaderboards' }"
           >
-            <span class="icon is-small mr-4">
-              <BrowserIcon />
-            </span>
-            <span>GPUs</span>
-          </nuxt-link>
-        </li>
-        <li>
-          <nuxt-link
-            to="/leaderboards"
-            active-class="is-active"
-            @click="showMenu = false"
-          >
-            <span class="icon is-small mr-4">
-              <LeaderboardIcon />
-            </span>
-            <span>Leaderboards</span>
-          </nuxt-link>
+            <div
+              class="is-flex is-align-items-center"
+              style="width: 100%; padding-left: 0.6rem;"
+            >
+              <span class="icon is-small mr-4">
+                <ExplorerIcon />
+              </span>
+              <span style="opacity: 1">Explorer</span>
+              <span class="icon is-small ml-auto">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  class="chevron"
+                  :class="{ 'is-active': showExplorerDropdown }"
+                >
+                  <path
+                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                  />
+                </svg>
+              </span>
+            </div>
+          </a>
+          <ul class="submenu" :class="{ 'is-active': showExplorerDropdown }">
+            <li>
+              <nuxt-link
+                to="/explorer"
+                active-class="is-active"
+                class="submenu-link"
+                @click="showMenu = false"
+              >
+                Deployments
+              </nuxt-link>
+            </li>
+            <li>
+              <nuxt-link
+                to="/markets"
+                active-class="is-active"
+                class="submenu-link"
+                @click="showMenu = false"
+              >
+                GPUs
+              </nuxt-link>
+            </li>
+            <li>
+              <nuxt-link
+                to="/leaderboards"
+                active-class="is-active"
+                class="submenu-link"
+                @click="showMenu = false"
+              >
+                Host Leaderboard
+              </nuxt-link>
+            </li>
+          </ul>
         </li>
         <li>
           <nuxt-link
             active-class="is-active"
             @click="showMenu = false"
             to="/support"
+            style="padding-left: 1.1rem"
           >
             <span class="icon is-small mr-4">
               <SupportIcon />
@@ -144,6 +182,8 @@
 
 <script lang="ts" setup>
 const showMenu = ref(false);
+const showExplorerDropdown = ref(false);
+const showProfileDropdown = ref(false);
 import JobBuilderIcon from "@/assets/img/icons/sidebar/job-builder.svg?component";
 import TemplateIcon from "@/assets/img/icons/sidebar/template.svg?component";
 import ExplorerIcon from "@/assets/img/icons/sidebar/explorer.svg?component";
@@ -153,7 +193,45 @@ import CoinsIcon from "@/assets/img/icons/sidebar/coins.svg?component";
 import SupportIcon from "@/assets/img/icons/sidebar/support.svg?component";
 import LeaderboardIcon from "@/assets/img/icons/sidebar/leaderboard.svg?component";
 import { useWallet } from "solana-wallets-vue";
+import { computed, onMounted, watch } from "vue";
+import { useRoute } from "vue-router";
+
 const { connected, publicKey } = useWallet();
+const route = useRoute();
+
+// Check if the current route is a profile page
+const isProfilePage = computed(() => {
+  return route.path === '/dashboard' || route.path === '/stake';
+});
+
+// Check if the current route is an explorer page
+const isExplorerPage = computed(() => {
+  return route.path === '/explorer' || route.path.includes('/markets') || route.path === '/leaderboards';
+});
+
+// Update dropdown states based on the current route
+const updateDropdownStates = () => {
+  showProfileDropdown.value = isProfilePage.value;
+  showExplorerDropdown.value = isExplorerPage.value;
+};
+
+// Set initial states on mount
+onMounted(() => {
+  updateDropdownStates();
+});
+
+// Watch for route changes to update dropdown states
+watch(() => route.path, () => {
+  updateDropdownStates();
+});
+
+const toggleExplorer = () => {
+  showExplorerDropdown.value = !showExplorerDropdown.value;
+};
+
+const toggleProfile = () => {
+  showProfileDropdown.value = !showProfileDropdown.value;
+};
 </script>
 
 <style lang="scss" scoped>
@@ -178,6 +256,15 @@ const { connected, publicKey } = useWallet();
     pointer-events: none;
   }
 
+  a,
+  span {
+    transition: opacity 0.2s ease;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+
   .icon {
     opacity: 0.5;
   }
@@ -186,6 +273,153 @@ const { connected, publicKey } = useWallet();
     .icon {
       color: $secondary;
       opacity: 1;
+    }
+  }
+}
+
+.has-dropdown {
+  margin-bottom: 5px !important;
+
+  .sidebar-link {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem;
+    color: inherit;
+    text-decoration: none;
+    cursor: pointer;
+
+    div {
+      color: $menu-item-color;
+      opacity: 1;
+      transition: opacity 0.2s ease;
+    }
+
+    &:hover {
+      div {
+        opacity: 1;
+      }
+
+      .icon,
+      span {
+        opacity: 1;
+      }
+    }
+
+    &.is-active {
+      div {
+        opacity: 1;
+        color: inherit;
+      }
+
+      .icon,
+      span {
+        opacity: 1;
+        color: white;
+      }
+
+      span.icon:first-of-type {
+        color: $secondary;
+      }
+    }
+  }
+
+  .chevron {
+    width: 16px;
+    height: 16px;
+    transition: transform 0.2s ease;
+    opacity: 0.5;
+
+    &.is-active {
+      transform: rotate(-180deg);
+    }
+  }
+}
+
+.submenu {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease-out;
+  margin-left: 2rem;
+  margin-bottom: 5px;
+
+  &.is-active {
+    max-height: 300px;
+  }
+}
+
+.submenu-link {
+  opacity: 0.9 !important;
+  transition: opacity 0.2s ease !important;
+  text-decoration: none !important;
+  font-size: 1em !important;
+  display: flex !important;
+  align-items: center !important;
+  height: 32px !important;
+  color: #4a4a4a !important;
+  padding: 0 8px !important;
+  border-radius: 4px !important;
+
+  &:hover {
+    opacity: 1 !important;
+    background-color: #f5f5f5 !important;
+  }
+
+  &.is-active {
+    opacity: 1 !important;
+    background-color: #f5f5f5 !important;
+  }
+}
+
+.dark-mode {
+  .sidebar-link {
+    color: $grey-lighter;
+
+    &:hover {
+      color: $grey-lighter;
+    }
+
+    &.is-active {
+      color: $secondary;
+      
+      .icon, 
+      span {
+        color: $black !important;
+      }
+      
+      span.icon:first-of-type {
+        color: $secondary !important;
+      }
+    }
+  }
+
+  .menu-list-link {
+    div {
+      color: $grey-lighter !important;
+    }
+
+    .icon,
+    span {
+      opacity: 0.5;
+    }
+
+    &:hover {
+      .icon,
+      span {
+        opacity: 1;
+      }
+    }
+  }
+
+  .submenu-link {
+    color: #d8d8d8 !important;
+    
+    &:hover {
+      opacity: 1 !important;
+      background-color: #363636 !important;
+    }
+
+    &.is-active {
+      background-color: #363636 !important;
     }
   }
 }
