@@ -11,17 +11,72 @@
     </div>
     <div class="menu">
       <ul class="menu-list is-size-5">
-        <li v-if="connected">
-          <nuxt-link
-            to="/account"
-            active-class="is-active"
-            @click="showMenu = false"
+        <li class="has-dropdown">
+          <a class="menu-list-link sidebar-link" @click="toggleProfile"
+            :class="{ 'is-active': $route.path === '/account' || $route.path === '/stake' }"
           >
-            <span class="icon is-small mr-4">
-              <UserIcon />
-            </span>
-            <span>My Account</span>
-          </nuxt-link>
+            <div
+              class="is-flex is-align-items-center"
+              style="width: 100%; padding-left: 0.6rem;"
+            >
+              <span class="icon is-small mr-4">
+                <UserIcon />
+              </span>
+              <span style="opacity: 1">Profile</span>
+              <span class="icon is-small ml-auto">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  class="chevron"
+                  :class="{ 'is-active': showProfileDropdown }"
+                >
+                  <path
+                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                  />
+                </svg>
+              </span>
+            </div>
+          </a>
+          <ul class="submenu" :class="{ 'is-active': showProfileDropdown }">
+            <li v-if="connected">
+              <nuxt-link
+                to="/account"
+                active-class="is-active"
+                class="submenu-link"
+                @click="showMenu = false"
+              >
+                My Account
+              </nuxt-link>
+            </li>
+            <li v-if="!connected">
+              <ClientOnly>
+                <wallet-modal-provider :dark="$colorMode.value === 'dark'">
+                  <template #default="modalScope">
+                    <a
+                      class="submenu-link"
+                      @click="() => {
+                        connectingFromSidebar = true;
+                        modalScope.openModal();
+                      }"
+                    >
+                      Connect Wallet
+                    </a>
+                  </template>
+                </wallet-modal-provider>
+              </ClientOnly>
+            </li>
+            <li>
+              <nuxt-link
+                to="/stake"
+                active-class="is-active"
+                class="submenu-link"
+                @click="showMenu = false"
+              >
+                Staking
+              </nuxt-link>
+            </li>
+          </ul>
         </li>
         <li>
           <nuxt-link
@@ -97,19 +152,6 @@
         </li>
         <li>
           <nuxt-link
-            to="/stake"
-            active-class="is-active"
-            @click="showMenu = false"
-            style="padding-left: 1.1rem"
-          >
-            <span class="icon is-small mr-4">
-              <CoinsIcon />
-            </span>
-            <span>Staking</span>
-          </nuxt-link>
-        </li>
-        <li>
-          <nuxt-link
             active-class="is-active"
             @click="showMenu = false"
             to="/support"
@@ -158,6 +200,8 @@
 <script lang="ts" setup>
 const showMenu = ref(false);
 const showExplorerDropdown = ref(false);
+const showProfileDropdown = ref(false);
+const connectingFromSidebar = ref(false);
 import JobBuilderIcon from "@/assets/img/icons/sidebar/job-builder.svg?component";
 import TemplateIcon from "@/assets/img/icons/sidebar/template.svg?component";
 import ExplorerIcon from "@/assets/img/icons/sidebar/explorer.svg?component";
@@ -166,12 +210,18 @@ import BrowserIcon from "@/assets/img/icons/sidebar/browser.svg?component";
 import CoinsIcon from "@/assets/img/icons/sidebar/coins.svg?component";
 import SupportIcon from "@/assets/img/icons/sidebar/support.svg?component";
 import LeaderboardIcon from "@/assets/img/icons/sidebar/leaderboard.svg?component";
-import { useWallet } from "solana-wallets-vue";
+import { useWallet, WalletModalProvider } from "solana-wallets-vue";
 import { computed, onMounted, watch } from "vue";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 
 const { connected, publicKey } = useWallet();
 const route = useRoute();
+const router = useRouter();
+
+// Check if the current route is a profile page
+const isProfilePage = computed(() => {
+  return route.path === '/account' || route.path === '/stake';
+});
 
 // Check if the current route is an explorer page
 const isExplorerPage = computed(() => {
@@ -180,6 +230,7 @@ const isExplorerPage = computed(() => {
 
 // Update dropdown states based on the current route
 const updateDropdownStates = () => {
+  showProfileDropdown.value = isProfilePage.value;
   showExplorerDropdown.value = isExplorerPage.value;
 };
 
@@ -193,8 +244,21 @@ watch(() => route.path, () => {
   updateDropdownStates();
 });
 
+// Navigate to account page only when connecting from sidebar
+watch(connected, (isConnected, prevConnected) => {
+  if (isConnected && !prevConnected && connectingFromSidebar.value) {
+    router.push('/account');
+    showMenu.value = false;  // Close mobile menu if open
+    connectingFromSidebar.value = false;  // Reset the flag
+  }
+});
+
 const toggleExplorer = () => {
   showExplorerDropdown.value = !showExplorerDropdown.value;
+};
+
+const toggleProfile = () => {
+  showProfileDropdown.value = !showProfileDropdown.value;
 };
 </script>
 
