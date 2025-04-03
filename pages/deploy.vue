@@ -526,6 +526,7 @@
                   class="input"
                   type="number"
                   v-model="hours"
+                  min="1"
                   max="500"
                   style="width: 60px; height: 28px;"
                 />
