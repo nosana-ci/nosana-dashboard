@@ -175,7 +175,7 @@ const route = useRoute();
 
 // Check if the current route is an explorer page
 const isExplorerPage = computed(() => {
-  return route.path === '/explorer' || route.path.includes('/markets') || route.path === '/leaderboards' || route.path === '/stake';
+  return route.path === '/explorer' || route.path.includes('/markets') || route.path === '/leaderboards';
 });
 
 // Update dropdown states based on the current route
