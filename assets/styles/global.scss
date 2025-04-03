@@ -766,3 +766,47 @@ button[disabled][data-tooltip] {
     }
   }
 }
+
+/* Add dark mode styles */
+.dark-mode {
+  .button-filter.button {
+    background-color: $black !important;
+    border-color: $white !important;
+    color: $white !important;
+
+    &:hover,
+    &:focus,
+    &.is-selected,
+    &:active {
+      background-color: $white !important;
+      border-color: $white !important;
+      color: $black !important;
+    }
+
+    &.is-primary {
+      &:hover,
+      &:focus,
+      &:active,
+      &.is-selected {
+        background-color: $white !important;
+        border-color: $white !important;
+        color: $black !important;
+      }
+    }
+
+    &.is-outlined {
+      background-color: transparent !important;
+      border-color: $white !important;
+      color: $white !important;
+
+      &:hover,
+      &:focus,
+      &:active,
+      &.is-selected {
+        background-color: $white !important;
+        border-color: $white !important;
+        color: $black !important;
+      }
+    }
+  }
+}
