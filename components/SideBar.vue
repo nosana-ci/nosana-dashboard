@@ -37,7 +37,7 @@
         </li>
         <li class="has-dropdown">
           <a class="menu-list-link sidebar-link" @click="toggleExplorer"
-            :class="{ 'is-active': $route.path === '/explorer' || $route.path.includes('/markets') || $route.path === '/leaderboards' || $route.path === '/stake' }"
+            :class="{ 'is-active': $route.path === '/explorer' || $route.path.includes('/markets') || $route.path === '/leaderboards'}"
           >
             <div
               class="is-flex is-align-items-center"
@@ -85,16 +85,6 @@
             </li>
             <li>
               <nuxt-link
-                to="/stake"
-                active-class="is-active"
-                class="submenu-link"
-                @click="showMenu = false"
-              >
-                Staking
-              </nuxt-link>
-            </li>
-            <li>
-              <nuxt-link
                 to="/leaderboards"
                 active-class="is-active"
                 class="submenu-link"
@@ -104,6 +94,19 @@
               </nuxt-link>
             </li>
           </ul>
+        </li>
+        <li>
+          <nuxt-link
+            to="/stake"
+            active-class="is-active"
+            @click="showMenu = false"
+            style="padding-left: 1.1rem"
+          >
+            <span class="icon is-small mr-4">
+              <CoinsIcon />
+            </span>
+            <span>Staking</span>
+          </nuxt-link>
         </li>
         <li>
           <nuxt-link
