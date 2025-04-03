@@ -24,11 +24,15 @@ export function useWalletRedirect() {
     async (isConnected) => {
       // Only perform redirects after initial page load
       if (!initialLoadComplete.value) return;
-      
       if (isConnected) {
         // If connected on landing page, navigate to My Account
         if (route.path === '/') {
           router.push('/account');
+        }
+      } else {
+        // If disconnected on account page, navigate to home
+        if (route.path === '/account') {
+          router.push('/');
         }
       }
     }
