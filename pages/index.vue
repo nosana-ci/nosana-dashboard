@@ -9,10 +9,10 @@
     <div class="content-wrapper">
       <!-- Top Left -->
       <div class="left-content">
-        <h1 class="title is-2">Dashboard</h1>
+        <h1 class="title is-2">My Account</h1>
         <!-- <h2 class="subtitle is-4 mb-6">Launch the dashboard</h2> -->
         <nuxt-link
-          to="/jobs/templates"
+          to="/deploy"
           active-class="is-active"
           class="button is-primary"
         >
