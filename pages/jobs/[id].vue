@@ -3,6 +3,8 @@
     <TopBar
       :title="'Deployment Page'"
       :subtitle="'Find information about your deployment here'"
+      ref="topBar"
+      v-model="showSettingsModal"
     />
 
     <div class="box">
@@ -24,7 +26,7 @@
 import Job from "~/components/Explorer/Job/Job.vue";
 // Composables
 import { useJobPage } from "~/composables/jobs/useJobPage";
-
+const showSettingsModal = ref(false);
 const { params } = useRoute();
 
 const jobId = ref<string>(params.id as string);

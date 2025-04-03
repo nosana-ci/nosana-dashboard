@@ -1,6 +1,11 @@
 <template>
   <div>
-    <TopBar :title="'Explorer'" :subtitle="'GPUs'"></TopBar>
+    <TopBar
+      :title="'Explorer'"
+      :subtitle="'GPUs'"
+      ref="topBar"
+      v-model="showSettingsModal"
+    ></TopBar>
     <div class="box has-background-white-ter">
       <ExplorerSearch />
     </div>
@@ -20,7 +25,7 @@
 </template>
 <script setup lang="ts">
 const { markets, getMarkets, loadingMarkets } = useMarkets();
-
+const showSettingsModal = ref(false);
 if (!markets.value && !loadingMarkets.value) {
   getMarkets();
 }

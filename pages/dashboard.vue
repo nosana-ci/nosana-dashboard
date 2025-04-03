@@ -1,6 +1,11 @@
 <template>
   <div>
-    <TopBar :title="'My Account'" :subtitle="'Your personal overview'">
+    <TopBar 
+      :title="'My Account'"
+      :subtitle="'Your personal overview'" 
+      ref="topBar"
+      v-model="showSettingsModal"
+    >
     </TopBar>
     <div class="container">
       <div v-if="connected">
@@ -221,7 +226,7 @@ import {
 } from 'chart.js';
 
 ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale);
-
+const showSettingsModal = ref(false);
 const toast = useToast();
 const { connected, publicKey } = useWallet();
 const { nosana } = useSDK();

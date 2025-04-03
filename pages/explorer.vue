@@ -1,6 +1,11 @@
 <template>
   <div>
-    <TopBar :title="'Explorer'" :subtitle="'Overview'"></TopBar>
+    <TopBar
+      :title="'Explorer'"
+      :subtitle="'Overview'"
+      ref="topBar"
+      v-model="showSettingsModal"
+    ></TopBar>
     <div class="box has-background-white-ter">
       <ExplorerSearch />
     </div>
@@ -29,4 +34,5 @@
 </template>
 
 <script lang="ts" setup>
+const showSettingsModal = ref(false);
 </script>

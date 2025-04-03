@@ -1,6 +1,11 @@
 <template>
   <div>
-    <TopBar :title="'Leaderboards'" :subtitle="'Performance Benchmarks'" />
+    <TopBar
+      :title="'Leaderboards'"
+      :subtitle="'Performance Benchmarks'"
+      ref="topBar"
+      v-model="showSettingsModal"
+    />
     <div class="box">
       <div class="tabs">
         <ul>
@@ -24,9 +29,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import LeaderboardLLM from '~/components/Leaderboard/LLM.vue';
-import LeaderboardImageGen from '~/components/Leaderboard/ImageGen.vue';
-
-const activeTab = ref('llm');
+import { ref } from "vue";
+import LeaderboardLLM from "~/components/Leaderboard/LLM.vue";
+import LeaderboardImageGen from "~/components/Leaderboard/ImageGen.vue";
+const showSettingsModal = ref(false);
+const activeTab = ref("llm");
 </script>
