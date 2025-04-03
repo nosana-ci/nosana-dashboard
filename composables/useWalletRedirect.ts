@@ -28,7 +28,7 @@ export function useWalletRedirect() {
       if (isConnected) {
         // If connected on landing page, navigate to My Account
         if (route.path === '/') {
-          router.push('/dashboard');
+          router.push('/account');
         }
       }
     }

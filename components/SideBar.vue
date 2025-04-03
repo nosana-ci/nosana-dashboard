@@ -13,7 +13,7 @@
       <ul class="menu-list is-size-5">
         <li v-if="connected">
           <nuxt-link
-            to="/dashboard"
+            to="/account"
             active-class="is-active"
             @click="showMenu = false"
           >
