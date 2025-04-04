@@ -985,16 +985,38 @@ const createDeployment = async () => {
 
 // Handle repost if needed
 const handleRepost = async () => {
-  if (!route.query.fromRepost || !route.query.jobAddress) return;
+  const repostId = route.query.repostId as string;
+  if (!repostId) return;
   
   isFromRepost.value = true;
   skipAutoSelection.value = true;
   
   try {
-    // Fetch job data
-    const response = await fetch(`https://dashboard.k8s.prd.nos.ci/api/jobs/${route.query.jobAddress}`);
+    // Try to get data from localStorage first
+    const storedData = localStorage.getItem(repostId);
+    let jobAddress: string;
+    let jobTimeout: string | null = null;
+    let marketAddress: string | null = null;
+    
+    if (storedData) {
+      const parsedData = JSON.parse(storedData);
+      jobAddress = parsedData.jobAddress;
+      jobTimeout = parsedData.jobTimeout;
+      marketAddress = parsedData.marketAddress;
+      
+      // Set timeout from localStorage if available
+      if (jobTimeout) {
+        hours.value = parseFloat(jobTimeout);
+      }
+    } else {
+      // If no localStorage data, we can't proceed
+      throw new Error("Repost data not found. The page may have been reloaded or the data expired.");
+    }
+    
+    // Fetch job data from API
+    const response = await fetch(`https://dashboard.k8s.prd.nos.ci/api/jobs/${jobAddress}`);
     if (!response.ok) {
-      throw new Error(`Failed to load deployment with address ${route.query.jobAddress}`);
+      throw new Error(`Failed to load deployment with address ${jobAddress}`);
     }
     
     const jobData = await response.json();
@@ -1004,15 +1026,32 @@ const handleRepost = async () => {
       await getMarkets();
     }
     
-    // Set market from the original job
-    if (jobData.market && markets.value) {
-      const foundMarket = markets.value.find((m: Market) => m.address.toString() === jobData.market);
+    // Set market from localStorage first if available, then from the original job data
+    if (markets.value) {
+      let foundMarket = null;
+      
+      // First try using the marketAddress from localStorage
+      if (marketAddress) {
+        foundMarket = markets.value.find((m: Market) => 
+          m.address.toString() === marketAddress
+        );
+      }
+      
+      // Fall back to job data market if needed
+      if (!foundMarket && jobData.market) {
+        foundMarket = markets.value.find((m: Market) => 
+          m.address.toString() === jobData.market
+        );
+      }
+      
       if (foundMarket) {
         selectedMarket.value = foundMarket;
         
         // Set GPU type based on market
         if (testgridMarkets.value.length > 0) {
-          const marketInfo = testgridMarkets.value.find((tgm: any) => tgm.address === foundMarket.address.toString());
+          const marketInfo = testgridMarkets.value.find((tgm: any) => 
+            tgm.address === foundMarket.address.toString()
+          );
           if (marketInfo && marketInfo.type) {
             gpuTypeCheckbox.value = [marketInfo.type];
             activeFilter.value = marketInfo.type;
@@ -1021,14 +1060,13 @@ const handleRepost = async () => {
       }
     }
     
-    // Set job definition and hours/timeout
+    // Set job definition
     if (jobData.jobDefinition) {
       jobDefinition.value = JSON.parse(JSON.stringify(jobData.jobDefinition));
     }
     
-    if (route.query.jobTimeout) {
-      hours.value = parseFloat(route.query.jobTimeout.toString());
-    } else if (jobData.timeout) {
+    // Set hours/timeout if not already set from localStorage
+    if (!jobTimeout && jobData.timeout) {
       hours.value = jobData.timeout / 3600;
     }
     
@@ -1050,10 +1088,55 @@ const handleRepost = async () => {
         };
       }
     }
+    
+    // Clean up localStorage data after successful use
+    cleanupLocalStorage(repostId);
+    
+    // Remove repostId from URL to avoid reuse on refresh
+    router.replace({ query: {} });
   } catch (err: any) {
     toast.error(`Error setting up reposted deployment: ${err.toString()}`);
     isFromRepost.value = false;
     skipAutoSelection.value = false;
+    
+    // Clean up localStorage in case of error too
+    if (repostId) {
+      cleanupLocalStorage(repostId);
+    }
+    
+    // Remove repostId from URL on error
+    router.replace({ query: {} });
+  }
+};
+
+// Function to clean up localStorage data
+const cleanupLocalStorage = (currentRepostId?: string) => {
+  // Remove specific repost ID if provided
+  if (currentRepostId) {
+    localStorage.removeItem(currentRepostId);
+  }
+  
+  // Clean up any old repost data (older than 24 hours)
+  const repostPrefix = 'repost-';
+  const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000);
+  
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key?.startsWith(repostPrefix)) {
+      try {
+        const item = localStorage.getItem(key);
+        if (item) {
+          const data = JSON.parse(item);
+          // If the item is older than 24 hours, remove it
+          if (data.timestamp && data.timestamp < oneDayAgo) {
+            localStorage.removeItem(key);
+          }
+        }
+      } catch (e) {
+        // If we can't parse the item, remove it
+        if (key) localStorage.removeItem(key);
+      }
+    }
   }
 };
 
@@ -1439,7 +1522,7 @@ onMounted(async () => {
     await getMarkets();
   }
   
-  if (route.query.fromRepost && route.query.jobAddress) {
+  if (route.query.repostId) {
     await handleRepost();
   }
 
@@ -1450,6 +1533,9 @@ onMounted(async () => {
   if (publicKey.value && nosana.value) {
     await refreshAllBalances();
   }
+  
+  // Clean up old repost data
+  cleanupLocalStorage();
 });
 
 // Watch for tab changes to sync market type
@@ -1517,6 +1603,14 @@ watch([publicKey, nosana], async () => {
     await refreshAllBalances();
   }
 }, { immediate: true });
+
+// Cleanup on component unmount
+onBeforeUnmount(() => {
+  // Clean up repost data when leaving the page
+  if (route.query.repostId) {
+    cleanupLocalStorage(route.query.repostId as string);
+  }
+});
 
 // Add a watch for navTab
 watch(navTab, async (newValue) => {

@@ -98,14 +98,22 @@ async function stopJob() {
 }
 
 function repostJob() {
+  // Generate a unique repost ID with timestamp
+  const repostId = `repost-${Date.now()}`;
+  
+  // Store job information in localStorage
+  localStorage.setItem(repostId, JSON.stringify({
+    jobAddress: job.address,
+    jobTimeout: (job.timeout / 3600).toFixed(2),
+    marketAddress: job.market.toString(),
+    timestamp: Date.now()
+  }));
+  
+  // Navigate with minimal URL parameters
   router.push({
-    path: "/jobs/create",
+    path: "/deploy",
     query: {
-      fromRepost: "true",
-      jobAddress: job.address,
-      jobTimeout: (job.timeout / 3600).toFixed(2),
-      step: "deploy-model",
-      marketAddress: job.market.toString(),
+      repostId: repostId
     },
   });
 }
