@@ -4,7 +4,7 @@
       <input v-model="address" autofocus type="text" class="input" style="
           padding-top: 1.4rem !important;
           padding-bottom: 1.4rem !important;
-        " placeholder="Search for deployements, hosts, GPUs and accounts" :disabled="checkingIfJob" />
+        " placeholder="Search for deployements, hosts and GPUs" :disabled="checkingIfJob" />
       <span class="icon pt-1 is-left" v-if="!checkingIfJob">
         <SearchIcon style="width:1.5em; height: 1.5em" />
       </span>
@@ -40,17 +40,38 @@ const selectItem = async (item: { type: string; value: string }) => {
   let s = '';
   if (item.type === 'account') {
     checkingIfJob.value = true;
-    // @ts-ignore TODO: add to useAPI opts type
-    const { data: job } = await useAPI(`/api/jobs/${item.value}`, { disableToastOnError: true });
+    let isJob = false;
+    
+    try {
+      // @ts-ignore TODO: add to useAPI opts type
+      const { data: job } = await useAPI(`/api/jobs/${item.value}`, { disableToastOnError: true });
+      if (job.value) {
+        item.type = 'job';
+        isJob = true;
+      }
+    } catch (error) {
+      // Job check failed, continue to node check
+    }
+    
     checkingIfJob.value = false;
-    if (job.value) {
-      item.type = 'job';
+    
+    // If not a job, default to treating it as a node/host
+    if (!isJob) {
+      item.type = 'node';
     }
   }
-  if (item.type !== 'account') {
+  
+  // Add plural 's' except for job and node
+  if (item.type !== 'account' && item.type !== 'job' && item.type !== 'node') {
     s = 's'
   }
-  router.push(`/${item.type}${s}/${item.value}`);
+  
+  // Special case for nodes - route to /nodes/address instead of /node/address
+  if (item.type === 'node') {
+    router.push(`/nodes/${item.value}`);
+  } else {
+    router.push(`/${item.type}${s}/${item.value}`);
+  }
 };
 
 const searchItems = computed(() => {
@@ -61,7 +82,7 @@ const searchItems = computed(() => {
 
   // combine jobs and markets in one list
   items.value = markets.value
-    ? markets.value!.map((a: Node) => {
+    ? markets.value!.map((a: any) => {
       return { value: a.address.toString(), type: 'market' };
     })
     : [];
