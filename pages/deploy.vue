@@ -1517,6 +1517,26 @@ watch([publicKey, nosana], async () => {
     await refreshAllBalances();
   }
 }, { immediate: true });
+
+// Add a watch for navTab
+watch(navTab, async (newValue) => {
+  if (newValue === 'builder' && !selectedTemplate.value) {
+    // Create a custom template for the current job definition
+    selectedTemplate.value = {
+      name: 'Custom',
+      description: 'Custom configuration',
+      jobDefinition: JSON.parse(JSON.stringify(jobDefinition.value))
+    };
+    
+    // If a market was previously selected, reselect it to ensure proper UI update
+    if (selectedMarket.value) {
+      const currentMarket = selectedMarket.value;
+      selectedMarket.value = null;
+      await nextTick();
+      selectedMarket.value = currentMarket;
+    }
+  }
+});
 </script>
 <style lang="scss" scoped>
 .template-card {
