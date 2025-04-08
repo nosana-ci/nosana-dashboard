@@ -966,7 +966,8 @@ const createDeployment = async () => {
     const response = await nosana.value.jobs.list(
       ipfsHash,
       hours.value * 3600,
-      selectedMarket.value!.address
+      selectedMarket.value!.address,
+      selectedHostAddress.value || undefined
     );
     toast.success(`Successfully created deployment ${response.job}`);
     setTimeout(() => {
