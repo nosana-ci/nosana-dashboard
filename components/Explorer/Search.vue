@@ -60,10 +60,11 @@ const selectItem = async (item: { type: string; value: string }) => {
   if (item.type === "account") {
     checkingIfJob.value = true;
     let isJob = false;
+    let isNode = false;
 
     try {
-      // @ts-ignore TODO: add to useAPI opts type
       const { data: job } = await useAPI(`/api/jobs/${item.value}`, {
+        // @ts-ignore TODO: add to useAPI opts type
         disableToastOnError: true,
       });
       if (job.value) {
@@ -74,11 +75,26 @@ const selectItem = async (item: { type: string; value: string }) => {
       // Job check failed, continue to node check
     }
 
+    if (!isJob) {
+      try {
+        const { data: node } = await useAPI(`/api/nodes/${item.value}/specs`, {
+          // @ts-ignore TODO: add to useAPI opts type
+          disableToastOnError: true,
+        });
+        if (node.value) {
+          item.type = "node";
+          isNode = true;
+        }
+      } catch (error) {
+        // Job check failed, continue to node check
+      }
+    }
+
     checkingIfJob.value = false;
 
     // If not a job, default to treating it as a node/host
-    if (!isJob) {
-      item.type = "node";
+    if (!isJob && !isNode) {
+      item.type = "poster";
     }
   }
 
