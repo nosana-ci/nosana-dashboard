@@ -6,7 +6,7 @@
           <div class="select status-select">
             <select v-model="currentState">
               <option v-for="filterState in filterStates" 
-                :key="filterState.value" 
+                :key="filterState.value === null ? 'null' : filterState.value" 
                 :value="filterState.value"
               >
                 {{ filterState.label }}
@@ -147,6 +147,8 @@ const props = defineProps({
   }
 });
 
+const emit = defineEmits(['update:total-deployments']);
+
 const currentPage = ref(1);
 const currentState = ref<number | null>(null);
 
@@ -207,6 +209,11 @@ const totalJobs = computed(() => {
   const nodeTotal = nodeJobs.value?.totalJobs || 0;
   return Math.max(postedTotal, nodeTotal);
 });
+
+// Emit total jobs count when it changes
+watch(totalJobs, (newValue) => {
+  emit('update:total-deployments', newValue);
+}, { immediate: true });
 
 const totalPages = computed(() => Math.ceil(totalJobs.value / props.itemsPerPage));
 

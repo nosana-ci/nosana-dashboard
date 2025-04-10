@@ -16,7 +16,7 @@
               <p class="heading">Deployments</p>
               <p class="title is-flex is-align-items-center is-justify-content-center">
                 <RocketIcon style="width: 16px; height: 16px; fill: #10E80C; margin-right: 0.5rem;" />
-                560
+                {{ totalDeployments }}
               </p>
             </div>
           </div>
@@ -59,7 +59,7 @@
           </div>
         </div>
         <h3 class="title is-4 mb-7">Deployments</h3>
-        <DashboardDeploymentsList :items-per-page="10" class="mb-6 deployments-list" />
+        <DashboardDeploymentsList :items-per-page="10" class="mb-6 deployments-list" @update:total-deployments="totalDeployments = $event" />
         
         <div class="columns mt-6">
           <div class="column is-4">
@@ -231,6 +231,7 @@ const toast = useToast();
 const { connected, publicKey } = useWallet();
 const { nosana } = useSDK();
 const claimingRewards = ref(false);
+const totalDeployments = ref(0);
 
 // Define type for spending history results item
 interface MonthlyResult {

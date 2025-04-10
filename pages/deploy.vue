@@ -550,7 +550,7 @@
               <button
                 v-else-if="connected && !canPostJob && selectedMarket"
                 class="button is-secondary is-fullwidth"
-                @click="showSwapModal = true"
+                @click="openSwapModal"
               >
                 Swap
               </button>
@@ -1632,6 +1632,24 @@ watch(navTab, async (newValue) => {
     }
   }
 });
+
+watch(() => showSwapModal.value, (newValue) => {
+  if (newValue === true) {
+    // Force a small delay before refreshing balances
+    setTimeout(async () => {
+      // Refresh balances before showing the modal
+      await refreshAllBalances();
+    }, 50);
+  }
+});
+
+// Add this function to the script section
+const openSwapModal = () => {
+  // Make sure balances are refreshed before opening the modal
+  refreshAllBalances();
+  // Set showSwapModal to true
+  showSwapModal.value = true;
+};
 </script>
 <style lang="scss" scoped>
 .template-card {
