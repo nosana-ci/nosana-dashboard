@@ -43,7 +43,9 @@ export function useJobLogs(
     host,
     signMessage,
     addLog,
-    handleWebSocketMessage
+    handleWebSocketMessage,
+    3, // maxRetries
+    3000 // retryDelay
   );
 
   // Configure ansi_up
