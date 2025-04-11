@@ -959,4 +959,12 @@ const claimRewards = async () => {
 .container-icon svg {
   fill: black;
 }
+
+@media screen and (max-width: 768px) {
+  .deployments-list {
+    overflow-x: auto;
+    /* Optional: Add padding if needed */
+    /* padding-bottom: 1rem; */
+  }
+}
 </style> 

@@ -1,7 +1,6 @@
-`
 <template>
   <div class="mt-4">
-    <table class="table is-fullwidth two-column-labels">
+    <table class="table is-fullwidth">
       <tbody>
         <tr>
           <td colspan="2" class="has-background-light">

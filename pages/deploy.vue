@@ -7,8 +7,8 @@
       :hide-buttons="true"
       v-model="showSettingsModal"
     ></TopBar>
-    <div class="columns">
-      <div class="column is-9">
+    <div class="columns is-multiline">
+      <div class="column is-9-fullhd is-12">
         <!-- Choose model -->
         <h2 class="title py-4">1. Define your model</h2>
         <div class="nav-tabs is-flex">
@@ -88,7 +88,7 @@
               <div
                 v-for="template in filteredTemplates"
                 :key="template.id"
-                class="column is-4-desktop is-6-tablet is-12-mobile"
+                class="column is-6-fullhd is-6-desktop is-6-tablet is-12-mobile"
               >
                 <div
                   class="box template-card has-background-white-ter"
@@ -417,7 +417,9 @@
                           <div class="column is-3">
                             <div class="input-with-unit">
                               <input class="input" 
-                                    type="number" 
+                                    type="text" 
+                                    inputmode="numeric" 
+                                    pattern="[0-9]*"
                                     :value="getDisplayValue(String(key), (filterValues[key] as FilterValue).min)"
                                     @input="(e) => handleSliderInput(e, String(key))" 
                                     :min="getMinValue(String(key), filter)"
@@ -479,7 +481,7 @@
           </div>
         </div>
       </div>
-      <div class="column is-3">
+      <div class="column is-3-fullhd is-12">
         <div class="summary">
           <div class="is-flex is-justify-content-flex-end" style="margin-bottom: 32px;">
             <button class="button mr-2 is-rounded is-large is-text" @click="showSettingsModal = true">
@@ -2194,28 +2196,32 @@ html.dark-mode .github-icon {
 }
 
 .input-with-unit {
-  position: relative;
+  // position: relative; // Remove relative positioning
   display: flex;
   align-items: center;
   width: 100%;
 
   .input {
-    padding-right: 78px;
+    // padding-right: 78px; // Remove fixed padding
+    flex-grow: 1; /* Allow input to grow */
+    min-width: 50px; /* Prevent input from becoming too small */
     width: 100%;
     font-size: 1rem;
   }
 
   .unit {
-    position: absolute;
-    right: 47px;
+    // position: absolute;
+    // right: 47px;
+    margin-left: 0.5rem; /* Add space after input */
     color: #666;
     font-size: 0.875rem;
     white-space: nowrap;
   }
 
   .max-value {
-    position: absolute;
-    right: 5px;
+    // position: absolute;
+    // right: 5px;
+    margin-left: 0.25rem; /* Add space after unit */
     color: #666;
     font-size: 0.875rem;
     white-space: nowrap;
@@ -2253,5 +2259,88 @@ html.dark-mode .github-icon {
 }
 .gpu-list-transition-move {
   transition: transform 0.3s ease;
+}
+
+@media screen and (max-width: 1407px) { // Below fullhd (1408px)
+  .summary {
+    position: static;
+    top: auto;
+    margin-top: 1.5rem;
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+
+/* Custom breakpoint for 3 columns */
+@media screen and (min-width: 1600px) {
+  .columns.is-multiline > .column.is-6-fullhd {
+    flex: none;
+    width: calc(100% / 3);
+  }
+}
+
+/* Adjust column padding on mobile */
+@media screen and (max-width: 768px) {
+  .columns.is-multiline > .column.is-9-fullhd,
+  .columns.is-multiline > .column.is-3-fullhd {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  /* Reduce padding inside the main content boxes on mobile */
+  .column.is-9-fullhd > .box,
+  .column.is-3-fullhd > .summary > .box {
+    padding-left: 0.5rem;
+    padding-right: 0.1rem;
+  }
+
+  /* Make TopBar more compact on mobile */
+  .topbar {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+
+  /* Target any buttons or nav items in the TopBar */
+  .topbar .button,
+  .topbar .navbar-burger {
+    margin: 0;
+    padding: 0.5rem;
+  }
+}
+
+/* Stack GPU specs vertically on mobile */
+.gpu-box__specs {
+  gap: 0.5rem; /* Adjust gap between rows */
+}
+.gpu-box__specs-row {
+  /* flex-direction: column; */ /* Revert stacking */
+  /* gap: 0.1rem; */
+  /* align-items: flex-start; */
+  flex-wrap: wrap; /* Allow items to wrap */
+  gap: 0.25rem 0.5rem; /* Adjust vertical and horizontal gap */
+}
+
+/* Further adjust input unit/max-value on mobile */
+.input-with-unit .unit,
+.input-with-unit .max-value {
+  font-size: 0.7rem; /* Reduce font size */
+  margin-left: 0.2rem; /* Reduce margin */
+}
+.input-with-unit .unit { 
+  margin-left: 0.3rem; /* Keep slightly more margin for unit */
+}
+
+/* Allow input to shrink more on mobile */
+.input-with-unit .input {
+  min-width: 0; /* Allow shrinking below default */
+  flex-shrink: 1; /* Ensure input shrinks */
+}
+
+/* Adjust slider/input column widths on mobile */
+.field > .columns.is-mobile > .column.is-9 {
+  width: 60%; /* Equivalent to is-8 */
+}
+.field > .columns.is-mobile > .column.is-3 {
+  width: 33.3333%; /* Equivalent to is-4 */
 }
 </style> 
