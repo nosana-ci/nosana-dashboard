@@ -118,7 +118,8 @@ const formatDuration = (seconds: number) => {
 
 // Format price
 const formattedPrice = computed(() => {
-  return (props.price / 1e6).toFixed(6) + " NOS";
+  const duration = getDuration();
+  return ((props.price / 1e6) * duration).toFixed(6) + " NOS";
 });
 
 // Get NOS price from API
@@ -128,8 +129,19 @@ const nosPriceUsd = computed(() => stats.value?.price || null);
 // Calculate USD price
 const calculatedUsdPrice = computed(() => {
   if (!nosPriceUsd.value) return null;
-  return ((props.price / 1e6) * nosPriceUsd.value).toFixed(3);
+  const duration = getDuration();
+  return (((props.price / 1e6) * duration) * nosPriceUsd.value).toFixed(3);
 });
+
+// Get duration in seconds
+const getDuration = () => {
+  if (props.timeEnd && props.timeStart) {
+    return props.timeEnd - props.timeStart;
+  } else if (props.timeStart) {
+    return Math.floor(Date.now() / 1000) - props.timeStart;
+  }
+  return 1; // Default to 1 if no duration available
+};
 
 // Format time started
 const timeStartFormatted = computed(() => {
