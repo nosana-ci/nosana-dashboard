@@ -129,7 +129,7 @@ import { ref, computed } from "vue";
 import { WalletMultiButton } from "solana-wallets-vue";
 import { useAPI } from "~/composables/useAPI";
 import { useSDK } from "~/composables/useSDK";
-import WorldMap from "~/components/Explorer/Nodes/WorldMap.vue";
+import WorldMap from "~/components/WorldMap.vue";
 import RocketIcon from "~/assets/img/icons/rocket.svg?component";
 
 const { data: nodeStatsResponse } = await useAPI("/api/stats/nodes-country");

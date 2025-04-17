@@ -131,7 +131,7 @@
           <nuxt-link
             v-for="item in leaderboardData"
             :key="generateRowKey(item)"
-            :to="`/nodes/${item.node}`"
+            :to="`/host/${item.node}`"
             custom
           >
             <template #default="{ navigate }">
@@ -141,7 +141,7 @@
               >
                 <td>
                   <nuxt-link
-                    :to="`/nodes/${item.node}`"
+                    :to="`/host/${item.node}`"
                     class="is-family-monospace address has-text-black"
                   >
                     {{ item.node }}

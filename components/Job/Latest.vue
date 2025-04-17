@@ -1,8 +1,8 @@
 <template>
   <div>
-    <ExplorerJobList :per-page="limit" :total-jobs="limit" v-model:page="page" v-model:state="state"
+    <DeploymentList :per-page="limit" :total-jobs="limit" v-model:page="page" v-model:state="state"
       :loading-jobs="loadingJobs" title="Latest Deployments" :jobs="jobs ? jobs.jobs : null" :small="true">
-    </ExplorerJobList>
+    </DeploymentList>
     <div class="has-text-right mt-auto pt-2">
       <nuxt-link to="/jobs" class="button is-text">
         <span>All deployments</span>
@@ -14,6 +14,8 @@
 </template>
 
 <script lang="ts" setup>
+import DeploymentList from "~/components/List/DeploymentList.vue";
+
 const page: Ref<number> = ref(1);
 const state: Ref<number | null> = ref(null);
 const jobStateMapping: any = {

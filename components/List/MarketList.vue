@@ -66,7 +66,8 @@
               }"
               @click="isMarketCompatible(market) && (select ? (selectedMarket = market) : navigate())">
               <td class="py-2">
-                <div class="has-tooltip-arrow" v-if="!isMarketCompatible(market)" data-tooltip="This GPU does not meet the required VRAM specifications for your job.">
+                <div class="has-tooltip-arrow is-flex is-align-items-center" v-if="!isMarketCompatible(market)" data-tooltip="This GPU does not meet the required VRAM specifications for your job.">
+                  <img src="@/assets/img/icons/nvidia.svg" alt="Nvidia" class="mr-2" style="width: 20px; height: 20px;">
                   <span v-if="testgridMarkets.find((tgm: any) => tgm.address === market.address.toString())">
                     {{
                       testgridMarkets.find(
@@ -78,7 +79,8 @@
                     {{ market.address.toString() }}
                   </span>
                 </div>
-                <div v-else>
+                <div v-else class="is-flex is-align-items-center">
+                  <img src="@/assets/img/icons/nvidia.svg" alt="Nvidia" class="mr-2" style="width: 20px; height: 20px;">
                   <span v-if="testgridMarkets.find((tgm: any) => tgm.address === market.address.toString())">
                     {{
                       testgridMarkets.find(
@@ -165,6 +167,7 @@
 
 <script setup lang="ts">
 import { type Market } from '@nosana/sdk';
+import type { PropType } from 'vue';
 
 //
 // Hardcoded VRAM capacities for certain GPU types.
@@ -203,7 +206,7 @@ const tab: Ref<string> = ref('premium');
  */
 const props = defineProps({
   markets: {
-    type: Array<Market>,
+    type: Array as PropType<Array<Market>>,
     default: undefined,
   },
   select: {
@@ -540,4 +543,4 @@ td {
   border-bottom: none !important;
   cursor: pointer;
 }
-</style>
+</style> 

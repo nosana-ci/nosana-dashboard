@@ -36,7 +36,7 @@
           Repost
         </button>
       </div>
-      <ExplorerJobStatus
+      <JobStatus
         :status="
           job.isCompleted && job.jobStatus
             ? job.jobStatus === 'success'
@@ -45,7 +45,7 @@
             : job.state
         "
       >
-      </ExplorerJobStatus>
+      </JobStatus>
     </div>
   </div>
 </template>
@@ -53,7 +53,8 @@
 <script setup lang="ts">
 import { useToast } from "vue-toastification";
 
-import EndpointsModal from "~/components/Explorer/Job/Modals/Endpoints.vue";
+import EndpointsModal from "~/components/Job/Modals/Endpoints.vue";
+import JobStatus from "~/components/Job/Status.vue";
 import { useNosanaWallet } from "~/composables/useNosanaWallet";
 
 import { type Endpoints, type UseJob } from "~/composables/jobs/useJob";

@@ -37,7 +37,7 @@
                   style="width: fit-content"
                   class="is-flex"
                 >
-                  <ExplorerJobStatus :status="'RUNNING'"></ExplorerJobStatus>
+                  <JobStatus :status="'RUNNING'"></JobStatus>
                 </div>
                 <div v-else>
                   <span v-if="nodeInfo">(Re)starting</span>
@@ -52,9 +52,37 @@
                 style="width: fit-content"
                 class="is-flex"
               >
-                <ExplorerJobStatus :status="'QUEUED'"></ExplorerJobStatus>
+                <JobStatus :status="'QUEUED'"></JobStatus>
               </div>
             </td>
+          </tr>
+          <tr>
+            <td>
+              <span class="is-flex-inline">
+                <span>Availability</span>
+                <span
+                  class="has-tooltip-arrow ml-1"
+                  style="vertical-align: middle"
+                  data-tooltip="The percentage of time this host has been available to process deployments while in queue"
+                >
+                  <img src="~/assets/img/icons/info.svg" />
+                </span>
+              </span>
+            </td>
+            <td
+              v-if="
+                !nodeRanking ||
+                typeof nodeRanking.uptimePercentage === 'undefined'
+              "
+            >
+              <span
+                class="has-tooltip-arrow"
+                data-tooltip="This host hasn't been online long enough to calculate availibily"
+              >
+                unknown
+              </span>
+            </td>
+            <td v-else>{{ nodeRanking.uptimePercentage.toFixed(1) }}%</td>
           </tr>
           <tr v-if="nodeRuns && nodeRuns.length > 0">
             <td>Running deployment</td>
@@ -142,132 +170,22 @@
               <span v-else>Offline</span>
             </td>
           </tr>
-          <NodeSpecification v-if="combinedSpecs" :specs="combinedSpecs" />
-          <!-- Performance Section -->
-          <tr>
-            <td colspan="2" class="has-background-light">
-              <h4 class="title is-5 mb-0">Performance</h4>
-            </td>
-          </tr>
-          <tr>
-            <td>
-              <span class="is-flex-inline">
-                <span>Availability</span>
-                <span
-                  class="has-tooltip-arrow ml-1"
-                  style="vertical-align: middle"
-                  data-tooltip="The percentage of time this host has been available to process deployments while in queue"
-                >
-                  <img src="~/assets/img/icons/info.svg" />
-                </span>
-              </span>
-            </td>
-            <td
-              v-if="
-                !nodeRanking ||
-                typeof nodeRanking.uptimePercentage === 'undefined'
-              "
-            >
-              <span
-                class="has-tooltip-arrow"
-                data-tooltip="This host hasn't been online long enough to calculate availibily"
-              >
-                unknown
-              </span>
-            </td>
-            <td v-else>{{ nodeRanking.uptimePercentage.toFixed(1) }}%</td>
-          </tr>
-          <tr>
-            <td>Average Download Speed (Mbps)</td>
-            <td
-              v-if="
-                !genericBenchmarkResponse ||
-                !genericBenchmarkResponse.data.length
-              "
-            >
-              -
-            </td>
-            <td v-else>
-              {{
-                Number(
-                  genericBenchmarkResponse.data[0]?.metrics
-                    .internetSpeedDownload
-                ).toFixed(2)
-              }}
-            </td>
-          </tr>
-          <tr>
-            <td>Average Upload Speed (Mbps)</td>
-            <td
-              v-if="
-                !genericBenchmarkResponse ||
-                !genericBenchmarkResponse.data.length
-              "
-            >
-              -
-            </td>
-            <td v-else>
-              {{
-                Number(
-                  genericBenchmarkResponse.data[0]?.metrics.internetSpeedUpload
-                ).toFixed(2)
-              }}
-            </td>
-          </tr>
+          <HostSpecifications 
+            v-if="combinedSpecs" 
+            :specs="combinedSpecs" 
+            :node-ranking="nodeRanking"
+            :generic-benchmark-response="genericBenchmarkResponse"
+          />
         </tbody>
       </table>
-
-      <!-- Only render benchmark histograms if nodeSpecs & nodeSpecs.marketAddress are valid -->
-      <div class="columns" v-if="nodeSpecs && benchmarkMarketId">
-        <div class="column is-6">
-          <NodeBenchmarkHistogram
-            title="LLM Performance"
-            type="llm"
-            :node-id="address"
-            :market-id="benchmarkMarketId"
-            default-metric="averageTokensPerSecond"
-            :metrics="[
-              { value: 'averageTokensPerSecond', label: 'Tokens / Second' },
-              { value: 'avgClockSpeed', label: 'Clock Speed (MHz)' },
-              { value: 'avgWattage', label: 'Power Usage (W)' },
-              { value: 'avgTemperature', label: 'Temperature (°C)' },
-            ]"
-            x-axis-label="Concurrent Users"
-          />
-        </div>
-        <div class="column is-6">
-          <NodeBenchmarkHistogram
-            title="Image Generation Performance"
-            type="image-gen"
-            :node-id="address"
-            :market-id="benchmarkMarketId"
-            default-metric="imagesPerSecond"
-            :metrics="[
-              { value: 'imagesPerSecond', label: 'Images / Second' },
-              { value: 'avgClockSpeed', label: 'Clock Speed (MHz)' },
-              { value: 'avgWattage', label: 'Power Usage (W)' },
-              { value: 'avgTemperature', label: 'Temperature (°C)' },
-            ]"
-            x-axis-label="Batch Size"
-          />
-        </div>
-      </div>
-      <ExplorerJobList
-        :per-page="limit"
-        :total-jobs="totalJobs"
-        v-model:page="page"
-        v-model:state="state"
-        :loading-jobs="loadingJobs"
-        title="Deployments Ran"
-        :jobs="jobs?.jobs || []"
-        :states="[1, 2]"
-      />
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
 import { type Market } from "@nosana/sdk";
+import HostSpecifications from "~/components/Info/HostSpecifications.vue";
+import JobStatus from "~/components/Job/Status.vue";
 const { nosana } = useSDK();
 const { data: testgridMarkets, pending: loadingTestgridMarkets } =
   useAPI("/api/markets");
@@ -316,7 +234,8 @@ const { data: nodeRuns, pending: loadingRuns } = useMyAsyncData(
           },
         ]);
       } catch (e) {
-        console.error("Could not get runs", e);
+        // Silent error handling - expected for offline nodes
+        return null;
       }
     }
     return null;
@@ -328,7 +247,7 @@ const { data: nodeRuns, pending: loadingRuns } = useMyAsyncData(
  *************/
 const page: Ref<number> = ref(1);
 const state: Ref<number | null> = ref(null);
-const jobStateMapping: any = {
+const jobStateMapping: Record<number, string> = {
   0: "QUEUED",
   1: "RUNNING",
   2: "COMPLETED",
@@ -348,10 +267,9 @@ interface JobsResponse {
   jobs: any[];
 }
 
-const { data: jobs, pending: loadingJobs } = useAPI<JobsResponse | null>(
-  jobsUrl,
-  { watch: [jobsUrl] }
-);
+const { data: jobs, pending: loadingJobs } = useAPI(jobsUrl, {
+  watch: [jobsUrl],
+});
 
 const hasRanJobs: ComputedRef<Boolean> = computed(() => {
   return Boolean(jobs?.value?.jobs?.length);
@@ -386,11 +304,18 @@ const {
   pending: loadingInfo,
   execute: getNodeInfo,
 } = useAPI(
-  `https://${props.address}.${useRuntimeConfig().public.nodeDomain}/node/info`,
+  `/api/nodes/${props.address}/info`,
   {
     immediate: false,
     // @ts-ignore
     disableToastOnError: true,
+    // Handle backend/fetch errors silently
+    onRequestError: () => ({ info: null }),
+    onResponseError: () => ({ info: null }),
+    // @ts-ignore
+    options: {
+      retry: 0
+    }
   }
 );
 
@@ -448,20 +373,30 @@ const combinedSpecs = computed(() => {
  *********************/
 const { data: genericBenchmarkResponse, execute: getNodeBenchmarks } = useAPI(
   `/api/benchmarks/generic-benchmark-data?node=${props.address}`,
-  { immediate: false }
+  { 
+    immediate: false,
+    // @ts-ignore
+    disableToastOnError: true,
+    // Handle API errors silently
+    onRequestError: () => ({ data: [] }),
+    onResponseError: () => ({ data: [] }),
+    // @ts-ignore
+    options: {
+      retry: 0
+    }
+  }
 );
 
 // Safely call node info + benchmark if it's actually (or likely) a node
 function fetchAdditionalNodeData() {
-  getNodeBenchmarks().catch((err) => {
-    console.error(
-      "Could not fetch benchmark info. Possibly offline host:",
-      err
-    );
-  });
-  getNodeInfo().catch((err) => {
-    console.error("Could not fetch host info. Possibly offline host:", err);
-  });
+  // Use try-catch for both API calls
+  try {
+    getNodeBenchmarks();
+    getNodeInfo();
+  } catch (err) {
+    // Silent error handling - expected for offline nodes
+    console.log("Could not fetch node data. Possibly offline host.");
+  }
 }
 
 // If isNode is truthy, try fetching everything
@@ -529,11 +464,20 @@ async function fetchMarketRelation() {
   ) {
     try {
       const { data } = await useAPI(
-        `/api/nodes/market-relation?market=${nodeSpecs.value.marketAddress}`
+        `/api/nodes/market-relation?market=${nodeSpecs.value.marketAddress}`,
+        {
+          // @ts-ignore
+          disableToastOnError: true
+        }
       );
-      marketRelationId.value = data.value;
+      if (data && data.value) {
+        marketRelationId.value = data.value;
+      } else {
+        marketRelationId.value = null;
+      }
     } catch (err) {
-      console.error("Error fetching market relation:", err);
+      // Silent error handling
+      marketRelationId.value = null;
     }
   }
 }

@@ -59,7 +59,7 @@
           </div>
         </div>
         <h3 class="title is-4 mb-7">Deployments</h3>
-        <DashboardDeploymentsList :items-per-page="10" class="mb-6 deployments-list" @update:total-deployments="totalDeployments = $event" />
+        <ListDeploymentsList :items-per-page="10" class="mb-6 deployments-list" @update:total-deployments="totalDeployments = $event" />
         
         <div class="columns mt-6">
           <div class="column is-4">
@@ -202,7 +202,7 @@
 </template>
 
 <script setup lang="ts">
-import DashboardDeploymentsList from '~/components/Dashboard/DeploymentsList.vue';
+import ListDeploymentsList from '~/components/List/AccountDeploymentsList.vue';
 import { useWallet } from 'solana-wallets-vue';
 import { useStake } from '~/composables/useStake';
 import { useAPI } from '~/composables/useAPI';
@@ -845,7 +845,7 @@ const claimRewards = async () => {
   max-height: 280px;
 }
 
-/* Exclude DeploymentsList from the height restriction */
+/* Exclude ListDeploymentsList from the height restriction */
 .deployments-list > .box {
   max-height: none;
   height: auto;

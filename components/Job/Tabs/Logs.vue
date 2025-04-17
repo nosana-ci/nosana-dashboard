@@ -18,7 +18,7 @@
     <div v-else-if="job.results && job.results[0] === 'nos/secret'">
       Results are secret
     </div>
-    <ExplorerJobResult
+    <JobResult
       v-else-if="job.isCompleted"
       :ipfs-result="job.results"
       :ipfs-job="job"
@@ -28,6 +28,7 @@
 
 <script setup lang="ts">
 import JobLogViewer from "../LogViewer.vue";
+import JobResult from "../Result.vue";
 import type { UseJob } from "~/composables/jobs/useJob";
 import type { LogEntry, ProgressBar } from "~/composables/jobs/useJobLogs";
 

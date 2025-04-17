@@ -2,7 +2,7 @@
   <div>
     <TopBar :title="'Explorer'" :subtitle="'Deployments'"></TopBar>
     <div class="box has-background-white-ter">
-      <ExplorerSearch />
+      <Search />
     </div>
     <div class="has-text-right mb-2">
       <nuxt-link class="button is-primary is-outlined" to="/deploy">
@@ -14,9 +14,9 @@
     </div>
     <div class="box">
 
-      <ExplorerJobList :per-page="limit" :total-jobs="jobs ? jobs.totalJobs : null" v-model:page="page"
+      <DeploymentList :per-page="limit" :total-jobs="jobs ? jobs.totalJobs : null" v-model:page="page"
         v-model:state="state" :loading-jobs="loadingJobs" :jobs="jobs ? jobs.jobs : null">
-      </ExplorerJobList>
+      </DeploymentList>
     </div>
     <div v-if="!loadingJobs && !jobs">Could not load jobs</div>
   </div>
@@ -24,6 +24,8 @@
 
 <script setup lang="ts">
 import JobBuilderIcon from '@/assets/img/icons/sidebar/job-builder.svg?component';
+import DeploymentList from "~/components/List/DeploymentList.vue";
+import Search from "~/components/Search.vue";
 const page: Ref<number> = ref(1);
 const state: Ref<number | null> = ref(null);
 const jobStateMapping: any = {
