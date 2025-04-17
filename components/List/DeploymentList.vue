@@ -156,10 +156,10 @@
 
             </td>
             <td>
-              <ExplorerJobStatus
+              <JobStatus
                 :status="job.state === 2 && job.jobStatus ? (job.jobStatus === 'success' ? 'SUCCESS' : 'FAILED') : job.state"
-                :image-only="small">
-              </ExplorerJobStatus>
+                :image-only="small"
+              ></JobStatus>
             </td>
           </tr>
         </template>
@@ -175,6 +175,15 @@
 <script setup lang="ts">
 import type { Job } from '@nosana/sdk';
 import { UseTimeAgo } from '@vueuse/components';
+import type { PropType } from 'vue';
+import JobStatus from "~/components/Job/Status.vue";
+
+// Extended job type to include additional properties
+interface ExtendedJob extends Job {
+  address: string;
+  usdRewardPerHour?: number;
+  jobStatus?: string;
+}
 
 const { data: testgridMarkets, pending: loadingTestgridMarkets } = await useAPI('/api/markets', { default: () => [] });
 
@@ -199,7 +208,7 @@ const fmtMSS = (s: number) => {
 };
 const props = defineProps({
   jobs: {
-    type: Array<Job & { address: string }>,
+    type: Array as PropType<Array<ExtendedJob>>,
     default: undefined,
   },
   states: {
@@ -231,12 +240,12 @@ const props = defineProps({
     default: false,
   },
 });
-const state: Ref<number | null> = defineModel('state', { default: null });
+const state = defineModel<number | null>('state', { default: null });
 const changeState = (newState: number | null) => {
   page.value = 1;
   state.value = newState;
 }
-const page: Ref<number> = defineModel('page', { default: 1 })
+const page = defineModel<number>('page', { default: 1 })
 </script>
 
 <style lang="scss" scoped>
@@ -269,4 +278,4 @@ const page: Ref<number> = defineModel('page', { default: 1 })
     }
   }
 }
-</style>
+</style> 

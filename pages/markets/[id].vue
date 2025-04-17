@@ -111,7 +111,7 @@
                       <div class="p-3">
                         <ol class="ml-4">
                           <li v-for="node in allNodes" :key="node">
-                            <nuxt-link :to="`/nodes/${node}`" class="is-family-monospace">
+                            <nuxt-link :to="`/host/${node}`" class="is-family-monospace">
                               {{ node }}
                             </nuxt-link>
                           </li>
@@ -144,7 +144,7 @@
                       <div class="p-3">
                         <ol class="ml-4">
                           <li v-for="node in runningNodes" :key="node">
-                            <nuxt-link :to="`/nodes/${node}`" class="is-family-monospace">
+                            <nuxt-link :to="`/host/${node}`" class="is-family-monospace">
                               {{ node }}
                             </nuxt-link>
                           </li>
@@ -186,7 +186,7 @@
                       <div class="p-3">
                         <ol class="ml-4">
                           <li v-for="node in queuedNodes" :key="node">
-                            <nuxt-link :to="`/nodes/${node}`" class="is-family-monospace">
+                            <nuxt-link :to="`/host/${node}`" class="is-family-monospace">
                               {{ node }}
                             </nuxt-link>
                           </li>
@@ -220,7 +220,7 @@
                       <div class="p-3">
                         <ol class="ml-4">
                           <li v-for="node in availableNodesWithAccess" :key="node">
-                            <nuxt-link :to="`/nodes/${node}`" class="is-family-monospace">
+                            <nuxt-link :to="`/host/${node}`" class="is-family-monospace">
                               {{ node }}
                             </nuxt-link>
                           </li>
@@ -234,10 +234,10 @@
           </div>
         </div>
 
-        <ExplorerJobList :per-page="limit" :total-jobs="jobs ? jobs.totalJobs : null" v-model:page="page"
+        <DeploymentList :per-page="limit" :total-jobs="jobs ? jobs.totalJobs : null" v-model:page="page"
           v-model:state="state" :loading-jobs="loadingJobs" title="All Deployments for this GPU"
           :jobs="jobs ? jobs.jobs : null">
-        </ExplorerJobList>
+        </DeploymentList>
       </div>
       <div v-else>Market not found</div>
     </div>
@@ -246,6 +246,7 @@
 
 <script setup lang="ts">
 import { type Market } from '@nosana/sdk'
+import DeploymentList from "~/components/List/DeploymentList.vue";
 
 interface TestgridMarket {
   address: string

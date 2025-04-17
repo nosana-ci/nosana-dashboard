@@ -270,7 +270,7 @@
               <div v-if="loadingMarkets">
                 Loading GPUs...
               </div>
-              <DeployMarketList
+              <ListDeployMarketList
                 v-else-if="markets"
                 :key="`market-list-${activeFilterKey}`"
                 :markets="markets"

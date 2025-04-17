@@ -7,7 +7,6 @@ const { nosana } = useSDK();
 const loadingMarkets = ref(false);
 
 const getMarkets = async () => {
-  console.log("retrieving all markets..");
   loadingMarkets.value = true;
   try {
     markets.value = (await nosana.value.jobs.allMarkets()).sort(

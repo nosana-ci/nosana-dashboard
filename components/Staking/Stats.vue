@@ -5,7 +5,7 @@
         <div class="box">
           <label class="label mb-1">USD value staked</label>
           <div class="is-size-1 has-text-black">
-            <CustomCountUp v-if="!loading" :end-val="stats.usdValueStaked">
+            <CustomCountUp v-if="!loading" :end-val="Number(stats.usdValueStaked)">
               <template #prefix>
                 <span>$</span>
               </template>
@@ -18,7 +18,7 @@
         <div class="box">
           <label class="label mb-1">NOS Stakers</label>
           <div class="is-size-1 has-text-black">
-            <CustomCountUp v-if="!loading" :end-val="stats.stakers">
+            <CustomCountUp v-if="!loading" :end-val="Number(stats.stakers)">
             </CustomCountUp>
             <span v-else-if="loading">....</span>
 
@@ -29,7 +29,7 @@
         <div class="box">
           <label class="label mb-1">NOS Staked</label>
           <div class="is-size-1 has-text-black">
-            <CustomCountUp v-if="!loading" :end-val="stats.nosStaked">
+            <CustomCountUp v-if="!loading" :end-val="Number(stats.nosStaked)">
               <!-- <template #suffix>
                 <img src="~assets/img/icon.svg" width="24px" class="ml-2" />
               </template> -->
@@ -42,7 +42,7 @@
         <div class="box">
           <label class="label mb-1">total xNOS score</label>
           <div class="is-size-1 has-text-black">
-            <CustomCountUp v-if="!loading" :end-val="stats.totalXNosStaked">
+            <CustomCountUp v-if="!loading" :end-val="Number(stats.totalXNosStaked)">
             </CustomCountUp>
             <span v-else-if="loading">....</span>
           </div>

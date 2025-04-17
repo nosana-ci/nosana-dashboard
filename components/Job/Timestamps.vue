@@ -8,7 +8,7 @@
               Deployments
               <span class="has-text-weight-bold ml-2">
                 <count-up v-if="timestamps"
-                  :end-val="chartData.datasets[0].data.reduce((n, { y }) => n + y, 0)"></count-up>
+                  :end-val="totalDeployments"></count-up>
                 <span v-else-if="loadingTimestamps">...</span>
                 <span v-else>-</span>
               </span>
@@ -87,6 +87,16 @@ watch(timestampsUrl, () => {
 const { data: timestamps, pending: loadingTimestamps } = await useAPI(timestampsUrl, { watch: [timestampsUrl] });
 // Interaction.modes.interpolate = Interpolate;
 
+// Calculate total deployments from original data
+const totalDeployments = computed(() => {
+  const data: Array<{ x: any, y: number }> = timestamps.value && timestamps.value.data ? timestamps.value.data : [];
+  if (!data || data.length === 0) {
+    return 0;
+  }
+  // Ensure 'y' exists and is a number before summing
+  return data.reduce((sum, point) => sum + (point && typeof point.y === 'number' ? point.y : 0), 0);
+});
+
 Chartjs.register(
   TimeScale,
   LineElement,
@@ -106,8 +116,14 @@ const tooltipFormat = ref('[Week] W MMM YYYY');
 const unit: Ref<false | "millisecond" | "second" | "minute" | "hour" | "day" | "week" | "month" | "quarter" | "year" | undefined> = ref('day');
 
 const chartData = computed<ChartData<'line'>>(() => {
-  const data: Array<any> = timestamps.value && timestamps.value.data ? [...timestamps.value.data] : [];
+  const originalData: Array<any> = timestamps.value && timestamps.value.data ? [...timestamps.value.data] : [];
   const timeValue = parseInt(time.value as string);
+
+  let chartDisplayData = originalData;
+  // Remove first and last points for display if data exists and has more than 2 points
+  if (originalData.length > 2) {
+    chartDisplayData = originalData.slice(1, -1); // Use slice to create a new array for the chart
+  }
 
   if (timeValue > 365 / 3 * 24 * 3600) {
     // Bigger than 4 month, group by week
@@ -140,7 +156,7 @@ const chartData = computed<ChartData<'line'>>(() => {
         borderColor: '#2feb2b',
         showLine: true,
         backgroundColor: '#2feb2b45',
-        data: data,
+        data: chartDisplayData,
         interpolate: true,
         // pointRadius: 2,
       },

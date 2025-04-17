@@ -56,7 +56,6 @@ const activeSearchItem: Ref<number> = ref(0);
 const checkingIfJob = ref(false);
 
 const selectItem = async (item: { type: string; value: string }) => {
-  let s = "";
   if (item.type === "account") {
     checkingIfJob.value = true;
     let isJob = false;
@@ -86,28 +85,34 @@ const selectItem = async (item: { type: string; value: string }) => {
           isNode = true;
         }
       } catch (error) {
-        // Job check failed, continue to node check
+        // Node check failed
       }
     }
 
     checkingIfJob.value = false;
 
-    // If not a job, default to treating it as a node/host
+    // If not a job or node, default to account
     if (!isJob && !isNode) {
-      item.type = "poster";
+      item.type = "account";
     }
   }
 
-  // Add plural 's' except for job and node
-  if (item.type !== "account" && item.type !== "node") {
-    s = "s";
-  }
-
-  // Special case for nodes - route to /nodes/address instead of /node/address
-  if (item.type === "node") {
-    router.push(`/nodes/${item.value}`);
-  } else {
-    router.push(`/${item.type}${s}/${item.value}`);
+  // Route based on item type
+  switch (item.type) {
+    case "job":
+      router.push(`/jobs/${item.value}`);
+      break;
+    case "node":
+      router.push(`/host/${item.value}`);
+      break;
+    case "market":
+      router.push(`/markets/${item.value}`);
+      break;
+    case "account":
+      router.push(`/deployer/${item.value}`);
+      break;
+    default:
+      router.push(`/${item.type}/${item.value}`);
   }
 };
 

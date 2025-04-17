@@ -6,24 +6,31 @@
     :isJobPoster="isJobPoster"
     :openExtendModal="modal.open"
   />
-  <ExplorerJobInfo
-    :address="job.address"
-    :node="job.node"
-    :project="job.project"
-    :market="job.market"
-    :price="job.price"
-    :timeStart="job.timeStart"
-    :timeEnd="job.timeEnd"
-    :timeout="job.timeout"
-    :jobDefinition="job.jobDefinition"
-    :isCompleted="job.isCompleted"
-  />
-  <JobNodeInfo
-    v-if="
-      job.node && job.node.toString() !== '11111111111111111111111111111111'
-    "
-    :address="job.node.toString()"
-  />
+  <table class="table is-fullwidth mt-4">
+    <tbody>
+      <DeploymentInfo
+        v-if="
+          job.node && job.node.toString() !== '11111111111111111111111111111111'
+        "
+        :address="job.address"
+        :node="job.node.toString()"
+        :project="job.project.toString()"
+        :market="job.market.toString()"
+        :price="job.price"
+        :timeStart="job.timeStart"
+        :timeEnd="job.timeEnd"
+        :timeout="job.timeout"
+        :jobDefinition="job.jobDefinition"
+        :isCompleted="job.isCompleted"
+      />
+      <HostSpecifications
+        v-if="
+          job.node && job.node.toString() !== '11111111111111111111111111111111'
+        "
+        :node-address="job.node.toString()"
+      />
+    </tbody>
+  </table>
   <JobTabs
     v-if="job.jobDefinition"
     :job="job"
@@ -50,17 +57,18 @@
   />
 </template>
 <script setup lang="ts">
-import JobTabs from "~/components/Explorer/Job/Tabs.vue";
-import JobNodeInfo from "~/components/Node/JobNodeInfo.vue";
-import JobToolbar from "~/components/Explorer/Job/JobToolbar.vue";
-import ExtendModal from "~/components/Explorer/Job/Modals/Extend.vue";
-import ExplorerJobInfo from "~/components/Explorer/Job/Info.vue";
+import JobTabs from "~/components/Job/Tabs.vue";
+import DeploymentInfo from "~/components/Info/DeploymentInfo.vue";
+import HostSpecifications from "~/components/Info/HostSpecifications.vue";
+import JobToolbar from "~/components/Job/JobToolbar.vue";
+import ExtendModal from "~/components/Job/Modals/Extend.vue";
 
 import LogSubscription from "./LogSubscription.vue";
 import { useJobLogs } from "~/composables/jobs/useJobLogs";
 
 import type { UseModal } from "~/composables/jobs/useModal";
 import type { Endpoints, UseJob } from "~/composables/jobs/useJob";
+import { computed } from 'vue';
 
 interface Props {
   job: UseJob;

@@ -13,7 +13,7 @@
       <ul class="menu-list is-size-5">
         <li class="has-dropdown">
           <a class="menu-list-link sidebar-link" @click="toggleProfile"
-            :class="{ 'is-active': $route.path === '/account' || $route.path === '/stake' }"
+            :class="{ 'is-active': isProfilePage }"
           >
             <div
               class="is-flex is-align-items-center"
@@ -41,7 +41,7 @@
           <ul class="submenu" :class="{ 'is-active': showProfileDropdown }">
             <li v-if="connected">
               <nuxt-link
-                to="/account"
+                to="/account/deployer"
                 active-class="is-active"
                 class="submenu-link"
                 @click="showMenu = false"
@@ -220,7 +220,7 @@ const router = useRouter();
 
 // Check if the current route is a profile page
 const isProfilePage = computed(() => {
-  return route.path === '/account' || route.path === '/stake';
+  return ['/account', '/stake', '/account/deployer'].includes(route.path);
 });
 
 // Check if the current route is an explorer page
@@ -259,6 +259,10 @@ const toggleExplorer = () => {
 
 const toggleProfile = () => {
   showProfileDropdown.value = !showProfileDropdown.value;
+};
+
+const isActive = (paths: string[]) => {
+  return paths.includes(route.path);
 };
 </script>
 

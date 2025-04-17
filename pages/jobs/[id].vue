@@ -23,7 +23,7 @@
 </template>
 <script setup lang="ts">
 // Views
-import Job from "~/components/Explorer/Job/Job.vue";
+import Job from "~/components/Job/Job.vue";
 // Composables
 import { useJobPage } from "~/composables/jobs/useJobPage";
 const showSettingsModal = ref(false);

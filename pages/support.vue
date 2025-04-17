@@ -11,19 +11,39 @@
       <div class="columns">
         <div class="column is-4">
           <div class="box">
-            <h4 class="title is-4">Get 1-on-1 Support</h4>
+            <h4 class="title is-4">Discord Community</h4>
             <p class="is-size-5">
-              Receive prompt, personalized support for staking, wallet issues,
-              or help with posting jobs from our dedicated support team.<br />
+              Connect with our community for prompt, personalized support for deployments and setting up your host.
+              <br />
               <a
-                href="https://discord.gg/KFNu8Skx8T"
+                href="https://discord.gg/nosana-ai"
                 target="_blank"
                 class="button mt-4 is-primary is-outlined"
               >
                 <span class="icon is-small">
                   <DiscordIcon style="height: 1em" />
                 </span>
-                <span>Support</span>
+                <span>Discord</span>
+              </a>
+            </p>
+          </div>
+        </div>
+        <div class="column is-4">
+          <div class="box">
+            <h4 class="title is-4">Documentation</h4>
+            <p class="is-size-5">
+              Explore our comprehensive guides and learn how the Nosana 
+              network works with detailed examples and tutorials.
+              <br />
+              <a
+                href="https://docs.nosana.com/about/intro.html"
+                target="_blank"
+                class="button mt-4 is-primary is-outlined"
+              >
+                <span class="icon is-small">
+                  <ExplorerIcon style="height: 1em" />
+                </span>
+                <span>Documentation</span>
               </a>
             </p>
           </div>
@@ -47,25 +67,6 @@
             </p>
           </div>
         </div>
-        <div class="column is-4">
-          <div class="box">
-            <h4 class="title is-4">Connect</h4>
-            <p class="is-size-5">
-              Our server is where you can connect with others, chat, and
-              interact with team and other community members.<br />
-              <a
-                href="https://discord.gg/nosana-ai"
-                target="_blank"
-                class="button mt-4 is-primary is-outlined"
-              >
-                <span class="icon is-small">
-                  <DiscordIcon style="height: 1em" />
-                </span>
-                <span>Discord</span>
-              </a>
-            </p>
-          </div>
-        </div>
       </div>
     </div>
   </div>
@@ -74,7 +75,9 @@
 <script lang="ts" setup>
 import GithubIcon from "@/assets/img/icons/github.svg?component";
 import DiscordIcon from "@/assets/img/icons/discord.svg?component";
+import ExplorerIcon from "@/assets/img/icons/sidebar/explorer.svg?component";
 const showSettingsModal = ref(false);
 </script>
 
-<style lang="scss" scoped></style>
+<style lang="scss" scoped>
+</style>
