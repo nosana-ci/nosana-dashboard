@@ -170,9 +170,9 @@
               <span v-else>Offline</span>
             </td>
           </tr>
-          <HostSpecifications 
-            v-if="combinedSpecs" 
-            :specs="combinedSpecs" 
+          <HostSpecifications
+            v-if="combinedSpecs"
+            :specs="combinedSpecs"
             :node-ranking="nodeRanking"
             :generic-benchmark-response="genericBenchmarkResponse"
           />
@@ -304,7 +304,7 @@ const {
   pending: loadingInfo,
   execute: getNodeInfo,
 } = useAPI(
-  `/api/nodes/${props.address}/info`,
+  `https://${props.address}.${useRuntimeConfig().public.nodeDomain}/node/info`,
   {
     immediate: false,
     // @ts-ignore
@@ -314,8 +314,8 @@ const {
     onResponseError: () => ({ info: null }),
     // @ts-ignore
     options: {
-      retry: 0
-    }
+      retry: 0,
+    },
   }
 );
 
@@ -373,7 +373,7 @@ const combinedSpecs = computed(() => {
  *********************/
 const { data: genericBenchmarkResponse, execute: getNodeBenchmarks } = useAPI(
   `/api/benchmarks/generic-benchmark-data?node=${props.address}`,
-  { 
+  {
     immediate: false,
     // @ts-ignore
     disableToastOnError: true,
@@ -382,8 +382,8 @@ const { data: genericBenchmarkResponse, execute: getNodeBenchmarks } = useAPI(
     onResponseError: () => ({ data: [] }),
     // @ts-ignore
     options: {
-      retry: 0
-    }
+      retry: 0,
+    },
   }
 );
 
@@ -467,7 +467,7 @@ async function fetchMarketRelation() {
         `/api/nodes/market-relation?market=${nodeSpecs.value.marketAddress}`,
         {
           // @ts-ignore
-          disableToastOnError: true
+          disableToastOnError: true,
         }
       );
       if (data && data.value) {
