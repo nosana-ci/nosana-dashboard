@@ -5,9 +5,8 @@
       <div v-if="market">
         <h3 class="title mt-3">
           {{
-            testgridMarkets.find(m => m.address === marketId)
-              ? testgridMarkets.find(m => m.address === marketId).name
-              : marketId
+            testgridMarkets.find((m: any) => m.address === marketId)?.name
+              || marketId
           }}
         </h3>
 
@@ -19,7 +18,7 @@
                   <td>GPU size</td>
                   <td>{{ totalNodes }} hosts</td>
                 </tr>
-                <tr v-if="testgridMarkets.find(m => m.address === marketId)">
+                <tr>
                   <td>GPU address</td>
                   <td>
                     <a target="_blank" class="address is-family-monospace"
@@ -32,27 +31,32 @@
                   <td>Authority</td>
                   <td>
                     <a target="_blank" class="address is-family-monospace"
-                      :href="'https://explorer.solana.com/address/' + market.authority">
-                      {{ market.authority }}
+                      :href="'https://explorer.solana.com/address/' + market.authority.toString()">
+                      {{ market.authority.toString() }}
                     </a>
                   </td>
                 </tr>
                 <tr>
                   <td>Price</td>
                   <td>
-                    {{ ((market.jobPrice / 1e6) * 3600 * 1.1).toFixed(3) }} NOS/h
-                    <span v-if="stats && stats.price">
-                      (${{ ((stats.price * (market.jobPrice / 1e6)) * 3600 * 1.1).toFixed(3) }}/h)
-                    </span>
+                    <CurrentMarketPrice 
+                      :marketAddressOrData="market" 
+                      :statsData="stats"
+                      :decimalPlaces="3" />
                   </td>
                 </tr>
                 <tr>
                   <td>Host payment</td>
                   <td>
-                    {{ ((market.jobPrice / 1e6) * 3600).toFixed(3) }} NOS/h
-                    <span v-if="stats && stats.price">
-                      (${{ ((stats.price * (market.jobPrice / 1e6)) * 3600).toFixed(3) }}/h)
+                    <span v-if="market">
+                      {{ ((market.jobPrice / 1e6) * 3600).toFixed(3) }} NOS/h
+                      <span v-if="stats?.price">
+                        (${{ ((stats.price * (market.jobPrice / 1e6)) * 3600).toFixed(3) }}/h)
+                      </span>
+                      <span v-else-if="loadingStats">...</span>
                     </span>
+                    <span v-else-if="loading">...</span>
+                    <span v-else>N/A</span>
                   </td>
                 </tr>
                 <tr>
@@ -236,10 +240,11 @@
 
         <DeploymentList :per-page="limit" :total-jobs="jobs ? jobs.totalJobs : null" v-model:page="page"
           v-model:state="state" :loading-jobs="loadingJobs" title="All Deployments for this GPU"
-          :jobs="jobs ? jobs.jobs : null">
+          :jobs="jobs ? jobs.jobs : []">
         </DeploymentList>
       </div>
-      <div v-else>Market not found</div>
+      <div v-else-if="loading">Loading market...</div>
+      <div v-else>Market not found for {{ marketId }}</div>
     </div>
   </div>
 </template>
@@ -247,14 +252,18 @@
 <script setup lang="ts">
 import { type Market } from '@nosana/sdk'
 import DeploymentList from "~/components/List/DeploymentList.vue";
+import CurrentMarketPrice from "~/components/Market/CurrentPrice.vue";
+import type { Ref } from 'vue';
 
+// Define the interface for the market data
 interface TestgridMarket {
-  address: string
-  name: string
+  address: string;
+  name: string;
 }
 
-const { data: testgridMarkets, pending: loadingTestgridMarkets } = useAPI('/api/markets', {
-  default: () => [] as TestgridMarket[],
+// Use the specific interface for the API call
+const { data: testgridMarkets } = useAPI('/api/markets', {
+  default: () => [] as TestgridMarket[], 
 })
 const { params } = useRoute()
 const { nosana } = useSDK()
@@ -263,7 +272,6 @@ const market = ref<Market | null>(null)
 const marketId = ref<string>(String(params.id))
 const loading = ref<boolean>(false)
 
-// Add stats API call
 const { data: stats, pending: loadingStats } = useAPI('/api/stats')
 
 const page = ref<number>(1)
@@ -280,40 +288,16 @@ const jobsUrl = computed(() => {
   const stateStr = state.value !== null ? `&state=${jobStateMapping[state.value]}` : ''
   return `/api/jobs?limit=${limit.value}&offset=${(page.value - 1) * limit.value}${stateStr}&market=${marketId.value}`
 })
-const { data: jobs, pending: loadingJobs } = useAPI(jobsUrl, { watch: [jobsUrl] })
+interface JobInfo { address: string; usdRewardPerHour?: number | null; timeStart?: number; timeEnd?: number; timeout?: number; state?: number | string; node?: string; }
+interface JobsApiResponse { jobs: JobInfo[]; totalJobs: number; }
+const { data: jobs, pending: loadingJobs } = useAPI(jobsUrl, {
+  watch: [jobsUrl],
+  default: () => ({ jobs: [], totalJobs: 0 }) as JobsApiResponse
+})
 
 watch(jobsUrl, () => {
-  jobs.value = null
-})
-
-const runningNodesUrl = computed(() => `/api/jobs/running-nodes?market=${marketId.value}`)
-const {
-  data: runningNodesData,
-  pending: loadingRunningNodes
-} = useAPI(runningNodesUrl, {
-  watch: [runningNodesUrl],
-  transform: (data: any) => (data || []) as string[],
-  default: () => [] as string[],
-  immediate: true,
-  lazy: true
-})
-
-const nodesWithAccessUrl = computed(() => `/api/nodes/with-access?marketAddress=${marketId.value}`)
-const {
-  data: nodesWithAccessData,
-  pending: loadingNodesWithAccess
-} = useAPI(nodesWithAccessUrl, {
-  watch: [nodesWithAccessUrl],
-  transform: (data: any) => (data || []) as string[],
-  default: () => [] as string[],
-  immediate: true,
-  lazy: true
-})
-
-const nodesWithAccess = computed(() => nodesWithAccessData.value || [])
-const runningNodes = computed(() => {
-  // Remove duplicates from running nodes array and ensure string type
-  return [...new Set(runningNodesData.value?.map(node => String(node)) || [])]
+  // Resetting jobs data might be needed depending on UX requirements
+  // jobs.value = null;
 })
 
 const getMarket = async () => {
@@ -321,6 +305,7 @@ const getMarket = async () => {
     loading.value = true
     market.value = await nosana.value.jobs.getMarket(marketId.value)
   } catch (e) {
+    console.error("Error fetching market from SDK:", e)
     market.value = null
   }
   loading.value = false
@@ -335,6 +320,7 @@ const showAccessNodes = ref(false)
 const toggleRunningNodes = () => {
   showRunningNodes.value = !showRunningNodes.value
   if (showRunningNodes.value) {
+    showAllNodes.value = false
     showQueuedNodes.value = false
     showAccessNodes.value = false
   }
@@ -343,6 +329,7 @@ const toggleRunningNodes = () => {
 const toggleQueuedNodes = () => {
   showQueuedNodes.value = !showQueuedNodes.value
   if (showQueuedNodes.value) {
+    showAllNodes.value = false
     showRunningNodes.value = false
     showAccessNodes.value = false
   }
@@ -351,6 +338,7 @@ const toggleQueuedNodes = () => {
 const toggleAccessNodes = () => {
   showAccessNodes.value = !showAccessNodes.value
   if (showAccessNodes.value) {
+    showAllNodes.value = false
     showRunningNodes.value = false
     showQueuedNodes.value = false
   }
@@ -437,6 +425,38 @@ const toggleAllNodes = () => {
     showAccessNodes.value = false
   }
 }
+
+const runningNodesUrl = computed(() => `/api/jobs/running-nodes?market=${marketId.value}`)
+const {
+  data: runningNodesData,
+  pending: loadingRunningNodes
+} = useAPI(runningNodesUrl, {
+  watch: [runningNodesUrl],
+  default: () => [] as string[],
+  immediate: true,
+  lazy: true
+})
+
+const nodesWithAccessUrl = computed(() => `/api/nodes/with-access?marketAddress=${marketId.value}`)
+const {
+  data: nodesWithAccessData,
+  pending: loadingNodesWithAccess
+} = useAPI(nodesWithAccessUrl, {
+  watch: [nodesWithAccessUrl],
+  default: () => [] as string[],
+  immediate: true,
+  lazy: true
+})
+
+const nodesWithAccess = computed(() => nodesWithAccessData.value || [])
+const runningNodes = computed(() => {
+  // Ensure map callback has type
+  return [...new Set(runningNodesData.value?.map((node: string) => String(node)) || [])]
+})
+
+onMounted(() => {
+  getMarket(); // Fetch market data via SDK on mount
+})
 </script>
 
 <style lang="scss" scoped>

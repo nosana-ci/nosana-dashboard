@@ -2343,4 +2343,12 @@ html.dark-mode .github-icon {
 .field > .columns.is-mobile > .column.is-3 {
   width: 33.3333%; /* Equivalent to is-4 */
 }
+
+.dark-mode .gpu-logo {
+  // filter: invert(1); <- Removed this line
+}
+
+.warning-icon {
+  filter: invert(73%) sepia(45%) saturate(5600%) hue-rotate(359deg) brightness(101%) contrast(106%);
+}
 </style> 

@@ -61,8 +61,15 @@
   <tr>
     <td>Price</td>
     <td>
-      {{ formattedPrice }}
-      <span v-if="nosPriceUsd">(${{ calculatedUsdPrice }})</span>
+      <JobPrice 
+        :job="{
+          usdRewardPerHour,
+          timeStart,
+          timeEnd,
+          timeout,
+          state: state ?? (isCompleted ? 2 : timeStart ? 1 : 0)
+        }"
+      />
     </td>
   </tr>
   <tr>
@@ -93,18 +100,21 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { PublicKey } from "@solana/web3.js";
+import useJobPrice from "~/composables/jobs/useJobPrice";
+import JobPrice from "~/components/Job/Price.vue";
 
 const props = defineProps<{
   address: string;
   node: string;
   project: string;
   market: string;
-  price: number;
+  usdRewardPerHour: number;
   timeStart?: number;
   timeEnd?: number;
-  timeout?: number;
-  jobDefinition?: any;
+  timeout: number;
+  jobDefinition: any;
   isCompleted?: boolean;
+  state: number | string;
 }>();
 
 // Format duration (seconds) to readable format
@@ -116,32 +126,8 @@ const formatDuration = (seconds: number) => {
   return `${hours}h ${minutes}m ${remainingSeconds}s`;
 };
 
-// Format price
-const formattedPrice = computed(() => {
-  const duration = getDuration();
-  return ((props.price / 1e6) * duration).toFixed(6) + " NOS";
-});
-
 // Get NOS price from API
 const { data: stats } = useAPI("/api/stats");
-const nosPriceUsd = computed(() => stats.value?.price || null);
-
-// Calculate USD price
-const calculatedUsdPrice = computed(() => {
-  if (!nosPriceUsd.value) return null;
-  const duration = getDuration();
-  return (((props.price / 1e6) * duration) * nosPriceUsd.value).toFixed(3);
-});
-
-// Get duration in seconds
-const getDuration = () => {
-  if (props.timeEnd && props.timeStart) {
-    return props.timeEnd - props.timeStart;
-  } else if (props.timeStart) {
-    return Math.floor(Date.now() / 1000) - props.timeStart;
-  }
-  return 1; // Default to 1 if no duration available
-};
 
 // Format time started
 const timeStartFormatted = computed(() => {

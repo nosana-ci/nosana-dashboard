@@ -106,40 +106,18 @@
               <span v-else> - </span>
             </td>
             <td v-if="!small" class="is-hidden-touch">
-              <span v-if="job.state === 1">
-                <!-- Running job - show hourly rate -->
-                <span v-if="nosPrice">
-                  ${{ ((getMarketPrice(job.market.toString()) / 1e6) * 3600 * nosPrice * (select || title === 'Jobs Posted' ? 1.1 : 1)).toFixed(2) }} / h
-                </span>
-                <span v-else>
-                  {{ ((getMarketPrice(job.market.toString()) / 1e6) * (select || title === 'Jobs Posted' ? 1.1 : 1)).toFixed(6) }}
-                  NOS/s
-                </span>
+              <!-- If job is Running (1) or Queued (0), show CURRENT market price -->
+              <span v-if="job.state === 1 || job.state === 0">
+                <CurrentMarketPrice 
+                  :marketAddressOrData="job.market.toString()" 
+                  :statsData="stats"
+                  :decimalPlaces="3" />
               </span>
+              <!-- If job is Completed (2) or Stopped (3), show HISTORICAL job price -->
               <span v-else>
-                <!-- Completed/Stopped job - show final price -->
-                <span v-if="job.timeEnd && job.timeStart">
-                  <span v-if="job.usdRewardPerHour != null">
-                    ${{ (job.usdRewardPerHour * (Math.min(job.timeEnd - job.timeStart, job.timeout ? job.timeout : 7200) / 3600)).toFixed(2) }}
-                  </span>
-                  <span v-else-if="nosPrice">
-                    ${{ ((getMarketPrice(job.market.toString()) / 1e6) * Math.min(job.timeEnd - job.timeStart, job.timeout ? job.timeout : 7200) * nosPrice * (select || title === 'Jobs Posted' ? 1.1 : 1)).toFixed(2) }}
-                  </span>
-                  <span v-else>
-                    {{ ((getMarketPrice(job.market.toString()) / 1e6) * Math.min(job.timeEnd - job.timeStart, job.timeout ? job.timeout : 7200) * (select || title === 'Jobs Posted' ? 1.1 : 1)).toFixed(6) }}
-                    NOS
-                  </span>
-                </span>
-                <span v-else>
-                  <!-- Queued job - show hourly rate -->
-                  <span v-if="nosPrice">
-                    ${{ ((getMarketPrice(job.market.toString()) / 1e6) * 3600 * nosPrice * (select || title === 'Jobs Posted' ? 1.1 : 1)).toFixed(2) }} / h
-                  </span>
-                  <span v-else>
-                    {{ ((getMarketPrice(job.market.toString()) / 1e6) * (select || title === 'Jobs Posted' ? 1.1 : 1)).toFixed(6) }}
-                    NOS/s
-                  </span>
-                </span>
+                <JobPrice 
+                  :job="job" 
+                  :options="{ showPerHour: false, decimalPlaces: 3 }" />
               </span>
             </td>
             <td v-if="!small" class="is-hidden-touch">
@@ -177,18 +155,21 @@ import type { Job } from '@nosana/sdk';
 import { UseTimeAgo } from '@vueuse/components';
 import type { PropType } from 'vue';
 import JobStatus from "~/components/Job/Status.vue";
+import JobPrice from "~/components/Job/Price.vue";
+import CurrentMarketPrice from "~/components/Market/CurrentPrice.vue";
+import useJobPrice from "~/composables/jobs/useJobPrice";
+
+// Fetch stats data needed for CurrentMarketPrice
+const { data: stats, pending: loadingStats } = useAPI('/api/stats');
 
 // Extended job type to include additional properties
 interface ExtendedJob extends Job {
   address: string;
-  usdRewardPerHour?: number;
+  usdRewardPerHour: number;
   jobStatus?: string;
 }
 
 const { data: testgridMarkets, pending: loadingTestgridMarkets } = await useAPI('/api/markets', { default: () => [] });
-
-const { data: stats, pending: loadingStats } = await useAPI('/api/stats');
-const nosPrice = computed(() => stats.value?.price);
 
 const { markets, getMarkets, loadingMarkets } = useMarkets();
 if (!markets.value) {

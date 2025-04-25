@@ -95,22 +95,11 @@
               </td>
               <td class="py-3">
                 <span v-if="loadingStats">...</span>
-                <span v-else-if="stats && stats.price">
-                  <template v-if="select">
-                    ${{ ((stats.price * (parseInt(String(market.jobPrice)) / 1e6)) * 3600 * 1.1).toFixed(2) }}/h
-                  </template>
-                  <template v-else>
-                    {{ `${((parseInt(String(market.jobPrice)) / 1e6) * 3600 * 1.1).toFixed(3)} NOS/h` }}
-                    {{ `($${((stats.price * (parseInt(String(market.jobPrice)) / 1e6)) * 3600 * 1.1).toFixed(2)}/h)` }}
-                  </template>
-                </span>
                 <span v-else>
-                  <template v-if="select">
-                    Price unavailable
-                  </template>
-                  <template v-else>
-                    {{ `${((parseInt(String(market.jobPrice)) / 1e6) * 3600 * 1.1).toFixed(3)} NOS/h` }}
-                  </template>
+                  <CurrentMarketPrice 
+                    :marketAddressOrData="market" 
+                    :statsData="stats"
+                    :decimalPlaces="3" />
                 </span>
               </td>
               <td class="py-3">
@@ -121,8 +110,8 @@
                       {{ market.queue.length }} /
                       <span v-if="runningJobs">
                         <span>
-                          {{ market.queue.length + (runningJobs[market.address] ?
-                            runningJobs[market.address].running : 0) }}
+                          {{ market.queue.length + (runningJobs[market.address.toString()] ?
+                            runningJobs[market.address.toString()].running : 0) }}
                         </span>
                       </span>
                       <span v-else>
@@ -131,8 +120,8 @@
                     </span>
                     <span>
                       hosts</span>
-                    <span><progress class="is-pulled-right progress is-secondary" :value="market.queue.length" :max="market.queue.length + (runningJobs[market.address] ?
-                      runningJobs[market.address].running : 0)"></progress></span>
+                    <span><progress class="is-pulled-right progress is-secondary" :value="market.queue.length" :max="market.queue.length + (runningJobs[market.address.toString()] ?
+                      runningJobs[market.address.toString()].running : 0)"></progress></span>
                   </template>
                 </span>
                 <span v-else>
@@ -140,15 +129,15 @@
                   <span v-else>
                     0 /
                     <span v-if="runningJobs">
-                      {{ (runningJobs[market.address] ? runningJobs[market.address].running : 0) }}
+                      {{ (runningJobs[market.address.toString()] ? runningJobs[market.address.toString()].running : 0) }}
                     </span>
                     <span v-else>
                       ?
                     </span>
                     <span>
                       hosts</span>
-                    <span><progress class="is-pulled-right progress is-secondary" :value="0" :max="(runningJobs[market.address] ?
-                      runningJobs[market.address].running : 0)"></progress></span>
+                    <span><progress class="is-pulled-right progress is-secondary" :value="0" :max="(runningJobs[market.address.toString()] ?
+                      runningJobs[market.address.toString()].running : 0)"></progress></span>
                   </span>
                   <br>
                   <small v-if="market.queueType === 0">{{ market.queue.length }} deployments queued</small>
@@ -168,6 +157,7 @@
 <script setup lang="ts">
 import { type Market } from '@nosana/sdk';
 import type { PropType } from 'vue';
+import CurrentMarketPrice from "~/components/Market/CurrentPrice.vue";
 
 //
 // Hardcoded VRAM capacities for certain GPU types.
@@ -299,7 +289,7 @@ const paginatedMarkets = computed(() => {
   return filteredMarkets.value.slice((page.value - 1) * perPage.value, page.value * perPage.value);
 });
 
-// Helper to get hourly price for a market
+// Helper to get hourly price for sorting (uses stats.price, doesn't need 10% fee for sorting)
 const getMarketHourlyPrice = (market: Market) => {
   if (!stats.value?.price) return Number.MAX_VALUE;
   return (stats.value.price * (parseInt(String(market.jobPrice)) / 1e6)) * 3600;
@@ -307,11 +297,12 @@ const getMarketHourlyPrice = (market: Market) => {
 
 // Helper to check if market has available GPUs
 const hasAvailableGPUs = (market: Market) => {
-  if (market.queueType !== 1) return false;
-  if (loadingRunningJobs.value) return false;
+  if (market.queueType !== 1) return false; // Only relevant for FIFO queues
+  if (loadingRunningJobs.value || !runningJobs.value) return false; // Need running jobs data
   
-  const running = runningJobs.value?.[market.address]?.running || 0;
-  return market.queue.length > 0 && running > 0;
+  const running = runningJobs.value[market.address.toString()]?.running || 0;
+  // Market has available hosts if there are hosts in the queue OR running jobs
+  return market.queue.length > 0 || running > 0;
 };
 
 // Find the best market automatically when markets or job definition changes

@@ -16,12 +16,13 @@
         :node="job.node.toString()"
         :project="job.project.toString()"
         :market="job.market.toString()"
-        :price="job.price"
+        :usdRewardPerHour="job.usdRewardPerHour"
         :timeStart="job.timeStart"
         :timeEnd="job.timeEnd"
         :timeout="job.timeout"
         :jobDefinition="job.jobDefinition"
         :isCompleted="job.isCompleted"
+        :state="job.state"
       />
       <HostSpecifications
         v-if="
