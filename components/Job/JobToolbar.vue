@@ -26,6 +26,17 @@
           </button>
         </div>
       </template>
+      <template v-if="isJobPoster && job.state === 0">
+        <div class="mr-4">
+          <button
+            @click="stopJob"
+            :class="{ 'is-loading': loading }"
+            class="button is-warning"
+          >
+            Delist Job
+          </button>
+        </div>
+      </template>
     </div>
     <div class="is-flex is-align-items-center">
       <div class="mr-4">
@@ -90,9 +101,12 @@ async function stopJob() {
 
   try {
     await job.stopJob();
-    toast.success("Job stopped successfully.");
   } catch (error) {
-    toast.error("Failed to stop job.");
+    const message = error instanceof Error ? error.message : String(error);
+    if (!message.includes('Job is already COMPLETED') && !message.includes('Job is already STOPPED')) {
+       toast.error(`Failed to initiate stop/delist: ${message}`); 
+    }
+    console.error("Error calling job.stopJob():", error);
   } finally {
     loading.value = false;
   }

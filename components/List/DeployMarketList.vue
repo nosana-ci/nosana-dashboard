@@ -32,22 +32,11 @@
               </td>
               <td class="py-3">
                 <span v-if="loadingStats">...</span>
-                <span v-else-if="stats?.price">
-                  <template v-if="select">
-                    ${{ ((stats.price * (parseInt(String(market.jobPrice)) / 1e6)) * 3600 * 1.1).toFixed(2) }}/h
-                  </template>
-                  <template v-else>
-                    {{ `${((parseInt(String(market.jobPrice)) / 1e6) * 3600 * 1.1).toFixed(3)} NOS/h` }}
-                    {{ `($${((stats.price * (parseInt(String(market.jobPrice)) / 1e6)) * 3600 * 1.1).toFixed(2)}/h)` }}
-                  </template>
-                </span>
                 <span v-else>
-                  <template v-if="select">
-                    Price unavailable
-                  </template>
-                  <template v-else>
-                    {{ `${((parseInt(String(market.jobPrice)) / 1e6) * 3600 * 1.1).toFixed(3)} NOS/h` }}
-                  </template>
+                  <CurrentMarketPrice
+                    :marketAddressOrData="market"
+                    :statsData="stats"
+                    :decimalPlaces="3" />
                 </span>
               </td>
               <td class="py-3">
@@ -88,6 +77,7 @@
 
 <script setup lang="ts">
 import { type Market } from '@nosana/sdk';
+import CurrentMarketPrice from "~/components/Market/CurrentPrice.vue";
 
 const { data: runningJobs, pending: loadingRunningJobs } = await useAPI('/api/jobs/running');
 const { data: stats, pending: loadingStats } = await useAPI('/api/stats');
@@ -100,6 +90,7 @@ interface MarketInfo {
   type?: string;
   client?: boolean;
   lowest_vram?: number;
+  usd_reward_per_hour?: number;
 }
 
 /**
@@ -212,7 +203,7 @@ const filteredMarkets = computed(() => {
   });
 });
 
-// Helper to get hourly price for a market
+// Helper to get hourly price for sorting (uses stats.price, doesn't need 10% fee for sorting)
 const getMarketHourlyPrice = (market: Market) => {
   if (!stats.value?.price) return Number.MAX_VALUE;
   return (stats.value.price * (parseInt(String(market.jobPrice)) / 1e6)) * 3600;
@@ -517,7 +508,7 @@ td {
 }
 
 .dark-mode .gpu-logo {
-  filter: invert(1);
+  // filter: invert(1);  <- Removed this line
 }
 
 .warning-icon {

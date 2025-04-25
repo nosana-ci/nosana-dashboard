@@ -13,7 +13,7 @@ export const useMyAsyncData = (
         return await callable();
       } catch (error: any) {
         console.error(error);
-        if (!opts?.disableToastOnError) {
+        if (opts?.disableToastOnError === false) {
           toast.error(error.toString());
         }
         throw error;

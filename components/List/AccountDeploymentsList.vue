@@ -36,11 +36,11 @@
               <tr v-if="loadingJobs || loadingNodeJobs">
                 <td colspan="7" class="has-text-centered loading-cell">Loading deployments...</td>
               </tr>
-              <tr v-else-if="(!postedJobs || !postedJobs.jobs || postedJobs.jobs.length === 0) && (!nodeJobs || !nodeJobs.jobs || nodeJobs.jobs.length === 0)">
+              <tr v-else-if="displayedJobs.length === 0">
                 <td colspan="7" class="has-text-centered">No deployments found</td>
               </tr>
               <template v-else>
-                <tr v-for="job in combinedJobs" :key="job.address" class="is-clickable" @click="navigateToJob(job.address)">
+                <tr v-for="job in displayedJobs" :key="job.address" class="is-clickable" @click="navigateToJob(job.address)">
                   <td>
                     <div class="is-flex is-align-items-center">
                       <img src="@/assets/img/icons/nvidia.svg" alt="Nvidia" class="mr-2" style="width: 20px; height: 20px;">
@@ -88,7 +88,7 @@
                     <span v-else>-</span>
                   </td>
                   <td class="is-hidden-touch">
-                    {{ formatPrice(job) }}
+                    <JobPrice :job="job" :options="{ showPerHour: job.state === 1 || (!job.timeStart && !job.timeEnd) }" />
                   </td>
                   <td>
                     <div class="tag is-outlined" :class="{
@@ -135,6 +135,8 @@ import { useWallet } from 'solana-wallets-vue';
 import PlusSymbolIcon from '@/assets/img/icons/plus_symbol.svg?component';
 import { useTemplates } from '~/composables/useTemplates';
 import { useMarkets } from '~/composables/useMarkets';
+import JobPrice from "~/components/Job/Price.vue";
+import { computed } from 'vue';
 
 const router = useRouter();
 const { publicKey: walletPublicKey } = useWallet();
@@ -204,10 +206,18 @@ const combinedJobs = computed(() => {
   );
 });
 
+// Create a new computed property for the jobs actually displayed in the table
+const displayedJobs = computed(() => {
+  // Take the combined & deduplicated jobs and apply the itemsPerPage limit
+  return combinedJobs.value.slice(0, props.itemsPerPage);
+});
+
 const totalJobs = computed(() => {
   const postedTotal = postedJobs.value?.totalJobs || 0;
   const nodeTotal = nodeJobs.value?.totalJobs || 0;
-  return Math.max(postedTotal, nodeTotal);
+  // This calculation remains an approximation for pagination controls (Previous/Next enabling)
+  // A more accurate total would require a dedicated API endpoint or fetching all jobs.
+  return Math.max(postedTotal, nodeTotal); 
 });
 
 // Emit total jobs count when it changes
@@ -275,61 +285,11 @@ const formatDuration = (seconds: number) => {
 };
 
 const { data: testgridMarkets, pending: loadingTestgridMarkets } = useAPI('/api/markets', { default: () => [] });
-const { data: stats, pending: loadingStats } = useAPI('/api/stats');
-const nosPrice = computed(() => stats.value?.price);
 
 const { markets, getMarkets, loadingMarkets } = useMarkets();
 if (!markets.value) {
   getMarkets();
 }
-
-// Helper function to get market price
-const getMarketPrice = (marketAddress: string) => {
-  if (!markets.value) return 0;
-  const market = markets.value.find(m => m.address.toString() === marketAddress);
-  return market?.jobPrice || 0;
-};
-
-const formatPrice = (job: any) => {
-  // Running job - show hourly rate
-  if (job.state === 1) {
-    if (nosPrice.value) {
-      return `$${((getMarketPrice(job.market.toString()) / 1e6) * 3600 * nosPrice.value * 1.1).toFixed(2)}/h`;
-    }
-    return `${((getMarketPrice(job.market.toString()) / 1e6) * 1.1).toFixed(6)} NOS/s`;
-
-  // Completed or Stopped job - show final price
-  } else if (job.timeEnd && job.timeStart) {
-    const usedTime = Math.min(job.timeEnd - job.timeStart, job.timeout || 7200); // in seconds
-    const usedHours = usedTime / 3600;
-
-    // If usdRewardPerHour is provided, multiply by used time. Otherwise, fall back.
-    if (job.usdRewardPerHour != null) {
-      return `$${(job.usdRewardPerHour * usedHours).toFixed(2)}`;
-    } else {
-      if (nosPrice.value) {
-        return `$${(
-          (getMarketPrice(job.market.toString()) / 1e6) *
-          usedTime *
-          nosPrice.value *
-          1.1
-        ).toFixed(2)}`;
-      }
-      return `${(
-        (getMarketPrice(job.market.toString()) / 1e6) *
-        usedTime *
-        1.1
-      ).toFixed(6)} NOS`;
-    }
-
-  // Queued job - show hourly rate
-  } else {
-    if (nosPrice.value) {
-      return `$${((getMarketPrice(job.market.toString()) / 1e6) * 3600 * nosPrice.value * 1.1).toFixed(2)}/h`;
-    }
-    return `${((getMarketPrice(job.market.toString()) / 1e6) * 1.1).toFixed(6)} NOS/s`;
-  }
-};
 
 const getStateButtonClass = (state: number | null) => {
   if (state === currentState.value) {
