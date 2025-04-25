@@ -240,7 +240,7 @@
         <div class="box has-background-white" style="border: none;">
           <div v-if="gpuTab === 'simple'">
             <div class="flex">
-              <div class="field px-1 mt-5 mb-5">
+              <!-- <div class="field px-1 mt-5 mb-5">
                 <div class="control">
                   <div class="checkboxes is-flex">
                     <button 
@@ -266,7 +266,7 @@
                     </button>
                   </div>
                 </div>
-              </div>
+              </div> -->
               <div v-if="loadingMarkets">
                 Loading GPUs...
               </div>
@@ -327,7 +327,7 @@
                 </div>
                 
                 <!-- Market Type Selection - Replace dropdown with buttons matching simple tab -->
-                <div class="field">
+                <!-- <div class="field">
                   <label class="label has-text-weight-bold has-text-black">Type</label>
                   <div class="control">
                     <div class="checkboxes is-flex">
@@ -354,7 +354,7 @@
                       </button>
                     </div>
                   </div>
-                </div>
+                </div> -->
                 
                 <!-- Dynamic Filters -->
                 <template v-if="gpuFilters">
