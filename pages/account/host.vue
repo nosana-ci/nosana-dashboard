@@ -605,12 +605,20 @@ interface JobsResponse {
   jobs: any[];
 }
 
-const { data: jobs, pending: loadingJobs, refresh: refreshJobs } = useAPI(
-  () => jobsUrl.value || '', // Reverted to original function
+const initialJobsLoadInitiated = ref(false);
+const { data: jobs, pending: loadingJobs, refresh: refreshJobs, error: jobsError } = useAPI(
+  () => {
+    const url = jobsUrl.value;
+    if (!url) {
+      return '';
+    }
+    initialJobsLoadInitiated.value = true;
+    return url;
+  },
   { 
     watch: [jobsUrl], 
     default: () => ({ totalJobs: 0, jobs: [] }),
-    immediate: false // Add immediate: false
+    immediate: false
   }
 );
 
@@ -691,6 +699,17 @@ watch([publicKey, selectedPeriod], ([newPublicKey, newPeriod]) => {
   }
 }, { immediate: true });
 
+// Modify the publicKey watcher to check the flag
+watch(publicKey, (newPublicKey) => {
+  if (newPublicKey && !initialJobsLoadInitiated.value) {
+    console.log('PublicKey available and initial load not started, refreshing jobs...');
+    nextTick(() => {
+      refreshJobs();
+    });
+  }
+}, { immediate: true });
+
+// Modify the onMounted to check the flag
 onMounted(() => {
   checkBalances();
   const style = document.createElement('style');
@@ -702,6 +721,12 @@ onMounted(() => {
     }
   `;
   document.head.appendChild(style);
+
+  if (publicKey.value && !initialJobsLoadInitiated.value) {
+    nextTick(() => {
+      refreshJobs();
+    });
+  }
 });
 </script>
 <style scoped>

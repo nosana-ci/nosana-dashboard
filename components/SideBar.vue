@@ -272,7 +272,6 @@ watch([connected, publicKey], async () => {
       const { data: node } = await useAPI(`/api/nodes/${publicKey.value.toString()}/specs`, {
         disableToastOnError: true,
       });
-      console.log('node', node);
       watchEffect(() => {
         isHost.value = !!node.value;
       });
