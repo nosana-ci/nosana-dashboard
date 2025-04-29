@@ -173,7 +173,7 @@
 import { useWallet } from "solana-wallets-vue";
 import { useStake } from "~/composables/useStake";
 import { useAPI } from "~/composables/useAPI";
-import { computed, ref, onMounted, watch } from 'vue';
+import { computed, ref, onMounted, watch, nextTick } from 'vue';
 import { Bar } from 'vue-chartjs';
 import GeneralInfo from "~/components/Info/GeneralInfo.vue";
 import {
@@ -239,10 +239,10 @@ interface MonthlyResult {
 // API call for earnings history
 const selectedPeriod = ref<'daily' | '3' | '3000'>('3000');
 const earningsHistoryEndpoint = computed(() => {
-  if (!publicKey.value) return null;
-
+  if (!publicKey.value) return undefined;
+  
   const today = new Date();
-  const minStartDate = new Date('2025-01-14'); // Define the minimum start date
+  const minStartDate = new Date('2025-01-14');
   let calculatedStartDate: Date;
   let groupBy: 'day' | 'month' = 'month';
 
@@ -260,10 +260,8 @@ const earningsHistoryEndpoint = computed(() => {
     calculatedStartDate = new Date(today.getFullYear(), today.getMonth() - monthsAgo + 1, 1);
   }
 
-  // Ensure the start date is not earlier than the minimum date
   const finalStartDate = new Date(Math.max(calculatedStartDate.getTime(), minStartDate.getTime()));
 
-  // Adjust endpoint and query params for earnings using the final start date
   return `/api/stats/earning-history?address=${publicKey.value.toString()}&start_date=${formatDate(finalStartDate)}&group_by=${groupBy}`;
 });
 
@@ -271,7 +269,13 @@ const {
   data: earningsHistory,
   pending: loadingEarnings,
   refresh: refreshEarningsHistory
-} = useAPI(() => earningsHistoryEndpoint.value || '', {
+} = useAPI(() => {
+  const endpoint = earningsHistoryEndpoint.value;
+  if (!endpoint) {
+    return '';
+  }
+  return endpoint;
+}, {
   default: () => ({
     nodeAddress: '',
     startDate: '',
@@ -282,8 +286,8 @@ const {
     comparison: null,
     sameDayComparison: null
   }),
-  immediate: false,
-  watch: [earningsHistoryEndpoint]
+  immediate: true,
+  watch: false
 });
 
 const loadingHistory = computed(() => loadingEarnings.value); // Main loading state for chart
@@ -678,12 +682,14 @@ const benchmarkMarketId = computed(() => {
 });
 
 // Add watcher for publicKey to trigger initial fetch
-watch(publicKey, (newPublicKey) => {
-  if (newPublicKey) {
-    refreshEarningsHistory();
-    refreshJobs(); 
+watch([publicKey, selectedPeriod], ([newPublicKey, newPeriod]) => {
+  if (newPublicKey && earningsHistoryEndpoint.value) {
+    // Add a small delay to ensure reactive dependencies are settled
+    nextTick(() => {
+      refreshEarningsHistory();
+    });
   }
-}, { immediate: true }); // Run immediately to catch case where key is already available
+}, { immediate: true });
 
 onMounted(() => {
   checkBalances();
