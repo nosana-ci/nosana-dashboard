@@ -269,10 +269,9 @@ const earningsHistoryEndpoint = computed(() => {
 
 const {
   data: earningsHistory,
-  pending: loadingEarnings, // Use a distinct loading state
+  pending: loadingEarnings,
   refresh: refreshEarningsHistory
-} = useAPI(() => earningsHistoryEndpoint.value || '', {
-  // Adjust default structure for EarningsHistoryResponse
+} = useAPI(() => earningsHistoryEndpoint.value, {
   default: () => ({
     nodeAddress: '',
     startDate: '',
@@ -282,7 +281,9 @@ const {
     forecast: 0,
     comparison: null,
     sameDayComparison: null
-  })
+  }),
+  immediate: false,
+  watch: [earningsHistoryEndpoint]
 });
 
 const loadingHistory = computed(() => loadingEarnings.value); // Main loading state for chart
@@ -600,9 +601,13 @@ interface JobsResponse {
   jobs: any[];
 }
 
-const { data: jobs, pending: loadingJobs } = useAPI(
-  () => jobsUrl.value || '', // Ensure string is always returned
-  { watch: [jobsUrl], default: () => ({ totalJobs: 0, jobs: [] }) }
+const { data: jobs, pending: loadingJobs, refresh: refreshJobs } = useAPI(
+  () => jobsUrl.value || '', // Reverted to original function
+  { 
+    watch: [jobsUrl], 
+    default: () => ({ totalJobs: 0, jobs: [] }),
+    immediate: false // Add immediate: false
+  }
 );
 
 const totalRunJobs = computed(() => {
@@ -671,6 +676,14 @@ const benchmarkMarketId = computed(() => {
   }
   return nodeSpecs.value.marketAddress;
 });
+
+// Add watcher for publicKey to trigger initial fetch
+watch(publicKey, (newPublicKey) => {
+  if (newPublicKey) {
+    refreshEarningsHistory();
+    refreshJobs(); 
+  }
+}, { immediate: true }); // Run immediately to catch case where key is already available
 
 onMounted(() => {
   checkBalances();
