@@ -31,7 +31,7 @@ export function useWalletRedirect() {
         }
       } else {
         // If disconnected on account page, navigate to home
-        if (route.path === '/account/deployer') {
+        if (route.path === '/account/deployer' || route.path === '/account/host') {
           router.push('/');
         }
       }

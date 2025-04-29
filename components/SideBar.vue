@@ -49,6 +49,16 @@
                 My Account
               </nuxt-link>
             </li>
+            <li v-if="connected">
+              <nuxt-link
+                to="/account/host"
+                active-class="is-active"
+                class="submenu-link"
+                @click="showMenu = false"
+              >
+                Host Earnings
+              </nuxt-link>
+            </li>
             <li v-if="!connected">
               <ClientOnly>
                 <wallet-modal-provider :dark="$colorMode.value === 'dark'">
@@ -220,7 +230,7 @@ const router = useRouter();
 
 // Check if the current route is a profile page
 const isProfilePage = computed(() => {
-  return ['/account', '/stake', '/account/deployer'].includes(route.path);
+  return ['/account', '/stake', '/account/deployer', '/account/host'].includes(route.path);
 });
 
 // Check if the current route is an explorer page
@@ -247,7 +257,7 @@ watch(() => route.path, () => {
 // Navigate to account page only when connecting from sidebar
 watch(connected, (isConnected, prevConnected) => {
   if (isConnected && !prevConnected && connectingFromSidebar.value) {
-    router.push('/account');
+    router.push('/account/deployer');
     showMenu.value = false;  // Close mobile menu if open
     connectingFromSidebar.value = false;  // Reset the flag
   }

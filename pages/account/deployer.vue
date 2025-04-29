@@ -415,8 +415,6 @@ const GPU_COLORS: Record<string, string> = {
   'NVIDIA H100':      '#E3FCBF',
 };
 
-
-
 // Create a mapping of market addresses to names and group info
 const marketAddressToInfo = computed(() => {
   if (!marketsData.value) return {};
