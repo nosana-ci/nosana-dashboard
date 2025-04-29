@@ -271,7 +271,7 @@ const {
   data: earningsHistory,
   pending: loadingEarnings,
   refresh: refreshEarningsHistory
-} = useAPI(() => earningsHistoryEndpoint.value, {
+} = useAPI(() => earningsHistoryEndpoint.value || '', {
   default: () => ({
     nodeAddress: '',
     startDate: '',
