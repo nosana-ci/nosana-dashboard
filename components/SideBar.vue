@@ -49,7 +49,7 @@
                 My Account
               </nuxt-link>
             </li>
-            <li v-if="connected">
+            <li v-if="connected && isHost">
               <nuxt-link
                 to="/account/host"
                 active-class="is-active"
@@ -212,6 +212,7 @@ const showMenu = ref(false);
 const showExplorerDropdown = ref(false);
 const showProfileDropdown = ref(false);
 const connectingFromSidebar = ref(false);
+const isHost = ref(false);
 import JobBuilderIcon from "@/assets/img/icons/sidebar/job-builder.svg?component";
 import TemplateIcon from "@/assets/img/icons/sidebar/template.svg?component";
 import ExplorerIcon from "@/assets/img/icons/sidebar/explorer.svg?component";
@@ -223,6 +224,7 @@ import LeaderboardIcon from "@/assets/img/icons/sidebar/leaderboard.svg?componen
 import { useWallet, WalletModalProvider } from "solana-wallets-vue";
 import { computed, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { useAPI } from '@/composables/useAPI';
 
 const { connected, publicKey } = useWallet();
 const route = useRoute();
@@ -262,6 +264,25 @@ watch(connected, (isConnected, prevConnected) => {
     connectingFromSidebar.value = false;  // Reset the flag
   }
 });
+
+// Check if the connected wallet is a host
+watch([connected, publicKey], async () => {
+  if (connected && publicKey) {
+    try {
+      const { data: node } = await useAPI(`/api/nodes/${publicKey.value.toString()}/specs`, {
+        disableToastOnError: true,
+      });
+      console.log('node', node);
+      watchEffect(() => {
+        isHost.value = !!node.value;
+      });
+    } catch (error) {
+      isHost.value = false;
+    }
+  } else {
+    isHost.value = false;
+  }
+}, { immediate: true });
 
 const toggleExplorer = () => {
   showExplorerDropdown.value = !showExplorerDropdown.value;
