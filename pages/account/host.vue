@@ -1,5 +1,5 @@
 <template>
-  <TopBar :title="'Host'" :subtitle="'Details about your Nosana Host'">
+  <TopBar :title="'Host'" :subtitle="'Welcome to your dedicated Host Earnings and Performance page'">
   </TopBar>
 
   <div class="columns">
@@ -8,19 +8,7 @@
       <div class="columns is-multiline mb-4">
         <div class="column is-12">
           <div class="box has-text-centered" style="height: 100%;">
-            <p class="heading">Total Earnings All Time</p>
-            <p
-              class="title is-flex is-align-items-center is-justify-content-center"
-              v-if="!loadingHistory"
-            >
-              ${{ totalEarnedAllTime.toFixed(2) }}
-            </p>
-            <p class="title is-flex is-align-items-center is-justify-content-center" v-else>-</p>
-          </div>
-        </div>
-        <div class="column is-12">
-          <div class="box has-text-centered" style="height: 100%;">
-            <p class="heading">Current Month Earnings So Far</p>
+            <p class="heading">Current Month</p>
             <p class="title is-4 mb-1" v-if="!loadingHistory">
               ${{ displayedEarnedThisMonth.toFixed(2) }}
             </p>
@@ -42,7 +30,7 @@
         </div>
         <div class="column is-12">
           <div class="box has-text-centered">
-            <p class="heading">Forecasted Month End Earnings</p>
+            <p class="heading">Forecasted Monthly</p>
             <p class="title is-4 mb-1" v-if="!loadingHistory" style="height: 100%;">
               ${{ displayedForecastAmount.toFixed(2) }}
             </p>
@@ -60,6 +48,18 @@
               />
               {{ displayedPctChangeForecast.toFixed(2) }}% vs last month (total)
             </p>
+          </div>
+        </div>
+        <div class="column is-12">
+          <div class="box has-text-centered" style="height: 100%;">
+            <p class="heading">All Time</p>
+            <p
+              class="title is-flex is-align-items-center is-justify-content-center"
+              v-if="!loadingHistory"
+            >
+              ${{ totalEarnedAllTime.toFixed(2) }}
+            </p>
+            <p class="title is-flex is-align-items-center is-justify-content-center" v-else>-</p>
           </div>
         </div>
       </div>
