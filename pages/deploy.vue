@@ -1152,6 +1152,7 @@ watch(() => selectedTemplate.value, (newTemplate) => {
     // Reset market selection for proper reactivity if not a repost
     if (!isFromRepost.value) {
       selectedMarket.value = null;
+      selectedHostAddress.value = null; // Add this line
     }
   } else {
     // Reset job definition in non-repost mode
