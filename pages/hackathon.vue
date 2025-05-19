@@ -58,7 +58,7 @@
   <br>
                   <br />
                   <a
-                    href="https://docs.nosana.com/about/intro.html"
+                    href="https://docs.nosana.com/wallet/key.html#_2-nosana-cli"
                     target="_blank"
                     class="button mt-4 is-primary is-outlined"
                   >
@@ -78,7 +78,7 @@
 
                   <br />
                   <a
-                    href="https://docs.nosana.com/about/intro.html"
+                    href="https://docs.nosana.com/wallet/key.html#_3-nosana-sdk"
                     target="_blank"
                     class="button mt-4 is-primary is-outlined"
                   >
@@ -97,7 +97,7 @@
                   Use Nosana's interface with your key for intuitive configuration, monitoring, and control—no coding needed.
                   <br />
                   <a
-                    href="https://docs.nosana.com/about/intro.html"
+                    href="https://docs.nosana.com/wallet/key.html#_1-nosana-dashboard"
                     target="_blank"
                     class="button mt-4 is-primary is-outlined"
                   >
