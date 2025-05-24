@@ -440,11 +440,9 @@ interface NodeRanking {
 
 const nodeRanking: ComputedRef<NodeRanking | null> = computed(() => {
   if (rankingAPInstance?.data?.value) {
-    return (
-      rankingAPInstance.data.value.find((ranking: NodeRanking) => {
-        return ranking.node === props.address;
-      }) || null
-    );
+    if (rankingAPInstance.data.value.node === props.address) {
+      return rankingAPInstance.data.value;
+    }
   }
   return null;
 });
