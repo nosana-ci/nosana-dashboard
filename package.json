@@ -50,6 +50,7 @@
     "idb-keyval": "^6.2.1",
     "json-editor-vue": "^0.17.0",
     "marked": "^14.1.2",
+    "openai": "^4.100.0",
     "solana-wallets-vue": "^0.6.0",
     "vue-chartjs": "^5.3.0",
     "vue-countup-v3": "^1.4.1",

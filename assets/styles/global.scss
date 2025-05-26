@@ -463,8 +463,10 @@
       border-bottom: 3px solid $grey-darker;
     }
     li.is-active a {
-      border-bottom-color: $primary-invert;
+      border-bottom-color: $grey;
+      border-color: $grey;
       color: $primary-invert;
+      background-color: $black-bis;
     }
 
     a {
@@ -476,6 +478,7 @@
       &:hover {
         color: $grey-light;
         border-bottom-color: $grey;
+        background-color: $black-ter;
       }
     }
   }
