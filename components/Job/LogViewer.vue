@@ -177,7 +177,7 @@ function scrollToBottom() {
   }
 }
 
-// // Auto-scroll to bottom when new logs arrive or progress bars update
+// Auto-scroll to bottom when new logs arrive or progress bars update
 watch(
   [
     () => logs.length,
@@ -199,6 +199,11 @@ function handleScroll() {
   // If we're near the bottom (within 50px), enable auto-scroll
   shouldAutoScroll.value = scrollHeight - (scrollTop + clientHeight) < 50;
 }
+
+// Expose scrollToBottom for parent components
+defineExpose({
+  scrollToBottom
+});
 </script>
 
 <style lang="scss" scoped>
@@ -208,10 +213,9 @@ function handleScroll() {
   color: #c9d1d9;
   padding: 1rem;
   border-radius: 4px;
-  height: 100%;
+  height: 30vh; // Doubled height for condensed view
   overflow-y: auto;
-  min-height: 300px;
-  max-height: 600px;
+  min-height: 200px;
 }
 
 .log-content {

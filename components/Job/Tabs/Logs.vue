@@ -1,5 +1,5 @@
 <template>
-  <div class="p-1 py-4 has-background-white-bis">
+  <div class="p-1 py-4 has-background-white-bis logs-container" ref="logsContainer">
     <template v-if="job.isRunning">
       <JobLogViewer
         v-if="isJobPoster"
@@ -7,6 +7,7 @@
         :isConnecting="isConnecting"
         :progressBars="progressBars"
         :resourceProgressBars="resourceProgressBars"
+        ref="logViewer"
       />
       <div v-else>Please connect your wallet to view logs</div>
     </template>
@@ -27,6 +28,7 @@
 </template>
 
 <script setup lang="ts">
+import { ref, watch, nextTick } from 'vue';
 import JobLogViewer from "../LogViewer.vue";
 import JobResult from "../Result.vue";
 import type { UseJob } from "~/composables/jobs/useJob";
@@ -51,8 +53,31 @@ const {
   progressBars,
   resourceProgressBars,
 } = defineProps<Props>();
+
+const logsContainer = ref<HTMLElement | null>(null);
+const logViewer = ref<any>(null);
+
+// Auto-scroll when logs tab becomes visible
+const scrollToBottomOnOpen = () => {
+  nextTick(() => {
+    if (logViewer.value && logViewer.value.scrollToBottom) {
+      logViewer.value.scrollToBottom();
+    }
+  });
+};
+
+// Expose the scroll function for parent component
+defineExpose({
+  scrollToBottomOnOpen
+});
 </script>
+
 <style lang="scss" scoped>
+.logs-container {
+  // Remove max-height and overflow to prevent double scrollbar
+  // The LogViewer component will handle its own scrolling
+}
+
 .progress.is-primary::-webkit-progress-bar {
   background-color: #dbdbdb;
 }

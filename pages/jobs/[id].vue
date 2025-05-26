@@ -7,7 +7,7 @@
       v-model="showSettingsModal"
     />
 
-    <div class="box">
+    <div>
       <Job
         v-if="job"
         :job="job"

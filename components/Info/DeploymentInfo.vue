@@ -1,11 +1,6 @@
 <template>
   <!-- Deployment Info Section -->
   <tr>
-    <td colspan="2" class="has-background-light">
-      <h4 class="title is-5">Deployment Info</h4>
-    </td>
-  </tr>
-  <tr>
     <td>Solana address</td>
     <td>
       <a

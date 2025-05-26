@@ -3,35 +3,12 @@
     class="is-flex is-align-items-center is-justify-content-space-between mb-4"
   >
     <div class="is-flex is-align-items-center">
-      <template v-if="isJobPoster && job.isRunning">
-        <div class="mr-4">
-          <EndpointsModal v-if="endpoints.size" :endpoints="endpoints" />
-        </div>
-        <div class="mr-4">
-          <button
-            @click="stopJob"
-            :class="{ 'is-loading': loading }"
-            class="button is-danger"
-          >
-            Stop Deployment
-          </button>
-        </div>
-        <div class="mr-4">
-          <button
-            @click="openExtendModal"
-            :class="{ 'is-loading': loadingExtend }"
-            class="button is-warning"
-          >
-            Extend Deployment
-          </button>
-        </div>
-      </template>
       <template v-if="isJobPoster && job.state === 0">
         <div class="mr-4">
           <button
             @click="stopJob"
             :class="{ 'is-loading': loading }"
-            class="button is-warning"
+            class="button is-outlined"
           >
             Delist Job
           </button>
@@ -39,12 +16,32 @@
       </template>
     </div>
     <div class="is-flex is-align-items-center">
+      <template v-if="isJobPoster && job.isRunning">
+        <div class="mr-4">
+          <button
+            @click="stopJob"
+            :class="{ 'is-loading': loading }"
+            class="button is-outlined"
+          >
+            Stop
+          </button>
+        </div>
+        <div class="mr-4">
+          <button
+            @click="openExtendModal"
+            :class="{ 'is-loading': loadingExtend }"
+            class="button is-outlined"
+          >
+            Extend
+          </button>
+        </div>
+      </template>
       <div class="mr-4">
         <button
           @click="repostJob"
-          class="button is-primary is-small is-outlined"
+          class="button is-outlined"
         >
-          Repost
+          Redeploy
         </button>
       </div>
       <JobStatus
@@ -64,7 +61,6 @@
 <script setup lang="ts">
 import { useToast } from "vue-toastification";
 
-import EndpointsModal from "~/components/Job/Modals/Endpoints.vue";
 import JobStatus from "~/components/Job/Status.vue";
 import { useNosanaWallet } from "~/composables/useNosanaWallet";
 

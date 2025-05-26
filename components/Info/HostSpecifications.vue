@@ -1,11 +1,6 @@
 <template>
   <!-- Specifications Section -->
   <tr>
-    <td colspan="2" class="has-background-light">
-      <h4 class="title is-5 mb-0">Host Specifications</h4>
-    </td>
-  </tr>
-  <tr>
     <td>GPU</td>
     <td>
       <span v-if="resolvedSpecs?.gpus?.length">
