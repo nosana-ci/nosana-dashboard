@@ -508,7 +508,7 @@ td {
 }
 
 .dark-mode .gpu-logo {
-  // filter: invert(1);  <- Removed this line
+  filter: none !important;
 }
 
 .warning-icon {

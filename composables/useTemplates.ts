@@ -27,7 +27,9 @@ export type Template = {
   stargazers_count?: number;
 }
 
-const { data: templates, pending: loadingTemplates } = useAPI('/api/jobs/templates');
+const { data: templates, pending: loadingTemplates } = useAPI('/api/jobs/templates', {
+  immediate: true
+});
 
 export const useTemplates = (): {templates: Ref<Template[]>, emptyJobDefinition: JobDefinition, loadingTemplates: Ref<boolean>} => {
   return { templates, emptyJobDefinition, loadingTemplates };
