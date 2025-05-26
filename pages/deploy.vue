@@ -13,206 +13,114 @@
         <h2 class="title py-4">1. Define your model</h2>
         <div class="nav-tabs is-flex">
           <div
-            class="nav-tabs-item p-3 px-5 mr-3"
-            :class="{ 'is-active has-background-white': navTab === 'choose' }"
-            @click="navTab = 'choose'"
+            class="nav-tabs-item p-3 px-5 mr-3 is-active has-background-white"
           >
-            Templates
-          </div>
-          <div
-            class="nav-tabs-item p-3 px-5"
-            :class="{ 'is-active has-background-white': navTab === 'builder' }"
-            @click="navTab = 'builder'"
-          >
-            Advanced Builder
+            Job Definition
           </div>
         </div>
         <div
           class="box has-background-white"
-          style="height: 600px; overflow-y: scroll; border: none;"
+          :style="{ overflowY: 'scroll', border: 'none', height: 'auto' }"
         >
-          <div v-if="navTab === 'choose'">
-            <div class="flex">
-              <div class="field is-flex category-filters">
-                <div class="field">
-                  <div class="control">
-                    <div class="select is-fullwidth">
-                      <select v-model="selectedCategory">
-                        <option :value="null">All Models</option>
-                        <option
-                          v-for="category in ALL_CATEGORIES"
-                          :key="category"
-                          :value="category"
-                        >
-                          {{ category }}
-                        </option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="field ml-4">
-                  <div class="control">
-                    <div class="select is-fullwidth">
-                      <select v-model="selectedInterfaceCategory">
-                        <option :value="null">All Interface Categories</option>
-                        <option
-                          v-for="category in INTERFACE_CATEGORIES"
-                          :key="category"
-                          :value="category"
-                        >
-                          {{ category }}
-                        </option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-                <div class="field ml-4">
-                  <div class="control has-icons-left">
-                    <input
-                      class="input"
-                      type="text"
-                      v-model="search"
-                      placeholder="Search model"
-                    />
-                    <span class="icon is-small is-left">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" fill="currentColor"/>
-                      </svg>
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="columns is-multiline mt-3">
-              <div
-                v-for="template in filteredTemplates"
-                :key="template.id"
-                class="column is-6-fullhd is-6-desktop is-6-tablet is-12-mobile"
-              >
-                <div
-                  class="box template-card has-background-white-ter"
-                  @click="selectTemplate(template)"
-                  :class="{
-                    'selected-card':
-                      selectedTemplate && selectedTemplate.id === template.id,
-                  }"
-                >
-                  <span v-if="getCategoryArray(template.category).includes('New')" class="new-badge">New</span>
-                  <div class="template-header is-fullwidth">
-                    <div class="is-flex is-justify-content-space-between">
-                      <label class="checkbox is-flex">
-                        <input 
-                          type="checkbox" 
-                          :checked="selectedTemplate?.id === template.id"
-                          style="transform: scale(1.3);" 
-                          class="green-checkbox"
-                          @click.stop="selectTemplate(template)"
-                        />
-                      </label>
-                      <div>
-                        <span
-                          v-if="template.stargazers_count"
-                          class="github-stars"
-                        >
-                          <img
-                            src="~/assets/img/icons/github.svg"
-                            class="github-icon"
-                            alt="GitHub"
-                          />
-                          <span
-                            class="has-text-warning mr-1"
-                            style="font-size: 12px"
-                            >★</span
-                          >
-                          <span class="ml-1">{{
-                            String(template.stargazers_count)
-                          }}</span>
-                        </span>
-                        <span v-else class="star-placeholder"></span>
-                      </div>
-                    </div>
-                    <div class="header-content mt-1">
-                      <div class="header-title">
-                        <h2
-                          class="is-size-4 has-text-weight-semibold mb-0 has-text-black"
-                        >
-                          {{ template.name }}
-                        </h2>
-                      </div>
-                      <div class="header-meta">
-                        <div
-                          v-if="template.icon || template.avatar_url"
-                          class="template-icon"
-                        >
-                          <img :src="template.icon || template.avatar_url" />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="template-description">
-                    <p class="has-text-grey" style="font-size: 12px !important">
-                      {{ template.description }}
+          <div>
+            <!-- START: New Template Info Box (above editor) -->
+            <div class="p-3 pb-2" style="width: 100%; display: flex;">
+              <div class="is-flex is-align-items-start" style="width: 100%;">
+                <div v-if="selectedTemplate" class="is-flex is-align-items-start">
+                  <img 
+                    v-if="selectedTemplate.icon || selectedTemplate.avatar_url"
+                    :src="selectedTemplate.icon || selectedTemplate.avatar_url"
+                    alt="Template Icon"
+                    class="mr-2" 
+                    style="height: 24px; width: 24px; border-radius: 4px; object-fit: contain; flex-shrink: 0; margin-top: 7px;"
+                  />
+                  <div>
+                    <h3 class="is-size-5 has-text-weight-semibold has-text-black mb-0">
+                      {{ selectedTemplate.name }}
+                    </h3>
+                    <p v-if="selectedTemplateImage" class="is-size-7 has-text-grey" style="line-height: 1; margin-top: 0; margin-bottom: 4px;">
+                      {{ selectedTemplateImage }}
                     </p>
-                    <div class="template-tags mt-3">
-                      <span
-                        v-for="cat in getCategoryArray(
-                          template.category
-                        ).filter((c) => !['Featured', 'New'].includes(c))"
-                        :key="cat"
-                        class="tag has-background-white"
-                      >
-                        {{ cat }}
-                      </span>
-                    </div>
+                    <button
+                        v-if="selectedTemplate && selectedTemplate.readme"
+                        class="button is-light is-small readme-button"
+                        @click="openReadmeModal(selectedTemplate.readme!)"
+                        title="View template documentation"
+                        style="margin-top: 2px;"
+                    >
+                        <span class="icon is-small">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" fill="currentColor"/>
+                          </svg>
+                        </span>
+                        <span>README</span>
+                    </button>
                   </div>
+                </div>
+                <div v-else>
+                  <h3 class="is-size-5 has-text-weight-semibold has-text-black mb-0">
+                    Custom Job Definition
+                  </h3>
+                  <p class="is-size-7 has-text-grey" style="line-height: 1; margin-top: 0;">
+                    No template selected
+                  </p>
+                </div>
+                <div class="is-flex is-align-items-start ml-3" style="margin-top: 6px;">
+                  <!-- Select Template Button -->
+                  <button
+                      class="button is-light is-small action-button mr-2" 
+                      @click="showTemplateModal = true"
+                      title="Select a template"
+                  >
+                      <span class="icon is-small">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="currentColor"/>
+                        </svg>
+                      </span>
+                      <span>Select Template</span>
+                  </button>
+                  <!-- New Collapse Button: Only shown when editor is EXPANDED -->
+                  <button
+                      v-if="!isEditorCollapsed"
+                      class="button is-outlined is-small action-button"
+                      @click="isEditorCollapsed = true"
+                      title="Collapse job definition" 
+                  >
+                      <span class="icon is-small">
+                        <img src="~/assets/img/icons/arrow-collapse.svg" alt="Collapse" style="height: 16px; width: 16px;" />
+                      </span>
+                      <span>Collapse</span>
+                  </button>
                 </div>
               </div>
             </div>
-          </div>
-          <div v-if="navTab === 'builder'">
-            <div class="columns builder-columns">
-              <div class="column" :class="{ 'is-7': showTemplateInfo, 'is-12': !showTemplateInfo }">
-                <div class="field full-height">
+            <!-- END: New Template Info Box -->
+
+            <div class="columns builder-columns" style="margin-top: 0;">
+              <div class="column is-12">
+                <div
+                  class="field full-height editor-wrapper"
+                  @click="isEditorCollapsed ? (isEditorCollapsed = false) : undefined"
+                  :class="{ 'is-clickable-to-expand': isEditorCollapsed }"
+                >
                   <div class="control full-height">
-                    <JsonEditorVue :validator="validator" :class="{ 'jse-theme-dark': $colorMode.value === 'dark' }" 
-                      v-model="jobDefinition" :mode="Mode.text" :mainMenuBar="true" :stringified="false" class="full-height-editor" />
+                    <JsonEditorVue 
+                        :validator="validator" 
+                        :class="{ 
+                          'jse-theme-dark': $colorMode.value === 'dark',
+                          'editor-collapsed': isEditorCollapsed
+                        }" 
+                        v-model="jobDefinition" 
+                        :mode="Mode.text" 
+                        :mainMenuBar="false" 
+                        :statusBar="false" 
+                        :stringified="false" 
+                        class="full-height-editor" 
+                        :style="{ height: isEditorCollapsed ? '150px' : 'auto' }" />
                   </div>
-                </div>
-              </div>
-              <div v-if="showTemplateInfo" class="column is-5">
-                <div class="box has-background-white-ter h-100">
-                  <div class="template-info">
-                    <template v-if="selectedTemplate">
-                      <div class="template-header">
-                        <div class="header-content">
-                          <div class="header-title">
-                            <h2 class="is-size-4 has-text-weight-semibold mb-0 has-text-black">
-                              {{ selectedTemplate.name }}
-                            </h2>
-                          </div>
-                          <div class="header-meta">
-                            <span v-if="selectedTemplate.stargazers_count" class="github-stars">
-                              <img src="~/assets/img/icons/github.svg" class="github-icon" alt="GitHub">
-                              <span class="has-text-warning mr-1" style="font-size: 12px;">★</span>
-                              <span class="ml-1">{{ String(selectedTemplate.stargazers_count) }}</span>
-                            </span>
-                            <span v-else class="star-placeholder"></span>
-                            <div v-if="selectedTemplate.icon || selectedTemplate.avatar_url" class="template-icon">
-                              <img :src="selectedTemplate.icon || selectedTemplate.avatar_url">
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      <div class="markdown-content">
-                        <div v-if="selectedTemplate.readme">
-                          <MarkdownFile :raw-markdown="selectedTemplate.readme" />
-                        </div>
-                        <div v-else>
-                          <p>{{ selectedTemplate.description }}</p>
-                        </div>
-                      </div>
-                    </template>
+                  <div v-if="isEditorCollapsed" class="expand-indicator">
+                    <span>Expand</span>
+                    <img src="~/assets/img/icons/arrow-expand.svg" alt="Expand" style="height: 16px; width: 16px;" />
                   </div>
                 </div>
               </div>
@@ -361,7 +269,7 @@
                   <div v-for="(filter, key) in getCurrentFilters()" 
                         :key="key" 
                         class="field"
-                        v-show="key !== 'UPLOAD_SPEED_MB' && key !== 'MARKET_TYPE' && key !== 'CUDA_DRIVER'">
+                        v-show="String(key) !== 'UPLOAD_SPEED_MB' && String(key) !== 'MARKET_TYPE' && String(key) !== 'CUDA_DRIVER'">
                     <label class="label">
                       <span class="has-text-weight-bold has-text-black">{{ getFilterLabel(String(key)) }}</span>
                       <span v-if="filter.type === 'min-max'" class="has-text-grey is-size-7 ml-2">- {{ getFilterDescription(String(key)) }} -</span>
@@ -583,6 +491,153 @@
       @refresh-balances="refreshAllBalances"
     />
     
+    <!-- README Modal -->
+    <div class="modal" :class="{ 'is-active': showReadmeModal }">
+      <div class="modal-background" @click="showReadmeModal = false"></div>
+      <div class="modal-card" style="width: 80%; max-width: 960px;">
+        <header class="modal-card-head">
+          <div class="modal-card-title is-flex is-align-items-center">
+            <img 
+              v-if="selectedTemplate?.icon || selectedTemplate?.avatar_url"
+              :src="selectedTemplate.icon || selectedTemplate.avatar_url"
+              alt="Template Icon"
+              class="mr-2" 
+              style="height: 24px; width: 24px; border-radius: 4px; object-fit: contain; flex-shrink: 0;"
+            />
+            <span>{{ selectedTemplate?.name }}</span>
+          </div>
+          <button class="delete" aria-label="close" @click="showReadmeModal = false"></button>
+        </header>
+        <section class="modal-card-body" style="max-height: 70vh; overflow-y: auto;">
+          <ClientOnly>
+            <MarkdownFile v-if="readmeContentForModal" :raw-markdown="readmeContentForModal" />
+          </ClientOnly>
+        </section>
+      </div>
+    </div>
+
+    <!-- Template Selection Modal -->
+    <div class="modal" :class="{ 'is-active': showTemplateModal }">
+      <div class="modal-background" @click="showTemplateModal = false"></div>
+      <div class="modal-card" style="width: 90%; max-width: 1200px;">
+        <header class="modal-card-head">
+          <div class="modal-card-title">Choose Template</div>
+          <button class="delete" aria-label="close" @click="showTemplateModal = false"></button>
+        </header>
+        <section class="modal-card-body" style="max-height: 70vh; overflow-y: auto;">
+          <div class="flex mb-4">
+            <div class="field is-flex category-filters">
+              <div class="field">
+                <div class="control">
+                  <div class="select" style="width: 120px;">
+                    <select v-model="selectedCategory">
+                      <option :value="null">All</option>
+                      <option
+                        v-for="category in COMBINED_CATEGORIES"
+                        :key="category"
+                        :value="category"
+                      >
+                        {{ category }}
+                      </option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div class="field ml-4">
+                <div class="control has-icons-left">
+                  <input
+                    class="input"
+                    type="text"
+                    v-model="search"
+                    placeholder="Search"
+                  />
+                  <span class="icon is-small is-left">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" fill="currentColor"/>
+                    </svg>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="columns is-multiline" style="max-height: calc(70vh - 120px); overflow-y: auto;">
+            <div
+              v-for="template in filteredTemplates"
+              :key="template.id"
+              class="column is-4-fullhd is-6-desktop is-6-tablet is-12-mobile"
+            >
+              <div
+                class="box template-card-compact has-background-white-ter"
+                @click="selectTemplateFromModal(template)"
+              >
+                <span v-if="getCategoryArray(template.category).includes('New')" class="new-badge">New</span>
+                <div class="template-header-compact is-fullwidth">
+                  <div class="is-flex is-justify-content-flex-end">
+                    <div>
+                      <span
+                        v-if="template.stargazers_count"
+                        class="github-stars"
+                      >
+                        <img
+                          src="~/assets/img/icons/github.svg"
+                          class="github-icon"
+                          alt="GitHub"
+                        />
+                        <span
+                          class="has-text-warning mr-1"
+                          style="font-size: 12px"
+                          >★</span
+                        >
+                        <span class="ml-1">{{
+                          String(template.stargazers_count)
+                        }}</span>
+                      </span>
+                      <span v-else class="star-placeholder"></span>
+                    </div>
+                  </div>
+                  <div class="header-content-compact mt-1">
+                    <div class="header-title-compact">
+                      <h2
+                        class="is-size-5 has-text-weight-semibold mb-0 has-text-black"
+                      >
+                        {{ template.name }}
+                      </h2>
+                    </div>
+                    <div class="header-meta-compact">
+                      <div
+                        v-if="template.icon || template.avatar_url"
+                        class="template-icon-compact"
+                      >
+                        <img :src="template.icon || template.avatar_url" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="template-description-compact">
+                  <p class="has-text-grey" style="font-size: 11px !important">
+                    {{ getTemplateImage(template) || template.description }}
+                  </p>
+                  <div class="template-tags-compact mt-2">
+                    <span
+                      v-for="cat in getCategoryArray(
+                        template.category
+                      ).filter((c) => !['Featured', 'New'].includes(c))"
+                      :key="cat"
+                      class="tag has-background-white"
+                      style="font-size: 0.65rem; padding: 0.2rem 0.5rem;"
+                    >
+                      {{ cat }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -595,7 +650,7 @@ import { useToast } from "vue-toastification";
 import { WalletMultiButton, WalletModalProvider, useWallet } from "solana-wallets-vue";
 import TopBar from '~/components/TopBar.vue';
 import { useRouter, useRoute } from 'vue-router';
-import { useDebounceFn } from "@vueuse/core";
+import { useDebounceFn, useScrollLock } from "@vueuse/core";
 import countries from 'i18n-iso-countries';
 import en from 'i18n-iso-countries/langs/en.json';
 import SwapModal from '~/components/SwapModal.vue';
@@ -618,15 +673,17 @@ const getCountryName = (code: string): string => {
 
 // Type definitions
 interface Template {
-  id?: string;
+  id?: string | number;
   name: string;
   description: string;
-  category?: string | string[];
+  category?: string;
+  subcategory?: string | string[];
   icon?: string;
+  readme?: string;
   avatar_url?: string;
   stargazers_count?: number;
-  jobDefinition?: any;
-  readme?: string;
+  jobDefinition: any;
+  github_url?: string;
 }
 
 // Advanced GPU selection types
@@ -667,11 +724,14 @@ const route = useRoute();
 const toast = useToast();
 const { connected, publicKey } = useWallet();
 
+// Scroll lock for README modal
+const scrollLockTarget = ref<HTMLElement | null>(null);
+const isLocked = useScrollLock(scrollLockTarget);
+
 // State
 const selectedCategory = ref<string | null>(null);
 const selectedInterfaceCategory = ref<string | null>(null);
 const search = ref("");
-const navTab = ref<"choose" | "builder">("choose");
 const gpuTab = ref<"simple" | "advanced">("simple");
 const gpuTypeCheckbox = ref<string[]>(["PREMIUM"]);
 const activeFilter = ref("PREMIUM");
@@ -683,6 +743,8 @@ const showSettingsModal = ref(false);
 const showSwapModal = ref(false);
 const isFromRepost = ref(false);
 const skipAutoSelection = ref(false);
+const isUpdatingFromJobDef = ref(false); // Flag to prevent infinite loops
+const isEditorCollapsed = ref(true); // Default to collapsed
 
 // Balance and price state
 const balance = ref<number>(0);
@@ -768,20 +830,28 @@ const { data: stats } = await useAPI("/api/stats");
 const { data: testgridMarkets } = await useAPI("/api/markets", { default: () => [] });
 const nosApiPrice = computed(() => stats.value?.price || 0);
 
-// Default job definition
+// Default job definition - will be populated by template selection
 const jobDefinition = ref({
-  version: "1.0.0",
   type: "container",
+  version: "0.1",
   ops: [
     {
-      id: "operation-1",
+      id: "default",
       type: "container/run",
       args: {
         image: "ubuntu",
-        gpu: true
+        gpu: true,
+        cmd: ["echo", "hello world"],
+        expose: 80
       }
     }
-  ]
+  ],
+  meta: {
+    trigger: "dashboard",
+    system_requirements: {
+      required_vram: 1
+    }
+  }
 });
 
 // Cache NOS price data
@@ -838,7 +908,7 @@ watch(() => priceData.value, (newPrice) => {
 
 // Computed properties
 const showTemplateInfo = computed(() => 
-  selectedTemplate.value && selectedTemplate.value.name !== 'Custom'
+  selectedTemplate.value !== null
 );
 
 const marketName = computed(() => {
@@ -887,6 +957,9 @@ const ALL_CATEGORIES = [
 
 const INTERFACE_CATEGORIES = ["API", "Website"] as const;
 
+// Combined categories for the single dropdown
+const COMBINED_CATEGORIES = [...ALL_CATEGORIES, ...INTERFACE_CATEGORIES] as const;
+
 // Methods
 const getCategoryArray = (category: string | string[] | undefined): string[] => {
   if (!category) return [];
@@ -905,7 +978,7 @@ const filteredTemplates = computed(() => {
   if (search.value) {
     const searchTerm = search.value.toLowerCase();
     templatesList = templatesList.filter(
-      (t: Template) =>
+      (t: any) =>
         t.name.toLowerCase().includes(searchTerm) ||
         t.description.toLowerCase().includes(searchTerm)
     );
@@ -913,21 +986,14 @@ const filteredTemplates = computed(() => {
 
   // Filter by selected categories
   if (selectedCategory.value) {
-    templatesList = templatesList.filter((t: Template) => {
+    templatesList = templatesList.filter((t: any) => {
       const categoryArray = getCategoryArray(t.category);
       return categoryArray.includes(selectedCategory.value as string);
     });
   }
 
-  if (selectedInterfaceCategory.value) {
-    templatesList = templatesList.filter((t: Template) => {
-      const categoryArray = getCategoryArray(t.category);
-      return categoryArray.includes(selectedInterfaceCategory.value as string);
-    });
-  }
-
   // Sort by New flag and stars
-  return templatesList.sort((a: Template, b: Template) => {
+  return templatesList.sort((a: any, b: any) => {
     const aIsNew = getCategoryArray(a.category).includes("New");
     const bIsNew = getCategoryArray(b.category).includes("New");
 
@@ -970,7 +1036,7 @@ const createDeployment = async () => {
       hours.value * 3600,
       selectedMarket.value!.address,
       selectedHostAddress.value || undefined
-    );
+    ) as { tx: string; job: string; run: string }; // Type assertion for response
     toast.success(`Successfully created deployment ${response.job}`);
     setTimeout(() => {
       router.push('/jobs/' + response.job);
@@ -1075,15 +1141,14 @@ const handleRepost = async () => {
     
     // Find and select template or use custom
     if (templates.value && jobData.jobDefinition) {
-      const matchingTemplate = templates.value.find((t: Template) => 
+      const matchingTemplate = templates.value.find((t: any) => // Use any for t here to bypass complex type check for now
         t.jobDefinition && 
         JSON.stringify(t.jobDefinition) === JSON.stringify(jobData.jobDefinition)
       );
       
       if (matchingTemplate) {
-        selectedTemplate.value = matchingTemplate;
+        selectedTemplate.value = matchingTemplate as Template; // Assert as Template
       } else {
-        navTab.value = "builder";
         selectedTemplate.value = {
           name: 'Custom',
           jobDefinition: jobData.jobDefinition,
@@ -1145,6 +1210,8 @@ const cleanupLocalStorage = (currentRepostId?: string) => {
 
 // Template selection handling
 watch(() => selectedTemplate.value, (newTemplate) => {
+  if (isUpdatingFromJobDef.value) return; // Prevent loop when updating from job definition changes
+  
   if (newTemplate?.jobDefinition) {
     // Update job definition
     jobDefinition.value = JSON.parse(JSON.stringify(newTemplate.jobDefinition));
@@ -1165,14 +1232,75 @@ watch(() => selectedTemplate.value, (newTemplate) => {
           type: "container/run",
           args: {
             image: "ubuntu",
-            gpu: true
+            gpu: true,
+            cmd: ["echo", "hello world"],
+            expose: 80
           }
         }
-      ]
+      ],
+      meta: {
+        trigger: "dashboard",
+        system_requirements: {
+          required_vram: 1
+        }
+      }
     };
     selectedMarket.value = null;
   }
 });
+
+// Auto-select PyTorch template when templates load
+watch(() => templates.value, (newTemplates) => {
+  if (newTemplates && newTemplates.length > 0 && !selectedTemplate.value && !isFromRepost.value) {
+    // Find the PyTorch Jupyter template by matching the docker image
+    const pytorchTemplate = newTemplates.find((template: any) => 
+      template.jobDefinition?.ops?.[0]?.args?.image === "docker.io/nosana/pytorch-jupyter:0.0.0"
+    );
+    
+    if (pytorchTemplate) {
+      selectedTemplate.value = pytorchTemplate as Template;
+    }
+  }
+}, { immediate: true });
+
+// Watch jobDefinition changes to detect custom configurations
+watch(() => jobDefinition.value, (newJobDef) => {
+  if (!templates.value || !newJobDef?.ops?.[0]?.args?.image || isFromRepost.value) return;
+  
+  const currentImage = newJobDef.ops[0].args.image;
+  
+  // Check if current image matches any template
+  const matchingTemplate = templates.value.find((template: any) => 
+    template.jobDefinition?.ops?.[0]?.args?.image === currentImage
+  );
+  
+  if (matchingTemplate) {
+    // If we found a matching template and it's not already selected
+    if (selectedTemplate.value?.id !== matchingTemplate.id) {
+      isUpdatingFromJobDef.value = true;
+      selectedTemplate.value = matchingTemplate as Template;
+      nextTick(() => {
+        isUpdatingFromJobDef.value = false;
+      });
+    }
+  } else {
+    // No matching template found - create custom template
+    const customTemplate: Template = {
+      id: 'custom',
+      name: 'Custom',
+      description: currentImage,
+      jobDefinition: newJobDef
+    };
+    
+    if (selectedTemplate.value?.name !== 'Custom') {
+      isUpdatingFromJobDef.value = true;
+      selectedTemplate.value = customTemplate;
+      nextTick(() => {
+        isUpdatingFromJobDef.value = false;
+      });
+    }
+  }
+}, { deep: true });
 
 // Update GPU type when market changes
 watch(() => selectedMarket.value, (newMarket) => {
@@ -1522,6 +1650,9 @@ watch(selectedGpuGroup, async (newValue) => {
 
 // Update the onMounted hook to use fetchGpuFilters
 onMounted(async () => {
+  if (process.client) { // ADDED: Ensure document is available for scrollLockTarget
+    scrollLockTarget.value = document.documentElement; // Revert back to documentElement
+  }
   if (!markets.value && !loadingMarkets.value) {
     await getMarkets();
   }
@@ -1617,25 +1748,6 @@ onBeforeUnmount(() => {
 });
 
 // Add a watch for navTab
-watch(navTab, async (newValue) => {
-  if (newValue === 'builder' && !selectedTemplate.value) {
-    // Create a custom template for the current job definition
-    selectedTemplate.value = {
-      name: 'Custom',
-      description: 'Custom configuration',
-      jobDefinition: JSON.parse(JSON.stringify(jobDefinition.value))
-    };
-    
-    // If a market was previously selected, reselect it to ensure proper UI update
-    if (selectedMarket.value) {
-      const currentMarket = selectedMarket.value;
-      selectedMarket.value = null;
-      await nextTick();
-      selectedMarket.value = currentMarket;
-    }
-  }
-});
-
 watch(() => showSwapModal.value, (newValue) => {
   if (newValue === true) {
     // Force a small delay before refreshing balances
@@ -1653,6 +1765,95 @@ const openSwapModal = () => {
   // Set showSwapModal to true
   showSwapModal.value = true;
 };
+
+// Open README Modal
+const openReadmeModal = (readme: string) => {
+  readmeContentForModal.value = readme;
+  showReadmeModal.value = true;
+};
+
+// State
+// const selectedCategory = ref<string | null>(null); // This line was duplicated and is now removed/commented
+
+// README Modal state
+const showReadmeModal = ref(false);
+const readmeContentForModal = ref<string | undefined>(undefined);
+
+// Template Modal state
+const showTemplateModal = ref(false);
+
+// Computed property to get Docker image from job definition
+const selectedTemplateImage = computed(() => {
+  try {
+    // First, try to get it from the selectedTemplate's jobDefinition if available
+    if (selectedTemplate.value && selectedTemplate.value.jobDefinition && selectedTemplate.value.jobDefinition.ops && selectedTemplate.value.jobDefinition.ops[0] && selectedTemplate.value.jobDefinition.ops[0].args && selectedTemplate.value.jobDefinition.ops[0].args.image) {
+      return selectedTemplate.value.jobDefinition.ops[0].args.image;
+    }
+    // Fallback to the current jobDefinition in the editor
+    if (jobDefinition.value && jobDefinition.value.ops && jobDefinition.value.ops[0] && jobDefinition.value.ops[0].args && jobDefinition.value.ops[0].args.image) {
+      return jobDefinition.value.ops[0].args.image;
+    }
+  } catch (e) {
+    console.warn("Could not extract image from job definition", e);
+  }
+  return null; // Return null if not found or error
+});
+
+// Function to get Docker image from any template
+const getTemplateImage = (template: Template): string | null => {
+  try {
+    if (template.jobDefinition && template.jobDefinition.ops && template.jobDefinition.ops[0] && template.jobDefinition.ops[0].args && template.jobDefinition.ops[0].args.image) {
+      return template.jobDefinition.ops[0].args.image;
+    }
+  } catch (e) {
+    console.warn("Could not extract image from template", e);
+  }
+  return null;
+};
+
+// Watch for README modal state to control body scroll using useScrollLock
+watch(showReadmeModal, (isOpen) => {
+  isLocked.value = isOpen;
+});
+
+// Watch for template modal state to control body scroll
+watch(showTemplateModal, (isOpen) => {
+  if (!showReadmeModal.value) { // Only lock if README modal isn't already open
+    isLocked.value = isOpen;
+  }
+});
+
+// JSON Editor collapse state
+// const isEditorCollapsed = ref(false); // Now initialized to true above
+// const userToggledEditor = ref(false); // Removed
+
+// JSON Editor toggle function
+// const toggleEditorCollapse = () => { // Removed
+// isEditorCollapsed.value = !isEditorCollapsed.value;
+// userToggledEditor.value = true;
+// };
+
+// Auto-collapse watcher
+// watch(shouldCollapseEditor, (shouldCollapse) => { // Removed
+// if (shouldCollapse && !userToggledEditor.value) {
+// isEditorCollapsed.value = true;
+// }
+// }, { immediate: true });
+
+// Reset user toggle when template changes
+// watch(() => selectedTemplate.value, () => { // Removed
+// userToggledEditor.value = false;
+// });
+
+// Template selection handler
+const selectTemplateFromModal = (template: Template) => {
+  selectedTemplate.value = template;
+  showTemplateModal.value = false;
+  isEditorCollapsed.value = true; // Collapse editor when a new template is selected
+};
+
+// CSS rules below were mistakenly placed here and will be moved to the <style> block
+
 </script>
 <style lang="scss" scoped>
 .template-card {
@@ -1911,7 +2112,6 @@ html.dark-mode .github-icon {
 }
 
 .builder-columns {
-  min-height: 300px;
   height: auto;
 }
 
@@ -2345,11 +2545,209 @@ html.dark-mode .github-icon {
   width: 33.3333%; /* Equivalent to is-4 */
 }
 
-.dark-mode .gpu-logo {
-  // filter: invert(1); <- Removed this line
-}
 
 .warning-icon {
   filter: invert(73%) sepia(45%) saturate(5600%) hue-rotate(359deg) brightness(101%) contrast(106%);
 }
+
+/* JSON Editor collapse styles */
+.editor-collapsed {
+  overflow: hidden !important;
+  position: relative;
+  
+  &::after {
+    content: ''; // Default gradient, implying expand (up arrow)
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 30px;
+    background: linear-gradient(transparent, rgba(255, 255, 255, 0.9));
+    pointer-events: none;
+    z-index: 1;
+  }
+}
+
+.dark-mode .editor-collapsed::after {
+  background: linear-gradient(transparent, rgba(18, 18, 18, 0.95) 70%); // Adjusted gradient for dark mode
+}
+
+:deep(.editor-collapsed .jse) {
+  height: 150px !important;
+  overflow: hidden !important;
+}
+
+/* Compact template card styles for modal */
+.template-card-compact {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  position: relative;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+
+  &:hover {
+    cursor: pointer;
+    border: 1px solid $secondary;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  }
+}
+
+.template-header-compact {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0.75rem;
+}
+
+.header-content-compact {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.header-title-compact {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+
+  h2 {
+    line-height: 1.2;
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+  }
+}
+
+.header-meta-compact {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.template-icon-compact {
+  width: 28px;
+  height: 28px;
+  border-radius: 100%;
+  padding: 0;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background-color: transparent;
+
+  img {
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+}
+
+.template-description-compact {
+  width: 100%;
+  flex: 1;
+
+  p {
+    margin: 0;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    line-height: 1.3;
+  }
+}
+
+.template-tags-compact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.dark-mode {
+  .template-card-compact {
+    &:hover {
+      box-shadow: 0 4px 12px rgba(255,255,255,0.1);
+    }
+  }
+
+  .template-icon-compact {
+    background-color: $black-bis !important;
+    border-color: $grey-darker;
+  }
+}
+
+/* Modal scroll fix - ensure modals can scroll when body is locked */
+.modal.is-active {
+  overflow: hidden;
+}
+
+.modal.is-active .modal-card-body {
+  overflow-y: auto !important;
+}
+
+/* Dark mode support for README and action buttons */
+.dark-mode {
+  .readme-button.button.is-light {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    color: rgba(255, 255, 255, 0.9) !important;
+    
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.15) !important;
+      border-color: rgba(255, 255, 255, 0.3) !important;
+      color: white !important;
+    }
+  }
+  
+  .action-button.button.is-outlined {
+    border-color: rgba(255, 255, 255, 0.3) !important;
+    color: rgba(255, 255, 255, 0.9) !important;
+    background-color: transparent !important;
+    
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.1) !important;
+      border-color: rgba(255, 255, 255, 0.5) !important;
+      color: white !important;
+    }
+  }
+}
+
+.editor-wrapper.is-clickable-to-expand {
+  cursor: pointer;
+}
+
+/* Inserted CSS for expand-indicator starts here */
+.expand-indicator {
+  position: absolute;
+  bottom: 24px; /* Adjusted from 20px to move everything up */
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #363636;
+  font-size: 0.9rem;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.expand-indicator span {
+  line-height: 1;
+}
+
+.expand-indicator img {
+  margin-left: 5px;
+}
+/* Inserted CSS for expand-indicator ends here */
+
+.dark-mode .expand-indicator {
+  color: #ccc; // Lighter text color for dark mode
+}
+
 </style> 

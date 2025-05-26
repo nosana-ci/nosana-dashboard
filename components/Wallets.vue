@@ -2,6 +2,9 @@
   <div>
     <div v-if="!connected">
       <wallet-multi-button></wallet-multi-button>
+      <button @click="refreshWallets" class="button is-small is-outlined" style="margin-left: 10px;">
+        Refresh Wallets
+      </button>
     </div>
     <div v-else-if="publicKey">
       {{ publicKey }}
@@ -21,5 +24,10 @@
 <script lang="ts" setup>
 import { WalletMultiButton } from "solana-wallets-vue";
 import { useWallet } from "solana-wallets-vue";
-const { publicKey, connected, disconnect } = useWallet();
+const { publicKey, connected, disconnect, select } = useWallet();
+
+const refreshWallets = () => {
+  // Force refresh by re-selecting current wallet or triggering a re-check
+  window.location.reload();
+};
 </script>
