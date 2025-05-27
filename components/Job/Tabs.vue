@@ -56,7 +56,24 @@
     :resourceProgressBars="resourceProgressBars"
     ref="logsView"
   />
-  <JobResultsView v-if="activeTab === 'result'" :job="job" />
+  <div v-if="activeTab === 'result' && job.results" class="job-definition-container">
+    <JsonEditorVue 
+      :validator="validator" 
+      :class="{ 
+        'jse-theme-dark': colorMode.value === 'dark'
+      }" 
+      v-model="jobResultsModel" 
+      :mode="Mode.text" 
+      :mainMenuBar="false" 
+      :statusBar="false" 
+      :stringified="false" 
+      :readOnly="true"
+      class="job-definition-editor"
+    />
+  </div>
+  <div v-else-if="activeTab === 'result' && !job.results">
+    <p class="p-4 has-text-centered">No results available for this job.</p>
+  </div>
   <JobArtifactsView v-if="activeTab === 'artifacts'" :job="job" />
   <JobChatView 
     v-if="activeTab === 'chat' && showChatTab" 
@@ -117,6 +134,12 @@ defineExpose({ logsView });
 // Create a reactive model for the job definition
 const jobDefinitionModel = computed({
   get: () => props.jobDefinition,
+  set: () => {} // Read-only, so no setter needed
+});
+
+// Create a reactive model for the job results
+const jobResultsModel = computed({
+  get: () => props.job.results,
   set: () => {} // Read-only, so no setter needed
 });
 

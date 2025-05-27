@@ -54,14 +54,9 @@
             <div class="job-price">
               <div class="price-value">
                 <JobPrice 
-                  :job="{
-                    usdRewardPerHour: job.usdRewardPerHour,
-                    timeStart: job.timeStart,
-                    timeEnd: job.timeEnd,
-                    timeout: job.timeout,
-                    state: job.state ?? (job.isCompleted ? 2 : job.timeStart ? 1 : 0)
-                  }"
-                    :options="{ showPerHour: !job.isCompleted }"
+                  :key="`job-price-${job.isCompleted}-${job.timeEnd || 'running'}`"
+                  :job="jobDataForPriceComponent"
+                  :options="jobOptionsForPriceComponent"
                 />
               </div>
             </div>
@@ -184,9 +179,10 @@
 
       <!-- Quick Details Compact Grid -->
       <div class="content mb-5">
-        <div class="columns is-multiline is-variable is-0 no-padding">
+        <!-- First Row of Quick Details -->
+        <div class="columns is-multiline is-variable is-0 no-padding is-justify-content-flex-start mb-0">
           <!-- Duration -->
-          <div class="column is-one-third-desktop is-half-tablet is-full-mobile no-padding">
+          <div class="column is-narrow-desktop is-narrow-tablet is-full-mobile no-padding" style="min-width: 150px;">
             <div class="quick-detail-item">
               <span class="quick-detail-label">Duration</span>
               <span class="quick-detail-value">
@@ -200,7 +196,7 @@
           </div>
 
           <!-- Country -->
-          <div class="column is-one-third-desktop is-half-tablet is-full-mobile no-padding">
+          <div class="column is-narrow-desktop is-narrow-tablet is-full-mobile no-padding" style="min-width: 150px;">
             <div class="quick-detail-item">
               <span class="quick-detail-label">Country</span>
               <span class="quick-detail-value">
@@ -214,7 +210,7 @@
           </div>
 
           <!-- CPU -->
-          <div class="column is-one-third-desktop is-half-tablet is-full-mobile no-padding">
+          <div class="column is-narrow-desktop is-narrow-tablet is-full-mobile no-padding" style="min-width: 150px;">
             <div class="quick-detail-item">
               <span class="quick-detail-label">CPU</span>
               <span class="quick-detail-value">
@@ -226,9 +222,12 @@
               </span>
             </div>
           </div>
+        </div>
 
+        <!-- Second Row of Quick Details -->
+        <div class="columns is-multiline is-variable is-0 no-padding is-justify-content-flex-start">
           <!-- RAM -->
-          <div class="column is-one-third-desktop is-half-tablet is-full-mobile no-padding">
+          <div class="column is-narrow-desktop is-narrow-tablet is-full-mobile no-padding" style="min-width: 150px;">
             <div class="quick-detail-item">
               <span class="quick-detail-label">RAM</span>
               <span class="quick-detail-value">
@@ -242,7 +241,7 @@
           </div>
 
           <!-- Disk Space -->
-          <div class="column is-one-third-desktop is-half-tablet is-full-mobile no-padding">
+          <div class="column is-narrow-desktop is-narrow-tablet is-full-mobile no-padding" style="min-width: 150px;">
             <div class="quick-detail-item">
               <span class="quick-detail-label">Disk Space</span>
               <span class="quick-detail-value">
@@ -256,7 +255,7 @@
           </div>
 
           <!-- Download Speed -->
-          <div class="column is-one-third-desktop is-half-tablet is-full-mobile no-padding">
+          <div class="column is-narrow-desktop is-narrow-tablet is-full-mobile no-padding" style="min-width: 150px;">
             <div class="quick-detail-item">
               <span class="quick-detail-label">Download</span>
               <span class="quick-detail-value">
@@ -272,7 +271,7 @@
           </div>
 
           <!-- Upload Speed -->
-          <div class="column is-one-third-desktop is-half-tablet is-full-mobile no-padding" style="display: none;">
+          <div class="column is-narrow-desktop is-narrow-tablet is-full-mobile no-padding" style="display: none; min-width: 150px;">
             <div class="quick-detail-item">
               <span class="quick-detail-label">Upload</span>
               <span class="quick-detail-value">
@@ -488,6 +487,21 @@ const countryInfo = computed(() => {
   return null;
 });
 
+const jobDataForPriceComponent = computed(() => {
+  const currentJob = job; // job is props.job via destructuring
+  return {
+    usdRewardPerHour: currentJob.usdRewardPerHour,
+    timeStart: currentJob.timeStart,
+    timeEnd: currentJob.timeEnd,
+    timeout: currentJob.timeout,
+    state: currentJob.state ?? (currentJob.isCompleted ? 2 : currentJob.timeStart ? 1 : 0)
+  };
+});
+
+const jobOptionsForPriceComponent = computed(() => {
+  return { showPerHour: !job.isCompleted }; // job is props.job
+});
+
 const formatDuration = (seconds: number) => {
   if (isNaN(seconds) || seconds < 0) return 'Invalid duration';
   const h = Math.floor(seconds / 3600);
@@ -496,24 +510,31 @@ const formatDuration = (seconds: number) => {
   return `${h}h ${m}m ${s}s`;
 };
 
+const formatMaxDurationInHours = (seconds: number) => {
+  if (isNaN(seconds) || seconds < 0) return 'Invalid duration';
+  const hours = seconds / 3600;
+  const formattedHours = parseFloat(hours.toFixed(1)); // toFixed(1) for one decimal, parseFloat to remove trailing .0
+  return `${formattedHours}h`;
+};
+
 const jobDurationDisplay = computed(() => {
   if (job.timeStart === undefined || job.timeout === undefined) return null; // Loading or not applicable
 
-  const maxDurationFormatted = formatDuration(job.timeout);
+  const maxDurationInHoursFormatted = formatMaxDurationInHours(job.timeout);
 
   if (job.isCompleted && job.timeEnd !== undefined) {
     // Job completed, show actual duration
     const actualDuration = job.timeEnd - job.timeStart;
-    return `${formatDuration(actualDuration)} (max ${maxDurationFormatted})`;
+    return `${formatDuration(actualDuration)} (max ${maxDurationInHoursFormatted})`;
   } else if (job.isRunning && job.timeStart) {
     // Job running, show current duration
     const currentDuration = currentTime.value - job.timeStart;
-    return `${formatDuration(currentDuration)} (max ${maxDurationFormatted})`;
+    return `${formatDuration(currentDuration)} (max ${maxDurationInHoursFormatted})`;
   } else if (job.state === 0 && job.timeStart === 0) {
     // Queued job, just show max duration
-    return `(max ${maxDurationFormatted})`;
+    return `(max ${maxDurationInHoursFormatted})`;
   } 
-  return `(max ${maxDurationFormatted})`; // Default or fallback
+  return `(max ${maxDurationInHoursFormatted})`; // Default or fallback
 });
 
 const cleanGpuName = computed(() => {
@@ -775,6 +796,8 @@ function activateChatAndClosePopup() {
 
 const activeTab = ref('logs');
 const jobTabsRef = ref<any>(null); // Ref for the JobTabs component
+
+// Watch for changes in table content (for real-time updates) - REMOVING THIS SECTION
 
 watch(isMainContentOpen, (newValue) => {
   if (newValue && activeTab.value === 'logs') {
