@@ -9,109 +9,112 @@
         <!-- Main Job Info Row -->
           <div class="job-header-main p-4 w-100" style="flex-grow: 1;">
           <div class="job-header-grid">
-            <!-- Job Title -->
-            <div class="job-title-col">
-              <div class="job-title">
-                <template v-if="templateForJob">
-                  {{ templateForJob.name }}
-                </template>
-                <template v-else-if="jobDefinitionId">
-                  {{ jobDefinitionId }}
-                </template>
-                <template v-else-if="dockerImage">
-                  {{ dockerImage.split('/').pop() }}
-                </template>
-                <template v-else>
-                  <span class="icon-text">
-                    <span class="icon is-small">
-                      <i class="fas fa-spinner fa-spin"></i>
+            <!-- Left Group: Title, GPU, Price -->
+            <div class="job-header-left-group">
+              <!-- Job Title -->
+              <div class="job-title-col">
+                <div class="job-title">
+                  <template v-if="templateForJob">
+                    {{ templateForJob.name }}
+                  </template>
+                  <template v-else-if="jobDefinitionId">
+                    {{ jobDefinitionId }}
+                  </template>
+                  <template v-else-if="formattedDockerImage">
+                    {{ formattedDockerImage.split('/').pop() }}
+                  </template>
+                  <template v-else>
+                    <span class="icon-text">
+                      <span class="icon is-small">
+                        <i class="fas fa-spinner fa-spin"></i>
+                      </span>
+                      <span>Loading</span>
                     </span>
-                    <span>Loading</span>
-                  </span>
-                </template>
-              </div>
-                <div class="job-docker">
-                  <span v-if="dockerImage">{{ dockerImage }}</span>
+                  </template>
                 </div>
-            </div>
+                <div class="job-docker">
+                  <span v-if="formattedDockerImage">{{ formattedDockerImage }}</span>
+                </div>
+              </div>
 
-            <!-- GPU -->
-            <div class="job-gpu-col">
-              <div class="job-gpu">
-                <span v-if="actualGpuInfo">{{ cleanGpuName }}</span>
-                <span v-else>
-                  <span class="icon-text">
-                    <span class="icon is-small">
-                      <i class="fas fa-spinner fa-spin"></i>
+              <!-- GPU -->
+              <div class="job-gpu-col">
+                <div class="job-gpu">
+                  <span v-if="actualGpuInfo">{{ cleanGpuName }}</span>
+                  <span v-else>
+                    <span class="icon-text">
+                      <span class="icon is-small">
+                        <i class="fas fa-spinner fa-spin"></i>
+                      </span>
+                      <span>Loading GPU</span>
                     </span>
-                    <span>Loading GPU</span>
                   </span>
-                </span>
+                </div>
+              </div>
+
+              <!-- Price -->
+              <div class="job-price">
+                <div class="price-value">
+                  <JobPrice 
+                    :key="`job-price-${job.isCompleted}-${job.timeEnd || 'running'}`"
+                    :job="jobDataForPriceComponent"
+                    :options="jobOptionsForPriceComponent"
+                  />
+                </div>
               </div>
             </div>
 
-            <!-- Price -->
-            <div class="job-price">
-              <div class="price-value">
-                <JobPrice 
-                  :key="`job-price-${job.isCompleted}-${job.timeEnd || 'running'}`"
-                  :job="jobDataForPriceComponent"
-                  :options="jobOptionsForPriceComponent"
-                />
-              </div>
-            </div>
-
-              <!-- Actions and Status -->
-              <div class="job-actions is-hidden-mobile">
-                <div class="actions-container">
-              <button
-                    v-if="job.isRunning && isJobPoster"
-                @click.stop="stopJob"
-                :class="{ 'is-loading': loading }"
-                    class="button is-danger is-small custom-button"
-              >
-                    <span class="icon is-small mr-1">
-                      <img src="~/assets/img/icons/stop.svg" class="button-icon" />
-                    </span>
-                    <span>Stop</span>
-              </button>
-              <button
-                    v-if="job.isRunning && isJobPoster"
-                @click.stop="openExtendModal"
-                :class="{ 'is-loading': loadingExtend }"
-                    class="button is-primary is-small ml-2 custom-button"
-              >
-                    <span class="icon is-small mr-1">
-                      <img src="~/assets/img/icons/plus_symbol.svg" class="button-icon" />
-                    </span>
-                    <span>Extend</span>
-              </button>
-              <button 
-                v-if="job.isRunning || job.isCompleted"
-                @click.stop="repostJob" 
-                    class="button is-primary is-small ml-2 custom-button"
-              >
-                    <span class="icon is-small mr-1">
-                      <img src="~/assets/img/icons/redo.svg" class="button-icon" />
-                </span>
-                <span>Redeploy</span>
-              </button>
-                  <div class="job-status ml-2">
-              <JobStatus
-                :status="
-                  job.isCompleted && job.jobStatus
-                    ? job.jobStatus === 'success'
-                      ? 'SUCCESS'
-                      : 'FAILED'
-                    : job.state
-                "
-              />
-                  </div>
+            <!-- Right Group: Actions and Status -->
+            <div class="job-actions is-hidden-mobile">
+              <div class="actions-container">
+            <button
+                  v-if="job.isRunning && isJobPoster"
+              @click.stop="stopJob"
+              :class="{ 'is-loading': loading }"
+                  class="button is-danger is-small custom-button"
+            >
+                  <span class="icon is-small mr-1">
+                    <img src="~/assets/img/icons/stop.svg" class="button-icon" />
+                  </span>
+                  <span>Stop</span>
+            </button>
+            <button
+                  v-if="job.isRunning && isJobPoster"
+              @click.stop="openExtendModal"
+              :class="{ 'is-loading': loadingExtend }"
+                  class="button is-primary is-small ml-2 custom-button"
+            >
+                  <span class="icon is-small mr-1">
+                    <img src="~/assets/img/icons/plus_symbol.svg" class="button-icon" />
+                  </span>
+                  <span>Extend</span>
+            </button>
+            <button 
+              v-if="job.isRunning || job.isCompleted"
+              @click.stop="repostJob" 
+                  class="button is-primary is-small ml-2 custom-button"
+            >
+                  <span class="icon is-small mr-1">
+                    <img src="~/assets/img/icons/redo.svg" class="button-icon" />
+              </span>
+              <span>Redeploy</span>
+            </button>
+                <div class="job-status ml-2">
+            <JobStatus
+              :status="
+                job.isCompleted && job.jobStatus
+                  ? job.jobStatus === 'success'
+                    ? 'SUCCESS'
+                    : 'FAILED'
+                  : job.state
+              "
+            />
                 </div>
               </div>
             </div>
           </div>
         </div>
+      </div>
 
         <!-- Dropdown Arrow -->
         <button class="card-header-icon" aria-label="more options">
@@ -417,6 +420,14 @@ const dockerImage = computed(() => {
     }
   }
   return null; // Will show loading state
+});
+
+const formattedDockerImage = computed(() => {
+  if (!dockerImage.value) return null;
+  if (dockerImage.value.startsWith('docker.io/')) {
+    return dockerImage.value.substring(10); // Length of "docker.io/"
+  }
+  return dockerImage.value;
 });
 
 const jobDefinitionId = computed(() => {
@@ -868,14 +879,32 @@ const getStatusText = (status: string) => {
 }
 
 .job-header-grid {
-  display: grid;
-  grid-template-columns: 1.5fr 1fr 1fr 1fr;
+  display: flex;
+  justify-content: space-between;
   gap: 1rem;
   align-items: center;
   
   @media (max-width: 768px) {
-    grid-template-columns: 1fr;
+    flex-direction: column;
     gap: 0.75rem;
+    justify-content: flex-start;
+    align-items: stretch;
+  }
+}
+
+.job-header-left-group {
+  display: flex;
+  align-items: center;
+  gap: 1rem; /* Maintain gap between title, gpu, price */
+  flex-shrink: 0; /* Prevent this group from shrinking if space is tight */
+  min-width: 0; /* Allow flex items to shrink below their content size if needed */
+
+  
+  @media (max-width: 768px) {
+    flex-direction: column; /* Stack title, gpu, price on mobile */
+    align-items: flex-start; /* Align them left on mobile */
+    width: 100%; /* Take full width to align with actions below */
+    gap: 0.75rem; /* Match mobile gap */
   }
 }
 
@@ -884,7 +913,8 @@ const getStatusText = (status: string) => {
   flex-direction: column;
   justify-content: center;
   position: relative;
-  min-width: 0; // Allow container to shrink below content size
+  min-width: 200px; /* Example: Set minimum width for the title column here */
+  flex-shrink: 0; // Prevent title from shrinking too much
   
   .job-title {
     font-size: 1.1rem;
@@ -901,7 +931,7 @@ const getStatusText = (status: string) => {
     overflow: hidden;
     text-overflow: ellipsis;
     line-height: 1.3;
-    position: absolute;
+    position: absolute; /* Positioned relative to job-title-col */
     top: 100%;
     left: 0;
     right: 0;
