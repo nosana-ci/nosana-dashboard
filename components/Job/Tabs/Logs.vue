@@ -252,6 +252,10 @@ html.dark-mode .logs-container {
   background-color: #2c2c2c;
 }
 
+html.dark-mode .logs-content .has-text-centered {
+  color: #ffffff; /* Make centered text in logs content white in dark mode */
+}
+
 .progress.is-primary::-webkit-progress-bar {
   background-color: #dbdbdb;
 }

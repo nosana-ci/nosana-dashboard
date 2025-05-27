@@ -28,6 +28,12 @@
     </ul>
   </div>
   <div v-if="activeTab === 'info'" class="job-definition-container">
+    <button 
+      class="button is-small is-light copy-button"
+      @click="copyToClipboard(JSON.stringify(jobDefinitionModel, null, 2), 'Job Definition')"
+    >
+      Copy
+    </button>
     <JsonEditorVue 
       :validator="validator" 
       :class="{ 
@@ -40,23 +46,35 @@
       :stringified="false" 
       :readOnly="true"
       class="job-definition-editor" 
-  />
+    />
   </div>
-  <JobLogsView
-    v-if="activeTab === 'logs' && isJobPoster"
-    :job="job"
-    :endpoints="endpoints"
-    :jobDefinition="jobDefinition"
-    :signMessageError="false"
-    :isJobPoster="isJobPoster"
-    :loading="false"
-    :isConnecting="isConnecting"
-    :logs="logs"
-    :progressBars="progressBars"
-    :resourceProgressBars="resourceProgressBars"
-    ref="logsView"
-  />
+  <div v-if="activeTab === 'logs' && isJobPoster" class="logs-wrapper">
+    <JobLogsView
+      :job="job"
+      :endpoints="endpoints"
+      :jobDefinition="jobDefinition"
+      :signMessageError="false"
+      :isJobPoster="isJobPoster"
+      :loading="false"
+      :isConnecting="isConnecting"
+      :logs="logs"
+      :progressBars="progressBars"
+      :resourceProgressBars="resourceProgressBars"
+      :logsTextForCopy="logsTextForCopy"
+      :copyToClipboard="copyToClipboard"
+      ref="logsView"
+    />
+  </div>
+  <div v-else-if="activeTab === 'logs' && !isJobPoster">
+    <!-- Placeholder or message if logs are not available for non-posters -->
+  </div>
   <div v-if="activeTab === 'result' && job.results" class="job-definition-container">
+    <button 
+      class="button is-small is-light copy-button"
+      @click="copyToClipboard(JSON.stringify(jobResultsModel, null, 2), 'Results')"
+    >
+      Copy
+    </button>
     <JsonEditorVue 
       :validator="validator" 
       :class="{ 
@@ -95,6 +113,7 @@ import type { JobDefinition } from "@nosana/sdk";
 import JsonEditorVue from 'json-editor-vue';
 import { Mode } from 'vanilla-jsoneditor';
 import 'vanilla-jsoneditor/themes/jse-theme-dark.css';
+import { useToast } from 'vue-toastification';
 
 import JobLogsView from "./Tabs/Logs.vue";
 import JobResultsView from "./Tabs/Results.vue";
@@ -120,6 +139,8 @@ interface Props {
   showChatTab?: boolean;
   chatServiceUrl?: string | null;
   activeTab: string; // Prop for active tab
+  logsTextForCopy?: string;
+  copyToClipboard?: (text: string | undefined, type: string) => Promise<void>;
 }
 
 const props = defineProps<Props>();
@@ -145,6 +166,25 @@ const jobResultsModel = computed({
 
 // Validator function (can be empty for read-only)
 const validator = () => [];
+
+const toast = useToast(); // Correctly get toast functions
+
+const copyToClipboard = async (text: string | undefined, type: string) => {
+  if (text === undefined || text === null) {
+    console.error(`${type} content is not available to copy.`);
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(text);
+    console.log(`Copied ${type} to clipboard!`);
+  } catch (err) {
+    console.error('Failed to copy: ', err);
+  }
+};
+
+const logsTextForCopy = computed(() => {
+  return props.logs.map(log => log.content).join('\n');
+});
 
 const handleTabClick = (tabName: string) => {
   emit('update:activeTab', tabName);
@@ -174,7 +214,7 @@ const handleTabClick = (tabName: string) => {
     li {
       a {
         padding: 0.4em 0.8em;
-        font-size: 0.9rem;
+        font-size: 0.95rem; /* Increased font size */
         background-color: transparent;
       }
     }
@@ -186,6 +226,19 @@ const handleTabClick = (tabName: string) => {
   border-radius: 4px;
   padding: 0;
   margin-top: 0.2rem;
+  position: relative; /* For copy button positioning */
+}
+
+.logs-wrapper {
+  position: relative; /* For copy button positioning */
+  margin-top: 0.2rem;
+}
+
+.copy-button {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 10;
 }
 
 .job-definition-editor {
@@ -213,6 +266,7 @@ html.dark-mode {
       li {
         a {
           color: #ffffff;
+          font-size: 0.95rem; /* Increased font size */
           
           &:hover {
             background-color: #363636;
@@ -231,6 +285,7 @@ html.dark-mode {
   .job-definition-container {
     background-color: #2c2c2c;
     border-color: #444;
+    position: relative; /* For copy button positioning */
   }
 
   // Update table background in dark mode
