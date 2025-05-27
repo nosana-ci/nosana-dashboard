@@ -1,6 +1,6 @@
 <template>
   <div class="logs-tab-container">
-    <div class="p-1 py-4 logs-container" ref="logsContainer">
+    <div class="p-0 py-0 logs-container" ref="logsContainer">
       <div class="logs-header">
         <span class="logs-title"><!-- Can be empty or hold a title --></span>
         <!-- Fullscreen button moved out of header for easier absolute positioning relative to logs-container -->
@@ -179,8 +179,6 @@ defineExpose({
 }
 
 .logs-container {
-  background-color: #ffffff;
-  border-radius: 4px;
   display: flex;
   flex-direction: column;
   position: relative; // Context for the fullscreen button
@@ -202,8 +200,8 @@ defineExpose({
 
 .fullscreen-logs-button {
   position: absolute;
-  top: 2rem; // Increased top value to lower the button
-  right: 0.5rem;
+  top: 1rem; // Increased top value to lower the button
+  right: 0.2rem;
   z-index: 10;
   background-color: #ffffff !important;
   border: 1px solid #e8e8e8 !important;

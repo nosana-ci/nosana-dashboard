@@ -62,7 +62,7 @@
     v-if="activeTab === 'chat' && showChatTab" 
     :job="job" 
     :chatServiceUrl="chatServiceUrl" />
-  <div v-if="activeTab === 'details'" class="p-1 py-4 has-background-white">
+  <div v-if="activeTab === 'details'">
     <table class="table is-fullwidth">
       <tbody>
         <HostSpecifications v-if="job && job.node && job.node.toString() !== '11111111111111111111111111111111'" :node-address="job.node.toString()" />
@@ -140,13 +140,19 @@ const handleTabClick = (tabName: string) => {
 
 <style lang="scss" scoped>
 .job-tabs-condensed {
+  background-color: #ffffff;
+  border-radius: 4px 4px 0 0;
+  margin-bottom: 0 !important;
+  
   ul {
     border-bottom-width: 1px !important;
+    background-color: transparent;
     
     li {
       a {
         padding: 0.4em 0.8em;
         font-size: 0.9rem;
+        background-color: transparent;
       }
     }
   }
@@ -154,7 +160,6 @@ const handleTabClick = (tabName: string) => {
 
 .job-definition-container {
   background-color: #ffffff;
-  border: 1px solid #dbdbdb;
   border-radius: 4px;
   padding: 0;
   margin-top: 0.2rem;
@@ -175,9 +180,51 @@ const handleTabClick = (tabName: string) => {
 }
 
 // Dark mode styling for job definition
-html.dark-mode .job-definition-container {
-  background-color: #2c2c2c;
-  border-color: #444;
+html.dark-mode {
+  .job-tabs-condensed {
+    background-color: #2c2c2c;
+    
+    ul {
+      border-bottom-color: #444;
+      
+      li {
+        a {
+          color: #ffffff;
+          
+          &:hover {
+            background-color: #363636;
+          }
+        }
+        
+        &.is-active a {
+          background-color: #2c2c2c;
+          border-bottom-color: #444;
+          color: #ffffff;
+        }
+      }
+    }
+  }
+  
+  .job-definition-container {
+    background-color: #2c2c2c;
+    border-color: #444;
+  }
+
+  // Update table background in dark mode
+  .table {
+    background-color: #2c2c2c;
+    color: #ffffff;
+
+    thead th {
+      color: #ffffff;
+      border-color: #444;
+    }
+
+    td {
+      border-color: #444;
+      color: #ffffff;
+    }
+  }
 }
 
 // Add styles to remove extra spacing

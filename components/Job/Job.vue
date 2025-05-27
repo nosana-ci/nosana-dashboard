@@ -3,114 +3,114 @@
   <div class="card">
     <!-- Card Header and Service Endpoints Container -->
     <div class="card-header-container" @click="toggleMainContent">
-      <!-- Card Header - Always Visible -->
+    <!-- Card Header - Always Visible -->
       <header class="card-header">
-        <div class="w-100">
-          <!-- Main Job Info Row -->
+      <div class="w-100">
+        <!-- Main Job Info Row -->
           <div class="job-header-main p-4 w-100" style="flex-grow: 1;">
-            <div class="job-header-grid">
-              <!-- Job Title -->
-              <div class="job-title-col">
-                <div class="job-title">
-                  <template v-if="templateForJob">
-                    {{ templateForJob.name }}
-                  </template>
-                  <template v-else-if="jobDefinitionId">
-                    {{ jobDefinitionId }}
-                  </template>
-                  <template v-else-if="dockerImage">
-                    {{ dockerImage.split('/').pop() }}
-                  </template>
-                  <template v-else>
-                    <span class="icon-text">
-                      <span class="icon is-small">
-                        <i class="fas fa-spinner fa-spin"></i>
-                      </span>
-                      <span>Loading</span>
+          <div class="job-header-grid">
+            <!-- Job Title -->
+            <div class="job-title-col">
+              <div class="job-title">
+                <template v-if="templateForJob">
+                  {{ templateForJob.name }}
+                </template>
+                <template v-else-if="jobDefinitionId">
+                  {{ jobDefinitionId }}
+                </template>
+                <template v-else-if="dockerImage">
+                  {{ dockerImage.split('/').pop() }}
+                </template>
+                <template v-else>
+                  <span class="icon-text">
+                    <span class="icon is-small">
+                      <i class="fas fa-spinner fa-spin"></i>
                     </span>
-                  </template>
-                </div>
+                    <span>Loading</span>
+                  </span>
+                </template>
+              </div>
                 <div class="job-docker">
                   <span v-if="dockerImage">{{ dockerImage }}</span>
                 </div>
-              </div>
+            </div>
 
-              <!-- GPU -->
-              <div class="job-gpu-col">
-                <div class="job-gpu">
-                  <span v-if="actualGpuInfo">{{ cleanGpuName }}</span>
-                  <span v-else>
-                    <span class="icon-text">
-                      <span class="icon is-small">
-                        <i class="fas fa-spinner fa-spin"></i>
-                      </span>
-                      <span>Loading GPU</span>
+            <!-- GPU -->
+            <div class="job-gpu-col">
+              <div class="job-gpu">
+                <span v-if="actualGpuInfo">{{ cleanGpuName }}</span>
+                <span v-else>
+                  <span class="icon-text">
+                    <span class="icon is-small">
+                      <i class="fas fa-spinner fa-spin"></i>
                     </span>
+                    <span>Loading GPU</span>
                   </span>
-                </div>
+                </span>
               </div>
+            </div>
 
-              <!-- Price -->
-              <div class="job-price">
-                <div class="price-value">
-                  <JobPrice 
-                    :job="{
-                      usdRewardPerHour: job.usdRewardPerHour,
-                      timeStart: job.timeStart,
-                      timeEnd: job.timeEnd,
-                      timeout: job.timeout,
-                      state: job.state ?? (job.isCompleted ? 2 : job.timeStart ? 1 : 0)
-                    }"
+            <!-- Price -->
+            <div class="job-price">
+              <div class="price-value">
+                <JobPrice 
+                  :job="{
+                    usdRewardPerHour: job.usdRewardPerHour,
+                    timeStart: job.timeStart,
+                    timeEnd: job.timeEnd,
+                    timeout: job.timeout,
+                    state: job.state ?? (job.isCompleted ? 2 : job.timeStart ? 1 : 0)
+                  }"
                     :options="{ showPerHour: !job.isCompleted }"
-                  />
-                </div>
+                />
               </div>
+            </div>
 
               <!-- Actions and Status -->
               <div class="job-actions is-hidden-mobile">
                 <div class="actions-container">
-                  <button
+              <button
                     v-if="job.isRunning && isJobPoster"
-                    @click.stop="stopJob"
-                    :class="{ 'is-loading': loading }"
+                @click.stop="stopJob"
+                :class="{ 'is-loading': loading }"
                     class="button is-danger is-small custom-button"
-                  >
+              >
                     <span class="icon is-small mr-1">
                       <img src="~/assets/img/icons/stop.svg" class="button-icon" />
                     </span>
                     <span>Stop</span>
-                  </button>
-                  <button
+              </button>
+              <button
                     v-if="job.isRunning && isJobPoster"
-                    @click.stop="openExtendModal"
-                    :class="{ 'is-loading': loadingExtend }"
+                @click.stop="openExtendModal"
+                :class="{ 'is-loading': loadingExtend }"
                     class="button is-primary is-small ml-2 custom-button"
-                  >
+              >
                     <span class="icon is-small mr-1">
                       <img src="~/assets/img/icons/plus_symbol.svg" class="button-icon" />
                     </span>
                     <span>Extend</span>
-                  </button>
-                  <button 
-                    v-if="job.isRunning || job.isCompleted"
-                    @click.stop="repostJob" 
+              </button>
+              <button 
+                v-if="job.isRunning || job.isCompleted"
+                @click.stop="repostJob" 
                     class="button is-primary is-small ml-2 custom-button"
-                  >
+              >
                     <span class="icon is-small mr-1">
                       <img src="~/assets/img/icons/redo.svg" class="button-icon" />
-                    </span>
-                    <span>Redeploy</span>
-                  </button>
+                </span>
+                <span>Redeploy</span>
+              </button>
                   <div class="job-status ml-2">
-                    <JobStatus
-                      :status="
-                        job.isCompleted && job.jobStatus
-                          ? job.jobStatus === 'success'
-                            ? 'SUCCESS'
-                            : 'FAILED'
-                          : job.state
-                      "
-                    />
+              <JobStatus
+                :status="
+                  job.isCompleted && job.jobStatus
+                    ? job.jobStatus === 'success'
+                      ? 'SUCCESS'
+                      : 'FAILED'
+                    : job.state
+                "
+              />
                   </div>
                 </div>
               </div>
@@ -131,20 +131,20 @@
         </button>
       </header>
 
-      <!-- Service Endpoints Row -->
+        <!-- Service Endpoints Row -->
       <div v-if="endpoints && endpoints.size > 0" class="service-endpoints px-5 py-2">
-        <div 
-          v-for="([url, endpointData], index) in Array.from(endpoints.entries())" 
-          :key="index"
-          class="endpoint-item mb-2"
-        >
-          <div class="endpoint-content">
+          <div 
+            v-for="([url, endpointData], index) in Array.from(endpoints.entries())" 
+            :key="index"
+            class="endpoint-item mb-2"
+          >
+            <div class="endpoint-content">
             <span class="endpoint-port">- Port {{ endpointData.port }}</span>
             <div class="tag is-outlined is-light ml-2" :class="{
-              'is-success': job.isRunning && endpointData.status === 'ONLINE',
-              'is-danger': !job.isRunning || (job.isRunning && endpointData.status === 'OFFLINE'),
+                  'is-success': job.isRunning && endpointData.status === 'ONLINE',
+                  'is-danger': !job.isRunning || (job.isRunning && endpointData.status === 'OFFLINE'),
               'is-info': job.isRunning && endpointData.status === 'UNKNOWN'
-            }">
+                }">
               <span>{{ 
                 !job.isRunning || job.isCompleted 
                   ? 'OFFLINE' 
@@ -152,14 +152,14 @@
                     ? 'LOADING' 
                     : endpointData.status 
               }}</span>
+              </div>
+            <a :href="url" target="_blank" class="button is-small custom-button" @click.stop>
+                Open Service
+              </a>
             </div>
-            <a :href="url" target="_blank" class="button is-small service-button" @click.stop>
-              Open Service
-            </a>
           </div>
         </div>
       </div>
-    </div>
 
     <div v-if="isMainContentOpen" class="content-separator"></div>
 
@@ -835,18 +835,8 @@ const getStatusText = (status: string) => {
 // Card header container styling
 .card-header-container {
   cursor: pointer;
-  transition: background-color 0.2s ease;
   background-color: #ffffff;
   border-radius: 8px 8px 0 0; // Round top corners
-
-  &:hover {
-    background-color: #fafafa;
-
-    .service-endpoints,
-    .endpoint-content {
-      background-color: #fafafa;
-    }
-  }
 }
 
 // New job header layout
@@ -1090,7 +1080,7 @@ const getStatusText = (status: string) => {
 
   .quick-detail-value {
     font-size: 0.9rem;
-    font-weight: 500;
+      font-weight: 500;
     color: #363636;
     word-break: break-word;
 
@@ -1147,27 +1137,22 @@ html.dark-mode {
   .card-header {
     background-color: #2c2c2c;
     border-bottom-color: #444;
-    
-    &.is-clickable:hover {
-      background-color: #333333;
-    }
   }
   
   .card-header-container {
     background-color: #2c2c2c;
-    
-    &:hover {
-      background-color: #333333;
-      
-      .service-endpoints,
-      .endpoint-content {
-        background-color: #333333;
-      }
-    }
   }
   
   .card-content {
     background-color: #2c2c2c;
+
+    pre {
+      background-color: #1f1f1f;
+      color: #c9d1d9;
+      border-radius: 4px;
+      border: 1px solid #444;
+      padding: 1rem;
+    }
   }
   
   .box {
@@ -1240,6 +1225,10 @@ html.dark-mode {
   .card-header.is-clickable:hover + .service-endpoints,
   .card-header.is-clickable:hover {
     background-color: rgba(255, 255, 255, 0.05);
+  }
+
+  .arrow-icon {
+    filter: brightness(0) invert(1); // Make arrow white in dark mode
   }
 }
 
@@ -1346,17 +1335,17 @@ html.dark-mode .content-separator {
 
 html.dark-mode {
   .service-button {
-    background-color: #3a3a3a !important;
-    color: #ffffff !important;
+    background-color: #555555 !important; // Match custom-button dark bg
+    color: #ffffff !important; // Match custom-button dark text
     
     &:hover {
-      background-color: #444444 !important;
+      background-color: #656565 !important; // Match custom-button dark hover bg
     }
     
     &:focus,
     &:active,
     &:focus-visible {
-      background-color: #3a3a3a !important;
+      background-color: #555555 !important; // Match custom-button dark bg for focus/active
     }
   }
 }
