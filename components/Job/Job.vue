@@ -61,7 +61,7 @@
                       timeout: job.timeout,
                       state: job.state ?? (job.isCompleted ? 2 : job.timeStart ? 1 : 0)
                     }"
-                    :options="{ showPerHour: true }"
+                    :options="{ showPerHour: !job.isCompleted }"
                   />
                 </div>
               </div>
@@ -145,7 +145,13 @@
               'is-danger': !job.isRunning || (job.isRunning && endpointData.status === 'OFFLINE'),
               'is-info': job.isRunning && endpointData.status === 'UNKNOWN'
             }">
-              <span>{{ getStatusText(endpointData.status) }}</span>
+              <span>{{ 
+                !job.isRunning || job.isCompleted 
+                  ? 'OFFLINE' 
+                  : endpointData.status === 'UNKNOWN' 
+                    ? 'LOADING' 
+                    : endpointData.status 
+              }}</span>
             </div>
             <a :href="url" target="_blank" class="button is-small service-button" @click.stop>
               Open Service
@@ -737,16 +743,20 @@ watchEffect(() => {
   }
 });
 
-watch([chatServiceUrl, endpoints], ([newUrl, currentEndpoints]) => {
+watch([chatServiceUrl, endpoints, () => job.isRunning, () => job.isCompleted], ([newUrl, currentEndpoints, isRunning, isCompleted]) => {
   if (newUrl && currentEndpoints.has(newUrl)) {
     const serviceInfo = currentEndpoints.get(newUrl);
-    if (serviceInfo && serviceInfo.status === 'ONLINE') {
+    if (serviceInfo && serviceInfo.status === 'ONLINE' && isRunning && !isCompleted) {
       isChatServiceReady.value = true; // Enable the chat tab
       if (!popupAlreadyShown.value) {
         showChatPopup.value = true;
         popupAlreadyShown.value = true; // Ensure popup is shown only once
       }
+    } else {
+      isChatServiceReady.value = false; // Disable chat tab
     }
+  } else {
+    isChatServiceReady.value = false; // Disable chat tab if no URL or endpoint info
   }
 }, { deep: true }); // deep true for endpoints map
 
@@ -827,6 +837,7 @@ const getStatusText = (status: string) => {
   cursor: pointer;
   transition: background-color 0.2s ease;
   background-color: #ffffff;
+  border-radius: 8px 8px 0 0; // Round top corners
 
   &:hover {
     background-color: #fafafa;
@@ -845,7 +856,7 @@ const getStatusText = (status: string) => {
 
 .job-header-grid {
   display: grid;
-  grid-template-columns: 3fr 1fr 1fr 1fr;
+  grid-template-columns: 1.5fr 1fr 1fr 1fr;
   gap: 1rem;
   align-items: center;
   
@@ -860,6 +871,7 @@ const getStatusText = (status: string) => {
   flex-direction: column;
   justify-content: center;
   position: relative;
+  min-width: 0; // Allow container to shrink below content size
   
   .job-title {
     font-size: 1.1rem;
@@ -872,13 +884,16 @@ const getStatusText = (status: string) => {
     font-size: 0.8rem;
     font-family: monospace;
     color: #7a7a7a;
-    word-break: break-all;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     line-height: 1.3;
     position: absolute;
     top: 100%;
     left: 0;
     right: 0;
     margin-top: -0.1rem;
+    max-width: 100%; // Ensure it doesn't overflow its container
   }
 }
 
@@ -887,7 +902,7 @@ const getStatusText = (status: string) => {
   align-items: center;
   
   .job-gpu {
-    font-size: 1.1rem;
+    font-size: 1.05rem;
     color: #363636;
     font-weight: 600;
     line-height: 1.2;
@@ -906,7 +921,7 @@ const getStatusText = (status: string) => {
   }
   
   .price-value {
-    font-size: 1.1rem;
+    font-size: 1.05rem;
     font-weight: 600;
     color: #363636;
     line-height: 1.2;
@@ -956,6 +971,7 @@ const getStatusText = (status: string) => {
     border-color: #e8e8e8 !important;
     color: #363636 !important;
     border: none !important;
+    box-shadow: none !important;
     
     &:hover {
       background-color: #d8d8d8 !important;
@@ -975,6 +991,15 @@ const getStatusText = (status: string) => {
         background-color: #48c774 !important;
         border-color: #48c774 !important;
         color: white !important;
+      }
+    }
+
+    &.is-danger {
+      &:focus,
+      &:active,
+      &:focus-visible {
+        box-shadow: none !important;
+        outline: none !important;
       }
     }
   }
@@ -1332,6 +1357,11 @@ html.dark-mode {
       background-color: #363636 !important;
     }
   }
+}
+
+.card {
+  border-radius: 8px;
+  overflow: hidden; // Ensure inner content doesn't overflow rounded corners
 }
 </style>
 
