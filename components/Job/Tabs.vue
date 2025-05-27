@@ -20,7 +20,7 @@
         <a @click.prevent="handleTabClick('artifacts')">Artifacts</a>
       </li>
       <li
-        v-if="showChatTab"
+        v-if="showChatTab" 
         :class="{ 'is-active': activeTab === 'chat' }"
       >
         <a @click.prevent="handleTabClick('chat')">Test-Chat</a>
@@ -40,7 +40,7 @@
       :stringified="false" 
       :readOnly="true"
       class="job-definition-editor" 
-    />
+  />
   </div>
   <JobLogsView
     v-if="activeTab === 'logs'"
@@ -58,9 +58,9 @@
   />
   <JobResultsView v-if="activeTab === 'result'" :job="job" />
   <JobArtifactsView v-if="activeTab === 'artifacts'" :job="job" />
-  <JobChatView
-    v-if="activeTab === 'chat' && showChatTab"
-    :job="job"
+  <JobChatView 
+    v-if="activeTab === 'chat' && showChatTab" 
+    :job="job" 
     :chatServiceUrl="chatServiceUrl" />
   <div v-if="activeTab === 'details'" class="p-1 py-4 has-background-white-bis">
     <table class="table is-fullwidth">

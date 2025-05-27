@@ -1,5 +1,5 @@
 <template>
-  <div class="p-1 py-4 has-background-white-bis logs-container" ref="logsContainer">
+  <div class="p-1 py-4 logs-container" ref="logsContainer">
     <template v-if="job.isRunning">
       <JobLogViewer
         v-if="isJobPoster"
@@ -74,8 +74,13 @@ defineExpose({
 
 <style lang="scss" scoped>
 .logs-container {
-  // Remove max-height and overflow to prevent double scrollbar
-  // The LogViewer component will handle its own scrolling
+  background-color: #ffffff;
+  border-radius: 4px;
+}
+
+// Dark mode styling
+html.dark-mode .logs-container {
+  background-color: #2c2c2c;
 }
 
 .progress.is-primary::-webkit-progress-bar {

@@ -1,300 +1,283 @@
 <template>
-  <!-- Job Title Header with Collapsible Content -->
-  <div class="job-header-container">
-    <div class="job-title-row" @click="toggleMainContent" :class="{ 'is-closed': !isMainContentOpen }">
-      <div class="job-title-info">
-        <!-- Template Name/Title -->
-        <div class="job-title">
-          <template v-if="templateForJob">
-            <span class="title-text main-row-text">{{ templateForJob.name }}</span>
-          </template>
-          <template v-else-if="jobDefinitionId || dockerImage">
-            <span class="title-text main-row-text">{{ jobDefinitionId || dockerImage }}</span>
-          </template>
-          <template v-else>
-            <span class="title-text main-row-text">
-              <span class="icon is-small mr-1">
-                <i class="fas fa-spinner fa-spin"></i>
-              </span>
-              Loading
-            </span>
-          </template>
+  <!-- Job Card Container -->
+  <div class="card">
+    <!-- Card Header and Service Endpoints Container -->
+    <div class="card-header-container" @click="toggleMainContent">
+      <!-- Card Header - Always Visible -->
+      <header class="card-header">
+        <div class="w-100">
+          <!-- Main Job Info Row -->
+          <div class="job-header-main p-4 w-100" style="flex-grow: 1;">
+            <div class="job-header-grid">
+              <!-- Job Title -->
+              <div class="job-title-col">
+                <div class="job-title">
+                  <template v-if="templateForJob">
+                    {{ templateForJob.name }}
+                  </template>
+                  <template v-else-if="jobDefinitionId">
+                    {{ jobDefinitionId }}
+                  </template>
+                  <template v-else-if="dockerImage">
+                    {{ dockerImage.split('/').pop() }}
+                  </template>
+                  <template v-else>
+                    <span class="icon-text">
+                      <span class="icon is-small">
+                        <i class="fas fa-spinner fa-spin"></i>
+                      </span>
+                      <span>Loading</span>
+                    </span>
+                  </template>
+                </div>
+                <!-- Docker Image moved here -->
+                <div class="job-docker">
+                  <span v-if="dockerImage">{{ dockerImage }}</span>
+                </div>
+              </div>
+
+              <!-- GPU -->
+              <div class="job-gpu-col">
+                <div class="job-gpu">
+                  <span v-if="actualGpuInfo">{{ cleanGpuName }}</span>
+                  <span v-else>
+                    <span class="icon-text">
+                      <span class="icon is-small">
+                        <i class="fas fa-spinner fa-spin"></i>
+                      </span>
+                      <span>Loading GPU</span>
+                    </span>
+                  </span>
+                </div>
+              </div>
+
+              <!-- Price -->
+              <div class="job-price">
+                <div class="price-value">
+                  <JobPrice 
+                    :job="{
+                      usdRewardPerHour: job.usdRewardPerHour,
+                      timeStart: job.timeStart,
+                      timeEnd: job.timeEnd,
+                      timeout: job.timeout,
+                      state: job.state ?? (job.isCompleted ? 2 : job.timeStart ? 1 : 0)
+                    }"
+                    :options="{ showPerHour: true }"
+                  />
+                </div>
+              </div>
+
+              <!-- Actions and Status -->
+              <div class="job-actions is-hidden-mobile" v-if="isJobPoster">
+                <div class="actions-container">
+                  <button
+                    v-if="job.isRunning"
+                    @click.stop="stopJob"
+                    :class="{ 'is-loading': loading }"
+                    class="button is-danger is-small custom-button"
+                  >
+                    <span class="icon is-small mr-1">
+                      <img src="~/assets/img/icons/stop.svg" class="button-icon" />
+                    </span>
+                    <span>Stop</span>
+                  </button>
+                  <button
+                    v-if="job.isRunning"
+                    @click.stop="openExtendModal"
+                    :class="{ 'is-loading': loadingExtend }"
+                    class="button is-primary is-small ml-2 custom-button"
+                  >
+                    <span class="icon is-small mr-1">
+                      <img src="~/assets/img/icons/plus_symbol.svg" class="button-icon" />
+                    </span>
+                    <span>Extend</span>
+                  </button>
+                  <button 
+                    v-if="job.isRunning || job.isCompleted"
+                    @click.stop="repostJob" 
+                    class="button is-primary is-small ml-2 custom-button"
+                  >
+                    <span class="icon is-small mr-1">
+                      <img src="~/assets/img/icons/redo.svg" class="button-icon" />
+                    </span>
+                    <span>Redeploy</span>
+                  </button>
+                  <div class="job-status ml-2">
+                    <JobStatus
+                      :status="
+                        job.isCompleted && job.jobStatus
+                          ? job.jobStatus === 'success'
+                            ? 'SUCCESS'
+                            : 'FAILED'
+                          : job.state
+                      "
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <!-- GPU Info -->
-        <div class="job-gpu">
-          <span v-if="actualGpuInfo" class="gpu-text main-row-text">{{ cleanGpuName }}</span>
-          <span v-else class="gpu-text main-row-text">
-            <span class="icon is-small mr-1">
-              <i class="fas fa-spinner fa-spin"></i>
-            </span>
-            Loading
+        <!-- Dropdown Arrow -->
+        <button class="card-header-icon" aria-label="more options">
+          <span class="icon">
+            <img 
+              src="~/assets/img/icons/arrow-collapse.svg" 
+              class="arrow-icon" 
+              :class="{ 'is-rotated': isMainContentOpen }"
+              alt="Toggle content"
+            />
           </span>
-        </div>
+        </button>
+      </header>
 
-        <!-- Price per hour -->
-        <div class="job-price">
-          <JobPrice 
-            :job="{
-              usdRewardPerHour: job.usdRewardPerHour,
-              timeStart: job.timeStart,
-              timeEnd: job.timeEnd,
-              timeout: job.timeout,
-              state: job.state ?? (job.isCompleted ? 2 : job.timeStart ? 1 : 0)
-            }"
-            :options="{ showPerHour: true }"
-            class="main-row-text"
-          />
+      <!-- Service Endpoints Row -->
+      <div v-if="endpoints && endpoints.size > 0" class="service-endpoints px-4 py-2">
+        <div 
+          v-for="([url, endpointData], index) in Array.from(endpoints.entries())" 
+          :key="index"
+          class="endpoint-item mb-2"
+        >
+          <div class="endpoint-content">
+            <span class="endpoint-port">Port {{ endpointData.port }}</span>
+            <div class="tag is-outlined is-light ml-2" :class="{
+              'is-success': job.isRunning && endpointData.status === 'ONLINE',
+              'is-danger': !job.isRunning || (job.isRunning && endpointData.status === 'OFFLINE'),
+              'is-info': job.isRunning && endpointData.status === 'UNKNOWN'
+            }">
+              <img class="mr-2" :src="getStatusIcon(endpointData.status)" />
+              <span>{{ getStatusText(endpointData.status) }}</span>
+            </div>
+            <a :href="url" target="_blank" class="button is-small service-button" @click.stop>
+              Open Service
+            </a>
+          </div>
         </div>
-
-        <!-- Docker URL -->
-        <div class="job-docker">
-          <span v-if="dockerImage" class="docker-url is-family-monospace main-row-text">{{ dockerImage }}</span>
-          <span v-else class="docker-url main-row-text">
-            <span class="icon is-small mr-1">
-              <i class="fas fa-spinner fa-spin"></i>
-            </span>
-            Loading
-          </span>
-        </div>
-
-        <!-- Action Buttons (Stop/Extend) -->
-        <div class="job-actions-inline">
-          <template v-if="isJobPoster && job.isRunning">
-            <button
-              @click.stop="stopJob"
-              :class="{ 'is-loading': loading }"
-              class="button is-light is-small stop-button"
-            >
-              Stop
-            </button>
-            <button
-              @click.stop="openExtendModal"
-              :class="{ 'is-loading': loadingExtend }"
-              class="button is-light is-small"
-            >
-              Extend
-            </button>
-            <button @click.stop="repostJob" class="button is-light is-small">
-              <span class="icon"><i class="fas fa-redo"></i></span>
-              <span>Redeploy</span>
-            </button>
-          </template>
-        </div>
-
-        <!-- Job Status -->
-        <div class="job-status">
-          <JobStatus
-            :status="
-              job.isCompleted && job.jobStatus
-                ? job.jobStatus === 'success'
-                  ? 'SUCCESS'
-                  : 'FAILED'
-                : job.state
-            "
-          />
-        </div>
-      </div>
-
-      <!-- Dropdown Arrow -->
-      <div class="dropdown-arrow">
-        <img src="~/assets/img/icons/arrow-expand.svg" alt="Expand" class="expand-arrow" :class="{ 'is-expanded': isMainContentOpen }" />
       </div>
     </div>
 
-    <!-- Service Endpoints Table (always visible) -->
-    <div v-if="endpoints && endpoints.size > 0" class="service-endpoints-section-persistent">
-      <table class="table">
-        <tbody>
-          <tr v-for="([url, endpointData], index) in Array.from(endpoints.entries())" :key="index">
-            <td class="endpoint-port-cell">
-              <span class="port-text">Port {{ endpointData.port }}</span>
-            </td>
-            <td class="endpoint-status-cell">
-              <span class="endpoint-status-simple" :class="{
-                'status-online': endpointData.status === 'ONLINE',
-                'status-offline': endpointData.status === 'OFFLINE',
-                'status-loading': endpointData.status === 'UNKNOWN'
-              }">
-                <span class="status-icon">
-                  <span v-if="endpointData.status === 'ONLINE'" class="icon is-small">
-                    <i class="fas fa-check-circle"></i>
-                  </span>
-                  <span v-else-if="endpointData.status === 'OFFLINE'" class="icon is-small">
-                    <i class="fas fa-times-circle"></i>
-                  </span>
-                  <span v-else class="icon is-small">
-                    <i class="fas fa-spinner fa-spin"></i>
-                  </span>
-                </span>
-                <span class="status-text">
-                  {{ endpointData.status === 'UNKNOWN' ? 'Loading' : endpointData.status }}
-                </span>
-              </span>
-            </td>
-            <td class="endpoint-url-cell">
-              <a :href="url" target="_blank" class="button is-small is-light">
-                <span>Open Service</span>
-                <span class="icon is-small ml-1">
-                  <img src="~/assets/img/icons/external.png" alt="External" class="external-icon">
-                </span>
-              </a>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <div v-if="isMainContentOpen" class="content-separator"></div>
 
     <!-- Collapsible Content -->
-    <div v-if="isMainContentOpen" class="job-content">
-      <!-- Action Buttons Row (conditional, moved inside collapsible) -->
-      <div v-if="isJobPoster && job.state === 0" class="job-actions-row-collapsible mb-4">
-        <div class="action-buttons-left">
+    <div v-if="isMainContentOpen" class="card-content p-4">
+      <!-- Delist Button for Queued Jobs -->
+      <div v-if="isJobPoster && job.state === 0" class="notification is-warning is-light mb-4">
+        <div class="is-flex is-justify-content-space-between is-align-items-center">
+          <div>
+            <p class="subtitle is-6 mb-1">Job is queued</p>
+            <p class="is-size-7">This job is waiting to be picked up by a node.</p>
+          </div>
           <button
             @click.stop="stopJob"
             :class="{ 'is-loading': loading }"
-            class="button is-light is-small stop-button"
+            class="button is-warning"
           >
             Delist Job
           </button>
         </div>
       </div>
 
-      <!-- Quick Details Section -->
-      <div class="quick-details-section mb-4">
-        <div class="quick-details-grid">
+      <!-- Quick Details Compact Grid -->
+      <div class="content mb-5">
+        <div class="columns is-multiline is-variable is-0 no-padding">
           <!-- Duration -->
-          <div class="detail-item">
-            <span class="icon is-small">
-              <i class="fas fa-clock"></i>
-            </span>
-            <div class="detail-content">
-              <span class="detail-label">Duration</span>
-              <span class="detail-value">
+          <div class="column is-one-third-desktop is-half-tablet is-full-mobile no-padding">
+            <div class="quick-detail-item">
+              <span class="quick-detail-label">Duration</span>
+              <span class="quick-detail-value">
                 <span v-if="jobDurationDisplay">{{ jobDurationDisplay }}</span>
-                <span v-else>
-                  <span class="icon is-small mr-1">
-                    <i class="fas fa-spinner fa-spin"></i>
-                  </span>
-                  Loading
+                <span v-else class="icon-text">
+                  <span class="icon is-small"><i class="fas fa-spinner fa-spin"></i></span>
+                  <span>Loading</span>
                 </span>
               </span>
             </div>
           </div>
 
           <!-- Country -->
-          <div class="detail-item">
-            <span class="icon is-small">
-              <i class="fas fa-globe"></i>
-            </span>
-            <div class="detail-content">
-              <span class="detail-label">Country</span>
-              <span class="detail-value">
+          <div class="column is-one-third-desktop is-half-tablet is-full-mobile no-padding">
+            <div class="quick-detail-item">
+              <span class="quick-detail-label">Country</span>
+              <span class="quick-detail-value">
                 <span v-if="countryInfo">{{ countryInfo }}</span>
-                <span v-else>
-                  <span class="icon is-small mr-1">
-                    <i class="fas fa-spinner fa-spin"></i>
-                  </span>
-                  Loading
+                <span v-else class="icon-text">
+                  <span class="icon is-small"><i class="fas fa-spinner fa-spin"></i></span>
+                  <span>Loading</span>
                 </span>
               </span>
             </div>
           </div>
 
           <!-- CPU -->
-          <div class="detail-item">
-            <span class="icon is-small">
-              <i class="fas fa-microchip"></i>
-            </span>
-            <div class="detail-content">
-              <span class="detail-label">CPU</span>
-              <span class="detail-value">
+          <div class="column is-one-third-desktop is-half-tablet is-full-mobile no-padding">
+            <div class="quick-detail-item">
+              <span class="quick-detail-label">CPU</span>
+              <span class="quick-detail-value">
                 <span v-if="combinedSpecs?.cpu">{{ combinedSpecs.cpu }}</span>
-                <span v-else>
-                  <span class="icon is-small mr-1">
-                    <i class="fas fa-spinner fa-spin"></i>
-                  </span>
-                  Loading
+                <span v-else class="icon-text">
+                  <span class="icon is-small"><i class="fas fa-spinner fa-spin"></i></span>
+                  <span>Loading</span>
                 </span>
               </span>
             </div>
           </div>
 
           <!-- RAM -->
-          <div class="detail-item">
-            <span class="icon is-small">
-              <i class="fas fa-memory"></i>
-            </span>
-            <div class="detail-content">
-              <span class="detail-label">RAM</span>
-              <span class="detail-value">
+          <div class="column is-one-third-desktop is-half-tablet is-full-mobile no-padding">
+            <div class="quick-detail-item">
+              <span class="quick-detail-label">RAM</span>
+              <span class="quick-detail-value">
                 <span v-if="combinedSpecs?.ram">{{ combinedSpecs.ram }} MB</span>
-                <span v-else>
-                  <span class="icon is-small mr-1">
-                    <i class="fas fa-spinner fa-spin"></i>
-                  </span>
-                  Loading
+                <span v-else class="icon-text">
+                  <span class="icon is-small"><i class="fas fa-spinner fa-spin"></i></span>
+                  <span>Loading</span>
                 </span>
               </span>
             </div>
           </div>
 
           <!-- Disk Space -->
-          <div class="detail-item">
-            <span class="icon is-small">
-              <i class="fas fa-hdd"></i>
-            </span>
-            <div class="detail-content">
-              <span class="detail-label">Disk Space</span>
-              <span class="detail-value">
+          <div class="column is-one-third-desktop is-half-tablet is-full-mobile no-padding">
+            <div class="quick-detail-item">
+              <span class="quick-detail-label">Disk Space</span>
+              <span class="quick-detail-value">
                 <span v-if="combinedSpecs?.diskSpace">{{ combinedSpecs.diskSpace }} GB</span>
-                <span v-else>
-                  <span class="icon is-small mr-1">
-                    <i class="fas fa-spinner fa-spin"></i>
-                  </span>
-                  Loading
+                <span v-else class="icon-text">
+                  <span class="icon is-small"><i class="fas fa-spinner fa-spin"></i></span>
+                  <span>Loading</span>
                 </span>
               </span>
             </div>
           </div>
 
           <!-- Download Speed -->
-          <div class="detail-item">
-            <span class="icon is-small">
-              <i class="fas fa-download"></i>
-            </span>
-            <div class="detail-content">
-              <span class="detail-label">Download</span>
-              <span class="detail-value">
+          <div class="column is-one-third-desktop is-half-tablet is-full-mobile no-padding">
+            <div class="quick-detail-item">
+              <span class="quick-detail-label">Download</span>
+              <span class="quick-detail-value">
                 <span v-if="benchmarkData?.data?.length">
                   {{ Number(benchmarkData.data[0]?.metrics.internetSpeedDownload).toFixed(2) }} Mbps
                 </span>
-                <span v-else>
-                  <span class="icon is-small mr-1">
-                    <i class="fas fa-spinner fa-spin"></i>
-                  </span>
-                  Loading
+                <span v-else class="icon-text">
+                  <span class="icon is-small"><i class="fas fa-spinner fa-spin"></i></span>
+                  <span>Loading</span>
                 </span>
               </span>
             </div>
           </div>
 
           <!-- Upload Speed -->
-          <div class="detail-item">
-            <span class="icon is-small">
-              <i class="fas fa-upload"></i>
-            </span>
-            <div class="detail-content">
-              <span class="detail-label">Upload</span>
-              <span class="detail-value">
+          <div class="column is-one-third-desktop is-half-tablet is-full-mobile no-padding" style="display: none;">
+            <div class="quick-detail-item">
+              <span class="quick-detail-label">Upload</span>
+              <span class="quick-detail-value">
                 <span v-if="benchmarkData?.data?.length">
                   {{ Number(benchmarkData.data[0]?.metrics.internetSpeedUpload).toFixed(2) }} Mbps
                 </span>
-                <span v-else>
-                  <span class="icon is-small mr-1">
-                    <i class="fas fa-spinner fa-spin"></i>
-                  </span>
-                  Loading
+                <span v-else class="icon-text">
+                  <span class="icon is-small"><i class="fas fa-spinner fa-spin"></i></span>
+                  <span>Loading</span>
                 </span>
               </span>
             </div>
@@ -302,27 +285,28 @@
         </div>
       </div>
 
-      <!-- Modal Action Buttons -->
-      <div v-if="job.jobDefinition" class="modal-buttons-container mt-5">
-        <JobTabs
-          :job="job"
-          :endpoints="endpoints"
-          :isJobPoster="isJobPoster"
-          :jobDefinition="job.jobDefinition"
-          :hasArtifacts="false"
-          :isConnecting="isConnecting"
-          :logs="logs"
-          :progressBars="progressBars"
-          :resourceProgressBars="resourceProgressBars"
-          :showChatTab="isChatServiceReady"
-          :chatServiceUrl="chatServiceUrl"
+      <!-- Tabs Section -->
+      <div v-if="job.jobDefinition">
+  <JobTabs
+    :job="job"
+    :endpoints="endpoints"
+    :isJobPoster="isJobPoster"
+    :jobDefinition="job.jobDefinition"
+    :hasArtifacts="false"
+    :isConnecting="isConnecting"
+    :logs="logs"
+    :progressBars="progressBars"
+    :resourceProgressBars="resourceProgressBars"
+    :showChatTab="isChatServiceReady"
+    :chatServiceUrl="chatServiceUrl"
           v-model:activeTab="activeTab"
           ref="jobTabsRef"
-        />
+  />
       </div>
     </div>
   </div>
 
+  <!-- Modals -->
   <ExtendModal
     v-if="modal.isOpen.value && job"
     :job="job"
@@ -337,11 +321,20 @@
   />
 
   <!-- Chat Popup -->
-  <div v-if="showChatPopup" class="chat-prompt-popup">
-    <div class="popup-content">
-      <p>The model's ready. Would you like to test it out in chat?</p>
-      <button @click="activateChatAndClosePopup">Open Test-Chat</button>
-      <button @click="showChatPopup = false">Dismiss</button>
+  <div v-if="showChatPopup" class="modal is-active">
+    <div class="modal-background" @click="showChatPopup = false"></div>
+    <div class="modal-card">
+      <header class="modal-card-head">
+        <p class="modal-card-title">Test Chat Available</p>
+        <button class="delete" aria-label="close" @click="showChatPopup = false"></button>
+      </header>
+      <section class="modal-card-body">
+        <p>The model's ready. Would you like to test it out in chat?</p>
+      </section>
+      <footer class="modal-card-foot">
+        <button class="button is-success" @click="activateChatAndClosePopup">Open Test-Chat</button>
+        <button class="button" @click="showChatPopup = false">Dismiss</button>
+      </footer>
     </div>
   </div>
 </template>
@@ -788,513 +781,551 @@ watch(isMainContentOpen, (newValue) => {
   }
 });
 
+const getStatusIcon = (status: string) => {
+  if (!job.isRunning) {
+    return '/img/icons/status/stopped.svg'; // Offline because job is not running
+  }
+
+  // Job is running, determine icon by endpoint status
+  if (status === 'ONLINE') {
+    return '/img/icons/status/done.svg';
+  } else if (status === 'UNKNOWN') {
+    return '/img/icons/status/running.svg'; // Loading state
+  } else if (status === 'OFFLINE') {
+    return '/img/icons/status/failed.svg'; // Offline because endpoint is offline
+  }
+  
+  return '/img/icons/status/failed.svg'; // Default to failed if status is unexpected while job is running
+};
+
+const getStatusText = (status: string) => {
+  if (!job.isRunning) {
+    return 'OFFLINE';
+  }
+  // Job is running
+  if (status === 'ONLINE') {
+    return 'ONLINE';
+  } else if (status === 'UNKNOWN') {
+    return 'LOADING';
+  } else if (status === 'OFFLINE') {
+    return 'OFFLINE';
+  }
+  return 'OFFLINE'; // Default to OFFLINE for any other case when job is running
+};
+
 </script>
 
 <style lang="scss" scoped>
-// --- Global Variables (subset for popup) ---
-$nosana-green: #1bff45;
-$nosana-darker: #030303;
-$nosana-border: #222;
-$text-light: #ffffff;
-$text-secondary: rgba(white, 0.7);
-$border-radius: 12px;
-
-.job-header-container {
-  background-color: #ffffff;
-  border: none;
-  border-radius: 8px;
-  margin-bottom: 1rem;
-  overflow: hidden;
-  padding: 0 1rem;
+// Utility class for full width
+.w-100 {
+  width: 100%;
 }
 
-.job-title-row {
-  background-color: transparent;
-  margin: 0 -1rem;
-  padding: 1rem 1rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.has-text-ellipsis {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// Card header container styling
+.card-header-container {
   cursor: pointer;
   transition: background-color 0.2s ease;
-  border-bottom: none;
+  background-color: #ffffff;
 
   &:hover {
-    background-color: rgba(0,0,0,0.03);
-  }
+    background-color: #fafafa;
 
-  &.is-closed {
-    border-bottom: none;
+    .service-endpoints,
+    .endpoint-content {
+      background-color: #fafafa;
+    }
   }
 }
 
-.job-title-info {
+// New job header layout
+.job-header-main {
+  /* border-bottom: 1px solid #e8e8e8; */ /* Removed */
+}
+
+.job-header-grid {
+  display: grid;
+  grid-template-columns: 3fr 1fr 1fr 1fr;
+  gap: 1rem;
+  align-items: center;
+  
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+}
+
+.job-title-col {
+  .job-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #363636;
+    line-height: 1.2;
+  }
+  
+  .job-docker {
+    font-size: 0.8rem;
+    font-family: monospace;
+    color: #7a7a7a;
+    word-break: break-all;
+    line-height: 1.3;
+    margin-top: 0.25rem;
+  }
+}
+
+.job-gpu-col {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
-  flex: 1;
-  min-width: 0;
-}
-
-.job-title {
-  display: flex;
-  align-items: center;
-  flex: 1;
-  min-width: 180px;
-
-  .title-text {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-}
-
-.job-gpu {
-  flex: 1;
-  min-width: 100px;
-
-  .gpu-text {
-    font-weight: 500;
-    color: #6c757d;
-    font-size: 0.9rem;
+  
+  .job-gpu {
+    font-size: 1.1rem;
+    color: #363636;
+    font-weight: 600;
+    line-height: 1.2;
   }
 }
 
 .job-price {
-  flex: 1;
-  min-width: 80px;
-  
-  :deep(.job-price) {
-    font-weight: normal !important;
-    color: #000000 !important;
-    font-family: inherit !important;
-    font-size: 0.9rem;
-  }
-}
-
-.job-docker {
-  flex: 2;
-  min-width: 0;
-
-  .docker-url {
-    color: #6c757d;
-    font-size: 0.85rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: block;
-  }
-}
-
-.job-actions-inline {
+  text-align: center;
   display: flex;
   align-items: center;
+  justify-content: center;
+  
+  @media (max-width: 768px) {
+    text-align: left;
+    justify-content: flex-start;
+  }
+  
+  .price-value {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #363636;
+    line-height: 1.2;
+  }
+}
+
+.job-actions {
+  display: flex;
   gap: 0.5rem;
-  min-width: 120px;
-  flex-shrink: 0;
+  justify-content: flex-start;
+  
+  @media (max-width: 768px) {
+    justify-content: flex-start;
+  }
+
+  .actions-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .button {
+    .icon {
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      
+      i {
+        font-size: 0.75rem !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        display: inline-block !important;
+      }
+      
+      .button-icon {
+        width: 12px !important;
+        height: 12px !important;
+        display: inline-block !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+      }
+    }
+  }
+
+  .custom-button {
+    background-color: #e8e8e8 !important;
+    border-color: #e8e8e8 !important;
+    color: #363636 !important;
+    border: none !important;
+    
+    &:hover {
+      background-color: #d8d8d8 !important;
+      border-color: #d8d8d8 !important;
+    }
+    
+    .button-icon {
+      filter: brightness(0) saturate(100%) invert(21%) sepia(6%) saturate(2013%) hue-rotate(201deg) brightness(95%) contrast(93%);
+    }
+
+    &.is-success.is-outlined {
+      background-color: transparent !important;
+      border-color: #48c774 !important;
+      color: #48c774 !important;
+      
+      &:hover {
+        background-color: #48c774 !important;
+        border-color: #48c774 !important;
+        color: white !important;
+      }
+    }
+  }
 }
 
 .job-status {
-  min-width: 100px;
-  flex-shrink: 0;
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  
+  @media (max-width: 768px) {
+    margin-left: 0.5rem;
+  }
 }
 
-.dropdown-arrow {
-  margin-left: 1rem;
-  flex-shrink: 0;
+// Service endpoints styling
+.service-endpoints {
+  background-color: #ffffff;
+  border-top: 0px solid #e8e8e8;
+  transition: background-color 0.2s ease;
+}
 
-  .expand-arrow {
-    width: 16px;
-    height: 16px;
-    opacity: 0.8;
-    transition: transform 0.2s ease;
-    transform: rotate(90deg);
+.endpoint-content {
+  background-color: #ffffff;
+  transition: background-color 0.2s ease;
+}
+
+.card-header.is-clickable:hover + .service-endpoints,
+.card-header.is-clickable:hover {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.endpoint-item {
+  &:last-child {
+    margin-bottom: 0 !important;
+  }
+}
+
+.endpoint-content {
+  display: flex;
+  align-items: center;
+  padding: 0.0rem;
+  background: #ffffff;
+  gap: 0.5rem;
+}
+
+.endpoint-port {
+  font-weight: 600;
+  color: #363636;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+}
+
+.tags.has-addons {
+  display: inline-flex;
+  align-items: center;
+  margin: 0;
+  margin-top: 0.6rem;
+  
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    height: 1.3rem;
+    padding: 0 0.5rem;
+  }
+}
+
+// Smooth rotation for dropdown arrow
+.fa-angle-down {
+  transition: transform 0.3s ease;
+}
+
+// Quick Details specific styling
+.quick-detail-item {
+  padding: 0;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+
+  .quick-detail-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #7a7a7a;
+    text-transform: uppercase;
+    margin-bottom: 0;
+  }
+
+  .quick-detail-value {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #363636;
+    word-break: break-word;
+
+    .icon-text {
+      color: #363636;
+    }
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 768px) {
+  .card-header-title {
+    .columns {
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    
+    .column {
+      width: 100% !important;
+      text-align: left !important; // Align all header items left on mobile
+      &.has-text-centered {
+        text-align: left !important;
+      }
+    }
   }
   
-  .expand-arrow.is-expanded {
-    transform: rotate(0deg);
+  .buttons {
+    justify-content: flex-start; // Align buttons left on mobile
+    &.is-flex-wrap-nowrap {
+      flex-wrap: wrap !important; // Allow buttons to wrap on mobile
+      .button {
+        margin-bottom: 0.5rem !important;
+      }
+    }
   }
-}
-
-.job-content {
-  background-color: transparent;
-  padding-top: 1rem;
-  padding-bottom: 1.25rem;
-}
-
-.template-icon {
-  background-color: #ffffff;
-  border: 1px solid #dbdbdb;
-  width: 24px;
-  height: 24px;
-  border-radius: 100%;
-  padding: 2px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-
-  img {
-    width: auto;
-    height: auto;
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
+  .level-left,
+  .level-right {
+    flex-basis: auto;
+    flex-grow: 0;
+    flex-shrink: 0;
   }
-}
-
-.container-icon {
-  background-color: #ffffff;
-  border: 1px solid #dbdbdb;
-  width: 24px;
-  height: 24px;
-  border-radius: 100%;
-  padding: 2px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-
-  .github-icon {
-    position: relative;
-    top: -1px;
-    width: 16px;
-    height: 16px;
-  }
-
-  .docker-icon {
-    filter: invert(48%) sepia(90%) saturate(2299%) hue-rotate(188deg) brightness(97%) contrast(91%);
-    width: 16px;
-    height: 16px;
+  .level-left + .level-right {
+    margin-top: 0.75rem;
   }
 }
 
 // Dark mode adjustments
-html.dark-mode .job-header-container {
-  background-color: #2c2c2c;
-  border: none;
-
-  .job-title-row {
-    &:hover {
-      background-color: rgba(255,255,255,0.05);
-    }
-    &.is-closed {
-      border-bottom: none;
-    }
-  }
-}
-
-html.dark-mode .quick-details-section {
-  .quick-details-grid {
+html.dark-mode {
+  .card {
     background-color: #2c2c2c;
     border-color: #444;
   }
-
-  .detail-item {
-    .icon {
-      color: #b0b0b0;
+  
+  .card-header {
+    background-color: #2c2c2c;
+    border-bottom-color: #444;
+    
+    &.is-clickable:hover {
+      background-color: rgba(255, 255, 255, 0.05);
     }
-
-    .detail-content {
-      .detail-label {
-        color: #b0b0b0;
-      }
-
-      .detail-value {
-        color: #ffffff;
+  }
+  
+  .card-header-container {
+    background-color: #2c2c2c;
+    
+    &:hover {
+      background-color: #333333;
+      
+      .service-endpoints,
+      .endpoint-content {
+        background-color: #333333;
       }
     }
   }
-}
-
-html.dark-mode .service-endpoints-section-persistent {
-  border-bottom: none;
   
-  .endpoint-port-cell .port-text {
+  .card-content {
+    background-color: #2c2c2c;
+  }
+  
+  .box {
+    background-color: #363636;
+    border-color: #555;
+  }
+
+  // New header layout dark mode
+  .job-header-main {
+    /* border-bottom-color: #444; */ /* Removed */
+  }
+  
+  .job-title-col {
+    .job-title {
+      color: #ffffff;
+    }
+  }
+  
+  .job-gpu-col {
+    .job-gpu {
+      color: #ffffff;
+    }
+  }
+  
+  .job-price {
+    .price-value {
+      color: #ffffff;
+    }
+  }
+  
+  .job-docker {
     color: #b0b0b0;
   }
   
-  .endpoint-status-simple {
-    &.status-online { color: #28a745; }
-    &.status-offline { color: #dc3545; }
-    &.status-loading { color: #ffc107; }
-  }
-}
-
-// Responsive design
-@media (max-width: 1200px) {
-  .job-title-info {
-    gap: 1.5rem;
+  .service-endpoints {
+    background-color: #1e1e1e;
+    border-top-color: #444;
   }
   
-  .job-title {
-    min-width: 150px;
+  .endpoint-content {
+    background: #2c2c2c;
+    border-color: #444;
+  }
+  
+  .endpoint-port {
+    color: #ffffff;
+  }
+
+  .quick-detail-item {
+    /* background-color: #363636; // Keep background for dark mode consistency */
+    /* border-color: #555; // Border removed */
+
+    .quick-detail-label {
+      color: #b0b0b0;
+    }
+
+    .quick-detail-value,
+    .quick-detail-value .icon-text {
+      color: #ffffff;
+    }
+  }
+  
+  .notification.is-warning.is-light {
+    background-color: rgba(255, 221, 87, 0.1);
+    color: #fff;
+  }
+
+  .card-header.is-clickable:hover + .service-endpoints,
+  .card-header.is-clickable:hover {
+    background-color: rgba(255, 255, 255, 0.05);
   }
 }
 
-@media (max-width: 768px) {
-  .job-title-info {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.75rem;
-  }
-
-  .job-title,
-  .job-gpu,
-  .job-price,
-  .job-docker,
-  .job-actions-inline,
-  .job-status {
-    min-width: auto;
-    width: 100%;
-  }
-
-  .job-status {
-    justify-content: flex-start;
-  }
-
-  .job-actions-row {
-    flex-direction: column;
-    gap: 0.75rem;
-    align-items: stretch;
-
-    .action-buttons-left {
-      justify-content: center;
-    }
-  }
-}
-
-.chat-prompt-popup {
-  position: fixed;
-  top: 50%; 
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background-color: rgba($nosana-darker, 0.95); 
-  border: 1px solid $nosana-green;
-  color: $text-light;
-  padding: 20px;
-  border-radius: $border-radius;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
-  z-index: 1000;
-  text-align: center;
-
-  .popup-content {
-    p {
-      margin-bottom: 15px;
-      font-size: 16px;
-    }
-    button {
-      background-color: $nosana-green;
-      color: $nosana-darker;
-      border: none;
-      padding: 10px 15px;
-      border-radius: 6px;
-      cursor: pointer;
-      margin: 0 10px;
-      font-weight: 500;
-      transition: background-color 0.2s;
-      &:hover {
-        background-color: lighten($nosana-green, 10%);
-      }
-      &:last-child {
-        background-color: rgba($text-secondary, 0.3);
-        color: $text-light;
-        &:hover {
-          background-color: rgba($text-secondary, 0.5);
+// Override Bulma's default spacing for tighter layout in specific areas
+.card-content.py-3 {
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
         }
-      }
-    }
+
+// Status tag styling improvements
+.tags.has-addons {
+  .tag:first-child {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+  
+  .tag:last-child {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
   }
 }
 
-.service-endpoints-section-persistent {
-  padding: 0.25rem 1rem;
-  border-bottom: none;
-
-  .table {
-    width: auto;
-    margin-bottom: 0;
-    background-color: transparent;
-
-    tbody tr td {
-      border: none;
-      padding: 0.3rem 0.5rem;
-      vertical-align: middle;
-      text-align: left;
-    }
-  }
-
-  .endpoint-port-cell { 
-    width: auto; 
-    padding-right: 0.8rem; 
-    
-    .port-text { 
-      font-weight: 500; 
-      color: #6c757d;
-      font-size: 0.75rem; 
-      font-family: inherit;
-    } 
-  }
-  .endpoint-status-cell { width: auto; text-align: left; padding-right: 0.8rem; }
-  .endpoint-url-cell { 
-    width: auto; text-align: left; 
-    .button.is-small {
-      font-size: 0.75rem;
-      font-weight: 500; font-family: inherit; display: inline-flex; align-items: center;
-      .external-icon { width: 11px; height: 11px; opacity: 0.8; }
-    }
-  }
-  .endpoint-status-simple { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.25rem 0; font-weight: 500; font-size: 0.75rem; font-family: inherit; 
-    .icon.is-small { font-size: 1em; }
-    &.status-online { color: #28a745; } &.status-offline { color: #dc3545; } &.status-loading { color: #ffc107; }
-  }
-}
-
-.quick-details-section {
-  margin-left: -1rem;
-  .quick-details-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-    padding: 1rem;
-    background-color: #ffffff;
-    border: none;
-    border-radius: 6px;
-  }
-
-  .detail-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.5rem;
-
-    .icon {
-      color: #6c757d;
-      margin-top: 0.1rem;
-      flex-shrink: 0;
-    }
-
-    .detail-content {
-      display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
-      min-width: 0;
-      flex: 1;
-
-      .detail-label {
-        font-size: 0.75rem;
-        font-weight: 600;
-        color: #6c757d;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-      }
-
-      .detail-value {
-        font-size: 0.875rem;
-        color: #2c3e50;
-        font-weight: 500;
-        word-break: break-word;
-      }
-    }
-  }
-}
-
-.all-details-section {
+// Button group spacing
+.buttons.are-small {
   .button {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    
-    .expand-arrow-small {
-      width: 12px;
-      height: 12px;
-      opacity: 0.8;
-      transition: transform 0.2s ease;
-      transform: rotate(-90deg);
-    }
-    
-    .expand-arrow-small.is-expanded {
-      transform: rotate(0deg);
-    }
+    margin-bottom: 0;
   }
 }
 
-.modal-buttons-container {
-  .custom-action-buttons {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: flex-start;
-    gap: 0.75rem;
-    
-    .button {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      
-      .expand-arrow-small {
-        width: 12px;
-        height: 12px;
-        opacity: 0.8;
-        transition: transform 0.2s ease;
-        transform: rotate(-90deg);
-      }
-      
-      .expand-arrow-small.is-expanded {
-        transform: rotate(0deg);
-      }
-    }
+.arrow-icon {
+  width: 1rem;
+  height: 1rem;
+  transition: transform 0.3s ease;
+  transform: rotate(-90deg);
+  
+  &.is-rotated {
+    transform: rotate(-180deg);
   }
 }
 
-.main-row-text {
-  font-weight: normal !important;
-  color: #000000 !important;
-  font-family: inherit !important;
-  font-size: 0.9rem;
+.button.is-success.is-small {
+  &.px-0.py-0 {
+    padding: 0;
+    line-height: 1;
+    height: auto;
+  }
 }
 
-:deep(.job-price .job-price) {
-  font-weight: normal !important;
-  color: #000000 !important;
-  font-family: inherit !important;
-  font-size: 0.9rem;
+.open-service-btn {
+  padding: 0 0.25rem !important;
+  line-height: 1;
+  height: auto;
 }
 
-// Stop button styling - light red background
-.button.stop-button {
-  background-color: #ffebee !important;
-  border-color: #ffcdd2 !important;
-  color: #c62828 !important;
+.compact-btn {
+  padding: 0 0.5rem !important;
+  line-height: 1.2 !important;
+  height: 1.5rem !important;
+  min-height: unset !important;
+}
+
+// Add this new class to remove padding from columns
+.no-padding {
+  padding: 0 !important;
+  
+  .column {
+    padding: 0 !important;
+    margin-bottom: 0.5rem;
+  }
+}
+
+.content-separator {
+  height: 1px;
+  background-color: #e8e8e8; // Bulma's $border-light or similar
+}
+
+html.dark-mode .content-separator {
+  background-color: #444; // Bulma's $grey-darker or similar for dark mode borders
+}
+
+.service-button {
+  background-color: #e8e8e8 !important;
+  border: none !important;
+  color: #363636 !important;
+  text-decoration: none !important;
+  outline: none !important;
+  box-shadow: none !important;
   
   &:hover {
-    background-color: #ffcdd2 !important;
-    border-color: #ef9a9a !important;
+    background-color: #d8d8d8 !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+  
+  &:focus,
+  &:active,
+  &:focus-visible {
+    background-color: #e8e8e8 !important;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
   }
 }
 
-// Dark mode button styling
 html.dark-mode {
-  .button.is-light {
-    background-color: #4a4a4a !important;
-    border-color: #4a4a4a !important;
+  .service-button {
+    background-color: #363636 !important;
     color: #ffffff !important;
     
     &:hover {
-      background-color: #5a5a5a !important;
-      border-color: #5a5a5a !important;
+      background-color: #444444 !important;
     }
-  }
-  
-  // Stop button in dark mode
-  .button.stop-button {
-    background-color: #4a2c2c !important;
-    border-color: #6a3a3a !important;
-    color: #ff8a80 !important;
     
-    &:hover {
-      background-color: #5a3a3a !important;
-      border-color: #7a4a4a !important;
+    &:focus,
+    &:active,
+    &:focus-visible {
+      background-color: #363636 !important;
     }
   }
 }
