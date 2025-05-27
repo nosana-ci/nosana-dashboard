@@ -1149,7 +1149,7 @@ html.dark-mode {
     border-bottom-color: #444;
     
     &.is-clickable:hover {
-      background-color: rgba(255, 255, 255, 0.05);
+      background-color: #333333;
     }
   }
   
@@ -1203,7 +1203,7 @@ html.dark-mode {
   }
   
   .service-endpoints {
-    background-color: #1e1e1e;
+    background-color: #2c2c2c;
     border-top-color: #444;
   }
   
@@ -1219,6 +1219,8 @@ html.dark-mode {
   .quick-detail-item {
     /* background-color: #363636; // Keep background for dark mode consistency */
     /* border-color: #555; // Border removed */
+    // Ensuring quick detail items don't have a conflicting background if card-content is #2c2c2c
+    background-color: transparent; // Or match #2c2c2c if they should be distinct cards
 
     .quick-detail-label {
       color: #b0b0b0;
@@ -1344,7 +1346,7 @@ html.dark-mode .content-separator {
 
 html.dark-mode {
   .service-button {
-    background-color: #363636 !important;
+    background-color: #3a3a3a !important;
     color: #ffffff !important;
     
     &:hover {
@@ -1354,7 +1356,7 @@ html.dark-mode {
     &:focus,
     &:active,
     &:focus-visible {
-      background-color: #363636 !important;
+      background-color: #3a3a3a !important;
     }
   }
 }
