@@ -30,7 +30,6 @@
                     </span>
                   </template>
                 </div>
-                <!-- Docker Image moved here -->
                 <div class="job-docker">
                   <span v-if="dockerImage">{{ dockerImage }}</span>
                 </div>
@@ -68,10 +67,10 @@
               </div>
 
               <!-- Actions and Status -->
-              <div class="job-actions is-hidden-mobile" v-if="isJobPoster">
+              <div class="job-actions is-hidden-mobile">
                 <div class="actions-container">
                   <button
-                    v-if="job.isRunning"
+                    v-if="job.isRunning && isJobPoster"
                     @click.stop="stopJob"
                     :class="{ 'is-loading': loading }"
                     class="button is-danger is-small custom-button"
@@ -82,7 +81,7 @@
                     <span>Stop</span>
                   </button>
                   <button
-                    v-if="job.isRunning"
+                    v-if="job.isRunning && isJobPoster"
                     @click.stop="openExtendModal"
                     :class="{ 'is-loading': loadingExtend }"
                     class="button is-primary is-small ml-2 custom-button"
@@ -133,20 +132,19 @@
       </header>
 
       <!-- Service Endpoints Row -->
-      <div v-if="endpoints && endpoints.size > 0" class="service-endpoints px-4 py-2">
+      <div v-if="endpoints && endpoints.size > 0" class="service-endpoints px-5 py-2">
         <div 
           v-for="([url, endpointData], index) in Array.from(endpoints.entries())" 
           :key="index"
           class="endpoint-item mb-2"
         >
           <div class="endpoint-content">
-            <span class="endpoint-port">Port {{ endpointData.port }}</span>
+            <span class="endpoint-port">- Port {{ endpointData.port }}</span>
             <div class="tag is-outlined is-light ml-2" :class="{
               'is-success': job.isRunning && endpointData.status === 'ONLINE',
               'is-danger': !job.isRunning || (job.isRunning && endpointData.status === 'OFFLINE'),
               'is-info': job.isRunning && endpointData.status === 'UNKNOWN'
             }">
-              <img class="mr-2" :src="getStatusIcon(endpointData.status)" />
               <span>{{ getStatusText(endpointData.status) }}</span>
             </div>
             <a :href="url" target="_blank" class="button is-small service-button" @click.stop>
@@ -328,9 +326,6 @@
         <p class="modal-card-title">Test Chat Available</p>
         <button class="delete" aria-label="close" @click="showChatPopup = false"></button>
       </header>
-      <section class="modal-card-body">
-        <p>The model's ready. Would you like to test it out in chat?</p>
-      </section>
       <footer class="modal-card-foot">
         <button class="button is-success" @click="activateChatAndClosePopup">Open Test-Chat</button>
         <button class="button" @click="showChatPopup = false">Dismiss</button>
@@ -782,8 +777,8 @@ watch(isMainContentOpen, (newValue) => {
 });
 
 const getStatusIcon = (status: string) => {
-  if (!job.isRunning) {
-    return '/img/icons/status/stopped.svg'; // Offline because job is not running
+  if (!job.isRunning || job.isCompleted) {
+    return '/img/icons/status/stopped.svg'; // Offline because job is not running or completed
   }
 
   // Job is running, determine icon by endpoint status
@@ -799,7 +794,7 @@ const getStatusIcon = (status: string) => {
 };
 
 const getStatusText = (status: string) => {
-  if (!job.isRunning) {
+  if (!job.isRunning || job.isCompleted) {
     return 'OFFLINE';
   }
   // Job is running
@@ -861,6 +856,11 @@ const getStatusText = (status: string) => {
 }
 
 .job-title-col {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  position: relative;
+  
   .job-title {
     font-size: 1.1rem;
     font-weight: 600;
@@ -874,7 +874,11 @@ const getStatusText = (status: string) => {
     color: #7a7a7a;
     word-break: break-all;
     line-height: 1.3;
-    margin-top: 0.25rem;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: -0.1rem;
   }
 }
 
@@ -1017,9 +1021,9 @@ const getStatusText = (status: string) => {
 }
 
 .endpoint-port {
-  font-weight: 600;
+  font-weight: 500;
   color: #363636;
-  font-size: 0.95rem;
+  font-size: 0.93rem;
   display: flex;
   align-items: center;
 }
@@ -1045,7 +1049,7 @@ const getStatusText = (status: string) => {
 
 // Quick Details specific styling
 .quick-detail-item {
-  padding: 0;
+  padding: 0.2rem;
   border-radius: 4px;
   display: flex;
   flex-direction: column;

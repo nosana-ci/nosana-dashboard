@@ -1,5 +1,5 @@
 <template>
-  <div class="log-viewer" ref="logContainer" @scroll="handleScroll">
+  <div class="log-viewer" ref="logContainer" @scroll="handleScroll" :class="{ 'is-fullscreen': fullscreen }">
     <div v-if="signMessageError">Failed to sign message. Please try again.</div>
 
     <!-- Regular Log View -->
@@ -91,9 +91,10 @@ interface Props {
   logs: LogEntry[];
   progressBars: Map<string, ProgressBar>;
   resourceProgressBars: Map<string, any>;
+  fullscreen?: boolean;
 }
 
-const { isConnecting, logs, progressBars, resourceProgressBars } =
+const { isConnecting, logs, progressBars, resourceProgressBars, fullscreen } =
   defineProps<Props>();
 
 // TODO: MOVE TO HOOKS
@@ -168,8 +169,8 @@ const activeProgressBars = computed(() =>
   Array.from(progressBars.values()).filter((b) => !b.completed)
 );
 
-function scrollToBottom() {
-  if (shouldAutoScroll.value && logContainer.value) {
+function scrollToBottom(force: boolean = false) {
+  if ((shouldAutoScroll.value || force) && logContainer.value) {
     nextTick(() => {
       const container = logContainer.value!;
       container.scrollTop = container.scrollHeight;
@@ -213,14 +214,23 @@ defineExpose({
   color: #c9d1d9;
   padding: 1rem;
   border-radius: 4px;
-  height: 30vh; // Doubled height for condensed view
+  height: 40vh;
   overflow-y: auto;
   min-height: 200px;
+  display: flex;
+  flex-direction: column;
+
+  &.is-fullscreen {
+    height: 100%;
+    min-height: unset;
+  }
 }
 
 .log-content {
   white-space: pre-wrap;
   word-wrap: break-word;
+  flex-grow: 1;
+  min-height: 0;
 }
 
 .log-entry {

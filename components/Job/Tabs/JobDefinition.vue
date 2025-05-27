@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div class="p-1 py-4 has-background-white-bis">
+    <div class="p-1 py-4 has-background-white">
       <VueJsonPretty :data="jobDefinition" show-icon show-line-number />
     </div>
   </div>

@@ -1,7 +1,7 @@
 <template>
-  <div class="tabs mt-5 is-boxed job-tabs-condensed">
+  <div class="tabs is-boxed job-tabs-condensed">
     <ul>
-      <li :class="{ 'is-active': activeTab === 'logs' }">
+      <li v-if="isJobPoster" :class="{ 'is-active': activeTab === 'logs' }">
         <a @click.prevent="handleTabClick('logs')">Logs</a>
       </li>
       <li v-if="job.jobResult" :class="{ 'is-active': activeTab === 'result' }">
@@ -43,7 +43,7 @@
   />
   </div>
   <JobLogsView
-    v-if="activeTab === 'logs'"
+    v-if="activeTab === 'logs' && isJobPoster"
     :job="job"
     :endpoints="endpoints"
     :jobDefinition="jobDefinition"
@@ -62,7 +62,7 @@
     v-if="activeTab === 'chat' && showChatTab" 
     :job="job" 
     :chatServiceUrl="chatServiceUrl" />
-  <div v-if="activeTab === 'details'" class="p-1 py-4 has-background-white-bis">
+  <div v-if="activeTab === 'details'" class="p-1 py-4 has-background-white">
     <table class="table is-fullwidth">
       <tbody>
         <HostSpecifications v-if="job && job.node && job.node.toString() !== '11111111111111111111111111111111'" :node-address="job.node.toString()" />
@@ -141,10 +141,12 @@ const handleTabClick = (tabName: string) => {
 <style lang="scss" scoped>
 .job-tabs-condensed {
   ul {
+    border-bottom-width: 1px !important;
+    
     li {
       a {
-        padding: 0.4em 0.8em; // Adjust padding to make tabs less long
-        font-size: 0.9rem; // Optional: reduce font size slightly
+        padding: 0.4em 0.8em;
+        font-size: 0.9rem;
       }
     }
   }
@@ -155,7 +157,7 @@ const handleTabClick = (tabName: string) => {
   border: 1px solid #dbdbdb;
   border-radius: 4px;
   padding: 0;
-  margin-top: 1rem;
+  margin-top: 0.2rem;
 }
 
 .job-definition-editor {
@@ -176,5 +178,20 @@ const handleTabClick = (tabName: string) => {
 html.dark-mode .job-definition-container {
   background-color: #2c2c2c;
   border-color: #444;
+}
+
+// Add styles to remove extra spacing
+.tabs {
+  margin-bottom: 0.2rem !important;
+}
+
+.tabs + div {
+  margin-top: 0.2rem !important;
+}
+
+// Remove padding from details tab
+div[class*="has-background-white"] {
+  padding-top: 0.2rem !important;
+  padding-bottom: 0.2rem !important;
 }
 </style>
