@@ -67,48 +67,57 @@
             <!-- Right Group: Actions and Status -->
             <div class="job-actions is-hidden-mobile">
               <div class="actions-container">
-            <button
+                <button
                   v-if="job.isRunning && isJobPoster"
-              @click.stop="stopJob"
-              :class="{ 'is-loading': loading }"
-                  class="button is-danger is-small custom-button"
-            >
-                  <span class="icon is-small mr-1">
-                    <img src="~/assets/img/icons/stop.svg" class="button-icon" />
+                  @click.stop="stopJob"
+                  :class="{ 'is-loading': loading }"
+                  class="button is-small action-button mr-2"
+                  title="Stop the job"
+                >
+                  <span class="icon is-small">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M6 6h12v12H6V6z" fill="currentColor"/>
+                    </svg>
                   </span>
                   <span>Stop</span>
-            </button>
-            <button
+                </button>
+                <button
                   v-if="job.isRunning && isJobPoster"
-              @click.stop="openExtendModal"
-              :class="{ 'is-loading': loadingExtend }"
-                  class="button is-primary is-small ml-2 custom-button"
-            >
-                  <span class="icon is-small mr-1">
-                    <img src="~/assets/img/icons/plus_symbol.svg" class="button-icon" />
+                  @click.stop="openExtendModal"
+                  :class="{ 'is-loading': loadingExtend }"
+                  class="button is-small action-button mr-2"
+                  title="Extend job duration"
+                >
+                  <span class="icon is-small">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" fill="currentColor"/>
+                    </svg>
                   </span>
                   <span>Extend</span>
-            </button>
-            <button 
-              v-if="job.isRunning || job.isCompleted"
-              @click.stop="repostJob" 
-                  class="button is-primary is-small ml-2 custom-button"
-            >
-                  <span class="icon is-small mr-1">
-                    <img src="~/assets/img/icons/redo.svg" class="button-icon" />
-              </span>
-              <span>Redeploy</span>
-            </button>
+                </button>
+                <button 
+                  v-if="job.isRunning || job.isCompleted"
+                  @click.stop="repostJob" 
+                  class="button is-small action-button mr-2"
+                  title="Redeploy this job"
+                >
+                  <span class="icon is-small">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" fill="currentColor"/>
+                    </svg>
+                  </span>
+                  <span>Redeploy</span>
+                </button>
                 <div class="job-status ml-2">
-            <JobStatus
-              :status="
-                job.isCompleted && job.jobStatus
-                  ? job.jobStatus === 'success'
-                    ? 'SUCCESS'
-                    : 'FAILED'
-                  : job.state
-              "
-            />
+                  <JobStatus
+                    :status="
+                      job.isCompleted && job.jobStatus
+                        ? job.jobStatus === 'success'
+                          ? 'SUCCESS'
+                          : 'FAILED'
+                        : job.state
+                    "
+                  />
                 </div>
               </div>
             </div>
@@ -151,8 +160,13 @@
                     : endpointData.status 
               }}</span>
               </div>
-            <a :href="url" target="_blank" class="button is-small custom-button" @click.stop>
-                Open Service
+            <a :href="url" target="_blank" class="button is-small action-button" @click.stop>
+                <span class="icon is-small">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z" fill="currentColor"/>
+                  </svg>
+                </span>
+                <span>Open Service</span>
               </a>
             </div>
           </div>
@@ -173,7 +187,7 @@
           <button
             @click.stop="stopJob"
             :class="{ 'is-loading': loading }"
-            class="button is-warning"
+            class="button action-button"
           >
             Delist Job
           </button>
@@ -986,63 +1000,46 @@ const getStatusText = (status: string) => {
     gap: 0.5rem;
   }
 
-  .button {
+  .action-button {
+    display: inline-flex;
+    align-items: center;
+    background-color: #ffffff !important;
+    border: 1px solid #e8e8e8 !important;
+    color: #363636 !important;
+    padding: 0.4rem 0.6rem !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+    line-height: 1;
+    transition: all 0.2s ease;
+    
+    &:hover {
+      background-color: #f5f5f5 !important;
+      border-color: #dadada !important;
+    }
+
     .icon {
       display: inline-flex !important;
       align-items: center !important;
       justify-content: center !important;
+      margin-right: 0.5rem;
       
-      i {
-        font-size: 0.75rem !important;
-        opacity: 1 !important;
-        visibility: visible !important;
-        display: inline-block !important;
-      }
-      
-      .button-icon {
-        width: 12px !important;
-        height: 12px !important;
-        display: inline-block !important;
-        opacity: 1 !important;
-        visibility: visible !important;
-      }
-    }
-  }
-
-  .custom-button {
-    background-color: #e8e8e8 !important;
-    border-color: #e8e8e8 !important;
-    color: #363636 !important;
-    border: none !important;
-    box-shadow: none !important;
-    
-    &:hover {
-      background-color: #d8d8d8 !important;
-      border-color: #d8d8d8 !important;
-    }
-    
-    .button-icon {
-      filter: brightness(0) saturate(100%) invert(21%) sepia(6%) saturate(2013%) hue-rotate(201deg) brightness(95%) contrast(93%);
-    }
-
-    &.is-success.is-outlined {
-      background-color: transparent !important;
-      border-color: #48c774 !important;
-      color: #48c774 !important;
-      
-      &:hover {
-        background-color: #48c774 !important;
-        border-color: #48c774 !important;
-        color: white !important;
+      svg {
+        width: 16px;
+        height: 16px;
+        display: block;
       }
     }
 
-    &.is-danger {
-      &:focus,
-      &:active,
-      &:focus-visible {
-        box-shadow: none !important;
-        outline: none !important;
+    &.is-loading {
+      position: relative;
+      color: transparent !important;
+      pointer-events: none;
+      
+      &:after {
+        position: absolute;
+        left: calc(50% - 0.5em);
+        top: calc(50% - 0.5em);
+        width: 1em;
+        height: 1em;
       }
     }
   }
@@ -1406,6 +1403,64 @@ html.dark-mode {
 .card {
   border-radius: 8px;
   overflow: hidden; // Ensure inner content doesn't overflow rounded corners
+}
+
+.action-button {
+  display: inline-flex;
+  align-items: center;
+  background-color: #ffffff !important;
+  border: 1px solid #e8e8e8 !important;
+  color: #363636 !important;
+  padding: 0.4rem 0.6rem !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+  line-height: 1;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background-color: #f5f5f5 !important;
+    border-color: #dadada !important;
+  }
+
+  .icon {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin-right: 0.5rem;
+    
+    svg {
+      width: 16px;
+      height: 16px;
+      display: block;
+    }
+  }
+
+  &.is-loading {
+    position: relative;
+    color: transparent !important;
+    pointer-events: none;
+    
+    &:after {
+      position: absolute;
+      left: calc(50% - 0.5em);
+      top: calc(50% - 0.5em);
+      width: 1em;
+      height: 1em;
+    }
+  }
+}
+
+html.dark-mode {
+  .action-button {
+    background-color: #363636 !important;
+    border-color: #4d4d4d !important;
+    color: #ffffff !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3) !important;
+    
+    &:hover {
+      background-color: #444444 !important;
+      border-color: #5a5a5a !important;
+    }
+  }
 }
 </style>
 
