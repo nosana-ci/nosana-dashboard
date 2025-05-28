@@ -1641,11 +1641,12 @@ watch(selectedGpuGroup, async (newValue) => {
   }
 });
 
-// Update the onMounted hook to use fetchGpuFilters
+// Update the onMounted hook to include debugging
 onMounted(async () => {
-  if (process.client) { // ADDED: Ensure document is available for scrollLockTarget
-    scrollLockTarget.value = document.documentElement; // Revert back to documentElement
+  if (process.client) {
+    scrollLockTarget.value = document.documentElement;
   }
+  
   if (!markets.value && !loadingMarkets.value) {
     await getMarkets();
   }
@@ -1654,15 +1655,12 @@ onMounted(async () => {
     await handleRepost();
   }
 
-  // Use the new fetchGpuFilters function with resetValues = true for initial loading
   await fetchGpuFilters(true);
   
-  // Refresh balances if wallet is connected
   if (publicKey.value && nosana.value) {
     await refreshAllBalances();
   }
   
-  // Clean up old repost data
   cleanupLocalStorage();
 });
 
@@ -2064,15 +2062,44 @@ html.dark-mode .github-icon {
 }
 
 .summary {
-  position: sticky;
-  top: 20px;
-  width: 100%;
-  padding-top: 0;
-  padding-left: 1rem;
-  padding-right: 1rem;
-  padding-bottom: 1rem;
-  z-index: 10;
-  margin-top: 0;
+  position: fixed;
+  top: 23px; /* Move it even lower */
+  right: 20px;
+  width: 20%;
+  max-width: 400px;
+  padding: 1 1rem 1rem;
+  z-index: 15;
+  background: transparent; /* Remove background from container */
+}
+
+/* Dark mode background */
+.dark-mode .summary {
+  background: transparent;
+}
+
+/* Responsive adjustments for summary */
+@media screen and (max-width: 1407px) { // Below fullhd (1408px)
+  .summary {
+    position: static;
+    top: auto;
+    right: auto;
+    width: 100%;
+    max-width: none;
+    margin-top: 1.5rem;
+    padding: 0;
+    background: transparent;
+  }
+}
+
+/* New rule to adjust padding for the box inside summary */
+.summary > .box {
+  padding: 1.5rem; /* Increased padding all around */
+  background: white !important; /* Ensure the box has background */
+}
+
+/* Dark mode background for the box */
+.dark-mode .summary > .box {
+  background: #121212 !important;
 }
 
 .h-100, .full-height {
