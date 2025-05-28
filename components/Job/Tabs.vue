@@ -4,7 +4,7 @@
       <li v-if="props.job.isRunning ? props.isJobPoster : true" :class="{ 'is-active': activeTab === 'logs' }">
         <a @click.prevent="handleTabClick('logs')">Logs</a>
       </li>
-      <li v-if="props.job.jobResult" :class="{ 'is-active': activeTab === 'result' }">
+      <li v-if="hasResultsSection" :class="{ 'is-active': activeTab === 'result' }">
         <a @click.prevent="handleTabClick('result')">Result</a>
       </li>
       <li :class="{ 'is-active': activeTab === 'info' }">
@@ -73,7 +73,7 @@
   <div v-if="activeTab === 'result' && props.job.results" class="job-definition-container">
     <button 
       class="button is-small is-light copy-button"
-      @click="copyToClipboard(JSON.stringify(jobResultsModel, null, 2), 'Results')"
+      @click="copyToClipboard(JSON.stringify(structuredResults, null, 2), 'Results')"
     >
       <span class="icon is-small">
         <img src="~/assets/img/icons/copy.svg" alt="Copy" />
@@ -84,7 +84,7 @@
       :class="{ 
         'jse-theme-dark': colorMode.value === 'dark'
       }" 
-      v-model="jobResultsModel" 
+      v-model="structuredResults" 
       :mode="Mode.text" 
       :mainMenuBar="false" 
       :statusBar="false" 
@@ -200,6 +200,38 @@ const handleTabClick = (tabName: string) => {
     });
   }
 };
+
+const hasResultsSection = computed(() => {
+  if (!props.jobDefinition?.ops) return false;
+  return props.jobDefinition.ops.some(op => op.results && Object.keys(op.results).length > 0);
+});
+
+// Extract structured results without logs
+const structuredResults = computed(() => {
+  if (!props.job.results?.opStates) return {};
+  
+  const results: any = {
+    status: props.job.results.status,
+    startTime: props.job.results.startTime,
+    endTime: props.job.results.endTime,
+    opStates: []
+  };
+  
+  for (const opState of props.job.results.opStates) {
+    if (opState.results && Object.keys(opState.results).length > 0) {
+      results.opStates.push({
+        operationId: opState.operationId,
+        status: opState.status,
+        startTime: opState.startTime,
+        endTime: opState.endTime,
+        exitCode: opState.exitCode,
+        results: opState.results
+      });
+    }
+  }
+  
+  return results;
+});
 
 </script>
 

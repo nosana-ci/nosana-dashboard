@@ -394,7 +394,7 @@ const popupAlreadyShown = ref(false);
 
 const isDetailsOpen = ref(false);
 
-const isMainContentOpen = ref(false);
+const isMainContentOpen = ref(true);
 
 // Loading states for buttons
 const loading = ref<boolean>(false);
@@ -794,7 +794,8 @@ watch([chatServiceUrl, props.endpoints, () => props.job.isRunning, () => props.j
 
 function activateChatAndClosePopup() {
   showChatPopup.value = false;
-  activeTab.value = 'chat'; // Switch to chat tab instead of opening modal
+  isMainContentOpen.value = true; // Expand the job card
+  activeTab.value = 'chat'; // Switch to chat tab
   
   // Scroll to bottom to show the chat UI properly
   nextTick(() => {
