@@ -68,11 +68,11 @@
             <div class="job-actions is-hidden-mobile">
               <div class="actions-container">
                 <button
-                  v-if="job.isRunning && isJobPoster"
+                  v-if="(job.isRunning || job.state === 0) && isJobPoster"
                   @click.stop="stopJob"
                   :class="{ 'is-loading': loading }"
                   class="button is-small action-button mr-2"
-                  title="Stop the job"
+                  :title="job.state === 0 ? 'Delist the job' : 'Stop the job'"
                 >
                   <span class="icon is-small">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -173,23 +173,6 @@
       </div>
 
     <div v-if="isMainContentOpen" class="card-content p-4">
-      <!-- Delist Button for Queued Jobs -->
-      <div v-if="isJobPoster && job.state === 0" class="notification is-warning is-light mb-4">
-        <div class="is-flex is-justify-content-space-between is-align-items-center">
-          <div>
-            <p class="subtitle is-6 mb-1">Job is queued</p>
-            <p class="is-size-7">This job is waiting to be picked up by a node.</p>
-          </div>
-          <button
-            @click.stop="stopJob"
-            :class="{ 'is-loading': loading }"
-            class="button action-button"
-          >
-            Delist Job
-          </button>
-        </div>
-      </div>
-
       <!-- Quick Details Compact Grid -->
       <div class="content mb-5">
         <!-- First Row of Quick Details -->

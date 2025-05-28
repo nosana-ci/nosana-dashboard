@@ -105,14 +105,17 @@ export function useJob(jobId: string) {
             if (numericState === 0) {
               await nosana.value.jobs.delist(jobId);
               toast.success('Job successfully delisted (canceled) from queue!');
+              setTimeout(() => {
+                window.location.reload();
+              }, 3000);
             } else if (numericState === 1) {
               await nosana.value.jobs.end(jobId);
               toast.success('Job successfully ended!');
+              setTimeout(() => refresh(), 1000);
             } else {
               toast.error(`Job is not in QUEUED or RUNNING state (currently: ${numericState})`);
               return;
             }
-            setTimeout(() => refresh(), 5000);
           } catch (e) {
             const errorMessage = e instanceof Error ? e.message : String(e);
             const fullError = String(e);
