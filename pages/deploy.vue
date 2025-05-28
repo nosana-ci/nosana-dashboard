@@ -10,21 +10,14 @@
     <div class="columns is-multiline">
       <div class="column is-9-fullhd is-12">
         <!-- Choose model -->
-        <h2 class="title py-4">1. Define your model</h2>
-        <div class="nav-tabs is-flex">
-          <div
-            class="nav-tabs-item p-3 px-5 mr-3 is-active has-background-white"
-          >
-            Job Definition
-          </div>
-        </div>
+        <h2 class="title pt-0 pb-0 mb-3">1. Define your model</h2>
         <div
           class="box has-background-white"
           :style="{ overflowY: 'scroll', border: 'none', height: 'auto' }"
         >
           <div>
             <!-- START: New Template Info Box (above editor) -->
-            <div class="p-3 pb-2" style="width: 100%; display: flex;">
+            <div class="px-3 pt-0 pb-2" style="width: 100%; display: flex;">
               <div class="is-flex is-align-items-start is-justify-content-space-between" style="width: 100%;">
                 <div v-if="selectedTemplate && selectedTemplate.id !== 'custom'" class="is-flex is-align-items-start">
                   <img 
@@ -131,7 +124,7 @@
           </div>
         </div>
         <!-- Define deployment -->
-        <h2 class="title py-4">2. Select your GPU</h2>
+        <h2 class="title pt-0 pb-0 mb-3">2. Select your GPU</h2>
         <div class="nav-tabs is-flex">
           <div
             class="nav-tabs-item p-3 px-5 mr-3"
