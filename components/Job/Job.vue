@@ -7,34 +7,45 @@
       <header class="card-header">
       <div class="w-100">
         <!-- Main Job Info Row -->
-          <div class="job-header-main p-4 w-100" style="flex-grow: 1;">
+          <div class="job-header-main px-4 pb-2 w-100" style="flex-grow: 1;">
           <div class="job-header-grid">
             <!-- Left Group: Title, GPU, Price -->
             <div class="job-header-left-group">
             <!-- Job Title -->
             <div class="job-title-col">
-              <div class="job-title">
-                <template v-if="templateForJob">
-                  {{ templateForJob.name }}
-                </template>
-                <template v-else-if="jobDefinitionId">
-                  {{ jobDefinitionId }}
-                </template>
-                  <template v-else-if="formattedDockerImage">
-                    {{ formattedDockerImage.split('/').pop() }}
-                </template>
-                <template v-else>
-                  <span class="icon-text">
-                    <span class="icon is-small">
-                      <i class="fas fa-spinner fa-spin"></i>
-                    </span>
-                    <span>Loading</span>
-                  </span>
-                </template>
-              </div>
-                <div class="job-docker">
-                  <span v-if="formattedDockerImage">{{ formattedDockerImage }}</span>
+              <div class="is-flex is-align-items-start">
+                <img 
+                  v-if="templateForJob && (templateForJob.icon || templateForJob.avatar_url)"
+                  :src="templateForJob.icon || templateForJob.avatar_url"
+                  alt="Template Icon"
+                  class="mr-2" 
+                  style="height: 24px; width: 24px; border-radius: 4px; object-fit: contain; flex-shrink: 0; margin-top: 1.4rem;"
+                />
+                <div style="margin-top: 1.16rem;">
+                  <div class="job-title">
+                    <template v-if="templateForJob">
+                      {{ templateForJob.name }}
+                    </template>
+                    <template v-else-if="jobDefinitionId">
+                      {{ jobDefinitionId }}
+                    </template>
+                    <template v-else-if="formattedDockerImage">
+                      {{ formattedDockerImage.split('/').pop() }}
+                    </template>
+                    <template v-else>
+                      <span class="icon-text">
+                        <span class="icon is-small">
+                          <i class="fas fa-spinner fa-spin"></i>
+                        </span>
+                        <span>Loading</span>
+                      </span>
+                    </template>
+                  </div>
+                  <div class="job-docker" style="position: static; margin-top: 0.0rem; /* Override absolute positioning */">
+                    <span v-if="formattedDockerImage">{{ formattedDockerImage }}</span>
+                  </div>
                 </div>
+              </div>
             </div>
 
             <!-- GPU -->
