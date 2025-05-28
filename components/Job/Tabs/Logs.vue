@@ -1,14 +1,13 @@
 <template>
   <div class="logs-tab-container">
-    <div class="p-0 py-0 logs-container" ref="logsContainer">
+    <div class="p-0 py-0 logs-container" ref="logsContainerRef">
       <div class="logs-header">
         <span class="logs-title"><!-- Can be empty or hold a title --></span>
-        <!-- Fullscreen button moved out of header for easier absolute positioning relative to logs-container -->
       </div>
       <button
         v-if="job.isRunning && isJobPoster"
         class="button is-small is-text fullscreen-logs-button"
-        @click="openLogFullscreenModal"
+        @click="logModal.open"
         title="Fullscreen Logs"
       >
         <span class="icon is-small">
@@ -16,72 +15,62 @@
         </span>
       </button>
       <div class="logs-content">
-    <template v-if="job.isRunning">
-      <JobLogViewer
-        v-if="isJobPoster"
-        :logs="logs"
-        :isConnecting="isConnecting"
-        :progressBars="progressBars"
-        :resourceProgressBars="resourceProgressBars"
-        ref="logViewer"
-      />
+        <template v-if="job.isRunning">
+          <JobLogViewer
+            v-if="isJobPoster"
+            :logs="logs"
+            :isConnecting="isConnecting"
+            :progressBars="progressBars"
+            :resourceProgressBars="resourceProgressBars"
+            ref="logViewer"
+          />
           <div v-else class="has-text-centered p-4">Please connect your wallet to view logs.</div>
-    </template>
+        </template>
         <div v-else-if="loading" class="has-text-centered p-4">Loading logs..</div>
         <div v-else-if="job.isCompleted && !job.results" class="has-text-centered p-4">
           The job was prematurely stopped so no logs are available.
-    </div>
+        </div>
         <div v-else-if="!job.results" class="has-text-centered p-4">No logs available.</div>
         <div v-else-if="job.results && job.results[0] === 'nos/secret'" class="has-text-centered p-4">
           Results are secret.
-    </div>
-    <JobResult
-      v-else-if="job.isCompleted"
-      :ipfs-result="job.results"
-      :ipfs-job="job"
-    />
+        </div>
+        <JobResult
+          v-else-if="job.isCompleted"
+          :ipfs-result="job.results"
+          :ipfs-job="job"
+        />
       </div>
     </div>
 
-    <!-- Fullscreen Modal -->
-    <div class="modal" :class="{ 'is-active': isLogFullscreenModalActive }">
-      <div class="modal-background" @click="closeLogFullscreenModal"></div>
-      <div class="modal-card log-fullscreen-modal-card">
-        <header class="modal-card-head">
-          <p class="modal-card-title">Logs</p>
-          <button class="delete" aria-label="close" @click="closeLogFullscreenModal"></button>
-        </header>
-        <section class="modal-card-body log-fullscreen-modal-body">
-          <template v-if="job.isRunning">
-            <JobLogViewer
-              v-if="isJobPoster"
-              :logs="logs"
-              :isConnecting="isConnecting"
-              :progressBars="progressBars"
-              :resourceProgressBars="resourceProgressBars"
-              :fullscreen="true"
-              ref="fullscreenLogViewerInstance"
-              class="fullscreen-viewer"
-            />
-            <div v-else class="has-text-centered p-4">Please connect your wallet to view logs.</div>
-          </template>
-          <div v-else-if="loading" class="has-text-centered p-4">Loading logs..</div>
-          <div v-else-if="job.isCompleted && !job.results" class="has-text-centered p-4">
-            The job was prematurely stopped so no logs are available.
-          </div>
-          <div v-else-if="!job.results" class="has-text-centered p-4">No logs available.</div>
-          <div v-else-if="job.results && job.results[0] === 'nos/secret'" class="has-text-centered p-4">
-            Results are secret.
-          </div>
-          <JobResult
-            v-else-if="job.isCompleted"
-            :ipfs-result="job.results"
-            :ipfs-job="job"
-            class="fullscreen-viewer"
-          />
-        </section>
+    <FullscreenModal :isOpen="logModal.isOpen.value" title="Logs" @close="logModal.close">
+      <template v-if="job.isRunning">
+        <JobLogViewer
+          v-if="isJobPoster"
+          :logs="logs"
+          :isConnecting="isConnecting"
+          :progressBars="progressBars"
+          :resourceProgressBars="resourceProgressBars"
+          :fullscreen="true"
+          ref="fullscreenLogViewerInstance"
+          class="fullscreen-viewer" 
+        />
+        <div v-else class="has-text-centered p-4">Please connect your wallet to view logs.</div>
+      </template>
+      <div v-else-if="loading" class="has-text-centered p-4">Loading logs..</div>
+      <div v-else-if="job.isCompleted && !job.results" class="has-text-centered p-4">
+        The job was prematurely stopped so no logs are available.
       </div>
-    </div>
+      <div v-else-if="!job.results" class="has-text-centered p-4">No logs available.</div>
+      <div v-else-if="job.results && job.results[0] === 'nos/secret'" class="has-text-centered p-4">
+        Results are secret.
+      </div>
+      <JobResult 
+        v-else-if="job.isCompleted"
+        :ipfs-result="job.results"
+        :ipfs-job="job"
+        class="fullscreen-viewer"
+      />
+    </FullscreenModal>
   </div>
 </template>
 
@@ -89,85 +78,65 @@
 import { ref, watch, nextTick } from 'vue';
 import JobLogViewer from "../LogViewer.vue";
 import JobResult from "../Result.vue";
+import FullscreenModal from '~/components/Common/FullscreenModal.vue';
+import { useModal } from '~/composables/jobs/useModal';
 import type { UseJob } from "~/composables/jobs/useJob";
 import type { LogEntry, ProgressBar } from "~/composables/jobs/useJobLogs";
 
 interface Props {
   job: UseJob;
   isJobPoster: boolean;
-  loading: boolean; // Renamed from 'isLoading' if it was that, to match usage
+  loading: boolean;
   isConnecting: boolean;
   logs: LogEntry[];
   progressBars: Map<string, ProgressBar>;
   resourceProgressBars: Map<string, any>;
 }
 
-const {
-  job,
-  isJobPoster,
-  isConnecting,
-  loading,
-  logs,
-  progressBars,
-  resourceProgressBars,
-} = defineProps<Props>();
+const props = defineProps<Props>();
 
-const logsContainer = ref<HTMLElement | null>(null);
-const logViewer = ref<any>(null); // Inline log viewer
-const fullscreenLogViewerInstance = ref<any>(null); // Log viewer in modal
+const logsContainerRef = ref<HTMLElement | null>(null);
+const logViewer = ref<any>(null);
+const fullscreenLogViewerInstance = ref<any>(null);
 
-const isLogFullscreenModalActive = ref(false);
+const logModal = useModal();
 
-const openLogFullscreenModal = () => {
-  isLogFullscreenModalActive.value = true;
+const scrollToContentBottom = (isModal: boolean) => {
   nextTick(() => {
-    if (fullscreenLogViewerInstance.value && fullscreenLogViewerInstance.value.scrollToBottom) {
-      fullscreenLogViewerInstance.value.scrollToBottom(true);
+    if (isModal) {
+      if (props.job.isRunning && fullscreenLogViewerInstance.value && fullscreenLogViewerInstance.value.scrollToBottom) {
+        fullscreenLogViewerInstance.value.scrollToBottom(true);
+      } else if (props.job.isCompleted) {
+        const modalResultEl = document.querySelector('.fullscreen-modal-body .job-result-container.fullscreen-viewer');
+        if (modalResultEl) modalResultEl.scrollTop = modalResultEl.scrollHeight;
+      }
     } else {
-      // For JobResult or other content in modal
-      const modalBody = document.querySelector('.log-fullscreen-modal-body .fullscreen-viewer');
-      if (modalBody) {
-        modalBody.scrollTop = modalBody.scrollHeight;
+      if (props.job.isRunning && logViewer.value && logViewer.value.scrollToBottom) {
+        logViewer.value.scrollToBottom();
+      } else if (props.job.isCompleted && logsContainerRef.value) {
+        const inlineResultEl = logsContainerRef.value.querySelector('.logs-content .job-result-container');
+        if (inlineResultEl) inlineResultEl.scrollTop = inlineResultEl.scrollHeight;
       }
     }
   });
 };
 
-const closeLogFullscreenModal = () => {
-  isLogFullscreenModalActive.value = false;
-};
-
-// Auto-scroll when logs tab becomes visible or job completes (for inline view)
-const scrollToBottomOnOpen = () => {
-  nextTick(() => {
-    if (logViewer.value && logViewer.value.scrollToBottom) {
-      logViewer.value.scrollToBottom();
-    } else if (logsContainer.value) {
-      const logsContentDiv = logsContainer.value.querySelector('.logs-content > *:last-child'); // Target JobResult or other content
-      if (logsContentDiv) {
-        logsContentDiv.scrollTop = logsContentDiv.scrollHeight;
-      }
-    }
-  });
-};
-
-// Watch for job completion and auto-scroll
-watch(() => job.isCompleted, (isCompleted) => {
-  if (isCompleted) {
-    nextTick(() => {
-      if (isLogFullscreenModalActive.value) {
-        const modalContent = document.querySelector('.log-fullscreen-modal-body .fullscreen-viewer');
-        if (modalContent) {
-          modalContent.scrollTop = modalContent.scrollHeight;
-        }
-      } else {
-        scrollToBottomOnOpen(); // Original behavior for inline view
-      }
-    });
+watch(logModal.isOpen, (isOpen) => {
+  if (isOpen) {
+    scrollToContentBottom(true);
   }
 });
 
-// Expose the scroll function for parent component
+const scrollToBottomOnOpen = () => {
+  scrollToContentBottom(false);
+};
+
+watch(() => props.job.isCompleted, (isCompleted) => {
+  if (isCompleted) {
+    scrollToContentBottom(logModal.isOpen.value);
+  }
+});
+
 defineExpose({
   scrollToBottomOnOpen
 });
@@ -175,21 +144,21 @@ defineExpose({
 
 <style lang="scss" scoped>
 .logs-tab-container {
-  position: relative; // For absolute positioning of the fullscreen button
+  position: relative;
 }
 
 .logs-container {
   display: flex;
   flex-direction: column;
-  position: relative; // Context for the fullscreen button
+  position: relative;
 }
 
 .logs-header {
   display: flex;
-  justify-content: space-between; // Title will take space, button is separate
+  justify-content: space-between;
   align-items: center;
   padding-bottom: 0.5rem;
-  margin: -0.25rem; 
+  margin: -0.25rem;
   margin-bottom: 0.5rem;
   padding: 0.25rem;
 }
@@ -200,19 +169,19 @@ defineExpose({
 
 .fullscreen-logs-button {
   position: absolute;
-  top: 1rem; // Increased top value to lower the button
+  top: 1rem;
   right: 0.2rem;
   z-index: 10;
   background-color: #ffffff !important;
   border: 1px solid #e8e8e8 !important;
-  padding: 0.4rem 0.6rem !important; // Increased padding to make background wider
+  padding: 0.4rem 0.6rem !important;
   box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
-  line-height: 1; // Ensure icon is centered with new padding
+  line-height: 1;
 
   .icon img {
     width: 16px;
     height: 16px;
-    display: block; // Helps with centering if padding is uneven
+    display: block;
   }
 
   &:hover {
@@ -222,8 +191,8 @@ defineExpose({
 }
 
 html.dark-mode .fullscreen-logs-button {
-  background-color: #363636 !important; // Dark mode background
-  border-color: #4d4d4d !important; // Dark mode border
+  background-color: #363636 !important;
+  border-color: #4d4d4d !important;
   box-shadow: 0 1px 3px rgba(0,0,0,0.3) !important;
 
   &:hover {
@@ -247,13 +216,12 @@ html.dark-mode .fullscreen-logs-button {
   }
 }
 
-// Dark mode styling
 html.dark-mode .logs-container {
   background-color: #2c2c2c;
 }
 
 html.dark-mode .logs-content .has-text-centered {
-  color: #ffffff; /* Make centered text in logs content white in dark mode */
+  color: #ffffff;
 }
 
 .progress.is-primary::-webkit-progress-bar {
@@ -277,37 +245,16 @@ html.dark-mode .logs-content .has-text-centered {
   margin-bottom: 1rem;
 }
 
-// Modal Styles
-.log-fullscreen-modal-card {
-  width: 90vw;
-  height: 90vh;
-  max-width: 1600px; 
-  display: flex;
-  flex-direction: column;
-}
-
-.log-fullscreen-modal-body {
-  padding: 0 !important;
-  flex-grow: 1; 
-  display: flex; 
-  flex-direction: column;
-  overflow: hidden; // Parent hides overflow, child handles scrolling
-  min-height: 0; // Important for flex context
-}
-
-.fullscreen-viewer { // Applied to JobLogViewer or JobResult in modal
-  flex-grow: 1;
-  min-height: 0; // Allows the component to shrink and then scroll its own content
-  // The JobLogViewer component itself will manage its height (100% via .is-fullscreen) 
-  // and scrolling (overflow-y: auto via .log-viewer class).
-  // JobResult, if used here, would also need to manage its internal scrolling if its content overflows.
-}
-
-// Centering for messages in modal
 .has-text-centered {
   display: flex;
   align-items: center;
   justify-content: center;
   height: 100%;
+}
+
+:deep(.fullscreen-modal-body .fullscreen-viewer) {
+  height: 100%;
+  min-height: 100%;
+  overflow-y: auto;
 }
 </style>
