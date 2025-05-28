@@ -1,7 +1,7 @@
 <template>
   <div class="tabs is-boxed job-tabs-condensed">
     <ul>
-      <li v-if="isJobPoster" :class="{ 'is-active': activeTab === 'logs' }">
+      <li v-if="job.isRunning ? isJobPoster : true" :class="{ 'is-active': activeTab === 'logs' }">
         <a @click.prevent="handleTabClick('logs')">Logs</a>
       </li>
       <li v-if="job.jobResult" :class="{ 'is-active': activeTab === 'result' }">
@@ -50,7 +50,7 @@
       class="job-definition-editor" 
     />
   </div>
-  <div v-if="activeTab === 'logs' && isJobPoster" class="logs-wrapper">
+  <div v-if="activeTab === 'logs'" class="logs-wrapper">
     <JobLogsView
       :job="job"
       :endpoints="endpoints"
