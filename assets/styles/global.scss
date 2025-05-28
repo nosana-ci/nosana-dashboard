@@ -262,7 +262,7 @@
   .tag {
     // color:white !important;
     background-color: $black-ter !important;
-    span {
+    &:not(.is-outlined) span {
       color: white;
     }
   }
@@ -533,6 +533,18 @@
 .modal-card {
   width: 420px;
   max-width: 90%;
+  
+  &.modal-card-wide {
+    width: 90%;
+    max-width: 1200px;
+  }
+  
+  &-body {
+    &.modal-card-body-scrollable {
+      max-height: 70vh;
+      overflow-y: auto;
+    }
+  }
 }
 
 .modal-card-title {

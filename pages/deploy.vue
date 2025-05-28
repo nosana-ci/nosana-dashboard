@@ -10,23 +10,16 @@
     <div class="columns is-multiline">
       <div class="column is-9-fullhd is-12">
         <!-- Choose model -->
-        <h2 class="title py-4">1. Define your model</h2>
-        <div class="nav-tabs is-flex">
-          <div
-            class="nav-tabs-item p-3 px-5 mr-3 is-active has-background-white"
-          >
-            Job Definition
-          </div>
-        </div>
+        <h2 class="title pt-0 pb-0 mb-3">1. Define your model</h2>
         <div
           class="box has-background-white"
           :style="{ overflowY: 'scroll', border: 'none', height: 'auto' }"
         >
           <div>
             <!-- START: New Template Info Box (above editor) -->
-            <div class="p-3 pb-2" style="width: 100%; display: flex;">
-              <div class="is-flex is-align-items-start" style="width: 100%;">
-                <div v-if="selectedTemplate" class="is-flex is-align-items-start">
+            <div class="px-3 pt-0 pb-2" style="width: 100%; display: flex;">
+              <div class="is-flex is-align-items-start is-justify-content-space-between" style="width: 100%;">
+                <div v-if="selectedTemplate && selectedTemplate.id !== 'custom'" class="is-flex is-align-items-start">
                   <img 
                     v-if="selectedTemplate.icon || selectedTemplate.avatar_url"
                     :src="selectedTemplate.icon || selectedTemplate.avatar_url"
@@ -36,10 +29,10 @@
                   />
                   <div>
                     <h3 class="is-size-5 has-text-weight-semibold has-text-black mb-0">
-                      {{ selectedTemplate.name }}
+                      {{ computedJobTitle }}
                     </h3>
-                    <p v-if="selectedTemplateImage" class="is-size-7 has-text-grey" style="line-height: 1; margin-top: 0; margin-bottom: 4px;">
-                      {{ selectedTemplateImage }}
+                    <p v-if="computedDockerImage" class="is-size-7 has-text-grey" style="line-height: 1; margin-top: 0; margin-bottom: 4px;">
+                      {{ computedDockerImage }}
                     </p>
                     <button
                         v-if="selectedTemplate && selectedTemplate.readme"
@@ -59,13 +52,16 @@
                 </div>
                 <div v-else>
                   <h3 class="is-size-5 has-text-weight-semibold has-text-black mb-0">
-                    Custom Job Definition
+                    {{ computedJobTitle }}
                   </h3>
-                  <p class="is-size-7 has-text-grey" style="line-height: 1; margin-top: 0;">
-                    No template selected
+                  <p v-if="computedDockerImage" class="is-size-7 has-text-grey" style="line-height: 1; margin-top: 0; margin-bottom: 4px;">
+                    {{ computedDockerImage }}
+                  </p>
+                   <p v-else class="is-size-7 has-text-grey" style="line-height: 1; margin-top: 0;">
+                    Configure job in editor
                   </p>
                 </div>
-                <div class="is-flex is-align-items-start ml-3" style="margin-top: 6px;">
+                <div class="is-flex is-align-items-start" style="margin-top: 6px;">
                   <!-- Select Template Button -->
                   <button
                       class="button is-light is-small action-button mr-2" 
@@ -128,7 +124,7 @@
           </div>
         </div>
         <!-- Define deployment -->
-        <h2 class="title py-4">2. Select your GPU</h2>
+        <h2 class="title pt-0 pb-0 mb-3">2. Select your GPU</h2>
         <div class="nav-tabs is-flex">
           <div
             class="nav-tabs-item p-3 px-5 mr-3"
@@ -414,8 +410,8 @@
             </div>
             <div class="is-flex is-justify-content-space-between has-text-grey">
               <p>Model:</p>
-              <p v-if="selectedTemplate" style="text-overflow: ellipsis; text-align: right; flex-basis: 70%;">
-                {{ selectedTemplate.name }}
+              <p v-if="computedJobTitle" style="text-overflow: ellipsis; text-align: right; flex-basis: 70%;">
+                {{ computedJobTitle }}
               </p>
               <p v-else>-</p>
             </div>
@@ -471,7 +467,7 @@
                 @click="createDeployment"
               >
                 <span v-if="isCreatingDeployment">Creating...</span>
-                <span v-else>Create Deployment</span>
+                <span v-else>Deploy</span>
               </button>
             </ClientOnly>
           </div>
@@ -743,7 +739,7 @@ const showSettingsModal = ref(false);
 const showSwapModal = ref(false);
 const isFromRepost = ref(false);
 const skipAutoSelection = ref(false);
-const isUpdatingFromJobDef = ref(false); // Flag to prevent infinite loops
+const isUpdatingFromJobDef = ref(false); // This flag will now be used by both watchers
 const isEditorCollapsed = ref(true); // Default to collapsed
 
 // Balance and price state
@@ -911,6 +907,31 @@ const showTemplateInfo = computed(() =>
   selectedTemplate.value !== null
 );
 
+const computedJobTitle = computed(() => {
+  if (selectedTemplate.value && selectedTemplate.value.id !== 'custom') {
+    return selectedTemplate.value.name;
+  }
+  // Try to get from jobDefinition.ops[0].id
+  if (jobDefinition.value?.ops?.[0]?.id) {
+    return jobDefinition.value.ops[0].id;
+  }
+  // Fallback to a generic name or derive from image if ops[0].id is not present
+  if (computedDockerImage.value) {
+    const imageNameParts = computedDockerImage.value.split('/');
+    return imageNameParts.pop() || 'Custom Job';
+  }
+  return 'Custom Job Definition';
+});
+
+const computedDockerImage = computed(() => {
+  // If an actual template (not the 'custom' placeholder) is selected, use its image
+  if (selectedTemplate.value && selectedTemplate.value.id !== 'custom' && selectedTemplate.value.jobDefinition?.ops?.[0]?.args?.image) {
+    return selectedTemplate.value.jobDefinition.ops[0].args.image;
+  }
+  // Otherwise, derive from the live jobDefinition
+  return jobDefinition.value?.ops?.[0]?.args?.image || null;
+});
+
 const marketName = computed(() => {
   if (!selectedMarket.value) return null;
   return testgridMarkets.value.find(
@@ -934,7 +955,10 @@ const canPostJob = computed(() => {
 });
 
 const canCreateDeployment = computed(() => 
-  !(!selectedMarket.value || (!selectedTemplate.value && !route.query.fromRepost) || isCreatingDeployment.value || hours.value <= 0)
+  selectedMarket.value !== null &&
+  jobDefinition.value !== null && // Ensure a job definition exists (it always should due to defaults)
+  !isCreatingDeployment.value &&
+  hours.value > 0
 );
 
 const activeFilterKey = computed(() => 
@@ -1061,7 +1085,6 @@ const handleRepost = async () => {
   skipAutoSelection.value = true;
   
   try {
-    // Try to get data from localStorage first
     const storedData = localStorage.getItem(repostId);
     let jobAddress: string;
     let jobTimeout: string | null = null;
@@ -1072,55 +1095,59 @@ const handleRepost = async () => {
       jobAddress = parsedData.jobAddress;
       jobTimeout = parsedData.jobTimeout;
       marketAddress = parsedData.marketAddress;
-      
-      // Set timeout from localStorage if available
-      if (jobTimeout) {
-        hours.value = parseFloat(jobTimeout);
-      }
+      if (jobTimeout) hours.value = parseFloat(jobTimeout);
     } else {
-      // If no localStorage data, we can't proceed
       throw new Error("Repost data not found. The page may have been reloaded or the data expired.");
     }
     
-    // Fetch job data from API
     const response = await fetch(`https://dashboard.k8s.prd.nos.ci/api/jobs/${jobAddress}`);
-    if (!response.ok) {
-      throw new Error(`Failed to load deployment with address ${jobAddress}`);
-    }
-    
+    if (!response.ok) throw new Error(`Failed to load deployment with address ${jobAddress}`);
     const jobData = await response.json();
     
-    // Wait for markets to load if needed
-    if (!markets.value || markets.value.length === 0) {
-      await getMarkets();
+    // **Crucial Step 1: Set the jobDefinition.value for the editor first**
+    if (jobData.jobDefinition) {
+      jobDefinition.value = JSON.parse(JSON.stringify(jobData.jobDefinition));
+    } else {
+      // Fallback or error if jobData.jobDefinition is missing for a repost
+      toast.error('Reposted job data is missing its definition.');
+      jobDefinition.value = { 
+        type: "container", 
+        version: "0.1", 
+        ops: [{
+          id: "error-loading-repost", 
+          type: "container/run", 
+          args: { 
+            image: "error", 
+            gpu: false, 
+            cmd: ["echo", "error"],
+            expose: 80 // Added default expose
+          }
+        }], 
+        meta: { 
+          trigger: "dashboard",
+          system_requirements: { // Added default system_requirements
+            required_vram: 0 
+          }
+        }
+      };
     }
     
-    // Set market from localStorage first if available, then from the original job data
+    // Set hours/timeout if not already set from localStorage and available in jobData
+    if (!jobTimeout && jobData.timeout) {
+      hours.value = jobData.timeout / 3600;
+    }
+    
+    await getMarkets(); // Ensure markets are loaded
+
     if (markets.value) {
       let foundMarket = null;
-      
-      // First try using the marketAddress from localStorage
-      if (marketAddress) {
-        foundMarket = markets.value.find((m: Market) => 
-          m.address.toString() === marketAddress
-        );
-      }
-      
-      // Fall back to job data market if needed
-      if (!foundMarket && jobData.market) {
-        foundMarket = markets.value.find((m: Market) => 
-          m.address.toString() === jobData.market
-        );
-      }
+      if (marketAddress) foundMarket = markets.value.find((m: Market) => m.address.toString() === marketAddress);
+      if (!foundMarket && jobData.market) foundMarket = markets.value.find((m: Market) => m.address.toString() === jobData.market);
       
       if (foundMarket) {
         selectedMarket.value = foundMarket;
-        
-        // Set GPU type based on market
         if (testgridMarkets.value.length > 0) {
-          const marketInfo = testgridMarkets.value.find((tgm: any) => 
-            tgm.address === foundMarket.address.toString()
-          );
+          const marketInfo = testgridMarkets.value.find((tgm: any) => tgm.address === foundMarket.address.toString());
           if (marketInfo && marketInfo.type) {
             gpuTypeCheckbox.value = [marketInfo.type];
             activeFilter.value = marketInfo.type;
@@ -1129,38 +1156,24 @@ const handleRepost = async () => {
       }
     }
     
-    // Set job definition
-    if (jobData.jobDefinition) {
-      jobDefinition.value = JSON.parse(JSON.stringify(jobData.jobDefinition));
-    }
-    
-    // Set hours/timeout if not already set from localStorage
-    if (!jobTimeout && jobData.timeout) {
-      hours.value = jobData.timeout / 3600;
-    }
-    
-    // Find and select template or use custom
-    if (templates.value && jobData.jobDefinition) {
-      const matchingTemplate = templates.value.find((t: any) => // Use any for t here to bypass complex type check for now
+    // **Crucial Step 2: Determine selectedTemplate.value based on the now-set jobDefinition.value**
+    if (templates.value && jobDefinition.value) { // Use the editor's jobDefinition.value
+      const matchingTemplate = templates.value.find((t: any) => 
         t.jobDefinition && 
-        JSON.stringify(t.jobDefinition) === JSON.stringify(jobData.jobDefinition)
+        JSON.stringify(t.jobDefinition) === JSON.stringify(jobDefinition.value) // Compare with editor's content
       );
       
       if (matchingTemplate) {
-        selectedTemplate.value = matchingTemplate as Template; // Assert as Template
+        selectedTemplate.value = matchingTemplate as Template;
       } else {
-        selectedTemplate.value = {
-          name: 'Custom',
-          jobDefinition: jobData.jobDefinition,
-          description: 'Custom configuration from reposted deployment'
-        };
+        // No exact template match for the reposted definition, so treat as custom.
+        selectedTemplate.value = null; 
       }
+    } else {
+      selectedTemplate.value = null; // Default to null if templates or jobDefinition aren't ready
     }
     
-    // Clean up localStorage data after successful use
     cleanupLocalStorage(repostId);
-    
-    // Remove repostId from URL to avoid reuse on refresh
     router.replace({ query: {} });
   } catch (err: any) {
     toast.error(`Error setting up reposted deployment: ${err.toString()}`);
@@ -1210,44 +1223,63 @@ const cleanupLocalStorage = (currentRepostId?: string) => {
 
 // Template selection handling
 watch(() => selectedTemplate.value, (newTemplate) => {
-  if (isUpdatingFromJobDef.value) return; // Prevent loop when updating from job definition changes
-  
+  if (isUpdatingFromJobDef.value) return; // If this change is due to the jobDefinition watcher, do nothing here
+
   if (newTemplate?.jobDefinition) {
-    // Update job definition
+    isUpdatingFromJobDef.value = true; // Indicate that the jobDefinition is being updated programmatically
     jobDefinition.value = JSON.parse(JSON.stringify(newTemplate.jobDefinition));
-    
-    // Reset market selection for proper reactivity if not a repost
+    nextTick(() => {
+      isUpdatingFromJobDef.value = false;
+    });
+
     if (!isFromRepost.value) {
       selectedMarket.value = null;
-      selectedHostAddress.value = null; // Add this line
+      selectedHostAddress.value = null;
     }
-  } else {
-    // Reset job definition in non-repost mode
-    jobDefinition.value = {
-      version: "1.0.0",
-      type: "container",
-      ops: [
-        {
-          id: "operation-1",
-          type: "container/run",
-          args: {
-            image: "ubuntu",
-            gpu: true,
-            cmd: ["echo", "hello world"],
-            expose: 80
-          }
-        }
-      ],
-      meta: {
-        trigger: "dashboard",
-        system_requirements: {
-          required_vram: 1
-        }
-      }
-    };
-    selectedMarket.value = null;
+  } 
+  // No specific action if newTemplate is null, as jobDefinition (editor) should retain custom values.
+}, { deep: true });
+
+// Watch jobDefinition changes to detect custom configurations or reverting to a template ID
+watch(() => jobDefinition.value, (newJobDef, oldJobDef) => {
+  if (isUpdatingFromJobDef.value) return; // If this change is due to the selectedTemplate watcher, do nothing here
+
+  // Avoid processing if the change was programmatic and identical (can happen with deep watchers)
+  if (JSON.stringify(newJobDef) === JSON.stringify(oldJobDef)) {
+      return;
   }
-});
+
+  const currentEditorOpId = newJobDef?.ops?.[0]?.id;
+
+  if (selectedTemplate.value && selectedTemplate.value.id !== 'custom') {
+    const originalTemplateOpId = selectedTemplate.value.jobDefinition?.ops?.[0]?.id;
+    if (originalTemplateOpId !== currentEditorOpId) {
+      // ID has changed from the selected template's ID, so deselect
+      isUpdatingFromJobDef.value = true; // Indicate that selectedTemplate is being updated programmatically
+      selectedTemplate.value = null;
+      nextTick(() => {
+        isUpdatingFromJobDef.value = false;
+      });
+    }
+    // If IDs match, selectedTemplate remains selected. User might be customizing other parts.
+  } else {
+    // No template is currently selected (it's custom or was deselected)
+    // Try to find a template that matches the new ID in the editor
+    if (currentEditorOpId && templates.value) {
+      const templateMatchingOpId = templates.value.find(
+        (t: Template) => t.jobDefinition?.ops?.[0]?.id === currentEditorOpId && t.id !== 'custom'
+      );
+
+      if (templateMatchingOpId) {
+        // A template matches the current ID. Set selectedTemplate. 
+        // The other watcher will then update the jobDefinition editor to this template's content.
+        // No need to set isUpdatingFromJobDef here for *this specific assignment* because the selectedTemplate
+        // watcher will set it before it modifies jobDefinition.
+        selectedTemplate.value = templateMatchingOpId as Template;
+      }
+    }
+  }
+}, { deep: true });
 
 // Auto-select PyTorch template when templates load
 watch(() => templates.value, (newTemplates) => {
@@ -1262,45 +1294,6 @@ watch(() => templates.value, (newTemplates) => {
     }
   }
 }, { immediate: true });
-
-// Watch jobDefinition changes to detect custom configurations
-watch(() => jobDefinition.value, (newJobDef) => {
-  if (!templates.value || !newJobDef?.ops?.[0]?.args?.image || isFromRepost.value) return;
-  
-  const currentImage = newJobDef.ops[0].args.image;
-  
-  // Check if current image matches any template
-  const matchingTemplate = templates.value.find((template: any) => 
-    template.jobDefinition?.ops?.[0]?.args?.image === currentImage
-  );
-  
-  if (matchingTemplate) {
-    // If we found a matching template and it's not already selected
-    if (selectedTemplate.value?.id !== matchingTemplate.id) {
-      isUpdatingFromJobDef.value = true;
-      selectedTemplate.value = matchingTemplate as Template;
-      nextTick(() => {
-        isUpdatingFromJobDef.value = false;
-      });
-    }
-  } else {
-    // No matching template found - create custom template
-    const customTemplate: Template = {
-      id: 'custom',
-      name: 'Custom',
-      description: currentImage,
-      jobDefinition: newJobDef
-    };
-    
-    if (selectedTemplate.value?.name !== 'Custom') {
-      isUpdatingFromJobDef.value = true;
-      selectedTemplate.value = customTemplate;
-      nextTick(() => {
-        isUpdatingFromJobDef.value = false;
-      });
-    }
-  }
-}, { deep: true });
 
 // Update GPU type when market changes
 watch(() => selectedMarket.value, (newMarket) => {

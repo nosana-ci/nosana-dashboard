@@ -390,9 +390,10 @@ const isActive = (paths: string[]) => {
     height: 16px;
     transition: transform 0.2s ease;
     opacity: 0.5;
+    transform: rotate(90deg);
 
     &.is-active {
-      transform: rotate(-180deg);
+      transform: rotate(0deg);
     }
   }
 }

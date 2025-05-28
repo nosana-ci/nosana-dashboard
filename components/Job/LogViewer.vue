@@ -1,5 +1,5 @@
 <template>
-  <div class="log-viewer" ref="logContainer" @scroll="handleScroll">
+  <div class="log-viewer" ref="logContainer" @scroll="handleScroll" :class="{ 'is-fullscreen': fullscreen }">
     <div v-if="signMessageError">Failed to sign message. Please try again.</div>
 
     <!-- Regular Log View -->
@@ -76,6 +76,7 @@
             {{ ((resBar.current / resBar.total) * 100).toFixed(0) }}%
           </progress>
         </div>
+        <div class="log-bottom-spacer"></div>
       </div>
     </template>
   </div>
@@ -91,9 +92,10 @@ interface Props {
   logs: LogEntry[];
   progressBars: Map<string, ProgressBar>;
   resourceProgressBars: Map<string, any>;
+  fullscreen?: boolean;
 }
 
-const { isConnecting, logs, progressBars, resourceProgressBars } =
+const { isConnecting, logs, progressBars, resourceProgressBars, fullscreen } =
   defineProps<Props>();
 
 // TODO: MOVE TO HOOKS
@@ -168,8 +170,8 @@ const activeProgressBars = computed(() =>
   Array.from(progressBars.values()).filter((b) => !b.completed)
 );
 
-function scrollToBottom() {
-  if (shouldAutoScroll.value && logContainer.value) {
+function scrollToBottom(force: boolean = false) {
+  if ((shouldAutoScroll.value || force) && logContainer.value) {
     nextTick(() => {
       const container = logContainer.value!;
       container.scrollTop = container.scrollHeight;
@@ -177,7 +179,7 @@ function scrollToBottom() {
   }
 }
 
-// // Auto-scroll to bottom when new logs arrive or progress bars update
+// Auto-scroll to bottom when new logs arrive or progress bars update
 watch(
   [
     () => logs.length,
@@ -199,6 +201,11 @@ function handleScroll() {
   // If we're near the bottom (within 50px), enable auto-scroll
   shouldAutoScroll.value = scrollHeight - (scrollTop + clientHeight) < 50;
 }
+
+// Expose scrollToBottom for parent components
+defineExpose({
+  scrollToBottom
+});
 </script>
 
 <style lang="scss" scoped>
@@ -208,15 +215,28 @@ function handleScroll() {
   color: #c9d1d9;
   padding: 1rem;
   border-radius: 4px;
-  height: 100%;
+  height: 40vh;
   overflow-y: auto;
-  min-height: 300px;
-  max-height: 600px;
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+
+  &.is-fullscreen {
+    height: 100%;
+    min-height: unset;
+  }
 }
 
 .log-content {
   white-space: pre-wrap;
   word-wrap: break-word;
+  flex-grow: 1;
+  min-height: 0;
+}
+
+.log-bottom-spacer {
+  height: 1rem;
+  flex-shrink: 0;
 }
 
 .log-entry {

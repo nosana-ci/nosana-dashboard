@@ -1,19 +1,14 @@
 <template>
   <!-- Deployment Info Section -->
   <tr>
-    <td colspan="2" class="has-background-light">
-      <h4 class="title is-5">Deployment Info</h4>
-    </td>
-  </tr>
-  <tr>
     <td>Solana address</td>
     <td>
       <a
-        :href="`https://solscan.io/account/${address}`"
+        :href="`https://solscan.io/account/${props.job.address}`"
         target="_blank"
         class="address is-family-monospace"
       >
-        {{ address }}
+        {{ props.job.address }}
       </a>
     </td>
   </tr>
@@ -22,9 +17,9 @@
     <td>
       <nuxt-link
         class="address is-family-monospace"
-        :to="`/host/${node}`"
+        :to="`/host/${props.job.node}`"
       >
-        {{ node }}
+        {{ props.job.node }}
       </nuxt-link>
     </td>
   </tr>
@@ -33,9 +28,9 @@
     <td>
       <nuxt-link
         class="address is-family-monospace"
-        :to="`/deployer/${project}`"
+        :to="`/deployer/${props.job.project}`"
       >
-        {{ project }}
+        {{ props.job.project }}
       </nuxt-link>
     </td>
   </tr>
@@ -44,17 +39,17 @@
     <td>
       <nuxt-link
         class="address is-family-monospace"
-        :to="`/markets/${market}`"
+        :to="`/markets/${props.job.market}`"
       >
         <span
           v-if="
             apiMarkets &&
-            apiMarkets.find((tgm: any) => tgm.address === market)
+            apiMarkets.find((tgm: any) => tgm.address === props.job.market)
           "
         >
-          {{ apiMarkets.find((tgm: any) => tgm.address === market).name }}
+          {{ apiMarkets.find((tgm: any) => tgm.address === props.job.market).name }}
         </span>
-        <span v-else>{{ market }}</span>
+        <span v-else>{{ props.job.market }}</span>
       </nuxt-link>
     </td>
   </tr>
@@ -62,13 +57,9 @@
     <td>Price</td>
     <td>
       <JobPrice 
-        :job="{
-          usdRewardPerHour,
-          timeStart,
-          timeEnd,
-          timeout,
-          state: state ?? (isCompleted ? 2 : timeStart ? 1 : 0)
-        }"
+        :key="`deployment-price-${props.job.isCompleted}-${props.job.timeEnd || 'running'}-${props.job.state}`"
+        :job="jobDataForPrice"
+        :options="priceOptions"
       />
     </td>
   </tr>
@@ -85,12 +76,12 @@
   <tr>
     <td>Duration</td>
     <td>
-      <span v-if="timeEnd && timeStart">
-        {{ formatDuration(timeEnd - timeStart) }}
+      <span v-if="props.job.timeEnd && props.job.timeStart">
+        {{ formatDuration(props.job.timeEnd - props.job.timeStart) }}
       </span>
-      <span v-else-if="timeStart">
-        {{ formatDuration(Math.floor(Date.now() / 1000) - timeStart) }}
-        <span class="has-text-grey">(max {{ formatDuration(timeout || 7200) }})</span>
+      <span v-else-if="props.job.timeStart">
+        {{ formatDuration(Math.floor(Date.now() / 1000) - props.job.timeStart) }}
+        <span class="has-text-grey">(max {{ formatDuration(props.job.timeout || 7200) }})</span>
       </span>
       <span v-else>-</span>
     </td>
@@ -102,19 +93,11 @@ import { computed, ref } from 'vue';
 import { PublicKey } from "@solana/web3.js";
 import useJobPrice from "~/composables/jobs/useJobPrice";
 import JobPrice from "~/components/Job/Price.vue";
+import type { UseJob } from "~/composables/jobs/useJob";
 
 const props = defineProps<{
-  address: string;
-  node: string;
-  project: string;
-  market: string;
-  usdRewardPerHour: number;
-  timeStart?: number;
-  timeEnd?: number;
-  timeout: number;
+  job: UseJob;
   jobDefinition: any;
-  isCompleted?: boolean;
-  state: number | string;
 }>();
 
 // Format duration (seconds) to readable format
@@ -131,17 +114,17 @@ const { data: stats } = useAPI("/api/stats");
 
 // Format time started
 const timeStartFormatted = computed(() => {
-  if (!props.timeStart) return null;
-  const date = new Date(props.timeStart * 1000);
+  if (!props.job.timeStart) return null;
+  const date = new Date(props.job.timeStart * 1000);
   return date.toISOString().replace('T', ' ').substring(0, 19);
 });
 
 // Get time ago
 const timeAgo = computed(() => {
-  if (!props.timeStart) return null;
+  if (!props.job.timeStart) return null;
   try {
     const now = Date.now();
-    const startTime = props.timeStart * 1000;
+    const startTime = props.job.timeStart * 1000;
     const diffMs = now - startTime;
     
     // Convert to appropriate time unit
@@ -162,13 +145,13 @@ const timeAgo = computed(() => {
 });
 
 // Get host specs
-const { data: nodeSpecs } = useAPI(`/api/nodes/${props.node}/specs`, {
+const { data: nodeSpecs } = useAPI(`/api/nodes/${props.job.node}/specs`, {
   // @ts-ignore
   disableToastOnError: true,
 });
 
 const { data: nodeInfo } = useAPI(
-  `https://${props.node}.${useRuntimeConfig().public.nodeDomain}/node/info`,
+  `https://${props.job.node}.${useRuntimeConfig().public.nodeDomain}/node/info`,
   {
     // @ts-ignore
     disableToastOnError: true,
@@ -194,5 +177,21 @@ const combinedSpecs = computed(() => {
 
 // Market data for GPU name
 const { data: apiMarkets, pending: loadingMarkets } = useAPI("/api/markets");
+
+const jobDataForPrice = computed(() => {
+  return {
+    usdRewardPerHour: props.job.usdRewardPerHour,
+    timeStart: props.job.timeStart,
+    timeEnd: props.job.timeEnd,
+    timeout: props.job.timeout,
+    state: props.job.state ?? (props.job.isCompleted ? 2 : props.job.timeStart ? 1 : 0)
+  };
+});
+
+const priceOptions = computed(() => {
+  return {
+    showPerHour: !props.job.isCompleted
+  };
+});
 
 </script> 

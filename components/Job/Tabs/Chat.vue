@@ -15,7 +15,7 @@
           <div class="initial-content">
             <div class="title-container">
               <img src="~/assets/img/token_icons/nosana-nos-logo.svg" alt="Nosana" class="nosana-logo" />
-              <h3 class="model-title">Nosana Test-Chat</h3>
+              <h3 class="model-title">Nosana Test Chat</h3>
             </div>
             <p class="model-subtitle">{{ modelName }}</p>
             <p class="empty-state-text">How can I help you today?</p>
@@ -44,7 +44,7 @@
             <div class="active-chat-title-area">
               <div class="title-container">
                 <img src="~/assets/img/token_icons/nosana-nos-logo.svg" alt="Nosana" class="nosana-logo" />
-                <h3 class="model-title">Nosana Test-Chat</h3>
+                <h3 class="model-title">Nosana Test Chat</h3>
               </div>
               <p class="model-subtitle">{{ modelName }}</p>
             </div>

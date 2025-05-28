@@ -486,7 +486,7 @@ const isGHCR = (image: string) => {
 }
 
 .dark-mode .template-icon {
-  background-color: #0a0a0a;
+  background-color: #2C2C2C;
   border-color: #363636;
 }
 
@@ -504,7 +504,7 @@ const isGHCR = (image: string) => {
 }
 
 .dark-mode .container-icon {
-  background-color: #0a0a0a;
+  background-color: #2C2C2C;
   border-color: #363636;
 }
 

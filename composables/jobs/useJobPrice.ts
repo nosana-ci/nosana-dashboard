@@ -13,39 +13,66 @@ export default function useJobPrice(job: JobPriceProps, options: JobPriceOptions
   
   const opts = { ...defaultOptions, ...options }
   
+  // Helper function to format price with options
+  const formatPrice = (price: number, options: typeof opts) => {
+    const dollarSign = options.showDollarSign ? '$' : '';
+    return `${dollarSign}${price.toFixed(options.decimalPlaces)}`;
+  };
+  
   // Current timestamp for calculating ongoing durations
   const now = computed(() => Math.floor(Date.now() / 1000))
   
   // Calculate the job duration in seconds
   const duration = computed(() => {
-    if (!job.timeStart) return 0
-    
-    const end = job.timeEnd || now.value
-    // Cap duration at timeout if specified
-    const maxDuration = job.timeout || 7200 // Default 2 hours (7200 seconds)
-    return Math.min(end - job.timeStart, maxDuration)
+    const timeStart = job.timeStart || 0;
+    const timeEnd = job.timeEnd || 0;
+    const now = Math.floor(Date.now() / 1000);
+    const end = timeEnd > 0 ? timeEnd : now;
+    const maxDuration = job.timeout || 7200;
+
+    const result = {
+      timeStart,
+      timeEnd,
+      now,
+      end,
+      maxDuration,
+      actualDuration: end - timeStart,
+      isCompleted: timeEnd > 0
+    };
+
+    return result;
   })
   
   // Calculate duration in hours for price calculation
-  const durationHours = computed(() => duration.value / 3600)
+  const durationHours = computed(() => {
+    const dur = duration.value;
+    const hours = Math.max(0, dur.actualDuration) / 3600;
+    return hours;
+  })
   
   // Calculate the price in USD
   const priceUsd = computed(() => {
-    if (!job.usdRewardPerHour) return 0
-    return (job.usdRewardPerHour * durationHours.value) * 1.1
+    const usdRewardPerHour = job.usdRewardPerHour || 0;
+    const hours = durationHours.value;
+    const price = usdRewardPerHour * hours;
+    return price;
   })
   
   // Format price for display
   const formattedPrice = computed(() => {
-    const dollarSign = opts.showDollarSign ? '$' : ''
-    
-    // For running jobs, we can show per hour rate if requested
-    if (Number(job.state) === 1 && opts.showPerHour && !job.timeEnd) {
-      return `${dollarSign}${((job.usdRewardPerHour || 0) * 1.1).toFixed(opts.decimalPlaces)} / hr`
+    const jobState = job.state;
+    const showPerHour = opts.showPerHour;
+    const timeEnd = job.timeEnd || 0;
+    const usdRewardPerHour = job.usdRewardPerHour || 0;
+
+    if (showPerHour) {
+      const formatted = formatPrice(usdRewardPerHour, opts);
+      return `${formatted} / hr`;
+    } else {
+      const price = priceUsd.value;
+      const formatted = formatPrice(price, opts);
+      return formatted;
     }
-    
-    // For completed or other jobs, show total price
-    return `${dollarSign}${priceUsd.value.toFixed(opts.decimalPlaces)}`
   })
   
   // Determines if the job is currently running
