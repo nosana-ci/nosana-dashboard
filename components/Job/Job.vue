@@ -884,10 +884,6 @@ const getStatusText = (status: string) => {
   border-radius: 8px 8px 0 0; // Round top corners
 }
 
-// New job header layout
-.job-header-main {
-  /* border-bottom: 1px solid #e8e8e8; */ /* Removed */
-}
 
 .job-header-grid {
   display: flex;
@@ -1207,10 +1203,6 @@ html.dark-mode {
     border-color: #555;
   }
 
-  // New header layout dark mode
-  .job-header-main {
-    /* border-bottom-color: #444; */ /* Removed */
-  }
   
   .job-title-col {
     .job-title {
