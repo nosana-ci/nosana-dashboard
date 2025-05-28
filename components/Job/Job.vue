@@ -11,68 +11,68 @@
           <div class="job-header-grid">
             <!-- Left Group: Title, GPU, Price -->
             <div class="job-header-left-group">
-              <!-- Job Title -->
-              <div class="job-title-col">
-                <div class="job-title">
-                  <template v-if="templateForJob">
-                    {{ templateForJob.name }}
-                  </template>
-                  <template v-else-if="jobDefinitionId">
-                    {{ jobDefinitionId }}
-                  </template>
+            <!-- Job Title -->
+            <div class="job-title-col">
+              <div class="job-title">
+                <template v-if="templateForJob">
+                  {{ templateForJob.name }}
+                </template>
+                <template v-else-if="jobDefinitionId">
+                  {{ jobDefinitionId }}
+                </template>
                   <template v-else-if="formattedDockerImage">
                     {{ formattedDockerImage.split('/').pop() }}
-                  </template>
-                  <template v-else>
-                    <span class="icon-text">
-                      <span class="icon is-small">
-                        <i class="fas fa-spinner fa-spin"></i>
-                      </span>
-                      <span>Loading</span>
+                </template>
+                <template v-else>
+                  <span class="icon-text">
+                    <span class="icon is-small">
+                      <i class="fas fa-spinner fa-spin"></i>
                     </span>
-                  </template>
-                </div>
+                    <span>Loading</span>
+                  </span>
+                </template>
+              </div>
                 <div class="job-docker">
                   <span v-if="formattedDockerImage">{{ formattedDockerImage }}</span>
                 </div>
-              </div>
+            </div>
 
-              <!-- GPU -->
-              <div class="job-gpu-col">
-                <div class="job-gpu">
-                  <span v-if="actualGpuInfo">{{ cleanGpuName }}</span>
-                  <span v-else>
-                    <span class="icon-text">
-                      <span class="icon is-small">
-                        <i class="fas fa-spinner fa-spin"></i>
-                      </span>
-                      <span>Loading GPU</span>
+            <!-- GPU -->
+            <div class="job-gpu-col">
+              <div class="job-gpu">
+                <span v-if="actualGpuInfo">{{ cleanGpuName }}</span>
+                <span v-else>
+                  <span class="icon-text">
+                    <span class="icon is-small">
+                      <i class="fas fa-spinner fa-spin"></i>
                     </span>
+                    <span>Loading GPU</span>
                   </span>
-                </div>
+                </span>
               </div>
+            </div>
 
-              <!-- Price -->
-              <div class="job-price">
-                <div class="price-value">
-                  <JobPrice 
-                    :key="`job-price-${job.isCompleted}-${job.timeEnd || 'running'}`"
+            <!-- Price -->
+            <div class="job-price">
+              <div class="price-value">
+                <JobPrice 
+                    :key="`job-price-${props.job.isCompleted}-${props.job.timeEnd || 'running'}-${props.job.state}`"
                     :job="jobDataForPriceComponent"
                     :options="jobOptionsForPriceComponent"
-                  />
-                </div>
+                />
               </div>
+            </div>
             </div>
 
             <!-- Right Group: Actions and Status -->
             <div class="job-actions is-hidden-mobile">
               <div class="actions-container">
-                <button
-                  v-if="(job.isRunning || job.state === 0) && isJobPoster"
-                  @click.stop="stopJob"
-                  :class="{ 'is-loading': loading }"
+              <button
+                  v-if="(props.job.isRunning || props.job.state === 0) && props.isJobPoster"
+                @click.stop="stopJob"
+                :class="{ 'is-loading': loading }"
                   class="button is-small action-button mr-2"
-                  :title="job.state === 0 ? 'Delist the job' : 'Stop the job'"
+                  :title="props.job.state === 0 ? 'Delist the job' : 'Stop the job'"
                 >
                   <span class="icon is-small">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -80,11 +80,11 @@
                     </svg>
                   </span>
                   <span>Stop</span>
-                </button>
-                <button
-                  v-if="job.isRunning && isJobPoster"
-                  @click.stop="openExtendModal"
-                  :class="{ 'is-loading': loadingExtend }"
+              </button>
+              <button
+                  v-if="props.job.isRunning && props.isJobPoster"
+                @click.stop="openExtendModal"
+                :class="{ 'is-loading': loadingExtend }"
                   class="button is-small action-button mr-2"
                   title="Extend job duration"
                 >
@@ -94,35 +94,35 @@
                     </svg>
                   </span>
                   <span>Extend</span>
-                </button>
-                <button 
-                  @click.stop="repostJob" 
+              </button>
+              <button 
+                @click.stop="repostJob" 
                   class="button is-small action-button mr-2"
                   title="Redeploy this job"
-                >
-                  <span class="icon is-small">
+              >
+                <span class="icon is-small">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" fill="currentColor"/>
                     </svg>
-                  </span>
-                  <span>Redeploy</span>
-                </button>
+                </span>
+                <span>Redeploy</span>
+              </button>
                 <div class="job-status ml-2">
-                  <JobStatus
-                    :status="
-                      job.isCompleted && job.jobStatus
-                        ? job.jobStatus === 'success'
-                          ? 'SUCCESS'
-                          : 'FAILED'
-                        : job.state
-                    "
-                  />
+              <JobStatus
+                :status="
+                  props.job.isCompleted && props.job.jobStatus
+                    ? props.job.jobStatus === 'success'
+                      ? 'SUCCESS'
+                      : 'FAILED'
+                    : props.job.state
+                "
+              />
                 </div>
               </div>
             </div>
+            </div>
           </div>
         </div>
-      </div>
 
         <!-- Dropdown Arrow -->
         <button class="card-header-icon" aria-label="more options">
@@ -138,21 +138,21 @@
       </header>
 
         <!-- Service Endpoints Row -->
-      <div v-if="endpoints && endpoints.size > 0" class="service-endpoints px-5 py-2">
+      <div v-if="props.endpoints && props.endpoints.size > 0" class="service-endpoints px-5 py-2">
           <div 
-            v-for="([url, endpointData], index) in Array.from(endpoints.entries())" 
+            v-for="([url, endpointData], index) in Array.from(props.endpoints.entries())" 
             :key="index"
             class="endpoint-item mb-2"
           >
             <div class="endpoint-content">
             <span class="endpoint-port">- Port {{ endpointData.port }}</span>
             <div class="tag is-outlined is-light ml-2" :class="{
-                  'is-success': job.isRunning && endpointData.status === 'ONLINE',
-                  'is-danger': !job.isRunning || (job.isRunning && endpointData.status === 'OFFLINE'),
-              'is-info': job.isRunning && endpointData.status === 'UNKNOWN'
+                  'is-success': props.job.isRunning && endpointData.status === 'ONLINE',
+                  'is-danger': !props.job.isRunning || (props.job.isRunning && endpointData.status === 'OFFLINE'),
+              'is-info': props.job.isRunning && endpointData.status === 'UNKNOWN'
                 }">
               <span>{{ 
-                !job.isRunning || job.isCompleted 
+                !props.job.isRunning || props.job.isCompleted 
                   ? 'OFFLINE' 
                   : endpointData.status === 'UNKNOWN' 
                     ? 'LOADING' 
@@ -182,7 +182,7 @@
             <div class="quick-detail-item">
               <span class="quick-detail-label">Duration</span>
               <span class="quick-detail-value">
-                <span v-if="jobDurationDisplay">{{ jobDurationDisplay }}</span>
+                <span v-if="jobDurationDisplayValue">{{ jobDurationDisplayValue }}</span>
                 <span v-else class="icon-text">
                   <span class="icon is-small"><i class="fas fa-spinner fa-spin"></i></span>
                   <span>Loading</span>
@@ -217,8 +217,8 @@
                 </span>
               </span>
             </div>
+            </div>
           </div>
-        </div>
 
         <!-- Second Row of Quick Details -->
         <div class="columns is-multiline is-variable is-0 no-padding is-justify-content-flex-start">
@@ -285,12 +285,12 @@
       </div>
 
       <!-- Tabs Section -->
-      <div v-if="job.jobDefinition">
+      <div v-if="props.job.jobDefinition">
   <JobTabs
-    :job="job"
-    :endpoints="endpoints"
-    :isJobPoster="isJobPoster"
-    :jobDefinition="job.jobDefinition"
+    :job="props.job"
+    :endpoints="props.endpoints"
+    :isJobPoster="props.isJobPoster"
+    :jobDefinition="props.job.jobDefinition"
     :hasArtifacts="false"
     :isConnecting="isConnecting"
     :logs="logs"
@@ -307,14 +307,14 @@
 
   <!-- Modals -->
   <ExtendModal
-    v-if="modal.isOpen.value && job"
-    :job="job"
-    :nosPrice="nosPrice"
-    :closeExtendModal="modal.close"
+    v-if="props.modal.isOpen.value && props.job"
+    :job="props.job"
+    :nosPrice="props.nosPrice"
+    :closeExtendModal="props.modal.close"
     :userBalances="userBalances"
   />
   <LogSubscription
-    v-if="isJobPoster && job.isRunning"
+    v-if="props.isJobPoster && props.job.isRunning"
     :initLogs="initLogs"
     :closeLogs="closeLogs"
   />
@@ -364,7 +364,7 @@ interface Props {
   isJobPoster: boolean;
 }
 
-const { job, isJobPoster, endpoints, modal, nosPrice } = defineProps<Props>();
+const props = defineProps<Props>();
 const { userBalances, signMessage } = useNosanaWallet();
 const { templates } = useTemplates();
 const toast = useToast();
@@ -402,10 +402,10 @@ const loadingExtend = ref<boolean>(false);
 
 // Computed properties for job info
 const dockerImage = computed(() => {
-  if (!job.jobDefinition?.ops?.length) {
+  if (!props.job.jobDefinition?.ops?.length) {
     return null; // Will show loading state
   }
-  const firstOp = job.jobDefinition.ops[0];
+  const firstOp = props.job.jobDefinition.ops[0];
   if (firstOp.type === 'container/run') {
     const args = firstOp.args as OperationArgsMap['container/run'];
     if (args.image) {
@@ -424,15 +424,15 @@ const formattedDockerImage = computed(() => {
 });
 
 const jobDefinitionId = computed(() => {
-  if (!job.jobDefinition?.ops?.length) return null;
-  const firstOp = job.jobDefinition.ops[0];
+  if (!props.job.jobDefinition?.ops?.length) return null;
+  const firstOp = props.job.jobDefinition.ops[0];
   return firstOp.id || null;
 });
 
 const templateForJob = computed(() => {
-  if (!templates.value || !job.jobDefinition) return null;
+  if (!templates.value || !props.job.jobDefinition) return null;
   return templates.value.find(t => 
-    JSON.stringify(t.jobDefinition) === JSON.stringify(job.jobDefinition)
+    JSON.stringify(t.jobDefinition) === JSON.stringify(props.job.jobDefinition)
   );
 });
 
@@ -441,13 +441,13 @@ const isGHCR = (image: string) => {
 };
 
 // Get host specs for actual GPU info
-const { data: nodeSpecs } = useAPI(`/api/nodes/${job.node}/specs`, {
+const { data: nodeSpecs } = useAPI(`/api/nodes/${props.job.node}/specs`, {
   // @ts-ignore
   disableToastOnError: true,
 });
 
 const { data: nodeInfo } = useAPI(
-  `https://${job.node}.${useRuntimeConfig().public.nodeDomain}/node/info`,
+  `https://${props.job.node}.${useRuntimeConfig().public.nodeDomain}/node/info`,
   {
     // @ts-ignore
     disableToastOnError: true,
@@ -492,19 +492,21 @@ const countryInfo = computed(() => {
 });
 
 const jobDataForPriceComponent = computed(() => {
-  const currentJob = job; // job is props.job via destructuring
   return {
-    usdRewardPerHour: currentJob.usdRewardPerHour,
-    timeStart: currentJob.timeStart,
-    timeEnd: currentJob.timeEnd,
-    timeout: currentJob.timeout,
-    state: currentJob.state ?? (currentJob.isCompleted ? 2 : currentJob.timeStart ? 1 : 0)
+    usdRewardPerHour: props.job.usdRewardPerHour,
+    timeStart: props.job.timeStart,
+    timeEnd: props.job.timeEnd,
+    timeout: props.job.timeout,
+    state: props.job.state ?? (props.job.isCompleted ? 2 : props.job.timeStart ? 1 : 0)
   };
 });
 
 const jobOptionsForPriceComponent = computed(() => {
-  return { showPerHour: !job.isCompleted }; // job is props.job
+  return { showPerHour: !props.job.isCompleted };
 });
+
+// Former jobDurationDisplay computed property, now a ref updated by a watch
+const jobDurationDisplayValue = ref<string | null>(null);
 
 const formatDuration = (seconds: number) => {
   if (isNaN(seconds) || seconds < 0) return 'Invalid duration';
@@ -517,29 +519,34 @@ const formatDuration = (seconds: number) => {
 const formatMaxDurationInHours = (seconds: number) => {
   if (isNaN(seconds) || seconds < 0) return 'Invalid duration';
   const hours = seconds / 3600;
-  const formattedHours = parseFloat(hours.toFixed(1)); // toFixed(1) for one decimal, parseFloat to remove trailing .0
+  const formattedHours = parseFloat(hours.toFixed(1));
   return `${formattedHours}h`;
 };
 
-const jobDurationDisplay = computed(() => {
-  if (job.timeStart === undefined || job.timeout === undefined) return null; // Loading or not applicable
+watch(
+  [() => props.job, currentTime],
+  ([newJob, newCurrentTimeVal]) => {
+    if (newJob.timeStart === undefined || newJob.timeout === undefined) {
+      jobDurationDisplayValue.value = null;
+      return;
+    }
 
-  const maxDurationInHoursFormatted = formatMaxDurationInHours(job.timeout);
+    const maxDurationInHoursFormatted = formatMaxDurationInHours(newJob.timeout);
 
-  if (job.isCompleted && job.timeEnd !== undefined) {
-    // Job completed, show actual duration
-    const actualDuration = job.timeEnd - job.timeStart;
-    return `${formatDuration(actualDuration)} (max ${maxDurationInHoursFormatted})`;
-  } else if (job.isRunning && job.timeStart) {
-    // Job running, show current duration
-    const currentDuration = currentTime.value - job.timeStart;
-    return `${formatDuration(currentDuration)} (max ${maxDurationInHoursFormatted})`;
-  } else if (job.state === 0 && job.timeStart === 0) {
-    // Queued job, just show max duration
-    return `(max ${maxDurationInHoursFormatted})`;
-  } 
-  return `(max ${maxDurationInHoursFormatted})`; // Default or fallback
-});
+    if (newJob.isCompleted && newJob.timeEnd !== undefined) {
+      const actualDuration = newJob.timeEnd - newJob.timeStart;
+      jobDurationDisplayValue.value = `${formatDuration(actualDuration)} (max ${maxDurationInHoursFormatted})`;
+    } else if (newJob.isRunning && newJob.timeStart) {
+      const currentDuration = newCurrentTimeVal - newJob.timeStart;
+      jobDurationDisplayValue.value = `${formatDuration(currentDuration)} (max ${maxDurationInHoursFormatted})`;
+    } else if (newJob.state === 0 && newJob.timeStart === 0) { // Queued
+      jobDurationDisplayValue.value = `(max ${maxDurationInHoursFormatted})`;
+    } else { // Fallback or other states
+      jobDurationDisplayValue.value = `(max ${maxDurationInHoursFormatted})`;
+    }
+  },
+  { immediate: true, deep: true }
+);
 
 const cleanGpuName = computed(() => {
   if (actualGpuInfo.value.startsWith('NVIDIA GeForce')) {
@@ -550,17 +557,17 @@ const cleanGpuName = computed(() => {
 
 // Format time started
 const timeStartFormatted = computed(() => {
-  if (!job.timeStart) return null;
-  const date = new Date(job.timeStart * 1000);
+  if (!props.job.timeStart) return null;
+  const date = new Date(props.job.timeStart * 1000);
   return date.toISOString().replace('T', ' ').substring(0, 19);
 });
 
 // Get time ago
 const timeAgo = computed(() => {
-  if (!job.timeStart) return null;
+  if (!props.job.timeStart) return null;
   try {
     const now = Date.now();
-    const startTime = job.timeStart * 1000;
+    const startTime = props.job.timeStart * 1000;
     const diffMs = now - startTime;
     
     // Convert to appropriate time unit
@@ -587,7 +594,7 @@ const combinedSpecs = computed(() => {
   const nodeInfoData = nodeInfo.value?.info;
 
   return {
-    nodeAddress: job.node,
+    nodeAddress: props.job.node,
     marketAddress: nodeSpecs.value.marketAddress,
     ram: nodeInfoData?.ram_mb
       ? Math.round(nodeInfoData.ram_mb)
@@ -627,7 +634,7 @@ const combinedSpecs = computed(() => {
 
 // Generic benchmark data
 const { data: benchmarkData } = useAPI(
-  `/api/benchmarks/generic-benchmark-data?node=${job.node}`,
+  `/api/benchmarks/generic-benchmark-data?node=${props.job.node}`,
   {
     // @ts-ignore
     disableToastOnError: true,
@@ -657,7 +664,7 @@ async function stopJob() {
   }
 
   try {
-    await job.stopJob();
+    await props.job.stopJob();
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (!message.includes('Job is already COMPLETED') && !message.includes('Job is already STOPPED')) {
@@ -675,9 +682,9 @@ function repostJob() {
   
   // Store job information in localStorage
   localStorage.setItem(repostId, JSON.stringify({
-    jobAddress: job.address,
-    jobTimeout: (job.timeout / 3600).toFixed(2),
-    marketAddress: job.market.toString(),
+    jobAddress: props.job.address,
+    jobTimeout: (props.job.timeout / 3600).toFixed(2),
+    marketAddress: props.job.market.toString(),
     timestamp: Date.now()
   }));
   
@@ -691,15 +698,15 @@ function repostJob() {
 }
 
 function openExtendModal() {
-  modal.open();
+  props.modal.open();
 }
 
 const hasOpenaiEndpoint = computed(() => {
-  if (!job.jobDefinition || !job.jobDefinition.ops) {
+  if (!props.job.jobDefinition || !props.job.jobDefinition.ops) {
     return false;
   }
 
-  for (const op of job.jobDefinition.ops) {
+  for (const op of props.job.jobDefinition.ops) {
     if (op.type === 'container/run') {
       const args = op.args as OperationArgsMap['container/run'];
       if (args.expose && Array.isArray(args.expose)) {
@@ -734,12 +741,12 @@ const {
   resourceProgressBars,
   initLogs,
   closeLogs,
-} = useJobLogs(job.address, job.node, endpoints, isJobPoster, signMessage);
+} = useJobLogs(props.job.address, props.job.node, props.endpoints, props.isJobPoster, signMessage);
 
 watchEffect(() => {
-  if (hasOpenaiEndpoint.value && job?.jobDefinition && endpoints) {
-    for (const [url, endpointData] of endpoints.entries()) {
-      const op = job.jobDefinition.ops[endpointData.opIndex];
+  if (hasOpenaiEndpoint.value && props.job?.jobDefinition && props.endpoints) {
+    for (const [url, endpointData] of props.endpoints.entries()) {
+      const op = props.job.jobDefinition.ops[endpointData.opIndex];
       if (op && op.type === 'container/run') {
         const args = op.args as OperationArgsMap['container/run'];
         if (args.expose && Array.isArray(args.expose)) {
@@ -768,7 +775,7 @@ watchEffect(() => {
   }
 });
 
-watch([chatServiceUrl, endpoints, () => job.isRunning, () => job.isCompleted], ([newUrl, currentEndpoints, isRunning, isCompleted]) => {
+watch([chatServiceUrl, props.endpoints, () => props.job.isRunning, () => props.job.isCompleted], ([newUrl, currentEndpoints, isRunning, isCompleted]) => {
   if (newUrl && currentEndpoints.has(newUrl)) {
     const serviceInfo = currentEndpoints.get(newUrl);
     if (serviceInfo && serviceInfo.status === 'ONLINE' && isRunning && !isCompleted) {
@@ -814,7 +821,7 @@ watch(isMainContentOpen, (newValue) => {
 });
 
 const getStatusIcon = (status: string) => {
-  if (!job.isRunning || job.isCompleted) {
+  if (!props.job.isRunning || props.job.isCompleted) {
     return '/img/icons/status/stopped.svg'; // Offline because job is not running or completed
   }
 
@@ -831,7 +838,7 @@ const getStatusIcon = (status: string) => {
 };
 
 const getStatusText = (status: string) => {
-  if (!job.isRunning || job.isCompleted) {
+  if (!props.job.isRunning || props.job.isCompleted) {
     return 'OFFLINE';
   }
   // Job is running
@@ -1169,7 +1176,7 @@ html.dark-mode {
   .card-header {
     background-color: #2c2c2c;
   }
-  
+    
   .card-header-container {
     background-color: #2c2c2c;
   }

@@ -474,7 +474,7 @@
                 @click="createDeployment"
               >
                 <span v-if="isCreatingDeployment">Creating...</span>
-                <span v-else>Create Deployment</span>
+                <span v-else>Deploy</span>
               </button>
             </ClientOnly>
           </div>
@@ -1110,7 +1110,7 @@ const handleRepost = async () => {
     const response = await fetch(`https://dashboard.k8s.prd.nos.ci/api/jobs/${jobAddress}`);
     if (!response.ok) throw new Error(`Failed to load deployment with address ${jobAddress}`);
     const jobData = await response.json();
-
+    
     // **Crucial Step 1: Set the jobDefinition.value for the editor first**
     if (jobData.jobDefinition) {
       jobDefinition.value = JSON.parse(JSON.stringify(jobData.jobDefinition));
@@ -1138,7 +1138,7 @@ const handleRepost = async () => {
         }
       };
     }
-
+    
     // Set hours/timeout if not already set from localStorage and available in jobData
     if (!jobTimeout && jobData.timeout) {
       hours.value = jobData.timeout / 3600;

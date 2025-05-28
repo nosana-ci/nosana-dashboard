@@ -1,10 +1,10 @@
 <template>
   <div class="tabs is-boxed job-tabs-condensed">
     <ul>
-      <li v-if="job.isRunning ? isJobPoster : true" :class="{ 'is-active': activeTab === 'logs' }">
+      <li v-if="props.job.isRunning ? props.isJobPoster : true" :class="{ 'is-active': activeTab === 'logs' }">
         <a @click.prevent="handleTabClick('logs')">Logs</a>
       </li>
-      <li v-if="job.jobResult" :class="{ 'is-active': activeTab === 'result' }">
+      <li v-if="props.job.jobResult" :class="{ 'is-active': activeTab === 'result' }">
         <a @click.prevent="handleTabClick('result')">Result</a>
       </li>
       <li :class="{ 'is-active': activeTab === 'info' }">
@@ -48,29 +48,29 @@
       :stringified="false" 
       :readOnly="true"
       class="job-definition-editor" 
-    />
+  />
   </div>
   <div v-if="activeTab === 'logs'" class="logs-wrapper">
-    <JobLogsView
-      :job="job"
-      :endpoints="endpoints"
-      :jobDefinition="jobDefinition"
-      :signMessageError="false"
-      :isJobPoster="isJobPoster"
-      :loading="false"
-      :isConnecting="isConnecting"
-      :logs="logs"
-      :progressBars="progressBars"
-      :resourceProgressBars="resourceProgressBars"
+  <JobLogsView
+    :job="props.job"
+    :endpoints="props.endpoints"
+    :jobDefinition="props.jobDefinition"
+    :signMessageError="false"
+    :isJobPoster="props.isJobPoster"
+    :loading="false"
+    :isConnecting="props.isConnecting"
+    :logs="props.logs"
+    :progressBars="props.progressBars"
+    :resourceProgressBars="props.resourceProgressBars"
       :logsTextForCopy="logsTextForCopy"
       :copyToClipboard="copyToClipboard"
-      ref="logsView"
-    />
+    ref="logsView"
+  />
   </div>
-  <div v-else-if="activeTab === 'logs' && !isJobPoster">
+  <div v-else-if="activeTab === 'logs' && !props.isJobPoster">
     <!-- Placeholder or message if logs are not available for non-posters -->
   </div>
-  <div v-if="activeTab === 'result' && job.results" class="job-definition-container">
+  <div v-if="activeTab === 'result' && props.job.results" class="job-definition-container">
     <button 
       class="button is-small is-light copy-button"
       @click="copyToClipboard(JSON.stringify(jobResultsModel, null, 2), 'Results')"
@@ -93,19 +93,19 @@
       class="job-definition-editor"
     />
   </div>
-  <div v-else-if="activeTab === 'result' && !job.results">
+  <div v-else-if="activeTab === 'result' && !props.job.results">
     <p class="p-4 has-text-centered">No results available for this job.</p>
   </div>
-  <JobArtifactsView v-if="activeTab === 'artifacts'" :job="job" />
+  <JobArtifactsView v-if="activeTab === 'artifacts'" :job="props.job" />
   <JobChatView 
     v-if="activeTab === 'chat' && showChatTab" 
-    :job="job" 
+    :job="props.job" 
     :chatServiceUrl="chatServiceUrl" />
   <div v-if="activeTab === 'details'">
     <table class="table is-fullwidth">
       <tbody>
-        <HostSpecifications v-if="job && job.node && job.node.toString() !== '11111111111111111111111111111111'" :node-address="job.node.toString()" />
-        <DeploymentInfo v-if="job && job.node && job.node.toString() !== '11111111111111111111111111111111'" :address="job.address" :node="job.node.toString()" :project="job.project.toString()" :market="job.market.toString()" :usdRewardPerHour="job.usdRewardPerHour || 0" :timeStart="job.timeStart" :timeEnd="job.timeEnd" :timeout="job.timeout" :jobDefinition="jobDefinition" :isCompleted="job.isCompleted" :state="job.state" />
+        <HostSpecifications v-if="props.job && props.job.node && props.job.node.toString() !== '11111111111111111111111111111111'" :node-address="props.job.node.toString()" />
+        <DeploymentInfo v-if="props.job && props.job.node && props.job.node.toString() !== '11111111111111111111111111111111'" :job="props.job" :jobDefinition="props.jobDefinition" />
       </tbody>
     </table>
   </div>
@@ -285,8 +285,8 @@ html.dark-mode {
   }
   
   .job-definition-container {
-    background-color: #2c2c2c;
-    border-color: #444;
+  background-color: #2c2c2c;
+  border-color: #444;
     position: relative; /* For copy button positioning */
   }
 
