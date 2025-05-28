@@ -25,7 +25,7 @@
           <div>
             <!-- START: New Template Info Box (above editor) -->
             <div class="p-3 pb-2" style="width: 100%; display: flex;">
-              <div class="is-flex is-align-items-start" style="width: 100%;">
+              <div class="is-flex is-align-items-start is-justify-content-space-between" style="width: 100%;">
                 <div v-if="selectedTemplate && selectedTemplate.id !== 'custom'" class="is-flex is-align-items-start">
                   <img 
                     v-if="selectedTemplate.icon || selectedTemplate.avatar_url"
@@ -68,7 +68,7 @@
                     Configure job in editor
                   </p>
                 </div>
-                <div class="is-flex is-align-items-start ml-3" style="margin-top: 6px;">
+                <div class="is-flex is-align-items-start" style="margin-top: 6px;">
                   <!-- Select Template Button -->
                   <button
                       class="button is-light is-small action-button mr-2" 
@@ -746,7 +746,7 @@ const showSettingsModal = ref(false);
 const showSwapModal = ref(false);
 const isFromRepost = ref(false);
 const skipAutoSelection = ref(false);
-const isUpdatingFromJobDef = ref(false); // Flag to prevent infinite loops
+const isUpdatingFromJobDef = ref(false); // This flag will now be used by both watchers
 const isEditorCollapsed = ref(true); // Default to collapsed
 
 // Balance and price state
@@ -1230,44 +1230,63 @@ const cleanupLocalStorage = (currentRepostId?: string) => {
 
 // Template selection handling
 watch(() => selectedTemplate.value, (newTemplate) => {
-  if (isUpdatingFromJobDef.value) return; // Prevent loop when updating from job definition changes
-  
+  if (isUpdatingFromJobDef.value) return; // If this change is due to the jobDefinition watcher, do nothing here
+
   if (newTemplate?.jobDefinition) {
-    // Update job definition
+    isUpdatingFromJobDef.value = true; // Indicate that the jobDefinition is being updated programmatically
     jobDefinition.value = JSON.parse(JSON.stringify(newTemplate.jobDefinition));
-    
-    // Reset market selection for proper reactivity if not a repost
+    nextTick(() => {
+      isUpdatingFromJobDef.value = false;
+    });
+
     if (!isFromRepost.value) {
       selectedMarket.value = null;
-      selectedHostAddress.value = null; // Add this line
+      selectedHostAddress.value = null;
     }
-  } else {
-    // Reset job definition in non-repost mode
-    jobDefinition.value = {
-      version: "1.0.0",
-      type: "container",
-      ops: [
-        {
-          id: "operation-1",
-          type: "container/run",
-          args: {
-            image: "ubuntu",
-            gpu: true,
-            cmd: ["echo", "hello world"],
-            expose: 80
-          }
-        }
-      ],
-      meta: {
-        trigger: "dashboard",
-        system_requirements: {
-          required_vram: 1
-        }
-      }
-    };
-    selectedMarket.value = null;
+  } 
+  // No specific action if newTemplate is null, as jobDefinition (editor) should retain custom values.
+}, { deep: true });
+
+// Watch jobDefinition changes to detect custom configurations or reverting to a template ID
+watch(() => jobDefinition.value, (newJobDef, oldJobDef) => {
+  if (isUpdatingFromJobDef.value) return; // If this change is due to the selectedTemplate watcher, do nothing here
+
+  // Avoid processing if the change was programmatic and identical (can happen with deep watchers)
+  if (JSON.stringify(newJobDef) === JSON.stringify(oldJobDef)) {
+      return;
   }
-});
+
+  const currentEditorOpId = newJobDef?.ops?.[0]?.id;
+
+  if (selectedTemplate.value && selectedTemplate.value.id !== 'custom') {
+    const originalTemplateOpId = selectedTemplate.value.jobDefinition?.ops?.[0]?.id;
+    if (originalTemplateOpId !== currentEditorOpId) {
+      // ID has changed from the selected template's ID, so deselect
+      isUpdatingFromJobDef.value = true; // Indicate that selectedTemplate is being updated programmatically
+      selectedTemplate.value = null;
+      nextTick(() => {
+        isUpdatingFromJobDef.value = false;
+      });
+    }
+    // If IDs match, selectedTemplate remains selected. User might be customizing other parts.
+  } else {
+    // No template is currently selected (it's custom or was deselected)
+    // Try to find a template that matches the new ID in the editor
+    if (currentEditorOpId && templates.value) {
+      const templateMatchingOpId = templates.value.find(
+        (t: Template) => t.jobDefinition?.ops?.[0]?.id === currentEditorOpId && t.id !== 'custom'
+      );
+
+      if (templateMatchingOpId) {
+        // A template matches the current ID. Set selectedTemplate. 
+        // The other watcher will then update the jobDefinition editor to this template's content.
+        // No need to set isUpdatingFromJobDef here for *this specific assignment* because the selectedTemplate
+        // watcher will set it before it modifies jobDefinition.
+        selectedTemplate.value = templateMatchingOpId as Template;
+      }
+    }
+  }
+}, { deep: true });
 
 // Auto-select PyTorch template when templates load
 watch(() => templates.value, (newTemplates) => {
@@ -1282,31 +1301,6 @@ watch(() => templates.value, (newTemplates) => {
     }
   }
 }, { immediate: true });
-
-// Watch jobDefinition changes to detect custom configurations
-watch(() => jobDefinition.value, (newJobDef) => {
-  if (isUpdatingFromJobDef.value) return; // Prevent loop
-
-  // If a specific template (not 'custom' or null) is currently selected
-  if (selectedTemplate.value && selectedTemplate.value.id !== 'custom') {
-    const originalTemplateOpId = selectedTemplate.value.jobDefinition?.ops?.[0]?.id;
-    const currentEditorOpId = newJobDef?.ops?.[0]?.id;
-
-    // If the ID of the first operation has changed, it's a custom job relative to the template.
-    if (originalTemplateOpId !== currentEditorOpId) {
-      isUpdatingFromJobDef.value = true;
-      selectedTemplate.value = null; // Set to null, computed props will pick up from editor
-      nextTick(() => {
-        isUpdatingFromJobDef.value = false;
-      });
-    }
-    // If the ID is the same, keep the template selected. 
-    // computedDockerImage will still update dynamically if the image field changes.
-  } 
-  // else: No specific template is selected or it's already marked 'custom'.
-  // computedJobTitle and computedDockerImage will derive from newJobDef.
-
-}, { deep: true });
 
 // Update GPU type when market changes
 watch(() => selectedMarket.value, (newMarket) => {
