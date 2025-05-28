@@ -32,7 +32,9 @@
       class="button is-small is-light copy-button"
       @click="copyToClipboard(JSON.stringify(jobDefinitionModel, null, 2), 'Job Definition')"
     >
-      Copy
+      <span class="icon is-small">
+        <img src="~/assets/img/icons/copy.svg" alt="Copy" />
+      </span>
     </button>
     <JsonEditorVue 
       :validator="validator" 
@@ -73,7 +75,9 @@
       class="button is-small is-light copy-button"
       @click="copyToClipboard(JSON.stringify(jobResultsModel, null, 2), 'Results')"
     >
-      Copy
+      <span class="icon is-small">
+        <img src="~/assets/img/icons/copy.svg" alt="Copy" />
+      </span>
     </button>
     <JsonEditorVue 
       :validator="validator" 
@@ -176,9 +180,7 @@ const copyToClipboard = async (text: string | undefined, type: string) => {
   }
   try {
     await navigator.clipboard.writeText(text);
-    console.log(`Copied ${type} to clipboard!`);
   } catch (err) {
-    console.error('Failed to copy: ', err);
   }
 };
 

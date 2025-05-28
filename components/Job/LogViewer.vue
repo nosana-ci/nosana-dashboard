@@ -76,6 +76,7 @@
             {{ ((resBar.current / resBar.total) * 100).toFixed(0) }}%
           </progress>
         </div>
+        <div class="log-bottom-spacer"></div>
       </div>
     </template>
   </div>
@@ -231,6 +232,11 @@ defineExpose({
   word-wrap: break-word;
   flex-grow: 1;
   min-height: 0;
+}
+
+.log-bottom-spacer {
+  height: 1rem;
+  flex-shrink: 0;
 }
 
 .log-entry {

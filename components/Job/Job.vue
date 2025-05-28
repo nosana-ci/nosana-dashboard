@@ -173,9 +173,6 @@
         </div>
       </div>
 
-    <div v-if="isMainContentOpen" class="content-separator"></div>
-
-    <!-- Collapsible Content -->
     <div v-if="isMainContentOpen" class="card-content p-4">
       <!-- Delist Button for Queued Jobs -->
       <div v-if="isJobPoster && job.state === 0" class="notification is-warning is-light mb-4">
@@ -1309,8 +1306,8 @@ html.dark-mode {
 }
 
 .arrow-icon {
-  width: 1rem;
-  height: 1rem;
+  width: 1.5rem;
+  height: 1.5rem;
   transition: transform 0.3s ease;
   transform: rotate(-90deg);
   
@@ -1351,8 +1348,7 @@ html.dark-mode {
 }
 
 .content-separator {
-  height: 1px;
-  background-color: #e8e8e8; // Bulma's $border-light or similar
+  display: none;
 }
 
 html.dark-mode .content-separator {
@@ -1460,6 +1456,15 @@ html.dark-mode {
       background-color: #444444 !important;
       border-color: #5a5a5a !important;
     }
+  }
+}
+
+.content {
+  margin: .8rem 0;
+  
+  .columns {
+    margin-left: 0.2rem;
+    margin-right: 0.2rem;
   }
 }
 </style>
