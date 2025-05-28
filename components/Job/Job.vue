@@ -345,7 +345,7 @@
         <button class="delete" aria-label="close" @click="showChatPopup = false"></button>
       </header>
       <footer class="modal-card-foot">
-        <button class="button is-success" @click="activateChatAndClosePopup">Open Test-Chat</button>
+        <button class="button is-success" @click="activateChatAndClosePopup">Open Test Chat</button>
         <button class="button" @click="showChatPopup = false">Dismiss</button>
       </footer>
     </div>

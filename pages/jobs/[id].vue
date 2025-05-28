@@ -16,8 +16,8 @@
         :nosPrice="nosPrice"
         :isJobPoster="isJobPoster"
       />
-      <div v-else-if="loading">Loading job..</div>
-      <div v-else>Job not found</div>
+      <div v-else-if="loading" class="loading-message">Loading job..</div>
+      <div v-else class="not-found-message">Job not found</div>
     </div>
   </div>
 </template>
@@ -35,3 +35,19 @@ const { job, modal, endpoints, nosPrice, isJobPoster, loading } = useJobPage(
   jobId.value
 );
 </script>
+
+<style lang="scss" scoped>
+.loading-message,
+.not-found-message {
+  color: #363636;
+  padding: 1rem;
+  text-align: center;
+}
+
+html.dark-mode {
+  .loading-message,
+  .not-found-message {
+    color: #ffffff;
+  }
+}
+</style>

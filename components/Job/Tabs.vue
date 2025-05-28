@@ -23,7 +23,7 @@
         v-if="showChatTab" 
         :class="{ 'is-active': activeTab === 'chat' }"
       >
-        <a @click.prevent="handleTabClick('chat')">Test-Chat</a>
+        <a @click.prevent="handleTabClick('chat')">Test Chat</a>
       </li>
     </ul>
   </div>
