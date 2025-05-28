@@ -262,7 +262,7 @@
   .tag {
     // color:white !important;
     background-color: $black-ter !important;
-    span {
+    &:not(.is-outlined) span {
       color: white;
     }
   }

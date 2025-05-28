@@ -96,7 +96,6 @@
                   <span>Extend</span>
                 </button>
                 <button 
-                  v-if="job.isRunning || job.isCompleted"
                   @click.stop="repostJob" 
                   class="button is-small action-button mr-2"
                   title="Redeploy this job"
