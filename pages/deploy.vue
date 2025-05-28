@@ -962,7 +962,10 @@ const canPostJob = computed(() => {
 });
 
 const canCreateDeployment = computed(() => 
-  !(!selectedMarket.value || (!selectedTemplate.value && !route.query.fromRepost) || isCreatingDeployment.value || hours.value <= 0)
+  selectedMarket.value !== null &&
+  jobDefinition.value !== null && // Ensure a job definition exists (it always should due to defaults)
+  !isCreatingDeployment.value &&
+  hours.value > 0
 );
 
 const activeFilterKey = computed(() => 
@@ -1089,7 +1092,6 @@ const handleRepost = async () => {
   skipAutoSelection.value = true;
   
   try {
-    // Try to get data from localStorage first
     const storedData = localStorage.getItem(repostId);
     let jobAddress: string;
     let jobTimeout: string | null = null;
@@ -1100,55 +1102,59 @@ const handleRepost = async () => {
       jobAddress = parsedData.jobAddress;
       jobTimeout = parsedData.jobTimeout;
       marketAddress = parsedData.marketAddress;
-      
-      // Set timeout from localStorage if available
-      if (jobTimeout) {
-        hours.value = parseFloat(jobTimeout);
-      }
+      if (jobTimeout) hours.value = parseFloat(jobTimeout);
     } else {
-      // If no localStorage data, we can't proceed
       throw new Error("Repost data not found. The page may have been reloaded or the data expired.");
     }
     
-    // Fetch job data from API
     const response = await fetch(`https://dashboard.k8s.prd.nos.ci/api/jobs/${jobAddress}`);
-    if (!response.ok) {
-      throw new Error(`Failed to load deployment with address ${jobAddress}`);
-    }
-    
+    if (!response.ok) throw new Error(`Failed to load deployment with address ${jobAddress}`);
     const jobData = await response.json();
-    
-    // Wait for markets to load if needed
-    if (!markets.value || markets.value.length === 0) {
-      await getMarkets();
+
+    // **Crucial Step 1: Set the jobDefinition.value for the editor first**
+    if (jobData.jobDefinition) {
+      jobDefinition.value = JSON.parse(JSON.stringify(jobData.jobDefinition));
+    } else {
+      // Fallback or error if jobData.jobDefinition is missing for a repost
+      toast.error('Reposted job data is missing its definition.');
+      jobDefinition.value = { 
+        type: "container", 
+        version: "0.1", 
+        ops: [{
+          id: "error-loading-repost", 
+          type: "container/run", 
+          args: { 
+            image: "error", 
+            gpu: false, 
+            cmd: ["echo", "error"],
+            expose: 80 // Added default expose
+          }
+        }], 
+        meta: { 
+          trigger: "dashboard",
+          system_requirements: { // Added default system_requirements
+            required_vram: 0 
+          }
+        }
+      };
+    }
+
+    // Set hours/timeout if not already set from localStorage and available in jobData
+    if (!jobTimeout && jobData.timeout) {
+      hours.value = jobData.timeout / 3600;
     }
     
-    // Set market from localStorage first if available, then from the original job data
+    await getMarkets(); // Ensure markets are loaded
+
     if (markets.value) {
       let foundMarket = null;
-      
-      // First try using the marketAddress from localStorage
-      if (marketAddress) {
-        foundMarket = markets.value.find((m: Market) => 
-          m.address.toString() === marketAddress
-        );
-      }
-      
-      // Fall back to job data market if needed
-      if (!foundMarket && jobData.market) {
-        foundMarket = markets.value.find((m: Market) => 
-          m.address.toString() === jobData.market
-        );
-      }
+      if (marketAddress) foundMarket = markets.value.find((m: Market) => m.address.toString() === marketAddress);
+      if (!foundMarket && jobData.market) foundMarket = markets.value.find((m: Market) => m.address.toString() === jobData.market);
       
       if (foundMarket) {
         selectedMarket.value = foundMarket;
-        
-        // Set GPU type based on market
         if (testgridMarkets.value.length > 0) {
-          const marketInfo = testgridMarkets.value.find((tgm: any) => 
-            tgm.address === foundMarket.address.toString()
-          );
+          const marketInfo = testgridMarkets.value.find((tgm: any) => tgm.address === foundMarket.address.toString());
           if (marketInfo && marketInfo.type) {
             gpuTypeCheckbox.value = [marketInfo.type];
             activeFilter.value = marketInfo.type;
@@ -1157,38 +1163,24 @@ const handleRepost = async () => {
       }
     }
     
-    // Set job definition
-    if (jobData.jobDefinition) {
-      jobDefinition.value = JSON.parse(JSON.stringify(jobData.jobDefinition));
-    }
-    
-    // Set hours/timeout if not already set from localStorage
-    if (!jobTimeout && jobData.timeout) {
-      hours.value = jobData.timeout / 3600;
-    }
-    
-    // Find and select template or use custom
-    if (templates.value && jobData.jobDefinition) {
-      const matchingTemplate = templates.value.find((t: any) => // Use any for t here to bypass complex type check for now
+    // **Crucial Step 2: Determine selectedTemplate.value based on the now-set jobDefinition.value**
+    if (templates.value && jobDefinition.value) { // Use the editor's jobDefinition.value
+      const matchingTemplate = templates.value.find((t: any) => 
         t.jobDefinition && 
-        JSON.stringify(t.jobDefinition) === JSON.stringify(jobData.jobDefinition)
+        JSON.stringify(t.jobDefinition) === JSON.stringify(jobDefinition.value) // Compare with editor's content
       );
       
       if (matchingTemplate) {
-        selectedTemplate.value = matchingTemplate as Template; // Assert as Template
+        selectedTemplate.value = matchingTemplate as Template;
       } else {
-        selectedTemplate.value = {
-          name: 'Custom',
-          jobDefinition: jobData.jobDefinition,
-          description: 'Custom configuration from reposted deployment'
-        };
+        // No exact template match for the reposted definition, so treat as custom.
+        selectedTemplate.value = null; 
       }
+    } else {
+      selectedTemplate.value = null; // Default to null if templates or jobDefinition aren't ready
     }
     
-    // Clean up localStorage data after successful use
     cleanupLocalStorage(repostId);
-    
-    // Remove repostId from URL to avoid reuse on refresh
     router.replace({ query: {} });
   } catch (err: any) {
     toast.error(`Error setting up reposted deployment: ${err.toString()}`);
