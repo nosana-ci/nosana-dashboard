@@ -26,7 +26,7 @@
             <!-- START: New Template Info Box (above editor) -->
             <div class="p-3 pb-2" style="width: 100%; display: flex;">
               <div class="is-flex is-align-items-start" style="width: 100%;">
-                <div v-if="selectedTemplate" class="is-flex is-align-items-start">
+                <div v-if="selectedTemplate && selectedTemplate.id !== 'custom'" class="is-flex is-align-items-start">
                   <img 
                     v-if="selectedTemplate.icon || selectedTemplate.avatar_url"
                     :src="selectedTemplate.icon || selectedTemplate.avatar_url"
@@ -36,10 +36,10 @@
                   />
                   <div>
                     <h3 class="is-size-5 has-text-weight-semibold has-text-black mb-0">
-                      {{ selectedTemplate.name }}
+                      {{ computedJobTitle }}
                     </h3>
-                    <p v-if="selectedTemplateImage" class="is-size-7 has-text-grey" style="line-height: 1; margin-top: 0; margin-bottom: 4px;">
-                      {{ selectedTemplateImage }}
+                    <p v-if="computedDockerImage" class="is-size-7 has-text-grey" style="line-height: 1; margin-top: 0; margin-bottom: 4px;">
+                      {{ computedDockerImage }}
                     </p>
                     <button
                         v-if="selectedTemplate && selectedTemplate.readme"
@@ -59,10 +59,13 @@
                 </div>
                 <div v-else>
                   <h3 class="is-size-5 has-text-weight-semibold has-text-black mb-0">
-                    Custom Job Definition
+                    {{ computedJobTitle }}
                   </h3>
-                  <p class="is-size-7 has-text-grey" style="line-height: 1; margin-top: 0;">
-                    No template selected
+                  <p v-if="computedDockerImage" class="is-size-7 has-text-grey" style="line-height: 1; margin-top: 0; margin-bottom: 4px;">
+                    {{ computedDockerImage }}
+                  </p>
+                   <p v-else class="is-size-7 has-text-grey" style="line-height: 1; margin-top: 0;">
+                    Configure job in editor
                   </p>
                 </div>
                 <div class="is-flex is-align-items-start ml-3" style="margin-top: 6px;">
@@ -414,8 +417,8 @@
             </div>
             <div class="is-flex is-justify-content-space-between has-text-grey">
               <p>Model:</p>
-              <p v-if="selectedTemplate" style="text-overflow: ellipsis; text-align: right; flex-basis: 70%;">
-                {{ selectedTemplate.name }}
+              <p v-if="computedJobTitle" style="text-overflow: ellipsis; text-align: right; flex-basis: 70%;">
+                {{ computedJobTitle }}
               </p>
               <p v-else>-</p>
             </div>
@@ -911,6 +914,31 @@ const showTemplateInfo = computed(() =>
   selectedTemplate.value !== null
 );
 
+const computedJobTitle = computed(() => {
+  if (selectedTemplate.value && selectedTemplate.value.id !== 'custom') {
+    return selectedTemplate.value.name;
+  }
+  // Try to get from jobDefinition.ops[0].id
+  if (jobDefinition.value?.ops?.[0]?.id) {
+    return jobDefinition.value.ops[0].id;
+  }
+  // Fallback to a generic name or derive from image if ops[0].id is not present
+  if (computedDockerImage.value) {
+    const imageNameParts = computedDockerImage.value.split('/');
+    return imageNameParts.pop() || 'Custom Job';
+  }
+  return 'Custom Job Definition';
+});
+
+const computedDockerImage = computed(() => {
+  // If an actual template (not the 'custom' placeholder) is selected, use its image
+  if (selectedTemplate.value && selectedTemplate.value.id !== 'custom' && selectedTemplate.value.jobDefinition?.ops?.[0]?.args?.image) {
+    return selectedTemplate.value.jobDefinition.ops[0].args.image;
+  }
+  // Otherwise, derive from the live jobDefinition
+  return jobDefinition.value?.ops?.[0]?.args?.image || null;
+});
+
 const marketName = computed(() => {
   if (!selectedMarket.value) return null;
   return testgridMarkets.value.find(
@@ -1265,41 +1293,27 @@ watch(() => templates.value, (newTemplates) => {
 
 // Watch jobDefinition changes to detect custom configurations
 watch(() => jobDefinition.value, (newJobDef) => {
-  if (!templates.value || !newJobDef?.ops?.[0]?.args?.image || isFromRepost.value) return;
-  
-  const currentImage = newJobDef.ops[0].args.image;
-  
-  // Check if current image matches any template
-  const matchingTemplate = templates.value.find((template: any) => 
-    template.jobDefinition?.ops?.[0]?.args?.image === currentImage
-  );
-  
-  if (matchingTemplate) {
-    // If we found a matching template and it's not already selected
-    if (selectedTemplate.value?.id !== matchingTemplate.id) {
+  if (isUpdatingFromJobDef.value) return; // Prevent loop
+
+  // If a specific template (not 'custom' or null) is currently selected
+  if (selectedTemplate.value && selectedTemplate.value.id !== 'custom') {
+    const originalTemplateOpId = selectedTemplate.value.jobDefinition?.ops?.[0]?.id;
+    const currentEditorOpId = newJobDef?.ops?.[0]?.id;
+
+    // If the ID of the first operation has changed, it's a custom job relative to the template.
+    if (originalTemplateOpId !== currentEditorOpId) {
       isUpdatingFromJobDef.value = true;
-      selectedTemplate.value = matchingTemplate as Template;
+      selectedTemplate.value = null; // Set to null, computed props will pick up from editor
       nextTick(() => {
         isUpdatingFromJobDef.value = false;
       });
     }
-  } else {
-    // No matching template found - create custom template
-    const customTemplate: Template = {
-      id: 'custom',
-      name: 'Custom',
-      description: currentImage,
-      jobDefinition: newJobDef
-    };
-    
-    if (selectedTemplate.value?.name !== 'Custom') {
-      isUpdatingFromJobDef.value = true;
-      selectedTemplate.value = customTemplate;
-      nextTick(() => {
-        isUpdatingFromJobDef.value = false;
-      });
-    }
-  }
+    // If the ID is the same, keep the template selected. 
+    // computedDockerImage will still update dynamically if the image field changes.
+  } 
+  // else: No specific template is selected or it's already marked 'custom'.
+  // computedJobTitle and computedDockerImage will derive from newJobDef.
+
 }, { deep: true });
 
 // Update GPU type when market changes
