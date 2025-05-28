@@ -87,65 +87,65 @@ export function useJob(jobId: string) {
         job.value.isCompleted = state === 2;
       } else {
         job.value = {
-          jobResult: undefined,
-          ...jobResult,
-          address: jobId,
-          isRunning: state === 1,
-          isActive: state === 0 || state === 1,
-          isCompleted: state === 2,
-          hasResultsRegex: false,
-          refresh,
-          stopJob: async () => {
-            if (!job.value) {
-              toast.error('Job data not available yet.');
-              return;
-            }
+        jobResult: undefined,
+        ...jobResult,
+        address: jobId,
+        isRunning: state === 1,
+        isActive: state === 0 || state === 1,
+        isCompleted: state === 2,
+        hasResultsRegex: false,
+        refresh,
+        stopJob: async () => {
+          if (!job.value) {
+            toast.error('Job data not available yet.');
+            return;
+          }
 
-            const numericState = getStateNumber(job.value.state ?? -1);
+          const numericState = getStateNumber(job.value.state ?? -1);
 
-            if (numericState === 2 || numericState === 3) {
-              toast.info(`Job is already ${numericState === 2 ? 'COMPLETED' : 'STOPPED'}`);
-              return;
-            }
+          if (numericState === 2 || numericState === 3) {
+            toast.info(`Job is already ${numericState === 2 ? 'COMPLETED' : 'STOPPED'}`);
+            return;
+          }
 
-            try {
-              if (numericState === 0) {
-                await nosana.value.jobs.delist(jobId);
-                toast.success('Job successfully delisted (canceled) from queue!');
+          try {
+            if (numericState === 0) {
+              await nosana.value.jobs.delist(jobId);
+              toast.success('Job successfully delisted (canceled) from queue!');
                 if (job.value) {
                   job.value.state = 3;
                 }
-              } else if (numericState === 1) {
-                await nosana.value.jobs.end(jobId);
-                toast.success('Job successfully ended!');
+            } else if (numericState === 1) {
+              await nosana.value.jobs.end(jobId);
+              toast.success('Job successfully ended!');
                 if (job.value) {
                   job.value.state = 2;
                   job.value.timeEnd = Math.floor(Date.now() / 1000);
                 }
-              } else {
-                toast.error(`Job is not in QUEUED or RUNNING state (currently: ${numericState})`);
-                return;
-              }
-              setTimeout(() => refresh(), 1000);
-            } catch (e) {
-              const errorMessage = e instanceof Error ? e.message : String(e);
-              const fullError = String(e);
-              if (errorMessage.includes('TransactionExpiredTimeoutError') || 
-                  fullError.includes('Transaction was not confirmed in') ||
-                  fullError.includes('TimeoutError')) {
-                toast.error('Solana is congested, try again or with a higher fee (Turbo/Ultra)');
-              } else if (errorMessage.includes('Unknown action') || 
-                        fullError.includes('Unknown action')) {
-                toast.error('Not enough NOS balance for the transaction');
-              } else if (errorMessage.includes('job cannot be delisted except when in queue')) {
-                toast.error('Job cannot be delisted, it might have already started.');
-              } else {
-                toast.error(`Error stopping/delisting job: ${errorMessage}`);
-              }
-              console.error('Stop/Delist job error:', e);
+            } else {
+              toast.error(`Job is not in QUEUED or RUNNING state (currently: ${numericState})`);
+              return;
             }
-          },
-        };
+              setTimeout(() => refresh(), 1000);
+          } catch (e) {
+            const errorMessage = e instanceof Error ? e.message : String(e);
+            const fullError = String(e);
+            if (errorMessage.includes('TransactionExpiredTimeoutError') || 
+                fullError.includes('Transaction was not confirmed in') ||
+                fullError.includes('TimeoutError')) {
+              toast.error('Solana is congested, try again or with a higher fee (Turbo/Ultra)');
+            } else if (errorMessage.includes('Unknown action') || 
+                      fullError.includes('Unknown action')) {
+              toast.error('Not enough NOS balance for the transaction');
+            } else if (errorMessage.includes('job cannot be delisted except when in queue')) {
+              toast.error('Job cannot be delisted, it might have already started.');
+            } else {
+              toast.error(`Error stopping/delisting job: ${errorMessage}`);
+            }
+            console.error('Stop/Delist job error:', e);
+          }
+        },
+      };
       }
 
       if (state < 2) {

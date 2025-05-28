@@ -882,8 +882,15 @@ const getStatusText = (status: string) => {
   cursor: pointer;
   background-color: #ffffff;
   border-radius: 8px 8px 0 0; // Round top corners
-}
 
+  // When this container is directly followed by card-content (i.e., no service endpoints)
+  &:has(+ .card-content) {
+    & > .card-header { // Target the .card-header *inside* this specific .card-header-container
+      box-shadow: none !important;
+      border-bottom-color: transparent !important;
+    }
+  }
+}
 
 .job-header-grid {
   display: flex;
@@ -1179,7 +1186,6 @@ html.dark-mode {
   
   .card-header {
     background-color: #2c2c2c;
-    border-bottom-color: #444;
   }
   
   .card-header-container {
@@ -1241,10 +1247,7 @@ html.dark-mode {
   }
 
   .quick-detail-item {
-    /* background-color: #363636; // Keep background for dark mode consistency */
-    /* border-color: #555; // Border removed */
-    // Ensuring quick detail items don't have a conflicting background if card-content is #2c2c2c
-    background-color: transparent; // Or match #2c2c2c if they should be distinct cards
+    background-color: transparent;
 
     .quick-detail-label {
       color: #b0b0b0;
@@ -1267,7 +1270,7 @@ html.dark-mode {
   }
 
   .arrow-icon {
-    filter: brightness(0) invert(1); // Make arrow white in dark mode
+    filter: brightness(0) invert(1);
   }
 }
 
@@ -1344,7 +1347,7 @@ html.dark-mode {
 }
 
 html.dark-mode .content-separator {
-  background-color: #444; // Bulma's $grey-darker or similar for dark mode borders
+  background-color: #444;
 }
 
 .service-button {
@@ -1373,91 +1376,24 @@ html.dark-mode .content-separator {
 
 html.dark-mode {
   .service-button {
-    background-color: #555555 !important; // Match custom-button dark bg
-    color: #ffffff !important; // Match custom-button dark text
+    background-color: #555555 !important;
+    color: #ffffff !important;
     
     &:hover {
-      background-color: #656565 !important; // Match custom-button dark hover bg
+      background-color: #656565 !important;
     }
     
     &:focus,
     &:active,
     &:focus-visible {
-      background-color: #555555 !important; // Match custom-button dark bg for focus/active
+      background-color: #555555 !important;
     }
   }
 }
 
 .card {
   border-radius: 8px;
-  overflow: hidden; // Ensure inner content doesn't overflow rounded corners
-}
-
-.action-button {
-  display: inline-flex;
-  align-items: center;
-  background-color: #ffffff !important;
-  border: 1px solid #e8e8e8 !important;
-  color: #363636 !important;
-  padding: 0.4rem 0.6rem !important;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
-  line-height: 1;
-  transition: all 0.2s ease;
-  
-  &:hover {
-    background-color: #f5f5f5 !important;
-    border-color: #dadada !important;
-  }
-
-  .icon {
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    margin-right: 0.5rem;
-    
-    svg {
-      width: 16px;
-      height: 16px;
-      display: block;
-    }
-  }
-
-  &.is-loading {
-    position: relative;
-    color: transparent !important;
-    pointer-events: none;
-    
-    &:after {
-      position: absolute;
-      left: calc(50% - 0.5em);
-      top: calc(50% - 0.5em);
-      width: 1em;
-      height: 1em;
-    }
-  }
-}
-
-html.dark-mode {
-  .action-button {
-    background-color: #363636 !important;
-    border-color: #4d4d4d !important;
-    color: #ffffff !important;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.3) !important;
-    
-    &:hover {
-      background-color: #444444 !important;
-      border-color: #5a5a5a !important;
-    }
-  }
-}
-
-.content {
-  margin: .8rem 0;
-  
-  .columns {
-    margin-left: 0.2rem;
-    margin-right: 0.2rem;
-  }
+  overflow: hidden;
 }
 </style>
 

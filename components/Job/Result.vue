@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div v-if="ipfsResult.opStates" class="is-family-monospace has-background-black has-text-white box light-mode" style="counter-reset: line">
+    <div v-if="ipfsResult.opStates" class="is-family-monospace has-background-black has-text-white box light-mode result-box" style="counter-reset: line">
       <div v-for="opState in ipfsResult.opStates" :key="opState.operationId">
         <div class="row-count has-text-link">
           <span>- Executed step '{{ opState.operationId }}'</span>
@@ -21,7 +21,7 @@
 
       </div>
     </div>
-    <div v-else-if="ipfsJob && ipfsJob.ops" class="is-family-monospace has-background-black has-text-white box"
+    <div v-else-if="ipfsJob && ipfsJob.ops" class="is-family-monospace has-background-black has-text-white box result-box"
       style="counter-reset: line">
       <div v-for="jobName in (ipfsJob.ops.find((j: any) => j.id === 'checkout')
       ? []
@@ -99,6 +99,11 @@ defineProps({
 });
 </script>
 <style lang="scss" scoped>
+.result-box {
+  box-shadow: none !important;
+  border: none !important;
+}
+
 .pre {
   white-space: pre-wrap;
 }

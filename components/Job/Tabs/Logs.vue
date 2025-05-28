@@ -16,30 +16,30 @@
         </span>
       </button>
       <div class="logs-content">
-        <template v-if="job.isRunning">
-          <JobLogViewer
-            v-if="isJobPoster"
-            :logs="logs"
-            :isConnecting="isConnecting"
-            :progressBars="progressBars"
-            :resourceProgressBars="resourceProgressBars"
-            ref="logViewer"
-          />
+    <template v-if="job.isRunning">
+      <JobLogViewer
+        v-if="isJobPoster"
+        :logs="logs"
+        :isConnecting="isConnecting"
+        :progressBars="progressBars"
+        :resourceProgressBars="resourceProgressBars"
+        ref="logViewer"
+      />
           <div v-else class="has-text-centered p-4">Please connect your wallet to view logs.</div>
-        </template>
+    </template>
         <div v-else-if="loading" class="has-text-centered p-4">Loading logs..</div>
         <div v-else-if="job.isCompleted && !job.results" class="has-text-centered p-4">
           The job was prematurely stopped so no logs are available.
-        </div>
+    </div>
         <div v-else-if="!job.results" class="has-text-centered p-4">No logs available.</div>
         <div v-else-if="job.results && job.results[0] === 'nos/secret'" class="has-text-centered p-4">
           Results are secret.
-        </div>
-        <JobResult
-          v-else-if="job.isCompleted"
-          :ipfs-result="job.results"
-          :ipfs-job="job"
-        />
+    </div>
+    <JobResult
+      v-else-if="job.isCompleted"
+      :ipfs-result="job.results"
+      :ipfs-job="job"
+    />
       </div>
     </div>
 
