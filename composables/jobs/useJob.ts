@@ -79,14 +79,7 @@ export function useJob(jobId: string) {
 
       const state = getStateNumber(jobResult.state || -1);
 
-      if (job.value) {
-        Object.assign(job.value, jobResult);
-        job.value.state = state;
-        job.value.isRunning = state === 1;
-        job.value.isActive = state === 0 || state === 1;
-        job.value.isCompleted = state === 2;
-      } else {
-        job.value = {
+      const jobObject: UseJob = {
         jobResult: undefined,
         ...jobResult,
         address: jobId,
@@ -112,21 +105,14 @@ export function useJob(jobId: string) {
             if (numericState === 0) {
               await nosana.value.jobs.delist(jobId);
               toast.success('Job successfully delisted (canceled) from queue!');
-                if (job.value) {
-                  job.value.state = 3;
-                }
             } else if (numericState === 1) {
               await nosana.value.jobs.end(jobId);
               toast.success('Job successfully ended!');
-                if (job.value) {
-                  job.value.state = 2;
-                  job.value.timeEnd = Math.floor(Date.now() / 1000);
-                }
             } else {
               toast.error(`Job is not in QUEUED or RUNNING state (currently: ${numericState})`);
               return;
             }
-              setTimeout(() => refresh(), 1000);
+            setTimeout(() => refresh(), 5000);
           } catch (e) {
             const errorMessage = e instanceof Error ? e.message : String(e);
             const fullError = String(e);
@@ -146,7 +132,6 @@ export function useJob(jobId: string) {
           }
         },
       };
-      }
 
       if (state < 2) {
         resumeJobPolling();
@@ -161,16 +146,16 @@ export function useJob(jobId: string) {
             "QmNLei78zWmzUdbeRB3CiUfAizWUrbeeZh5K1rhAQKCh51"
         ) {
           const resultResponse = await getIpfs(jobResult.ipfsResult);
-          job.value.hasResultsRegex = resultResponse.opStates.some(
+          jobObject.hasResultsRegex = resultResponse.opStates.some(
             (op: any) => op.results
           );
-          job.value.results = resultResponse;
+          jobObject.results = resultResponse;
         }
       } catch (error) {
         toast.error(`Error fetching IPFS result: ${JSON.stringify(error)}`);
       }
 
-      loading.value = false;
+      job.value = jobObject;
     },
     {
       immediate: true,
