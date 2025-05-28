@@ -138,7 +138,7 @@
       </header>
 
         <!-- Service Endpoints Row -->
-      <div v-if="props.endpoints && props.endpoints.size > 0" class="service-endpoints px-5 py-2">
+      <div v-if="props.job.isRunning && props.endpoints && props.endpoints.size > 0" class="service-endpoints px-5 py-2">
           <div 
             v-for="([url, endpointData], index) in Array.from(props.endpoints.entries())" 
             :key="index"
