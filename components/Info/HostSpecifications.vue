@@ -40,38 +40,23 @@
   <tr>
     <td>Download Speed</td>
     <td
-      v-if="
-        !resolvedBenchmarkResponse ||
-        !resolvedBenchmarkResponse.data?.length
-      "
+      v-if="!aggregatedDownloadSpeed"
     >
       -
     </td>
     <td v-else>
-      {{
-        Number(
-          resolvedBenchmarkResponse.data[0]?.metrics
-            .internetSpeedDownload
-        ).toFixed(2)
-      }} Mbps
+      {{ aggregatedDownloadSpeed }} Mbps
     </td>
   </tr>
   <tr>
     <td>Upload Speed</td>
     <td
-      v-if="
-        !resolvedBenchmarkResponse ||
-        !resolvedBenchmarkResponse.data?.length
-      "
+      v-if="!aggregatedUploadSpeed"
     >
       -
     </td>
     <td v-else>
-      {{
-        Number(
-          resolvedBenchmarkResponse.data[0]?.metrics.internetSpeedUpload
-        ).toFixed(2)
-      }} Mbps
+      {{ aggregatedUploadSpeed }} Mbps
     </td>
   </tr>
 </template>
@@ -151,7 +136,7 @@ const { data: nodeInfo } = fetchData
 // Generic benchmark data
 const { data: genericBenchmarkResponse } = fetchData
   ? useAPI(
-      `/api/benchmarks/generic-benchmark-data?node=${props.nodeAddress}`,
+      `/api/benchmarks/generic-benchmark-data?node=${props.nodeAddress}&bandwidthMeasurementTool=speedtest-cli`,
       {
         // @ts-ignore
         disableToastOnError: true,
@@ -169,6 +154,50 @@ const { data: nodeRankingData } = fetchData
       }
     )
   : { data: ref(null) };
+
+// Node ranking data
+const nodeRanking = computed(() => {
+  if (!fetchData || !nodeRankingData.value?.length) return null;
+  return nodeRankingData.value.find((ranking: any) => ranking.node === props.nodeAddress) || null;
+});
+
+const aggregatedDownloadSpeed = computed(() => {
+  if (
+    !resolvedBenchmarkResponse.value ||
+    !resolvedBenchmarkResponse.value.data ||
+    resolvedBenchmarkResponse.value.data.length === 0
+  ) {
+    return null;
+  }
+  const validEntries = resolvedBenchmarkResponse.value.data.filter(
+    (entry: any) => entry.metrics && typeof entry.metrics.internetSpeedDownload === 'number'
+  );
+  if (validEntries.length === 0) return null;
+  const totalDownload = validEntries.reduce(
+    (sum: number, entry: any) => sum + entry.metrics.internetSpeedDownload,
+    0
+  );
+  return (totalDownload / validEntries.length).toFixed(2);
+});
+
+const aggregatedUploadSpeed = computed(() => {
+  if (
+    !resolvedBenchmarkResponse.value ||
+    !resolvedBenchmarkResponse.value.data ||
+    resolvedBenchmarkResponse.value.data.length === 0
+  ) {
+    return null;
+  }
+  const validEntries = resolvedBenchmarkResponse.value.data.filter(
+    (entry: any) => entry.metrics && typeof entry.metrics.internetSpeedUpload === 'number'
+  );
+  if (validEntries.length === 0) return null;
+  const totalUpload = validEntries.reduce(
+    (sum: number, entry: any) => sum + entry.metrics.internetSpeedUpload,
+    0
+  );
+  return (totalUpload / validEntries.length).toFixed(2);
+});
 
 // Combined specs from both sources
 const combinedSpecs = computed(() => {
@@ -212,12 +241,6 @@ const combinedSpecs = computed(() => {
           : "Linux"
         : null,
   };
-});
-
-// Node ranking data
-const nodeRanking = computed(() => {
-  if (!fetchData || !nodeRankingData.value?.length) return null;
-  return nodeRankingData.value.find((ranking: any) => ranking.node === props.nodeAddress) || null;
 });
 
 const formatCountry = (countryCode: string) => {
