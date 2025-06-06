@@ -266,8 +266,8 @@
             <div class="quick-detail-item">
               <span class="quick-detail-label">Download</span>
               <span class="quick-detail-value">
-                <span v-if="benchmarkData?.data?.length">
-                  {{ Number(benchmarkData.data[0]?.metrics.internetSpeedDownload).toFixed(2) }} Mbps
+                <span v-if="aggregatedDownloadSpeed">
+                  {{ aggregatedDownloadSpeed }} Mbps
                 </span>
                 <span v-else class="icon-text">
                   <span class="icon is-small"><i class="fas fa-spinner fa-spin"></i></span>
@@ -282,8 +282,8 @@
             <div class="quick-detail-item">
               <span class="quick-detail-label">Upload</span>
               <span class="quick-detail-value">
-                <span v-if="benchmarkData?.data?.length">
-                  {{ Number(benchmarkData.data[0]?.metrics.internetSpeedUpload).toFixed(2) }} Mbps
+                <span v-if="aggregatedUploadSpeed">
+                  {{ aggregatedUploadSpeed }} Mbps
                 </span>
                 <span v-else class="icon-text">
                   <span class="icon is-small"><i class="fas fa-spinner fa-spin"></i></span>
@@ -645,12 +645,50 @@ const combinedSpecs = computed(() => {
 
 // Generic benchmark data
 const { data: benchmarkData } = useAPI(
-  `/api/benchmarks/generic-benchmark-data?node=${props.job.node}`,
+  `/api/benchmarks/generic-benchmark-data?node=${props.job.node}&bandwidthMeasurementTool=speedtest-cli`,
   {
     // @ts-ignore
     disableToastOnError: true,
   }
 );
+
+const aggregatedDownloadSpeed = computed(() => {
+  if (
+    !benchmarkData.value ||
+    !benchmarkData.value.data ||
+    benchmarkData.value.data.length === 0
+  ) {
+    return null;
+  }
+  const validEntries = benchmarkData.value.data.filter(
+    (entry: any) => entry.metrics && typeof entry.metrics.internetSpeedDownload === 'number'
+  );
+  if (validEntries.length === 0) return null;
+  const totalDownload = validEntries.reduce(
+    (sum: number, entry: any) => sum + entry.metrics.internetSpeedDownload,
+    0
+  );
+  return (totalDownload / validEntries.length).toFixed(2);
+});
+
+const aggregatedUploadSpeed = computed(() => {
+  if (
+    !benchmarkData.value ||
+    !benchmarkData.value.data ||
+    benchmarkData.value.data.length === 0
+  ) {
+    return null;
+  }
+  const validEntries = benchmarkData.value.data.filter(
+    (entry: any) => entry.metrics && typeof entry.metrics.internetSpeedUpload === 'number'
+  );
+  if (validEntries.length === 0) return null;
+  const totalUpload = validEntries.reduce(
+    (sum: number, entry: any) => sum + entry.metrics.internetSpeedUpload,
+    0
+  );
+  return (totalUpload / validEntries.length).toFixed(2);
+});
 
 const toggleDetails = () => {
   isDetailsOpen.value = !isDetailsOpen.value;

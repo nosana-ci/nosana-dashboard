@@ -372,7 +372,7 @@ const combinedSpecs = computed(() => {
  * Node Benchmarking *
  *********************/
 const { data: genericBenchmarkResponse, execute: getNodeBenchmarks } = useAPI(
-  `/api/benchmarks/generic-benchmark-data?node=${props.address}`,
+  `/api/benchmarks/generic-benchmark-data?node=${props.address}&bandwidthMeasurementTool=speedtest-cli`,
   {
     immediate: false,
     // @ts-ignore
