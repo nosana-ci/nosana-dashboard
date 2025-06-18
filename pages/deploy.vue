@@ -1252,30 +1252,28 @@ watch(() => jobDefinition.value, (newJobDef, oldJobDef) => {
   const currentEditorOpId = newJobDef?.ops?.[0]?.id;
 
   if (selectedTemplate.value && selectedTemplate.value.id !== 'custom') {
-    const originalTemplateOpId = selectedTemplate.value.jobDefinition?.ops?.[0]?.id;
-    if (originalTemplateOpId !== currentEditorOpId) {
-      // ID has changed from the selected template's ID, so deselect
-      isUpdatingFromJobDef.value = true; // Indicate that selectedTemplate is being updated programmatically
+    // If the editor content no longer matches the selected template's definition,
+    // we consider it a custom job and deselect the template.
+    if (JSON.stringify(newJobDef) !== JSON.stringify(selectedTemplate.value.jobDefinition)) {
+      isUpdatingFromJobDef.value = true;
       selectedTemplate.value = null;
       nextTick(() => {
         isUpdatingFromJobDef.value = false;
       });
     }
-    // If IDs match, selectedTemplate remains selected. User might be customizing other parts.
   } else {
     // No template is currently selected (it's custom or was deselected)
-    // Try to find a template that matches the new ID in the editor
-    if (currentEditorOpId && templates.value) {
-      const templateMatchingOpId = templates.value.find(
-        (t: Template) => t.jobDefinition?.ops?.[0]?.id === currentEditorOpId && t.id !== 'custom'
+    // Try to find a template that matches the new content in the editor
+    if (templates.value) {
+      const templateMatchingJobDef = templates.value.find(
+        (t: Template) => t.jobDefinition && JSON.stringify(t.jobDefinition) === JSON.stringify(newJobDef) && t.id !== 'custom'
       );
 
-      if (templateMatchingOpId) {
-        // A template matches the current ID. Set selectedTemplate. 
-        // The other watcher will then update the jobDefinition editor to this template's content.
-        // No need to set isUpdatingFromJobDef here for *this specific assignment* because the selectedTemplate
-        // watcher will set it before it modifies jobDefinition.
-        selectedTemplate.value = templateMatchingOpId as Template;
+      if (templateMatchingJobDef) {
+        // A template matches the current content. Set selectedTemplate.
+        // The other watcher will then update the jobDefinition editor to this template's content,
+        // which is fine since they are identical.
+        selectedTemplate.value = templateMatchingJobDef as Template;
       }
     }
   }
