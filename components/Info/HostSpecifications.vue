@@ -39,31 +39,19 @@
   </tr>
   <tr>
     <td>Download Speed</td>
-    <td
-      v-if="!aggregatedDownloadSpeed"
-    >
-      -
-    </td>
-    <td v-else>
-      {{ aggregatedDownloadSpeed }} Mbps
-    </td>
+    <td v-if="!aggregatedDownloadSpeed">-</td>
+    <td v-else>{{ aggregatedDownloadSpeed }} Mbps</td>
   </tr>
   <tr>
     <td>Upload Speed</td>
-    <td
-      v-if="!aggregatedUploadSpeed"
-    >
-      -
-    </td>
-    <td v-else>
-      {{ aggregatedUploadSpeed }} Mbps
-    </td>
+    <td v-if="!aggregatedUploadSpeed">-</td>
+    <td v-else>{{ aggregatedUploadSpeed }} Mbps</td>
   </tr>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
-import type { ComputedRef } from 'vue';
+import { computed } from "vue";
+import type { ComputedRef } from "vue";
 
 interface Specs {
   gpus: Array<{ gpu: string }>;
@@ -115,7 +103,7 @@ const resolvedBenchmarkResponse = computed(() => {
 const fetchData = !!props.nodeAddress;
 
 // Node specifications
-const { data: nodeSpecs } = fetchData 
+const { data: nodeSpecs } = fetchData
   ? useAPI(`/api/nodes/${props.nodeAddress}/specs`, {
       // @ts-ignore
       disableToastOnError: true,
@@ -136,7 +124,7 @@ const { data: nodeInfo } = fetchData
 // Generic benchmark data
 const { data: genericBenchmarkResponse } = fetchData
   ? useAPI(
-      `/api/benchmarks/generic-benchmark-data?node=${props.nodeAddress}&bandwidthMeasurementTool=speedtest-cli`,
+      `/api/benchmarks/generic-benchmark-data?node=${props.nodeAddress}&bandwidthMeasurementTool=fast`,
       {
         // @ts-ignore
         disableToastOnError: true,
@@ -146,19 +134,20 @@ const { data: genericBenchmarkResponse } = fetchData
 
 // Node ranking data
 const { data: nodeRankingData } = fetchData
-  ? useAPI(
-      `/api/benchmarks/node-report?node=${props.nodeAddress}`,
-      {
-        // @ts-ignore
-        disableToastOnError: true,
-      }
-    )
+  ? useAPI(`/api/benchmarks/node-report?node=${props.nodeAddress}`, {
+      // @ts-ignore
+      disableToastOnError: true,
+    })
   : { data: ref(null) };
 
 // Node ranking data
 const nodeRanking = computed(() => {
   if (!fetchData || !nodeRankingData.value?.length) return null;
-  return nodeRankingData.value.find((ranking: any) => ranking.node === props.nodeAddress) || null;
+  return (
+    nodeRankingData.value.find(
+      (ranking: any) => ranking.node === props.nodeAddress
+    ) || null
+  );
 });
 
 const aggregatedDownloadSpeed = computed(() => {
@@ -170,7 +159,8 @@ const aggregatedDownloadSpeed = computed(() => {
     return null;
   }
   const validEntries = resolvedBenchmarkResponse.value.data.filter(
-    (entry: any) => entry.metrics && typeof entry.metrics.internetSpeedDownload === 'number'
+    (entry: any) =>
+      entry.metrics && typeof entry.metrics.internetSpeedDownload === "number"
   );
   if (validEntries.length === 0) return null;
   const totalDownload = validEntries.reduce(
@@ -189,7 +179,8 @@ const aggregatedUploadSpeed = computed(() => {
     return null;
   }
   const validEntries = resolvedBenchmarkResponse.value.data.filter(
-    (entry: any) => entry.metrics && typeof entry.metrics.internetSpeedUpload === 'number'
+    (entry: any) =>
+      entry.metrics && typeof entry.metrics.internetSpeedUpload === "number"
   );
   if (validEntries.length === 0) return null;
   const totalUpload = validEntries.reduce(
@@ -203,7 +194,7 @@ const aggregatedUploadSpeed = computed(() => {
 const combinedSpecs = computed(() => {
   if (!fetchData || !nodeSpecs.value) return null;
   const nodeInfoData = nodeInfo.value?.info;
-  
+
   return {
     nodeAddress: props.nodeAddress,
     marketAddress: nodeSpecs.value.marketAddress,
@@ -262,4 +253,4 @@ const formatCountry = (countryCode: string) => {
   height: 20px;
   background-image: url("https://www.systemuicons.com/images/icons/info_circle.svg");
 }
-</style> 
+</style>
