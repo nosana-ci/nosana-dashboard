@@ -4,7 +4,7 @@ export function useJobWebSocket(
   jobAddress: string,
   host: string,
   signMessage: () => Promise<string>,
-  addLog: (log: string) => void,
+  addLog: (log: string, isSystemLog: boolean) => void,
   handleProgressEvent: (event: MessageEvent) => void,
   maxRetries = 3,
   retryDelay = 3000
@@ -104,13 +104,13 @@ export function useJobWebSocket(
     retryCount.value += 1;
     
     if (retryCount.value <= maxRetries) {
-      addLog(`${reason}. Retrying connection (${retryCount.value}/${maxRetries})...`);
+      addLog(`${reason}. Retrying connection (${retryCount.value}/${maxRetries})...`, true);
       
       setTimeout(() => {
         connectWebSocket();
       }, retryDelay);
     } else {
-      addLog(`Could not establish WebSocket connection after ${maxRetries} attempts. The node may be offline.`);
+      addLog(`Could not establish WebSocket connection after ${maxRetries} attempts. The node may be offline.`, true);
       isConnecting.value = false;
     }
   };
@@ -126,6 +126,7 @@ export function useJobWebSocket(
 
   return {
     isConnecting,
+    connectionEstablished,
     initConnection,
     closeConnection,
   };

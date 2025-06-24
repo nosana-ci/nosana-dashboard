@@ -1,7 +1,7 @@
 <template>
   <div class="tabs is-boxed job-tabs-condensed">
     <ul>
-      <li v-if="props.job.isRunning ? props.isJobPoster : true" :class="{ 'is-active': activeTab === 'logs' }">
+      <li v-if="!job.isRunning || (isJobPoster && logConnectionEstablished)" :class="{ 'is-active': activeTab === 'logs' }">
         <a @click.prevent="handleTabClick('logs')">Logs</a>
       </li>
       <li v-if="hasResultsSection" :class="{ 'is-active': activeTab === 'result' }">
@@ -59,7 +59,9 @@
     :isJobPoster="props.isJobPoster"
     :loading="false"
     :isConnecting="props.isConnecting"
-    :logs="props.logs"
+    :logConnectionEstablished="props.logConnectionEstablished"
+    :systemLogs="props.systemLogs"
+    :containerLogs="props.containerLogs"
     :progressBars="props.progressBars"
     :resourceProgressBars="props.resourceProgressBars"
       :logsTextForCopy="logsTextForCopy"
@@ -98,7 +100,7 @@
   </div>
   <JobArtifactsView v-if="activeTab === 'artifacts'" :job="props.job" />
   <JobChatView 
-    v-if="activeTab === 'chat' && showChatTab" 
+    v-show="activeTab === 'chat' && showChatTab" 
     :job="props.job" 
     :chatServiceUrl="chatServiceUrl" />
   <div v-if="activeTab === 'details'">
@@ -112,7 +114,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, computed } from 'vue';
+import { ref, nextTick, computed, watch } from 'vue';
 import type { JobDefinition } from "@nosana/sdk";
 import JsonEditorVue from 'json-editor-vue';
 import { Mode } from 'vanilla-jsoneditor';
@@ -137,7 +139,9 @@ interface Props {
   jobDefinition: JobDefinition;
   hasArtifacts: boolean;
   isConnecting: boolean;
-  logs: LogEntry[];
+  logConnectionEstablished: boolean;
+  systemLogs: LogEntry[];
+  containerLogs: LogEntry[];
   progressBars: Map<string, ProgressBar>;
   resourceProgressBars: Map<string, any>;
   showChatTab?: boolean;
@@ -150,15 +154,31 @@ interface Props {
 const props = defineProps<Props>();
 const emit = defineEmits(['update:activeTab']);
 
+const localJobDefinition = ref(props.jobDefinition);
+watch(() => props.job.address, (newAddress, oldAddress) => {
+  if (newAddress !== oldAddress) {
+    localJobDefinition.value = props.jobDefinition;
+  }
+});
+
 const logsView = ref<any>(null);
 const colorMode = useColorMode();
+
+watch(() => [props.job.isRunning, props.logConnectionEstablished, props.activeTab], () => {
+  const logsTabVisible = !props.job.isRunning || (props.isJobPoster && props.logConnectionEstablished);
+  if (props.activeTab === 'logs' && !logsTabVisible) {
+    // Logs tab is not visible, but it's the active one.
+    // Switch to another tab, in this case 'info' (Job Definition).
+    emit('update:activeTab', 'info');
+  }
+}, { immediate: true });
 
 // Expose logsView ref for parent component to call scrollToBottomOnOpen
 defineExpose({ logsView });
 
 // Create a reactive model for the job definition
 const jobDefinitionModel = computed({
-  get: () => props.jobDefinition,
+  get: () => localJobDefinition.value,
   set: () => {} // Read-only, so no setter needed
 });
 
@@ -185,7 +205,10 @@ const copyToClipboard = async (text: string | undefined, type: string) => {
 };
 
 const logsTextForCopy = computed(() => {
-  return props.logs.map(log => log.content).join('\n');
+  // You might want to decide which logs to copy here, or add another button.
+  // For now, let's copy container logs if available, otherwise system logs.
+  const logsToCopy = props.containerLogs.length > 0 ? props.containerLogs : props.systemLogs;
+  return logsToCopy.map(log => log.content).join('\n');
 });
 
 const handleTabClick = (tabName: string) => {

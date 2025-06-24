@@ -5,7 +5,7 @@
     <!-- Regular Log View -->
     <template v-else>
       <!-- Connection Status -->
-      <div v-if="isConnecting" class="connecting-message">
+      <div v-if="props.isConnecting" class="connecting-message">
         <span class="icon-text">
           <span class="icon">
             <i class="fas fa-sync fa-spin"></i>
@@ -14,9 +14,14 @@
         </span>
       </div>
 
+      <!-- Empty State Message -->
+      <div v-else-if="props.logs.length === 0 && props.emptyMessage" class="connecting-message">
+        <span>{{ props.emptyMessage }}</span>
+      </div>
+
       <!-- Log Entries and Progress Bars -->
       <div class="log-content">
-        <template v-for="log in logs" :key="log.id">
+        <template v-for="log in props.logs" :key="log.id">
           <div
             class="log-entry"
             :class="{ 'container-log': log.isContainerLog }"
@@ -93,10 +98,10 @@ interface Props {
   progressBars: Map<string, ProgressBar>;
   resourceProgressBars: Map<string, any>;
   fullscreen?: boolean;
+  emptyMessage?: string;
 }
 
-const { isConnecting, logs, progressBars, resourceProgressBars, fullscreen } =
-  defineProps<Props>();
+const props = defineProps<Props>();
 
 // TODO: MOVE TO HOOKS
 const signMessageError = ref(false);
@@ -162,12 +167,12 @@ function formatContainerLog(
 
 // A computed array of in-progress resource bars
 const activeResourceProgressBars = computed(() =>
-  Array.from(resourceProgressBars.values()).filter((b) => !b.completed)
+  Array.from(props.resourceProgressBars.values()).filter((b) => !b.completed)
 );
 
 // Likewise, your existing multi-process container bars
 const activeProgressBars = computed(() =>
-  Array.from(progressBars.values()).filter((b) => !b.completed)
+  Array.from(props.progressBars.values()).filter((b) => !b.completed)
 );
 
 function scrollToBottom(force: boolean = false) {
@@ -182,7 +187,7 @@ function scrollToBottom(force: boolean = false) {
 // Auto-scroll to bottom when new logs arrive or progress bars update
 watch(
   [
-    () => logs.length,
+    () => props.logs.length,
     () => activeProgressBars.value.length,
     () => activeResourceProgressBars.value.length,
   ],
@@ -263,7 +268,7 @@ defineExpose({
     color: #484f58;
   }
   :deep(.ansi-red-fg) {
-    color: #ff4444;
+    color: inherit;
   }
   :deep(.ansi-green-fg) {
     color: #4ade80;
@@ -288,7 +293,7 @@ defineExpose({
     color: #6e7681;
   }
   :deep(.ansi-bright-red-fg) {
-    color: #ff6b6b;
+    color: inherit;
   }
   :deep(.ansi-bright-green-fg) {
     color: #4dffb5;
