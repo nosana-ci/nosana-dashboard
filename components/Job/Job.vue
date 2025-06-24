@@ -424,7 +424,9 @@
           :jobDefinition="props.job.jobDefinition"
           :hasArtifacts="false"
           :isConnecting="isConnecting"
-          :logs="logs"
+          :logConnectionEstablished="connectionEstablished"
+          :systemLogs="systemLogs"
+          :containerLogs="containerLogs"
           :progressBars="progressBars"
           :resourceProgressBars="resourceProgressBars"
           :showChatTab="isChatServiceReady"
@@ -951,7 +953,9 @@ const hasOpenaiEndpoint = computed(() => {
 
 const {
   isConnecting,
-  logs,
+  connectionEstablished,
+  systemLogs,
+  containerLogs,
   progressBars,
   resourceProgressBars,
   initLogs,
@@ -1027,6 +1031,12 @@ watch(
   },
   { deep: true }
 ); // deep true for endpoints map
+
+watch(connectionEstablished, (newValue, oldValue) => {
+  if (newValue && !oldValue) {
+    activeTab.value = 'logs';
+  }
+});
 
 function activateChatAndClosePopup() {
   showChatPopup.value = false;
@@ -1188,7 +1198,7 @@ const getStatusText = (status: string) => {
   align-items: center;
 
   .job-gpu {
-    font-size: 1.05rem;
+    font-size: 1.1rem;
     color: #363636;
     font-weight: 600;
     line-height: 1.2;
@@ -1207,7 +1217,7 @@ const getStatusText = (status: string) => {
   }
 
   .price-value {
-    font-size: 1.05rem;
+    font-size: 1.1rem;
     font-weight: 600;
     color: #363636;
     line-height: 1.2;

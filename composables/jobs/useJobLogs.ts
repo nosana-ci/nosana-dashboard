@@ -31,14 +31,15 @@ export function useJobLogs(
   isJobPoster: boolean,
   signMessage: () => Promise<string>
 ) {
-  const logs = ref<LogEntry[]>([]);
+  const systemLogs = ref<LogEntry[]>([]);
+  const containerLogs = ref<LogEntry[]>([]);
   const progressBars = ref<Map<string, ProgressBar>>(new Map());
   const resourceProgressBars = ref<Map<string, any>>(new Map());
   const hasShownServiceOnlineToast = ref(false);
 
   const ansi = new AnsiUp();
 
-  const { isConnecting, initConnection, closeConnection } = useJobWebSocket(
+  const { isConnecting, connectionEstablished, initConnection, closeConnection } = useJobWebSocket(
     jobAddress,
     host,
     signMessage,
@@ -70,36 +71,37 @@ export function useJobLogs(
     return { value: Number((value / 1024).toFixed(2)), format: "gb" };
   }
 
-  function addLog(content: string, isHtml: boolean = false) {
-    // Don't add duplicate consecutive logs
-    const lastLog = logs.value[logs.value.length - 1];
-    if (lastLog?.type === "log" && lastLog.content === content) {
-      return;
+  function addLog(content: string, isSystemLog: boolean) {
+    // For container logs, strip the 8-byte Docker log header which contains stream type and size.
+    // This cleans up noise like `u0001u0000u0000u0000u0000u0000u0000aINFO...` -> `INFO...`
+    if (!isSystemLog && content.length > 8) {
+      content = content.substring(8);
     }
 
-    // Consider all logs as container logs except for specific system messages
-    const isContainerLog = !(
-      content.startsWith("Download complete:") ||
-      content.startsWith("Already exists:") ||
-      content.startsWith("Pull complete:") ||
-      content.startsWith("Pulled image") ||
-      content.startsWith("Creating network") ||
-      content.startsWith("Created network") ||
-      content.startsWith("Starting container") ||
-      content.startsWith("Running container")
-    );
+    // Convert ANSI to HTML
+    const processedContent = ansi.ansi_to_html(content);
 
-    // Convert ANSI to HTML if it's not already HTML
-    const processedContent = isHtml ? content : ansi.ansi_to_html(content);
-
-    logs.value.push({
+    const logEntry: LogEntry = {
       id: Date.now(),
       type: "log",
       content: processedContent,
       timestamp: Date.now(),
       html: true,
-      isContainerLog,
-    });
+      isContainerLog: !isSystemLog,
+    };
+    
+    // Don't add duplicate consecutive logs
+    const targetArray = isSystemLog ? systemLogs.value : containerLogs.value;
+    const lastLog = targetArray[targetArray.length - 1];
+    if (lastLog?.type === "log" && stripAnsi(lastLog.content) === stripAnsi(content)) {
+      return;
+    }
+
+    if (isSystemLog) {
+      systemLogs.value.push(logEntry);
+    } else {
+      containerLogs.value.push(logEntry);
+    }
   }
 
   function handleProgressEvent(event: any) {
@@ -109,6 +111,7 @@ export function useJobLogs(
     if (
       ["Download complete", "Pull complete", "Already exists"].includes(status)
     ) {
+      addLog(`${status}: ${layerId}`, true);
       const bar = progressBars.value.get(layerId);
       if (bar) {
         bar.completed = true;
@@ -118,7 +121,6 @@ export function useJobLogs(
           progressBars.value.delete(layerId);
         }, 1000); // Remove completed bars after 1 second
       }
-      addLog(`${status}: ${layerId}`);
       return;
     }
 
@@ -162,6 +164,7 @@ export function useJobLogs(
   }
 
   function stripAnsi(str: string): string {
+    if (!str) return '';
     return str.replace(
       /\u001b\[\d+m|\u001b\[\d+;\d+m|\u001b\[0m|\u001b\[1m|\u001b\[22m/g,
       ""
@@ -187,20 +190,39 @@ export function useJobLogs(
       }
 
       if (logData.log) {
-        addLog(logData.log);
+        const isSystemLog = logData.method !== 'NodeRepository.displayLog';
+        let logContent = logData.log;
 
-        const cleanLog = stripAnsi(logData.log);
+        // Apply colors to system logs based on the 'type' field from the websocket message.
+        if (isSystemLog && logData.type) {
+          const colorMap: { [key: string]: string } = {
+            success: '\u001b[32m', // Green
+            process: '\u001b[36m', // Cyan
+            info:    '\u001b[36m', // Cyan
+            stop:    '\u001b[36m', // Cyan
+          };
+          const color = colorMap[logData.type];
+          if (color) {
+            logContent = `${color}${logContent}\u001b[0m`;
+          }
+        }
+        addLog(logContent, isSystemLog);
 
-        const exposedMatch =
-          cleanLog.match(/Job .* is now exposed \((https:\/\/[^)]+)\)/) ||
-          cleanLog.match(/Service exposed at: (https:\/\/[^)\s]+)/);
+        // Only check for service online toast on system logs, as that's where the frpc message appears.
+        if (isSystemLog) {
+          const cleanLog = stripAnsi(logData.log);
 
-        if (exposedMatch && !hasShownServiceOnlineToast.value) {
-          const url = exposedMatch[1];
-          const endpoint = endpoints.get(url);
-          if (endpoint) {
-            endpoint.setStatus("ONLINE");
-            hasShownServiceOnlineToast.value = true;
+          const exposedMatch =
+            cleanLog.match(/Job .* is now exposed \((https:\/\/[^)]+)\)/) ||
+            cleanLog.match(/Service exposed at: (https:\/\/[^)\s]+)/);
+
+          if (exposedMatch && !hasShownServiceOnlineToast.value) {
+            const url = exposedMatch[1];
+            const endpoint = endpoints.get(url);
+            if (endpoint) {
+              endpoint.setStatus("ONLINE");
+              hasShownServiceOnlineToast.value = true;
+            }
           }
         }
       }
@@ -244,22 +266,26 @@ export function useJobLogs(
   }
 
   function closeLogs() {
-    logs.value = [];
+    systemLogs.value = [];
+    containerLogs.value = [];
     progressBars.value.clear();
     closeConnection();
   }
 
   function initLogs() {
     if (!isJobPoster) return;
-    logs.value = [];
+    systemLogs.value = [];
+    containerLogs.value = [];
     progressBars.value.clear();
     initConnection();
   }
 
   return {
-    logs,
+    systemLogs,
+    containerLogs,
     progressBars,
     isConnecting,
+    connectionEstablished,
     resourceProgressBars,
     initLogs,
     closeLogs,

@@ -17,14 +17,11 @@
           <div class="row-count has-text-link">
             <span>- Executed step '{{ opState.operationId }}'</span>
           </div>
-          <div v-for="(log, ik) in opState.logs" :key="ik" class="row-count" :class="{
-        'has-text-danger': log.type !== 'stdout',
-      }">
+          <div v-for="(log, ik) in opState.logs" :key="ik" class="row-count">
             <span class="pre" v-html="log.log.slice(0, 10000)" />
           </div>
           <div class="row-count"></div>
           <div v-if="opState.status" class="row-count" :class="{
-        'has-text-danger': opState.exitCode,
         'has-text-link': !opState.exitCode,
       }">
             {{ `Exited with status ${opState.status} with code ${opState.exitCode
@@ -51,7 +48,7 @@
         (!ipfsResult.results[jobName][2] ||
           (Array.isArray(ipfsResult.results[jobName][2]) &&
             ipfsResult.results[jobName][2].length === 0))
-        " class="has-text-danger row-count">
+        " class="row-count">
               <span>{{ ipfsResult.results[jobName][1] }}</span>
             </div>
             <div v-for="(step, index) in ipfsResult.results[jobName][2] &&
@@ -61,11 +58,10 @@
               <span v-if="typeof ipfsResult.results[jobName][1] === 'string' &&
         ipfsResult.results[jobName][2] &&
         index === 0
-        " class="has-text-danger row-count">
+        " class="row-count">
                 {{ ipfsResult.results[jobName][1] }}</span>
               <div v-if="step.cmd && false" class="row-count" :class="{
         'has-text-accent': !step.status,
-        'has-text-danger': step.status,
       }">
                 <span v-if="step.cmd.cmd" class="has-text-weight-bold">
                   <span v-if="!step.cmd.cmd.startsWith('sh -c')">$ {{ step.cmd.cmd }}</span>
@@ -74,15 +70,13 @@
                 <span v-else class="has-text-weight-bold">$ {{ step.cmd }}</span>
               </div>
               <div v-if="step.log && Array.isArray(step.log)">
-                <div v-for="(log, ik) in step.log" :key="ik" class="row-count" :class="{
-        'has-text-danger': log[0] === 2 && step.status,
-      }">
+                <div v-for="(log, ik) in step.log" :key="ik" class="row-count">
                   <span class="pre" v-html="log[1].slice(0, 10000)" />
                 </div>
-                <div v-if="step.error" class="row-count has-text-danger">
+                <div v-if="step.error" class="row-count">
                   <span class="has-text-weight-bold">{{ step.error }}</span>
                 </div>
-                <div v-if="step.status" class="row-count has-text-danger">
+                <div v-if="step.status" class="row-count">
                   <span class="has-text-weight-bold">Exited with code {{ step.status }}</span>
                 </div>
               </div>
@@ -91,7 +85,7 @@
         </div>
         <template v-if="ipfsResult && ipfsResult.results && ipfsResult.results['nosana/error']
         ">
-          <div class="row-count has-text-danger">
+          <div class="row-count">
             {{ ipfsResult.results['nosana/error'] }}
           </div>
         </template>
@@ -104,14 +98,11 @@
           <div class="row-count has-text-link">
             <span>- Executed step '{{ opState.operationId }}'</span>
           </div>
-          <div v-for="(log, ik) in opState.logs" :key="ik" class="row-count" :class="{
-        'has-text-danger': log.type !== 'stdout',
-      }">
+          <div v-for="(log, ik) in opState.logs" :key="ik" class="row-count">
             <span class="pre" v-html="log.log.slice(0, 10000)" />
           </div>
           <div class="row-count"></div>
           <div v-if="opState.status" class="row-count" :class="{
-        'has-text-danger': opState.exitCode,
         'has-text-link': !opState.exitCode,
       }">
             {{ `Exited with status ${opState.status} with code ${opState.exitCode
@@ -137,7 +128,7 @@
         (!ipfsResult.results[jobName][2] ||
           (Array.isArray(ipfsResult.results[jobName][2]) &&
             ipfsResult.results[jobName][2].length === 0))
-        " class="has-text-danger row-count">
+        " class="row-count">
               <span>{{ ipfsResult.results[jobName][1] }}</span>
             </div>
             <div v-for="(step, index) in ipfsResult.results[jobName][2] &&
@@ -147,11 +138,10 @@
               <span v-if="typeof ipfsResult.results[jobName][1] === 'string' &&
         ipfsResult.results[jobName][2] &&
         index === 0
-        " class="has-text-danger row-count">
+        " class="row-count">
                 {{ ipfsResult.results[jobName][1] }}</span>
               <div v-if="step.cmd && false" class="row-count" :class="{
         'has-text-accent': !step.status,
-        'has-text-danger': step.status,
       }">
                 <span v-if="step.cmd.cmd" class="has-text-weight-bold">
                   <span v-if="!step.cmd.cmd.startsWith('sh -c')">$ {{ step.cmd.cmd }}</span>
@@ -160,15 +150,13 @@
                 <span v-else class="has-text-weight-bold">$ {{ step.cmd }}</span>
               </div>
               <div v-if="step.log && Array.isArray(step.log)">
-                <div v-for="(log, ik) in step.log" :key="ik" class="row-count" :class="{
-        'has-text-danger': log[0] === 2 && step.status,
-      }">
+                <div v-for="(log, ik) in step.log" :key="ik" class="row-count">
                   <span class="pre" v-html="log[1].slice(0, 10000)" />
                 </div>
-                <div v-if="step.error" class="row-count has-text-danger">
+                <div v-if="step.error" class="row-count">
                   <span class="has-text-weight-bold">{{ step.error }}</span>
                 </div>
-                <div v-if="step.status" class="row-count has-text-danger">
+                <div v-if="step.status" class="row-count">
                   <span class="has-text-weight-bold">Exited with code {{ step.status }}</span>
                 </div>
               </div>
@@ -177,7 +165,7 @@
         </div>
         <template v-if="ipfsResult && ipfsResult.results && ipfsResult.results['nosana/error']
         ">
-          <div class="row-count has-text-danger">
+          <div class="row-count">
             {{ ipfsResult.results['nosana/error'] }}
           </div>
         </template>

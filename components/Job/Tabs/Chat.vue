@@ -48,6 +48,12 @@
               </div>
               <p class="model-subtitle">{{ modelName }}</p>
             </div>
+            <button class="button is-small is-light clear-chat-button" @click="clearChat" title="Clear chat history">
+              <span class="icon is-small">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12L19 6.41Z" fill="currentColor"/></svg>
+              </span>
+              <span>Clear Chat</span>
+            </button>
           </div>
           
           <div class="message-area" ref="messageAreaRef">
@@ -275,6 +281,10 @@ const modelName = computed(() => {
   return 'AI Model';
 });
 
+function clearChat() {
+  messages.value = [];
+}
+
 async function autoResizeTextarea() {
   await nextTick();
   if (messageInputRef.value) {
@@ -465,6 +475,7 @@ $message-spacing: 20px;
 .chat-header {
   padding: 16px $message-spacing 12px $message-spacing;
   background-color: var(--chat-bg);
+  position: relative;
 }
 
 .title-container {
@@ -931,6 +942,19 @@ details[open] .thinking-content {
   align-items: center;
   gap: 4px;
   width: 100%;
+}
+
+.clear-chat-button {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  background-color: transparent !important;
+  border-color: transparent !important;
+  color: var(--chat-text-secondary) !important;
+  
+  &:hover {
+    color: var(--chat-text-primary) !important;
+  }
 }
 
 // Dark mode logo switching and thinking toggle improvement
