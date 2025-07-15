@@ -52,6 +52,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import type { ComputedRef } from "vue";
+import { useGenericBenchmark } from "~/composables/useBenchmarkData";
 
 interface Specs {
   gpus: Array<{ gpu: string }>;
@@ -96,7 +97,9 @@ const resolvedNodeRanking = computed(() => {
 });
 
 const resolvedBenchmarkResponse = computed(() => {
-  return props.genericBenchmarkResponse || genericBenchmarkResponse.value;
+  return (
+    props.genericBenchmarkResponse || fetchedAndProcessedBenchmarkData.value
+  );
 });
 
 // Fetch and process data if nodeAddress is provided
@@ -122,15 +125,18 @@ const { data: nodeInfo } = fetchData
   : { data: ref(null) };
 
 // Generic benchmark data
-const { data: genericBenchmarkResponse } = fetchData
+const { data: fetchedAllBenchmarkData } = fetchData
   ? useAPI(
-      `/api/benchmarks/generic-benchmark-data?node=${props.nodeAddress}&bandwidthMeasurementTool=fast`,
+      `/api/benchmarks/generic-benchmark-data?node=${props.nodeAddress}&benchVersion=v1.0.3`,
       {
         // @ts-ignore
         disableToastOnError: true,
       }
     )
   : { data: ref(null) };
+
+const { processedBenchmarkResponse: fetchedAndProcessedBenchmarkData } =
+  useGenericBenchmark(fetchedAllBenchmarkData);
 
 // Node ranking data
 const { data: nodeRankingData } = fetchData

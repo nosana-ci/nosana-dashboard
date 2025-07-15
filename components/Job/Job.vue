@@ -489,6 +489,7 @@ import LogSubscription from "./LogSubscription.vue";
 import { useJobLogs } from "~/composables/jobs/useJobLogs";
 import { useTemplates } from "~/composables/useTemplates";
 import { useToast } from "vue-toastification";
+import { useGenericBenchmark } from "~/composables/useBenchmarkData";
 
 import type { UseModal } from "~/composables/jobs/useModal";
 import type { Endpoints, UseJob } from "~/composables/jobs/useJob";
@@ -803,13 +804,15 @@ const combinedSpecs = computed(() => {
 });
 
 // Generic benchmark data
-const { data: benchmarkData } = useAPI(
-  `/api/benchmarks/generic-benchmark-data?node=${props.job.node}&bandwidthMeasurementTool=fast`,
+const { data: allBenchmarkData } = useAPI(
+  `/api/benchmarks/generic-benchmark-data?node=${props.job.node}&benchVersion=v1.0.3`,
   {
     // @ts-ignore
     disableToastOnError: true,
   }
 );
+const { processedBenchmarkResponse: benchmarkData } =
+  useGenericBenchmark(allBenchmarkData);
 
 const aggregatedDownloadSpeed = computed(() => {
   if (
@@ -1034,7 +1037,7 @@ watch(
 
 watch(connectionEstablished, (newValue, oldValue) => {
   if (newValue && !oldValue) {
-    activeTab.value = 'logs';
+    activeTab.value = "logs";
   }
 });
 

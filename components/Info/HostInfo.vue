@@ -186,6 +186,7 @@
 import { type Market } from "@nosana/sdk";
 import HostSpecifications from "~/components/Info/HostSpecifications.vue";
 import JobStatus from "~/components/Job/Status.vue";
+import { useGenericBenchmark } from "~/composables/useBenchmarkData";
 const { nosana } = useSDK();
 const { data: testgridMarkets, pending: loadingTestgridMarkets } =
   useAPI("/api/markets");
@@ -371,8 +372,8 @@ const combinedSpecs = computed(() => {
 /*********************
  * Node Benchmarking *
  *********************/
-const { data: genericBenchmarkResponse, execute: getNodeBenchmarks } = useAPI(
-  `/api/benchmarks/generic-benchmark-data?node=${props.address}&bandwidthMeasurementTool=fast`,
+const { data: allBenchmarkData, execute: getNodeBenchmarks } = useAPI(
+  `/api/benchmarks/generic-benchmark-data?node=${props.address}&benchVersion=v1.0.3`,
   {
     immediate: false,
     // @ts-ignore
@@ -386,6 +387,9 @@ const { data: genericBenchmarkResponse, execute: getNodeBenchmarks } = useAPI(
     },
   }
 );
+
+const { processedBenchmarkResponse: genericBenchmarkResponse } =
+  useGenericBenchmark(allBenchmarkData);
 
 // Safely call node info + benchmark if it's actually (or likely) a node
 function fetchAdditionalNodeData() {
