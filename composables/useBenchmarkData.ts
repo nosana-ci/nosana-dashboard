@@ -210,3 +210,55 @@ export function useBenchmark(options: BenchmarkOptions) {
     availableModels,
   };
 }
+
+interface GenericBenchmarkMetric {
+  storageToCpuBandwidthMbps: number;
+  cpuToGpuBandwidthMbps: number;
+  systemReadWriteSpeed: number;
+  ramReadWriteSpeed: number;
+  internetSpeedDownload: number | null;
+  internetSpeedUpload: number | null;
+  bandwidthLatency: number | null;
+}
+
+interface GenericBenchmarkData {
+  node: string;
+  gpu: string;
+  benchVersion: string;
+  bandwidthMeasurementTool: string;
+  metrics: GenericBenchmarkMetric;
+}
+
+interface GenericBenchmarkResponse {
+  data: GenericBenchmarkData[];
+  total: number;
+}
+
+export const useGenericBenchmark = (
+  benchmarkResponse: ComputedRef<GenericBenchmarkResponse | null>
+) => {
+  const processedBenchmarkResponse = computed(() => {
+    if (benchmarkResponse.value && benchmarkResponse.value.data) {
+      const fast = benchmarkResponse.value.data.find(
+        (d: GenericBenchmarkData) => d.bandwidthMeasurementTool === "fast"
+      );
+      if (fast) return { data: [fast] };
+
+      const ookla = benchmarkResponse.value.data.find(
+        (d: GenericBenchmarkData) => d.bandwidthMeasurementTool === "ookla"
+      );
+      if (ookla) return { data: [ookla] };
+
+      const speedtest = benchmarkResponse.value.data.find(
+        (d: GenericBenchmarkData) =>
+          d.bandwidthMeasurementTool === "speedtest-cli"
+      );
+      if (speedtest) return { data: [speedtest] };
+    }
+    return { data: [] };
+  });
+
+  return {
+    processedBenchmarkResponse,
+  };
+};
