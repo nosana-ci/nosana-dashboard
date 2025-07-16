@@ -68,7 +68,7 @@ export function useJob(jobId: string) {
     () => {
       refresh();
     },
-    1000,
+    10000,
     { immediate: false }
   );
 
