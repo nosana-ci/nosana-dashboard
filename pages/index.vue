@@ -1,5 +1,5 @@
 <template>
-  <div class="login-page" :class="{ 'dark-mode': isDarkMode }">
+  <div class="login-page">
     <!-- World Map Background -->
     <div class="world-map-wrapper">
       <WorldMap />

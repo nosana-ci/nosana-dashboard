@@ -822,6 +822,30 @@ button[disabled][data-tooltip] {
         border-color: $white !important;
         color: $black !important;
       }
-    }
+    } 
+  }
+}
+
+html.dark-mode {
+  .login-page {
+    background: #181818 !important;
+  }
+  .world-map-wrapper {
+    background: #121212 !important;
+  }
+  .content-wrapper {
+    background: transparent !important;
+  }
+  .left-content,
+  .right-content {
+    color: #fff !important;
+  }
+  .box {
+    background: #23272e !important;
+    color: #fff !important;
+  }
+  .title,
+  .subtitle {
+    color: #fff !important;
   }
 }
