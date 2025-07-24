@@ -65,62 +65,11 @@
     </div>
 
     <!-- Settings Modal -->
-    <div class="modal" :class="{ 'is-active': showSettingsModal }">
-      <div class="modal-background" @click="showSettingsModal = false"></div>
-      <div class="modal-content">
-        <div class="box">
-          <h2 class="title mb-5 has-text-weight-bold">Settings</h2>
-          <h3 class="title is-5">Global Priority Fee Level</h3>
-          <p class="subtitle is-size-5">
-            These fees apply across Nosana's entire product suite, such as
-            staking actions, posting jobs etc.
-          </p>
-          <div class="field has-addons">
-            <p class="control">
-              <button
-                class="button is-medium is-primary"
-                @click="setPrioFeeConfig('low')"
-                :class="{ 'is-outlined': prioFee.strategy !== 'low' }"
-              >
-                <span>Slow</span>
-              </button>
-            </p>
-            <p class="control">
-              <button
-                class="button is-medium is-primary"
-                @click="setPrioFeeConfig('medium')"
-                :class="{ 'is-outlined': prioFee.strategy !== 'medium' }"
-              >
-                <span>Medium</span>
-              </button>
-            </p>
-            <p class="control">
-              <button
-                class="button is-medium is-primary"
-                @click="setPrioFeeConfig('high')"
-                :class="{ 'is-outlined': prioFee.strategy !== 'high' }"
-              >
-                <span>Fast</span>
-              </button>
-            </p>
-            <p class="control">
-              <button
-                class="button is-medium is-primary"
-                @click="setPrioFeeConfig('veryHigh')"
-                :class="{ 'is-outlined': prioFee.strategy !== 'veryHigh' }"
-              >
-                <span>Ultra</span>
-              </button>
-            </p>
-          </div>
-        </div>
-      </div>
-      <button
-        class="modal-close is-large"
-        @click="showSettingsModal = false"
-        aria-label="close"
-      ></button>
-    </div>
+    <SettingsModal
+      v-model="showSettingsModal"
+      :prioFee="prioFee"
+      :setPrioFeeConfig="setPrioFeeConfig"
+    />
   </div>
 </template>
 
@@ -131,6 +80,7 @@ import { useAPI } from "~/composables/useAPI";
 import { useSDK } from "~/composables/useSDK";
 import WorldMap from "~/components/WorldMap.vue";
 import RocketIcon from "~/assets/img/icons/rocket.svg?component";
+import SettingsModal from '~/components/Common/SettingsModal.vue';
 
 const { data: nodeStatsResponse } = await useAPI("/api/stats/nodes-country");
 const showSettingsModal = ref(false);
