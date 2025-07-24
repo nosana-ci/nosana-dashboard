@@ -15,47 +15,12 @@
         </svg>
       </span>
     </button>
-    <div class="modal" :class="{ 'is-active': modelValue }">
-      <div class="modal-background" @click="updateShowSettingsModal(false)"></div>
-      <div class="modal-content">
-        <div class="box">
-          <h2 class="title mb-5 has-text-weight-bold">Settings</h2>
-          <h3 class="title is-5">
-            Global Priority Fee Level
-          </h3>
-          <p class="subtitle is-size-5">
-            These fees apply across Nosana's entire product suite, such as staking actions, posting jobs etc.
-          </p>
-          <div class="field has-addons">
-            <p class="control">
-              <button class="button is-medium is-primary" @click="setPrioFeeConfig('low')"
-                :class="{ 'is-outlined': prioFee.strategy !== 'low' }">
-                <span>Slow</span>
-              </button>
-            </p>
-            <p class="control">
-              <button class="button is-medium is-primary" @click="setPrioFeeConfig('medium')"
-                :class="{ 'is-outlined': prioFee.strategy !== 'medium' }">
-                <span>Medium</span>
-              </button>
-            </p>
-            <p class="control">
-              <button class="button is-medium is-primary" @click="setPrioFeeConfig('high')"
-                :class="{ 'is-outlined': prioFee.strategy !== 'high' }">
-                <span>Fast</span>
-              </button>
-            </p>
-            <p class="control">
-              <button class="button is-medium is-primary" @click="setPrioFeeConfig('veryHigh')"
-                :class="{ 'is-outlined': prioFee.strategy !== 'veryHigh' }">
-                <span>Ultra</span>
-              </button>
-            </p>
-          </div>
-        </div>
-      </div>
-      <button class="modal-close is-large" @click="updateShowSettingsModal(false)" aria-label="close"></button>
-    </div>
+    <SettingsModal
+      :modelValue="modelValue"
+      @update:modelValue="emit('update:modelValue', $event)"
+      :prioFee="prioFee"
+      :setPrioFeeConfig="setPrioFeeConfig"
+    />
     <ClientOnly v-if="!hideButtons">
       <wallet-multi-button :dark="$colorMode.value === 'dark'"></wallet-multi-button>
     </ClientOnly>
@@ -63,13 +28,14 @@
 </template>
 <script lang="ts" setup>
 import { WalletMultiButton } from "solana-wallets-vue";
+import SettingsModal from '~/components/Common/SettingsModal.vue';
 const { prioFee } = useSDK();
 
 interface PrioFeeConfig {
   strategy: 'low' | 'medium' | 'high' | 'veryHigh';
   staticFee: number;
   dynamicPriorityFee: boolean;
-  maximumPriorityFee: number;
+  maxPriorityFee: number;
 }
 
 // Priority fee configuration mapping
@@ -78,25 +44,25 @@ const PRIO_FEE_CONFIGS: Record<string, PrioFeeConfig> = {
     strategy: 'low',
     staticFee: 10000,
     dynamicPriorityFee: true,
-    maximumPriorityFee: 1000000
+    maxPriorityFee: 1000000
   },
   medium: {
     strategy: 'medium',
     staticFee: 100000,
     dynamicPriorityFee: true,
-    maximumPriorityFee: 15000000
+    maxPriorityFee: 15000000
   },
   high: {
     strategy: 'high',
     staticFee: 100000,
     dynamicPriorityFee: true,
-    maximumPriorityFee: 15000000
+    maxPriorityFee: 15000000
   },
   veryHigh: {
     strategy: 'veryHigh',
     staticFee: 100000,
     dynamicPriorityFee: true,
-    maximumPriorityFee: 15000000
+    maxPriorityFee: 15000000
   }
 };
 

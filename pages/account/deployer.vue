@@ -811,36 +811,71 @@ const claimRewards = async () => {
 </script>
 
 <style scoped>
-/* Deployments section */
-.deployments-list {
-  margin-bottom: 3rem !important;
+/* Modernized UI Styles */
+
+body, .container {
+  font-family: 'Inter', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
+  background: #f7f8fa;
+  color: #23272f;
 }
 
 .container {
-  max-width: 1200px;
-  margin: 0 auto 0 0;
-  padding: 1.5rem;
+  width: 100vw;
+  min-height: 100vh;
+  height: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 2.5rem 2vw 2.5rem 2vw;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  box-shadow: none;
+}
+
+.section-divider {
+  height: 1px;
+  background: #e5e7eb;
+  margin: 2.5rem 0 2rem 0;
+  border: none;
 }
 
 .heading {
   text-transform: uppercase;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   font-weight: 600;
   color: #7a7a7a;
   margin-bottom: 0.5rem;
+  letter-spacing: 0.04em;
 }
 
 .title {
-  font-size: 1.5rem;
-  margin-bottom: 1rem !important;
+  font-size: 1.6rem;
+  margin-bottom: 1.2rem !important;
+  font-weight: 600;
+  color: #23272f;
+  letter-spacing: -0.01em;
+}
+
+h3.title {
+  font-size: 1.25rem;
+  font-weight: 500;
+  margin-bottom: 1.5rem !important;
+  color: #23272f;
 }
 
 .box {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  max-height: 280px;
+  background: #fff;
+  color: #23272f;
+  border-radius: 16px;
+  box-shadow: 0 4px 24px 0 rgba(30,34,40,0.08), 0 1.5px 4px 0 rgba(30,34,40,0.03);
+  border: none;
+  transition: background 0.5s cubic-bezier(.4,2,.6,1), box-shadow 0.5s cubic-bezier(.4,2,.6,1), border-color 0.5s cubic-bezier(.4,2,.6,1);
+}
+
+.box:hover {
+  box-shadow: 0 8px 32px 0 rgba(30,34,40,0.16);
+  border: 1px solid #10E80C1A; /* subtle green border on hover */
 }
 
 /* Exclude ListDeploymentsList from the height restriction */
@@ -857,9 +892,8 @@ const claimRewards = async () => {
   max-height: none;
 }
 
-/* Special handling for Cost and Usage and Monthly History boxes */
 .column.is-4 .box:not(.equal-height-boxes .box) {
-  max-height: 360px;
+  max-height: 380px;
 }
 
 .box .content {
@@ -867,53 +901,37 @@ const claimRewards = async () => {
   overflow-y: auto;
 }
 
-/* In any global .scss or in a <style scoped> block with deep selectors */
 .icon.is-small svg {
-  width: 1em;
-  height: 1em;
-  /* optionally, if you want slightly larger than default */
-  /* width: 1.25em; 
-     height: 1.25em; */
+  width: 1.1em;
+  height: 1.1em;
+  vertical-align: middle;
 }
 
-.plus-icon {
+.plus-icon, .container-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 16px;
-  height: 16px;
-  line-height: 1;
-  transition: transform 0.2s ease;
-}
-
-.plus-icon:hover {
-  transform: scale(1.1);
-}
-
-.container-icon {
   width: 24px;
   height: 24px;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  border-radius: 8px;
+  background: #f3f4f6;
+  border: 1.5px solid #e5e7eb;
+  transition: box-shadow 0.18s, border-color 0.18s, background 0.18s;
 }
 
-.dark-mode .container-icon {
-  background-color: black !important;
-  border-color: #363636 !important;
+.plus-icon:hover, .container-icon:hover {
+  background: #e8f8ee;
+  border-color: #10E80C;
+  box-shadow: 0 2px 8px 0 rgba(16,232,12,0.08);
 }
 
-.dark-mode .container-icon svg {
-  fill: white !important;
+.container-icon svg {
+  fill: #23272f;
+  transition: fill 0.18s;
 }
 
-.dark-mode .container-icon:hover {
-  border-color: #10E80C !important;
-}
-
-.dark-mode .container-icon:hover svg {
-  fill: #10E80C !important;
+.container-icon:hover svg {
+  fill: #10E80C;
 }
 
 .nosana-icon {
@@ -928,41 +946,193 @@ const claimRewards = async () => {
   display: flex;
   flex-direction: column;
   height: 100%;
-  max-height: 360px;
+  max-height: 380px;
+  gap: 0.7rem;
 }
 
 .equal-height-boxes .box {
   flex: 1;
   display: flex;
   flex-direction: column;
-  max-height: none; /* Override the default max-height */
-}
-
-.equal-height-boxes .box:not(:last-child) {
-  margin-bottom: 0.5rem;
+  max-height: none;
+  margin-bottom: 0 !important;
 }
 
 .equal-height-boxes .box > div {
   height: 100%;
 }
 
-.container-icon:hover {
+.button.is-small {
+  border-radius: 8px;
+  font-size: 0.98rem;
+  font-weight: 500;
+  padding: 0.35em 1.1em;
+  background: #10E80C;
+  color: #fff;
+  border: none;
+  box-shadow: 0 1px 4px 0 rgba(16,232,12,0.08);
+  transition: background 0.18s, color 0.18s, box-shadow 0.18s;
+}
+
+.button.is-small:hover, .button.is-small:focus {
+  background: #0bcf0a;
+  color: #fff;
+  box-shadow: 0 2px 8px 0 rgba(16,232,12,0.12);
+}
+
+.button.is-primary {
+  background: #10E80C;
+  color: #fff;
+}
+
+.button.is-primary:hover, .button.is-primary:focus {
+  background: #0bcf0a;
+  color: #fff;
+}
+
+.buttons.has-addons .button {
+  border-radius: 8px !important;
+  margin-right: 0.5rem;
+  background: #f3f4f6;
+  color: #23272f;
+  border: 1.5px solid #e5e7eb;
+  font-weight: 500;
+  transition: background 0.18s, color 0.18s, border-color 0.18s;
+}
+
+.buttons.has-addons .button.is-primary {
+  background: #10E80C;
+  color: #fff;
+  border-color: #10E80C;
+}
+
+.buttons.has-addons .button:last-child {
+  margin-right: 0;
+}
+
+.buttons.has-addons .button:hover {
+  background: #e8f8ee;
+  color: #10E80C;
+  border-color: #10E80C;
+}
+
+/* Chart area improvements */
+.box .content {
+  padding: 0.5rem 0.2rem 0.5rem 0.2rem;
+}
+
+/* Notification style */
+.notification.is-warning {
+  background: #fffbe6;
+  color: #b08900;
+  border-radius: 12px;
+  border: 1.5px solid #ffe58f;
+  font-size: 1.1rem;
+  margin-top: 2rem;
+  box-shadow: 0 2px 8px 0 rgba(255,229,143,0.08);
+}
+
+.dark-mode .container {
+  width: 100%; /* Prevent horizontal overflow */
+  min-height: 100vh;
+  height: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 2.5rem 2vw 2.5rem 2vw;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+}
+
+.dark-mode .box {
+  background: #000 !important;
+  color: #f1f1f1;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px 0 rgba(0,0,0,0.55);
+  border: 1px solid rgba(255,255,255,0.03);
+  transition: background 0.18s, box-shadow 0.18s, border-color 0.18s;
+}
+
+.dark-mode .box:hover {
+  background: #181818 !important;
+  box-shadow: 0 8px 32px 0 rgba(0,0,0,0.75);
+  border-color: #10E80C;
+}
+
+.dark-mode .button,
+.dark-mode .container-icon,
+.dark-mode .plus-icon {
+  transition: background 0.18s cubic-bezier(.4,2,.6,1),
+              color 0.18s cubic-bezier(.4,2,.6,1),
+              box-shadow 0.18s cubic-bezier(.4,2,.6,1),
+              border-color 0.18s cubic-bezier(.4,2,.6,1);
+}
+
+.dark-mode .button:hover,
+.dark-mode .container-icon:hover,
+.dark-mode .plus-icon:hover {
+  background: #181818 !important;
+  color: #10E80C !important;
   border-color: #10E80C !important;
+  box-shadow: 0 2px 8px 0 rgba(16,232,12,0.12);
 }
 
-.container-icon:hover svg {
-  fill: #10E80C !important;
+.dark-mode .section-divider {
+  background: rgba(255,255,255,0.04);
 }
 
-.container-icon svg {
-  fill: black;
+.dark-mode .heading,
+.dark-mode .title {
+  color: #fff;
+}
+
+.dark-mode .has-text-grey {
+  color: #b0b3b8 !important;
+}
+
+@media screen and (max-width: 1024px) {
+  .container {
+    padding: 1.5rem 1vw;
+  }
+  .columns {
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  .column {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-bottom: 1.5rem;
+  }
 }
 
 @media screen and (max-width: 768px) {
-  .deployments-list {
-    overflow-x: auto;
-    /* Optional: Add padding if needed */
-    /* padding-bottom: 1rem; */
+  .container {
+    padding: 1rem 0.5vw;
   }
+  .columns {
+    flex-direction: column;
+    gap: 1.2rem;
+  }
+  .column {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-bottom: 1.2rem;
+  }
+  .box {
+    padding: 1rem 0.7rem;
+    border-radius: 12px;
+  }
+  .equal-height-boxes {
+    max-height: none;
+  }
+}
+
+.dark-mode .container {
+  background: #181A1B !important;
+}
+
+.box {
+  transition: background 0.32s cubic-bezier(.4,2,.6,1), box-shadow 0.32s cubic-bezier(.4,2,.6,1), border-color 0.32s cubic-bezier(.4,2,.6,1) !important;
 }
 </style> 
