@@ -10,7 +10,7 @@ export default defineNuxtConfig({
   dir: {
     public: 'static',
   },
-  modules: ['@nuxtjs/google-fonts', '@vueuse/nuxt', '@nuxtjs/color-mode'],
+  modules: ['@nuxtjs/google-fonts', '@vueuse/nuxt', '@nuxtjs/color-mode', '@sidebase/nuxt-auth'],
   googleFonts: {
     preload: true,
     families: {
@@ -35,8 +35,40 @@ export default defineNuxtConfig({
       oldApiBase: process.env.OLD_API_BASE || 'https://backend.k8s.prd.nos.ci',
       network: process.env.NETWORK || 'mainnet',
       nodeDomain: process.env.NODE_DOMAIN,
-      frpServer: process.env.FRP_SERVER || 'node.k8s.prd.nos.ci'
+      frpServer: process.env.FRP_SERVER || 'node.k8s.prd.nos.ci',
+      googleRedirectUri: process.env.GOOGLE_REDIRECT_URI,
+      googleClientId: process.env.GOOGLE_CLIENT_ID,
     }
+  },
+  auth: {
+    baseURL: process.env.NUXT_PUBLIC_API_BASE,
+    provider: {
+      type: 'local',
+      endpoints: {
+        signIn: { path: '/api/auth/login', method: 'post', propertyName: 'token' },
+        getSession: { path: '/api/auth/session', method: 'get' },
+        signOut: false
+      },
+      token: {
+        type: false,
+        maxAgeInSeconds: 60 * 60 * 24 * 3, // 3 days
+      },
+      session: {
+        dataType: {
+          id: 'string',
+          name: 'string',
+          email: 'string',
+          address: 'string',
+          generatedAddress: 'string',
+          type: 'string',
+        },
+      },
+    },
+    sessionRefresh: {
+      enablePeriodically: false, // Disable automatic session refresh
+      enableOnWindowFocus: false, // Disable refresh on window focus
+    },
+    globalAppMiddleware: false,
   },
   vite: {
     esbuild: {

@@ -114,17 +114,17 @@
   <h3 class="title is-4 mt-5 mb-4">Info</h3>
   <div class="box">
     <!-- General Account Info -->
-    <GeneralInfo v-if="publicKey" :address="publicKey?.toString()" />
-    <HostInfo v-if="publicKey" :address="publicKey?.toString()" />
+    <GeneralInfo v-if="activeAddress" :address="activeAddress" />
+    <HostInfo v-if="activeAddress" :address="activeAddress" />
   </div>
   
   <!-- Benchmark Histograms -->
-  <div class="columns" v-if="publicKey && nodeSpecs && benchmarkMarketId">
+  <div class="columns" v-if="activeAddress && nodeSpecs && benchmarkMarketId">
     <div class="column is-6">
       <NodeBenchmarkHistogram
         title="LLM Performance"
         type="llm"
-        :node-id="publicKey.toString()"
+        :node-id="activeAddress"
         :market-id="benchmarkMarketId"
         default-metric="averageTokensPerSecond"
         :metrics="[
@@ -140,7 +140,7 @@
       <NodeBenchmarkHistogram
         title="Image Generation Performance"
         type="image-gen"
-        :node-id="publicKey.toString()"
+        :node-id="activeAddress"
         :market-id="benchmarkMarketId"
         default-metric="imagesPerSecond"
         :metrics="[
@@ -155,7 +155,7 @@
   </div>
   
   <!-- Deployments ran list moved from HostInfo to here -->
-  <div class="box mt-5" v-if="publicKey">
+  <div class="box mt-5" v-if="activeAddress">
     <DeploymentList
       :per-page="jobLimit"
       :total-jobs="totalRunJobs"
@@ -193,8 +193,34 @@ import NodeBenchmarkHistogram from "~/components/BenchmarkHistogram.vue";
 
 ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale);
 
+const { openWalletModal } = useLoginModal();
+
 const { connected, publicKey } = useWallet();
+const { status, data: userData } = useAuth();
 const { nosana } = useSDK();
+
+// Get active address (either wallet or Google-generated)
+const activeAddress = computed(() => {
+  if (status.value === 'authenticated' && userData.value?.generatedAddress) {
+    return userData.value.generatedAddress;
+  }
+  if (connected.value && publicKey.value) {
+    return publicKey.value.toString();
+  }
+  return null;
+});
+
+// Check if user should be prompted for wallet connection
+const shouldPromptWalletConnection = computed(() => {
+  return !connected.value && status.value !== 'authenticated';
+});
+
+// Watch for when user accesses the page without wallet connection
+watch(shouldPromptWalletConnection, (shouldPrompt) => {
+  if (shouldPrompt) {
+    openWalletModal(route.fullPath);
+  }
+}, { immediate: true });
 
 // Get balances
 const balance = ref<any | null>(null);
@@ -209,13 +235,13 @@ const nosPrice = computed(() => stats.value?.price || null);
 const checkBalances = async () => {
   loading.value = true;
   try {
-    if (publicKey.value) {
+    if (activeAddress.value) {
       balance.value = await nosana.value.solana.getNosBalance(
-        publicKey.value.toString()
+        activeAddress.value
       );
       try {
         nosStaked.value = await nosana.value.stake.get(
-          publicKey.value.toString()
+          activeAddress.value
         );
       } catch (error) {
         nosStaked.value = null;
@@ -239,7 +265,7 @@ interface MonthlyResult {
 // API call for earnings history
 const selectedPeriod = ref<'daily' | '3' | '3000'>('3000');
 const earningsHistoryEndpoint = computed(() => {
-  if (!publicKey.value) return undefined;
+  if (!activeAddress.value) return undefined;
   
   const today = new Date();
   const minStartDate = new Date('2025-01-14');
@@ -262,7 +288,7 @@ const earningsHistoryEndpoint = computed(() => {
 
   const finalStartDate = new Date(Math.max(calculatedStartDate.getTime(), minStartDate.getTime()));
 
-  return `/api/stats/earning-history?address=${publicKey.value.toString()}&start_date=${formatDate(finalStartDate)}&group_by=${groupBy}`;
+  return `/api/stats/earning-history?address=${activeAddress.value}&start_date=${formatDate(finalStartDate)}&group_by=${groupBy}`;
 });
 
 const {
@@ -591,12 +617,12 @@ const jobStateMapping = {
 const jobLimit = ref(10);
 
 const jobsUrl = computed(() => {
-  if (!publicKey.value) return null;
+  if (!activeAddress.value) return null;
   
   return `/api/jobs?limit=${jobLimit.value}&offset=${
     (jobPage.value - 1) * jobLimit.value
   }${jobState.value !== null ? `&state=${jobStateMapping[jobState.value as keyof typeof jobStateMapping]}` : ""}${
-    "&node=" + publicKey.value.toString()
+    "&node=" + activeAddress.value
   }`;
 });
 
@@ -627,7 +653,7 @@ const totalRunJobs = computed(() => {
 });
 
 // Node specs data for benchmark
-const nodeSpecsUrl = computed(() => publicKey.value ? `/api/nodes/${publicKey.value.toString()}/specs` : '');
+const nodeSpecsUrl = computed(() => activeAddress.value ? `/api/nodes/${activeAddress.value}/specs` : '');
 
 const { data: nodeSpecs, pending: loadingNodeSpecs } = useAPI(
   nodeSpecsUrl,
@@ -647,7 +673,7 @@ async function fetchMarketRelation() {
   if (
     nodeSpecs.value?.status === "ONBOARDED" &&
     nodeSpecs.value.marketAddress &&
-    publicKey.value
+    activeAddress.value
   ) {
     try {
       const { data } = await useAPI(
@@ -689,9 +715,9 @@ const benchmarkMarketId = computed(() => {
   return nodeSpecs.value.marketAddress;
 });
 
-// Add watcher for publicKey to trigger initial fetch
-watch([publicKey, selectedPeriod], ([newPublicKey, newPeriod]) => {
-  if (newPublicKey && earningsHistoryEndpoint.value) {
+// Add watcher for activeAddress to trigger initial fetch
+watch([activeAddress, selectedPeriod], ([newAddress, newPeriod]) => {
+  if (newAddress && earningsHistoryEndpoint.value) {
     // Add a small delay to ensure reactive dependencies are settled
     nextTick(() => {
       refreshEarningsHistory();
@@ -699,10 +725,10 @@ watch([publicKey, selectedPeriod], ([newPublicKey, newPeriod]) => {
   }
 }, { immediate: true });
 
-// Modify the publicKey watcher to check the flag
-watch(publicKey, (newPublicKey) => {
-  if (newPublicKey && !initialJobsLoadInitiated.value) {
-    console.log('PublicKey available and initial load not started, refreshing jobs...');
+// Modify the activeAddress watcher to check the flag
+watch(activeAddress, (newAddress) => {
+  if (newAddress && !initialJobsLoadInitiated.value) {
+    console.log('Address available and initial load not started, refreshing jobs...');
     nextTick(() => {
       refreshJobs();
     });
@@ -722,7 +748,7 @@ onMounted(() => {
   `;
   document.head.appendChild(style);
 
-  if (publicKey.value && !initialJobsLoadInitiated.value) {
+  if (activeAddress.value && !initialJobsLoadInitiated.value) {
     nextTick(() => {
       refreshJobs();
     });

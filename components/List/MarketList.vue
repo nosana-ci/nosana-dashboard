@@ -98,7 +98,7 @@
                 <span v-else>
                   <CurrentMarketPrice 
                     :marketAddressOrData="market" 
-                    :statsData="stats"
+                    :marketsData="testgridMarkets"
                     :decimalPlaces="3" />
                 </span>
               </td>
@@ -289,10 +289,17 @@ const paginatedMarkets = computed(() => {
   return filteredMarkets.value.slice((page.value - 1) * perPage.value, page.value * perPage.value);
 });
 
-// Helper to get hourly price for sorting (uses stats.price, doesn't need 10% fee for sorting)
+// Helper to get hourly price for sorting (uses base price without network fee for fair sorting)
 const getMarketHourlyPrice = (market: Market) => {
-  if (!stats.value?.price) return Number.MAX_VALUE;
-  return (stats.value.price * (parseInt(String(market.jobPrice)) / 1e6)) * 3600;
+  // Get base USD price from market data (before network fee)
+  const marketAddress = market.address.toString();
+  const marketInfo = testgridMarkets.value?.find(m => m.address === marketAddress);
+  
+  if (marketInfo?.usd_reward_per_hour) {
+    return marketInfo.usd_reward_per_hour; // Base price for fair sorting
+  }
+  
+  return Number.MAX_VALUE;
 };
 
 // Helper to check if market has available GPUs

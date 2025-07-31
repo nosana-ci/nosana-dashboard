@@ -3,22 +3,14 @@
 </template>
 
 <script setup lang="ts">
-import useJobPrice from '~/composables/jobs/useJobPrice';
-import type { PropType } from 'vue';
+import { computed, type PropType } from 'vue';
+import { useJobPricing, type JobData, type MarketPricingOptions } from '~/composables/useMarketPricing';
 
-// Define prop types directly in the component
-export interface JobPriceOptions {
-  showPerHour?: boolean
-  decimalPlaces?: number
-  showDollarSign?: boolean
-}
+// Legacy interface for backward compatibility
+export interface JobPriceOptions extends MarketPricingOptions {}
 
-export interface JobPriceProps {
-  usdRewardPerHour: number | null | undefined
-  timeStart?: number
-  timeEnd?: number
-  timeout?: number
-  state?: number | string
+export interface JobPriceProps extends JobData {
+  usdRewardPerHour?: number | null | undefined
 }
 
 const props = defineProps({
@@ -29,10 +21,27 @@ const props = defineProps({
   options: {
     type: Object as PropType<JobPriceOptions>,
     default: () => ({})
+  },
+  // Optional pre-fetched markets data for performance
+  marketsData: {
+    type: Array,
+    default: null
   }
 });
 
-const { formattedPrice } = useJobPrice(props.job, props.options);
+// Convert job data to the new format
+const jobData = computed((): JobData => ({
+  timeStart: props.job.timeStart,
+  timeEnd: props.job.timeEnd,
+  timeout: props.job.timeout,
+  state: props.job.state,
+  market: props.job.market,
+  usdRewardPerHour: props.job.usdRewardPerHour
+}));
+
+const marketsDataRef = computed(() => props.marketsData);
+
+const { formattedPrice } = useJobPricing(jobData, props.options, marketsDataRef);
 
 </script>
 

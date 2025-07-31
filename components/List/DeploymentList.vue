@@ -98,10 +98,10 @@
             </td>
             <td class="is-family-monospace is-hidden-mobile">
               <span v-if="job.timeStart && job.timeEnd">
-                {{ fmtMSS(job.timeEnd - job.timeStart) }}
+                <SecondsFormatter :seconds="job.timeEnd - job.timeStart" :showSeconds="true" />
               </span>
               <span v-else-if="job.timeStart">
-                {{ fmtMSS(Math.floor(timestamp / 1000) - job.timeStart) }}
+                <SecondsFormatter :seconds="Math.floor(timestamp / 1000) - job.timeStart" :showSeconds="true" />
               </span>
               <span v-else> - </span>
             </td>
@@ -110,14 +110,15 @@
               <span v-if="job.state === 1 || job.state === 0">
                 <CurrentMarketPrice 
                   :marketAddressOrData="job.market.toString()" 
-                  :statsData="stats"
+                  :marketsData="testgridMarkets"
                   :decimalPlaces="3" />
               </span>
               <!-- If job is Completed (2) or Stopped (3), show HISTORICAL job price -->
               <span v-else>
                 <JobPrice 
                   :job="job" 
-                  :options="{ showPerHour: false, decimalPlaces: 3 }" />
+                  :options="{ showPerHour: false, decimalPlaces: 3 }"
+                  :marketsData="testgridMarkets" />
               </span>
             </td>
             <td v-if="!small" class="is-hidden-touch">
@@ -157,7 +158,8 @@ import type { PropType } from 'vue';
 import JobStatus from "~/components/Job/Status.vue";
 import JobPrice from "~/components/Job/Price.vue";
 import CurrentMarketPrice from "~/components/Market/CurrentPrice.vue";
-import useJobPrice from "~/composables/jobs/useJobPrice";
+import SecondsFormatter from "~/components/SecondsFormatter.vue";
+import { useAPI } from "~/composables/useAPI";
 
 // Fetch stats data needed for CurrentMarketPrice
 const { data: stats, pending: loadingStats } = useAPI('/api/stats');
@@ -169,24 +171,11 @@ interface ExtendedJob extends Job {
   jobStatus?: string;
 }
 
+// Fetch markets data for centralized pricing
 const { data: testgridMarkets, pending: loadingTestgridMarkets } = await useAPI('/api/markets', { default: () => [] });
 
-const { markets, getMarkets, loadingMarkets } = useMarkets();
-if (!markets.value) {
-  getMarkets();
-}
-
-// Helper function to get market price
-const getMarketPrice = (marketAddress: string) => {
-  if (!markets.value) return 0;
-  const market = markets.value.find(m => m.address.toString() === marketAddress);
-  return market?.jobPrice || 0;
-};
 
 const timestamp = useTimestamp({ interval: 1000 });
-const fmtMSS = (s: number) => {
-  return (s - (s %= 60)) / 60 + (s > 9 ? 'm:' : 'm:0') + s + 's';
-};
 const props = defineProps({
   jobs: {
     type: Array as PropType<Array<ExtendedJob>>,

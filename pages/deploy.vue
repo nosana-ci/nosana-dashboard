@@ -4,127 +4,22 @@
       :title="'Create your Deployment'"
       :subtitle="'Choose the best fit for your needs'"
       ref="topBar"
-      :hide-buttons="true"
+      :hide-buttons="false"
       v-model="showSettingsModal"
     ></TopBar>
     <div class="columns is-multiline">
       <div class="column is-9-fullhd is-12">
         <!-- Choose model -->
-        <h2 class="title pt-0 pb-0 mb-3">1. Define your model</h2>
-        <div
-          class="box has-background-white"
-          :style="{ overflowY: 'scroll', border: 'none', height: 'auto' }"
-        >
-          <div>
-            <!-- START: New Template Info Box (above editor) -->
-            <div class="px-3 pt-0 pb-2" style="width: 100%; display: flex;">
-              <div class="is-flex is-align-items-start is-justify-content-space-between" style="width: 100%;">
-                <div v-if="selectedTemplate && selectedTemplate.id !== 'custom'" class="is-flex is-align-items-start">
-                  <img 
-                    v-if="selectedTemplate.icon || selectedTemplate.avatar_url"
-                    :src="selectedTemplate.icon || selectedTemplate.avatar_url"
-                    alt="Template Icon"
-                    class="mr-2" 
-                    style="height: 24px; width: 24px; border-radius: 4px; object-fit: contain; flex-shrink: 0; margin-top: 7px;"
-                  />
-                  <div>
-                    <h3 class="is-size-5 has-text-weight-semibold has-text-black mb-0">
-                      {{ computedJobTitle }}
-                    </h3>
-                    <p v-if="computedDockerImage" class="is-size-7 has-text-grey" style="line-height: 1; margin-top: 0; margin-bottom: 4px;">
-                      {{ computedDockerImage }}
-                    </p>
-                    <button
-                        v-if="selectedTemplate && selectedTemplate.readme"
-                        class="button is-light is-small readme-button"
-                        @click="openReadmeModal(selectedTemplate.readme!)"
-                        title="View template documentation"
-                        style="margin-top: 2px;"
-                    >
-                        <span class="icon is-small">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" fill="currentColor"/>
-                          </svg>
-                        </span>
-                        <span>README</span>
-                    </button>
-                  </div>
-                </div>
-                <div v-else>
-                  <h3 class="is-size-5 has-text-weight-semibold has-text-black mb-0">
-                    {{ computedJobTitle }}
-                  </h3>
-                  <p v-if="computedDockerImage" class="is-size-7 has-text-grey" style="line-height: 1; margin-top: 0; margin-bottom: 4px;">
-                    {{ computedDockerImage }}
-                  </p>
-                   <p v-else class="is-size-7 has-text-grey" style="line-height: 1; margin-top: 0;">
-                    Configure job in editor
-                  </p>
-                </div>
-                <div class="is-flex is-align-items-start" style="margin-top: 6px;">
-                  <!-- Select Template Button -->
-                  <button
-                      class="button is-light is-small action-button mr-2" 
-                      @click="showTemplateModal = true"
-                      title="Select a template"
-                  >
-                      <span class="icon is-small">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="currentColor"/>
-                        </svg>
-                      </span>
-                      <span>Select Template</span>
-                  </button>
-                  <!-- New Collapse Button: Only shown when editor is EXPANDED -->
-                  <button
-                      v-if="!isEditorCollapsed"
-                      class="button is-outlined is-small action-button"
-                      @click="isEditorCollapsed = true"
-                      title="Collapse job definition" 
-                  >
-                      <span class="icon is-small">
-                        <img src="~/assets/img/icons/arrow-collapse.svg" alt="Collapse" style="height: 16px; width: 16px;" />
-                      </span>
-                      <span>Collapse</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-            <!-- END: New Template Info Box -->
-
-            <div class="columns builder-columns" style="margin-top: 0;">
-              <div class="column is-12">
-                <div
-                  class="field full-height editor-wrapper"
-                  @click="isEditorCollapsed ? (isEditorCollapsed = false) : undefined"
-                  :class="{ 'is-clickable-to-expand': isEditorCollapsed }"
-                >
-                  <div class="control full-height">
-                    <JsonEditorVue 
-                        :validator="validator" 
-                        :class="{ 
-                          'jse-theme-dark': $colorMode.value === 'dark',
-                          'editor-collapsed': isEditorCollapsed
-                        }" 
-                        v-model="jobDefinition" 
-                        :mode="Mode.text" 
-                        :mainMenuBar="false" 
-                        :statusBar="false" 
-                        :stringified="false" 
-                        class="full-height-editor" 
-                        :style="{ height: isEditorCollapsed ? '150px' : 'auto' }" />
-                  </div>
-                  <div v-if="isEditorCollapsed" class="expand-indicator">
-                    <span>Expand</span>
-                    <img src="~/assets/img/icons/arrow-expand.svg" alt="Expand" style="height: 16px; width: 16px;" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <DeployJobDefinition
+          :selectedTemplate="selectedTemplate"
+          v-model:jobDefinition="jobDefinition"
+          v-model:isEditorCollapsed="isEditorCollapsed"
+          :validator="validator"
+          @showTemplateModal="showTemplateModal = true"
+          @openReadme="openReadmeModal"
+        />
         <!-- Define deployment -->
-        <h2 class="title pt-0 pb-0 mb-3">2. Select your GPU</h2>
+        <h2 class="title pt-0 pb-0 mb-3 mt-5">2. Select your GPU</h2>
         <div class="nav-tabs is-flex">
           <div
             class="nav-tabs-item p-3 px-5 mr-3"
@@ -142,263 +37,42 @@
           </div>
         </div>
         <div class="box has-background-white" style="border: none;">
-          <div v-if="gpuTab === 'simple'">
-            <div class="flex">
-              <!-- <div class="field px-1 mt-5 mb-5">
-                <div class="control">
-                  <div class="checkboxes is-flex">
-                    <button 
-                      class="button button-filter mr-3"
-                      :class="{ 'is-selected is-primary': activeFilter === 'ALL', 'is-outlined': activeFilter !== 'ALL' }"
-                      @click="toggleGpuType('ALL')"
-                    >
-                      All
-                    </button>
-                    <button 
-                      class="button button-filter mr-3"
-                      :class="{ 'is-selected is-primary': activeFilter === 'PREMIUM', 'is-outlined': activeFilter !== 'PREMIUM' }"
-                      @click="toggleGpuType('PREMIUM')"
-                    >
-                      Premium
-                    </button>
-                    <button 
-                      class="button button-filter"
-                      :class="{ 'is-selected is-primary': activeFilter === 'COMMUNITY', 'is-outlined': activeFilter !== 'COMMUNITY' }"
-                      @click="toggleGpuType('COMMUNITY')"
-                    >
-                      Community
-                    </button>
-                  </div>
-                </div>
-              </div> -->
-              <div v-if="loadingMarkets">
-                Loading GPUs...
-              </div>
-              <ListDeployMarketList
-                v-else-if="markets"
-                :key="`market-list-${activeFilterKey}`"
-                :markets="markets"
-                :testgridMarkets="testgridMarkets"
-                :select="true"
-                :typeFilter="gpuTypeCheckbox"
-                :jobDefinition="jobDefinition"
-                :isFromRepost="isFromRepost"
-                :skipAutoSelection="skipAutoSelection"
-                :initialMarket="selectedMarket"
-                :showLogo="true"
-                @selectedMarket="selectedMarket = $event"
-              />
-              <div v-else>
-                Could not load available GPUs
-              </div>
-            </div>
-          </div>
-          <div v-else-if="gpuTab === 'advanced'">
-            <div class="advanced-gpu-selection">
-              <div class="content">
-                <h3 class="title is-5 mb-4">Advanced GPU Configuration</h3>
-                
-                <!-- GPU Group Selection -->
-                <div class="field">
-                  <label class="label has-text-weight-bold has-text-black">GPU Model</label>
-                  <div class="control">
-                    <div class="select is-fullwidth">
-                      <select v-model="selectedGpuGroup" @change="debouncedSearch">
-                        <option v-for="group in gpuFilters?.groups" 
-                                :key="group.value" 
-                                :value="group.value">
-                          {{ group.label }}
-                        </option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-                
-                <!-- CUDA Driver Selection -->
-                <div class="field">
-                  <label class="label has-text-weight-bold has-text-black">CUDA Driver</label>
-                  <div class="control">
-                    <div class="select is-fullwidth">
-                      <select v-model="filterValues.CUDA_DRIVER" @change="debouncedSearch">
-                        <option v-for="value in getCudaDriverValues()" 
-                                :key="value" 
-                                :value="value">
-                          {{ value }}
-                        </option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-                
-                <!-- Market Type Selection - Replace dropdown with buttons matching simple tab -->
-                <!-- <div class="field">
-                  <label class="label has-text-weight-bold has-text-black">Type</label>
-                  <div class="control">
-                    <div class="checkboxes is-flex">
-                      <button 
-                        class="button button-filter mr-3"
-                        :class="{ 'is-selected is-primary': selectedMarketType === 'all', 'is-outlined': selectedMarketType !== 'all' }"
-                        @click="selectedMarketType = 'all'"
-                      >
-                        All
-                      </button>
-                      <button 
-                        class="button button-filter mr-3"
-                        :class="{ 'is-selected is-primary': selectedMarketType === 'premium', 'is-outlined': selectedMarketType !== 'premium' }"
-                        @click="selectedMarketType = 'premium'"
-                      >
-                        Premium
-                      </button>
-                      <button 
-                        class="button button-filter"
-                        :class="{ 'is-selected is-primary': selectedMarketType === 'community', 'is-outlined': selectedMarketType !== 'community' }"
-                        @click="selectedMarketType = 'community'"
-                      >
-                        Community
-                      </button>
-                    </div>
-                  </div>
-                </div> -->
-                
-                <!-- Dynamic Filters -->
-                <template v-if="gpuFilters">
-                  <div v-for="(filter, key) in getCurrentFilters()" 
-                        :key="key" 
-                        class="field"
-                        v-show="String(key) !== 'UPLOAD_SPEED_MB' && String(key) !== 'MARKET_TYPE' && String(key) !== 'CUDA_DRIVER'">
-                    <label class="label">
-                      <span class="has-text-weight-bold has-text-black">{{ getFilterLabel(String(key)) }}</span>
-                      <span v-if="filter.type === 'min-max'" class="has-text-grey is-size-7 ml-2">- {{ getFilterDescription(String(key)) }} -</span>
-                    </label>
-                    
-                    <!-- Select Type Filters -->
-                    <div v-if="filter.type === 'select'" class="control">
-                      <!-- Button-style filters for OS and Region -->
-                      <div v-if="shouldUseButtonsForFilter(String(key))" class="checkboxes is-flex flex-wrap">
-                        <button 
-                          v-for="value in filter.values"
-                          :key="value" 
-                          class="button button-filter mr-2 mb-2"
-                          :class="{ 'is-selected is-primary': filterValues[key] === value, 'is-outlined': filterValues[key] !== value }"
-                          @click="filterValues[key] = value; debouncedSearch()"
-                        >
-                          {{ value }}
-                        </button>
-                      </div>
-                      <!-- Standard dropdown for other select filters -->
-                      <div v-else class="select is-fullwidth">
-                        <select v-model="filterValues[key]" @change="debouncedSearch">
-                          <option v-for="value in filter.values" 
-                                  :key="value" 
-                                  :value="value">
-                            {{ value }}
-                          </option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <!-- Min-Max Type Filters -->
-                    <div v-if="filter.type === 'min-max'" class="control">
-                      <div class="field">
-                        <div class="columns is-mobile is-vcentered">
-                          <div class="column is-9">
-                            <div class="slider-container">
-                              <div class="range-slider">
-                                <div class="range-slider__fill" 
-                                    :style="{ width: `${calculateFillWidth(String(key), filterValues[key] as FilterValue, filter)}%` }">
-                                </div>
-                                <input type="range" 
-                                      class="range-slider__range" 
-                                      :min="getMinValue(String(key), filter)"
-                                      :max="getMaxInputValue(String(key), filter)"
-                                      :value="getDisplayValue(String(key), (filterValues[key] as FilterValue).min)"
-                                      @input="(e) => handleSliderInput(e, String(key))"
-                                      @change="debouncedSearch"
-                                      step="1">
-                              </div>
-                            </div>
-                          </div>
-                          <div class="column is-3">
-                            <div class="input-with-unit">
-                              <input class="input" 
-                                    type="text" 
-                                    inputmode="numeric" 
-                                    pattern="[0-9]*"
-                                    :value="getDisplayValue(String(key), (filterValues[key] as FilterValue).min)"
-                                    @input="(e) => handleSliderInput(e, String(key))" 
-                                    :min="getMinValue(String(key), filter)"
-                                    :max="getMaxInputValue(String(key), filter)"
-                                    :placeholder="'Min ' + String(key).replace(/_/g, ' ').toLowerCase()">
-                              <span class="unit">{{ getUnit(String(key)) }}</span>
-                              <span class="max-value">/ {{ getMaxValue(String(key), filter.max_value) }}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </template>
-
-                <!-- Available Hosts -->
-                <div class="mt-4">
-                  <h4 class="title is-6 mb-3">Available GPUs</h4>
-                  <div v-if="availableHosts.length === 0 && !loadingHosts" class="has-text-centered has-text-grey">
-                    No GPUs found matching your criteria
-                  </div>
-                  <transition-group name="gpu-list-transition" tag="div" class="gpu-list">
-                    <div v-for="host in availableHosts" 
-                        :key="host.host_address" 
-                        class="gpu-box"
-                        :class="{ 'is-selected': selectedHostAddress === host.host_address }"
-                        @click="selectHost(host)">
-                      <div class="gpu-box__selection-indicator"></div>
-                      <div class="gpu-box__content">
-                        <div class="gpu-box__main">
-                          <div class="gpu-box__title">
-                            <img src="~/assets/img/icons/nvidia.svg" alt="NVIDIA" class="gpu-logo" />
-                            {{ host.label }}
-                          </div>
-                          <div class="gpu-box__price">${{ (Number(host.USD_per_hour) * 1.1).toFixed(3) }}/hour</div>
-                        </div>
-                        <div class="gpu-box__specs">
-                          <div class="gpu-box__specs-row">
-                            <span class="has-text-grey">vCPU: {{ host.specs.CPU_CORES }} cores</span>
-                            <span class="has-text-grey">Memory: {{ host.specs.RAM_MB ? Math.round(host.specs.RAM_MB / 1024) : host.specs.MEMORY_GB || 0 }} GB</span>
-                            <span class="has-text-grey">Storage: {{ host.specs.DISK_SPACE_GB }} GB</span>
-                          </div>
-                          <div class="gpu-box__specs-row">
-                            <span class="has-text-grey">Download: {{ Math.round(host.specs.DOWNLOAD_SPEED_MB || host.specs.BANDWIDTH_MB || 0) }} MB/s</span>
-                            <span class="has-text-grey">Upload: {{ Math.round(host.specs.UPLOAD_SPEED_MB || 0) }} MB/s</span>
-                            <span class="has-text-grey">OS: {{ host.specs.PLATFORM_OS || '?' }}</span>
-                          </div>
-                          <div class="gpu-box__specs-row">
-                            <span class="has-text-grey">Type: {{ host.market_type ? host.market_type.charAt(0).toUpperCase() + host.market_type.slice(1) : '-' }}</span>
-                            <span class="has-text-grey" v-if="host.country">Country: {{ getCountryName(host.country) }}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </transition-group>
-                </div>
-              </div>
-            </div>
-          </div>
+          <DeploySimpleGpuSelection
+            v-if="gpuTab === 'simple'"
+            :markets="markets || null"
+            :testgridMarkets="testgridMarkets"
+            :loadingMarkets="loadingMarkets"
+            :gpuTypeCheckbox="gpuTypeCheckbox"
+            :activeFilter="activeFilter"
+            :jobDefinition="jobDefinition"
+            :skipAutoSelection="skipAutoSelection"
+            :selectedMarket="selectedMarket"
+            :activeFilterKey="activeFilterKey"
+            @selectedMarket="selectedMarket = $event"
+            @update:activeFilter="activeFilter = $event"
+            @update:gpuTypeCheckbox="gpuTypeCheckbox = $event"
+          />
+          <DeployAdvancedGpuSelection
+            v-else-if="gpuTab === 'advanced'"
+            :gpuFilters="gpuFilters"
+            :selectedGpuGroup="selectedGpuGroup"
+            :filterValues="filterValues"
+            :availableHosts="availableHosts"
+            :loadingHosts="loadingHosts"
+            :selectedHostAddress="selectedHostAddress"
+            :forceUpdateCounter="forceUpdateCounter"
+            :marketsData="testgridMarkets"
+            @update:selectedGpuGroup="selectedGpuGroup = $event"
+            @update:filterValues="filterValues = $event"
+            @update:selectedHostAddress="selectedHostAddress = $event"
+            @update:forceUpdateCounter="forceUpdateCounter = $event"
+            @selectedMarket="handleAdvancedMarketSelection"
+            @searchGpus="debouncedSearch"
+          />
         </div>
       </div>
       <div class="column is-3-fullhd is-12">
         <div class="summary">
-          <div class="is-flex is-justify-content-flex-end" style="margin-bottom: 32px;">
-            <button class="button mr-2 is-rounded is-large is-text" @click="showSettingsModal = true">
-              <span class="icon">
-                <svg width="32" height="32" viewBox="0 0 16 17" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M6.71971 1.2926L6.41471 2.9726C6.11846 3.06573 5.83097 3.18635 5.55971 3.32761L4.14971 2.35761L2.33979 4.16753L3.31479 5.57252C3.17292 5.84439 3.05355 6.13003 2.95979 6.42753L1.27979 6.73252V9.29252L2.95979 9.59751C3.05354 9.89564 3.17729 10.18 3.31979 10.4525L2.33979 11.8575L4.14971 13.6674L5.5547 12.6974C5.82719 12.8399 6.11657 12.9587 6.4147 13.0524L6.71969 14.7324H9.27969L9.58468 13.0524C9.88218 12.9587 10.1678 12.8393 10.4397 12.6974L11.8447 13.6674L13.6546 11.8575L12.6796 10.4525C12.8208 10.1813 12.9415 9.89878 13.0346 9.60252L14.7196 9.29252V6.73252L13.0346 6.42753C12.9415 6.1319 12.8252 5.84815 12.6846 5.57753L13.6546 4.16753L11.8447 2.35761L10.4397 3.32761C10.1678 3.18574 9.88218 3.06636 9.58468 2.9726L9.27969 1.2926H6.71971ZM7.9997 4.9726C9.67842 4.9726 11.0397 6.33385 11.0397 8.0126C11.0397 9.69135 9.67846 11.0526 7.9997 11.0526C6.32095 11.0526 4.95971 9.69135 4.95971 8.0126C4.95971 6.33385 6.32095 4.9726 7.9997 4.9726Z" fill="currentColor"></path>
-                </svg>
-              </span>
-            </button>
-            <ClientOnly>
-              <wallet-multi-button :dark="$colorMode.value === 'dark'"></wallet-multi-button>
-            </ClientOnly>
-          </div>
           <h1 class="title is-4 mb-2">Summary</h1>
           <div class="box has-background-white" style="border: none;">
             <div class="is-flex is-justify-content-space-between">
@@ -436,23 +110,22 @@
             </div>
             <hr />
             <div class="is-flex is-justify-content-space-between">
-              <h3 class="title is-4 mb-0">Total cost</h3>
+              <h3 class="title is-4 mb-0">Estimated costs</h3>
               <h3 class="title is-4" v-if="selectedMarket">
                 ${{ totalPrice.toFixed(3) }}
               </h3>
             </div>
             <hr />
             <ClientOnly>
-              <wallet-modal-provider v-if="!connected" :dark="$colorMode.value === 'dark'">
-                <template #default="modalScope">
-                  <button 
-                    class="button is-secondary is-fullwidth"
-                    @click="modalScope.openModal()"
-                  >
-                    Connect Wallet
-                  </button>
-                </template>
-              </wallet-modal-provider>
+              <!-- Show login button when not authenticated -->
+              <button
+                v-if="!connected && status !== 'authenticated'"
+                class="button is-secondary is-fullwidth"
+                @click="handleLoginClick"
+              >
+                Login
+              </button>
+              <!-- Show swap button for wallet users with insufficient balance -->
               <button
                 v-else-if="connected && !canPostJob && selectedMarket"
                 class="button is-secondary is-fullwidth"
@@ -460,10 +133,22 @@
               >
                 Swap
               </button>
+              <!-- Show insufficient credits message for Google users -->
+              <div
+                v-else-if="status === 'authenticated' && !canPostJob && selectedMarket"
+                class="has-text-centered"
+              >
+                <p class="has-text-grey is-size-7 mb-2">
+                  Insufficient credits. Need ${{ (estimatedCost || 0).toFixed(2) }}, have ${{ creditBalance.toFixed(2) }}
+                </p>
+                <p class="has-text-grey is-size-7">
+                  Claim credit codes on your account page
+                </p>
+              </div>
+              <!-- Show deploy button if any authentication method allows deployment -->
               <button
-                v-else
+                v-else-if="canCreateDeployment && (connected || status === 'authenticated')"
                 class="button is-secondary is-fullwidth"
-                :disabled="!canCreateDeployment"
                 @click="createDeployment"
               >
                 <span v-if="isCreatingDeployment">Creating...</span>
@@ -486,6 +171,8 @@
       :userBalances="userBalances"
       @refresh-balances="refreshAllBalances"
     />
+
+    <Loader v-if="loading" />
     
     <!-- README Modal -->
     <div class="modal" :class="{ 'is-active': showReadmeModal }">
@@ -513,132 +200,17 @@
     </div>
 
     <!-- Template Selection Modal -->
-    <div class="modal" :class="{ 'is-active': showTemplateModal }">
-      <div class="modal-background" @click="showTemplateModal = false"></div>
-      <div class="modal-card" style="width: 90%; max-width: 1200px;">
-        <header class="modal-card-head">
-          <div class="modal-card-title">Choose Template</div>
-          <button class="delete" aria-label="close" @click="showTemplateModal = false"></button>
-        </header>
-        <section class="modal-card-body" style="max-height: 70vh; overflow-y: auto;">
-          <div class="flex mb-4">
-            <div class="field is-flex category-filters">
-              <div class="field">
-                <div class="control">
-                  <div class="select" style="width: 120px;">
-                    <select v-model="selectedCategory">
-                      <option :value="null">All</option>
-                      <option
-                        v-for="category in COMBINED_CATEGORIES"
-                        :key="category"
-                        :value="category"
-                      >
-                        {{ category }}
-                      </option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <div class="field ml-4">
-                <div class="control has-icons-left">
-                  <input
-                    class="input"
-                    type="text"
-                    v-model="search"
-                    placeholder="Search"
-                  />
-                  <span class="icon is-small is-left">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" fill="currentColor"/>
-                    </svg>
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="columns is-multiline" style="max-height: calc(70vh - 120px); overflow-y: auto;">
-            <div
-              v-for="template in filteredTemplates"
-              :key="template.id"
-              class="column is-4-fullhd is-6-desktop is-6-tablet is-12-mobile"
-            >
-              <div
-                class="box template-card-compact has-background-white-ter"
-                @click="selectTemplateFromModal(template)"
-              >
-                <span v-if="getCategoryArray(template.category).includes('New')" class="new-badge">New</span>
-                <div class="template-header-compact is-fullwidth">
-                  <div class="is-flex is-justify-content-flex-end">
-                    <div>
-                      <span
-                        v-if="template.stargazers_count"
-                        class="github-stars"
-                      >
-                        <img
-                          src="~/assets/img/icons/github.svg"
-                          class="github-icon"
-                          alt="GitHub"
-                        />
-                        <span
-                          class="has-text-warning mr-1"
-                          style="font-size: 12px"
-                          >★</span
-                        >
-                        <span class="ml-1">{{
-                          String(template.stargazers_count)
-                        }}</span>
-                      </span>
-                      <span v-else class="star-placeholder"></span>
-                    </div>
-                  </div>
-                  <div class="header-content-compact mt-1">
-                    <div class="header-title-compact">
-                      <h2
-                        class="is-size-5 has-text-weight-semibold mb-0 has-text-black"
-                      >
-                        {{ template.name }}
-                      </h2>
-                    </div>
-                    <div class="header-meta-compact">
-                      <div
-                        v-if="template.icon || template.avatar_url"
-                        class="template-icon-compact"
-                      >
-                        <img :src="template.icon || template.avatar_url" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div class="template-description-compact">
-                  <p class="has-text-grey" style="font-size: 11px !important">
-                    {{ getTemplateImage(template) || template.description }}
-                  </p>
-                  <div class="template-tags-compact mt-2">
-                    <span
-                      v-for="cat in getCategoryArray(
-                        template.category
-                      ).filter((c) => !['Featured', 'New'].includes(c))"
-                      :key="cat"
-                      class="tag has-background-white"
-                      style="font-size: 0.65rem; padding: 0.2rem 0.5rem;"
-                    >
-                      {{ cat }}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-      </div>
-    </div>
+    <DeployTemplateModal
+      v-model:showModal="showTemplateModal"
+      :templates="groupedTemplates || []"
+      @select-template="selectTemplateFromModal"
+    />
 
   </div>
 </template>
 
 <script lang="ts" setup>
-import type { Market } from "@nosana/sdk";
+import type { Market, JobDefinition } from "@nosana/sdk";
 import JsonEditorVue from 'json-editor-vue';
 import { Mode, ValidationSeverity } from 'vanilla-jsoneditor';
 import 'vanilla-jsoneditor/themes/jse-theme-dark.css';
@@ -649,7 +221,10 @@ import { useRouter, useRoute } from 'vue-router';
 import { useDebounceFn, useScrollLock } from "@vueuse/core";
 import countries from 'i18n-iso-countries';
 import en from 'i18n-iso-countries/langs/en.json';
+import { useEstimatedCost } from '~/composables/useMarketPricing';
 import SwapModal from '~/components/SwapModal.vue';
+import type { Template } from '~/composables/useTemplates';
+import Loader from '~/components/Loader.vue';
 
 // Initialize the countries library with English locale
 countries.registerLocale(en);
@@ -666,21 +241,6 @@ const getCountryName = (code: string): string => {
   
   return countryName;
 };
-
-// Type definitions
-interface Template {
-  id?: string | number;
-  name: string;
-  description: string;
-  category?: string;
-  subcategory?: string | string[];
-  icon?: string;
-  readme?: string;
-  avatar_url?: string;
-  stargazers_count?: number;
-  jobDefinition: any;
-  github_url?: string;
-}
 
 // Advanced GPU selection types
 interface FilterValue {
@@ -713,23 +273,38 @@ interface HostInterface {
 
 // Setup composables
 const { markets, getMarkets, loadingMarkets } = useMarkets();
-const { templates, loadingTemplates } = useTemplates();
+const { templates, groupedTemplates, loadingTemplates, loadingGroupedTemplates } = useTemplates();
 const { nosana } = useSDK();
 const router = useRouter();
 const route = useRoute();
 const toast = useToast();
-const { connected, publicKey } = useWallet();
+const { connected, publicKey, wallet } = useWallet();
+const { status, data: userData, token } = useAuth();
+const loading = ref(false);
+
+// Initialize redirect composable for authentication flow
+useRedirect();
+
+// Deploy page state persistence
+const {
+  saveState: saveDeployState,
+  loadState: loadDeployState,
+  clearState: clearDeployState,
+  shouldRestoreState,
+  debouncedSave,
+  cleanup: cleanupDeployState,
+  hasValidStoredState
+} = useDeployPageState();
 
 // Scroll lock for README modal
 const scrollLockTarget = ref<HTMLElement | null>(null);
 const isLocked = useScrollLock(scrollLockTarget);
 
 // State
-const selectedCategory = ref<string | null>(null);
-const selectedInterfaceCategory = ref<string | null>(null);
-const search = ref("");
+const config = useRuntimeConfig();
 const gpuTab = ref<"simple" | "advanced">("simple");
-const gpuTypeCheckbox = ref<string[]>(["PREMIUM"]);
+// Show all markets on devnet, only premium on mainnet
+const gpuTypeCheckbox = ref<string[]>(config.public.network === 'devnet' ? ["PREMIUM", "COMMUNITY"] : ["PREMIUM"]);
 const activeFilter = ref("PREMIUM");
 const selectedMarket = ref<Market | null>(null);
 const selectedTemplate = ref<Template | null>(null);
@@ -737,9 +312,9 @@ const hours = ref(1);
 const isCreatingDeployment = ref(false);
 const showSettingsModal = ref(false);
 const showSwapModal = ref(false);
-const isFromRepost = ref(false);
 const skipAutoSelection = ref(false);
 const isUpdatingFromJobDef = ref(false); // This flag will now be used by both watchers
+const isRestoringState = ref(false); // Flag to prevent auto-selection during state restoration
 const isEditorCollapsed = ref(true); // Default to collapsed
 
 // Balance and price state
@@ -747,6 +322,10 @@ const balance = ref<number>(0);
 const loadingBalance = ref(false);
 const errorBalance = ref<string | null>(null);
 const nosPrice = ref(0);
+
+// Credit balance state
+const creditBalance = ref<number>(0);
+const loadingCreditBalance = ref(false);
 const solPrice = ref(0);
 const usdcPrice = ref(0);
 const usdtPrice = ref(0);
@@ -765,7 +344,6 @@ const availableHosts = ref<HostInterface[]>([]);
 const loadingHosts = ref(false);
 const selectedHostAddress = ref<string | null>(null);
 const forceUpdateCounter = ref(0);
-const config = useRuntimeConfig();
 
 // Initialize filterValues with defaults
 const filterValues = ref<FilterValues>({
@@ -827,7 +405,7 @@ const { data: testgridMarkets } = await useAPI("/api/markets", { default: () => 
 const nosApiPrice = computed(() => stats.value?.price || 0);
 
 // Default job definition - will be populated by template selection
-const jobDefinition = ref({
+const jobDefinition = ref<JobDefinition>({
   type: "container",
   version: "0.1",
   ops: [
@@ -925,11 +503,20 @@ const computedJobTitle = computed(() => {
 
 const computedDockerImage = computed(() => {
   // If an actual template (not the 'custom' placeholder) is selected, use its image
-  if (selectedTemplate.value && selectedTemplate.value.id !== 'custom' && selectedTemplate.value.jobDefinition?.ops?.[0]?.args?.image) {
-    return selectedTemplate.value.jobDefinition.ops[0].args.image;
+  if (selectedTemplate.value && selectedTemplate.value.id !== 'custom' && selectedTemplate.value.jobDefinition?.ops?.[0]?.args) {
+    const args = selectedTemplate.value.jobDefinition.ops[0].args as any;
+    if (args.image) {
+      return args.image;
+    }
   }
   // Otherwise, derive from the live jobDefinition
-  return jobDefinition.value?.ops?.[0]?.args?.image || null;
+  if (jobDefinition.value?.ops?.[0]?.args) {
+    const args = jobDefinition.value.ops[0].args as any;
+    if (args.image) {
+      return args.image;
+    }
+  }
+  return null;
 });
 
 const marketName = computed(() => {
@@ -939,26 +526,59 @@ const marketName = computed(() => {
   )?.name || selectedMarket.value.address.toString();
 });
 
-const hourlyPrice = computed(() => 
-  selectedMarket.value ? ((selectedMarket.value.jobPrice / 1e6) * 3600 * nosPrice.value * 1.1) : 0
+// Use centralized pricing system
+const selectedMarketAddress = computed(() => selectedMarket.value?.address?.toString() || null);
+const testgridMarketsRef = computed(() => testgridMarkets.value);
+
+const { estimatedCost, formattedCost, formattedHourlyRate, usdPricePerHour } = useEstimatedCost(
+  selectedMarketAddress,
+  hours,
+  testgridMarketsRef
 );
 
-const totalPrice = computed(() => hourlyPrice.value * hours.value);
+// Legacy computed properties for backward compatibility
+const hourlyPrice = computed(() => usdPricePerHour.value || 0);
+const totalPrice = computed(() => estimatedCost.value || 0);
 
 const requiredNos = computed(() => {
   if (!selectedMarket.value || !hours.value) return 0;
-  return (selectedMarket.value.jobPrice * hours.value * 3600 * 1.1) / 1e6; // Convert to NOS including 10% fee
+  
+  // Use the usdPricePerHour from the already initialized useEstimatedCost composable
+  if (usdPricePerHour.value && nosPrice.value) {
+    // Convert USD price to NOS amount
+    return (usdPricePerHour.value * hours.value) / nosPrice.value;
+  }
+  
+  // If centralized pricing fails, return 0 to prevent deployment
+  return 0;
 });
 
+// Check if user can post job based on their authentication method and balance
 const canPostJob = computed(() => {
-  return (balance.value || 0) >= requiredNos.value * 1.01;
+  // For wallet users: check NOS token balance
+  if (connected.value) {
+    return (balance.value || 0) >= requiredNos.value;
+  }
+  // For Google authenticated users: check credit balance using centralized pricing
+  if (status.value === 'authenticated') {
+    const costUSD = estimatedCost.value || 0;
+    return creditBalance.value >= costUSD;
+  }
+  return false;
+});
+
+// Check if user is authenticated via any method
+const isAuthenticated = computed(() => {
+  return connected.value || status.value === 'authenticated';
 });
 
 const canCreateDeployment = computed(() => 
   selectedMarket.value !== null &&
-  jobDefinition.value !== null && // Ensure a job definition exists (it always should due to defaults)
+  jobDefinition.value !== null &&
   !isCreatingDeployment.value &&
-  hours.value > 0
+  hours.value > 0 &&
+  isAuthenticated.value &&
+  canPostJob.value
 );
 
 const activeFilterKey = computed(() => 
@@ -971,63 +591,9 @@ const validator = (json: any) => {
   return errors;
 };
 
-// Predefined categories
-const ALL_CATEGORIES = [
-  "LLM",
-  "LLM Fine-tuning",
-  "Image Generation",
-  "Image Generation Fine-tuning",
-] as const;
-
-const INTERFACE_CATEGORIES = ["API", "Website"] as const;
-
-// Combined categories for the single dropdown
-const COMBINED_CATEGORIES = [...ALL_CATEGORIES, ...INTERFACE_CATEGORIES] as const;
+// Category constants moved to components
 
 // Methods
-const getCategoryArray = (category: string | string[] | undefined): string[] => {
-  if (!category) return [];
-  if (Array.isArray(category)) {
-    return category.map((cat) => (cat === "Web UI" ? "Website" : cat));
-  }
-  return category.split("|").map((cat) => (cat === "Web UI" ? "Website" : cat));
-};
-
-const filteredTemplates = computed(() => {
-  if (!templates.value) return [];
-
-  let templatesList = templates.value;
-  
-  // Filter by search term
-  if (search.value) {
-    const searchTerm = search.value.toLowerCase();
-    templatesList = templatesList.filter(
-      (t: any) =>
-        t.name.toLowerCase().includes(searchTerm) ||
-        t.description.toLowerCase().includes(searchTerm)
-    );
-  }
-
-  // Filter by selected categories
-  if (selectedCategory.value) {
-    templatesList = templatesList.filter((t: any) => {
-      const categoryArray = getCategoryArray(t.category);
-      return categoryArray.includes(selectedCategory.value as string);
-    });
-  }
-
-  // Sort by New flag and stars
-  return templatesList.sort((a: any, b: any) => {
-    const aIsNew = getCategoryArray(a.category).includes("New");
-    const bIsNew = getCategoryArray(b.category).includes("New");
-
-    if (aIsNew && !bIsNew) return -1;
-    if (!aIsNew && bIsNew) return 1;
-
-    return (b.stargazers_count || 0) - (a.stargazers_count || 0);
-  });
-});
-
 const toggleGpuType = (type: string) => {
   activeFilter.value = type;
   if (type === 'ALL') {
@@ -1039,8 +605,26 @@ const toggleGpuType = (type: string) => {
   }
 };
 
-const selectTemplate = (template: Template) => {
-  selectedTemplate.value = selectedTemplate.value?.id === template.id ? null : template;
+// Helper function to ensure wallet is ready for transactions
+const ensureWalletReady = async (): Promise<boolean> => {
+  if (!connected.value || !publicKey.value) {
+    return false;
+  }
+  
+  // Wait for wallet adapter to be fully connected
+  let attempts = 0;
+  const maxAttempts = 10;
+  
+  while (attempts < maxAttempts) {
+    if (wallet.value?.adapter?.connected && wallet.value?.adapter?.publicKey) {
+      return true;
+    }
+    
+    await new Promise(resolve => setTimeout(resolve, 100));
+    attempts++;
+  }
+  
+  return false;
 };
 
 const createDeployment = async () => {
@@ -1052,174 +636,111 @@ const createDeployment = async () => {
     return;
   }
   
+  loading.value = true;
   isCreatingDeployment.value = true;
   try {
     const ipfsHash = await nosana.value.ipfs.pin(jobDefinition.value);
-    const response = await nosana.value.jobs.list(
-      ipfsHash,
-      hours.value * 3600,
-      selectedMarket.value!.address,
-      selectedHostAddress.value || undefined
-    ) as { tx: string; job: string; run: string }; // Type assertion for response
-    toast.success(`Successfully created deployment ${response.job}`);
-    setTimeout(() => {
-      router.push('/jobs/' + response.job);
-    }, 3000);
+    
+    // Check authentication method and use appropriate posting method
+    if (status.value === 'authenticated') {
+      // Credit-based posting for Google authenticated users
+      const response = await fetch(`${config.public.apiBase}/api/jobs/create-with-credits`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Authorization': token.value as string,
+        },
+        body: JSON.stringify({
+          ipfsHash: ipfsHash,
+          market: selectedMarket.value!.address,
+          timeout: hours.value * 3600,
+          host: selectedHostAddress.value || undefined
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        toast.success(`Successfully created deployment ${data.jobAddress}`);
+        // Clear saved deploy state after successful deployment
+        clearDeployState();
+        // Refresh credit balance after successful deployment
+        await refreshCreditBalance();
+        setTimeout(() => {
+          router.push('/jobs/' + data.jobAddress);
+        }, 3000);
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create deployment with credits');
+      }
+    } else if (connected.value) {
+      // Wallet-based posting for wallet users
+      // Ensure wallet is fully ready for signing
+      const walletReady = await ensureWalletReady();
+      if (!walletReady) {
+        throw new Error('Wallet is not ready for signing. Please reconnect your wallet and try again.');
+      }
+      
+      const response = await nosana.value.jobs.list(
+        ipfsHash,
+        hours.value * 3600,
+        selectedMarket.value!.address,
+        selectedHostAddress.value || undefined
+      ) as { tx: string; job: string; run: string };
+      
+      toast.success(`Successfully created deployment ${response.job}`);
+      // Clear saved deploy state after successful deployment
+      clearDeployState();
+      setTimeout(() => {
+        router.push('/jobs/' + response.job);
+      }, 3000);
+    } else {
+      throw new Error('No authentication method available');
+    }
   } catch (error: any) {
     if (error.toString().toLowerCase().includes('user rejected')) {
       toast.info('Transaction was cancelled.');
+    } else if (error.toString().toLowerCase().includes('wallet is not ready')) {
+      toast.error('Wallet connection issue. Please disconnect and reconnect your wallet, then try again.');
+    } else if (error.toString().toLowerCase().includes('not connected')) {
+      toast.error('Wallet is not connected. Please connect your wallet and try again.');
     } else {
       toast.error(`Error creating deployment: ${error.toString()}`);
     }
   } finally {
     isCreatingDeployment.value = false;
+    loading.value = false;
   }
 };
 
-// Handle repost if needed
-const handleRepost = async () => {
-  const repostId = route.query.repostId as string;
-  if (!repostId) return;
+// Handle login click with state persistence
+const handleLoginClick = () => {
+  // Save current deploy page state before redirecting to login
+  const currentState = {
+    selectedMarket: selectedMarket.value,
+    selectedTemplate: selectedTemplate.value,
+    jobDefinition: jobDefinition.value,
+    hours: hours.value,
+    gpuTab: gpuTab.value,
+    gpuTypeCheckbox: gpuTypeCheckbox.value,
+    activeFilter: activeFilter.value
+  };
   
-  isFromRepost.value = true;
-  skipAutoSelection.value = true;
+  saveDeployState(currentState, 'user');
   
-  try {
-    const storedData = localStorage.getItem(repostId);
-    let jobAddress: string;
-    let jobTimeout: string | null = null;
-    let marketAddress: string | null = null;
-    
-    if (storedData) {
-      const parsedData = JSON.parse(storedData);
-      jobAddress = parsedData.jobAddress;
-      jobTimeout = parsedData.jobTimeout;
-      marketAddress = parsedData.marketAddress;
-      if (jobTimeout) hours.value = parseFloat(jobTimeout);
-    } else {
-      throw new Error("Repost data not found. The page may have been reloaded or the data expired.");
-    }
-    
-    const response = await fetch(`https://dashboard.k8s.prd.nos.ci/api/jobs/${jobAddress}`);
-    if (!response.ok) throw new Error(`Failed to load deployment with address ${jobAddress}`);
-    const jobData = await response.json();
-    
-    // **Crucial Step 1: Set the jobDefinition.value for the editor first**
-    if (jobData.jobDefinition) {
-      jobDefinition.value = JSON.parse(JSON.stringify(jobData.jobDefinition));
-    } else {
-      // Fallback or error if jobData.jobDefinition is missing for a repost
-      toast.error('Reposted job data is missing its definition.');
-      jobDefinition.value = { 
-        type: "container", 
-        version: "0.1", 
-        ops: [{
-          id: "error-loading-repost", 
-          type: "container/run", 
-          args: { 
-            image: "error", 
-            gpu: false, 
-            cmd: ["echo", "error"],
-            expose: 80 // Added default expose
-          }
-        }], 
-        meta: { 
-          trigger: "dashboard",
-          system_requirements: { // Added default system_requirements
-            required_vram: 0 
-          }
-        }
-      };
-    }
-    
-    // Set hours/timeout if not already set from localStorage and available in jobData
-    if (!jobTimeout && jobData.timeout) {
-      hours.value = jobData.timeout / 3600;
-    }
-    
-    await getMarkets(); // Ensure markets are loaded
-
-    if (markets.value) {
-      let foundMarket = null;
-      if (marketAddress) foundMarket = markets.value.find((m: Market) => m.address.toString() === marketAddress);
-      if (!foundMarket && jobData.market) foundMarket = markets.value.find((m: Market) => m.address.toString() === jobData.market);
-      
-      if (foundMarket) {
-        selectedMarket.value = foundMarket;
-        if (testgridMarkets.value.length > 0) {
-          const marketInfo = testgridMarkets.value.find((tgm: any) => tgm.address === foundMarket.address.toString());
-          if (marketInfo && marketInfo.type) {
-            gpuTypeCheckbox.value = [marketInfo.type];
-            activeFilter.value = marketInfo.type;
-          }
-        }
-      }
-    }
-    
-    // **Crucial Step 2: Determine selectedTemplate.value based on the now-set jobDefinition.value**
-    if (templates.value && jobDefinition.value) { // Use the editor's jobDefinition.value
-      const matchingTemplate = templates.value.find((t: any) => 
-        t.jobDefinition && 
-        JSON.stringify(t.jobDefinition) === JSON.stringify(jobDefinition.value) // Compare with editor's content
-      );
-      
-      if (matchingTemplate) {
-        selectedTemplate.value = matchingTemplate as Template;
-      } else {
-        // No exact template match for the reposted definition, so treat as custom.
-        selectedTemplate.value = null; 
-      }
-    } else {
-      selectedTemplate.value = null; // Default to null if templates or jobDefinition aren't ready
-    }
-    
-    cleanupLocalStorage(repostId);
-    router.replace({ query: {} });
-  } catch (err: any) {
-    toast.error(`Error setting up reposted deployment: ${err.toString()}`);
-    isFromRepost.value = false;
-    skipAutoSelection.value = false;
-    
-    // Clean up localStorage in case of error too
-    if (repostId) {
-      cleanupLocalStorage(repostId);
-    }
-    
-    // Remove repostId from URL on error
-    router.replace({ query: {} });
+  // Store redirect path in sessionStorage (for useRedirect composable)
+  if (typeof window !== 'undefined') {
+    sessionStorage.setItem('redirectAfterLogin', route.path);
   }
+  
+  // Open login modal instead of navigating to login page
+  const { openBothModal } = useLoginModal();
+  openBothModal();
 };
 
-// Function to clean up localStorage data
-const cleanupLocalStorage = (currentRepostId?: string) => {
-  // Remove specific repost ID if provided
-  if (currentRepostId) {
-    localStorage.removeItem(currentRepostId);
-  }
-  
-  // Clean up any old repost data (older than 24 hours)
-  const repostPrefix = 'repost-';
-  const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000);
-  
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key?.startsWith(repostPrefix)) {
-      try {
-        const item = localStorage.getItem(key);
-        if (item) {
-          const data = JSON.parse(item);
-          // If the item is older than 24 hours, remove it
-          if (data.timestamp && data.timestamp < oneDayAgo) {
-            localStorage.removeItem(key);
-          }
-        }
-      } catch (e) {
-        // If we can't parse the item, remove it
-        if (key) localStorage.removeItem(key);
-      }
-    }
-  }
-};
+// Redeploy functionality now handled by unified state persistence
+
+// Old redeploy cleanup functionality removed (no longer needed)
 
 // Template selection handling
 watch(() => selectedTemplate.value, (newTemplate) => {
@@ -1232,10 +753,8 @@ watch(() => selectedTemplate.value, (newTemplate) => {
       isUpdatingFromJobDef.value = false;
     });
 
-    if (!isFromRepost.value) {
-      selectedMarket.value = null;
-      selectedHostAddress.value = null;
-    }
+    // Preserve user's GPU selection when changing templates
+    // No longer clear selectedMarket and selectedHostAddress on template change
   } 
   // No specific action if newTemplate is null, as jobDefinition (editor) should retain custom values.
 }, { deep: true });
@@ -1264,8 +783,8 @@ watch(() => jobDefinition.value, (newJobDef, oldJobDef) => {
   } else {
     // No template is currently selected (it's custom or was deselected)
     // Try to find a template that matches the new content in the editor
-    if (templates.value) {
-      const templateMatchingJobDef = templates.value.find(
+    if (groupedTemplates.value) {
+      const templateMatchingJobDef = groupedTemplates.value.find(
         (t: Template) => t.jobDefinition && JSON.stringify(t.jobDefinition) === JSON.stringify(newJobDef) && t.id !== 'custom'
       );
 
@@ -1279,9 +798,9 @@ watch(() => jobDefinition.value, (newJobDef, oldJobDef) => {
   }
 }, { deep: true });
 
-// Auto-select PyTorch template when templates load
-watch(() => templates.value, (newTemplates) => {
-  if (newTemplates && newTemplates.length > 0 && !selectedTemplate.value && !isFromRepost.value) {
+// Auto-select PyTorch template when grouped templates load
+watch(() => groupedTemplates.value, (newTemplates) => {
+  if (Array.isArray(newTemplates) && newTemplates.length > 0 && !selectedTemplate.value && !isRestoringState.value && !hasValidStoredState.value) {
     // Find the PyTorch Jupyter template by matching the docker image
     const pytorchTemplate = newTemplates.find((template: any) => 
       template.jobDefinition?.ops?.[0]?.args?.image === "docker.io/nosana/pytorch-jupyter:0.0.0"
@@ -1304,115 +823,7 @@ watch(() => selectedMarket.value, (newMarket) => {
   }
 });
 
-// Advanced GPU Selection Utility Functions
-const getFilterLabel = (key: string): string => 
-  FIELD_MAPPINGS.LABELS[key as keyof typeof FIELD_MAPPINGS.LABELS] || key;
-
-const getFilterDescription = (key: string): string => 
-  FIELD_MAPPINGS.DESCRIPTIONS[key as keyof typeof FIELD_MAPPINGS.DESCRIPTIONS] || 'Set the value';
-
-const getUnit = (key: string): string => 
-  FIELD_MAPPINGS.UNITS[key as keyof typeof FIELD_MAPPINGS.UNITS] || '';
-
-const getDisplayValue = (key: string, value: number): number => 
-  key === 'RAM_MB' ? Math.round(value / 1024) : value;
-
-const getMaxValue = (key: string, maxValue: number): number => {
-  if (key === 'BANDWIDTH_MB' || key === 'DOWNLOAD_SPEED_MB') {
-    return Math.round(maxValue);
-  }
-  return key === 'RAM_MB' ? Math.round(maxValue / 1024) : maxValue;
-};
-
-const getMinValue = (key: string, filter: any): number => 
-  key === 'BANDWIDTH_MB' || key === 'DOWNLOAD_SPEED_MB' ? 0 : 
-  FIELD_MAPPINGS.ZERO_MIN_FIELDS.includes(key) ? 0 : filter.min_value;
-
-const getMaxInputValue = (key: string, filter: any): number => 
-  key === 'RAM_MB' ? Math.round(filter.max_value / 1024) : filter.max_value;
-
-// Helper to get current filters safely
-const getCurrentFilters = () => {
-  if (!gpuFilters.value || !gpuFilters.value['filter-options']) return {};
-  
-  const option = gpuFilters.value['filter-options'].find(
-    (f: { value: string }) => f.value === selectedGpuGroup.value || 
-    (!selectedGpuGroup.value && f.value === 'all')
-  );
-  
-  return option?.filters || {};
-};
-
-// Helper to check if a filter should use buttons instead of dropdown
-const shouldUseButtonsForFilter = (key: string): boolean => {
-  return ['PLATFORM_OS', 'REGION'].includes(key);
-};
-
-// Get CUDA driver values from current filters
-const getCudaDriverValues = (): string[] => {
-  if (!gpuFilters.value || !gpuFilters.value['filter-options']) return ['All'];
-  
-  const option = gpuFilters.value['filter-options'].find(
-    (f: { value: string }) => f.value === selectedGpuGroup.value || 
-    (!selectedGpuGroup.value && f.value === 'all')
-  );
-  
-  if (option?.filters?.CUDA_DRIVER?.values) {
-    return option.filters.CUDA_DRIVER.values;
-  }
-  
-  return ['All'];
-};
-
-// Fill width calculator for sliders
-const calculateFillWidth = (key: string, filterValue: FilterValue, filter: any): number => {
-  // Special handling for bandwidth - always start from 0
-  if (key === 'BANDWIDTH_MB' || key === 'DOWNLOAD_SPEED_MB') {
-    const maxValue = filter.max_value;
-    const currentValue = filterValue.min;
-    return (currentValue / maxValue) * 100;
-  }
-  
-  // Special handling for fields that can start from 0
-  if (FIELD_MAPPINGS.ZERO_MIN_FIELDS.includes(key)) {
-    // Use percentage of max value for these fields
-    const maxValue = key === 'RAM_MB' ? Math.round(filter.max_value / 1024) : filter.max_value;
-    const currentValue = key === 'RAM_MB' ? Math.round(filterValue.min / 1024) : filterValue.min;
-    return (currentValue / maxValue) * 100;
-  }
-  
-  // Standard calculation for other fields
-  return ((filterValue.min - filter.min_value) / (filter.max_value - filter.min_value)) * 100;
-};
-
-// Slider input handler
-const handleSliderInput = (e: Event, key: string) => {
-  const value = Number((e.target as HTMLInputElement).value);
-  if (!filterValues.value[key]) {
-    filterValues.value[key] = { min: 0, max: 0 };
-  }
-  (filterValues.value[key] as FilterValue).min = key === 'RAM_MB' ? value * 1024 : value;
-  forceUpdateCounter.value++;
-};
-
-// Host selection handler
-const selectHost = (host: HostInterface) => {
-  selectedHostAddress.value = selectedHostAddress.value === host.host_address ? null : host.host_address;
-  
-  // If a host is selected, update selectedMarket based on market_address
-  if (selectedHostAddress.value && host.market_address) {
-    // Find the market in markets.value that matches the host's market_address
-    const matchingMarket = markets.value?.find((m: Market) => 
-      m.address.toString() === host.market_address
-    );
-    
-    if (matchingMarket) {
-      selectedMarket.value = matchingMarket;
-    }
-  } else {
-    selectedMarket.value = null;
-  }
-};
+// Advanced GPU selection utility functions moved to component
 
 // Create a fetchGpuFilters function
 const fetchGpuFilters = async (resetValues = true) => {
@@ -1639,6 +1050,72 @@ watch(selectedGpuGroup, async (newValue) => {
   }
 });
 
+// Restore state if needed (following handleRepost pattern)
+const restoreStateIfNeeded = async () => {
+  if (!shouldRestoreState()) {
+    return;
+  }
+  
+  const savedState = loadDeployState();
+  if (!savedState) {
+    return;
+  }
+  
+  
+  // Set flags to prevent auto-selection interference (same as handleRepost)
+  isRestoringState.value = true;
+  skipAutoSelection.value = true;
+  
+  try {
+    // Restore non-market state first
+    if (savedState.selectedTemplate) selectedTemplate.value = savedState.selectedTemplate;
+    if (savedState.jobDefinition) jobDefinition.value = savedState.jobDefinition;
+    if (savedState.hours) hours.value = savedState.hours;
+    if (savedState.gpuTab) gpuTab.value = savedState.gpuTab;
+    if (savedState.gpuTypeCheckbox) gpuTypeCheckbox.value = savedState.gpuTypeCheckbox;
+    if (savedState.activeFilter) activeFilter.value = savedState.activeFilter;
+    
+    // Restore market selection (following handleRepost pattern)
+    if (savedState.selectedMarket && markets.value) {
+      const foundMarket = markets.value.find((m: Market) => 
+        m.address.toString() === savedState.selectedMarket?.address.toString()
+      );
+      
+      if (foundMarket) {
+        // Delay the assignment to let the component fully initialize first
+        setTimeout(() => {
+          selectedMarket.value = foundMarket;
+        }, 100);
+        
+        // Update GPU type filters based on market (same as handleRepost)
+        if (testgridMarkets.value.length > 0) {
+          const marketInfo = testgridMarkets.value.find((tgm: any) => 
+            tgm.address === foundMarket.address.toString()
+          );
+          if (marketInfo && marketInfo.type) {
+            gpuTypeCheckbox.value = [marketInfo.type];
+            activeFilter.value = marketInfo.type;
+          }
+        }
+      }
+    }
+    
+    // Show notification for redeploy operations
+    if (savedState.source === 'redeploy') {
+      setTimeout(() => {
+        toast.info('Job configuration restored for redeployment. Please select a GPU to continue.');
+      }, 500);
+    }
+    
+  } finally {
+    // Reset flags after restoration is complete
+    setTimeout(() => {
+      isRestoringState.value = false;
+      skipAutoSelection.value = false;
+    }, 100);
+  }
+};
+
 // Update the onMounted hook to include debugging
 onMounted(async () => {
   if (process.client) {
@@ -1649,17 +1126,14 @@ onMounted(async () => {
     await getMarkets();
   }
   
-  if (route.query.repostId) {
-    await handleRepost();
-  }
+  // Restore state after markets are loaded
+  await restoreStateIfNeeded();
 
   await fetchGpuFilters(true);
   
   if (publicKey.value && nosana.value) {
     await refreshAllBalances();
   }
-  
-  cleanupLocalStorage();
 });
 
 // Watch for tab changes to sync market type
@@ -1721,6 +1195,35 @@ const refreshAllBalances = async () => {
   }
 };
 
+// Refresh credit balance for Google authenticated users
+const refreshCreditBalance = async () => {
+  if (status.value !== 'authenticated' || !token.value) return;
+  
+  loadingCreditBalance.value = true;
+  
+  try {
+    const response = await fetch(`${config.public.apiBase}/api/credits/balance`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': token.value as string,
+      },
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      creditBalance.value = data.assignedCredits || 0;
+    } else {
+      console.error('Failed to fetch credit balance');
+    }
+  } catch (error) {
+    console.error('Error fetching credit balance:', error);
+  } finally {
+    loadingCreditBalance.value = false;
+  }
+};
+
 // Watch for wallet connection changes
 watch([publicKey, nosana], async () => {
   if (publicKey.value && nosana.value) {
@@ -1728,12 +1231,22 @@ watch([publicKey, nosana], async () => {
   }
 }, { immediate: true });
 
+// Watch for wallet connection state changes
+watch([connected, wallet], ([isConnected, walletInstance]) => {
+  // Wallet connection state monitoring (no user feedback needed)
+}, { immediate: true });
+
+// Watch for Google authentication changes
+watch([status, token], async () => {
+  if (status.value === 'authenticated' && token.value) {
+    await refreshCreditBalance();
+  }
+}, { immediate: true });
+
 // Cleanup on component unmount
 onBeforeUnmount(() => {
-  // Clean up repost data when leaving the page
-  if (route.query.repostId) {
-    cleanupLocalStorage(route.query.repostId as string);
-  }
+  // Clean up deploy state persistence
+  cleanupDeployState();
 });
 
 // Add a watch for navTab
@@ -1746,6 +1259,41 @@ watch(() => showSwapModal.value, (newValue) => {
     }, 50);
   }
 });
+
+// Auto-save deploy state when key values change
+watch([selectedMarket, selectedTemplate, hours, gpuTab, activeFilter], () => {
+  // Only auto-save if user is not restoring state from localStorage
+  if (!isRestoringState.value) {
+    debouncedSave({
+      selectedMarket: selectedMarket.value,
+      selectedTemplate: selectedTemplate.value,
+      jobDefinition: jobDefinition.value,
+      hours: hours.value,
+      gpuTab: gpuTab.value,
+      gpuTypeCheckbox: gpuTypeCheckbox.value,
+      activeFilter: activeFilter.value
+    });
+  }
+}, { deep: true });
+
+// Auto-save job definition changes separately (with longer debounce)
+watch(jobDefinition, () => {
+  // Only auto-save if user is not restoring state from localStorage  
+  if (!isRestoringState.value) {
+    debouncedSave({
+      selectedMarket: selectedMarket.value,
+      selectedTemplate: selectedTemplate.value,
+      jobDefinition: jobDefinition.value,
+      hours: hours.value,
+      gpuTab: gpuTab.value,
+      gpuTypeCheckbox: gpuTypeCheckbox.value,
+      activeFilter: activeFilter.value
+    }, 1000); // Longer delay for job definition
+  }
+}, { deep: true });
+
+// Market restoration is now handled in restoreStateIfNeeded function
+
 
 // Add this function to the script section
 const openSwapModal = () => {
@@ -1775,12 +1323,18 @@ const showTemplateModal = ref(false);
 const selectedTemplateImage = computed(() => {
   try {
     // First, try to get it from the selectedTemplate's jobDefinition if available
-    if (selectedTemplate.value && selectedTemplate.value.jobDefinition && selectedTemplate.value.jobDefinition.ops && selectedTemplate.value.jobDefinition.ops[0] && selectedTemplate.value.jobDefinition.ops[0].args && selectedTemplate.value.jobDefinition.ops[0].args.image) {
-      return selectedTemplate.value.jobDefinition.ops[0].args.image;
+    if (selectedTemplate.value && selectedTemplate.value.jobDefinition && selectedTemplate.value.jobDefinition.ops && selectedTemplate.value.jobDefinition.ops[0] && selectedTemplate.value.jobDefinition.ops[0].args) {
+      const args = selectedTemplate.value.jobDefinition.ops[0].args as any;
+      if (args.image) {
+        return args.image;
+      }
     }
     // Fallback to the current jobDefinition in the editor
-    if (jobDefinition.value && jobDefinition.value.ops && jobDefinition.value.ops[0] && jobDefinition.value.ops[0].args && jobDefinition.value.ops[0].args.image) {
-      return jobDefinition.value.ops[0].args.image;
+    if (jobDefinition.value && jobDefinition.value.ops && jobDefinition.value.ops[0] && jobDefinition.value.ops[0].args) {
+      const args = jobDefinition.value.ops[0].args as any;
+      if (args.image) {
+        return args.image;
+      }
     }
   } catch (e) {
     console.warn("Could not extract image from job definition", e);
@@ -1791,8 +1345,11 @@ const selectedTemplateImage = computed(() => {
 // Function to get Docker image from any template
 const getTemplateImage = (template: Template): string | null => {
   try {
-    if (template.jobDefinition && template.jobDefinition.ops && template.jobDefinition.ops[0] && template.jobDefinition.ops[0].args && template.jobDefinition.ops[0].args.image) {
-      return template.jobDefinition.ops[0].args.image;
+    if (template.jobDefinition && template.jobDefinition.ops && template.jobDefinition.ops[0] && template.jobDefinition.ops[0].args) {
+      const args = template.jobDefinition.ops[0].args as any;
+      if (args.image) {
+        return args.image;
+      }
     }
   } catch (e) {
     console.warn("Could not extract image from template", e);
@@ -1812,27 +1369,6 @@ watch(showTemplateModal, (isOpen) => {
   }
 });
 
-// JSON Editor collapse state
-// const isEditorCollapsed = ref(false); // Now initialized to true above
-// const userToggledEditor = ref(false); // Removed
-
-// JSON Editor toggle function
-// const toggleEditorCollapse = () => { // Removed
-// isEditorCollapsed.value = !isEditorCollapsed.value;
-// userToggledEditor.value = true;
-// };
-
-// Auto-collapse watcher
-// watch(shouldCollapseEditor, (shouldCollapse) => { // Removed
-// if (shouldCollapse && !userToggledEditor.value) {
-// isEditorCollapsed.value = true;
-// }
-// }, { immediate: true });
-
-// Reset user toggle when template changes
-// watch(() => selectedTemplate.value, () => { // Removed
-// userToggledEditor.value = false;
-// });
 
 // Template selection handler
 const selectTemplateFromModal = (template: Template) => {
@@ -1841,203 +1377,29 @@ const selectTemplateFromModal = (template: Template) => {
   isEditorCollapsed.value = true; // Collapse editor when a new template is selected
 };
 
+// Advanced GPU selection market handler
+const handleAdvancedMarketSelection = (marketInfo: any) => {
+  if (marketInfo && marketInfo.market_address && markets.value) {
+    // Find the market in markets.value that matches the market_address
+    const matchingMarket = markets.value.find((m: Market) => 
+      m.address.toString() === marketInfo.market_address
+    );
+    
+    if (matchingMarket) {
+      selectedMarket.value = matchingMarket;
+    }
+  } else {
+    selectedMarket.value = null;
+  }
+};
+
 // CSS rules below were mistakenly placed here and will be moved to the <style> block
 
 </script>
 <style lang="scss" scoped>
-.template-card {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  padding: 1.25rem;
-  position: relative;
-  border: 1px solid transparent;
 
-  &.selected-card {
-    border: 1px solid $secondary;
-  }
 
-  &:hover {
-    cursor: pointer;
-    border: 1px solid $secondary;
-  }
-}
-
-.github-stars {
-  display: inline-flex;
-  align-items: center;
-  color: $grey;
-  font-size: 0.875rem;
-  
-  .github-icon {
-    width: 18px;
-    height: 18px;
-    margin-right: 4px;
-    vertical-align: middle;
-    opacity: 0.7;
-  }
-}
-
-html.dark-mode .github-icon {
-  filter: invert(1);
-}
-
-.star-placeholder {
-  height: 19px;
-}
-
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.header-title {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-
-  h2 {
-    line-height: 1.2;
-    margin: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    max-width: 100%;
-  }
-}
-
-.header-meta {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.25rem;
-  flex-shrink: 0;
-  justify-content: center;
-  min-height: 56px;
-}
-
-.template-description {
-  width: 100%;
-
-  p {
-    margin: 0;
-    overflow-wrap: break-word;
-    word-wrap: break-word;
-  }
-}
-
-.template-icon {
-  width: 34px;
-  height: 34px;
-  border-radius: 100%;
-  padding: 0;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  background-color: transparent;
-
-  img {
-    width: auto;
-    height: auto;
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
-  }
-}
-
-.dark-mode .template-icon {
-  background-color: $black-bis !important;
-  border-color: $grey-darker;
-}
-
-.new-badge {
-  position: absolute;
-  top: -0.35rem;
-  left: -0.55rem;
-  background: black;
-  color: white;
-  padding: 0.15rem 0.5rem;
-  border-radius: 0.75rem;
-  font-size: 0.65rem;
-  font-weight: bold;
-  text-transform: uppercase;
-  z-index: 1;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
-  width: fit-content;
-  height: fit-content;
-  letter-spacing: 0.02em;
-}
-
-.green-checkbox {
-  width: 18px;
-  height: 18px;
-  margin-right: 8px;
-  border: 1px solid #ddd;
-  border-radius: 3px;
-  -webkit-appearance: none;
-  appearance: none;
-  
-  &:checked {
-    accent-color: $secondary;
-    background-color: $secondary;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24'%3E%3Cpath fill='white' d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z'/%3E%3C/svg%3E");
-    background-position: center;
-    background-repeat: no-repeat;
-    background-size: 100%;
-    -webkit-appearance: none;
-    appearance: none;
-    border-radius: 3px;
-    border: none;
-  }
-}
-
-.template-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 0.75rem;
-
-  .tag {
-    font-size: 0.75rem;
-    padding: 0.25rem 0.75rem;
-    border-radius: 1rem;
-    font-weight: 500;
-    background-color: rgba($grey, 0.1);
-    color: $grey-dark;
-  }
-}
-
-.dark-mode {
-  .template-tags {
-    .tag {
-      color: white;
-    }
-  }
-}
-
-.category-filters {
-  .checkbox {
-    cursor: pointer;
-    user-select: none;
-
-    &:hover {
-      color: $primary;
-    }
-  }
-  
-  .select::after {
-    border-color: #888 !important;
-  }
-}
+/* Category filter styles moved to components */
 
 .nav-tabs-item {
   border-top-left-radius: 6px;
@@ -2068,6 +1430,7 @@ html.dark-mode .github-icon {
   padding: 1 1rem 1rem;
   z-index: 15;
   background: transparent; /* Remove background from container */
+  margin-top: 78px; /* Add margin for fixed positioning on larger screens */
 }
 
 /* Dark mode background */
@@ -2083,7 +1446,7 @@ html.dark-mode .github-icon {
     right: auto;
     width: 100%;
     max-width: none;
-    margin-top: 1.5rem;
+    margin-top: 1.5rem !important; /* Override the fixed positioning margin */
     padding: 0;
     background: transparent;
   }
@@ -2106,36 +1469,7 @@ html.dark-mode .github-icon {
   flex-direction: column;
 }
 
-.full-height-editor {
-  height: 100%;
-  flex-grow: 1;
-  display: flex;
-  flex-direction: column;
-}
 
-.template-info {
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 auto;
-  min-height: 0;
-  height: 100%;
-}
-
-.markdown-content {
-  flex: 1 1 auto;
-  overflow-y: visible;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.builder-columns {
-  height: auto;
-}
-
-:deep(.jse) {
-  height: 100% !important;
-}
 
 .dark-mode {
   .box {
@@ -2162,331 +1496,10 @@ html.dark-mode .github-icon {
   }
 }
 
-/* Responsive styles */
+/* Mobile specific adjustments */
 @media screen and (max-width: 768px) {
-  .category-filters {
-    flex-direction: column;
-    width: 100%;
-    
-    .field.ml-4 {
-      margin-left: 0 !important;
-      margin-top: 0.75rem;
-      width: 100%;
-    }
-    
-    .field {
-      width: 100%;
-    }
-  }
-  
   .summary {
-    position: static;
-    margin-top: 0;
-    padding-top: 0;
-  }
-  
-  .header-content {
-    gap: 0.5rem;
-  }
-
-  .template-icon {
-    padding: 5px;
-  }
-
-  .header-title h2 {
-    font-size: 1.25rem !important;
-  }
-}
-
-@media screen and (max-width: 480px) {
-  .header-content {
-    gap: 0.25rem;
-  }
-
-  .template-icon {
-    width: 30px;
-    height: 30px;
-    padding: 4px;
-  }
-}
-
-/* Advanced GPU Selection Styles */
-.slider-container {
-  position: relative;
-  padding: 0 1rem;
-  
-  .range-slider {
-    position: relative;
-    width: 100%;
-    height: 6px;
-    background: #ddd;
-    border-radius: 3px;
-    margin: 14px 0;
-    
-    &__range {
-      -webkit-appearance: none;
-      appearance: none;
-      position: absolute;
-      top: -4px;
-      left: 0;
-      width: 100%;
-      height: 14px;
-      margin: 0;
-      background: transparent;
-      z-index: 3;
-      
-      &::-webkit-slider-thumb {
-        -webkit-appearance: none;
-        appearance: none;
-        width: 14px;
-        height: 14px;
-        border-radius: 50%;
-        background: white;
-        cursor: pointer;
-        border: 3px solid var(--primary-color, #2A2A2A);
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-      }
-      
-      &::-moz-range-thumb {
-        width: 14px;
-        height: 14px;
-        border-radius: 50%;
-        background: white;
-        cursor: pointer;
-        border: 3px solid var(--primary-color, #2A2A2A);
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-      }
-      
-      &:focus {
-        outline: none;
-      }
-    }
-    
-    &__fill {
-      position: absolute;
-      top: 0;
-      left: 0;
-      height: 100%;
-      background: #2A2A2A;
-      border-radius: 3px;
-      pointer-events: none;
-    }
-  }
-}
-
-.gpu-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.gpu-box {
-  position: relative;
-  background: white;
-  border: 1px solid #e8e8e8;
-  border-radius: 4px;
-  padding: 1rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-
-  &:hover {
-    background: #f5f5f5;
-  }
-
-  &.is-selected {
-    background: #2A2A2A;
-    border-color: #2A2A2A;
-
-    .gpu-box__title,
-    .gpu-box__price {
-      color: $secondary;
-    }
-
-    .gpu-box__specs-row span {
-      color: #A0A0A0;
-    }
-
-    .gpu-box__selection-indicator {
-      border-color: white;
-      background: white;
-
-      &::after {
-        background: $secondary;
-      }
-    }
-  }
-
-  &__content {
-    flex: 1;
-  }
-
-  &__main {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.5rem;
-  }
-
-  &__title {
-    font-weight: 600;
-    color: black;
-    display: flex;
-    align-items: center;
-  }
-
-  .gpu-logo {
-    width: 20px;
-    height: 20px;
-    margin-right: 8px;
-    vertical-align: middle;
-  }
-
-  &__price {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: black;
-  }
-
-  &__specs {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-  }
-
-  &__specs-row {
-    display: flex;
-    gap: 1rem;
-    font-size: 0.875rem;
-
-    span {
-      color: #666666;
-    }
-  }
-
-  &__selection-indicator {
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    border: 1px solid #ddd;
-    transition: all 0.2s ease;
-    flex-shrink: 0;
-    position: relative;
-
-    &::after {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background: transparent;
-      transition: all 0.2s ease;
-    }
-  }
-}
-
-.dark-mode {
-  .slider-container .range-slider {
-    background: var(--grey-darker, #333);
-  }
-  
-  .gpu-box {
-    background: var(--black-bis, #121212);
-    border-color: var(--grey-darker, #333);
-
-    &:hover {
-      background: lighten(#121212, 2%);
-    }
-
-    &.is-selected {
-      background: #2A2A2A;
-      border-color: #2A2A2A;
-    }
-
-    &__title, &__price {
-      color: white;
-    }
-  }
-}
-
-.input-with-unit {
-  // position: relative; // Remove relative positioning
-  display: flex;
-  align-items: center;
-  width: 100%;
-
-  .input {
-    // padding-right: 78px; // Remove fixed padding
-    flex-grow: 1; /* Allow input to grow */
-    min-width: 50px; /* Prevent input from becoming too small */
-    width: 100%;
-    font-size: 1rem;
-  }
-
-  .unit {
-    // position: absolute;
-    // right: 47px;
-    margin-left: 0.5rem; /* Add space after input */
-    color: #666;
-    font-size: 0.875rem;
-    white-space: nowrap;
-  }
-
-  .max-value {
-    // position: absolute;
-    // right: 5px;
-    margin-left: 0.25rem; /* Add space after unit */
-    color: #666;
-    font-size: 0.875rem;
-    white-space: nowrap;
-  }
-}
-
-.advanced-gpu-selection {
-  width: 100%;
-}
-
-.advanced-gpu-selection .label {
-  display: flex;
-  align-items: center;
-  margin-bottom: 0.5rem;
-  font-size: 0.9rem;
-  
-  .has-text-grey {
-    font-weight: normal;
-  }
-}
-
-.flex-wrap {
-  flex-wrap: wrap;
-}
-
-/* GPU list transitions */
-.gpu-list-transition-enter-active,
-.gpu-list-transition-leave-active {
-  transition: all 0.3s ease;
-}
-.gpu-list-transition-enter-from,
-.gpu-list-transition-leave-to {
-  opacity: 0;
-  transform: translateY(10px);
-}
-.gpu-list-transition-move {
-  transition: transform 0.3s ease;
-}
-
-@media screen and (max-width: 1407px) { // Below fullhd (1408px)
-  .summary {
-    position: static;
-    top: auto;
-    margin-top: 1.5rem;
-    padding-left: 0;
-    padding-right: 0;
+    margin-top: 1rem !important; /* Reduce margin even more on mobile */
   }
 }
 
@@ -2527,178 +1540,16 @@ html.dark-mode .github-icon {
   }
 }
 
-/* Stack GPU specs vertically on mobile */
-.gpu-box__specs {
-  gap: 0.5rem; /* Adjust gap between rows */
-}
-.gpu-box__specs-row {
-  /* flex-direction: column; */ /* Revert stacking */
-  /* gap: 0.1rem; */
-  /* align-items: flex-start; */
-  flex-wrap: wrap; /* Allow items to wrap */
-  gap: 0.25rem 0.5rem; /* Adjust vertical and horizontal gap */
-}
-
-/* Further adjust input unit/max-value on mobile */
-.input-with-unit .unit,
-.input-with-unit .max-value {
-  font-size: 0.7rem; /* Reduce font size */
-  margin-left: 0.2rem; /* Reduce margin */
-}
-.input-with-unit .unit { 
-  margin-left: 0.3rem; /* Keep slightly more margin for unit */
-}
-
-/* Allow input to shrink more on mobile */
-.input-with-unit .input {
-  min-width: 0; /* Allow shrinking below default */
-  flex-shrink: 1; /* Ensure input shrinks */
-}
-
-/* Adjust slider/input column widths on mobile */
-.field > .columns.is-mobile > .column.is-9 {
-  width: 60%; /* Equivalent to is-8 */
-}
-.field > .columns.is-mobile > .column.is-3 {
-  width: 33.3333%; /* Equivalent to is-4 */
-}
+/* Mobile styles moved to individual components */
 
 
 .warning-icon {
   filter: invert(73%) sepia(45%) saturate(5600%) hue-rotate(359deg) brightness(101%) contrast(106%);
 }
 
-/* JSON Editor collapse styles */
-.editor-collapsed {
-  overflow: hidden !important;
-  position: relative;
-  
-  &::after {
-    content: ''; // Default gradient, implying expand (up arrow)
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 30px;
-    background: linear-gradient(transparent, rgba(255, 255, 255, 0.9));
-    pointer-events: none;
-    z-index: 1;
-  }
-}
 
-.dark-mode .editor-collapsed::after {
-  background: linear-gradient(transparent, rgba(18, 18, 18, 0.95) 70%); // Adjusted gradient for dark mode
-}
 
-:deep(.editor-collapsed .jse) {
-  height: 150px !important;
-  overflow: hidden !important;
-}
 
-/* Compact template card styles for modal */
-.template-card-compact {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  padding: 1rem;
-  position: relative;
-  border: 1px solid transparent;
-  transition: all 0.2s ease;
-
-  &:hover {
-    cursor: pointer;
-    border: 1px solid $secondary;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  }
-}
-
-.template-header-compact {
-  display: flex;
-  flex-direction: column;
-  margin-bottom: 0.75rem;
-}
-
-.header-content-compact {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.header-title-compact {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-
-  h2 {
-    line-height: 1.2;
-    margin: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    max-width: 100%;
-  }
-}
-
-.header-meta-compact {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.template-icon-compact {
-  width: 28px;
-  height: 28px;
-  border-radius: 100%;
-  padding: 0;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  background-color: transparent;
-
-  img {
-    width: auto;
-    height: auto;
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
-  }
-}
-
-.template-description-compact {
-  width: 100%;
-  flex: 1;
-
-  p {
-    margin: 0;
-    overflow-wrap: break-word;
-    word-wrap: break-word;
-    line-height: 1.3;
-  }
-}
-
-.template-tags-compact {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-}
-
-.dark-mode {
-  .template-card-compact {
-    &:hover {
-      box-shadow: 0 4px 12px rgba(255,255,255,0.1);
-    }
-  }
-
-  .template-icon-compact {
-    background-color: $black-bis !important;
-    border-color: $grey-darker;
-  }
-}
 
 /* Modal scroll fix - ensure modals can scroll when body is locked */
 .modal.is-active {
@@ -2709,63 +1560,6 @@ html.dark-mode .github-icon {
   overflow-y: auto !important;
 }
 
-/* Dark mode support for README and action buttons */
-.dark-mode {
-  .readme-button.button.is-light {
-    background-color: rgba(255, 255, 255, 0.1) !important;
-    border-color: rgba(255, 255, 255, 0.2) !important;
-    color: rgba(255, 255, 255, 0.9) !important;
-    
-    &:hover {
-      background-color: rgba(255, 255, 255, 0.15) !important;
-      border-color: rgba(255, 255, 255, 0.3) !important;
-      color: white !important;
-    }
-  }
-  
-  .action-button.button.is-outlined {
-    border-color: rgba(255, 255, 255, 0.3) !important;
-    color: rgba(255, 255, 255, 0.9) !important;
-    background-color: transparent !important;
-    
-    &:hover {
-      background-color: rgba(255, 255, 255, 0.1) !important;
-      border-color: rgba(255, 255, 255, 0.5) !important;
-      color: white !important;
-    }
-  }
-}
 
-.editor-wrapper.is-clickable-to-expand {
-  cursor: pointer;
-}
-
-/* Inserted CSS for expand-indicator starts here */
-.expand-indicator {
-  position: absolute;
-  bottom: 24px; /* Adjusted from 20px to move everything up */
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #363636;
-  font-size: 0.9rem;
-  z-index: 2;
-  pointer-events: none;
-}
-
-.expand-indicator span {
-  line-height: 1;
-}
-
-.expand-indicator img {
-  margin-left: 5px;
-}
-/* Inserted CSS for expand-indicator ends here */
-
-.dark-mode .expand-indicator {
-  color: #ccc; // Lighter text color for dark mode
-}
 
 </style> 

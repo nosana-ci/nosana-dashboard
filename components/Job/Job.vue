@@ -88,6 +88,7 @@
                       :key="`job-price-${props.job.isCompleted}-${props.job.timeEnd || 'running'}-${props.job.state}`"
                       :job="jobDataForPriceComponent"
                       :options="jobOptionsForPriceComponent"
+                      :marketsData="testgridMarkets"
                     />
                   </div>
                 </div>
@@ -273,9 +274,15 @@
             <div class="quick-detail-item">
               <span class="quick-detail-label">Duration</span>
               <span class="quick-detail-value">
-                <span v-if="jobDurationDisplayValue">{{
-                  jobDurationDisplayValue
-                }}</span>
+                <span v-if="jobDurationData">
+                  <template v-if="jobDurationData.actualSeconds > 0">
+                    <SecondsFormatter :seconds="jobDurationData.actualSeconds" :showSeconds="true" />
+                    <span v-if="jobDurationData.maxDurationHours" class="has-text-grey"> (max {{ jobDurationData.maxDurationHours }})</span>
+                  </template>
+                  <template v-else-if="jobDurationData.maxDurationHours">
+                    <span class="has-text-grey">(max {{ jobDurationData.maxDurationHours }})</span>
+                  </template>
+                </span>
                 <span v-else class="icon-text">
                   <span class="icon is-small"
                     ><i class="fas fa-spinner fa-spin"></i
@@ -447,9 +454,10 @@
     :userBalances="userBalances"
   />
   <LogSubscription
-    v-if="props.isJobPoster && props.job.isRunning"
+    v-if="props.job.isRunning"
     :initLogs="initLogs"
     :closeLogs="closeLogs"
+    :isJobPoster="props.isJobPoster"
   />
 
   <!-- Chat Popup -->
@@ -484,11 +492,14 @@ import JobStatus from "~/components/Job/Status.vue";
 import JobPrice from "~/components/Job/Price.vue";
 import ExtendModal from "~/components/Job/Modals/Extend.vue";
 import JobTabs from "~/components/Job/Tabs.vue";
+import SecondsFormatter from "~/components/SecondsFormatter.vue";
 
 import LogSubscription from "./LogSubscription.vue";
 import { useJobLogs } from "~/composables/jobs/useJobLogs";
 import { useTemplates } from "~/composables/useTemplates";
 import { useToast } from "vue-toastification";
+import { useNosanaWallet } from "~/composables/useNosanaWallet";
+import { useAPI } from "~/composables/useAPI";
 import { useGenericBenchmark } from "~/composables/useBenchmarkData";
 
 import type { UseModal } from "~/composables/jobs/useModal";
@@ -519,8 +530,25 @@ interface Props {
 }
 
 const props = defineProps<Props>();
-const { userBalances, signMessage } = useNosanaWallet();
+const { userBalances, signMessage: walletSignMessage } = useNosanaWallet();
+const { status, data: userData } = useAuth();
+
+// Create a signMessage function that works for both wallet and credit users
+const signMessage = async () => {
+  // For authenticated credit users, use their authenticationHeader
+  if (status.value === 'authenticated' && userData.value?.authenticationHeader) {
+    return userData.value.authenticationHeader;
+  }
+  
+  // For wallet users, use the wallet's signMessage
+  return await walletSignMessage();
+};
 const { templates } = useTemplates();
+const { markets } = useMarkets();
+const { saveState } = useDeployPageState();
+
+// Fetch markets data needed for centralized pricing
+const { data: testgridMarkets } = useAPI('/api/markets', { default: () => [] });
 const toast = useToast();
 const router = useRouter();
 const { isVerified } = useNosanaWallet();
@@ -661,6 +689,7 @@ const jobDataForPriceComponent = computed(() => {
     timeStart: props.job.timeStart,
     timeEnd: props.job.timeEnd,
     timeout: props.job.timeout,
+    market: typeof props.job.market === 'string' ? props.job.market : props.job.market?.toString(),
     state:
       props.job.state ??
       (props.job.isCompleted ? 2 : props.job.timeStart ? 1 : 0),
@@ -671,16 +700,8 @@ const jobOptionsForPriceComponent = computed(() => {
   return { showPerHour: !props.job.isCompleted };
 });
 
-// Former jobDurationDisplay computed property, now a ref updated by a watch
-const jobDurationDisplayValue = ref<string | null>(null);
-
-const formatDuration = (seconds: number) => {
-  if (isNaN(seconds) || seconds < 0) return "Invalid duration";
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = Math.floor(seconds % 60);
-  return `${h}h ${m}m ${s}s`;
-};
+// Duration data for SecondsFormatter
+const jobDurationData = ref<{ actualSeconds: number; maxDurationHours?: string } | null>(null);
 
 const formatMaxDurationInHours = (seconds: number) => {
   if (isNaN(seconds) || seconds < 0) return "Invalid duration";
@@ -693,7 +714,7 @@ watch(
   [() => props.job, currentTime],
   ([newJob, newCurrentTimeVal]) => {
     if (newJob.timeStart === undefined || newJob.timeout === undefined) {
-      jobDurationDisplayValue.value = null;
+      jobDurationData.value = null;
       return;
     }
 
@@ -703,16 +724,28 @@ watch(
 
     if (newJob.isCompleted && newJob.timeEnd !== undefined) {
       const actualDuration = newJob.timeEnd - newJob.timeStart;
-      jobDurationDisplayValue.value = `${formatDuration(actualDuration)} (max ${maxDurationInHoursFormatted})`;
+      jobDurationData.value = {
+        actualSeconds: actualDuration,
+        maxDurationHours: maxDurationInHoursFormatted
+      };
     } else if (newJob.isRunning && newJob.timeStart) {
       const currentDuration = newCurrentTimeVal - newJob.timeStart;
-      jobDurationDisplayValue.value = `${formatDuration(currentDuration)} (max ${maxDurationInHoursFormatted})`;
+      jobDurationData.value = {
+        actualSeconds: currentDuration,
+        maxDurationHours: maxDurationInHoursFormatted
+      };
     } else if (newJob.state === 0 && newJob.timeStart === 0) {
-      // Queued
-      jobDurationDisplayValue.value = `(max ${maxDurationInHoursFormatted})`;
+      // Queued - show only max duration
+      jobDurationData.value = {
+        actualSeconds: 0,
+        maxDurationHours: maxDurationInHoursFormatted
+      };
     } else {
       // Fallback or other states
-      jobDurationDisplayValue.value = `(max ${maxDurationInHoursFormatted})`;
+      jobDurationData.value = {
+        actualSeconds: 0,
+        maxDurationHours: maxDurationInHoursFormatted
+      };
     }
   },
   { immediate: true, deep: true }
@@ -893,27 +926,27 @@ async function stopJob() {
 }
 
 function repostJob() {
-  // Generate a unique repost ID with timestamp
-  const repostId = `repost-${Date.now()}`;
+  // Find the matching market object
+  const selectedMarket = markets.value?.find(m => m.address.toString() === props.job.market.toString()) || null;
+  
+  // Find the matching template
+  const selectedTemplate = templates.value?.find(
+    (t) => JSON.stringify(t.jobDefinition) === JSON.stringify(props.job.jobDefinition)
+  ) || null;
 
-  // Store job information in localStorage
-  localStorage.setItem(
-    repostId,
-    JSON.stringify({
-      jobAddress: props.job.address,
-      jobTimeout: (props.job.timeout / 3600).toFixed(2),
-      marketAddress: props.job.market.toString(),
-      timestamp: Date.now(),
-    })
-  );
-
-  // Navigate with minimal URL parameters
-  router.push({
-    path: "/deploy",
-    query: {
-      repostId: repostId,
-    },
+  // Save job data using unified state persistence
+  saveState({
+    selectedMarket,
+    selectedTemplate,
+    jobDefinition: props.job.jobDefinition,
+    hours: props.job.timeout / 3600, // Convert from seconds to hours
+    gpuTab: 'simple',
+    gpuTypeCheckbox: ["PREMIUM"], // Default, will be updated by market type
+    activeFilter: "PREMIUM", // Default, will be updated by market type
   });
+
+  // Navigate to deploy page (no URL parameters needed)
+  router.push('/deploy');
 }
 
 function openExtendModal() {

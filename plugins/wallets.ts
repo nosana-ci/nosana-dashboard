@@ -16,6 +16,8 @@ const walletOptions = {
     new SolflareWalletAdapter({ network: WalletAdapterNetwork.Devnet }),
   ],
   autoConnect: true,
+  // Add local storage key to persist wallet selection
+  localStorageKey: 'walletName',
 };
 
 export default defineNuxtPlugin((nuxtContext) => {
@@ -37,5 +39,19 @@ export default defineNuxtPlugin((nuxtContext) => {
     
     // Check periodically for newly available wallets
     setInterval(checkWalletAvailability, 3000);
+    
+    // Add global wallet connection event listeners for better state management
+    window.addEventListener('beforeunload', () => {
+      // Cleanup any pending wallet connections
+      walletOptions.wallets.forEach(wallet => {
+        try {
+          if (wallet.connected) {
+            wallet.disconnect();
+          }
+        } catch (error) {
+          // Silently handle wallet disconnection errors
+        }
+      });
+    });
   }
 });

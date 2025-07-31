@@ -60,6 +60,7 @@
         :key="`deployment-price-${props.job.isCompleted}-${props.job.timeEnd || 'running'}-${props.job.state}`"
         :job="jobDataForPrice"
         :options="priceOptions"
+        :marketsData="apiMarkets"
       />
     </td>
   </tr>
@@ -77,11 +78,11 @@
     <td>Duration</td>
     <td>
       <span v-if="props.job.timeEnd && props.job.timeStart">
-        {{ formatDuration(props.job.timeEnd - props.job.timeStart) }}
+        <SecondsFormatter :seconds="props.job.timeEnd - props.job.timeStart" :showSeconds="true" />
       </span>
       <span v-else-if="props.job.timeStart">
-        {{ formatDuration(Math.floor(Date.now() / 1000) - props.job.timeStart) }}
-        <span class="has-text-grey">(max {{ formatDuration(props.job.timeout || 7200) }})</span>
+        <SecondsFormatter :seconds="Math.floor(Date.now() / 1000) - props.job.timeStart" :showSeconds="true" />
+        <span class="has-text-grey">(max <SecondsFormatter :seconds="props.job.timeout || 7200" />)</span>
       </span>
       <span v-else>-</span>
     </td>
@@ -91,8 +92,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { PublicKey } from "@solana/web3.js";
-import useJobPrice from "~/composables/jobs/useJobPrice";
 import JobPrice from "~/components/Job/Price.vue";
+import SecondsFormatter from "~/components/SecondsFormatter.vue";
 import type { UseJob } from "~/composables/jobs/useJob";
 
 const props = defineProps<{
@@ -100,14 +101,6 @@ const props = defineProps<{
   jobDefinition: any;
 }>();
 
-// Format duration (seconds) to readable format
-const formatDuration = (seconds: number) => {
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const remainingSeconds = seconds % 60;
-
-  return `${hours}h ${minutes}m ${remainingSeconds}s`;
-};
 
 // Get NOS price from API
 const { data: stats } = useAPI("/api/stats");
@@ -184,7 +177,8 @@ const jobDataForPrice = computed(() => {
     timeStart: props.job.timeStart,
     timeEnd: props.job.timeEnd,
     timeout: props.job.timeout,
-    state: props.job.state ?? (props.job.isCompleted ? 2 : props.job.timeStart ? 1 : 0)
+    state: props.job.state ?? (props.job.isCompleted ? 2 : props.job.timeStart ? 1 : 0),
+    market: props.job.market?.toString()
   };
 });
 

@@ -41,19 +41,18 @@
                   <td>
                     <CurrentMarketPrice 
                       :marketAddressOrData="market" 
-                      :statsData="stats"
+                      :marketsData="testgridMarkets"
                       :decimalPlaces="3" />
                   </td>
                 </tr>
                 <tr>
                   <td>Host payment</td>
                   <td>
-                    <span v-if="market">
-                      {{ ((market.jobPrice / 1e6) * 3600).toFixed(3) }} NOS/h
-                      <span v-if="stats?.price">
-                        (${{ ((stats.price * (market.jobPrice / 1e6)) * 3600).toFixed(3) }}/h)
+                    <span v-if="nosRatePerHour !== null">
+                      {{ nosRatePerHour.toFixed(3) }} NOS/h
+                      <span v-if="hostPaymentUsd">
+                        (${{ hostPaymentUsd.toFixed(3) }}/h)
                       </span>
-                      <span v-else-if="loadingStats">...</span>
                     </span>
                     <span v-else-if="loading">...</span>
                     <span v-else>N/A</span>
@@ -273,6 +272,16 @@ const marketId = ref<string>(String(params.id))
 const loading = ref<boolean>(false)
 
 const { data: stats, pending: loadingStats } = useAPI('/api/stats')
+
+// Calculate host payment using centralized pricing system
+const marketAddress = computed(() => market.value?.address.toString() || null);
+const { usdPricePerHour } = useMarketUsdPrice(marketAddress, computed(() => testgridMarkets.value));
+const { nosRatePerHour } = useHostNosRate(computed(() => market.value));
+
+// Host payment in USD (base rate without network fee since this is what hosts receive)
+const hostPaymentUsd = computed(() => {
+  return usdPricePerHour.value ? usdPricePerHour.value / 1.1 : null;
+});
 
 const page = ref<number>(1)
 const state = ref<number | null>(null)

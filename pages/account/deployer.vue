@@ -1,18 +1,143 @@
 <template>
   <div>
     <TopBar 
-      :title="'My Account'"
+      :title="status === 'authenticated' ? 'Hi ' + userData?.name : 'My Account'"
       :subtitle="'Your personal overview'" 
       ref="topBar"
       v-model="showSettingsModal"
     >
+      <template v-if="activeAddress" #extra>
+        <div class="is-flex is-align-items-center">
+          <span class="tag is-light mr-2">
+            {{ addressSource === 'wallet' ? 'Wallet Connected' : 'Generated Address' }}
+          </span>
+          <span class="is-family-monospace is-size-7">
+            {{ activeAddress.slice(0, 4) }}...{{ activeAddress.slice(-4) }}
+          </span>
+        </div>
+      </template>
     </TopBar>
     <div class="container">
-      <div v-if="connected">
+      <!-- Credit Invitation Section (shown when unauthenticated with invitation token) -->
+      <div v-if="invitationToken && !canShowAccountData" class="section">
+        <div class="columns is-centered">
+          <div class="column is-half">
+            <div class="box has-text-centered">
+              <div v-if="loadingInvitation">
+                <div class="loader is-loading"></div>
+                <p class="mt-2">Loading invitation details...</p>
+              </div>
+              
+              <div v-else-if="invitationError" class="has-text-danger">
+                <span class="icon is-large">
+                  <i class="fas fa-exclamation-triangle fa-2x"></i>
+                </span>
+                <h1 class="title is-4 mt-2">Invalid Invitation</h1>
+                <p>{{ invitationError }}</p>
+                <button @click="openBothModal($route.fullPath)" class="button is-primary mt-3">
+                  Go to Login
+                </button>
+              </div>
+              
+              <div v-else-if="invitation">
+                <span class="icon is-large has-text-success">
+                  <i class="fas fa-gift fa-2x"></i>
+                </span>
+                <h1 class="title is-3 mt-2">Credit Invitation</h1>
+                <p class="subtitle">
+                  You've been invited to claim credits
+                </p>
+                
+                <div class="credit-amount-display">
+                  {{ formatCredits(invitation.creditsAmount) }}
+                </div>
+                
+                <div v-if="invitation.expirationDate || invitation.restrictedEmail" class="invitation-meta">
+                  <div v-if="invitation.expirationDate" class="meta-item">
+                    <i class="fas fa-clock"></i>
+                    <span :class="{ 'expired': invitation.isExpired }">
+                      Expires {{ formatDate(invitation.expirationDate) }}
+                    </span>
+                  </div>
+                  
+                  <div v-if="invitation.restrictedEmail" class="meta-item">
+                    <i class="fas fa-envelope"></i>
+                    <span>For {{ invitation.restrictedEmail }}</span>
+                  </div>
+                </div>
+                
+                <div v-if="invitation.isClaimed" class="notification is-warning">
+                  <span class="icon">
+                    <i class="fas fa-clock"></i>
+                  </span>
+                  <strong>Already Claimed</strong><br>
+                  This credit invitation has already been claimed.
+                </div>
+                
+                <div v-else-if="invitation.isExpired" class="notification is-danger">
+                  <span class="icon">
+                    <i class="fas fa-clock"></i>
+                  </span>
+                  <strong>Expired</strong><br>
+                  This credit invitation has expired.
+                </div>
+                
+                <div v-else>
+                  <button 
+                    @click="openGoogleModal($route.fullPath)"
+                    class="button is-primary is-large"
+                  >
+                    <span class="icon">
+                      <i class="fas fa-sign-in-alt"></i>
+                    </span>
+                    <span>Sign In to Claim Credits</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pending Invitation Claim (shown when authenticated with unclaimed invitation) -->
+      <div v-if="invitationToken && canShowAccountData && invitation && !invitation.isClaimed && !invitation.isExpired" class="section">
+        <div class="columns is-centered">
+          <div class="column is-half">
+            <div class="box has-text-centered has-background-success-light">
+              <div v-if="invitation.restrictedEmail && userData?.email !== invitation.restrictedEmail" class="notification is-warning">
+                <strong>Email Restriction</strong><br>
+                This invitation is restricted to another email address.
+              </div>
+              
+              <div v-else>
+                <span class="icon is-large has-text-success">
+                  <i class="fas fa-gift fa-2x"></i>
+                </span>
+                <h2 class="title is-4 mt-2">Ready to Claim!</h2>
+                
+                <button
+                  @click="claimInvitation"
+                  :disabled="claiming"
+                  :class="['button', 'is-success', 'is-large', { 'is-loading': claiming }]"
+                >
+                  <span v-if="!claiming" class="icon">
+                    <i class="fas fa-check"></i>
+                  </span>
+                  <span>
+                    {{ claiming ? 'Claiming...' : `Claim ${formatCredits(invitation.creditsAmount)} Credits` }}
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="canShowAccountData">
         <h3 class="title is-4 mb-4">Status</h3>
         <div class="columns is-multiline mb-4">
           <div class="column is-3">
-            <div class="box has-text-centered">
+            <div class="box has-text-centered equal-height-box">
               <p class="heading">Deployments</p>
               <p class="title is-flex is-align-items-center is-justify-content-center">
                 <RocketIcon style="width: 16px; height: 16px; fill: #10E80C; margin-right: 0.5rem;" />
@@ -20,7 +145,12 @@
               </p>
             </div>
           </div>
-          <div class="column is-3">
+          <!-- Credit Balance for Google Auth Users -->
+          <div class="column is-3" v-if="status === 'authenticated'">
+            <CreditBalance ref="creditBalanceRef" />
+          </div>
+          <!-- NOS Balance for Wallet Users -->
+          <div class="column is-3" v-if="connected">
             <div class="box has-text-centered">
               <p class="heading">NOS Balance</p>
               <p class="title" v-if="balance && nosPrice">
@@ -30,33 +160,35 @@
               <p class="title" v-else>-</p>
             </div>
           </div>
-          <div v-if="nosStaked && nosStaked.amount > 0" class="column is-3">
-            <div class="box has-text-centered">
-              <p class="heading">NOS Staked</p>
-              <p class="title is-flex is-align-items-center is-justify-content-center">
-                <span v-if="nosStaked && nosStaked.amount >= 0">
-                  {{ (nosStaked.amount / 1e6).toFixed(2) }} NOS
-                </span>
-                <span v-else>-</span>
-                <nuxt-link to="/stake" class="ml-2">
-                  <span class="container-icon" style="background-color: white; border: 1px solid #dbdbdb; width: 24px; height: 24px; border-radius: 4px; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease;">
-                    <PlusSymbolIcon style="width: 12px; height: 12px; transition: fill 0.2s ease;" />
+          <template v-if="showStakingData">
+            <div v-if="nosStaked && nosStaked.amount > 0" class="column is-3">
+              <div class="box has-text-centered">
+                <p class="heading">NOS Staked</p>
+                <p class="title is-flex is-align-items-center is-justify-content-center">
+                  <span v-if="nosStaked && nosStaked.amount >= 0">
+                    {{ (nosStaked.amount / 1e6).toFixed(2) }} NOS
                   </span>
-                </nuxt-link>
-              </p>
+                  <span v-else>-</span>
+                  <nuxt-link to="/stake" class="ml-2">
+                    <span class="container-icon">
+                      <PlusSymbolIcon style="width: 12px; height: 12px;" />
+                    </span>
+                  </nuxt-link>
+                </p>
+              </div>
             </div>
-          </div>
-          <div v-if="pendingRewards > 0" class="column is-3">
-            <div class="box has-text-centered">
-              <p class="heading">Pending Rewards</p>
-              <p class="title is-flex is-align-items-center is-justify-content-center">
-                {{ pendingRewards.toFixed(2) }} NOS
-                <button @click="claimRewards" class="ml-2 button is-small is-primary" :class="{ 'is-loading': claimingRewards }">
-                  Claim
-                </button>
-              </p>
+            <div v-if="pendingRewards > 0" class="column is-3">
+              <div class="box has-text-centered">
+                <p class="heading">Pending Rewards</p>
+                <p class="title is-flex is-align-items-center is-justify-content-center">
+                  {{ pendingRewards.toFixed(2) }} NOS
+                  <button @click="claimRewards" class="ml-2 button is-small is-primary" :class="{ 'is-loading': claimingRewards }">
+                    Claim
+                  </button>
+                </p>
+              </div>
             </div>
-          </div>
+          </template>
         </div>
         <h3 class="title is-4 mb-7">Deployments</h3>
         <ListDeploymentsList :items-per-page="10" class="mb-6 deployments-list" @update:total-deployments="totalDeployments = $event" />
@@ -194,10 +326,12 @@
           </div>
         </div>
       </div>
-      <div v-else class="notification is-warning">
-        Please connect your wallet to view your account
-      </div>
     </div>
+    <Loader v-if="loading" />
+    <OnboardModal 
+      v-model:show="showOnboardModal"
+      @onboarding-progress="onboardingInProgress = $event"
+    />
   </div>
 </template>
 
@@ -207,6 +341,7 @@ import { useWallet } from 'solana-wallets-vue';
 import { useStake } from '~/composables/useStake';
 import { useAPI } from '~/composables/useAPI';
 import { computed, ref, onMounted, watch } from 'vue';
+import CreditBalance from "~/components/Account/CreditBalance.vue";
 import RocketIcon from '@/assets/img/icons/rocket.svg?component';
 import ExplorerIcon from '@/assets/img/icons/sidebar/explorer.svg?component';
 import SupportIcon from '@/assets/img/icons/sidebar/support.svg?component';
@@ -224,14 +359,65 @@ import {
   CategoryScale,
   LinearScale
 } from 'chart.js';
+import { useRouter } from "vue-router";
+import OnboardModal from '~/components/Account/OnboardModal.vue';
 
+const config = useRuntimeConfig().public;
 ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale);
+const { status, data: userData, signOut, token } = useAuth();
+const route = useRoute();
 const showSettingsModal = ref(false);
 const toast = useToast();
-const { connected, publicKey } = useWallet();
+const { connected, publicKey, wallet } = useWallet();
 const { nosana } = useSDK();
 const claimingRewards = ref(false);
+const onboardingInProgress = ref(false);
+const creditBalanceRef = ref();
+const { triggerCreditRefresh } = useCreditRefresh();
+const { openGoogleModal } = useLoginModal();
+
+// Credit invitation variables
+const invitationToken = computed(() => route.query.token as string);
+const invitation = ref(null);
+const loadingInvitation = ref(false);
+const invitationError = ref('');
+const claiming = ref(false);
+
+const showOnboardModal = computed(() => 
+  status.value === 'authenticated' && 
+  userData.value && 
+  onboardingInProgress.value
+);
 const totalDeployments = ref(0);
+
+const activeAddress = computed(() => {
+  if (status.value === 'authenticated' && userData.value?.generatedAddress) {
+    return userData.value.generatedAddress;
+  }
+  if (connected.value && publicKey.value) {
+    return publicKey.value.toString();
+  }
+  return null;
+});
+
+const addressSource = computed(() => {
+  if (status.value === 'authenticated' && userData.value?.generatedAddress) {
+    return 'generated';
+  }
+  if (connected.value && publicKey.value) {
+    return 'wallet';
+  }
+  return null;
+});
+
+const canShowAccountData = computed(() => {
+  // Don't hide account data during loading states - only hide if truly unauthenticated
+  if (status.value === 'loading') {
+    // During loading, check if we have any indication of authentication
+    return userData.value?.generatedAddress || connected.value;
+  }
+  return status.value === 'authenticated' || connected.value;
+});
 
 // Define type for spending history results item
 interface MonthlyResult {
@@ -254,8 +440,12 @@ const nosPrice = computed(() => stats.value?.price || null);
 const { activeStake, rewardsInfo, poolInfo, refreshStake, refreshBalance } = useStake(publicKey);
 const timestamp = useTimestamp({ interval: 1000 });
 
-// Calculate pending rewards
+const showStakingData = computed(() => {
+  return addressSource.value === 'wallet';
+});
+
 const pendingRewards = computed(() => {
+  if (!showStakingData.value) return 0;
   if (rewardsInfo.value?.account && poolInfo.value) {
     const currentReflection = rewardsInfo.value.account.reflection;
     const currentXnos = rewardsInfo.value.account.xnos;
@@ -279,33 +469,101 @@ const pendingRewards = computed(() => {
 const checkBalances = async () => {
   loading.value = true;
   try {
-    if (publicKey.value) {
-      balance.value = await nosana.value.solana.getNosBalance(publicKey.value.toString());
-      try {
-        nosStaked.value = await nosana.value.stake.get(publicKey.value.toString());
-      } catch (error) {
+    if (activeAddress.value) {
+      balance.value = await nosana.value.solana.getNosBalance(activeAddress.value);
+      console.log('balance', balance.value);
+      // Only fetch staking data for wallet connections
+      if (addressSource.value === 'wallet') {
+        try {
+          nosStaked.value = await nosana.value.stake.get(activeAddress.value);
+        } catch (error) {
+          nosStaked.value = null;
+        }
+      } else {
+        // Reset staking data for authenticated users
         nosStaked.value = null;
       }
     }
   } catch (error) {
     console.error("Error fetching balances:", error);
+    balance.value = null;
   }
   loading.value = false;
 };
 
-watch(() => publicKey.value, () => {
-  checkBalances();
-});
+// Add debouncing to prevent excessive API calls during tab switches
+let refreshTimeout: NodeJS.Timeout | null = null;
+let lastStableAddress: string | null = null;
+
+watch(
+  [
+    () => activeAddress.value,
+    () => status.value,
+    () => userData.value?.generatedAddress
+  ],
+  (newValues, oldValues) => {
+    const [newAddress, newStatus, newGenerated] = newValues;
+    const [oldAddress, oldStatus, oldGenerated] = oldValues || [null, null, null];
+    
+    // Clear any pending refresh
+    if (refreshTimeout) {
+      clearTimeout(refreshTimeout);
+      refreshTimeout = null;
+    }
+    
+    // Skip if authentication is loading (temporary state during tab switches)
+    if (newStatus === 'loading') {
+      return;
+    }
+    
+    // Skip if address is temporarily null during loading but we have a stable address
+    if (!newAddress && lastStableAddress && newStatus === 'loading') {
+      return;
+    }
+    
+    // Only refresh if we have a meaningful address change (not just loading states)
+    const addressReallyChanged = newAddress && newAddress !== lastStableAddress;
+    
+    if (addressReallyChanged) {
+      lastStableAddress = newAddress;
+      
+      refreshTimeout = setTimeout(() => {
+        checkBalances();
+        refreshSpendingHistory();
+      }, 500);
+    } else {
+      // Update stable address if we have a valid one
+      if (newAddress) {
+        lastStableAddress = newAddress;
+      }
+    }
+  }
+);
 
 onMounted(() => {
-  checkBalances();
+  if (canShowAccountData.value && activeAddress.value) {
+    lastStableAddress = activeAddress.value; // Initialize stable address
+    checkBalances();
+    refreshSpendingHistory();
+  }
+  
+  // Add CSS to improve text rendering
+  const style = document.createElement('style');
+  style.textContent = `
+    canvas {
+      text-rendering: optimizeLegibility;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+  `;
+  document.head.appendChild(style);
 });
 
 // Modify API calls to use a single endpoint
 const selectedMonths = ref<'3' | '6' | '12'>('3');
 
 const spendingHistoryEndpoint = computed(() => {
-  if (!publicKey.value) return null;
+  if (!activeAddress.value) return null;
   
   // Create date based on selected months
   const today = new Date();
@@ -320,13 +578,13 @@ const spendingHistoryEndpoint = computed(() => {
     return date.toISOString().split('T')[0];
   };
   
-  return `/api/stats/spending-history?address=${publicKey.value.toString()}&start_date=${formatDate(startDate)}&group_by=month`;
+  return `/api/stats/spending-history?address=${activeAddress.value}&start_date=${formatDate(startDate)}&group_by=month`;
 });
 
 const {
   data: spendingHistory,
   pending: loadingSpending,
-  refresh: refreshSpendingHistory
+  refresh: _refreshSpendingHistory
 } = useAPI(() => spendingHistoryEndpoint.value || '', {
   default: () => ({
     userAddress: '',
@@ -339,6 +597,11 @@ const {
     sameDayComparison: null
   })
 });
+
+// Wrapper function
+const refreshSpendingHistory = () => {
+  return _refreshSpendingHistory();
+};
 
 // Compute values for Cost and Usage section
 const spentThisMonth = computed(() => {
@@ -374,9 +637,9 @@ const pctChangeForecastFromLastMonth = computed(() => {
   return spendingHistory.value?.comparison?.pctChange ?? null;
 });
 
-// Watch changes to refresh data
+// Watch changes to refresh data - separate watcher for month selection only
 watch(
-  [() => publicKey.value, () => selectedMonths.value],
+  () => selectedMonths.value,
   () => {
     refreshSpendingHistory();
   }
@@ -429,13 +692,8 @@ const marketAddressToInfo = computed(() => {
   }, {});
 });
 
-// Optionally watch for changes in the wallet or months to auto-refresh
-watch(
-  () => publicKey.value,
-  () => {
-    refreshSpendingHistory();
-  }
-);
+// Remove duplicate watcher - already handled in main watcher above
+// This was causing duplicate API calls
 
 // ------------------------
 // 3) Transform monthly history for stacked bar chart
@@ -772,27 +1030,11 @@ const chartOptions = {
   }
 };
 
-onMounted(() => {
-  // If not automatically fetching, do so
-  if (publicKey.value) {
-    refreshSpendingHistory();
-  }
-  
-  // Add CSS to improve text rendering
-  const style = document.createElement('style');
-  style.textContent = `
-    canvas {
-      text-rendering: optimizeLegibility;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-    }
-  `;
-  document.head.appendChild(style);
-});
+// Removed duplicate onMounted - merged into the main one above
 
 // Claim rewards function
 const claimRewards = async () => {
-  if (!activeStake.value || !pendingRewards.value || pendingRewards.value <= 0) return;
+  if (!showStakingData.value || !activeStake.value || !pendingRewards.value || pendingRewards.value <= 0) return;
   
   claimingRewards.value = true;
   try {
@@ -800,7 +1042,7 @@ const claimRewards = async () => {
     await refreshStake();
     await refreshBalance();
     console.log('claim', claim);
-    toast.success('Succesfully claimed rewards');
+    toast.success('Successfully claimed rewards');
   } catch (error: any) {
     console.error('Cannot claim rewards', error);
     toast.error(error.toString());
@@ -808,6 +1050,94 @@ const claimRewards = async () => {
     claimingRewards.value = false;
   }
 };
+
+const logout = async () => {
+  loading.value = true;
+  await signOut({
+    callbackUrl: '/',
+  });
+  loading.value = false;
+};
+
+// Credit invitation functions
+const formatCredits = (cents) => {
+  const amount = typeof cents === 'number' ? cents : 0;
+  return `$${(amount / 1000).toFixed(2)}`;
+};
+
+const formatDate = (dateString) => {
+  return new Date(dateString).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
+
+const loadInvitation = async () => {
+  if (!invitationToken.value) return;
+  
+  try {
+    loadingInvitation.value = true;
+    invitationError.value = '';
+    
+    const response = await $fetch(`${config.apiBase}/api/credits/invitations/${invitationToken.value}`);
+    invitation.value = response;
+    
+    if (response.isClaimed) {
+      invitationError.value = 'This credit invitation has already been claimed.';
+    } else if (response.isExpired) {
+      invitationError.value = 'This credit invitation has expired.';
+    }
+  } catch (err) {
+    console.error('Error loading invitation:', err);
+    invitationError.value = err.data?.message || 'Failed to load invitation details';
+  } finally {
+    loadingInvitation.value = false;
+  }
+};
+
+const claimInvitation = async () => {
+  if (!invitationToken.value || !token.value) return;
+  
+  try {
+    claiming.value = true;
+    
+    const response = await $fetch(`${config.apiBase}/api/credits/invitations/${invitationToken.value}/claim`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token.value}`
+      }
+    });
+    
+    toast.success(`Successfully claimed ${formatCredits(response.amount * 100)} credits!`);
+    
+    // Refresh credit balance locally and globally
+    if (creditBalanceRef.value?.fetchBalance) {
+      await creditBalanceRef.value.fetchBalance();
+    }
+    
+    // Trigger global credit refresh to update all credit displays
+    triggerCreditRefresh();
+    
+    // Reload invitation to show it's claimed
+    await loadInvitation();
+    
+  } catch (err) {
+    console.error('Error claiming invitation:', err);
+    toast.error(err.data?.message || 'Failed to claim invitation');
+  } finally {
+    claiming.value = false;
+  }
+};
+
+// Watch for invitation token changes and authentication status
+watch([invitationToken, status], ([token, authStatus]) => {
+  if (token) {
+    loadInvitation();
+  }
+}, { immediate: true });
 </script>
 
 <style scoped>
@@ -840,7 +1170,13 @@ const claimRewards = async () => {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  max-height: 280px;
+}
+
+.equal-height-box {
+  height: 150px !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 /* Exclude ListDeploymentsList from the height restriction */
@@ -963,6 +1299,55 @@ const claimRewards = async () => {
     overflow-x: auto;
     /* Optional: Add padding if needed */
     /* padding-bottom: 1rem; */
+  }
+}
+
+/* Credit Invitation Styles */
+.credit-amount-display {
+  font-size: 3rem;
+  font-weight: 800;
+  color: #10E80C;
+  text-align: center;
+  margin: 2rem 0;
+  text-shadow: 0 2px 4px rgba(16, 232, 12, 0.2);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  letter-spacing: -0.02em;
+}
+
+.invitation-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 1.5rem 0;
+  padding: 1rem;
+  background: rgba(16, 232, 12, 0.05);
+  border-radius: 12px;
+  border: 1px solid rgba(16, 232, 12, 0.2);
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.meta-item i {
+  color: #10E80C;
+  width: 16px;
+}
+
+.meta-item .expired {
+  color: #f14668;
+}
+
+@media (max-width: 768px) {
+  .credit-amount-display {
+    font-size: 2.5rem;
   }
 }
 </style> 

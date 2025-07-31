@@ -11,82 +11,29 @@
     </div>
     <div class="menu">
       <ul class="menu-list is-size-5">
-        <li class="has-dropdown">
-          <a class="menu-list-link sidebar-link" @click="toggleProfile"
-            :class="{ 'is-active': isProfilePage }"
+        <li v-if="connected || status === 'authenticated'">
+          <nuxt-link
+            to="/account/deployer"
+            active-class="is-active"
+            @click="showMenu = false"
+            style="padding-left: 1.1rem"
           >
-            <div
-              class="is-flex is-align-items-center"
-              style="width: 100%; padding-left: 0.6rem;"
-            >
-              <span class="icon is-small mr-4">
-                <UserIcon />
-              </span>
-              <span style="opacity: 1">Profile</span>
-              <span class="icon is-small ml-auto">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  class="chevron"
-                  :class="{ 'is-active': showProfileDropdown }"
-                >
-                  <path
-                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                  />
-                </svg>
-              </span>
-            </div>
+            <span class="icon is-small mr-4">
+              <UserIcon />
+            </span>
+            <span>Account</span>
+          </nuxt-link>
+        </li>
+        <li v-if="!connected && status === 'unauthenticated'">
+          <a
+            @click="openBothModal($route.fullPath); showMenu = false"
+            style="padding-left: 1.1rem; cursor: pointer"
+          >
+            <span class="icon is-small mr-4">
+              <UserIcon />
+            </span>
+            <span>Login</span>
           </a>
-          <ul class="submenu" :class="{ 'is-active': showProfileDropdown }">
-            <li v-if="connected">
-              <nuxt-link
-                to="/account/deployer"
-                active-class="is-active"
-                class="submenu-link"
-                @click="showMenu = false"
-              >
-                My Account
-              </nuxt-link>
-            </li>
-            <li v-if="connected && isHost">
-              <nuxt-link
-                to="/account/host"
-                active-class="is-active"
-                class="submenu-link"
-                @click="showMenu = false"
-              >
-                Host Earnings
-              </nuxt-link>
-            </li>
-            <li v-if="!connected">
-              <ClientOnly>
-                <wallet-modal-provider :dark="$colorMode.value === 'dark'">
-                  <template #default="modalScope">
-                    <a
-                      class="submenu-link"
-                      @click="() => {
-                        connectingFromSidebar = true;
-                        modalScope.openModal();
-                      }"
-                    >
-                      Connect Wallet
-                    </a>
-                  </template>
-                </wallet-modal-provider>
-              </ClientOnly>
-            </li>
-            <li>
-              <nuxt-link
-                to="/stake"
-                active-class="is-active"
-                class="submenu-link"
-                @click="showMenu = false"
-              >
-                Staking
-              </nuxt-link>
-            </li>
-          </ul>
         </li>
         <li>
           <nuxt-link
@@ -102,7 +49,7 @@
         </li>
         <li class="has-dropdown">
           <a class="menu-list-link sidebar-link" @click="toggleExplorer"
-            :class="{ 'is-active': $route.path === '/explorer' || $route.path.includes('/markets') || $route.path === '/leaderboards'}"
+            :class="{ 'is-active': $route.path === '/explorer' || $route.path.includes('/markets') || $route.path === '/leaderboards' || ($route.path === '/account/host' && status !== 'authenticated') || $route.path === '/stake'}"
           >
             <div
               class="is-flex is-align-items-center"
@@ -158,6 +105,35 @@
                 Host Leaderboard
               </nuxt-link>
             </li>
+            <li v-if="status !== 'authenticated'">
+              <a
+                v-if="!connected"
+                @click="openWalletModal($route.fullPath); showMenu = false"
+                class="submenu-link"
+                style="cursor: pointer"
+              >
+                Host Earnings
+              </a>
+              <nuxt-link
+                v-else
+                to="/account/host"
+                active-class="is-active"
+                class="submenu-link"
+                @click="showMenu = false"
+              >
+                Host Earnings
+              </nuxt-link>
+            </li>
+            <li>
+              <nuxt-link
+                to="/stake"
+                active-class="is-active"
+                class="submenu-link"
+                @click="showMenu = false"
+              >
+                Staking
+              </nuxt-link>
+            </li>
           </ul>
         </li>
         <li>
@@ -176,14 +152,12 @@
       </ul>
     </div>
     <div
-      class="is-flex is-justify-content-space-between is-align-items-center mt-auto has-text-right"
+      class="is-flex is-justify-content-flex-start is-align-items-center mt-auto"
     >
       <nuxt-link to="/status" @click="showMenu = false">
         <div class="status-dot dot-online"></div>
         Healthy
       </nuxt-link>
-
-      <ColorModeSwitcher />
     </div>
   </aside>
   <nav class="navbar is-hidden-desktop is-fixed-top has-shadow">
@@ -210,39 +184,29 @@
 <script lang="ts" setup>
 const showMenu = ref(false);
 const showExplorerDropdown = ref(false);
-const showProfileDropdown = ref(false);
 const connectingFromSidebar = ref(false);
-const isHost = ref(false);
 import JobBuilderIcon from "@/assets/img/icons/sidebar/job-builder.svg?component";
-import TemplateIcon from "@/assets/img/icons/sidebar/template.svg?component";
 import ExplorerIcon from "@/assets/img/icons/sidebar/explorer.svg?component";
 import UserIcon from "@/assets/img/icons/sidebar/user.svg?component";
-import BrowserIcon from "@/assets/img/icons/sidebar/browser.svg?component";
-import CoinsIcon from "@/assets/img/icons/sidebar/coins.svg?component";
 import SupportIcon from "@/assets/img/icons/sidebar/support.svg?component";
-import LeaderboardIcon from "@/assets/img/icons/sidebar/leaderboard.svg?component";
-import { useWallet, WalletModalProvider } from "solana-wallets-vue";
-import { computed, onMounted, watch } from "vue";
+import { useWallet } from "solana-wallets-vue";
+import { computed, onMounted, watch, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { useAPI } from '@/composables/useAPI';
 
-const { connected, publicKey } = useWallet();
+const { connected } = useWallet();
+const { status } = useAuth();
 const route = useRoute();
 const router = useRouter();
+const { openBothModal, openWalletModal } = useLoginModal();
 
-// Check if the current route is a profile page
-const isProfilePage = computed(() => {
-  return ['/account', '/stake', '/account/deployer', '/account/host'].includes(route.path);
-});
 
 // Check if the current route is an explorer page
 const isExplorerPage = computed(() => {
-  return route.path === '/explorer' || route.path.includes('/markets') || route.path === '/leaderboards';
+  return route.path === '/explorer' || route.path.includes('/markets') || route.path === '/leaderboards' || (route.path === '/account/host' && status.value !== 'authenticated') || route.path === '/stake';
 });
 
 // Update dropdown states based on the current route
 const updateDropdownStates = () => {
-  showProfileDropdown.value = isProfilePage.value;
   showExplorerDropdown.value = isExplorerPage.value;
 };
 
@@ -265,35 +229,15 @@ watch(connected, (isConnected, prevConnected) => {
   }
 });
 
-// Check if the connected wallet is a host
-watch([connected, publicKey], async () => {
-  if (connected && publicKey) {
-    try {
-      const { data: node } = await useAPI(`/api/nodes/${publicKey.value.toString()}/specs`, {
-        disableToastOnError: true,
-      });
-      watchEffect(() => {
-        isHost.value = !!node.value;
-      });
-    } catch (error) {
-      isHost.value = false;
-    }
-  } else {
-    isHost.value = false;
-  }
-}, { immediate: true });
 
 const toggleExplorer = () => {
   showExplorerDropdown.value = !showExplorerDropdown.value;
 };
 
-const toggleProfile = () => {
-  showProfileDropdown.value = !showProfileDropdown.value;
-};
-
 const isActive = (paths: string[]) => {
   return paths.includes(route.path);
 };
+
 </script>
 
 <style lang="scss" scoped>
@@ -496,5 +440,193 @@ const isActive = (paths: string[]) => {
     top: $navbar-height;
     z-index: 5;
   }
+}
+
+// Profile dropdown styles
+.profile-dropdown {
+  position: relative;
+  cursor: pointer;
+  user-select: none;
+  z-index: 100;
+  flex-shrink: 0;
+}
+
+.profile-button {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+  background: white;
+}
+
+.profile-avatar {
+  width: 40px;
+  height: 32px;
+  border-radius: 8px;
+  background: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: white;
+}
+
+.wallet-avatar {
+  background: transparent !important;
+  padding: 0 !important;
+}
+
+.wallet-icon {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  border-radius: 6px;
+}
+
+.profile-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.125rem;
+  max-width: 120px;
+}
+
+.profile-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+}
+
+.profile-balance {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #374151;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+}
+
+.dropdown-arrow {
+  transition: transform 0.2s ease;
+  color: #6b7280;
+}
+
+.dropdown-arrow.is-flipped {
+  transform: rotate(90deg);
+}
+
+.dropdown-menu-simple {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 99999;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+  padding: 0.25rem 0;
+  width: 100%;
+}
+
+.dropdown-item-simple {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+  color: #374151;
+}
+
+.dropdown-item-simple:hover {
+  background-color: #f9fafb;
+}
+
+.dropdown-item-simple.logout-item {
+  color: #dc2626;
+}
+
+.dropdown-item-simple.logout-item:hover {
+  background-color: #fef2f2;
+}
+
+.dropdown-icon {
+  flex-shrink: 0;
+  color: #6b7280;
+}
+
+.logout-item .dropdown-icon {
+  color: #dc2626;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: #e5e7eb;
+  border: none;
+  margin: 0.5rem 0;
+}
+
+/* Dark mode styles */
+.dark-mode .profile-button {
+  background: #0A0A0A;
+}
+
+.dark-mode .profile-name {
+  color: #d1d5db;
+}
+
+.dark-mode .profile-balance {
+  color: #d1d5db;
+}
+
+.dark-mode .dropdown-menu-simple {
+  background: #1f2937;
+  border-color: #374151;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+}
+
+.dark-mode .dropdown-item-simple {
+  color: #d1d5db;
+}
+
+.dark-mode .dropdown-item-simple:hover {
+  background-color: #374151;
+}
+
+.dark-mode .dropdown-item-simple.logout-item {
+  color: #f87171;
+}
+
+.dark-mode .dropdown-item-simple.logout-item:hover {
+  background-color: #450a0a;
+}
+
+.dark-mode .dropdown-divider {
+  background: #374151;
+}
+
+.dark-mode .dropdown-icon {
+  color: #9ca3af;
+}
+
+.dark-mode .logout-item .dropdown-icon {
+  color: #f87171;
+}
+
+.dark-mode .profile-avatar {
+  background: #4b5563;
 }
 </style>
