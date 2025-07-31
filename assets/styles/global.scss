@@ -825,3 +825,8 @@ button[disabled][data-tooltip] {
     }
   }
 }
+
+// Ensure all modals appear above profile dropdowns and other UI elements
+.modal {
+  z-index: 1001 !important;
+}

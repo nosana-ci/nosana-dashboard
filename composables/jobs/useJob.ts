@@ -60,8 +60,14 @@ export function useJob(jobId: string) {
   const toast = useToast();
   const { nosana } = useSDK();
   const { getIpfs } = useIpfs();
+  const { status, data: userData, token } = useAuth();
   const { data, pending, refresh } = useAPI("/api/jobs/" + jobId, {
     watch: false,
+  });
+
+  // Helper to detect if current user is a credit user
+  const isCreditUser = computed(() => {
+    return status.value === 'authenticated' && userData.value?.generatedAddress;
   });
 
   const { pause: pauseJobPolling, resume: resumeJobPolling } = useIntervalFn(
@@ -102,23 +108,68 @@ export function useJob(jobId: string) {
           }
 
           try {
-            if (numericState === 0) {
-              await nosana.value.jobs.delist(jobId);
-              toast.success('Job successfully delisted (canceled) from queue!');
-              setTimeout(() => {
-                window.location.reload();
-              }, 3000);
-            } else if (numericState === 1) {
-              await nosana.value.jobs.end(jobId);
-              toast.success('Job successfully ended!');
-              setTimeout(() => refresh(), 1000);
+            // Use credit API for authenticated users with generated addresses
+            if (isCreditUser.value) {
+              const config = useRuntimeConfig();
+              const response = await $fetch<{ message: string; creditRefund?: number; delisted?: boolean }>(`${config.public.apiBase}/api/jobs/stop-with-credits`, {
+                method: 'POST',
+                body: { jobAddress: jobId },
+                headers: {
+                  Authorization: `Bearer ${token.value}`,
+                },
+              });
+              
+              if (response.creditRefund && response.creditRefund > 0) {
+                toast.success(`Job stopped successfully! ${response.creditRefund} credits refunded.`);
+              } else {
+                toast.success('Job stopped successfully!');
+              }
+
+              if (response.delisted) {
+                setTimeout(() => {
+                  navigateTo('/deploy');
+                }, 3000);
+              } else {
+                setTimeout(() => refresh(), 1000);
+              }
             } else {
-              toast.error(`Job is not in QUEUED or RUNNING state (currently: ${numericState})`);
-              return;
+              // Use SDK for wallet users
+              if (numericState === 0) {
+                await nosana.value.jobs.delist(jobId);
+                toast.success('Job successfully delisted (canceled) from queue!');
+                setTimeout(() => {
+                  navigateTo('/deploy');
+                }, 3000);
+              } else if (numericState === 1) {
+                await nosana.value.jobs.end(jobId);
+                toast.success('Job successfully ended!');
+                setTimeout(() => refresh(), 1000);
+              } else {
+                toast.error(`Job is not in QUEUED or RUNNING state (currently: ${numericState})`);
+                return;
+              }
             }
-          } catch (e) {
+          } catch (e: any) {
             const errorMessage = e instanceof Error ? e.message : String(e);
             const fullError = String(e);
+            
+            console.error('Stop/Delist job error:', e);
+            
+            // Handle API errors for credit users
+            if (isCreditUser.value) {
+              if (e.status === 404) {
+                toast.error('Job not found or you do not have permission to stop this job.');
+              } else if (e.status === 400) {
+                toast.error(e.data?.message || 'Invalid request. The job may not be stoppable.');
+              } else if (e.status === 401) {
+                toast.error('Authentication failed. Please log in again.');
+              } else {
+                toast.error(`Failed to stop job: ${e.data?.message || errorMessage}`);
+              }
+              return;
+            }
+            
+            // Handle SDK errors for wallet users
             if (errorMessage.includes('TransactionExpiredTimeoutError') || 
                 fullError.includes('Transaction was not confirmed in') ||
                 fullError.includes('TimeoutError')) {
@@ -131,7 +182,84 @@ export function useJob(jobId: string) {
             } else {
               toast.error(`Error stopping/delisting job: ${errorMessage}`);
             }
-            console.error('Stop/Delist job error:', e);
+          }
+        },
+        extendJob: async (extensionHours: number) => {
+          if (!job.value) {
+            toast.error('Job data not available yet.');
+            return;
+          }
+
+          if (job.value.state !== 1) {
+            toast.error('Job must be running to extend it.');
+            return;
+          }
+
+          if (extensionHours <= 0) {
+            toast.error('Extension must be greater than 0 hours.');
+            return;
+          }
+
+          try {
+            const extensionSeconds = extensionHours * 3600;
+
+            // Use credit API for authenticated users with generated addresses
+            if (isCreditUser.value) {
+              const config = useRuntimeConfig();
+              const response = await $fetch<{ message: string; newTimeout?: number; creditsUsed?: number }>(`${config.public.apiBase}/api/jobs/extend-with-credits`, {
+                method: 'POST',
+                body: { 
+                  jobAddress: jobId,
+                  extensionSeconds 
+                },
+                headers: {
+                  Authorization: `Bearer ${token.value}`,
+                },
+              });
+              
+              if (response.creditsUsed) {
+                const dollarAmount = (response.creditsUsed / 1000).toFixed(2);
+                toast.success(`Job extended by ${extensionHours} hour${extensionHours !== 1 ? 's' : ''}! $${dollarAmount} used.`);
+              } else {
+                toast.success(`Job extended by ${extensionHours} hour${extensionHours !== 1 ? 's' : ''}!`);
+              }
+              setTimeout(() => refresh(), 1000);
+            } else {
+              // Use SDK for wallet users
+              await nosana.value.jobs.extend(jobId, extensionSeconds);
+              toast.success(`Job extended by ${extensionHours} hour${extensionHours !== 1 ? 's' : ''}!`);
+              setTimeout(() => refresh(), 1000);
+            }
+          } catch (e: any) {
+            const errorMessage = e instanceof Error ? e.message : String(e);
+            
+            console.error('Extend job error:', e);
+            
+            // Handle API errors for credit users
+            if (isCreditUser.value) {
+              if (e.status === 404) {
+                toast.error('Job not found or you do not have permission to extend this job.');
+              } else if (e.status === 400) {
+                toast.error(e.data?.message || 'Invalid request. The job may not be extendable.');
+              } else if (e.status === 401) {
+                toast.error('Authentication failed. Please log in again.');
+              } else if (e.status === 402) {
+                toast.error('Insufficient credits to extend the job.');
+              } else {
+                toast.error(`Failed to extend job: ${e.data?.message || errorMessage}`);
+              }
+              return;
+            }
+            
+            // Handle SDK errors for wallet users
+            if (errorMessage.includes('TransactionExpiredTimeoutError') || 
+                errorMessage.includes('Transaction was not confirmed in')) {
+              toast.error('Solana is congested, try again or with a higher fee (Turbo/Ultra)');
+            } else if (errorMessage.includes('Unknown action')) {
+              toast.error('Not enough NOS balance for the transaction');
+            } else {
+              toast.error(`Error extending job: ${errorMessage}`);
+            }
           }
         },
       };

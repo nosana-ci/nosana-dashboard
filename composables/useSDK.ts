@@ -5,7 +5,6 @@ import {
   useWallet,
 } from "solana-wallets-vue";
 const config = useRuntimeConfig();
-let wallet: Ref<AnchorWallet | undefined>;
 
 const prioFee = useLocalStorage("prio-fee", {
   strategy: "medium",
@@ -15,11 +14,18 @@ const prioFee = useLocalStorage("prio-fee", {
 });
 
 const nosana = computed(() => {
-  // TODO: publicKey.value needed to trigger change in creating SDK on reconnect
-  // const { publicKey } = useWallet();
+  // Include wallet connection state to trigger reactivity when wallet connects/disconnects
+  const { connected, publicKey } = useWallet();
+  let wallet: Ref<AnchorWallet | undefined>;
+  
   try {
     wallet = useAnchorWallet();
-  } catch (error) {}
+  } catch (error) {
+    wallet = ref(undefined);
+  }
+
+  // Ensure we have both connection state and wallet before creating client
+  const walletValue = connected.value && publicKey.value && wallet?.value ? wallet.value : undefined;
 
   const clientConfig: Partial<ClientConfig> = {
     solana: {
@@ -37,7 +43,7 @@ const nosana = computed(() => {
   return new Client(
     // @ts-ignore - Todo: fix config typing
     config.public.network,
-    wallet ? wallet.value : undefined,
+    walletValue,
     clientConfig
   );
 });

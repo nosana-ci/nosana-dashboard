@@ -83,12 +83,12 @@
                   </td>
                   <td class="is-hidden-mobile">
                     <span v-if="job.timeStart && job.timeEnd">
-                      {{ formatDuration(job.timeEnd - job.timeStart) }}
+                      <SecondsFormatter :seconds="job.timeEnd - job.timeStart" :showSeconds="true" />
                     </span>
                     <span v-else>-</span>
                   </td>
                   <td class="is-hidden-touch">
-                    <JobPrice :job="job" :options="{ showPerHour: job.state === 1 || (!job.timeStart && !job.timeEnd) }" />
+                    <JobPrice :job="job" :options="{ showPerHour: job.state === 1 || (!job.timeStart && !job.timeEnd) }" :marketsData="testgridMarkets" />
                   </td>
                   <td>
                     <div class="tag is-outlined" :class="{
@@ -136,11 +136,23 @@ import PlusSymbolIcon from '@/assets/img/icons/plus_symbol.svg?component';
 import { useTemplates } from '~/composables/useTemplates';
 import { useMarkets } from '~/composables/useMarkets';
 import JobPrice from "~/components/Job/Price.vue";
+import SecondsFormatter from "~/components/SecondsFormatter.vue";
 import { computed } from 'vue';
 
 const router = useRouter();
 const { publicKey: walletPublicKey } = useWallet();
 const { templates } = useTemplates();
+const { status, data: userData } = useAuth();
+
+const activeAddress = computed(() => {
+  if (status.value === 'authenticated' && userData.value?.generatedAddress) {
+    return userData.value.generatedAddress;
+  }
+  if (walletPublicKey.value) {
+    return walletPublicKey.value.toString();
+  }
+  return null;
+});
 
 const props = defineProps({
   itemsPerPage: {
@@ -172,26 +184,27 @@ const jobStateMapping: Record<number, string> = {
 
 // URL for posted jobs
 const postedJobsUrl = computed(() => {
-  const address = walletPublicKey.value?.toString();
+  const address = activeAddress.value;
   if (!address) return '';
   return `/api/jobs?limit=${props.itemsPerPage}&offset=${(currentPage.value - 1) * props.itemsPerPage}${currentState.value !== null ? `&state=${jobStateMapping[currentState.value as keyof typeof jobStateMapping]}` : ''}&poster=${address}`;
 });
 
 // URL for node jobs
 const nodeJobsUrl = computed(() => {
-  const address = walletPublicKey.value?.toString();
+  const address = activeAddress.value;
   if (!address) return '';
   return `/api/jobs?limit=${props.itemsPerPage}&offset=${(currentPage.value - 1) * props.itemsPerPage}${currentState.value !== null ? `&state=${jobStateMapping[currentState.value as keyof typeof jobStateMapping]}` : ''}&node=${address}`;
 });
 
 // Fetch jobs API calls
-const { data: postedJobs, pending: loadingJobs, refresh: refreshPostedJobs } = useAPI(() => 
-  walletPublicKey.value ? postedJobsUrl.value : '', { 
+const { data: postedJobs, pending: loadingJobs, refresh: refreshPostedJobs } = useAPI(() => {
+  return activeAddress.value ? postedJobsUrl.value : '';
+}, { 
   default: () => ({ jobs: [], totalJobs: 0 })
 });
 
 const { data: nodeJobs, pending: loadingNodeJobs, refresh: refreshNodeJobs } = useAPI(() => 
-  walletPublicKey.value ? nodeJobsUrl.value : '', { 
+  activeAddress.value ? nodeJobsUrl.value : '', { 
   default: () => ({ jobs: [], totalJobs: 0 })
 });
 
@@ -277,12 +290,6 @@ const formatTimeAgo = (timestamp: number) => {
   return `${Math.floor(seconds / 86400)}d ago`;
 };
 
-const formatDuration = (seconds: number) => {
-  if (seconds < 60) return `${seconds}s`;
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = seconds % 60;
-  return `${minutes}m ${remainingSeconds}s`;
-};
 
 const { data: testgridMarkets, pending: loadingTestgridMarkets } = useAPI('/api/markets', { default: () => [] });
 

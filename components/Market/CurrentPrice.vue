@@ -1,21 +1,15 @@
 <template>
   <span class="current-market-price">
     <span v-if="isLoading">...</span>
-    <span v-else-if="error">Error</span>
-    <span v-else-if="formattedPrice !== null">{{ formattedPrice }}</span>
+    <span v-else-if="formattedPrice !== 'N/A'">{{ formattedPrice }}</span>
     <span v-else>N/A</span>
   </span>
 </template>
 
 <script setup lang="ts">
-import { computed, toRef, type Ref, type PropType } from 'vue';
-import { useCurrentMarketPrice } from '~/composables/market/useCurrentMarketPrice';
-import type { Market } from '@nosana/sdk'; // Import Market type
-
-// Define MarketStats interface consistent with the composable
-interface MarketStats {
-  price: number;
-}
+import { computed, toRef, type PropType } from 'vue';
+import { useMarketUsdPrice } from '~/composables/useMarketPricing';
+import type { Market } from '@nosana/sdk';
 
 const props = defineProps({
   // Can be market address (string) OR pre-fetched market data (Market object)
@@ -23,9 +17,14 @@ const props = defineProps({
     type: [String, Object] as PropType<string | Market | null>,
     required: true
   },
-  // Optional pre-fetched stats data
-  statsData: {
-    type: Object as PropType<MarketStats | null>,
+  // Optional pre-fetched markets data for performance
+  marketsData: {
+    type: Array,
+    default: null
+  },
+  // Optional USD price override (bypasses calculation)
+  usdPriceOverride: {
+    type: Number,
     default: null
   },
   decimalPlaces: {
@@ -38,22 +37,21 @@ const props = defineProps({
   }
 });
 
-// Use toRef for props passed to the composable
-const marketAddressOrDataRef = toRef(props, 'marketAddressOrData');
-const statsDataRef = toRef(props, 'statsData');
+// Use the new centralized pricing system
+const marketAddressRef = toRef(props, 'marketAddressOrData');
+const marketsDataRef = computed(() => props.marketsData);
 
-// Pass the optional stats data ref to the composable
-const { currentUsdPricePerHour, isLoading, error } = useCurrentMarketPrice(
-  marketAddressOrDataRef,
-  statsDataRef
-);
+const { usdPricePerHour, isLoading } = useMarketUsdPrice(marketAddressRef, marketsDataRef);
 
 const formattedPrice = computed(() => {
-  if (currentUsdPricePerHour.value === null) {
-    return null;
+  // Use USD override if provided
+  const price = props.usdPriceOverride !== null ? props.usdPriceOverride : usdPricePerHour.value;
+  
+  if (price === null) {
+    return 'N/A';
   }
   const prefix = props.showDollarSign ? '$' : '';
-  return `${prefix}${currentUsdPricePerHour.value.toFixed(props.decimalPlaces)}/h`;
+  return `${prefix}${price.toFixed(props.decimalPlaces)}/h`;
 });
 
 </script>

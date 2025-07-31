@@ -11,14 +11,40 @@
         <site-footer class="mt-auto" />
       </div>
     </section>
+
+    <!-- Login Modal -->
+    <LoginModal 
+      :isOpen="modalState.isOpen"
+      :mode="modalState.mode"
+      :redirectPath="modalState.redirectPath"
+      @close="closeModal"
+      @success="handleLoginSuccess"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { useWalletRedirect } from '~/composables/useWalletRedirect';
+import { useRedirect } from '~/composables/useRedirect';
+import { useLoginModal } from '~/composables/useLoginModal';
+import { useRouter, useRoute } from 'vue-router';
+import LoginModal from '~/components/LoginModal.vue';
 
-// Initialize wallet redirect to handle navigation on connect/disconnect
-useWalletRedirect();
+// Initialize redirect to handle navigation on connect/disconnect
+useRedirect();
+
+// Initialize login modal
+const { modalState, closeModal } = useLoginModal();
+const router = useRouter();
+const route = useRoute();
+
+// Handle successful login
+const handleLoginSuccess = () => {
+  // Always redirect to the specified path if provided, otherwise stay on current page
+  if (modalState.value.redirectPath) {
+    router.push(modalState.value.redirectPath);
+  }
+  // If no redirect path specified, stay on the current page (do nothing)
+};
 </script>
 
 <style lang="scss" scoped>

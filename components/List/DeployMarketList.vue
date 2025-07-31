@@ -35,7 +35,7 @@
                 <span v-else>
                   <CurrentMarketPrice
                     :marketAddressOrData="market"
-                    :statsData="stats"
+                    :marketsData="testgridMarkets"
                     :decimalPlaces="3" />
                 </span>
               </td>
@@ -77,11 +77,13 @@
 
 <script setup lang="ts">
 import { type Market } from '@nosana/sdk';
+import { useAPI } from "~/composables/useAPI";
 import CurrentMarketPrice from "~/components/Market/CurrentPrice.vue";
 
 const { data: runningJobs, pending: loadingRunningJobs } = await useAPI('/api/jobs/running');
 const { data: stats, pending: loadingStats } = await useAPI('/api/stats');
 const tab: Ref<string> = ref('premium');
+const config = useRuntimeConfig();
 
 // Define types for market info
 interface MarketInfo {
@@ -118,10 +120,6 @@ const props = defineProps({
     type: Object,
     default: null,
   },
-  isFromRepost: {
-    type: Boolean,
-    default: false,
-  },
   skipAutoSelection: {
     type: Boolean,
     default: false,
@@ -141,10 +139,20 @@ const selectedMarket = ref<Market | null>(props.initialMarket || null);
 const emit = defineEmits(['selectedMarket']);
 const didInitialSetup = ref(props.initialMarket !== null);
 
+
 // Watch for market selection changes and emit
-watch(() => selectedMarket.value, (newValue: Market | null) => {
+watch(() => selectedMarket.value, (newValue: Market | null, oldValue: Market | null) => {
   emit('selectedMarket', newValue);
 });
+
+// Watch for external market changes (from parent component)
+watch(() => props.initialMarket, (newInitialMarket, oldInitialMarket) => {
+  if (newInitialMarket && newInitialMarket !== selectedMarket.value) {
+    selectedMarket.value = newInitialMarket;
+  } else if (!newInitialMarket) {
+    selectedMarket.value = null;
+  }
+}, { immediate: true });
 
 // Compute how much VRAM is required for this job definition
 const requiredVRAM = computed(() => props.jobDefinition?.meta?.system_requirements?.required_vram ?? 0);
@@ -159,6 +167,7 @@ const getMarketName = (market: Market): string => {
   const marketInfo = findMarketInfo(market);
   return marketInfo?.name || market.address.toString();
 };
+
 
 // Helper to get running job count
 const getRunningJobCount = (market: Market): number => {
@@ -179,8 +188,13 @@ const filteredMarkets = computed(() => {
   return props.markets.filter((market) => {
     const marketInfo = findMarketInfo(market);
     
-    // If no market info exists, it goes to others
+    // If no market info exists, show on devnet but filter by others on mainnet
     if (!marketInfo) {
+      // On devnet, show all markets regardless of missing testgrid data
+      if (config.public.network === 'devnet') {
+        return true;
+      }
+      // On mainnet, use the original logic
       return tab.value === 'others';
     }
 
@@ -203,10 +217,17 @@ const filteredMarkets = computed(() => {
   });
 });
 
-// Helper to get hourly price for sorting (uses stats.price, doesn't need 10% fee for sorting)
+// Helper to get hourly price for sorting (uses base price without network fee for fair sorting)
 const getMarketHourlyPrice = (market: Market) => {
-  if (!stats.value?.price) return Number.MAX_VALUE;
-  return (stats.value.price * (parseInt(String(market.jobPrice)) / 1e6)) * 3600;
+  // Get base USD price from market data (before network fee)
+  const marketAddress = market.address.toString();
+  const marketInfo = props.testgridMarkets?.find(m => m.address === marketAddress);
+  
+  if (marketInfo?.usd_reward_per_hour) {
+    return marketInfo.usd_reward_per_hour; // Base price for fair sorting
+  }
+  
+  return Number.MAX_VALUE;  
 };
 
 // Helper to check if market has available GPUs
@@ -223,7 +244,8 @@ const hasAvailableGPUs = (market: Market) => {
 const isMarketCompatible = (market: Market) => {
   const marketInfo = findMarketInfo(market);
   
-  if (!marketInfo || !marketInfo.lowest_vram) return false;
+  // If we don't have market info, assume it's compatible (don't auto-mark as incompatible)
+  if (!marketInfo || !marketInfo.lowest_vram) return true;
   
   return marketInfo.lowest_vram >= (requiredVRAM.value ?? 0);
 };
@@ -292,28 +314,28 @@ const selectBestMarket = async () => {
   }
 };
 
-// Main watcher for auto-selection
-watch([
-  () => props.markets,
-  () => props.jobDefinition,
-  () => props.testgridMarkets,
-  () => loadingRunningJobs.value,
-  () => stats.value,
-  () => props.isFromRepost,
-  () => props.skipAutoSelection
-], async () => {
-  // Skip auto-selection if in repost mode or explicitly disabled
-  if (props.isFromRepost || 
-      props.skipAutoSelection || 
-      (props.initialMarket && !didInitialSetup.value)) {
-    
-    didInitialSetup.value = true;
-    return;
-  }
-  
-  // Auto-select market when appropriate
-  await selectBestMarket();
-}, { immediate: true });
+// Main watcher for auto-selection - DISABLED to preserve user selections
+// watch([
+//   () => props.markets,
+//   () => props.jobDefinition,
+//   () => props.testgridMarkets,
+//   () => loadingRunningJobs.value,
+//   () => stats.value,
+//   () => props.isFromRepost,
+//   () => props.skipAutoSelection
+// ], async () => {
+//   // Skip auto-selection if in repost mode or explicitly disabled
+//   if (props.isFromRepost || 
+//       props.skipAutoSelection || 
+//       (props.initialMarket && !didInitialSetup.value)) {
+//     
+//     didInitialSetup.value = true;
+//     return;
+//   }
+//   
+//   // Auto-select market when appropriate
+//   await selectBestMarket();
+// }, { immediate: true });
 </script>
 <style lang="scss" scoped>
 .columns {

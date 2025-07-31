@@ -63,6 +63,7 @@ import { useToast } from "vue-toastification";
 
 import JobStatus from "~/components/Job/Status.vue";
 import { useNosanaWallet } from "~/composables/useNosanaWallet";
+import { useDeployPageState } from "~/composables/useDeployPageState";
 
 import { type Endpoints, type UseJob } from "~/composables/jobs/useJob";
 
@@ -109,23 +110,24 @@ async function stopJob() {
 }
 
 function repostJob() {
-  // Generate a unique repost ID with timestamp
-  const repostId = `repost-${Date.now()}`;
+  // Use unified state persistence system
+  const { saveState } = useDeployPageState();
   
-  // Store job information in localStorage
-  localStorage.setItem(repostId, JSON.stringify({
-    jobAddress: job.address,
-    jobTimeout: (job.timeout / 3600).toFixed(2),
-    marketAddress: job.market.toString(),
-    timestamp: Date.now()
-  }));
+  // Convert seconds to hours (keep decimal precision)
+  const calculatedHours = job.timeout / 3600;
   
-  // Navigate with minimal URL parameters
-  router.push({
-    path: "/deploy",
-    query: {
-      repostId: repostId
-    },
-  });
+  // Save the current job configuration to deploy state
+  saveState({
+    selectedMarket: null, // Will be restored from market address
+    selectedTemplate: null, // Will be determined from job definition
+    jobDefinition: job.jobDefinition,
+    hours: calculatedHours,
+    gpuTab: 'simple',
+    gpuTypeCheckbox: ['PREMIUM'],
+    activeFilter: 'PREMIUM'
+  }, 'redeploy');
+  
+  // Navigate to deploy page - state will be automatically restored
+  router.push("/deploy");
 }
 </script>

@@ -6,16 +6,28 @@ import { useModal } from "./useModal";
 
 export function useJobPage(id: string) {
   const { connected, publicKey } = useWallet();
+  const { status, data: userData } = useAuth();
 
   const { job, endpoints, loading } = useJob(id);
   const modal = useModal();
   const nosPrice = useNosPrice();
 
+  // Get the active address - either generated address (for credit users) or wallet address
+  const activeAddress = computed(() => {
+    if (status.value === 'authenticated' && userData.value?.generatedAddress) {
+      return userData.value.generatedAddress;
+    }
+    if (connected.value && publicKey.value) {
+      return publicKey.value.toString();
+    }
+    return null;
+  });
+
   // Check if user is job poster
   const isJobPoster: ComputedRef<boolean> = computed(() => {
-    return connected.value &&
+    return activeAddress.value &&
       job.value &&
-      publicKey.value?.toString() === job.value.project.toString()
+      activeAddress.value === job.value.project.toString()
       ? true
       : false;
   });
