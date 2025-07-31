@@ -1111,7 +1111,7 @@ const claimInvitation = async () => {
       }
     });
     
-    toast.success(`Successfully claimed ${formatCredits(response.amount * 100)} credits!`);
+    toast.success(`Successfully claimed ${formatCredits(response.amount * 1000)} credits!`);
     
     // Refresh credit balance locally and globally
     if (creditBalanceRef.value?.fetchBalance) {
