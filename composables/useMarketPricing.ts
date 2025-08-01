@@ -34,13 +34,21 @@ export function useMarketUsdPrice(
   marketAddress: Ref<string | Market | null | undefined>,
   marketsData?: Ref<any[] | null | undefined>
 ) {
+  const shouldFetchInternally = !marketsData;
   const { data: internalMarketsData, pending: loadingMarkets } = useAPI('/api/markets', { 
     default: () => [], 
-    lazy: !marketsData,
-    immediate: !marketsData
+    lazy: !shouldFetchInternally,
+    immediate: shouldFetchInternally
   });
 
-  const markets = computed(() => marketsData?.value || internalMarketsData.value || []);
+  const markets = computed(() => {
+    // Prioritize external markets data if provided
+    if (marketsData && marketsData.value && marketsData.value.length > 0) {
+      return marketsData.value;
+    }
+    // Fallback to internal data
+    return internalMarketsData.value || [];
+  });
 
   const usdPricePerHour = computed(() => {
     if (!marketAddress.value) return null;
@@ -51,8 +59,13 @@ export function useMarketUsdPrice(
     
     if (!address) return null;
 
+    const availableMarkets = markets.value;
+    if (!availableMarkets || availableMarkets.length === 0) {
+      return null;
+    }
+
     // Only use USD pricing from markets API - no fallbacks to jobPrice
-    const marketInfo = markets.value?.find((m: any) => m.address === address);
+    const marketInfo = availableMarkets.find((m: any) => m.address === address);
     if (marketInfo?.usd_reward_per_hour) {
       return marketInfo.usd_reward_per_hour * NETWORK_FEE_MULTIPLIER;
     }

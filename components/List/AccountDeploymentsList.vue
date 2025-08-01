@@ -40,18 +40,20 @@
                 <td colspan="7" class="has-text-centered">No deployments found</td>
               </tr>
               <template v-else>
-                <tr v-for="job in displayedJobs" :key="job.address" class="is-clickable" @click="navigateToJob(job.address)">
+                <tr v-for="job in displayedJobs" :key="job.address" class="clickable-row">
                   <td>
-                    <div class="is-flex is-align-items-center">
-                      <img src="@/assets/img/icons/nvidia.svg" alt="Nvidia" class="mr-2" style="width: 20px; height: 20px;">
-                      <span v-if="testgridMarkets && testgridMarkets.find((tgm: any) => tgm.address === job.market.toString())">
-                        {{ testgridMarkets.find((tgm: any) => tgm.address === job.market.toString()).name }}
-                      </span>
-                      <span v-else class="is-family-monospace">{{ job.market.toString() }}</span>
-                    </div>
+                    <a :href="`/jobs/${job.address}`" class="clickable-row-link">
+                      <div class="clickable-row-cell-content is-flex is-align-items-center">
+                        <img src="@/assets/img/icons/nvidia.svg" alt="Nvidia" class="mr-2" style="width: 20px; height: 20px;">
+                        <span v-if="testgridMarkets && testgridMarkets.find((tgm: any) => tgm.address === job.market.toString())">
+                          {{ testgridMarkets.find((tgm: any) => tgm.address === job.market.toString()).name }}
+                        </span>
+                        <span v-else class="is-family-monospace">{{ job.market.toString() }}</span>
+                      </div>
+                    </a>
                   </td>
                   <td>
-                    <div class="is-flex is-align-items-center">
+                    <div class="clickable-row-cell-content is-flex is-align-items-center">
                       <template v-if="getTemplateForJob(job)">
                         <div class="template-icon mr-2">
                           <img :src="getTemplateForJob(job)?.icon" :alt="getTemplateForJob(job)?.name">
@@ -74,32 +76,42 @@
                     </div>
                   </td>
                   <td>
-                    <span v-if="nodeSpecs[job.node]">{{ formatCountry(nodeSpecs[job.node].country) }}</span>
-                    <span v-else>-</span>
+                    <span class="clickable-row-cell-content">
+                      <span v-if="nodeSpecs[job.node]">{{ formatCountry(nodeSpecs[job.node].country) }}</span>
+                      <span v-else>-</span>
+                    </span>
                   </td>
                   <td>
-                    <span v-if="job.timeStart">{{ formatTimeAgo(job.timeStart) }}</span>
-                    <span v-else>-</span>
+                    <span class="clickable-row-cell-content">
+                      <span v-if="job.timeStart">{{ formatTimeAgo(job.timeStart) }}</span>
+                      <span v-else>-</span>
+                    </span>
                   </td>
                   <td class="is-hidden-mobile">
-                    <span v-if="job.timeStart && job.timeEnd">
-                      <SecondsFormatter :seconds="job.timeEnd - job.timeStart" :showSeconds="true" />
+                    <span class="clickable-row-cell-content">
+                      <span v-if="job.timeStart && job.timeEnd">
+                        <SecondsFormatter :seconds="job.timeEnd - job.timeStart" :showSeconds="true" />
+                      </span>
+                      <span v-else>-</span>
                     </span>
-                    <span v-else>-</span>
                   </td>
                   <td class="is-hidden-touch">
-                    <JobPrice :job="job" :options="{ showPerHour: job.state === 1 || (!job.timeStart && !job.timeEnd) }" :marketsData="testgridMarkets" />
+                    <span class="clickable-row-cell-content">
+                      <JobPrice :job="job" :options="{ showPerHour: job.state === 1 || (!job.timeStart && !job.timeEnd) }" :marketsData="testgridMarkets" />
+                    </span>
                   </td>
                   <td>
-                    <div class="tag is-outlined" :class="{
-                      'is-success': job.state === 2,
-                      'is-info': job.state === 1,
-                      'is-warning': job.state === 0,
-                      'has-background-white has-text-black': job.state === 3,
-                      'is-light': job.state !== 3
-                    }" :style="job.state === 3 ? 'border: 1px solid black;' : ''">
-                      <img class="mr-2 status-icon" :src="`/img/icons/status/${getStatusIcon(job.state)}.svg`" :style="job.state === 3 ? 'filter: brightness(0);' : ''" />
-                      <span>{{ getStatusText(job.state) }}</span>
+                    <div class="clickable-row-cell-content">
+                      <div class="tag is-outlined" :class="{
+                        'is-success': job.state === 2,
+                        'is-info': job.state === 1,
+                        'is-warning': job.state === 0,
+                        'has-background-white has-text-black': job.state === 3,
+                        'is-light': job.state !== 3
+                      }" :style="job.state === 3 ? 'border: 1px solid black;' : ''">
+                        <img class="mr-2 status-icon" :src="`/img/icons/status/${getStatusIcon(job.state)}.svg`" :style="job.state === 3 ? 'filter: brightness(0);' : ''" />
+                        <span>{{ getStatusText(job.state) }}</span>
+                      </div>
                     </div>
                   </td>
                 </tr>
@@ -108,22 +120,13 @@
           </table>
         </div>
 
-        <nav v-if="totalPages > 1" class="pagination is-centered mt-4" role="navigation">
-          <a class="pagination-previous" :class="{ 'is-disabled': currentPage === 1 }" @click="currentPage > 1 && changePage(currentPage - 1)">Previous</a>
-          <a class="pagination-next" :class="{ 'is-disabled': currentPage === totalPages }" @click="currentPage < totalPages && changePage(currentPage + 1)">Next</a>
-          <ul class="pagination-list">
-            <li v-for="item in displayedPages" :key="item.page">
-              <span v-if="item.isEllipsis" class="pagination-ellipsis">&hellip;</span>
-              <a v-else
-                class="pagination-link"
-                :class="{ 'is-current': item.page === currentPage }"
-                @click="changePage(item.page)"
-              >
-                {{ item.page }}
-              </a>
-            </li>
-          </ul>
-        </nav>
+        <Pagination
+            v-if="totalPages > 1"
+            v-model="currentPage"
+            class="pagination is-centered mt-4"
+            :total-page="totalPages"
+            :max-page="6"
+        />
       </div>
     </div>
   </div>
@@ -240,45 +243,6 @@ watch(totalJobs, (newValue) => {
 
 const totalPages = computed(() => Math.ceil(totalJobs.value / props.itemsPerPage));
 
-const displayedPages = computed(() => {
-  const pages = [];
-  const maxVisiblePages = 5; // Number of pages to show on each side of current page
-  
-  if (totalPages.value <= maxVisiblePages * 2 + 1) {
-    // If total pages is small enough, show all pages
-    for (let i = 1; i <= totalPages.value; i++) {
-      pages.push({ page: i, isEllipsis: false });
-    }
-  } else {
-    // Always add first page
-    pages.push({ page: 1, isEllipsis: false });
-
-    // Calculate range around current page
-    let rangeStart = Math.max(2, currentPage.value - maxVisiblePages);
-    let rangeEnd = Math.min(totalPages.value - 1, currentPage.value + maxVisiblePages);
-
-    // Add ellipsis after first page if needed
-    if (rangeStart > 2) {
-      pages.push({ page: -1, isEllipsis: true });
-    }
-
-    // Add pages around current page
-    for (let i = rangeStart; i <= rangeEnd; i++) {
-      pages.push({ page: i, isEllipsis: false });
-    }
-
-    // Add ellipsis before last page if needed
-    if (rangeEnd < totalPages.value - 1) {
-      pages.push({ page: -1, isEllipsis: true });
-    }
-
-    // Always add last page
-    pages.push({ page: totalPages.value, isEllipsis: false });
-  }
-
-  return pages;
-});
-
 const formatTimeAgo = (timestamp: number) => {
   const date = new Date(timestamp * 1000);
   const now = new Date();
@@ -340,16 +304,6 @@ const getStatusIcon = (state: number) => {
     case 3: return 'stopped';
     default: return 'stopped';
   }
-};
-
-const changePage = (page: number) => {
-  if (page >= 1 && page <= totalPages.value) {
-    currentPage.value = page;
-  }
-};
-
-const navigateToJob = (address: string) => {
-  router.push(`/jobs/${address}`);
 };
 
 // Store node specifications

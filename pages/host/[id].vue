@@ -2,10 +2,15 @@
   <TopBar :title="'Host Page'" :subtitle="'Details about this Nosana Host'">
   </TopBar>
   <div class="box">
-    <!-- General Account Info -->
-    <GeneralInfo :address="address" />
-    <!-- Node Specifications (if node) -->
-    <HostInfo :address="address" />
+    <!-- Quick Details Compact Grid -->
+    <div class="content mb-5">
+      <div class="columns is-multiline is-variable is-0 no-padding is-justify-content-flex-start mb-0">
+        <!-- General Account Info -->
+        <GeneralInfo :address="address" />
+        <!-- Host Info -->
+        <HostInfo :address="address" />
+      </div>
+    </div>
   </div>
   
   <!-- Benchmark Histograms -->
@@ -143,7 +148,7 @@ interface JobsResponse {
   jobs: any[];
 }
 
-const { data: jobs, pending: loadingJobs } = useAPI<JobsResponse | null>(
+const { data: jobs, pending: loadingJobs } = useAPI(
   jobsUrl,
   { watch: [jobsUrl] }
 );
@@ -152,3 +157,50 @@ const totalJobs = computed(() => {
   return jobs.value?.totalJobs ?? undefined;
 });
 </script>
+
+<style lang="scss" scoped>
+// Quick Details specific styling
+.quick-detail-item {
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+
+  .quick-detail-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #7a7a7a;
+    text-transform: uppercase;
+    margin-bottom: 0.1rem;
+  }
+
+  .quick-detail-value {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #363636;
+    word-break: break-word;
+
+    .icon-text {
+      color: #363636;
+    }
+  }
+}
+
+.no-padding {
+  padding: 0 !important;
+}
+
+html.dark-mode {
+  .quick-detail-item {
+    .quick-detail-label {
+      color: #b0b0b0;
+    }
+
+    .quick-detail-value,
+    .quick-detail-value .icon-text {
+      color: #ffffff;
+    }
+  }
+}
+</style>

@@ -1,34 +1,37 @@
 <template>
-  <div>
-    <div v-if="!isNode">
-      <div v-if="loadingJobs || loadingSpecs || loadingMarkets || loadingRuns">
-        Checking if account is host..
-      </div>
-      <div v-else>
-        <!-- Not a node-->
+  <template v-if="!isNode">
+    <div class="column is-full" v-if="loadingJobs || loadingSpecs || loadingMarkets || loadingRuns">
+      <div class="quick-detail-item">
+        <span class="quick-detail-label">Status</span>
+        <span class="quick-detail-value">Checking if account is host..</span>
       </div>
     </div>
-    <div v-else>
-      <table class="table is-fullwidth two-column-labels">
-        <tbody>
-          <tr>
-            <td colspan="2" class="has-background-light">
-              <h4 class="title is-5">Host Info</h4>
-            </td>
-          </tr>
-          <tr>
-            <td>Deployments ran</td>
-            <td v-if="loadingJobs">...</td>
-            <td v-else-if="jobs">
-              <span>{{ jobs.totalJobs }}</span>
-            </td>
-            <td v-else class="has-text-danger">
-              Could not retrieve deployments
-            </td>
-          </tr>
-          <tr>
-            <td>Status</td>
-            <td v-if="!queueInfo">
+    <div class="column is-full" v-else>
+      <div class="quick-detail-item">
+        <span class="quick-detail-label">Host Status</span>
+        <span class="quick-detail-value">Not a node</span>
+      </div>
+    </div>
+  </template>
+  <template v-else>
+      <!-- Deployments ran -->
+      <div class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+        <div class="quick-detail-item">
+          <span class="quick-detail-label">Deployments ran</span>
+          <span class="quick-detail-value">
+            <span v-if="loadingJobs">...</span>
+            <span v-else-if="jobs">{{ jobs.totalJobs }}</span>
+            <span v-else class="has-text-danger">Could not retrieve deployments</span>
+          </span>
+        </div>
+      </div>
+
+      <!-- Status -->
+      <div class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+        <div class="quick-detail-item">
+          <span class="quick-detail-label">Status</span>
+          <span class="quick-detail-value">
+            <span v-if="!queueInfo">
               <span v-if="loadingMarkets || loadingRuns">...</span>
               <span v-else>
                 <div
@@ -45,8 +48,8 @@
                   <span v-else>Offline</span>
                 </div>
               </span>
-            </td>
-            <td v-else style="vertical-align: middle">
+            </span>
+            <div v-else style="width: fit-content" class="is-flex">
               <div
                 data-tooltip="Host is queued in market"
                 style="width: fit-content"
@@ -54,75 +57,83 @@
               >
                 <JobStatus :status="'QUEUED'"></JobStatus>
               </div>
-            </td>
-          </tr>
-          <tr>
-            <td>
-              <span class="is-flex-inline">
-                <span>Availability</span>
-                <span
-                  class="has-tooltip-arrow ml-1"
-                  style="vertical-align: middle"
-                  data-tooltip="The percentage of time this host has been available to process deployments while in queue"
-                >
-                  <img src="~/assets/img/icons/info.svg" />
-                </span>
+            </div>
+          </span>
+        </div>
+      </div>
+
+      <!-- Availability -->
+      <div class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+        <div class="quick-detail-item">
+          <span class="quick-detail-label">
+            <span class="is-flex-inline">
+              <span>Availability</span>
+              <span
+                class="has-tooltip-arrow ml-1"
+                style="vertical-align: middle"
+                data-tooltip="The percentage of time this host has been available to process deployments while in queue"
+              >
+                <img src="~/assets/img/icons/info.svg" />
               </span>
-            </td>
-            <td
-              v-if="
-                !nodeRanking ||
-                typeof nodeRanking.uptimePercentage === 'undefined'
-              "
-            >
+            </span>
+          </span>
+          <span class="quick-detail-value">
+            <span v-if="!nodeRanking || typeof nodeRanking.uptimePercentage === 'undefined'">
               <span
                 class="has-tooltip-arrow"
                 data-tooltip="This host hasn't been online long enough to calculate availibily"
               >
                 unknown
               </span>
-            </td>
-            <td v-else>{{ nodeRanking.uptimePercentage.toFixed(1) }}%</td>
-          </tr>
-          <tr v-if="nodeRuns && nodeRuns.length > 0">
-            <td>Running deployment</td>
-            <td>
+            </span>
+            <span v-else>{{ nodeRanking.uptimePercentage.toFixed(1) }}%</span>
+          </span>
+        </div>
+      </div>
+
+      <!-- Running deployment -->
+      <div v-if="nodeRuns && nodeRuns.length > 0" class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+        <div class="quick-detail-item">
+          <span class="quick-detail-label">Running deployment</span>
+          <span class="quick-detail-value">
+            <nuxt-link
+              :to="`/jobs/${nodeRuns[0].account.job}`"
+              class="address is-family-monospace"
+            >{{ nodeRuns[0].account.job }}</nuxt-link>
+          </span>
+        </div>
+      </div>
+
+      <!-- Host pool -->
+      <div class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+        <div class="quick-detail-item">
+          <span class="quick-detail-label">Host pool</span>
+          <span class="quick-detail-value">
+            <span v-if="queueInfo">
               <nuxt-link
-                :to="`/jobs/${nodeRuns[0].account.job}`"
+                :to="`/markets/${queueInfo.market.address.toString()}`"
                 class="address is-family-monospace"
-                >{{ nodeRuns[0].account.job }}</nuxt-link
               >
-            </td>
-          </tr>
-          <tr>
-            <td>Host pool</td>
-            <td v-if="queueInfo">
-              <span>
-                <nuxt-link
-                  :to="`/markets/${queueInfo.market.address.toString()}`"
-                  class="address is-family-monospace"
+                <span
+                  v-if="
+                    testgridMarkets &&
+                    testgridMarkets.find(
+                      (tgm: any) =>
+                        tgm.address === queueInfo!.market.address.toString()
+                    )
+                  "
                 >
-                  <span
-                    v-if="
-                      testgridMarkets &&
-                      testgridMarkets.find(
-                        (tgm: any) =>
-                          tgm.address === queueInfo!.market.address.toString()
-                      )
-                    "
-                  >
-                    {{
-                      testgridMarkets.find(
-                        (tgm: any) =>
-                          tgm.address === queueInfo!.market.address.toString()
-                      ).name
-                    }}
-                  </span>
-                  <span v-else>{{ queueInfo.market.address.toString() }}</span>
-                </nuxt-link>
-              </span>
-            </td>
-            <td v-else>
+                  {{
+                    testgridMarkets.find(
+                      (tgm: any) =>
+                        tgm.address === queueInfo!.market.address.toString()
+                    ).name
+                  }}
+                </span>
+                <span v-else>{{ queueInfo.market.address.toString() }}</span>
+              </nuxt-link>
+            </span>
+            <span v-else>
               <span v-if="nodeSpecs">
                 <template v-if="nodeSpecs.marketAddress">
                   <nuxt-link
@@ -152,34 +163,80 @@
               </span>
               <span v-else-if="loadingMarkets || loadingSpecs">...</span>
               <span v-else>-</span>
-            </td>
-          </tr>
-          <tr>
-            <td>CLI Version</td>
-            <td v-if="combinedSpecs && combinedSpecs.nodeVersion">
+            </span>
+          </span>
+        </div>
+      </div>
+
+      <!-- CLI Version -->
+      <div class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+        <div class="quick-detail-item">
+          <span class="quick-detail-label">CLI Version</span>
+          <span class="quick-detail-value">
+            <span v-if="combinedSpecs && combinedSpecs.nodeVersion">
               v{{ combinedSpecs.nodeVersion }}
-            </td>
-            <td v-else-if="loadingInfo || loadingSpecs">...</td>
-            <td v-else>Offline</td>
-          </tr>
-          <tr>
-            <td>Host API Status</td>
-            <td>
-              <span v-if="nodeInfo">Online</span>
-              <span v-else-if="loadingInfo">...</span>
-              <span v-else>Offline</span>
-            </td>
-          </tr>
-          <HostSpecifications
-            v-if="combinedSpecs"
-            :specs="combinedSpecs"
-            :node-ranking="nodeRanking"
-            :generic-benchmark-response="genericBenchmarkResponse"
-          />
-        </tbody>
-      </table>
-    </div>
-  </div>
+            </span>
+            <span v-else-if="loadingInfo || loadingSpecs">...</span>
+            <span v-else>Offline</span>
+          </span>
+        </div>
+      </div>
+
+      <!-- Host API Status -->
+      <div class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+        <div class="quick-detail-item">
+          <span class="quick-detail-label">Host API Status</span>
+          <span class="quick-detail-value">
+            <span v-if="nodeInfo">Online</span>
+            <span v-else-if="loadingInfo">...</span>
+            <span v-else>Offline</span>
+          </span>
+        </div>
+      </div>
+
+      <!-- Total Jobs -->
+      <div class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+        <div class="quick-detail-item">
+          <span class="quick-detail-label">Total Jobs</span>
+          <span class="quick-detail-value">
+            <span v-if="loadingJobs">...</span>
+            <span v-else-if="jobs">{{ jobs.totalJobs }}</span>
+            <span v-else>-</span>
+          </span>
+        </div>
+      </div>
+
+      <!-- Node Address -->
+      <div class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+        <div class="quick-detail-item">
+          <span class="quick-detail-label">Node Address</span>
+          <span class="quick-detail-value">
+            <span class="address is-family-monospace">{{ props.address }}</span>
+          </span>
+        </div>
+      </div>
+
+      <!-- Performance Score -->
+      <div class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+        <div class="quick-detail-item">
+          <span class="quick-detail-label">Performance Score</span>
+          <span class="quick-detail-value">
+            <span v-if="nodeRanking && nodeRanking.participationRate">{{ nodeRanking.participationRate.toFixed(1) }}%</span>
+            <span v-else>-</span>
+          </span>
+        </div>
+      </div>
+
+      <!-- Host Specifications -->
+      <HostSpecifications
+        v-if="combinedSpecs"
+        :specs="combinedSpecs"
+        :node-ranking="nodeRanking"
+        :generic-benchmark-response="genericBenchmarkResponse"
+        :aggregated-download-speed="aggregatedDownloadSpeed"
+        :aggregated-upload-speed="aggregatedUploadSpeed"
+      />
+    </template>
 </template>
 
 <script lang="ts" setup>
@@ -506,4 +563,126 @@ const benchmarkMarketId = computed(() => {
   }
   return nodeSpecs.value.marketAddress;
 });
+
+const cliVersion = computed(() => {
+  if (!combinedSpecs.value && !nodeInfo.value?.info) return null;
+  return nodeInfo.value?.info?.version ?? combinedSpecs.value?.nodeVersion;
+});
+
+const aggregatedDownloadSpeed = computed(() => {
+  if (
+    !genericBenchmarkResponse.value ||
+    !genericBenchmarkResponse.value.data ||
+    genericBenchmarkResponse.value.data.length === 0
+  ) {
+    return null;
+  }
+  const validEntries = genericBenchmarkResponse.value.data.filter(
+    (entry: any) =>
+      entry.metrics && typeof entry.metrics.internetSpeedDownload === "number"
+  );
+  if (validEntries.length === 0) return null;
+  const totalDownload = validEntries.reduce(
+    (sum: number, entry: any) => sum + entry.metrics.internetSpeedDownload,
+    0
+  );
+  return (totalDownload / validEntries.length).toFixed(2);
+});
+
+const aggregatedUploadSpeed = computed(() => {
+  if (
+    !genericBenchmarkResponse.value ||
+    !genericBenchmarkResponse.value.data ||
+    genericBenchmarkResponse.value.data.length === 0
+  ) {
+    return null;
+  }
+  const validEntries = genericBenchmarkResponse.value.data.filter(
+    (entry: any) =>
+      entry.metrics && typeof entry.metrics.internetSpeedUpload === "number"
+  );
+  if (validEntries.length === 0) return null;
+  const totalUpload = validEntries.reduce(
+    (sum: number, entry: any) => sum + entry.metrics.internetSpeedUpload,
+    0
+  );
+  return (totalUpload / validEntries.length).toFixed(2);
+});
 </script>
+
+<style lang="scss" scoped>
+.address {
+  word-break: break-all;
+  white-space: normal;
+  display: inline-block;
+  line-height: 1.3;
+}
+
+.quick-detail-item {
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+
+  .quick-detail-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #7a7a7a;
+    text-transform: uppercase;
+    margin-bottom: 0.1rem;
+    display: inline-flex; 
+    align-items: center;
+  }
+
+  .quick-detail-value {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #363636;
+    word-break: break-word;
+
+    .icon-text {
+      color: #363636;
+    }
+    .address {
+        font-size: 0.8rem; 
+    }
+    .tag {
+        font-size: 0.75rem; 
+        padding: 0.2em 0.5em;
+        height: auto;
+        line-height: 1.2;
+        vertical-align: middle;
+    }
+  }
+}
+
+.no-padding {
+  padding: 0 !important;
+}
+
+html.dark-mode {
+  .quick-detail-item {
+    .quick-detail-label {
+      color: #b0b0b0;
+    }
+
+    .quick-detail-value,
+    .quick-detail-value .icon-text,
+    .quick-detail-value .address {
+      color: #ffffff;
+    }
+    
+    .quick-detail-value a,
+    .quick-detail-value nuxt-link,
+    .quick-detail-value .address {
+      color: #10E80C !important; // Nosana green for links in dark mode
+    }
+    
+    .quick-detail-value a:hover,
+    .quick-detail-value nuxt-link:hover {
+      color: #33ff33 !important; // Lighter green on hover
+    }
+  }
+}
+</style>
