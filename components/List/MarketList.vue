@@ -573,6 +573,26 @@ td {
   }
 }
 
+.clickable-row {
+  position: relative;
+  z-index: 1;
+}
+
+.clickable-row-link {
+  position: relative;
+  z-index: 2;
+  display: block;
+  
+  &:hover {
+    text-decoration: none;
+  }
+}
+
+.clickable-row-cell-content {
+  position: relative;
+  z-index: 1;
+}
+
 /* Add styles to remove dotted line from all tooltips in the component */
 [data-tooltip] {
   text-decoration: none !important;
