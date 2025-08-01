@@ -57,90 +57,96 @@
         </tr>
         <nuxt-link v-for="market in paginatedMarkets" v-else :key="market.address.toString()"
           :to="`/markets/${market.address.toString()}`" custom>
-          <template #default="{ navigate }">
+          <template #default="{ navigate, href }">
             <tr
-              class="is-clickable"
+              class="clickable-row"
               :class="{
                 'is-selected': selectedMarket === market,
                 'is-incompatible': !isMarketCompatible(market)
               }"
-              @click="isMarketCompatible(market) && (select ? (selectedMarket = market) : navigate())">
+              @click="handleMarketClick($event, market, navigate)">
               <td class="py-2">
-                <div class="has-tooltip-arrow is-flex is-align-items-center" v-if="!isMarketCompatible(market)" data-tooltip="This GPU does not meet the required VRAM specifications for your job.">
-                  <img src="@/assets/img/icons/nvidia.svg" alt="Nvidia" class="mr-2" style="width: 20px; height: 20px;">
-                  <span v-if="testgridMarkets.find((tgm: any) => tgm.address === market.address.toString())">
-                    {{
-                      testgridMarkets.find(
-                        (tgm: any) => tgm.address === market.address.toString()
-                      ).name || market.address.toString()
-                    }}
-                  </span>
-                  <span v-else class="is-family-monospace address">
-                    {{ market.address.toString() }}
-                  </span>
-                </div>
-                <div v-else class="is-flex is-align-items-center">
-                  <img src="@/assets/img/icons/nvidia.svg" alt="Nvidia" class="mr-2" style="width: 20px; height: 20px;">
-                  <span v-if="testgridMarkets.find((tgm: any) => tgm.address === market.address.toString())">
-                    {{
-                      testgridMarkets.find(
-                        (tgm: any) => tgm.address === market.address.toString()
-                      ).name || market.address.toString()
-                    }}
-                  </span>
-                  <span v-else class="is-family-monospace address">
-                    {{ market.address.toString() }}
-                  </span>
-                </div>
+                <a :href="href" class="clickable-row-link" @click="handleLinkClick($event, navigate)">
+                  <div class="clickable-row-cell-content has-tooltip-arrow is-flex is-align-items-center" v-if="!isMarketCompatible(market)" data-tooltip="This GPU does not meet the required VRAM specifications for your job.">
+                    <img src="@/assets/img/icons/nvidia.svg" alt="Nvidia" class="mr-2" style="width: 20px; height: 20px;">
+                    <span v-if="testgridMarkets.find((tgm: any) => tgm.address === market.address.toString())">
+                      {{
+                        testgridMarkets.find(
+                          (tgm: any) => tgm.address === market.address.toString()
+                        ).name || market.address.toString()
+                      }}
+                    </span>
+                    <span v-else class="is-family-monospace address">
+                      {{ market.address.toString() }}
+                    </span>
+                  </div>
+                  <div v-else class="clickable-row-cell-content is-flex is-align-items-center">
+                    <img src="@/assets/img/icons/nvidia.svg" alt="Nvidia" class="mr-2" style="width: 20px; height: 20px;">
+                    <span v-if="testgridMarkets.find((tgm: any) => tgm.address === market.address.toString())">
+                      {{
+                        testgridMarkets.find(
+                          (tgm: any) => tgm.address === market.address.toString()
+                        ).name || market.address.toString()
+                      }}
+                    </span>
+                    <span v-else class="is-family-monospace address">
+                      {{ market.address.toString() }}
+                    </span>
+                  </div>
+                </a>
               </td>
               <td class="py-3">
-                <span v-if="loadingStats">...</span>
-                <span v-else>
-                  <CurrentMarketPrice 
-                    :marketAddressOrData="market" 
-                    :marketsData="testgridMarkets"
-                    :decimalPlaces="3" />
+                <span class="clickable-row-cell-content">
+                  <span v-if="loadingStats">...</span>
+                  <span v-else>
+                    <CurrentMarketPrice
+                      :marketAddressOrData="market"
+                      :marketsData="testgridMarkets"
+                      :decimalPlaces="3" />
+                  </span>
                 </span>
               </td>
               <td class="py-3">
-                <span v-if="market.queueType === 1">
-                  <span v-if="loadingRunningJobs">...</span>
-                  <template v-else>
-                    <span>
-                      {{ market.queue.length }} /
-                      <span v-if="runningJobs">
-                        <span>
-                          {{ market.queue.length + (runningJobs[market.address.toString()] ?
-                            runningJobs[market.address.toString()].running : 0) }}
+                <span class="clickable-row-cell-content">
+                  <span v-if="market.queueType === 1">
+                    <span v-if="loadingRunningJobs">...</span>
+                    <template v-else>
+                      <span>
+                        {{ market.queue.length }} /
+                        <span v-if="runningJobs">
+                          <span>
+                            {{ market.queue.length + (runningJobs[market.address.toString()] ?
+                              runningJobs[market.address.toString()].running : 0) }}
+                          </span>
                         </span>
+                        <span v-else>
+                          ?
+                        </span>
+                      </span>
+                      <span>
+                        hosts</span>
+                      <span><progress class="is-pulled-right progress is-secondary" :value="market.queue.length" :max="market.queue.length + (runningJobs[market.address.toString()] ?
+                        runningJobs[market.address.toString()].running : 0)"></progress></span>
+                    </template>
+                  </span>
+                  <span v-else>
+                    <span v-if="loadingRunningJobs">0 / ...</span>
+                    <span v-else>
+                      0 /
+                      <span v-if="runningJobs">
+                        {{ (runningJobs[market.address.toString()] ? runningJobs[market.address.toString()].running : 0) }}
                       </span>
                       <span v-else>
                         ?
                       </span>
+                      <span>
+                        hosts</span>
+                      <span><progress class="is-pulled-right progress is-secondary" :value="0" :max="(runningJobs[market.address.toString()] ?
+                        runningJobs[market.address.toString()].running : 0)"></progress></span>
                     </span>
-                    <span>
-                      hosts</span>
-                    <span><progress class="is-pulled-right progress is-secondary" :value="market.queue.length" :max="market.queue.length + (runningJobs[market.address.toString()] ?
-                      runningJobs[market.address.toString()].running : 0)"></progress></span>
-                  </template>
-                </span>
-                <span v-else>
-                  <span v-if="loadingRunningJobs">0 / ...</span>
-                  <span v-else>
-                    0 /
-                    <span v-if="runningJobs">
-                      {{ (runningJobs[market.address.toString()] ? runningJobs[market.address.toString()].running : 0) }}
-                    </span>
-                    <span v-else>
-                      ?
-                    </span>
-                    <span>
-                      hosts</span>
-                    <span><progress class="is-pulled-right progress is-secondary" :value="0" :max="(runningJobs[market.address.toString()] ?
-                      runningJobs[market.address.toString()].running : 0)"></progress></span>
+                    <br>
+                    <small v-if="market.queueType === 0">{{ market.queue.length }} deployments queued</small>
                   </span>
-                  <br>
-                  <small v-if="market.queueType === 0">{{ market.queue.length }} deployments queued</small>
                 </span>
               </td>
             </tr>
@@ -358,6 +364,38 @@ watch([
 watch(() => props.jobDefinition, () => {
   selectedMarket.value = null;
 }, { immediate: true });
+
+// Handle market row clicks with Ctrl+click support
+function handleMarketClick(event: MouseEvent, market: Market, navigate: Function) {
+  if (!isMarketCompatible(market)) return;
+  
+  if (props.select) {
+    selectedMarket.value = market;
+    return;
+  }
+  
+  // Handle Ctrl+click - open in new tab without navigating current page
+  if (event.ctrlKey || event.metaKey) {
+    event.preventDefault();
+    window.open(`/markets/${market.address.toString()}`, '_blank');
+  } else {
+    // Regular click - navigate in current page
+    navigate();
+  }
+}
+
+// Handle link clicks with Ctrl+click support
+function handleLinkClick(event: MouseEvent, navigate: Function) {
+  // Handle Ctrl+click - let browser handle opening in new tab
+  if (event.ctrlKey || event.metaKey) {
+    // Don't prevent default - let browser handle the Ctrl+click on the link
+    return;
+  } else {
+    // Regular click - prevent default and use Vue navigation
+    event.preventDefault();
+    navigate();
+  }
+}
 </script>
 <style lang="scss" scoped>
 .columns {

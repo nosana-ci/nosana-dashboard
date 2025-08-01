@@ -103,13 +103,94 @@
     v-show="activeTab === 'chat' && showChatTab" 
     :job="props.job" 
     :chatServiceUrl="chatServiceUrl" />
-  <div v-if="activeTab === 'details'">
-    <table class="table is-fullwidth">
-      <tbody>
-        <HostSpecifications v-if="props.job && props.job.node && props.job.node.toString() !== '11111111111111111111111111111111'" :node-address="props.job.node.toString()" />
-        <DeploymentInfo v-if="props.job && props.job.node && props.job.node.toString() !== '11111111111111111111111111111111'" :job="props.job" :jobDefinition="props.jobDefinition" />
-      </tbody>
-    </table>
+  <div v-if="activeTab === 'details'" class="details-tab-content">
+    <div class="columns is-multiline">
+      <!-- Started -->
+      <div v-if="props.job && props.job.timeStart" class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+        <div class="quick-detail-item">
+          <span class="quick-detail-label">Started</span>
+          <span class="quick-detail-value">
+            {{ formatStartTime(props.job.timeStart) }}
+            <span class="has-text-grey is-size-7"> ({{ formatTimeAgo(props.job.timeStart) }})</span>
+          </span>
+        </div>
+      </div>
+
+      <!-- NVIDIA Driver -->
+      <div v-if="hostSpecs && hostSpecs.nvmlVersion" class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+        <div class="quick-detail-item">
+          <span class="quick-detail-label">NVIDIA Driver</span>
+          <span class="quick-detail-value">{{ hostSpecs.nvmlVersion }}</span>
+        </div>
+      </div>
+
+      <!-- CUDA Version -->
+      <div v-if="hostSpecs && hostSpecs.cudaVersion" class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+        <div class="quick-detail-item">
+          <span class="quick-detail-label">CUDA Version</span>
+          <span class="quick-detail-value">{{ hostSpecs.cudaVersion }}</span>
+        </div>
+      </div>
+
+      <!-- System Environment -->
+      <div v-if="hostSpecs && hostSpecs.systemEnvironment" class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+        <div class="quick-detail-item">
+          <span class="quick-detail-label">System Environment</span>
+          <span class="quick-detail-value">{{ hostSpecs.systemEnvironment }}</span>
+        </div>
+      </div>
+
+      <!-- Solana address -->
+      <div v-if="props.job" class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+        <div class="quick-detail-item">
+          <span class="quick-detail-label">Solana address</span>
+          <span class="quick-detail-value">
+            <a :href="`https://solscan.io/account/${props.job.address}`" target="_blank" class="address is-family-monospace">
+              {{ props.job.address }}
+            </a>
+          </span>
+        </div>
+      </div>
+
+      <!-- Host address -->
+      <div v-if="props.job && props.job.node && props.job.node.toString() !== '11111111111111111111111111111111'" class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+        <div class="quick-detail-item">
+          <span class="quick-detail-label">Host address</span>
+          <span class="quick-detail-value">
+            <nuxt-link class="address is-family-monospace" :to="`/host/${props.job.node}`">
+              {{ props.job.node }}
+            </nuxt-link>
+          </span>
+        </div>
+      </div>
+
+      <!-- Deployer address -->
+      <div v-if="props.job" class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+        <div class="quick-detail-item">
+          <span class="quick-detail-label">Deployer address</span>
+          <span class="quick-detail-value">
+            <nuxt-link class="address is-family-monospace" :to="`/deployer/${props.job.project}`">
+              {{ props.job.project }}
+            </nuxt-link>
+          </span>
+        </div>
+      </div>
+
+      <!-- GPU pool -->
+      <div v-if="props.job" class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+        <div class="quick-detail-item">
+          <span class="quick-detail-label">GPU pool</span>
+          <span class="quick-detail-value">
+            <nuxt-link class="address is-family-monospace" :to="`/markets/${props.job.market}`">
+              <span v-if="apiMarkets && apiMarkets.find((tgm: any) => tgm.address === props.job.market)">
+                {{ apiMarkets.find((tgm: any) => tgm.address === props.job.market)?.name || props.job.market }}
+              </span>
+              <span v-else>{{ props.job.market }}</span>
+            </nuxt-link>
+          </span>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -126,8 +207,7 @@ import JobResultsView from "./Tabs/Results.vue";
 import JobArtifactsView from "./Tabs/Artifacts.vue";
 import JobDefinitionView from "./Tabs/JobDefinition.vue";
 import JobChatView from "./Tabs/Chat.vue";
-import HostSpecifications from "~/components/Info/HostSpecifications.vue";
-import DeploymentInfo from "~/components/Info/DeploymentInfo.vue";
+// Note: Info components no longer needed for simplified More Details tab
 
 import type { Endpoints, UseJob } from "~/composables/jobs/useJob";
 import type { LogEntry, ProgressBar } from "~/composables/jobs/useJobLogs";
@@ -175,6 +255,91 @@ watch(() => [props.job.isRunning, props.logConnectionEstablished, props.activeTa
 
 // Expose logsView ref for parent component to call scrollToBottomOnOpen
 defineExpose({ logsView });
+
+// Host specifications data
+const { data: nodeSpecs } = useAPI(`/api/nodes/${props.job.node}/specs`, {
+  // @ts-ignore
+  disableToastOnError: true,
+});
+
+const { data: nodeInfo } = useAPI(
+  `https://${props.job.node}.${useRuntimeConfig().public.nodeDomain}/node/info`,
+  {
+    // @ts-ignore
+    disableToastOnError: true,
+  }
+);
+
+const hostSpecs = computed(() => {
+  if (!nodeSpecs.value) return null;
+  const nodeInfoData = nodeInfo.value?.info;
+
+  return {
+    gpus: nodeInfoData?.gpus?.devices
+      ? nodeInfoData.gpus.devices.map((gpu: any) => ({
+          gpu: gpu.name,
+          memory: gpu.memory?.total_mb,
+          architecture: `${gpu.network_architecture?.major}.${gpu.network_architecture?.minor}`,
+        }))
+      : nodeSpecs.value.gpus,
+    cpu: nodeInfoData?.cpu?.model ?? nodeSpecs.value.cpu,
+    ram: nodeInfoData?.ram_mb
+      ? Math.round(nodeInfoData.ram_mb)
+      : Math.round(Number(nodeSpecs.value.ram)),
+    diskSpace: nodeInfoData?.disk_gb
+      ? Math.round(Number(nodeInfoData.disk_gb))
+      : Math.round(Number(nodeSpecs.value.diskSpace)),
+    country: nodeInfoData?.country ?? nodeSpecs.value.country,
+    cudaVersion: nodeInfoData?.gpus?.cuda_driver_version ?? nodeSpecs.value.cudaVersion,
+    nvmlVersion: nodeInfoData?.gpus?.nvml_driver_version ?? nodeSpecs.value.nvmlVersion,
+    nodeVersion: nodeInfoData?.version ?? nodeSpecs.value.nodeVersion,
+    systemEnvironment: nodeInfoData?.system_environment
+      ? nodeInfoData.system_environment.toLowerCase().includes("wsl")
+        ? "WSL"
+        : nodeInfoData.system_environment
+          ? "Linux"
+          : null
+      : nodeSpecs.value.systemEnvironment
+        ? nodeSpecs.value.systemEnvironment.toLowerCase().includes("wsl")
+          ? "WSL"
+          : "Linux"
+        : null,
+  };
+});
+
+const aggregatedDownloadSpeed = computed(() => {
+  // For now return null - would need benchmark data to calculate
+  return null;
+});
+
+const aggregatedUploadSpeed = computed(() => {
+  // For now return null - would need benchmark data to calculate  
+  return null;
+});
+
+// Get market data for GPU pool names
+const { data: apiMarkets } = useAPI("/api/markets");
+
+// Format start time
+const formatStartTime = (timeStart: number) => {
+  const date = new Date(timeStart * 1000);
+  return date.toISOString().replace('T', ' ').substring(0, 19);
+};
+
+// Format time ago
+const formatTimeAgo = (timeStart: number) => {
+  const now = Date.now();
+  const startTime = timeStart * 1000;
+  const diffMs = now - startTime;
+  const diffSec = Math.floor(diffMs / 1000);
+  if (diffSec < 60) return `${diffSec}s ago`;
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHours = Math.floor(diffMin / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays}d ago`;
+};
 
 // Create a reactive model for the job definition
 const jobDefinitionModel = computed({
@@ -375,5 +540,76 @@ html.dark-mode {
 div[class*="has-background-white"] {
   padding-top: 0.2rem !important;
   padding-bottom: 0.2rem !important;
+}
+
+// Add proper spacing for details tab content
+.details-tab-content {
+  margin-top: 1.5rem;
+  padding: 0 0.75rem;
+  
+  .quick-detail-item {
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+
+    .quick-detail-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: #7a7a7a;
+      text-transform: uppercase;
+      margin-bottom: 0.1rem;
+    }
+
+    .quick-detail-value {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: #363636;
+      word-break: break-word;
+      
+      .address {
+        word-break: break-all;
+        white-space: normal;
+        display: inline-block;
+        line-height: 1.3;
+        font-size: 0.8rem;
+      }
+
+      .has-text-grey {
+        font-size: 0.75rem;
+      }
+    }
+  }
+  
+  .no-padding {
+    padding: 0 !important;
+  }
+}
+
+// Dark mode styling for quick detail items
+html.dark-mode {
+  .details-tab-content .quick-detail-item {
+    .quick-detail-label {
+      color: #b0b0b0;
+    }
+    
+    .quick-detail-value,
+    .quick-detail-value .address,
+    .quick-detail-value .has-text-grey {
+      color: #ffffff;
+    }
+    
+    .quick-detail-value a,
+    .quick-detail-value nuxt-link,
+    .quick-detail-value .address {
+      color: #10E80C !important; // Nosana green for links in dark mode
+    }
+    
+    .quick-detail-value a:hover,
+    .quick-detail-value nuxt-link:hover {
+      color: #33ff33 !important; // Lighter green on hover
+    }
+  }
 }
 </style>

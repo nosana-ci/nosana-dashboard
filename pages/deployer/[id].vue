@@ -2,47 +2,56 @@
   <TopBar :title="'Deployer Page'" :subtitle="'Details about this Model Deployer'">
   </TopBar>
   <div class="box">
-    <!-- General Account Info -->
-    <GeneralInfo :address="address" />
-    <!-- Deployer Specifications (if deployer) -->
-    <div>
-      <div v-if="!isPoster">
-        <div v-if="loadingJobs">
-          Checking if account is the model deployer..
-        </div>
-        <div v-else>
-          <!-- Not a deployer-->
-        </div>
+    <!-- Quick Details Compact Grid -->
+    <div class="content mb-5">
+      <div class="columns is-multiline is-variable is-0 no-padding is-justify-content-flex-start mb-0">
+        <!-- General Account Info -->
+        <GeneralInfo :address="address" />
+        
+        <!-- Deployer Info (if deployer) -->
+        <template v-if="isPoster">
+          <!-- Deployments -->
+          <div class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+            <div class="quick-detail-item">
+              <span class="quick-detail-label">Deployments</span>
+              <span class="quick-detail-value">
+                <span v-if="loadingJobs">...</span>
+                <span v-else-if="jobs">{{ jobs.totalJobs }}</span>
+                <span v-else class="has-text-danger">Could not retrieve deployments</span>
+              </span>
+            </div>
+          </div>
+        </template>
+        
+        <template v-else>
+          <!-- Not a deployer status -->
+          <div class="column is-full" v-if="!loadingJobs">
+            <div class="quick-detail-item">
+              <span class="quick-detail-label">Deployer Status</span>
+              <span class="quick-detail-value">Not a deployer</span>
+            </div>
+          </div>
+          <div class="column is-full" v-else>
+            <div class="quick-detail-item">
+              <span class="quick-detail-label">Status</span>
+              <span class="quick-detail-value">Checking if account is the model deployer..</span>
+            </div>
+          </div>
+        </template>
       </div>
-      <div v-else>
-        <table class="table is-fullwidth two-column-labels">
-          <tbody>
-            <tr>
-              <td colspan="2" class="has-background-light">
-                <h4 class="title is-5 mb-0">Deployer Info</h4>
-              </td>
-            </tr>
-            <tr>
-              <td>Deployments</td>
-              <td v-if="loadingJobs">...</td>
-              <td v-else-if="jobs">
-                <span>{{ jobs.totalJobs }}</span>
-              </td>
-              <td v-else class="has-text-danger">Could not retrieve deployments</td>
-            </tr>
-          </tbody>
-        </table>
+    </div>
 
-        <DeploymentList
-          :per-page="limit"
-          :total-jobs="totalJobs"
-          v-model:page="page"
-          :loading-jobs="loadingJobs"
-          title="Deployments Ran"
-          :jobs="jobs?.jobs || []"
-          :states="[1, 2]"
-        />
-      </div>
+    <!-- Deployment List -->
+    <div v-if="isPoster">
+      <DeploymentList
+        :per-page="limit"
+        :total-jobs="totalJobs"
+        v-model:page="page"
+        :loading-jobs="loadingJobs"
+        title="Deployments Ran"
+        :jobs="jobs?.jobs || []"
+        :states="[1, 2]"
+      />
     </div>
   </div>
 </template>
@@ -95,4 +104,51 @@ const totalJobs = computed(() => {
   return jobs.value?.totalJobs ?? undefined;
 });
 // End: Moved script content from PosterInfo.vue
-</script> 
+</script>
+
+<style lang="scss" scoped>
+// Quick Details specific styling
+.quick-detail-item {
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+
+  .quick-detail-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #7a7a7a;
+    text-transform: uppercase;
+    margin-bottom: 0.1rem;
+  }
+
+  .quick-detail-value {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #363636;
+    word-break: break-word;
+
+    .icon-text {
+      color: #363636;
+    }
+  }
+}
+
+.no-padding {
+  padding: 0 !important;
+}
+
+html.dark-mode {
+  .quick-detail-item {
+    .quick-detail-label {
+      color: #b0b0b0;
+    }
+
+    .quick-detail-value,
+    .quick-detail-value .icon-text {
+      color: #ffffff;
+    }
+  }
+}
+</style> 

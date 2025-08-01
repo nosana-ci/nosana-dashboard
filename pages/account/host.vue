@@ -113,9 +113,15 @@
 
   <h3 class="title is-4 mt-5 mb-4">Info</h3>
   <div class="box">
-    <!-- General Account Info -->
-    <GeneralInfo v-if="activeAddress" :address="activeAddress" />
-    <HostInfo v-if="activeAddress" :address="activeAddress" />
+    <!-- Quick Details Compact Grid -->
+    <div class="content mb-5">
+      <div class="columns is-multiline is-variable is-0 no-padding is-justify-content-flex-start mb-0">
+        <!-- General Account Info -->
+        <GeneralInfo v-if="activeAddress" :address="activeAddress" />
+        <!-- Host Info -->
+        <HostInfo v-if="activeAddress" :address="activeAddress" />
+      </div>
+    </div>
   </div>
   
   <!-- Benchmark Histograms -->
@@ -216,6 +222,7 @@ const shouldPromptWalletConnection = computed(() => {
 });
 
 // Watch for when user accesses the page without wallet connection
+const route = useRoute();
 watch(shouldPromptWalletConnection, (shouldPrompt) => {
   if (shouldPrompt) {
     openWalletModal(route.fullPath);
@@ -798,5 +805,50 @@ onMounted(() => {
 }
 .buttons.has-addons .button.is-primary {
   z-index: 1; 
+}
+
+/* Quick Details specific styling */
+.quick-detail-item {
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+
+  .quick-detail-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #7a7a7a;
+    text-transform: uppercase;
+    margin-bottom: 0.1rem;
+  }
+
+  .quick-detail-value {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #363636;
+    word-break: break-word;
+
+    .icon-text {
+      color: #363636;
+    }
+  }
+}
+
+.no-padding {
+  padding: 0 !important;
+}
+
+html.dark-mode {
+  .quick-detail-item {
+    .quick-detail-label {
+      color: #b0b0b0;
+    }
+
+    .quick-detail-value,
+    .quick-detail-value .icon-text {
+      color: #ffffff;
+    }
+  }
 }
 </style>
