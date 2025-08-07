@@ -176,14 +176,12 @@ const formatDuration = (seconds: number) => {
 // Get NOS price from API
 const { data: stats } = useAPI("/api/stats");
 
-// Format time started
 const timeStartFormatted = computed(() => {
   if (!props.job.timeStart) return null;
   const date = new Date(props.job.timeStart * 1000);
   return date.toISOString().replace('T', ' ').substring(0, 19);
 });
 
-// Get time ago
 const timeAgo = computed(() => {
   if (!props.job.timeStart) return null;
   try {
@@ -203,38 +201,12 @@ const timeAgo = computed(() => {
   }
 });
 
-// Get host specs
-const { data: nodeSpecs } = useAPI(`/api/nodes/${props.job.node}/specs`, {
-  // @ts-ignore
-  disableToastOnError: true,
-});
+const { data: nodeSpecs } = useAPI(`/api/nodes/${props.job.node}/specs`);
 
 const { data: nodeInfo } = useAPI(
-  `https://${props.job.node}.${useRuntimeConfig().public.nodeDomain}/node/info`,
-  {
-    // @ts-ignore
-    disableToastOnError: true,
-  }
+  `https://${props.job.node}.${useRuntimeConfig().public.nodeDomain}/node/info`
 );
 
-// Combined node specs
-const combinedSpecs = computed(() => {
-  if (!nodeSpecs.value) return null;
-
-  const nodeInfoData = nodeInfo.value?.info;
-
-  return {
-    gpus: nodeInfoData?.gpus?.devices
-      ? nodeInfoData.gpus.devices.map((gpu: any) => ({
-          gpu: gpu.name,
-          memory: gpu.memory?.total_mb,
-          architecture: `${gpu.network_architecture?.major}.${gpu.network_architecture?.minor}`,
-        }))
-      : nodeSpecs.value.gpus,
-  };
-});
-
-// Market data for GPU name
 const { data: apiMarkets, pending: loadingMarkets } = useAPI("/api/markets");
 
 const jobDataForPrice = computed(() => {

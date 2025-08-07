@@ -212,6 +212,13 @@ import JobChatView from "./Tabs/Chat.vue";
 import type { Endpoints, UseJob } from "~/composables/jobs/useJob";
 import type { LogEntry, ProgressBar } from "~/composables/jobs/useJobLogs";
 
+// Define NodeRanking interface if not already globally available
+interface NodeRankingData {
+  node: string;
+  participationRate: number;
+  uptimePercentage: number;
+}
+
 interface Props {
   job: UseJob;
   endpoints: Endpoints;
@@ -229,6 +236,14 @@ interface Props {
   activeTab: string; // Prop for active tab
   logsTextForCopy?: string;
   copyToClipboard?: (text: string | undefined, type: string) => Promise<void>;
+
+  // Props for HostSpecifications (to be passed from Job.vue)
+  jobCombinedSpecs: any | null;
+  jobNodeRanking: NodeRankingData | null;
+  loadingJobNodeSpecs: boolean;
+  aggregatedDownloadSpeed: string | null;
+  aggregatedUploadSpeed: string | null;
+  isQueuedJob: boolean;
 }
 
 const props = defineProps<Props>();

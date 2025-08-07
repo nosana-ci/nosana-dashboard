@@ -113,6 +113,14 @@ const checkAddressAndBalance = async () => {
 };
 
 checkAddressAndBalance();
+
+defineExpose({
+  publicKey,
+  balance,
+  nosStaked,
+  solBalance,
+  loading
+});
 </script>
 
 <style lang="scss" scoped>

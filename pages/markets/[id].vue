@@ -54,7 +54,7 @@
                         (${{ hostPaymentUsd.toFixed(3) }}/h)
                       </span>
                     </span>
-                    <span v-else-if="loading">...</span>
+                    <span v-else-if="loading || loadingStats">...</span>
                     <span v-else>N/A</span>
                   </td>
                 </tr>
@@ -113,7 +113,7 @@
                     <td colspan="4" class="has-background-white-ter">
                       <div class="p-3">
                         <ol class="ml-4">
-                          <li v-for="node in allNodes" :key="node">
+                          <li v-for="node in allNodes" :key="String(node)">
                             <nuxt-link :to="`/host/${node}`" class="is-family-monospace">
                               {{ node }}
                             </nuxt-link>
@@ -146,7 +146,7 @@
                     <td colspan="4" class="has-background-white-ter">
                       <div class="p-3">
                         <ol class="ml-4">
-                          <li v-for="node in runningNodes" :key="node">
+                          <li v-for="node in runningNodes" :key="String(node)">
                             <nuxt-link :to="`/host/${node}`" class="is-family-monospace">
                               {{ node }}
                             </nuxt-link>
@@ -188,7 +188,7 @@
                     <td colspan="4" class="has-background-white-ter">
                       <div class="p-3">
                         <ol class="ml-4">
-                          <li v-for="node in queuedNodes" :key="node">
+                          <li v-for="node in queuedNodes" :key="String(node)">
                             <nuxt-link :to="`/host/${node}`" class="is-family-monospace">
                               {{ node }}
                             </nuxt-link>
@@ -222,7 +222,7 @@
                     <td colspan="4" class="has-background-white-ter">
                       <div class="p-3">
                         <ol class="ml-4">
-                          <li v-for="node in availableNodesWithAccess" :key="node">
+                          <li v-for="node in availableNodesWithAccess" :key="String(node)">
                             <nuxt-link :to="`/host/${node}`" class="is-family-monospace">
                               {{ node }}
                             </nuxt-link>

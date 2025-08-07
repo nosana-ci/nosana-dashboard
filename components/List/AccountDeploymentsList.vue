@@ -42,7 +42,7 @@
               <template v-else>
                 <tr v-for="job in displayedJobs" :key="job.address" class="clickable-row">
                   <td>
-                    <a :href="`/jobs/${job.address}`" class="clickable-row-link">
+                    <NuxtLink :to="`/jobs/${job.address}`" class="clickable-row-link">
                       <div class="clickable-row-cell-content is-flex is-align-items-center">
                         <img src="@/assets/img/icons/nvidia.svg" alt="Nvidia" class="mr-2" style="width: 20px; height: 20px;">
                         <span v-if="testgridMarkets && testgridMarkets.find((tgm: any) => tgm.address === job.market.toString())">
@@ -50,7 +50,7 @@
                         </span>
                         <span v-else class="is-family-monospace">{{ job.market.toString() }}</span>
                       </div>
-                    </a>
+                    </NuxtLink>
                   </td>
                   <td>
                     <div class="clickable-row-cell-content is-flex is-align-items-center">
@@ -161,6 +161,11 @@ const props = defineProps({
   itemsPerPage: {
     type: Number,
     default: 10
+  },
+  jobType: {
+    type: String,
+    default: 'combined', // 'posted', 'node', or 'combined'
+    validator: (value: string) => ['posted', 'node', 'combined'].includes(value)
   }
 });
 
@@ -213,13 +218,21 @@ const { data: nodeJobs, pending: loadingNodeJobs, refresh: refreshNodeJobs } = u
 
 // Combine jobs and remove duplicates
 const combinedJobs = computed(() => {
-  const allJobs = [
-    ...(postedJobs.value?.jobs || []),
-    ...(nodeJobs.value?.jobs || [])
-  ];
-  return allJobs.filter((job, index, self) =>
-    index === self.findIndex((j) => j.address === job.address)
-  );
+  switch (props.jobType) {
+    case 'posted':
+      return postedJobs.value?.jobs || [];
+    case 'node':
+      return nodeJobs.value?.jobs || [];
+    case 'combined':
+    default:
+      const allJobs = [
+        ...(postedJobs.value?.jobs || []),
+        ...(nodeJobs.value?.jobs || [])
+      ];
+      return allJobs.filter((job, index, self) =>
+        index === self.findIndex((j) => j.address === job.address)
+      );
+  }
 });
 
 // Create a new computed property for the jobs actually displayed in the table
@@ -229,11 +242,17 @@ const displayedJobs = computed(() => {
 });
 
 const totalJobs = computed(() => {
-  const postedTotal = postedJobs.value?.totalJobs || 0;
-  const nodeTotal = nodeJobs.value?.totalJobs || 0;
-  // This calculation remains an approximation for pagination controls (Previous/Next enabling)
-  // A more accurate total would require a dedicated API endpoint or fetching all jobs.
-  return Math.max(postedTotal, nodeTotal); 
+  switch (props.jobType) {
+    case 'posted':
+      return postedJobs.value?.totalJobs || 0;
+    case 'node':
+      return nodeJobs.value?.totalJobs || 0;
+    case 'combined':
+    default:
+      const postedTotal = postedJobs.value?.totalJobs || 0;
+      const nodeTotal = nodeJobs.value?.totalJobs || 0;
+      return Math.max(postedTotal, nodeTotal); 
+  }
 });
 
 // Emit total jobs count when it changes
@@ -341,13 +360,13 @@ watch([combinedJobs, currentPage], async ([jobs]) => {
   
   // Get unique node addresses that we haven't fetched yet
   const nodeAddresses = [...new Set(jobs.map(job => job.node))]
-    .filter(address => !nodeSpecs.value[address] && address !== '11111111111111111111111111111111');
+    .filter(address => !nodeSpecs.value[address as string] && address !== '11111111111111111111111111111111');
   
   // Fetch specs for each node in parallel
   const specsPromises = nodeAddresses.map(async (nodeAddress) => {
-    const specs = await fetchNodeSpecs(nodeAddress);
+    const specs = await fetchNodeSpecs(nodeAddress as string);
     if (specs) {
-      nodeSpecs.value[nodeAddress] = specs;
+      nodeSpecs.value[nodeAddress as string] = specs;
     }
   });
   
@@ -447,7 +466,7 @@ const isGHCR = (image: string) => {
 }
 
 .dark-mode .template-icon {
-  background-color: #2C2C2C;
+  background-color: #0a0a0a;
   border-color: #363636;
 }
 
@@ -465,7 +484,7 @@ const isGHCR = (image: string) => {
 }
 
 .dark-mode .container-icon {
-  background-color: #2C2C2C;
+  background-color: #0a0a0a;
   border-color: #363636;
 }
 

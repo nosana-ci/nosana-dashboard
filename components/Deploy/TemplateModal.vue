@@ -307,7 +307,7 @@ const filteredTemplates = computed(() => {
     templatesList = templatesList.filter(
       (t: any) =>
         t.name.toLowerCase().includes(searchTerm) ||
-        t.description.toLowerCase().includes(searchTerm)
+        (t.description && t.description.toLowerCase().includes(searchTerm))
     );
   }
 

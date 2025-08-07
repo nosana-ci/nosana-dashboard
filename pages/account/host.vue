@@ -4,7 +4,7 @@
 
   <div class="columns">
     <div class="column is-4">
-      <h3 class="title is-4 mt-5 mb-4">Earnings</h3>
+      <!-- <h3 class="title is-4 mt-5 mb-4">Earnings</h3> -->
       <div class="columns is-multiline mb-4">
         <div class="column is-12">
           <div class="box has-text-centered" style="height: 100%;">
@@ -60,13 +60,14 @@
               ${{ totalEarnedAllTime.toFixed(2) }}
             </p>
             <p class="title is-flex is-align-items-center is-justify-content-center" v-else>-</p>
-          </div>
+          </div>  
         </div>
+
       </div>
     </div>
     <!-- Moved Earnings History Section Start -->
     <div class="column is-8">
-      <h3 class="title is-4 mt-5 mb-4">History</h3>
+      <!-- <h3 class="title is-4 mt-5 mb-4">History</h3> -->
       <div class="box" style="height: 400px; position: relative;">
         <div class="content" style="height: 100%;">
           <div class="field is-grouped is-justify-content-end" style="position: absolute; top: 12px; right: 12px; z-index: 1;">
@@ -106,12 +107,25 @@
         </div>
       </div>
     </div>
-
-
   </div>
   <!-- Moved Earnings History Section End -->
 
-  <h3 class="title is-4 mt-5 mb-4">Info</h3>
+  <!-- Uptime Container -->
+  <!-- <div class="box mt-5">
+    <UptimeChart v-if="publicKey" :node-address="publicKey.toString()" />
+
+    <hr class="my-4">
+    <UptimeRewards 
+      :node-specs="nodeSpecs"
+      :loading-node-specs="loadingNodeSpecs"
+      :connected="connected"
+      :public-key="publicKey"
+      :wallet="wallet"
+      @refresh-node-specs="refreshNodeSpecs"
+    />
+  </div> -->
+
+  <!-- <h3 class="title is-4 mt-5 mb-4">Info</h3> -->
   <div class="box">
     <!-- Quick Details Compact Grid -->
     <div class="content mb-5">
@@ -119,7 +133,42 @@
         <!-- General Account Info -->
         <GeneralInfo v-if="activeAddress" :address="activeAddress" />
         <!-- Host Info -->
-        <HostInfo v-if="activeAddress" :address="activeAddress" />
+        <div class="column is-full">
+          <h4 class="subtitle is-5 mb-3">Host Details</h4>
+        </div>
+        <HostInfo v-if="activeAddress" 
+          :address="activeAddress"
+          :node-specs="nodeSpecs"
+          :node-info="nodeInfo"
+          :node-ranking="nodeRanking"
+          :loading-node-specs="loadingNodeSpecs" 
+          :loading-node-info="loadingNodeInfo"
+          :loading-node-ranking="loadingNodeRanking"
+        />
+
+        <div class="column is-full">
+          <hr class="my-4">
+        </div>
+
+        <!-- System Specifications Section -->
+        <div class="column is-full">
+          <h4 class="subtitle is-5 mb-3">System Specifications</h4>
+        </div>
+        <HostSpecifications v-if="publicKey && combinedSpecs" 
+          :specs="combinedSpecs" 
+          :node-ranking="nodeRanking" 
+          :generic-benchmark-response="genericBenchmarkResponse"
+          :loading-node-specs="loadingNodeSpecs"
+          :loading-generic-benchmark="loadingGenericBenchmark"
+          :aggregated-download-speed="aggregatedDownloadSpeed"
+          :aggregated-upload-speed="aggregatedUploadSpeed"
+        />
+        <div v-else-if="publicKey && (loadingNodeSpecs || loadingNodeInfo || loadingGenericBenchmark)" class="column is-full">
+          <p>Loading system specifications...</p>
+        </div>
+        <div v-else-if="publicKey" class="column is-full">
+          <p>System specifications are not available for this account.</p>
+        </div>
       </div>
     </div>
   </div>
@@ -177,7 +226,6 @@
 
 <script setup lang="ts">
 import { useWallet } from "solana-wallets-vue";
-import { useStake } from "~/composables/useStake";
 import { useAPI } from "~/composables/useAPI";
 import { computed, ref, onMounted, watch, nextTick } from 'vue';
 import { Bar } from 'vue-chartjs';
@@ -194,14 +242,17 @@ import {
 import ArrowUpIcon from '@/assets/img/icons/arrow-up.svg?component';
 import ArrowDownIcon from '@/assets/img/icons/arrow-down.svg?component';
 import HostInfo from "~/components/Info/HostInfo.vue";
-import DeploymentList from "~/components/List/DeploymentList.vue";
+import DeploymentList from '~/components/List/AccountDeploymentsList.vue';
 import NodeBenchmarkHistogram from "~/components/BenchmarkHistogram.vue";
+import UptimeChart from "~/components/UptimeChart.vue";
+import UptimeRewards from "~/components/UptimeRewards.vue";
+import HostSpecifications from "~/components/Info/HostSpecifications.vue";
 
 ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale);
 
 const { openWalletModal } = useLoginModal();
 
-const { connected, publicKey } = useWallet();
+const { connected, publicKey, wallet } = useWallet();
 const { status, data: userData } = useAuth();
 const { nosana } = useSDK();
 
@@ -215,7 +266,6 @@ const activeAddress = computed(() => {
   }
   return null;
 });
-
 // Check if user should be prompted for wallet connection
 const shouldPromptWalletConnection = computed(() => {
   return !connected.value && status.value !== 'authenticated';
@@ -368,15 +418,6 @@ watch(earningsHistory, (newData) => {
 
 // --- End Computed Stats & Persistent Refs ---
 
-// Remove markets API call as it's no longer needed for single-color chart
-// const { data: marketsData } = useAPI('/api/markets', { default: () => [] });
-
-// Remove predefined colors as we use a single color now
-// const GPU_COLORS: Record<string, string> = { ... };
-
-// Remove market mapping as it's no longer needed
-// const marketAddressToInfo = computed(() => { ... });
-
 // Transform earnings history for single-color stacked bar chart
 const chartData = computed(() => {
   if (!earningsHistory.value?.results && !loadingEarnings.value) {
@@ -474,12 +515,12 @@ const chartData = computed(() => {
   };
 });
 
-// Remove unused helper functions
-// function getColorForMarket(...) { ... }
-// function makeColorBrighter(...) { ... }
-
 // Chart options (adapted for single dataset earnings)
 const chartOptions = computed(() => {
+  const { $colorMode } = useNuxtApp();
+  const isDark = $colorMode?.value === 'dark';
+  const textColor = isDark ? '#ffffff' : '#000000';
+  
   return {
     responsive: true,
     maintainAspectRatio: false,
@@ -558,7 +599,7 @@ const chartOptions = computed(() => {
             weight: 'normal' as const,
             lineHeight: 1.2
           },
-          color: '#000000',
+          color: textColor,
           padding: 8
         },
         border: {
@@ -568,7 +609,7 @@ const chartOptions = computed(() => {
       },
       y: {
         grid: {
-          color: '#e5e5e5',
+          color: isDark ? '#444444' : '#e5e5e5',
           drawBorder: false,
           lineWidth: 0.5,
           tickLength: 4,
@@ -591,7 +632,7 @@ const chartOptions = computed(() => {
             weight: 'normal' as const,
             lineHeight: 1.2
           },
-          color: '#000000',
+          color: textColor,
           maxTicksLimit: 5,
           padding: 10
         }
@@ -633,11 +674,6 @@ const jobsUrl = computed(() => {
   }`;
 });
 
-interface JobsResponse {
-  totalJobs: number;
-  jobs: any[];
-}
-
 const initialJobsLoadInitiated = ref(false);
 const { data: jobs, pending: loadingJobs, refresh: refreshJobs, error: jobsError } = useAPI(
   () => {
@@ -662,17 +698,151 @@ const totalRunJobs = computed(() => {
 // Node specs data for benchmark
 const nodeSpecsUrl = computed(() => activeAddress.value ? `/api/nodes/${activeAddress.value}/specs` : '');
 
-const { data: nodeSpecs, pending: loadingNodeSpecs } = useAPI(
+const { data: nodeSpecs, pending: loadingNodeSpecs, refresh: refreshNodeSpecs } = useAPI(
   nodeSpecsUrl,
   {
-    // @ts-ignore // Add ignore for custom option
-    disableToastOnError: true,
     watch: [nodeSpecsUrl],
     default: () => null
   }
 );
 
-// Create a ref to store the market relation result
+// NEW: Node Info (public node API)
+const nodeInfoUrl = computed(() => {
+  if (!publicKey.value || !nodeSpecs.value) return ''; // Fetch only if we have publicKey and potentially valid nodeSpecs
+  return `https://${publicKey.value.toString()}.${useRuntimeConfig().public.nodeDomain}/node/info`;
+});
+const { data: nodeInfo, pending: loadingNodeInfo } = useAPI(
+  nodeInfoUrl,
+  {
+    immediate: false,
+    onRequestError: () => ({ info: null }),
+    onResponseError: () => ({ info: null }),
+    default: () => null,
+    watch: [nodeInfoUrl]
+  }
+);
+
+// NEW: Generic Benchmark Response
+const genericBenchmarkUrl = computed(() => {
+  if (!publicKey.value || !nodeSpecs.value) return '';
+  return `/api/benchmarks/generic-benchmark-data?node=${publicKey.value.toString()}`;
+});
+const { data: genericBenchmarkResponse, pending: loadingGenericBenchmark } = useAPI(
+  genericBenchmarkUrl,
+  {
+    immediate: false,
+    onRequestError: () => ({ data: [] }),
+    onResponseError: () => ({ data: [] }),
+    default: () => ({ data: [] }),
+    watch: [genericBenchmarkUrl]
+  }
+);
+
+// NEW: Node Ranking
+interface NodeRanking {
+  node: string;
+  participationRate: number;
+  uptimePercentage: number;
+}
+const nodeRankingUrl = computed(() => {
+  if (!publicKey.value || !nodeSpecs.value?.marketAddress) return '';
+  return `/api/benchmarks/node-report?node=${publicKey.value.toString()}`;
+});
+const { data: nodeRanking, pending: loadingNodeRanking } = useAPI(
+  nodeRankingUrl,
+  {
+    default: () => null,
+    watch: [nodeRankingUrl]
+  }
+);
+
+// NEW: Combined Specs (moved from HostInfo.vue, adapted for host.vue context)
+const combinedSpecs = computed(() => {
+  if (!publicKey.value || !nodeSpecs.value) return null;
+
+  const nodeInfoData = nodeInfo.value?.info;
+
+  return {
+    nodeAddress: publicKey.value.toString(),
+    marketAddress: nodeSpecs.value.marketAddress,
+    ram: nodeInfoData?.ram_mb
+      ? Math.round(nodeInfoData.ram_mb)
+      : nodeSpecs.value.ram ? Math.round(Number(nodeSpecs.value.ram)) : 0,
+    diskSpace: nodeInfoData?.disk_gb
+      ? Math.round(Number(nodeInfoData.disk_gb))
+      : nodeSpecs.value.diskSpace ? Math.round(Number(nodeSpecs.value.diskSpace)) : 0,
+    cpu: nodeInfoData?.cpu?.model ?? nodeSpecs.value.cpu,
+    country: nodeInfoData?.country ?? nodeSpecs.value.country,
+    bandwidth:
+      nodeInfoData?.network?.download_mbps ?? nodeSpecs.value.bandwidth,
+    gpus: nodeInfoData?.gpus?.devices
+      ? nodeInfoData.gpus.devices.map((gpu: any) => ({
+          gpu: gpu.name,
+          memory: gpu.memory?.total_mb,
+          architecture: gpu.network_architecture 
+            ? `${gpu.network_architecture.major}.${gpu.network_architecture.minor}` 
+            : undefined,
+        }))
+      : nodeSpecs.value.gpus,
+    cudaVersion:
+      nodeInfoData?.gpus?.cuda_driver_version ?? nodeSpecs.value.cudaVersion,
+    nvmlVersion:
+      nodeInfoData?.gpus?.nvml_driver_version ?? nodeSpecs.value.nvmlVersion,
+    nodeVersion: nodeInfoData?.version ?? nodeSpecs.value.nodeVersion,
+    systemEnvironment: nodeInfoData?.system_environment
+      ? nodeInfoData.system_environment.toLowerCase().includes("wsl")
+        ? "WSL"
+        : nodeInfoData.system_environment
+          ? "Linux"
+          : null
+      : nodeSpecs.value.systemEnvironment
+        ? nodeSpecs.value.systemEnvironment.toLowerCase().includes("wsl")
+          ? "WSL"
+          : "Linux"
+        : null,
+  };
+});
+
+// Computed properties for download/upload speeds
+const aggregatedDownloadSpeed = computed(() => {
+  if (!combinedSpecs.value) return null;
+  
+  // Try to get from nodeInfo first
+  if (nodeInfo.value?.info?.network?.download_mbps) {
+    return nodeInfo.value.info.network.download_mbps.toFixed(2);
+  }
+  
+  // Fallback to nodeSpecs bandwidth
+  if (nodeSpecs.value?.bandwidth) {
+    if (typeof nodeSpecs.value.bandwidth === 'object' && nodeSpecs.value.bandwidth.download) {
+      return nodeSpecs.value.bandwidth.download.toFixed(2);
+    } else if (typeof nodeSpecs.value.bandwidth === 'number') {
+      return nodeSpecs.value.bandwidth.toFixed(2);
+    }
+  }
+  
+  return null;
+});
+
+const aggregatedUploadSpeed = computed(() => {
+  if (!combinedSpecs.value) return null;
+  
+  // Try to get from nodeInfo first
+  if (nodeInfo.value?.info?.network?.upload_mbps) {
+    return nodeInfo.value.info.network.upload_mbps.toFixed(2);
+  }
+  
+  // Fallback to nodeSpecs bandwidth
+  if (nodeSpecs.value?.bandwidth) {
+    if (typeof nodeSpecs.value.bandwidth === 'object' && nodeSpecs.value.bandwidth.upload) {
+      return nodeSpecs.value.bandwidth.upload.toFixed(2);
+    }
+  }
+  
+  return null;
+});
+
+// Market relation logic (already existing)
 const marketRelationId = ref<string | null>(null);
 
 // Define a function to fetch the market relation

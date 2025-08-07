@@ -78,7 +78,41 @@ const { data: nodeSpecs, pending: loadingSpecs } = useAPI(
   `/api/nodes/${address.value}/specs`,
   {
     // @ts-ignore
-    disableToastOnError: true,
+    // disableToastOnError: true, // This option is not standard, remove or use supported ones
+  }
+);
+
+// Fetch Node Info (public node API)
+const nodeInfoUrl = computed(() => {
+  if (!address.value || !nodeSpecs.value) return ''; // Fetch only if we have address and potentially valid nodeSpecs
+  return `https://${address.value}.${useRuntimeConfig().public.nodeDomain}/node/info`;
+});
+const { data: nodeInfo, pending: loadingNodeInfo } = useAPI(
+  nodeInfoUrl,
+  {
+    immediate: false,
+    onRequestError: () => ({ info: null }),
+    onResponseError: () => ({ info: null }),
+    default: () => null,
+    watch: [nodeInfoUrl]
+  }
+);
+
+// Fetch Node Ranking
+interface NodeRanking {
+  node: string;
+  participationRate: number;
+  uptimePercentage: number;
+}
+const nodeRankingUrl = computed(() => {
+  if (!address.value || !nodeSpecs.value?.marketAddress) return '';
+  return `/api/benchmarks/node-report?node=${address.value}`;
+});
+const { data: nodeRanking, pending: loadingNodeRanking } = useAPI(
+  nodeRankingUrl,
+  {
+    default: () => null,
+    watch: [nodeRankingUrl]
   }
 );
 
