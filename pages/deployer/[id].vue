@@ -69,7 +69,7 @@ const address: Ref<string> = ref(params.id as string);
 
 // Start: Moved script content from PosterInfo.vue
 const page: Ref<number> = ref(1);
-const state: Ref<number | null> = ref(null);
+const state: Ref<number | null> = ref(null); // state is not used for filtering in the URL for poster, but kept for v-model
 const jobStateMapping: any = {
   0: 'QUEUED',
   1: 'RUNNING',
@@ -83,7 +83,8 @@ const jobsUrl: ComputedRef<string> = computed(() => {
   return (
     `/api/jobs?limit=${limit.value}` +
     `&offset=${(page.value - 1) * limit.value}` +
-    `${state.value !== null ? `&state=${jobStateMapping[state.value]}` : ''}` +
+    // Poster page typically shows all states, so state filter is removed from URL
+    // `${state.value !== null ? `&state=${jobStateMapping[state.value]}` : ''}` +
     `&poster=${address.value}` // Changed from props.address
   )
 });
@@ -96,7 +97,7 @@ const hasPostedJobs: ComputedRef<boolean> = computed(() => {
   return !!(jobs.value && jobs.value.jobs && jobs.value.jobs.length > 0)
 });
 
-const isPoster: ComputedRef<boolean> = computed(() => { // Note: Changed from Boolean to boolean for consistency
+const isPoster: ComputedRef<boolean> = computed(() => { 
   return hasPostedJobs.value
 });
 

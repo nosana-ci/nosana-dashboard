@@ -191,7 +191,7 @@
           </template>
         </div>
         <h3 class="title is-4 mb-7">Deployments</h3>
-        <ListDeploymentsList :items-per-page="10" class="mb-6 deployments-list" @update:total-deployments="totalDeployments = $event" />
+        <ListDeploymentsList job-type="posted" :items-per-page="10" class="mb-6 deployments-list" @update:total-deployments="totalDeployments = $event" />
         
         <div class="columns mt-6">
           <div class="column is-4">

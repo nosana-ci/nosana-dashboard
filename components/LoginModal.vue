@@ -131,11 +131,11 @@ const modalTitle = computed(() => {
 const modalSubtitle = computed(() => {
   switch (props.mode) {
     case 'google':
-      return 'Sign in or create a developer account to build with the Nosana AI Platform';
+      return 'Sign in or create an account to build with the Nosana AI Platform';
     case 'wallet':
       return 'Connect your wallet to view host earnings and manage your nodes';
     default:
-      return 'Sign in or create a developer account to build with the Nosana AI Platform';
+      return 'Sign in or create an account to build with the Nosana AI Platform';
   }
 });
 

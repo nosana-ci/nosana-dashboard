@@ -302,6 +302,9 @@
               <span class="quick-detail-label">Country</span>
               <span class="quick-detail-value">
                 <span v-if="countryInfo">{{ countryInfo }}</span>
+                <span v-else-if="isQueuedJob" class="has-text-grey-light">
+                  Not assigned yet
+                </span>
                 <span v-else class="icon-text">
                   <span class="icon is-small"
                     ><i class="fas fa-spinner fa-spin"></i
@@ -321,6 +324,9 @@
               <span class="quick-detail-label">CPU</span>
               <span class="quick-detail-value">
                 <span v-if="combinedSpecs?.cpu">{{ combinedSpecs.cpu }}</span>
+                <span v-else-if="isQueuedJob" class="has-text-grey-light">
+                  Not assigned yet
+                </span>
                 <span v-else class="icon-text">
                   <span class="icon is-small"
                     ><i class="fas fa-spinner fa-spin"></i
@@ -347,6 +353,9 @@
                 <span v-if="combinedSpecs?.ram"
                   >{{ combinedSpecs.ram }} MB</span
                 >
+                <span v-else-if="isQueuedJob" class="has-text-grey-light">
+                  Not assigned yet
+                </span>
                 <span v-else class="icon-text">
                   <span class="icon is-small"
                     ><i class="fas fa-spinner fa-spin"></i
@@ -368,6 +377,9 @@
                 <span v-if="combinedSpecs?.diskSpace"
                   >{{ combinedSpecs.diskSpace }} GB</span
                 >
+                <span v-else-if="isQueuedJob" class="has-text-grey-light">
+                  Not assigned yet
+                </span>
                 <span v-else class="icon-text">
                   <span class="icon is-small"
                     ><i class="fas fa-spinner fa-spin"></i
@@ -388,6 +400,9 @@
               <span class="quick-detail-value">
                 <span v-if="aggregatedDownloadSpeed">
                   {{ aggregatedDownloadSpeed }} Mbps
+                </span>
+                <span v-else-if="isQueuedJob" class="has-text-grey-light">
+                  Not assigned yet
                 </span>
                 <span v-else class="icon-text">
                   <span class="icon is-small"
@@ -438,6 +453,12 @@
           :resourceProgressBars="resourceProgressBars"
           :showChatTab="isChatServiceReady"
           :chatServiceUrl="chatServiceUrl"
+          :jobCombinedSpecs="combinedSpecs"
+          :jobNodeRanking="jobNodeRanking"
+          :loadingJobNodeSpecs="loadingNodeSpecs"
+          :aggregatedDownloadSpeed="aggregatedDownloadSpeed"
+          :aggregatedUploadSpeed="aggregatedUploadSpeed"
+          :isQueuedJob="isQueuedJob"
           v-model:activeTab="activeTab"
           ref="jobTabsRef"
         />
@@ -482,12 +503,6 @@
   </div>
 </template>
 <script setup lang="ts">
-import JobLogsView from "~/components/Job/Tabs/Logs.vue";
-import JobDefinitionView from "~/components/Job/Tabs/JobDefinition.vue";
-import JobChatView from "~/components/Job/Tabs/Chat.vue";
-import JobResultsView from "~/components/Job/Tabs/Results.vue";
-import DeploymentInfo from "~/components/Info/DeploymentInfo.vue";
-import HostSpecifications from "~/components/Info/HostSpecifications.vue";
 import JobStatus from "~/components/Job/Status.vue";
 import JobPrice from "~/components/Job/Price.vue";
 import ExtendModal from "~/components/Job/Modals/Extend.vue";
@@ -625,16 +640,22 @@ const isGHCR = (image: string) => {
 };
 
 // Get host specs for actual GPU info
-const { data: nodeSpecs } = useAPI(`/api/nodes/${props.job.node}/specs`, {
-  // @ts-ignore
-  disableToastOnError: true,
-});
+const { data: nodeSpecs, pending: loadingNodeSpecs } = useAPI(`/api/nodes/${props.job.node}/specs`);
 
 const { data: nodeInfo } = useAPI(
   `https://${props.job.node}.${useRuntimeConfig().public.nodeDomain}/node/info`,
+);
+
+// NEW: Fetch Node Ranking for HostSpecifications
+const jobNodeRankingUrl = computed(() => {
+  if (!props.job.node || props.job.node.toString() === '11111111111111111111111111111111') return '';
+  return `/api/benchmarks/node-report?node=${props.job.node.toString()}`;
+});
+const { data: jobNodeRanking, pending: loadingJobNodeRanking } = useAPI(
+  jobNodeRankingUrl,
   {
-    // @ts-ignore
-    disableToastOnError: true,
+    default: () => null,
+    watch: [jobNodeRankingUrl],
   }
 );
 
@@ -845,46 +866,28 @@ const { data: allBenchmarkData } = useAPI(
   }
 );
 const { processedBenchmarkResponse: benchmarkData } =
-  useGenericBenchmark(allBenchmarkData);
+  useGenericBenchmark(allBenchmarkData as any);
 
 const aggregatedDownloadSpeed = computed(() => {
-  if (
-    !benchmarkData.value ||
-    !benchmarkData.value.data ||
-    benchmarkData.value.data.length === 0
-  ) {
-    return null;
+  if (nodeSpecs.value?.bandwidth?.download) {
+    return nodeSpecs.value.bandwidth.download.toFixed(2);
   }
-  const validEntries = benchmarkData.value.data.filter(
-    (entry: any) =>
-      entry.metrics && typeof entry.metrics.internetSpeedDownload === "number"
-  );
-  if (validEntries.length === 0) return null;
-  const totalDownload = validEntries.reduce(
-    (sum: number, entry: any) => sum + entry.metrics.internetSpeedDownload,
-    0
-  );
-  return (totalDownload / validEntries.length).toFixed(2);
+  return null;
 });
 
 const aggregatedUploadSpeed = computed(() => {
-  if (
-    !benchmarkData.value ||
-    !benchmarkData.value.data ||
-    benchmarkData.value.data.length === 0
-  ) {
-    return null;
+  if (nodeSpecs.value?.bandwidth?.upload) {
+    return nodeSpecs.value.bandwidth.upload.toFixed(2);
   }
-  const validEntries = benchmarkData.value.data.filter(
-    (entry: any) =>
-      entry.metrics && typeof entry.metrics.internetSpeedUpload === "number"
-  );
-  if (validEntries.length === 0) return null;
-  const totalUpload = validEntries.reduce(
-    (sum: number, entry: any) => sum + entry.metrics.internetSpeedUpload,
-    0
-  );
-  return (totalUpload / validEntries.length).toFixed(2);
+  return null;
+});
+
+// Check if the job is queued (state 0 and no start time, or placeholder node)
+const isQueuedJob = computed(() => {
+  return (
+    props.job.state === 0 && 
+    props.job.timeStart === 0
+  ) || props.job.node === '11111111111111111111111111111111';
 });
 
 const toggleDetails = () => {

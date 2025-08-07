@@ -76,11 +76,11 @@
       </tr>
       <tr v-for="job in jobs" v-else :key="job.address" class="clickable-row">
         <td>
-          <a :href="`/jobs/${job.address}`" class="clickable-row-link">
+          <NuxtLink :to="`/jobs/${job.address}`" class="clickable-row-link">
             <span class="clickable-row-cell-content is-family-monospace address has-text-black">
               {{ job.address }}
             </span>
-          </a>
+          </NuxtLink>
         </td>
         <td v-if="!small" class="is-hidden-touch">
           <div class="clickable-row-cell-content is-family-monospace address">
@@ -148,7 +148,7 @@
               :image-only="small"
             ></JobStatus>
             <span
-              v-if="isHostPage && job.project === 'jobtF7TBbGWxFf4X7pJcG63fWbcpSzEizMrDxZ1t5i2' && (job.state === 1 || (job.state === 2 && job.timeStart && job.timeEnd))"
+              v-if="isHostPage && job.project.toString() === 'jobtF7TBbGWxFf4X7pJcG63fWbcpSzEizMrDxZ1t5i2' && (job.state === 1 || (job.state === 2 && job.timeStart && job.timeEnd))"
               class="tag is-small is-info ml-1"
               title="Benchmark job"
             >B</span>

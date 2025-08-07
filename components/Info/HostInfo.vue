@@ -241,43 +241,47 @@
 
 <script lang="ts" setup>
 import { type Market } from "@nosana/sdk";
-import HostSpecifications from "~/components/Info/HostSpecifications.vue";
 import JobStatus from "~/components/Job/Status.vue";
+import HostSpecifications from "~/components/Info/HostSpecifications.vue";
 import { useGenericBenchmark } from "~/composables/useBenchmarkData";
 const { nosana } = useSDK();
 const { data: testgridMarkets, pending: loadingTestgridMarkets } =
   useAPI("/api/markets");
 
-interface Props {
+const props = defineProps<{
   address: string;
-}
-const props = defineProps<Props>();
+  nodeSpecs?: any; 
+  nodeInfo?: any;  
+  nodeRanking?: any; 
+  loadingNodeSpecs?: boolean;
+  loadingNodeInfo?: boolean;
+  loadingNodeRanking?: boolean;
+}>();
 
-/***************
- * Node Queue  *
- ***************/
+const getMarketNameFromList = (marketAddress: string): string => {
+  if (testgridMarkets.value && Array.isArray(testgridMarkets.value)) {
+    const market = testgridMarkets.value.find((tgm: any) => tgm.address === marketAddress);
+    return market?.name || marketAddress;
+  }
+  return marketAddress;
+};
+
 const { markets, getMarkets, loadingMarkets } = useMarkets();
 if (!markets.value) {
   getMarkets();
 }
-const queueInfo: ComputedRef<{ market: Market; position: number } | undefined> =
-  computed(() => {
-    let position = -1;
-    const market = markets.value?.find((m) => {
-      position = m.queue.findIndex((a: any) => a.toString() === props.address);
-      return position !== -1;
-    });
-    if (market) {
-      return { market, position };
-    }
-    return undefined;
+const queueInfo: ComputedRef<{ market: Market; position: number } | undefined> = computed(() => {
+  let position = -1;
+  const market = markets.value?.find((m) => {
+    position = m.queue.findIndex((a: any) => a.toString() === props.address);
+    return position !== -1;
   });
+  if (market) {
+    return { market, position };
+  }
+  return undefined;
+});
 
-console.log(queueInfo.value?.market.address.toString());
-
-/***************
- * Node Runs   *
- ***************/
 const { data: nodeRuns, pending: loadingRuns } = useMyAsyncData(
   "getNodeRuns",
   async () => {
@@ -292,7 +296,6 @@ const { data: nodeRuns, pending: loadingRuns } = useMyAsyncData(
           },
         ]);
       } catch (e) {
-        // Silent error handling - expected for offline nodes
         return null;
       }
     }
@@ -300,9 +303,6 @@ const { data: nodeRuns, pending: loadingRuns } = useMyAsyncData(
   }
 );
 
-/*************
- * Node Jobs *
- *************/
 const page: Ref<number> = ref(1);
 const state: Ref<number | null> = ref(null);
 const jobStateMapping: Record<number, string> = {
@@ -313,21 +313,10 @@ const jobStateMapping: Record<number, string> = {
 };
 const limit: Ref<number> = ref(10);
 const jobsUrl: ComputedRef<string> = computed(() => {
-  return `/api/jobs?limit=${limit.value}&offset=${
-    (page.value - 1) * limit.value
-  }${state.value !== null ? `&state=${jobStateMapping[state.value]}` : ""}${
-    "&node=" + props.address
-  }`;
+  return `/api/jobs?limit=${limit.value}&offset=${(page.value - 1) * limit.value}${state.value !== null ? `&state=${jobStateMapping[state.value]}` : ""}${"&node=" + props.address}`;
 });
 
-interface JobsResponse {
-  totalJobs: number;
-  jobs: any[];
-}
-
-const { data: jobs, pending: loadingJobs } = useAPI(jobsUrl, {
-  watch: [jobsUrl],
-});
+const { data: jobs, pending: loadingJobs } = useAPI(jobsUrl, { watch: [jobsUrl] });
 
 const hasRanJobs: ComputedRef<Boolean> = computed(() => {
   return Boolean(jobs?.value?.jobs?.length);
@@ -336,7 +325,7 @@ const hasRanJobs: ComputedRef<Boolean> = computed(() => {
 /**********************
  * Node Specification *
  **********************/
-const { data: nodeSpecs, pending: loadingSpecs } = useAPI(
+ const { data: nodeSpecs, pending: loadingSpecs } = useAPI(
   `/api/nodes/${props.address}/specs`,
   {
     // @ts-ignore
@@ -344,12 +333,12 @@ const { data: nodeSpecs, pending: loadingSpecs } = useAPI(
   }
 );
 
+
 const isNode: ComputedRef<Boolean> = computed(() => {
-  // If nodeSpecs exists or queueInfo says this is queued, or we found any runs or jobs, consider it a node
   return (
     (nodeRuns.value && nodeRuns.value.length) ||
     hasRanJobs.value ||
-    nodeSpecs.value?.marketAddress ||
+    (props.nodeSpecs && props.nodeSpecs.marketAddress) ||
     queueInfo.value
   );
 });
@@ -357,7 +346,7 @@ const isNode: ComputedRef<Boolean> = computed(() => {
 /*************
  * Node Info *
  *************/
-const {
+ const {
   data: nodeInfo,
   pending: loadingInfo,
   execute: getNodeInfo,
@@ -426,6 +415,7 @@ const combinedSpecs = computed(() => {
   };
 });
 
+
 /*********************
  * Node Benchmarking *
  *********************/
@@ -446,7 +436,7 @@ const { data: allBenchmarkData, execute: getNodeBenchmarks } = useAPI(
 );
 
 const { processedBenchmarkResponse: genericBenchmarkResponse } =
-  useGenericBenchmark(allBenchmarkData);
+  useGenericBenchmark(allBenchmarkData as any);
 
 // Safely call node info + benchmark if it's actually (or likely) a node
 function fetchAdditionalNodeData() {
@@ -550,19 +540,6 @@ watch(
   },
   { immediate: true }
 );
-
-const benchmarkMarketId = computed(() => {
-  if (!nodeSpecs.value || !nodeSpecs.value.marketAddress) {
-    return undefined;
-  }
-  if (nodeSpecs.value.status === "ONBOARDED") {
-    if (!marketRelationId.value) {
-      return undefined;
-    }
-    return marketRelationId.value;
-  }
-  return nodeSpecs.value.marketAddress;
-});
 
 const cliVersion = computed(() => {
   if (!combinedSpecs.value && !nodeInfo.value?.info) return null;
