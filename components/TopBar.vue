@@ -51,8 +51,10 @@
       <div class="profile-button" @click="toggleUserProfileDropdown">
         <!-- Google Auth User -->
         <template v-if="isGoogleAuthenticated">
-          <div class="profile-avatar">
-            <span>{{ getUserInitials() }}</span>
+          <div class="profile-avatar auth-avatar">
+            <img v-if="getAuthProvider() === 'google'" src="@/assets/img/icons/google.svg" alt="Google icon" class="auth-icon" />
+            <img v-else-if="getAuthProvider() === 'twitter'" src="@/assets/img/icons/twitter.svg" alt="Twitter icon" class="auth-icon" />
+            <span v-else>{{ getUserInitials() }}</span>
           </div>
           <div class="profile-info">
             <span class="profile-name">{{ getUserName() }}</span>
@@ -152,6 +154,13 @@ const getUserName = () => {
 const getUserInitials = () => {
   const name = getUserName();
   return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+};
+
+const getAuthProvider = () => {
+  if (session.value?.id?.startsWith('twitter_')) {
+    return 'twitter';
+  }
+  return 'google';
 };
 
 // Credit balance state
@@ -563,5 +572,28 @@ defineExpose({
   .button.is-primary {
     display: none !important;
   }
+}
+
+.auth-avatar {
+  background: transparent !important;
+  padding: 0 !important;
+}
+
+.auth-icon {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  border-radius: 6px;
+}
+
+/* X (Twitter) icon specific styling */
+img[alt="Twitter icon"] {
+  background-color: #000;
+  border-radius: 6px;
+  padding: 4px;
+}
+
+.dark-mode img[alt="Twitter icon"] {
+  background-color: #000;
 }
 </style>
