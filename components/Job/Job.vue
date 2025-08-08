@@ -453,6 +453,7 @@
           :resourceProgressBars="resourceProgressBars"
           :showChatTab="isChatServiceReady"
           :chatServiceUrl="chatServiceUrl"
+          :chatApiConfig="chatApiConfig"
           :jobCombinedSpecs="combinedSpecs"
           :jobNodeRanking="jobNodeRanking"
           :loadingJobNodeSpecs="loadingNodeSpecs"
@@ -974,11 +975,20 @@ const hasOpenaiEndpoint = computed(() => {
             for (const healthCheck of exposedPort.health_checks) {
               if (healthCheck.type === "http") {
                 const httpCheck = healthCheck as HttpHealthCheck;
-                if (
-                  httpCheck.path.includes("/v1") &&
-                  httpCheck.method === "POST"
-                ) {
-                  return true;
+                // Check for LLM chat endpoints - both vLLM and Ollama formats
+                if (httpCheck.method === "POST" && httpCheck.body) {
+                  try {
+                    const body = JSON.parse(httpCheck.body);
+                    // Check if it has LLM-style request format (model + messages)
+                    if (body.model && body.messages && Array.isArray(body.messages)) {
+                      return true;
+                    }
+                  } catch (e) {
+                    // If body parsing fails, fall back to path-based detection
+                    if (httpCheck.path.includes("/chat") || httpCheck.path.includes("/v1")) {
+                      return true;
+                    }
+                  }
                 }
               }
             }
@@ -1007,6 +1017,13 @@ const {
   signMessage
 );
 
+// Structure to hold API configuration extracted from health check
+const chatApiConfig = ref<{
+  path: string;
+  model: string;
+  headers?: Record<string, string>;
+} | null>(null);
+
 watchEffect(() => {
   if (hasOpenaiEndpoint.value && props.job?.jobDefinition && props.endpoints) {
     for (const [url, endpointData] of props.endpoints.entries()) {
@@ -1023,12 +1040,31 @@ watchEffect(() => {
               for (const healthCheck of exposedPort.health_checks) {
                 if (healthCheck.type === "http") {
                   const httpCheck = healthCheck as HttpHealthCheck;
-                  if (
-                    httpCheck.path.includes("/v1") &&
-                    httpCheck.method === "POST"
-                  ) {
-                    chatServiceUrl.value = url;
-                    return; // Found our chat service
+                  if (httpCheck.method === "POST" && httpCheck.body) {
+                    try {
+                      const body = JSON.parse(httpCheck.body);
+                      // Check if it has LLM-style request format
+                      if (body.model && body.messages && Array.isArray(body.messages)) {
+                        chatServiceUrl.value = url;
+                        chatApiConfig.value = {
+                          path: httpCheck.path,
+                          model: body.model,
+                          headers: httpCheck.headers || {}
+                        };
+                        return; // Found our chat service with configuration
+                      }
+                    } catch (e) {
+                      // If body parsing fails, fall back to path-based detection
+                      if (httpCheck.path.includes("/chat") || httpCheck.path.includes("/v1")) {
+                        chatServiceUrl.value = url;
+                        chatApiConfig.value = {
+                          path: httpCheck.path,
+                          model: "unknown",
+                          headers: httpCheck.headers || {}
+                        };
+                        return;
+                      }
+                    }
                   }
                 }
               }

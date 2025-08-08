@@ -134,7 +134,7 @@
 <script setup lang="ts">
 import { ref, computed, nextTick, watch } from 'vue';
 import type { UseJob } from "~/composables/jobs/useJob";
-import { createOpenAIClient, sendChatCompletion, type ChatMessage } from '~/composables/useOpenaiAPI';
+import { createOpenAIClient, sendChatCompletion, sendCustomChatCompletion, type ChatMessage } from '~/composables/useOpenaiAPI';
 import type { OperationArgsMap, ExposedPort, HttpHealthCheck } from '@nosana/sdk';
 import { marked } from 'marked';
 import type { Tokens } from 'marked';
@@ -149,6 +149,11 @@ interface MessageSection {
 interface Props {
   job: UseJob;
   chatServiceUrl?: string | null;
+  chatApiConfig?: {
+    path: string;
+    model: string;
+    headers?: Record<string, string>;
+  } | null;
 }
 
 interface ExtendedChatMessage extends ChatMessage {
@@ -243,13 +248,33 @@ const parseMessageContent = (content: string): MessageSection[] => {
 }
 
 const openAIClient = computed(() => {
-  if (props.chatServiceUrl) {
-    return createOpenAIClient(props.chatServiceUrl);
+  if (props.chatServiceUrl && props.chatApiConfig) {
+    // Create client with dynamic base URL based on API path
+    const baseUrl = props.chatServiceUrl.endsWith("/") 
+      ? props.chatServiceUrl.slice(0, -1) 
+      : props.chatServiceUrl;
+    
+    // Determine if this is OpenAI-compatible (vLLM) or Ollama format
+    const isOpenAICompatible = props.chatApiConfig.path.startsWith("/v1");
+    
+    if (isOpenAICompatible) {
+      // vLLM uses standard OpenAI format with /v1 prefix
+      return createOpenAIClient(props.chatServiceUrl);
+    } else {
+      // Ollama or other custom format - create client with custom base URL
+      return createOpenAIClient(baseUrl, "token-abc123");
+    }
   }
   return null;
 });
 
 const modelName = computed(() => {
+  // First, try to get model name from chatApiConfig
+  if (props.chatApiConfig?.model && props.chatApiConfig.model !== 'unknown') {
+    return props.chatApiConfig.model;
+  }
+
+  // Fallback to job definition parsing
   if (props.job?.jobDefinition?.ops) {
     for (const op of props.job.jobDefinition.ops) {
       if (op.type === 'container/run') { 
@@ -330,11 +355,36 @@ async function sendMessage() {
   apiMessages.push({role: 'user', content: currentNewMessage.trim()});
 
   try {
-    const response = await sendChatCompletion(
-      openAIClient.value,
-      apiMessages, 
-      modelName.value
-    );
+    let response;
+    
+    if (props.chatApiConfig?.path?.startsWith("/v1")) {
+      // vLLM or OpenAI-compatible API
+      response = await sendChatCompletion(
+        openAIClient.value,
+        apiMessages, 
+        modelName.value
+      );
+    } else if (props.chatApiConfig && props.chatServiceUrl) {
+      // Ollama or other custom API
+      const baseUrl = props.chatServiceUrl.endsWith("/") 
+        ? props.chatServiceUrl.slice(0, -1) 
+        : props.chatServiceUrl;
+      
+      response = await sendCustomChatCompletion(
+        baseUrl,
+        props.chatApiConfig.path,
+        apiMessages,
+        modelName.value,
+        props.chatApiConfig.headers || {}
+      );
+    } else {
+      // Fallback to standard OpenAI client
+      response = await sendChatCompletion(
+        openAIClient.value,
+        apiMessages, 
+        modelName.value
+      );
+    }
     
     if (response.content) {
       const parsedSections = parseMessageContent(response.content);
