@@ -29,6 +29,19 @@
           Continue with Google
         </button>
 
+        <button 
+          v-if="allowTwitter"
+          class="login-button twitter-button" 
+          @click="selectTwitterLogin" 
+          :disabled="twitterLoading"
+          :class="{ 'is-loading': twitterLoading }"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24">
+            <path fill="currentColor" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+          </svg>
+          Continue with X
+        </button>
+
         <div v-if="allowGoogle && allowWallet" class="divider">
           <span>OR</span>
         </div>
@@ -86,10 +99,11 @@ import { ref, computed, watch } from 'vue';
 import { useWallet } from 'solana-wallets-vue';
 import { useRouter } from 'vue-router';
 import { useToast } from 'vue-toastification';
+import { generateCodeVerifier, generateCodeChallenge } from '~/utils/pkce';
 
 interface LoginModalProps {
   isOpen: boolean;
-  mode: 'both' | 'google' | 'wallet';
+  mode: 'both' | 'google' | 'wallet' | 'twitter';
   redirectPath?: string;
 }
 
@@ -110,11 +124,14 @@ const toast = useToast();
 const config = useRuntimeConfig().public;
 
 const googleLoading = ref(false);
+const twitterLoading = ref(false);
 const showWalletModal = ref(false);
+const codeVerifier = ref('');
 
 // Compute what authentication methods are allowed
 const allowGoogle = computed(() => props.mode === 'both' || props.mode === 'google');
 const allowWallet = computed(() => props.mode === 'both' || props.mode === 'wallet');
+const allowTwitter = computed(() => props.mode === 'both' || props.mode === 'twitter');
 
 // Compute modal title and subtitle based on mode
 const modalTitle = computed(() => {
@@ -146,6 +163,8 @@ const closeModal = () => {
 // Google login logic (copied from original login page)
 const selectGoogleLogin = async () => {
   googleLoading.value = true;
+  let popup: Window | null = null;
+  
   try {
     // Disconnect wallet if connected (mutual exclusivity)
     if (connected.value) {
@@ -162,7 +181,7 @@ const selectGoogleLogin = async () => {
     url.search = new URLSearchParams(query).toString();
     
     // Open Google auth in a popup
-    const popup = window.open(
+    popup = window.open(
       url.toString(),
       'google-auth',
       'width=500,height=600,scrollbars=yes,resizable=yes'
@@ -175,14 +194,14 @@ const selectGoogleLogin = async () => {
     // Listen for the popup to complete authentication
     const checkPopup = setInterval(() => {
       try {
-        if (popup.closed) {
+        if (popup?.closed) {
           clearInterval(checkPopup);
           googleLoading.value = false;
           return;
         }
         
         // Check if popup has been redirected to our domain with a code
-        if (popup.location.href.includes(window.location.origin)) {
+        if (popup?.location.href.includes(window.location.origin)) {
           const popupUrl = new URL(popup.location.href);
           const code = popupUrl.searchParams.get('code');
           
@@ -200,6 +219,7 @@ const selectGoogleLogin = async () => {
     }, 1000);
     
   } catch (error) {
+    if (popup) popup.close();
     toast.error('Error preparing Google login');
     googleLoading.value = false;
   }
@@ -301,6 +321,129 @@ watch(connected, (isConnected) => {
 
 // Google auth success is handled in authenticateLogin function
 // No need for additional status watcher
+
+// Twitter login logic
+const selectTwitterLogin = async () => {
+  twitterLoading.value = true;
+  let popup: Window | null = null;
+  
+  try {
+    // Disconnect wallet if connected (mutual exclusivity)
+    if (connected.value) {
+      await disconnect();
+    }
+
+    // Generate PKCE values
+    codeVerifier.value = generateCodeVerifier();
+    const codeChallenge = await generateCodeChallenge(codeVerifier.value);
+    
+    const query = {
+      response_type: 'code',
+      client_id: config.twitterClientId as string,
+      redirect_uri: config.twitterRedirectUri as string,
+      scope: 'users.read users.email offline.access tweet.read',
+      state: crypto.randomUUID(),
+      code_challenge: codeChallenge,
+      code_challenge_method: 'S256',
+    };
+
+    const url = new URL('https://twitter.com/i/oauth2/authorize');
+    url.search = new URLSearchParams(query).toString();
+    
+    // Open Twitter auth in a popup
+    popup = window.open(
+      url.toString(),
+      'twitter-auth',
+      'width=500,height=600,scrollbars=yes,resizable=yes'
+    );
+    
+    if (!popup) {
+      throw new Error('Popup blocked. Please allow popups for this site.');
+    }
+    
+    // Listen for the popup to complete authentication
+    const checkPopup = setInterval(() => {
+      try {
+        if (popup?.closed) {
+          clearInterval(checkPopup);
+          twitterLoading.value = false;
+          return;
+        }
+        
+        if (popup?.location.href.includes(window.location.origin)) {
+          const popupUrl = new URL(popup.location.href);
+          const code = popupUrl.searchParams.get('code');
+          const state = popupUrl.searchParams.get('state');
+          
+          if (code) {
+            clearInterval(checkPopup);
+            popup.close();
+            
+            // Process the authentication code
+            authenticateTwitterLogin(code, state || '', codeVerifier.value);
+          }
+        }
+      } catch (e) {
+        // Cross-origin restrictions - popup hasn't returned to our domain yet
+      }
+    }, 1000);
+    
+  } catch (error) {
+    if (popup) popup.close();
+    toast.error('Error preparing Twitter login');
+    twitterLoading.value = false;
+  }
+};
+
+// Twitter authentication logic
+const authenticateTwitterLogin = async (code: string, state: string, codeVerifier: string) => {
+  let originalEndpoint: any;
+  
+  try {
+    const { signIn } = useAuth();
+
+    // Temporarily override the auth endpoint for Twitter login
+    originalEndpoint = config.auth.provider.endpoints.signIn;
+    config.auth.provider.endpoints.signIn = {
+      path: "/api/auth/login/twitter",
+      method: "post",
+      propertyName: "token",
+    };
+
+    // Call the Twitter login endpoint
+    await signIn(
+      {
+        code,
+        state,
+        codeVerifier,
+      },
+      {
+        redirect: false
+      }
+    );
+
+    // Restore original endpoint
+    config.auth.provider.endpoints.signIn = originalEndpoint;
+
+    twitterLoading.value = false;
+    
+    // Close modal and emit success
+    setTimeout(() => {
+      emit('success');
+      emit('close');
+    }, 100);
+    
+  } catch (error) {
+    console.error("Authentication error in authenticateTwitterLogin:", error);
+    
+    if (originalEndpoint) {
+      config.auth.provider.endpoints.signIn = originalEndpoint;
+    }
+    
+    toast.error("Failed to authenticate with X. Please try again.");
+    twitterLoading.value = false;
+  }
+};
 </script>
 
 <style scoped>
@@ -314,7 +457,7 @@ watch(connected, (isConnected) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 10000;
+  z-index: 1000;
 }
 
 .login-modal {
@@ -369,6 +512,42 @@ watch(connected, (isConnected) => {
   justify-content: center;
   gap: 0.75rem;
   margin-bottom: 1rem;
+  position: relative; /* Add this */
+}
+
+/* Add loading state styles */
+.login-button.is-loading {
+  color: transparent !important;
+  pointer-events: none;
+}
+
+.login-button.is-loading::after {
+  content: '';
+  position: absolute;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 2px solid;
+  border-color: #ffffff transparent #ffffff transparent;
+  border-radius: 50%;
+  animation: button-loading-spinner 1.2s linear infinite;
+}
+
+@keyframes button-loading-spinner {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Add light mode variant */
+.login-modal:not(.dark-mode) .login-button.is-loading::after {
+  border-color: #000000 transparent #000000 transparent;
+}
+
+.twitter-button.is-loading::after {
+  border-color: #ffffff transparent #ffffff transparent !important;
 }
 
 .google-button:hover:not(:disabled) {
@@ -379,6 +558,16 @@ watch(connected, (isConnected) => {
 .google-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.twitter-button {
+  background: #000000;
+  border-color: #2f2f2f;
+  
+  &:hover:not(:disabled) {
+    background: #141414;
+    border-color: #3f3f3f;
+  }
 }
 
 .wallet-button:disabled {
@@ -429,7 +618,7 @@ watch(connected, (isConnected) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 10001;
+  z-index: 1001;
 }
 
 .wallet-modal-content {
@@ -507,6 +696,17 @@ watch(connected, (isConnected) => {
 .login-modal:not(.dark-mode) .google-button:hover:not(:disabled) {
   background: #f3f4f6;
   border-color: #d1d5db;
+}
+
+.login-modal:not(.dark-mode) .twitter-button {
+  background: #000000;
+  border-color: #2f2f2f;
+  color: #ffffff;
+}
+
+.login-modal:not(.dark-mode) .twitter-button:hover:not(:disabled) {
+  background: #141414;
+  border-color: #3f3f3f;
 }
 
 .login-modal:not(.dark-mode) .divider span {

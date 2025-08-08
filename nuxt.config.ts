@@ -38,6 +38,8 @@ export default defineNuxtConfig({
       frpServer: process.env.FRP_SERVER || 'node.k8s.prd.nos.ci',
       googleRedirectUri: process.env.GOOGLE_REDIRECT_URI,
       googleClientId: process.env.GOOGLE_CLIENT_ID,
+      twitterClientId: process.env.TWITTER_CLIENT_ID,
+      twitterRedirectUri: process.env.TWITTER_REDIRECT_URI,
     }
   },
   auth: {
