@@ -62,6 +62,7 @@ export default defineNuxtConfig({
           email: 'string',
           address: 'string',
           generatedAddress: 'string',
+          providerUsername: 'string',
           type: 'string',
         },
       },

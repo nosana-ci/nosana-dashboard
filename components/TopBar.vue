@@ -148,7 +148,7 @@ const toggleDarkMode = () => {
 };
 
 const getUserName = () => {
-  return session.value?.name || session.value?.email || 'User';
+  return session.value?.providerUsername || session.value?.name || session.value?.email || 'User';
 };
 
 const getUserInitials = () => {
