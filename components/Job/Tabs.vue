@@ -102,7 +102,8 @@
   <JobChatView 
     v-show="activeTab === 'chat' && showChatTab" 
     :job="props.job" 
-    :chatServiceUrl="chatServiceUrl" />
+    :chatServiceUrl="chatServiceUrl" 
+    :chatApiConfig="chatApiConfig" />
   <div v-if="activeTab === 'details'" class="details-tab-content">
     <div class="columns is-multiline">
       <!-- Started -->
@@ -233,6 +234,11 @@ interface Props {
   resourceProgressBars: Map<string, any>;
   showChatTab?: boolean;
   chatServiceUrl?: string | null;
+  chatApiConfig?: {
+    path: string;
+    model: string;
+    headers?: Record<string, string>;
+  } | null;
   activeTab: string; // Prop for active tab
   logsTextForCopy?: string;
   copyToClipboard?: (text: string | undefined, type: string) => Promise<void>;
