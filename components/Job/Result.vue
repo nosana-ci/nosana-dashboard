@@ -18,7 +18,7 @@
             <span>- Executed step '{{ opState.operationId }}'</span>
           </div>
           <div v-for="(log, ik) in opState.logs" :key="ik" class="row-count">
-            <span class="pre" v-html="log.log.slice(0, 10000)" />
+            <span class="pre" v-html="escapeHtml(log.log.slice(0, 10000))" />
           </div>
           <div class="row-count"></div>
           <div v-if="opState.status" class="row-count" :class="{
@@ -71,7 +71,7 @@
               </div>
               <div v-if="step.log && Array.isArray(step.log)">
                 <div v-for="(log, ik) in step.log" :key="ik" class="row-count">
-                  <span class="pre" v-html="log[1].slice(0, 10000)" />
+                  <span class="pre" v-html="escapeHtml(log[1].slice(0, 10000))" />
                 </div>
                 <div v-if="step.error" class="row-count">
                   <span class="has-text-weight-bold">{{ step.error }}</span>
@@ -99,7 +99,7 @@
             <span>- Executed step '{{ opState.operationId }}'</span>
           </div>
           <div v-for="(log, ik) in opState.logs" :key="ik" class="row-count">
-            <span class="pre" v-html="log.log.slice(0, 10000)" />
+            <span class="pre" v-html="escapeHtml(log.log.slice(0, 10000))" />
           </div>
           <div class="row-count"></div>
           <div v-if="opState.status" class="row-count" :class="{
@@ -151,7 +151,7 @@
               </div>
               <div v-if="step.log && Array.isArray(step.log)">
                 <div v-for="(log, ik) in step.log" :key="ik" class="row-count">
-                  <span class="pre" v-html="log[1].slice(0, 10000)" />
+                  <span class="pre" v-html="escapeHtml(log[1].slice(0, 10000))" />
                 </div>
                 <div v-if="step.error" class="row-count">
                   <span class="has-text-weight-bold">{{ step.error }}</span>
@@ -192,6 +192,16 @@ defineProps({
 const resultContainer = ref<HTMLElement | null>(null);
 const fullscreenResultContainer = ref<HTMLElement | null>(null);
 const resultModal = useModal();
+
+// Escape HTML to prevent any style/script injection coming from job logs
+function escapeHtml(unsafe: string): string {
+  return unsafe
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
 
 const scrollToBottom = (container?: HTMLElement | null) => {
   const targetContainer = container || resultContainer.value;

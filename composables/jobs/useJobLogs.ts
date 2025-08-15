@@ -24,6 +24,9 @@ export interface LogEntry {
   isContainerLog?: boolean;
 }
 
+// Monotonic id to avoid duplicate keys when logs arrive within the same ms
+let logSequence = 0;
+
 export function useJobLogs(
   jobAddress: string,
   host: string,
@@ -52,6 +55,63 @@ export function useJobLogs(
   // Configure ansi_up
   ansi.use_classes = true;
 
+  // --- HTML utilities ---
+  function escapeHtml(unsafe: string): string {
+    return unsafe
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  // Sanitize ansi_up output. Allow only spans with classes starting with
+  // "ansi-" or "download-status" and optional font-weight:bold style.
+  function sanitizeAnsiHtml(html: string): string {
+    if (typeof window === "undefined" || typeof document === "undefined") {
+      return escapeHtml(html);
+    }
+    const container = document.createElement("div");
+    container.innerHTML = html;
+
+    const sanitizeNode = (node: Node): Node | null => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        return document.createTextNode((node as Text).data);
+      }
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        const el = node as HTMLElement;
+        if (el.tagName.toUpperCase() === "SPAN") {
+          const keptClasses = Array.from(el.classList).filter(
+            (c) => c.startsWith("ansi-") || c === "download-status"
+          );
+          const bold = /font-weight\s*:\s*bold/i.test(el.getAttribute("style") || "");
+          const newSpan = document.createElement("span");
+          if (keptClasses.length > 0) newSpan.className = keptClasses.join(" ");
+          if (bold) newSpan.style.fontWeight = "bold";
+          Array.from(el.childNodes).forEach((child) => {
+            const sanitizedChild = sanitizeNode(child);
+            if (sanitizedChild) newSpan.appendChild(sanitizedChild);
+          });
+          return newSpan;
+        }
+        const fragment = document.createDocumentFragment();
+        Array.from(el.childNodes).forEach((child) => {
+          const sanitizedChild = sanitizeNode(child);
+          if (sanitizedChild) fragment.appendChild(sanitizedChild);
+        });
+        return fragment;
+      }
+      return null;
+    };
+
+    const out = document.createElement("div");
+    Array.from(container.childNodes).forEach((child) => {
+      const sanitized = sanitizeNode(child);
+      if (sanitized) out.appendChild(sanitized);
+    });
+    return out.innerHTML;
+  }
+
   function convertFromBytes(
     bytes: number,
     toFormat?: "gb" | "mb" | "kb"
@@ -79,10 +139,22 @@ export function useJobLogs(
     }
 
     // Convert ANSI to HTML
-    const processedContent = ansi.ansi_to_html(content);
+    let processedContent = ansi.ansi_to_html(content);
+
+    // Wrap known status lines for clearer styling
+    if (
+      content.startsWith("Download complete:") ||
+      content.startsWith("Already exists:") ||
+      content.startsWith("Pull complete:")
+    ) {
+      processedContent = `<span class="download-status">${escapeHtml(content)}</span>`;
+    } else {
+      // Sanitize ansi_up output
+      processedContent = sanitizeAnsiHtml(processedContent);
+    }
 
     const logEntry: LogEntry = {
-      id: Date.now(),
+      id: ++logSequence,
       type: "log",
       content: processedContent,
       timestamp: Date.now(),
@@ -93,7 +165,11 @@ export function useJobLogs(
     // Don't add duplicate consecutive logs
     const targetArray = isSystemLog ? systemLogs.value : containerLogs.value;
     const lastLog = targetArray[targetArray.length - 1];
-    if (lastLog?.type === "log" && stripAnsi(lastLog.content) === stripAnsi(content)) {
+    const stripHtml = (s: string) => s.replace(/<[^>]+>/g, "");
+    if (
+      lastLog?.type === "log" &&
+      stripHtml(lastLog.content) === stripAnsi(content)
+    ) {
       return;
     }
 
