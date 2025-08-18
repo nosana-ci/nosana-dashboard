@@ -111,7 +111,7 @@ const showUserProfileDropdown = ref(false);
 
 // Check if user is authenticated via Google
 const isGoogleAuthenticated = computed(() => {
-  return status.value === 'authenticated';
+  return status.value === 'authenticated' || status.value === 'loading';
 });
 
 // Profile dropdown functions
