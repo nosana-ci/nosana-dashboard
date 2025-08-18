@@ -2,7 +2,7 @@
   <!-- Job Card Container -->
   <div class="card">
     <!-- Card Header and Service Endpoints Container -->
-    <div class="card-header-container" @click="toggleMainContent">
+    <div class="card-header-container">
       <!-- Card Header - Always Visible -->
       <header class="card-header">
         <div class="w-100">
@@ -183,17 +183,7 @@
           </div>
         </div>
 
-        <!-- Dropdown Arrow -->
-        <button class="card-header-icon" aria-label="more options">
-          <span class="icon">
-            <img
-              src="~/assets/img/icons/arrow-collapse.svg"
-              class="arrow-icon"
-              :class="{ 'is-rotated': isMainContentOpen }"
-              alt="Toggle content"
-            />
-          </span>
-        </button>
+        <!-- Arrow removed - content always open -->
       </header>
 
       <!-- Service Endpoints Row -->
@@ -259,7 +249,7 @@
       </div>
     </div>
 
-    <div v-if="isMainContentOpen" class="card-content p-4">
+    <div class="card-content p-4">
       <!-- Quick Details Compact Grid -->
       <div class="content mb-5">
         <!-- First Row of Quick Details -->
@@ -925,9 +915,7 @@ const toggleDetails = () => {
   isDetailsOpen.value = !isDetailsOpen.value;
 };
 
-const toggleMainContent = () => {
-  isMainContentOpen.value = !isMainContentOpen.value;
-};
+// Toggle function removed - content always open
 
 // Job action functions (moved from JobToolbar)
 async function stopJob() {
