@@ -305,7 +305,7 @@ const config = useRuntimeConfig();
 const gpuTab = ref<"simple" | "advanced">("simple");
 // Show all markets on devnet, only premium on mainnet
 const gpuTypeCheckbox = ref<string[]>(config.public.network === 'devnet' ? ["PREMIUM", "COMMUNITY"] : ["PREMIUM"]);
-const activeFilter = ref("PREMIUM");
+const activeFilter = ref(config.public.network === 'devnet' ? "ALL" : "PREMIUM");
 const selectedMarket = ref<Market | null>(null);
 const selectedTemplate = ref<Template | null>(null);
 const hours = ref(1);
