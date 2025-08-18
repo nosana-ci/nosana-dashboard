@@ -1500,6 +1500,21 @@ const handleAdvancedMarketSelection = (marketInfo: any) => {
   }
 }
 
+/* Ultrawide screen adjustments for deploy page */
+@media screen and (min-width: 1920px) {
+  .summary {
+    position: static !important;
+    top: auto !important;
+    right: auto !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin-top: 1.5rem !important;
+    padding: 0 !important;
+    background: transparent !important;
+  }
+}
+
+
 /* Adjust column padding on mobile */
 @media screen and (max-width: 768px) {
   .columns.is-multiline > .column.is-9-fullhd,

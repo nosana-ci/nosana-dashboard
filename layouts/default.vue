@@ -2,7 +2,7 @@
   <div id="app">
     <section class="columns ml-0 mr-0 mt-0 mb-0">
       <side-bar />
-      <div id="content" class="column has-navbar-fixed-top-mobile is-flex is-flex-direction-column">
+      <div id="content" class="column has-navbar-fixed-top-mobile is-flex is-flex-direction-column ultrawide-centered">
         <div class="section">
           <div>
             <slot />
@@ -52,5 +52,20 @@ const handleLoginSuccess = () => {
   min-height: 100vh;
   max-width: 1600px;
   min-width: 0;
+}
+
+/* Ultrawide screen centering - center main content while keeping sidebar fixed */
+@media screen and (min-width: 1920px) {
+  .ultrawide-centered {
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+  
+  /* Adjust the main columns container to accommodate centered content */
+  .columns {
+    justify-content: flex-start;
+  }
 }
 </style>
