@@ -180,14 +180,22 @@
       <div class="modal-card" style="width: 80%; max-width: 960px;">
         <header class="modal-card-head">
           <div class="modal-card-title is-flex is-align-items-center">
-            <img 
-              v-if="selectedTemplate?.icon || selectedTemplate?.avatar_url"
-              :src="selectedTemplate.icon || selectedTemplate.avatar_url"
-              alt="Template Icon"
-              class="mr-2" 
-              style="height: 24px; width: 24px; border-radius: 4px; object-fit: contain; flex-shrink: 0;"
-            />
-            <span>{{ selectedTemplate?.name }}</span>
+            <template v-if="loadingTemplates">
+              <span class="icon is-small mr-2">
+                <i class="fas fa-spinner fa-spin"></i>
+              </span>
+              <span>Loading template...</span>
+            </template>
+            <template v-else>
+              <img 
+                v-if="selectedTemplate?.icon || selectedTemplate?.avatar_url"
+                :src="selectedTemplate.icon || selectedTemplate.avatar_url"
+                alt="Template Icon"
+                class="mr-2" 
+                style="height: 24px; width: 24px; border-radius: 4px; object-fit: contain; flex-shrink: 0;"
+              />
+              <span>{{ selectedTemplate?.name || 'Template' }}</span>
+            </template>
           </div>
           <button class="delete" aria-label="close" @click="showReadmeModal = false"></button>
         </header>
@@ -404,29 +412,8 @@ const { data: stats } = await useAPI("/api/stats");
 const { data: testgridMarkets } = await useAPI("/api/markets", { default: () => [] });
 const nosApiPrice = computed(() => stats.value?.price || 0);
 
-// Default job definition - will be populated by template selection
-const jobDefinition = ref<JobDefinition>({
-  type: "container",
-  version: "0.1",
-  ops: [
-    {
-      id: "default",
-      type: "container/run",
-      args: {
-        image: "ubuntu",
-        gpu: true,
-        cmd: ["echo", "hello world"],
-        expose: 80
-      }
-    }
-  ],
-  meta: {
-    trigger: "dashboard",
-    system_requirements: {
-      required_vram: 1
-    }
-  }
-});
+// Job definition - will be populated when PyTorch template loads
+const jobDefinition = ref<JobDefinition | null>(null);
 
 // Cache NOS price data
 interface CachedPrice {
@@ -803,11 +790,13 @@ watch(() => groupedTemplates.value, (newTemplates) => {
   if (Array.isArray(newTemplates) && newTemplates.length > 0 && !selectedTemplate.value && !isRestoringState.value && !hasValidStoredState.value) {
     // Find the PyTorch Jupyter template by matching the docker image
     const pytorchTemplate = newTemplates.find((template: any) => 
-      template.jobDefinition?.ops?.[0]?.args?.image === "docker.io/nosana/pytorch-jupyter:0.0.0"
+      template.jobDefinition?.ops?.[0]?.args?.image?.includes("nosana/pytorch-jupyter")
     );
     
     if (pytorchTemplate) {
       selectedTemplate.value = pytorchTemplate as Template;
+      // Set the job definition from the template
+      jobDefinition.value = pytorchTemplate.jobDefinition;
     }
   }
 }, { immediate: true });
