@@ -870,15 +870,45 @@ const { processedBenchmarkResponse: benchmarkData } =
   useGenericBenchmark(allBenchmarkData as any);
 
 const aggregatedDownloadSpeed = computed(() => {
-  if (nodeSpecs.value?.bandwidth?.download) {
-    return nodeSpecs.value.bandwidth.download.toFixed(2);
+  // Use only benchmark data (same as host page)
+  if (
+    benchmarkData.value &&
+    benchmarkData.value.data &&
+    benchmarkData.value.data.length > 0
+  ) {
+    const validEntries = benchmarkData.value.data.filter(
+      (entry: any) =>
+        entry.metrics && typeof entry.metrics.internetSpeedDownload === "number"
+    );
+    if (validEntries.length > 0) {
+      const totalDownload = validEntries.reduce(
+        (sum: number, entry: any) => sum + entry.metrics.internetSpeedDownload,
+        0
+      );
+      return (totalDownload / validEntries.length).toFixed(2);
+    }
   }
   return null;
 });
 
 const aggregatedUploadSpeed = computed(() => {
-  if (nodeSpecs.value?.bandwidth?.upload) {
-    return nodeSpecs.value.bandwidth.upload.toFixed(2);
+  // Use only benchmark data (same as host page)
+  if (
+    benchmarkData.value &&
+    benchmarkData.value.data &&
+    benchmarkData.value.data.length > 0
+  ) {
+    const validEntries = benchmarkData.value.data.filter(
+      (entry: any) =>
+        entry.metrics && typeof entry.metrics.internetSpeedUpload === "number"
+    );
+    if (validEntries.length > 0) {
+      const totalUpload = validEntries.reduce(
+        (sum: number, entry: any) => sum + entry.metrics.internetSpeedUpload,
+        0
+      );
+      return (totalUpload / validEntries.length).toFixed(2);
+    }
   }
   return null;
 });
