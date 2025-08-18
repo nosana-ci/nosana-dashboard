@@ -151,9 +151,10 @@ const getAuthProvider = () => {
   return 'google';
 };
 
-// Credit balance state
-const creditBalance = ref(0);
+// Credit balance state - using useState to persist across navigation
+const creditBalance = useState('topbar-credit-balance', () => 0);
 const loadingCreditBalance = ref(false);
+const hasLoadedCreditBalance = useState('topbar-has-loaded-balance', () => false);
 
 // NOS balance state
 const nosBalance = ref<any | null>(null);
@@ -195,6 +196,7 @@ const fetchCreditBalance = async () => {
       creditBalance.value = data.assignedCredits
         ? data.assignedCredits - data.settledCredits - data.reservedCredits
         : 0;
+      hasLoadedCreditBalance.value = true;
     } else {
       console.error("Failed to fetch credit balance");
     }
