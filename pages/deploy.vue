@@ -7,7 +7,11 @@
       :hide-buttons="false"
       v-model="showSettingsModal"
     ></TopBar>
-    <div class="columns is-multiline">
+    
+    <!-- Show loader until all critical data is loaded -->
+    <Loader v-if="!jobDefinition || loadingTemplates || loadingMarkets" />
+    
+    <div v-else class="columns is-multiline">
       <div class="column is-9-fullhd is-12">
         <!-- Choose model -->
         <DeployJobDefinition
