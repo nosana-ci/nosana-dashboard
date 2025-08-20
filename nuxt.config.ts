@@ -69,7 +69,7 @@ export default defineNuxtConfig({
     },
     sessionRefresh: {
       enablePeriodically: false, // Disable automatic session refresh
-      enableOnWindowFocus: false, // Disable refresh on window focus
+      enableOnWindowFocus: true, // Enable refresh on window focus for cross-tab sync
     },
     globalAppMiddleware: false,
   },

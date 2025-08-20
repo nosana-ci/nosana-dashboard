@@ -2,7 +2,7 @@
   <!-- Job Card Container -->
   <div class="card">
     <!-- Card Header and Service Endpoints Container -->
-    <div class="card-header-container" @click="toggleMainContent">
+    <div class="card-header-container">
       <!-- Card Header - Always Visible -->
       <header class="card-header">
         <div class="w-100">
@@ -183,17 +183,6 @@
           </div>
         </div>
 
-        <!-- Dropdown Arrow -->
-        <button class="card-header-icon" aria-label="more options">
-          <span class="icon">
-            <img
-              src="~/assets/img/icons/arrow-collapse.svg"
-              class="arrow-icon"
-              :class="{ 'is-rotated': isMainContentOpen }"
-              alt="Toggle content"
-            />
-          </span>
-        </button>
       </header>
 
       <!-- Service Endpoints Row -->
@@ -259,7 +248,7 @@
       </div>
     </div>
 
-    <div v-if="isMainContentOpen" class="card-content p-4">
+    <div class="card-content p-4">
       <!-- Quick Details Compact Grid -->
       <div class="content mb-5">
         <!-- First Row of Quick Details -->
@@ -870,15 +859,39 @@ const { processedBenchmarkResponse: benchmarkData } =
   useGenericBenchmark(allBenchmarkData as any);
 
 const aggregatedDownloadSpeed = computed(() => {
-  if (nodeSpecs.value?.bandwidth?.download) {
-    return nodeSpecs.value.bandwidth.download.toFixed(2);
+  // Use only benchmark data (same as host page)
+  if (benchmarkData.value?.data?.length > 0) {
+    const { totalDownload, entries } = benchmarkData.value.data.reduce(
+      (acc: { totalDownload: number; entries: number }, entry: any) => {
+        if (typeof entry.metrics?.internetSpeedDownload !== "number") return acc;
+        return {
+          totalDownload: acc.totalDownload + entry.metrics.internetSpeedDownload,
+          entries: acc.entries + 1
+        };
+      },
+      { totalDownload: 0, entries: 0 }
+    );
+    
+    return entries > 0 ? (totalDownload / entries).toFixed(2) : null;
   }
   return null;
 });
 
 const aggregatedUploadSpeed = computed(() => {
-  if (nodeSpecs.value?.bandwidth?.upload) {
-    return nodeSpecs.value.bandwidth.upload.toFixed(2);
+  // Use only benchmark data (same as host page)
+  if (benchmarkData.value?.data?.length > 0) {
+    const { totalUpload, entries } = benchmarkData.value.data.reduce(
+      (acc: { totalUpload: number; entries: number }, entry: any) => {
+        if (typeof entry.metrics?.internetSpeedUpload !== "number") return acc;
+        return {
+          totalUpload: acc.totalUpload + entry.metrics.internetSpeedUpload,
+          entries: acc.entries + 1
+        };
+      },
+      { totalUpload: 0, entries: 0 }
+    );
+    
+    return entries > 0 ? (totalUpload / entries).toFixed(2) : null;
   }
   return null;
 });
@@ -895,9 +908,6 @@ const toggleDetails = () => {
   isDetailsOpen.value = !isDetailsOpen.value;
 };
 
-const toggleMainContent = () => {
-  isMainContentOpen.value = !isMainContentOpen.value;
-};
 
 // Job action functions (moved from JobToolbar)
 async function stopJob() {

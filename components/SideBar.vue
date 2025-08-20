@@ -152,12 +152,22 @@
       </ul>
     </div>
     <div
-      class="is-flex is-justify-content-flex-start is-align-items-center mt-auto"
+      class="is-flex is-justify-content-space-between is-align-items-center mt-auto"
     >
       <nuxt-link to="/status" @click="showMenu = false">
         <div class="status-dot dot-online"></div>
         Healthy
       </nuxt-link>
+      <button 
+        class="sidebar-theme-toggle"
+        @click="toggleDarkMode"
+        :title="$colorMode.value === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'"
+      >
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+          <path v-if="$colorMode.value === 'dark'" fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd" fill="currentColor"/>
+          <path v-else d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" fill="currentColor"/>
+        </svg>
+      </button>
     </div>
   </aside>
   <nav class="navbar is-hidden-desktop is-fixed-top has-shadow">
@@ -236,6 +246,11 @@ const toggleExplorer = () => {
 
 const isActive = (paths: string[]) => {
   return paths.includes(route.path);
+};
+
+// Toggle dark mode
+const toggleDarkMode = () => {
+  useColorMode().preference = useColorMode().value === 'dark' ? 'light' : 'dark';
 };
 
 </script>
@@ -628,5 +643,32 @@ const isActive = (paths: string[]) => {
 
 .dark-mode .profile-avatar {
   background: #4b5563;
+}
+
+.sidebar-theme-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+  color: #6b7280;
+}
+
+.sidebar-theme-toggle:hover {
+  background-color: #f3f4f6;
+  color: #374151;
+}
+
+.dark-mode .sidebar-theme-toggle {
+  color: #9ca3af;
+}
+
+.dark-mode .sidebar-theme-toggle:hover {
+  background-color: #374151;
+  color: #d1d5db;
 }
 </style>

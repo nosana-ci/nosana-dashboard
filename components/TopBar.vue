@@ -78,13 +78,6 @@
       </div>
       
       <div v-if="showUserProfileDropdown" class="dropdown-menu-simple">
-        <button class="dropdown-item-simple" @click.stop="toggleDarkMode">
-          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" class="dropdown-icon">
-            <path v-if="$colorMode.value === 'dark'" fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd" fill="currentColor"/>
-            <path v-else d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" fill="currentColor"/>
-          </svg>
-          {{ $colorMode.value === 'dark' ? 'Light Mode' : 'Dark Mode' }}
-        </button>
         <button class="dropdown-item-simple" @click.stop="openPriorityFeeSettings">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" class="dropdown-icon">
             <path d="M6.71971 1.2926L6.41471 2.9726C6.11846 3.06573 5.83097 3.18635 5.55971 3.32761L4.14971 2.35761L2.33979 4.16753L3.31479 5.57252C3.17292 5.84439 3.05355 6.13003 2.95979 6.42753L1.27979 6.73252V9.29252L2.95979 9.59751C3.05354 9.89564 3.17729 10.18 3.31979 10.4525L2.33979 11.8575L4.14971 13.6674L5.5547 12.6974C5.82719 12.8399 6.11657 12.9587 6.4147 13.0524L6.71969 14.7324H9.27969L9.58468 13.0524C9.88218 12.9587 10.1678 12.8393 10.4397 12.6974L11.8447 13.6674L13.6546 11.8575L12.6796 10.4525C12.8208 10.1813 12.9415 9.89878 13.0346 9.60252L14.7196 9.29252V6.73252L13.0346 6.42753C12.9415 6.1319 12.8252 5.84815 12.6846 5.57753L13.6546 4.16753L11.8447 2.35761L10.4397 3.32761C10.1678 3.18574 9.88218 3.06636 9.58468 2.9726L9.27969 1.2926H6.71971ZM7.9997 4.9726C9.67842 4.9726 11.0397 6.33385 11.0397 8.0126C11.0397 9.69135 9.67846 11.0526 7.9997 11.0526C6.32095 11.0526 4.95971 9.69135 4.95971 8.0126C4.95971 6.33385 6.32095 4.9726 7.9997 4.9726Z" fill="currentColor"/>
@@ -104,7 +97,7 @@
 </template>
 <script lang="ts" setup>
 import { WalletMultiButton } from "solana-wallets-vue";
-import { computed, ref, onMounted, watch } from 'vue';
+import { computed, ref, onMounted, onUnmounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useWallet } from 'solana-wallets-vue';
 
@@ -116,9 +109,10 @@ const { connected, publicKey, wallet, disconnect } = useWallet();
 // Profile dropdown state  
 const showUserProfileDropdown = ref(false);
 
-// Check if user is authenticated via Google
+// Memoized authentication state to prevent unnecessary template re-renders
 const isGoogleAuthenticated = computed(() => {
-  return status.value === 'authenticated';
+  const currentStatus = status.value;
+  return currentStatus === 'authenticated' || currentStatus === 'loading';
 });
 
 // Profile dropdown functions
@@ -141,11 +135,6 @@ const getWalletAddress = () => {
   return `${address.slice(0, 4)}..${address.slice(-4)}`;
 };
 
-// Toggle dark mode
-const toggleDarkMode = () => {
-  showUserProfileDropdown.value = false;
-  useColorMode().preference = useColorMode().value === 'dark' ? 'light' : 'dark';
-};
 
 const getUserName = () => {
   return session.value?.providerUsername || session.value?.name || session.value?.email || 'User';
@@ -163,9 +152,10 @@ const getAuthProvider = () => {
   return 'google';
 };
 
-// Credit balance state
-const creditBalance = ref(0);
+// Credit balance state - using useState to persist across navigation
+const creditBalance = useState('topbar-credit-balance', () => 0);
 const loadingCreditBalance = ref(false);
+const hasLoadedCreditBalance = useState('topbar-has-loaded-balance', () => false);
 
 // NOS balance state
 const nosBalance = ref<any | null>(null);
@@ -175,18 +165,20 @@ const getCreditBalance = () => {
   return creditBalance.value || 0;
 };
 
-// Get NOS price from stats API
+// Get NOS price from stats API with memoization
 const { data: stats } = useAPI('/api/stats');
 const nosPrice = computed(() => stats.value?.price || 0);
 
-// Get NOS balance in USD
-const getNosBalanceUSD = () => {
-  if (!nosBalance.value) return 0;
+// Memoized NOS balance in USD to prevent recalculation on every render
+const nosBalanceUSD = computed(() => {
+  if (!nosBalance.value || !nosPrice.value) return 0;
   return (nosBalance.value.uiAmount || 0) * nosPrice.value;
-};
+});
+
+const getNosBalanceUSD = () => nosBalanceUSD.value;
 
 // Fetch credit balance
-const fetchCreditBalance = async () => {
+const fetchCreditBalance = async (signal?: AbortSignal) => {
   if (status.value !== 'authenticated') return;
   
   loadingCreditBalance.value = true;
@@ -200,6 +192,7 @@ const fetchCreditBalance = async () => {
         "Content-Type": "application/json",
         Authorization: token.value as string,
       },
+      signal, // Pass the abort signal
     });
 
     if (response.ok) {
@@ -207,26 +200,36 @@ const fetchCreditBalance = async () => {
       creditBalance.value = data.assignedCredits
         ? data.assignedCredits - data.settledCredits - data.reservedCredits
         : 0;
+      hasLoadedCreditBalance.value = true;
     } else {
       console.error("Failed to fetch credit balance");
     }
   } catch (error) {
-    console.error("Error fetching credit balance:", error);
+    // Don't log errors for aborted requests
+    if (error instanceof Error && error.name !== 'AbortError') {
+      console.error("Error fetching credit balance:", error);
+    }
   } finally {
     loadingCreditBalance.value = false;
   }
 };
 
 // Fetch NOS balance
-const fetchNosBalance = async () => {
+const fetchNosBalance = async (signal?: AbortSignal) => {
   if (!connected.value || !publicKey.value) return;
   
   loadingNosBalance.value = true;
   try {
     const { nosana } = useSDK();
+    // Note: SDK calls don't support AbortSignal directly, but we can check if aborted
+    if (signal?.aborted) return;
+    
     nosBalance.value = await nosana.value.solana.getNosBalance(publicKey.value.toBase58());
   } catch (error) {
-    console.error("Error fetching NOS balance:", error);
+    // Don't log errors for aborted requests
+    if (!(error instanceof Error && error.name === 'AbortError') && !signal?.aborted) {
+      console.error("Error fetching NOS balance:", error);
+    }
     nosBalance.value = null;
   } finally {
     loadingNosBalance.value = false;
@@ -253,17 +256,59 @@ const logout = async () => {
 
 // Close dropdown when clicking outside (onMounted)
 
-// Watch for authentication status and token changes
-watch([status, token], async () => {
-  if (status.value === 'authenticated' && token.value) {
-    await fetchCreditBalance();
+// Debounced API calls with abort controllers to prevent race conditions
+let creditBalanceTimeout: NodeJS.Timeout | null = null;
+let nosBalanceTimeout: NodeJS.Timeout | null = null;
+let creditBalanceController: AbortController | null = null;
+let nosBalanceController: AbortController | null = null;
+
+const debouncedFetchCreditBalance = () => {
+  // Cancel any pending request
+  if (creditBalanceController) {
+    creditBalanceController.abort();
+  }
+  
+  if (creditBalanceTimeout) clearTimeout(creditBalanceTimeout);
+  creditBalanceTimeout = setTimeout(() => {
+    creditBalanceController = new AbortController();
+    fetchCreditBalance(creditBalanceController.signal);
+  }, 100);
+};
+
+const debouncedFetchNosBalance = () => {
+  // Cancel any pending request
+  if (nosBalanceController) {
+    nosBalanceController.abort();
+  }
+  
+  if (nosBalanceTimeout) clearTimeout(nosBalanceTimeout);
+  nosBalanceTimeout = setTimeout(() => {
+    nosBalanceController = new AbortController();
+    fetchNosBalance(nosBalanceController.signal);
+  }, 100);
+};
+
+// Watch for authentication status and token changes (optimized)
+watch([status, token], async (newValues, oldValues) => {
+  const [newStatus, newToken] = newValues;
+  const [oldStatus, oldToken] = oldValues || [];
+  
+  // Only fetch if authentication state actually changed to authenticated
+  if (newStatus === 'authenticated' && newToken && 
+      (oldStatus !== 'authenticated' || oldToken !== newToken)) {
+    debouncedFetchCreditBalance();
   }
 }, { immediate: true });
 
-// Watch for wallet connection changes
-watch([connected, publicKey], async () => {
-  if (connected.value && publicKey.value) {
-    await fetchNosBalance();
+// Watch for wallet connection changes (optimized)
+watch([connected, publicKey], async (newValues, oldValues) => {
+  const [newConnected, newPublicKey] = newValues;
+  const [oldConnected, oldPublicKey] = oldValues || [];
+  
+  // Only fetch if wallet actually connected or changed
+  if (newConnected && newPublicKey && 
+      (!oldConnected || oldPublicKey?.toBase58() !== newPublicKey?.toBase58())) {
+    debouncedFetchNosBalance();
   }
 }, { immediate: true });
 
@@ -275,15 +320,47 @@ onCreditRefresh(async () => {
   }
 });
 
+// Store click handler reference for cleanup
+let clickHandler: ((e: Event) => void) | null = null;
+
 onMounted(() => {
   if (process.client) {
-    document.addEventListener('click', (e) => {
+    clickHandler = (e: Event) => {
       const target = e.target as HTMLElement;
       const dropdown = target?.closest?.('.profile-dropdown');
       if (!dropdown && showUserProfileDropdown.value) {
         showUserProfileDropdown.value = false;
       }
-    });
+    };
+    document.addEventListener('click', clickHandler);
+  }
+});
+
+onUnmounted(() => {
+  // Clean up timeouts to prevent memory leaks
+  if (creditBalanceTimeout) {
+    clearTimeout(creditBalanceTimeout);
+    creditBalanceTimeout = null;
+  }
+  if (nosBalanceTimeout) {
+    clearTimeout(nosBalanceTimeout);
+    nosBalanceTimeout = null;
+  }
+  
+  // Abort any pending requests
+  if (creditBalanceController) {
+    creditBalanceController.abort();
+    creditBalanceController = null;
+  }
+  if (nosBalanceController) {
+    nosBalanceController.abort();
+    nosBalanceController = null;
+  }
+  
+  // Clean up event listener
+  if (clickHandler && process.client) {
+    document.removeEventListener('click', clickHandler);
+    clickHandler = null;
   }
 });
 

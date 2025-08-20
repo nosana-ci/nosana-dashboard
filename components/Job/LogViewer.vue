@@ -21,7 +21,7 @@
 
       <!-- Log Entries and Progress Bars -->
       <div class="log-content">
-        <template v-for="log in props.logs" :key="log.id">
+        <template v-for="(log, index) in props.logs" :key="index">
           <div
             class="log-entry"
             :class="{ 'container-log': log.isContainerLog }"
@@ -89,6 +89,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch, nextTick } from "vue";
+import { escapeHtml, sanitizeAnsiHtml } from "~/utils/htmlSanitization";
 
 import type { LogEntry, ProgressBar } from "~/composables/jobs/useJobLogs";
 
@@ -109,6 +110,7 @@ const signMessageError = ref(false);
 const logContainer = ref<HTMLElement | null>(null);
 const shouldAutoScroll = ref(true);
 
+
 // Format container logs to highlight timestamps and handle ANSI codes
 function formatContainerLog(
   content: string,
@@ -116,7 +118,13 @@ function formatContainerLog(
 ) {
   if (!content) return "";
 
-  let formattedContent = content;
+  // If upstream already sends ANSI/status spans, sanitize that HTML and return.
+  if (content.includes('<span') && (content.includes('ansi-') || content.includes('download-status'))) {
+    return sanitizeAnsiHtml(content);
+  }
+
+  // Otherwise, treat as plain text and escape
+  let formattedContent = escapeHtml(content);
 
   if (!isContainerLog) {
     // Add color to download status lines
@@ -125,11 +133,11 @@ function formatContainerLog(
       content.startsWith("Already exists:") ||
       content.startsWith("Pull complete:")
     ) {
-      return `<span class="download-status">${content}</span>`;
+      return `<span class=\"download-status\">${escapeHtml(content)}</span>`;
     }
   } else {
     // Replace timestamp with styled version for container logs
-    formattedContent = content.replace(
+    formattedContent = formattedContent.replace(
       /^\[(\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2},\d{3})\]/,
       '<span class="timestamp">[$1]</span>'
     );
