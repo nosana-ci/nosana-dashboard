@@ -21,7 +21,7 @@
 
       <!-- Log Entries and Progress Bars -->
       <div class="log-content">
-        <template v-for="(log, index) in props.logs" :key="`${log.id}-${index}`">
+        <template v-for="(log, index) in props.logs" :key="index">
           <div
             class="log-entry"
             :class="{ 'container-log': log.isContainerLog }"
@@ -89,6 +89,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch, nextTick } from "vue";
+import { escapeHtml, sanitizeAnsiHtml } from "~/utils/htmlSanitization";
 
 import type { LogEntry, ProgressBar } from "~/composables/jobs/useJobLogs";
 
@@ -109,65 +110,6 @@ const signMessageError = ref(false);
 const logContainer = ref<HTMLElement | null>(null);
 const shouldAutoScroll = ref(true);
 
-// Escape HTML to prevent style/script injection from log content
-function escapeHtml(unsafe: string): string {
-  return unsafe
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/\"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
-// Sanitize an incoming HTML snippet that may contain pre-rendered ANSI/status spans.
-// Allows only <span class="ansi-..."> or <span class="download-status"> and optional style="font-weight:bold" attributes.
-function sanitizeAnsiHtml(html: string): string {
-  if (typeof window === "undefined" || typeof document === "undefined") {
-    // SSR fallback – return escaped text
-    return escapeHtml(html);
-  }
-  const container = document.createElement("div");
-  container.innerHTML = html;
-
-  const sanitizeNode = (node: Node): Node | null => {
-    if (node.nodeType === Node.TEXT_NODE) {
-      return document.createTextNode((node as Text).data);
-    }
-    if (node.nodeType === Node.ELEMENT_NODE) {
-      const el = node as HTMLElement;
-      if (el.tagName.toUpperCase() === "SPAN") {
-        // Keep only classes that start with "ansi-" or the explicit 'download-status'
-        const keptClasses = Array.from(el.classList).filter((c) => c.startsWith("ansi-") || c === "download-status");
-        // Allow only font-weight:bold in style
-        const bold = /font-weight\s*:\s*bold/i.test(el.getAttribute("style") || "");
-        const newSpan = document.createElement("span");
-        if (keptClasses.length > 0) newSpan.className = keptClasses.join(" ");
-        if (bold) newSpan.style.fontWeight = "bold";
-        // Recurse for children
-        Array.from(el.childNodes).forEach((child) => {
-          const sanitizedChild = sanitizeNode(child);
-          if (sanitizedChild) newSpan.appendChild(sanitizedChild);
-        });
-        return newSpan;
-      }
-      // For all other elements, drop the element but keep sanitized children
-      const fragment = document.createDocumentFragment();
-      Array.from(el.childNodes).forEach((child) => {
-        const sanitizedChild = sanitizeNode(child);
-        if (sanitizedChild) fragment.appendChild(sanitizedChild);
-      });
-      return fragment;
-    }
-    return null;
-  };
-
-  const out = document.createElement("div");
-  Array.from(container.childNodes).forEach((child) => {
-    const sanitized = sanitizeNode(child);
-    if (sanitized) out.appendChild(sanitized);
-  });
-  return out.innerHTML;
-}
 
 // Format container logs to highlight timestamps and handle ANSI codes
 function formatContainerLog(

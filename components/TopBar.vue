@@ -97,7 +97,7 @@
 </template>
 <script lang="ts" setup>
 import { WalletMultiButton } from "solana-wallets-vue";
-import { computed, ref, onMounted, watch } from 'vue';
+import { computed, ref, onMounted, onUnmounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useWallet } from 'solana-wallets-vue';
 
@@ -109,9 +109,10 @@ const { connected, publicKey, wallet, disconnect } = useWallet();
 // Profile dropdown state  
 const showUserProfileDropdown = ref(false);
 
-// Check if user is authenticated via Google
+// Memoized authentication state to prevent unnecessary template re-renders
 const isGoogleAuthenticated = computed(() => {
-  return status.value === 'authenticated' || status.value === 'loading';
+  const currentStatus = status.value;
+  return currentStatus === 'authenticated' || currentStatus === 'loading';
 });
 
 // Profile dropdown functions
@@ -164,15 +165,17 @@ const getCreditBalance = () => {
   return creditBalance.value || 0;
 };
 
-// Get NOS price from stats API
+// Get NOS price from stats API with memoization
 const { data: stats } = useAPI('/api/stats');
 const nosPrice = computed(() => stats.value?.price || 0);
 
-// Get NOS balance in USD
-const getNosBalanceUSD = () => {
-  if (!nosBalance.value) return 0;
+// Memoized NOS balance in USD to prevent recalculation on every render
+const nosBalanceUSD = computed(() => {
+  if (!nosBalance.value || !nosPrice.value) return 0;
   return (nosBalance.value.uiAmount || 0) * nosPrice.value;
-};
+});
+
+const getNosBalanceUSD = () => nosBalanceUSD.value;
 
 // Fetch credit balance
 const fetchCreditBalance = async () => {
@@ -243,17 +246,41 @@ const logout = async () => {
 
 // Close dropdown when clicking outside (onMounted)
 
-// Watch for authentication status and token changes
-watch([status, token], async () => {
-  if (status.value === 'authenticated' && token.value) {
-    await fetchCreditBalance();
+// Debounced API calls to prevent excessive re-renders
+let creditBalanceTimeout: NodeJS.Timeout | null = null;
+let nosBalanceTimeout: NodeJS.Timeout | null = null;
+
+const debouncedFetchCreditBalance = () => {
+  if (creditBalanceTimeout) clearTimeout(creditBalanceTimeout);
+  creditBalanceTimeout = setTimeout(fetchCreditBalance, 100);
+};
+
+const debouncedFetchNosBalance = () => {
+  if (nosBalanceTimeout) clearTimeout(nosBalanceTimeout);
+  nosBalanceTimeout = setTimeout(fetchNosBalance, 100);
+};
+
+// Watch for authentication status and token changes (optimized)
+watch([status, token], async (newValues, oldValues) => {
+  const [newStatus, newToken] = newValues;
+  const [oldStatus, oldToken] = oldValues || [];
+  
+  // Only fetch if authentication state actually changed to authenticated
+  if (newStatus === 'authenticated' && newToken && 
+      (oldStatus !== 'authenticated' || oldToken !== newToken)) {
+    debouncedFetchCreditBalance();
   }
 }, { immediate: true });
 
-// Watch for wallet connection changes
-watch([connected, publicKey], async () => {
-  if (connected.value && publicKey.value) {
-    await fetchNosBalance();
+// Watch for wallet connection changes (optimized)
+watch([connected, publicKey], async (newValues, oldValues) => {
+  const [newConnected, newPublicKey] = newValues;
+  const [oldConnected, oldPublicKey] = oldValues || [];
+  
+  // Only fetch if wallet actually connected or changed
+  if (newConnected && newPublicKey && 
+      (!oldConnected || oldPublicKey?.toBase58() !== newPublicKey?.toBase58())) {
+    debouncedFetchNosBalance();
   }
 }, { immediate: true });
 
@@ -265,15 +292,37 @@ onCreditRefresh(async () => {
   }
 });
 
+// Store click handler reference for cleanup
+let clickHandler: ((e: Event) => void) | null = null;
+
 onMounted(() => {
   if (process.client) {
-    document.addEventListener('click', (e) => {
+    clickHandler = (e: Event) => {
       const target = e.target as HTMLElement;
       const dropdown = target?.closest?.('.profile-dropdown');
       if (!dropdown && showUserProfileDropdown.value) {
         showUserProfileDropdown.value = false;
       }
-    });
+    };
+    document.addEventListener('click', clickHandler);
+  }
+});
+
+onUnmounted(() => {
+  // Clean up timeouts to prevent memory leaks
+  if (creditBalanceTimeout) {
+    clearTimeout(creditBalanceTimeout);
+    creditBalanceTimeout = null;
+  }
+  if (nosBalanceTimeout) {
+    clearTimeout(nosBalanceTimeout);
+    nosBalanceTimeout = null;
+  }
+  
+  // Clean up event listener
+  if (clickHandler && process.client) {
+    document.removeEventListener('click', clickHandler);
+    clickHandler = null;
   }
 });
 

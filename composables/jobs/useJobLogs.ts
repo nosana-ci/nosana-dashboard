@@ -2,6 +2,7 @@ import { ref } from "vue";
 import AnsiUp from "ansi_up";
 import { useJobWebSocket } from "./useJobWebSocket";
 import type { Endpoints } from "./useJob";
+import { escapeHtml, sanitizeAnsiHtml } from "~/utils/htmlSanitization";
 
 export interface ProgressBar {
   id: string;
@@ -55,62 +56,6 @@ export function useJobLogs(
   // Configure ansi_up
   ansi.use_classes = true;
 
-  // --- HTML utilities ---
-  function escapeHtml(unsafe: string): string {
-    return unsafe
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/\"/g, "&quot;")
-      .replace(/'/g, "&#039;");
-  }
-
-  // Sanitize ansi_up output. Allow only spans with classes starting with
-  // "ansi-" or "download-status" and optional font-weight:bold style.
-  function sanitizeAnsiHtml(html: string): string {
-    if (typeof window === "undefined" || typeof document === "undefined") {
-      return escapeHtml(html);
-    }
-    const container = document.createElement("div");
-    container.innerHTML = html;
-
-    const sanitizeNode = (node: Node): Node | null => {
-      if (node.nodeType === Node.TEXT_NODE) {
-        return document.createTextNode((node as Text).data);
-      }
-      if (node.nodeType === Node.ELEMENT_NODE) {
-        const el = node as HTMLElement;
-        if (el.tagName.toUpperCase() === "SPAN") {
-          const keptClasses = Array.from(el.classList).filter(
-            (c) => c.startsWith("ansi-") || c === "download-status"
-          );
-          const bold = /font-weight\s*:\s*bold/i.test(el.getAttribute("style") || "");
-          const newSpan = document.createElement("span");
-          if (keptClasses.length > 0) newSpan.className = keptClasses.join(" ");
-          if (bold) newSpan.style.fontWeight = "bold";
-          Array.from(el.childNodes).forEach((child) => {
-            const sanitizedChild = sanitizeNode(child);
-            if (sanitizedChild) newSpan.appendChild(sanitizedChild);
-          });
-          return newSpan;
-        }
-        const fragment = document.createDocumentFragment();
-        Array.from(el.childNodes).forEach((child) => {
-          const sanitizedChild = sanitizeNode(child);
-          if (sanitizedChild) fragment.appendChild(sanitizedChild);
-        });
-        return fragment;
-      }
-      return null;
-    };
-
-    const out = document.createElement("div");
-    Array.from(container.childNodes).forEach((child) => {
-      const sanitized = sanitizeNode(child);
-      if (sanitized) out.appendChild(sanitized);
-    });
-    return out.innerHTML;
-  }
 
   function convertFromBytes(
     bytes: number,

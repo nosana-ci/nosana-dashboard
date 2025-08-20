@@ -183,7 +183,6 @@
           </div>
         </div>
 
-        <!-- Arrow removed - content always open -->
       </header>
 
       <!-- Service Endpoints Row -->
@@ -861,44 +860,38 @@ const { processedBenchmarkResponse: benchmarkData } =
 
 const aggregatedDownloadSpeed = computed(() => {
   // Use only benchmark data (same as host page)
-  if (
-    benchmarkData.value &&
-    benchmarkData.value.data &&
-    benchmarkData.value.data.length > 0
-  ) {
-    const validEntries = benchmarkData.value.data.filter(
-      (entry: any) =>
-        entry.metrics && typeof entry.metrics.internetSpeedDownload === "number"
+  if (benchmarkData.value?.data?.length > 0) {
+    const { totalDownload, entries } = benchmarkData.value.data.reduce(
+      (acc: { totalDownload: number; entries: number }, entry: any) => {
+        if (typeof entry.metrics?.internetSpeedDownload !== "number") return acc;
+        return {
+          totalDownload: acc.totalDownload + entry.metrics.internetSpeedDownload,
+          entries: acc.entries + 1
+        };
+      },
+      { totalDownload: 0, entries: 0 }
     );
-    if (validEntries.length > 0) {
-      const totalDownload = validEntries.reduce(
-        (sum: number, entry: any) => sum + entry.metrics.internetSpeedDownload,
-        0
-      );
-      return (totalDownload / validEntries.length).toFixed(2);
-    }
+    
+    return entries > 0 ? (totalDownload / entries).toFixed(2) : null;
   }
   return null;
 });
 
 const aggregatedUploadSpeed = computed(() => {
   // Use only benchmark data (same as host page)
-  if (
-    benchmarkData.value &&
-    benchmarkData.value.data &&
-    benchmarkData.value.data.length > 0
-  ) {
-    const validEntries = benchmarkData.value.data.filter(
-      (entry: any) =>
-        entry.metrics && typeof entry.metrics.internetSpeedUpload === "number"
+  if (benchmarkData.value?.data?.length > 0) {
+    const { totalUpload, entries } = benchmarkData.value.data.reduce(
+      (acc: { totalUpload: number; entries: number }, entry: any) => {
+        if (typeof entry.metrics?.internetSpeedUpload !== "number") return acc;
+        return {
+          totalUpload: acc.totalUpload + entry.metrics.internetSpeedUpload,
+          entries: acc.entries + 1
+        };
+      },
+      { totalUpload: 0, entries: 0 }
     );
-    if (validEntries.length > 0) {
-      const totalUpload = validEntries.reduce(
-        (sum: number, entry: any) => sum + entry.metrics.internetSpeedUpload,
-        0
-      );
-      return (totalUpload / validEntries.length).toFixed(2);
-    }
+    
+    return entries > 0 ? (totalUpload / entries).toFixed(2) : null;
   }
   return null;
 });
@@ -915,7 +908,6 @@ const toggleDetails = () => {
   isDetailsOpen.value = !isDetailsOpen.value;
 };
 
-// Toggle function removed - content always open
 
 // Job action functions (moved from JobToolbar)
 async function stopJob() {

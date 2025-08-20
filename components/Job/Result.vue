@@ -177,6 +177,7 @@
 import { ref, onMounted, nextTick, watch } from 'vue';
 import FullscreenModal from '~/components/Common/FullscreenModal.vue';
 import { useModal } from '~/composables/jobs/useModal';
+import { escapeHtml } from '~/utils/htmlSanitization';
 
 defineProps({
   ipfsJob: {
@@ -193,15 +194,6 @@ const resultContainer = ref<HTMLElement | null>(null);
 const fullscreenResultContainer = ref<HTMLElement | null>(null);
 const resultModal = useModal();
 
-// Escape HTML to prevent any style/script injection coming from job logs
-function escapeHtml(unsafe: string): string {
-  return unsafe
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/\"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
 
 const scrollToBottom = (container?: HTMLElement | null) => {
   const targetContainer = container || resultContainer.value;
