@@ -12,13 +12,13 @@
         </span>
       </button>
 
-      <div v-if="ipfsResult.opStates" class="is-family-monospace has-background-black has-text-white box light-mode result-box job-result-container" style="counter-reset: line" ref="resultContainer">
+      <div v-if="ipfsResult?.opStates" class="is-family-monospace has-background-black has-text-white box light-mode result-box job-result-container" style="counter-reset: line" ref="resultContainer">
         <div v-for="opState in ipfsResult.opStates" :key="opState.operationId">
           <div class="row-count has-text-link">
             <span>- Executed step '{{ opState.operationId }}'</span>
           </div>
-          <div v-for="(log, ik) in opState.logs" :key="ik" class="row-count">
-            <span class="pre" v-html="escapeHtml(log.log.slice(0, 10000))" />
+          <div v-for="(log, ik) in (opState.logs || [])" :key="ik" class="row-count">
+            <span class="pre" v-html="escapeHtml((log?.log || '').slice(0, 10000))" />
           </div>
           <div class="row-count"></div>
           <div v-if="opState.status" class="row-count" :class="{
@@ -30,7 +30,7 @@
 
         </div>
       </div>
-      <div v-else-if="ipfsJob && ipfsJob.ops" class="is-family-monospace has-background-black has-text-white box result-box job-result-container"
+      <div v-else-if="ipfsJob?.ops" class="is-family-monospace has-background-black has-text-white box result-box job-result-container"
         style="counter-reset: line" ref="resultContainer">
         <div v-for="jobName in (ipfsJob.ops.find((j: any) => j.id === 'checkout')
         ? []
@@ -71,7 +71,7 @@
               </div>
               <div v-if="step.log && Array.isArray(step.log)">
                 <div v-for="(log, ik) in step.log" :key="ik" class="row-count">
-                  <span class="pre" v-html="escapeHtml(log[1].slice(0, 10000))" />
+                  <span class="pre" v-html="escapeHtml((log?.[1] || '').slice(0, 10000))" />
                 </div>
                 <div v-if="step.error" class="row-count">
                   <span class="has-text-weight-bold">{{ step.error }}</span>
@@ -99,7 +99,7 @@
             <span>- Executed step '{{ opState.operationId }}'</span>
           </div>
           <div v-for="(log, ik) in opState.logs" :key="ik" class="row-count">
-            <span class="pre" v-html="escapeHtml(log.log.slice(0, 10000))" />
+            <span class="pre" v-html="escapeHtml((log.log || '').slice(0, 10000))" />
           </div>
           <div class="row-count"></div>
           <div v-if="opState.status" class="row-count" :class="{
@@ -151,7 +151,7 @@
               </div>
               <div v-if="step.log && Array.isArray(step.log)">
                 <div v-for="(log, ik) in step.log" :key="ik" class="row-count">
-                  <span class="pre" v-html="escapeHtml(log[1].slice(0, 10000))" />
+                  <span class="pre" v-html="escapeHtml((log?.[1] || '').slice(0, 10000))" />
                 </div>
                 <div v-if="step.error" class="row-count">
                   <span class="has-text-weight-bold">{{ step.error }}</span>
@@ -214,7 +214,9 @@ watch(resultModal.isOpen, (isOpen) => {
 
 // Auto-scroll to bottom when component mounts for the inline view
 onMounted(() => {
-  scrollToBottom(resultContainer.value);
+  nextTick(() => {
+    scrollToBottom(resultContainer.value);
+  });
 });
 
 // Expose scrollToBottom for parent components

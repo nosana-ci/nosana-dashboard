@@ -178,7 +178,7 @@ const nosBalanceUSD = computed(() => {
 const getNosBalanceUSD = () => nosBalanceUSD.value;
 
 // Fetch credit balance
-const fetchCreditBalance = async () => {
+const fetchCreditBalance = async (signal?: AbortSignal) => {
   if (status.value !== 'authenticated') return;
   
   loadingCreditBalance.value = true;
@@ -192,6 +192,7 @@ const fetchCreditBalance = async () => {
         "Content-Type": "application/json",
         Authorization: token.value as string,
       },
+      signal, // Pass the abort signal
     });
 
     if (response.ok) {
@@ -204,22 +205,31 @@ const fetchCreditBalance = async () => {
       console.error("Failed to fetch credit balance");
     }
   } catch (error) {
-    console.error("Error fetching credit balance:", error);
+    // Don't log errors for aborted requests
+    if (error instanceof Error && error.name !== 'AbortError') {
+      console.error("Error fetching credit balance:", error);
+    }
   } finally {
     loadingCreditBalance.value = false;
   }
 };
 
 // Fetch NOS balance
-const fetchNosBalance = async () => {
+const fetchNosBalance = async (signal?: AbortSignal) => {
   if (!connected.value || !publicKey.value) return;
   
   loadingNosBalance.value = true;
   try {
     const { nosana } = useSDK();
+    // Note: SDK calls don't support AbortSignal directly, but we can check if aborted
+    if (signal?.aborted) return;
+    
     nosBalance.value = await nosana.value.solana.getNosBalance(publicKey.value.toBase58());
   } catch (error) {
-    console.error("Error fetching NOS balance:", error);
+    // Don't log errors for aborted requests
+    if (!(error instanceof Error && error.name === 'AbortError') && !signal?.aborted) {
+      console.error("Error fetching NOS balance:", error);
+    }
     nosBalance.value = null;
   } finally {
     loadingNosBalance.value = false;
@@ -246,18 +256,36 @@ const logout = async () => {
 
 // Close dropdown when clicking outside (onMounted)
 
-// Debounced API calls to prevent excessive re-renders
+// Debounced API calls with abort controllers to prevent race conditions
 let creditBalanceTimeout: NodeJS.Timeout | null = null;
 let nosBalanceTimeout: NodeJS.Timeout | null = null;
+let creditBalanceController: AbortController | null = null;
+let nosBalanceController: AbortController | null = null;
 
 const debouncedFetchCreditBalance = () => {
+  // Cancel any pending request
+  if (creditBalanceController) {
+    creditBalanceController.abort();
+  }
+  
   if (creditBalanceTimeout) clearTimeout(creditBalanceTimeout);
-  creditBalanceTimeout = setTimeout(fetchCreditBalance, 100);
+  creditBalanceTimeout = setTimeout(() => {
+    creditBalanceController = new AbortController();
+    fetchCreditBalance(creditBalanceController.signal);
+  }, 100);
 };
 
 const debouncedFetchNosBalance = () => {
+  // Cancel any pending request
+  if (nosBalanceController) {
+    nosBalanceController.abort();
+  }
+  
   if (nosBalanceTimeout) clearTimeout(nosBalanceTimeout);
-  nosBalanceTimeout = setTimeout(fetchNosBalance, 100);
+  nosBalanceTimeout = setTimeout(() => {
+    nosBalanceController = new AbortController();
+    fetchNosBalance(nosBalanceController.signal);
+  }, 100);
 };
 
 // Watch for authentication status and token changes (optimized)
@@ -317,6 +345,16 @@ onUnmounted(() => {
   if (nosBalanceTimeout) {
     clearTimeout(nosBalanceTimeout);
     nosBalanceTimeout = null;
+  }
+  
+  // Abort any pending requests
+  if (creditBalanceController) {
+    creditBalanceController.abort();
+    creditBalanceController = null;
+  }
+  if (nosBalanceController) {
+    nosBalanceController.abort();
+    nosBalanceController = null;
   }
   
   // Clean up event listener
