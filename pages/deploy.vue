@@ -8,8 +8,8 @@
       v-model="showSettingsModal"
     ></TopBar>
     
-    <!-- Show loader until all critical data is loaded -->
-    <Loader v-if="!jobDefinition || loadingTemplates || loadingMarkets" />
+    <!-- Show loader until critical async data is loaded (templates/markets) -->
+    <Loader v-if="loadingTemplates || loadingMarkets" />
     
     <div v-else class="columns is-multiline">
       <div class="column is-9-fullhd is-12">
