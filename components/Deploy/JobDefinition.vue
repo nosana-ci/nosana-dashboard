@@ -125,7 +125,7 @@ import type { Template } from '~/composables/useTemplates';
 // Define props
 interface Props {
   selectedTemplate: Template | null;
-  jobDefinition: JobDefinition;
+  jobDefinition: JobDefinition | null | string;
   isEditorCollapsed: boolean;
   validator: any;
 }
@@ -134,7 +134,7 @@ interface Props {
 const emit = defineEmits<{
   showTemplateModal: [];
   'update:isEditorCollapsed': [value: boolean];
-  'update:jobDefinition': [value: JobDefinition];
+  'update:jobDefinition': [value: JobDefinition | null];
   openReadme: [readme: string];
 }>();
 
@@ -148,8 +148,14 @@ const isEditorCollapsed = computed({
 });
 
 const jobDefinition = computed({
-  get: () => props.jobDefinition,
-  set: (value: JobDefinition) => emit('update:jobDefinition', value)
+  get: () => (props.jobDefinition === null ? {} : props.jobDefinition),
+  set: (value: any) => {
+    if (typeof value === 'string') {
+      emit('update:jobDefinition', null);
+    } else {
+      emit('update:jobDefinition', value as JobDefinition);
+    }
+  }
 });
 
 // Computed properties for template info
@@ -169,8 +175,8 @@ const computedJobTitle = computed(() => {
 });
 
 const computedDockerImage = computed(() => {
-  if (props.jobDefinition?.ops?.[0]?.args) {
-    const args = props.jobDefinition.ops[0].args as any;
+  if ((props.jobDefinition as any)?.ops?.[0]?.args) {
+    const args = (props.jobDefinition as any).ops[0].args as any;
     if (args.image) {
       return args.image;
     }

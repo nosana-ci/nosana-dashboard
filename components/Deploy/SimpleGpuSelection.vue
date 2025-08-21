@@ -61,7 +61,7 @@ interface Props {
   loadingMarkets: boolean;
   gpuTypeCheckbox: string[];
   activeFilter: string;
-  jobDefinition: JobDefinition;
+  jobDefinition: JobDefinition | null | string;
   skipAutoSelection: boolean;
   selectedMarket: Market | null;
   activeFilterKey: string;
