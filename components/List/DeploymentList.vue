@@ -287,8 +287,23 @@ watch(() => props.loadingJobs, (isLoading, wasLoading) => {
   }
 }
 
-// Prevent box height changes during loading states
-.deployment-list-container {
-  // Height is now managed dynamically via JavaScript
+.clickable-row {
+  position: relative;
+  z-index: 1;
+}
+
+.clickable-row-link {
+  position: relative;
+  z-index: 2;
+  display: block;
+  
+  &:hover {
+    text-decoration: none;
+  }
+}
+
+.clickable-row-cell-content {
+  position: relative;
+  z-index: 1;
 }
 </style> 
