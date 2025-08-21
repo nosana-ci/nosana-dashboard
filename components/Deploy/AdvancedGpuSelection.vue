@@ -169,7 +169,7 @@
                     :marketAddressOrData="host.market_address"
                     :marketsData="props.marketsData"
                     :decimalPlaces="3" 
-                    :showDollarSign="true" />/hour
+                    :showDollarSign="true" />
                 </div>
               </div>
               <div class="gpu-box__specs">
