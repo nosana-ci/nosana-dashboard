@@ -1,5 +1,5 @@
 <template>
-  <template v-if="props.specs || (props.genericBenchmarkResponse && props.genericBenchmarkResponse.data?.length)">
+  <template v-if="props.specs">
     <!-- GPU -->
     <div class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
       <div class="quick-detail-item">
@@ -86,8 +86,8 @@
       <div class="quick-detail-item">
         <span class="quick-detail-label">Download Speed</span>
         <span class="quick-detail-value">
-          <span v-if="!props.aggregatedDownloadSpeed">-</span>
-          <span v-else>{{ props.aggregatedDownloadSpeed }} Mbps</span>
+          <span v-if="!props.specs?.download">-</span>
+          <span v-else>{{ props.specs?.download }} Mbps</span>
         </span>
       </div>
     </div>
@@ -97,8 +97,8 @@
       <div class="quick-detail-item">
         <span class="quick-detail-label">Upload Speed</span>
         <span class="quick-detail-value">
-          <span v-if="!props.aggregatedUploadSpeed">-</span>
-          <span v-else>{{ props.aggregatedUploadSpeed }} Mbps</span>
+          <span v-if="!props.specs?.upload">-</span>
+          <span v-else>{{ props.specs?.upload }} Mbps</span>
         </span>
       </div>
     </div>
@@ -117,11 +117,9 @@ interface Specs {
   ram: number;
   diskSpace: number;
   country: string;
-  bandwidth?: {
-    ping: number;
-    download: number;
-    upload: number;
-  };
+  download: number;
+  upload: number;
+  ping: number;
   cudaVersion: number | string; // Allow string for flexibility if API sends it as such
   nvmlVersion: string;
   nodeVersion: string;
@@ -137,9 +135,6 @@ interface NodeRanking {
 const props = defineProps<{
   specs?: Specs | null; // Allow null explicitly for the specs prop
   nodeRanking?: NodeRanking | null;
-  genericBenchmarkResponse?: any;
-  aggregatedDownloadSpeed: string | null;
-  aggregatedUploadSpeed: string | null;
   showInJobContext?: boolean;
 }>();
 

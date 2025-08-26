@@ -157,13 +157,9 @@
         <HostSpecifications v-if="publicKey && combinedSpecs" 
           :specs="combinedSpecs" 
           :node-ranking="nodeRanking" 
-          :generic-benchmark-response="genericBenchmarkResponse"
           :loading-node-specs="loadingNodeSpecs"
-          :loading-generic-benchmark="loadingGenericBenchmark"
-          :aggregated-download-speed="aggregatedDownloadSpeed"
-          :aggregated-upload-speed="aggregatedUploadSpeed"
         />
-        <div v-else-if="publicKey && (loadingNodeSpecs || loadingNodeInfo || loadingGenericBenchmark)" class="column is-full">
+        <div v-else-if="publicKey && (loadingNodeSpecs || loadingNodeInfo )" class="column is-full">
           <p>Loading system specifications...</p>
         </div>
         <div v-else-if="publicKey" class="column is-full">
@@ -722,22 +718,6 @@ const { data: nodeInfo, pending: loadingNodeInfo } = useAPI(
   }
 );
 
-// NEW: Generic Benchmark Response
-const genericBenchmarkUrl = computed(() => {
-  if (!publicKey.value || !nodeSpecs.value) return '';
-  return `/api/benchmarks/generic-benchmark-data?node=${publicKey.value.toString()}`;
-});
-const { data: genericBenchmarkResponse, pending: loadingGenericBenchmark } = useAPI(
-  genericBenchmarkUrl,
-  {
-    immediate: false,
-    onRequestError: () => ({ data: [] }),
-    onResponseError: () => ({ data: [] }),
-    default: () => ({ data: [] }),
-    watch: [genericBenchmarkUrl]
-  }
-);
-
 // NEW: Node Ranking
 interface NodeRanking {
   node: string;
@@ -773,8 +753,9 @@ const combinedSpecs = computed(() => {
       : nodeSpecs.value.diskSpace ? Math.round(Number(nodeSpecs.value.diskSpace)) : 0,
     cpu: nodeInfoData?.cpu?.model ?? nodeSpecs.value.cpu,
     country: nodeInfoData?.country ?? nodeSpecs.value.country,
-    bandwidth:
-      nodeInfoData?.network?.download_mbps ?? nodeSpecs.value.bandwidth,
+    download: nodeSpecs.value.avgDownload10,
+    upload: nodeSpecs.value.avgUpload10,
+    ping: nodeSpecs.value.avgPing10,
     gpus: nodeInfoData?.gpus?.devices
       ? nodeInfoData.gpus.devices.map((gpu: any) => ({
           gpu: gpu.name,
@@ -801,45 +782,6 @@ const combinedSpecs = computed(() => {
           : "Linux"
         : null,
   };
-});
-
-// Computed properties for download/upload speeds
-const aggregatedDownloadSpeed = computed(() => {
-  if (!combinedSpecs.value) return null;
-  
-  // Try to get from nodeInfo first
-  if (nodeInfo.value?.info?.network?.download_mbps) {
-    return nodeInfo.value.info.network.download_mbps.toFixed(2);
-  }
-  
-  // Fallback to nodeSpecs bandwidth
-  if (nodeSpecs.value?.bandwidth) {
-    if (typeof nodeSpecs.value.bandwidth === 'object' && nodeSpecs.value.bandwidth.download) {
-      return nodeSpecs.value.bandwidth.download.toFixed(2);
-    } else if (typeof nodeSpecs.value.bandwidth === 'number') {
-      return nodeSpecs.value.bandwidth.toFixed(2);
-    }
-  }
-  
-  return null;
-});
-
-const aggregatedUploadSpeed = computed(() => {
-  if (!combinedSpecs.value) return null;
-  
-  // Try to get from nodeInfo first
-  if (nodeInfo.value?.info?.network?.upload_mbps) {
-    return nodeInfo.value.info.network.upload_mbps.toFixed(2);
-  }
-  
-  // Fallback to nodeSpecs bandwidth
-  if (nodeSpecs.value?.bandwidth) {
-    if (typeof nodeSpecs.value.bandwidth === 'object' && nodeSpecs.value.bandwidth.upload) {
-      return nodeSpecs.value.bandwidth.upload.toFixed(2);
-    }
-  }
-  
-  return null;
 });
 
 // Market relation logic (already existing)

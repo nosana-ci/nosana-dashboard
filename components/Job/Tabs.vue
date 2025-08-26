@@ -213,8 +213,8 @@ import JobChatView from "./Tabs/Chat.vue";
 import type { Endpoints, UseJob } from "~/composables/jobs/useJob";
 import type { LogEntry, ProgressBar } from "~/composables/jobs/useJobLogs";
 
-// Define NodeRanking interface if not already globally available
-interface NodeRankingData {
+// Define NodeReport interface if not already globally available
+interface NodeReportData {
   node: string;
   participationRate: number;
   uptimePercentage: number;
@@ -245,10 +245,8 @@ interface Props {
 
   // Props for HostSpecifications (to be passed from Job.vue)
   jobCombinedSpecs: any | null;
-  jobNodeRanking: NodeRankingData | null;
+  jobNodeReport: NodeReportData | null;
   loadingJobNodeSpecs: boolean;
-  aggregatedDownloadSpeed: string | null;
-  aggregatedUploadSpeed: string | null;
   isQueuedJob: boolean;
 }
 
@@ -326,16 +324,6 @@ const hostSpecs = computed(() => {
           : "Linux"
         : null,
   };
-});
-
-const aggregatedDownloadSpeed = computed(() => {
-  // For now return null - would need benchmark data to calculate
-  return null;
-});
-
-const aggregatedUploadSpeed = computed(() => {
-  // For now return null - would need benchmark data to calculate  
-  return null;
 });
 
 // Get market data for GPU pool names
