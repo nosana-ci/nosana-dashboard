@@ -2,24 +2,27 @@ import { useRuntimeConfig } from "#imports";
 
 export function useJobWebSocket(
   jobAddress: string,
-  host: string,
-  signMessage: () => Promise<string>,
+  host: string | Ref<string>,
+  getAuth: () => Promise<string | Headers>,
   addLog: (log: string, isSystemLog: boolean) => void,
   handleProgressEvent: (event: MessageEvent) => void,
   maxRetries = 3,
   retryDelay = 3000
 ) {
   const frpServer = useRuntimeConfig().public.nodeDomain;
-  const websocketUrl = `wss://${host}.${frpServer}/log`;
 
   const isConnecting = ref<boolean>(false);
   const webSocket = ref<WebSocket | undefined>(undefined);
   const retryCount = ref<number>(0);
   const connectionEstablished = ref<boolean>(false);
+  const allowRetry = ref<boolean>(true);
 
   const initConnection = () => {
+    // Avoid interrupting an in-flight connection attempt
+    if (isConnecting.value) return;
+    if (webSocket.value && webSocket.value.readyState === WebSocket.CONNECTING) return;
     if (webSocket.value && webSocket.value.readyState === WebSocket.OPEN && connectionEstablished.value) return;
-    
+
     retryCount.value = 0;
     connectionEstablished.value = false;
     connectWebSocket();
@@ -31,34 +34,48 @@ export function useJobWebSocket(
       webSocket.value = undefined;
     }
 
+    const currentHost = typeof host === 'string' ? host : host.value;
+    // Guard: do not attempt when host is placeholder or empty
+    if (!currentHost || currentHost === '11111111111111111111111111111111') {
+      isConnecting.value = false;
+      connectionEstablished.value = false;
+      return;
+    }
+
+    const websocketUrl = `wss://${currentHost}.${frpServer}/log`;
     let connectionTimeout: NodeJS.Timeout;
     const socket = new WebSocket(websocketUrl);
     isConnecting.value = true;
+    allowRetry.value = true;
 
     socket.onopen = async () => {
       try {
-        const header = await signMessage();
+        const auth = await getAuth();
+        const header = auth instanceof Headers ? (auth.get('Authorization') || auth.get('authorization') || '') : auth;
         
         connectionTimeout = setTimeout(() => {
           if (!connectionEstablished.value) {
-            socket.close();
+            // mark no auto-retry for this close; we'll retry via handleRetry
+            allowRetry.value = true;
+            try { socket.close(); } catch {}
             handleRetry("Connection timed out");
           }
         }, 10000);
 
-        socket.send(
-          JSON.stringify({
-            path: "/log",
-            header,
-            body: {
-              jobAddress,
-              address: host,
-            },
-          })
-        );
+        const payload = {
+          path: "/log",
+          headers: { Authorization: header },
+          header, // legacy field
+          body: {
+            jobAddress,
+            address: currentHost,
+          },
+        };
+        socket.send(JSON.stringify(payload));
       } catch (error) {
         clearTimeout(connectionTimeout);
-        socket.close();
+        allowRetry.value = true;
+        try { socket.close(); } catch {}
         handleRetry("Failed to sign message");
       }
     };
@@ -70,6 +87,7 @@ export function useJobWebSocket(
         isConnecting.value = false;
         clearTimeout(connectionTimeout);
         retryCount.value = 0;
+        // console.log('[ws] message', event.data);
         handleProgressEvent(event);
       } catch (error) {
         console.error("Error handling WebSocket message:", error);
@@ -80,7 +98,7 @@ export function useJobWebSocket(
       clearTimeout(connectionTimeout);
       webSocket.value = undefined;
       
-      if (isConnecting.value && !connectionEstablished.value) {
+      if (allowRetry.value && !connectionEstablished.value) {
         handleRetry("WebSocket connection closed unexpectedly");
       }
       
@@ -107,6 +125,8 @@ export function useJobWebSocket(
       addLog(`${reason}. Retrying connection (${retryCount.value}/${maxRetries})...`, true);
       
       setTimeout(() => {
+        // prevent re-entrant connects
+        if (isConnecting.value) return;
         connectWebSocket();
       }, retryDelay);
     } else {
@@ -117,6 +137,7 @@ export function useJobWebSocket(
 
   const closeConnection = () => {
     if (webSocket.value) {
+      allowRetry.value = false;
       webSocket.value.close();
       webSocket.value = undefined;
     }

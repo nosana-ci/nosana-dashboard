@@ -71,30 +71,24 @@ const connectWallet = async () => {
       throw new Error("Wallet adapter not available");
     }
 
-    const message = `nosana_${timestamp}`;
-    const encodedMessage = new TextEncoder().encode(message);
-    const adapter = currentWallet.adapter as MessageSignerWalletAdapter;
-
-    if (!adapter.connected) {
+    if (!currentWallet.adapter.connected) {
       throw new Error(
         "Wallet is not connected. Please try reconnecting your wallet."
       );
     }
 
-    const signedMessage = await adapter.signMessage(encodedMessage);
-    const signature = { type: "Buffer", data: Object.values(signedMessage) };
+    const { generateAuthHeaders } = useNosanaWallet();
+    const headers = await generateAuthHeaders({ key: 'X-Wallet-Auth' });
+    headers.set('Accept', 'application/json');
+    headers.set('Content-Type', 'application/json');
+    headers.set('Authorization', token.value as string);
 
     const response = await fetch(
       `${config.apiBase}/api/auth/add-solana-wallet`,
       {
         method: "POST",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          Authorization: token.value as string,
-        },
+        headers,
         body: JSON.stringify({
-          signature,
           timestamp,
           address: publicKey.value?.toBuffer(),
           type: "client",

@@ -36,6 +36,7 @@ export type UseJob = Job & {
   jobResult: any;
 
   stopJob: () => Promise<void>;
+  extendJob: (extensionHours: number) => Promise<void>;
   refresh: () => Promise<void>;
 };
 
@@ -134,19 +135,24 @@ export function useJob(jobId: string) {
               }
             } else {
               // Use SDK for wallet users
-              if (numericState === 0) {
-                await nosana.value.jobs.delist(jobId);
-                toast.success('Job successfully delisted (canceled) from queue!');
-                setTimeout(() => {
-                  navigateTo('/deploy');
-                }, 3000);
-              } else if (numericState === 1) {
-                await nosana.value.jobs.end(jobId);
-                toast.success('Job successfully ended!');
-                setTimeout(() => refresh(), 1000);
-              } else {
-                toast.error(`Job is not in QUEUED or RUNNING state (currently: ${numericState})`);
-                return;
+              try {
+                if (numericState === 0) {
+                  await nosana.value.jobs.delist(jobId);
+                  toast.success('Job successfully delisted (canceled) from queue!');
+                  setTimeout(() => {
+                    navigateTo('/deploy');
+                  }, 3000);
+                } else if (numericState === 1) {
+                  await nosana.value.jobs.end(jobId);
+                  toast.success('Job successfully ended!');
+                  setTimeout(() => refresh(), 1000);
+                } else {
+                  toast.error(`Job is not in QUEUED or RUNNING state (currently: ${numericState})`);
+                  return;
+                }
+              } catch (sdkError: any) {
+                console.error('SDK method failed:', sdkError);
+                throw sdkError;
               }
             }
           } catch (e: any) {
@@ -321,7 +327,7 @@ export function useJob(jobId: string) {
           url,
           opId,
           opIndex,
-          port,
+          port: Number(port),
           hasHealthCheck,
           setStatus: (status: "ONLINE" | "OFFLINE") => {
             setEndpointStatus(url, status);

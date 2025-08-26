@@ -128,23 +128,14 @@ const emit = defineEmits<Emits>();
 const toast = useToast();
 const config = useRuntimeConfig().public;
 
-const createAuthHeader = async (message: string): Promise<string> => {
-  if (!props.connected || !props.publicKey || !props.wallet) {
+const { generateAuthHeaders } = useNosanaWallet();
+
+const createAuthHeader = async (): Promise<Headers> => {
+  if (!props.connected || !props.publicKey) {
     throw new Error("Wallet not connected or not found");
   }
 
-  const adapter = props.wallet.adapter as MessageSignerWalletAdapter;
-  if (!adapter.signMessage) {
-    throw new Error("Wallet does not support message signing");
-  }
-
-  const encodedMessage = new TextEncoder().encode(message);
-  const signedMessage = await adapter.signMessage(encodedMessage);
-
-  // Convert to base64 format expected by backend
-  const base64Signature = Buffer.from(signedMessage).toString("base64");
-
-  return `${props.publicKey.toString()}:${base64Signature}`;
+  return await generateAuthHeaders({ key: 'Authorization' });
 };
 
 // Uptime rewards logic
@@ -170,14 +161,12 @@ const claimRewards = async () => {
   claimingRewards.value = true;
 
   try {
-    const authHeader = await createAuthHeader("Hello Nosana Node!");
+    const headers = await createAuthHeader();
+    headers.set('Content-Type', 'application/json');
 
     const response = (await $fetch(`${config.apiBase}/api/nodes/payment`, {
       method: "POST",
-      headers: {
-        Authorization: authHeader,
-        "Content-Type": "application/json",
-      },
+      headers,
     })) as {
       message: string;
       success: boolean;

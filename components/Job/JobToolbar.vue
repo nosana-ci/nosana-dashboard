@@ -78,7 +78,7 @@ const { job, isJobPoster, endpoints, openExtendModal } = defineProps<Props>();
 
 const toast = useToast();
 const router = useRouter();
-const { isVerified, signMessage } = useNosanaWallet();
+const { generateAuthHeaders } = useNosanaWallet();
 
 const loading = ref<boolean>(false);
 const loadingExtend = ref<boolean>(false);
@@ -86,14 +86,13 @@ const loadingExtend = ref<boolean>(false);
 async function stopJob() {
   loading.value = true;
 
-  if (!isVerified.value) {
-    try {
-      await signMessage(true);
-    } catch (error) {
-      loading.value = false;
-      toast.error("Failed to verify wallet.");
-      return;
-    }
+  // Ensure we can generate headers (will sign if needed); do not force time-bound headers
+  try {
+    await generateAuthHeaders({ key: 'Authorization' });
+  } catch (error) {
+    loading.value = false;
+    toast.error("Failed to verify wallet.");
+    return;
   }
 
   try {
