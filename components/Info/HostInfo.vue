@@ -232,9 +232,6 @@
         v-if="combinedSpecs"
         :specs="combinedSpecs"
         :node-ranking="nodeRanking"
-        :generic-benchmark-response="genericBenchmarkResponse"
-        :aggregated-download-speed="aggregatedDownloadSpeed"
-        :aggregated-upload-speed="aggregatedUploadSpeed"
       />
     </template>
 </template>
@@ -243,7 +240,6 @@
 import { type Market } from "@nosana/sdk";
 import JobStatus from "~/components/Job/Status.vue";
 import HostSpecifications from "~/components/Info/HostSpecifications.vue";
-import { useGenericBenchmark } from "~/composables/useBenchmarkData";
 const { nosana } = useSDK();
 const { data: testgridMarkets, pending: loadingTestgridMarkets } =
   useAPI("/api/markets");
@@ -387,8 +383,9 @@ const combinedSpecs = computed(() => {
       : Math.round(Number(nodeSpecs.value.diskSpace)),
     cpu: nodeInfoData?.cpu?.model ?? nodeSpecs.value.cpu,
     country: nodeInfoData?.country ?? nodeSpecs.value.country,
-    bandwidth:
-      nodeInfoData?.network?.download_mbps ?? nodeSpecs.value.bandwidth,
+    download: nodeSpecs.value.avgDownload10,
+    upload: nodeSpecs.value.avgUpload10,
+    ping: nodeSpecs.value.avgPing10,
     gpus: nodeInfoData?.gpus?.devices
       ? nodeInfoData.gpus.devices.map((gpu: any) => ({
           gpu: gpu.name,
@@ -419,30 +416,11 @@ const combinedSpecs = computed(() => {
 /*********************
  * Node Benchmarking *
  *********************/
-const { data: allBenchmarkData, execute: getNodeBenchmarks } = useAPI(
-  `/api/benchmarks/generic-benchmark-data?node=${props.address}&benchVersion=v1.0.3`,
-  {
-    immediate: false,
-    // @ts-ignore
-    disableToastOnError: true,
-    // Handle API errors silently
-    onRequestError: () => ({ data: [] }),
-    onResponseError: () => ({ data: [] }),
-    // @ts-ignore
-    options: {
-      retry: 0,
-    },
-  }
-);
-
-const { processedBenchmarkResponse: genericBenchmarkResponse } =
-  useGenericBenchmark(allBenchmarkData as any);
 
 // Safely call node info + benchmark if it's actually (or likely) a node
 function fetchAdditionalNodeData() {
   // Use try-catch for both API calls
   try {
-    getNodeBenchmarks();
     getNodeInfo();
   } catch (err) {
     // Silent error handling - expected for offline nodes
@@ -546,45 +524,7 @@ const cliVersion = computed(() => {
   return nodeInfo.value?.info?.version ?? combinedSpecs.value?.nodeVersion;
 });
 
-const aggregatedDownloadSpeed = computed(() => {
-  if (
-    !genericBenchmarkResponse.value ||
-    !genericBenchmarkResponse.value.data ||
-    genericBenchmarkResponse.value.data.length === 0
-  ) {
-    return null;
-  }
-  const validEntries = genericBenchmarkResponse.value.data.filter(
-    (entry: any) =>
-      entry.metrics && typeof entry.metrics.internetSpeedDownload === "number"
-  );
-  if (validEntries.length === 0) return null;
-  const totalDownload = validEntries.reduce(
-    (sum: number, entry: any) => sum + entry.metrics.internetSpeedDownload,
-    0
-  );
-  return (totalDownload / validEntries.length).toFixed(2);
-});
 
-const aggregatedUploadSpeed = computed(() => {
-  if (
-    !genericBenchmarkResponse.value ||
-    !genericBenchmarkResponse.value.data ||
-    genericBenchmarkResponse.value.data.length === 0
-  ) {
-    return null;
-  }
-  const validEntries = genericBenchmarkResponse.value.data.filter(
-    (entry: any) =>
-      entry.metrics && typeof entry.metrics.internetSpeedUpload === "number"
-  );
-  if (validEntries.length === 0) return null;
-  const totalUpload = validEntries.reduce(
-    (sum: number, entry: any) => sum + entry.metrics.internetSpeedUpload,
-    0
-  );
-  return (totalUpload / validEntries.length).toFixed(2);
-});
 </script>
 
 <style lang="scss" scoped>

@@ -387,8 +387,8 @@
             <div class="quick-detail-item">
               <span class="quick-detail-label">Download</span>
               <span class="quick-detail-value">
-                <span v-if="aggregatedDownloadSpeed">
-                  {{ aggregatedDownloadSpeed }} Mbps
+                <span v-if="combinedSpecs?.download">
+                  {{ combinedSpecs.download }} Mbps
                 </span>
                 <span v-else-if="isQueuedJob" class="has-text-grey-light">
                   Not assigned yet
@@ -411,8 +411,8 @@
             <div class="quick-detail-item">
               <span class="quick-detail-label">Upload</span>
               <span class="quick-detail-value">
-                <span v-if="aggregatedUploadSpeed">
-                  {{ aggregatedUploadSpeed }} Mbps
+                <span v-if="combinedSpecs?.upload">
+                  {{ combinedSpecs.upload }} Mbps
                 </span>
                 <span v-else class="icon-text">
                   <span class="icon is-small"
@@ -444,10 +444,8 @@
           :chatServiceUrl="chatServiceUrl"
           :chatApiConfig="chatApiConfig"
           :jobCombinedSpecs="combinedSpecs"
-          :jobNodeRanking="jobNodeRanking"
+          :jobNodeReport="jobNodeReport"
           :loadingJobNodeSpecs="loadingNodeSpecs"
-          :aggregatedDownloadSpeed="aggregatedDownloadSpeed"
-          :aggregatedUploadSpeed="aggregatedUploadSpeed"
           :isQueuedJob="isQueuedJob"
           v-model:activeTab="activeTab"
           ref="jobTabsRef"
@@ -505,7 +503,6 @@ import { useToast } from "vue-toastification";
 import { useNosanaWallet } from "~/composables/useNosanaWallet";
 import { useAuthHeader } from "~/composables/useAuthHeader";
 import { useAPI } from "~/composables/useAPI";
-import { useGenericBenchmark } from "~/composables/useBenchmarkData";
 
 import type { UseModal } from "~/composables/jobs/useModal";
 import type { Endpoints, UseJob } from "~/composables/jobs/useJob";
@@ -638,16 +635,16 @@ const nodeInfoUrl = computed(() =>
 );
 const { data: nodeInfo } = useAPI(nodeInfoUrl);
 
-// NEW: Fetch Node Ranking for HostSpecifications
-const jobNodeRankingUrl = computed(() => {
+// Get node report
+const jobNodeReportUrl = computed(() => {
   if (!props.job.node || props.job.node.toString() === '11111111111111111111111111111111') return '';
   return `/api/benchmarks/node-report?node=${props.job.node.toString()}`;
 });
-const { data: jobNodeRanking, pending: loadingJobNodeRanking } = useAPI(
-  jobNodeRankingUrl,
+const { data: jobNodeReport, pending: loadingJobNodeReport } = useAPI(
+  jobNodeReportUrl,
   {
     default: () => null,
-    watch: [jobNodeRankingUrl],
+    watch: [jobNodeReportUrl],
   }
 );
 
@@ -821,8 +818,9 @@ const combinedSpecs = computed(() => {
       : Math.round(Number(nodeSpecs.value.diskSpace)),
     cpu: nodeInfoData?.cpu?.model ?? nodeSpecs.value.cpu,
     country: nodeInfoData?.country ?? nodeSpecs.value.country,
-    bandwidth:
-      nodeInfoData?.network?.download_mbps ?? nodeSpecs.value.bandwidth,
+    download: nodeSpecs.value.avgDownload10,
+    upload: nodeSpecs.value.avgUpload10,
+    ping: nodeSpecs.value.avgPing10,
     gpus: nodeInfoData?.gpus?.devices
       ? nodeInfoData.gpus.devices.map((gpu: any) => ({
           gpu: gpu.name,
@@ -849,54 +847,6 @@ const combinedSpecs = computed(() => {
   };
 });
 
-// Generic benchmark data
-const { data: allBenchmarkData } = useAPI(
-  `/api/benchmarks/generic-benchmark-data?node=${props.job.node}&benchVersion=v1.0.3`,
-  {
-    // @ts-ignore
-    disableToastOnError: true,
-  }
-);
-const { processedBenchmarkResponse: benchmarkData } =
-  useGenericBenchmark(allBenchmarkData as any);
-
-const aggregatedDownloadSpeed = computed(() => {
-  // Use only benchmark data (same as host page)
-  if (benchmarkData.value?.data?.length > 0) {
-    const { totalDownload, entries } = benchmarkData.value.data.reduce(
-      (acc: { totalDownload: number; entries: number }, entry: any) => {
-        if (typeof entry.metrics?.internetSpeedDownload !== "number") return acc;
-        return {
-          totalDownload: acc.totalDownload + entry.metrics.internetSpeedDownload,
-          entries: acc.entries + 1
-        };
-      },
-      { totalDownload: 0, entries: 0 }
-    );
-    
-    return entries > 0 ? (totalDownload / entries).toFixed(2) : null;
-  }
-  return null;
-});
-
-const aggregatedUploadSpeed = computed(() => {
-  // Use only benchmark data (same as host page)
-  if (benchmarkData.value?.data?.length > 0) {
-    const { totalUpload, entries } = benchmarkData.value.data.reduce(
-      (acc: { totalUpload: number; entries: number }, entry: any) => {
-        if (typeof entry.metrics?.internetSpeedUpload !== "number") return acc;
-        return {
-          totalUpload: acc.totalUpload + entry.metrics.internetSpeedUpload,
-          entries: acc.entries + 1
-        };
-      },
-      { totalUpload: 0, entries: 0 }
-    );
-    
-    return entries > 0 ? (totalUpload / entries).toFixed(2) : null;
-  }
-  return null;
-});
 
 // Check if the job is queued (state 0 and no start time, or placeholder node)
 const isQueuedJob = computed(() => {
