@@ -104,30 +104,25 @@ interface Props {
 
 const props = defineProps<Props>();
 
-// TODO: MOVE TO HOOKS
 const signMessageError = ref(false);
 
 const logContainer = ref<HTMLElement | null>(null);
 const shouldAutoScroll = ref(true);
 
 
-// Format container logs to highlight timestamps and handle ANSI codes
 function formatContainerLog(
   content: string,
   isContainerLog: boolean | undefined
 ) {
   if (!content) return "";
 
-  // If upstream already sends ANSI/status spans, sanitize that HTML and return.
   if (content.includes('<span') && (content.includes('ansi-') || content.includes('download-status'))) {
     return sanitizeAnsiHtml(content);
   }
 
-  // Otherwise, treat as plain text and escape
   let formattedContent = escapeHtml(content);
 
   if (!isContainerLog) {
-    // Add color to download status lines
     if (
       content.startsWith("Download complete:") ||
       content.startsWith("Already exists:") ||
@@ -136,18 +131,14 @@ function formatContainerLog(
       return `<span class=\"download-status\">${escapeHtml(content)}</span>`;
     }
   } else {
-    // Replace timestamp with styled version for container logs
     formattedContent = formattedContent.replace(
       /^\[(\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2},\d{3})\]/,
       '<span class="timestamp">[$1]</span>'
     );
   }
 
-  // Process ANSI color codes
   formattedContent = formattedContent
-    // Bold
     .replace(/\u001b\[1m/g, '<span class="ansi-bold">')
-    // Colors
     .replace(/\u001b\[30m/g, '<span class="ansi-black-fg">')
     .replace(/\u001b\[31m/g, '<span class="ansi-red-fg">')
     .replace(/\u001b\[32m/g, '<span class="ansi-green-fg">')
@@ -156,7 +147,6 @@ function formatContainerLog(
     .replace(/\u001b\[35m/g, '<span class="ansi-magenta-fg">')
     .replace(/\u001b\[36m/g, '<span class="ansi-cyan-fg">')
     .replace(/\u001b\[37m/g, '<span class="ansi-white-fg">')
-    // Bright colors
     .replace(/\u001b\[90m/g, '<span class="ansi-bright-black-fg">')
     .replace(/\u001b\[91m/g, '<span class="ansi-bright-red-fg">')
     .replace(/\u001b\[92m/g, '<span class="ansi-bright-green-fg">')
@@ -165,9 +155,7 @@ function formatContainerLog(
     .replace(/\u001b\[95m/g, '<span class="ansi-bright-magenta-fg">')
     .replace(/\u001b\[96m/g, '<span class="ansi-bright-cyan-fg">')
     .replace(/\u001b\[97m/g, '<span class="ansi-bright-white-fg">')
-    // Reset
     .replace(/\u001b\[0m/g, "</span>")
-    // Close any unclosed spans
     .replace(/\u001b\[\d+m/g, "");
 
   return formattedContent;

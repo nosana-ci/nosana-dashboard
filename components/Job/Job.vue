@@ -17,9 +17,9 @@
                     <img
                       v-if="
                         templateForJob &&
-                        (templateForJob.icon || templateForJob.avatar_url)
+                        (templateForJob.icon || (templateForJob as any).avatar_url)
                       "
-                      :src="templateForJob.icon || templateForJob.avatar_url"
+                      :src="templateForJob.icon || (templateForJob as any).avatar_url"
                       alt="Template Icon"
                       class="mr-2"
                       style="
@@ -465,7 +465,6 @@
     :userBalances="userBalances"
   />
   <LogSubscription
-    v-if="props.job.isRunning"
     :initLogs="initLogs"
     :closeLogs="closeLogs"
     :isJobPoster="props.isJobPoster"
@@ -504,6 +503,7 @@ import { useJobLogs } from "~/composables/jobs/useJobLogs";
 import { useTemplates } from "~/composables/useTemplates";
 import { useToast } from "vue-toastification";
 import { useNosanaWallet } from "~/composables/useNosanaWallet";
+import { useAuthHeader } from "~/composables/useAuthHeader";
 import { useAPI } from "~/composables/useAPI";
 import { useGenericBenchmark } from "~/composables/useBenchmarkData";
 
@@ -535,19 +535,9 @@ interface Props {
 }
 
 const props = defineProps<Props>();
-const { userBalances, signMessage: walletSignMessage } = useNosanaWallet();
-const { status, data: userData } = useAuth();
-
-// Create a signMessage function that works for both wallet and credit users
-const signMessage = async () => {
-  // For authenticated credit users, use their authenticationHeader
-  if (status.value === 'authenticated' && userData.value?.authenticationHeader) {
-    return userData.value.authenticationHeader;
-  }
-  
-  // For wallet users, use the wallet's signMessage
-  return await walletSignMessage();
-};
+const { userBalances } = useNosanaWallet();
+const { hasAuth, ensureAuth } = useAuthHeader();
+const getAuth = async () => ensureAuth();
 const { templates } = useTemplates();
 const { markets } = useMarkets();
 const { saveState } = useDeployPageState();
@@ -556,7 +546,6 @@ const { saveState } = useDeployPageState();
 const { data: testgridMarkets } = useAPI('/api/markets', { default: () => [] });
 const toast = useToast();
 const router = useRouter();
-const { isVerified } = useNosanaWallet();
 
 const currentTime = ref(Math.floor(Date.now() / 1000));
 let timerId: NodeJS.Timeout | null = null;
@@ -572,6 +561,13 @@ onUnmounted(() => {
     clearInterval(timerId);
   }
 });
+
+// Single boolean to drive connection
+const hasRealNode = computed<boolean>(() => Boolean(props.job.node && props.job.node !== '11111111111111111111111111111111'));
+// Do not gate on hasAuth; auth will be ensured during WS open
+const shouldConnect = computed(() => props.isJobPoster && props.job.isRunning && hasRealNode.value);
+
+// No local WS watchers; lifecycle handled inside useJobLogs
 
 const isChatServiceReady = ref(false); // Controls chat tab visibility
 
@@ -629,12 +625,18 @@ const isGHCR = (image: string) => {
   return image.startsWith("ghcr.io");
 };
 
-// Get host specs for actual GPU info
-const { data: nodeSpecs, pending: loadingNodeSpecs } = useAPI(`/api/nodes/${props.job.node}/specs`);
-
-const { data: nodeInfo } = useAPI(
-  `https://${props.job.node}.${useRuntimeConfig().public.nodeDomain}/node/info`,
+// Get host specs for actual GPU info (skip when node is placeholder)
+const nodeSpecsUrl = computed(() =>
+  hasRealNode.value ? `/api/nodes/${props.job.node}/specs` : ''
 );
+const { data: nodeSpecs, pending: loadingNodeSpecs } = useAPI(nodeSpecsUrl);
+
+const nodeInfoUrl = computed(() =>
+  hasRealNode.value
+    ? `https://${props.job.node}.${useRuntimeConfig().public.nodeDomain}/node/info`
+    : ''
+);
+const { data: nodeInfo } = useAPI(nodeInfoUrl);
 
 // NEW: Fetch Node Ranking for HostSpecifications
 const jobNodeRankingUrl = computed(() => {
@@ -913,14 +915,13 @@ const toggleDetails = () => {
 async function stopJob() {
   loading.value = true;
 
-  if (!isVerified.value) {
-    try {
-      await signMessage(true);
-    } catch (error) {
-      loading.value = false;
-      toast.error("Failed to verify wallet.");
-      return;
-    }
+  // Ensure we can sign (or use credit header); attempts header generation
+  try {
+    await getAuth();
+  } catch (error) {
+    loading.value = false;
+    toast.error("Failed to verify wallet.");
+    return;
   }
 
   try {
@@ -1021,10 +1022,10 @@ const {
   closeLogs,
 } = useJobLogs(
   props.job.address,
-  props.job.node,
+  computed(() => props.job.node),
   props.endpoints,
-  props.isJobPoster,
-  signMessage
+  shouldConnect,
+  getAuth
 );
 
 // Structure to hold API configuration extracted from health check

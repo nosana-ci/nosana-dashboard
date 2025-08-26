@@ -30,10 +30,10 @@ let logSequence = 0;
 
 export function useJobLogs(
   jobAddress: string,
-  host: string,
+  host: string | Ref<string>,
   endpoints: Endpoints,
-  isJobPoster: boolean,
-  signMessage: () => Promise<string>
+  shouldConnect: ComputedRef<boolean>,
+  getAuth: () => Promise<string | Headers>
 ) {
   const systemLogs = ref<LogEntry[]>([]);
   const containerLogs = ref<LogEntry[]>([]);
@@ -46,7 +46,7 @@ export function useJobLogs(
   const { isConnecting, connectionEstablished, initConnection, closeConnection } = useJobWebSocket(
     jobAddress,
     host,
-    signMessage,
+    getAuth,
     addLog,
     handleWebSocketMessage,
     3, // maxRetries
@@ -287,19 +287,30 @@ export function useJobLogs(
   }
 
   function closeLogs() {
-    systemLogs.value = [];
-    containerLogs.value = [];
-    progressBars.value.clear();
     closeConnection();
   }
 
   function initLogs() {
-    if (!isJobPoster) return;
-    systemLogs.value = [];
-    containerLogs.value = [];
-    progressBars.value.clear();
     initConnection();
   }
+
+  // Single watcher to manage connection lifecycle
+  let closeDebounce: ReturnType<typeof setTimeout> | null = null;
+  watch(shouldConnect, (next) => {
+    if (next) {
+      if (closeDebounce) {
+        clearTimeout(closeDebounce);
+        closeDebounce = null;
+      }
+      initConnection();
+    } else {
+      if (closeDebounce) clearTimeout(closeDebounce);
+      closeDebounce = setTimeout(() => {
+        if (!shouldConnect.value) closeConnection();
+        closeDebounce = null;
+      }, 500);
+    }
+  }, { immediate: true });
 
   return {
     systemLogs,
@@ -312,3 +323,4 @@ export function useJobLogs(
     closeLogs,
   };
 }
+
