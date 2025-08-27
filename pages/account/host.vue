@@ -238,7 +238,7 @@ import {
 import ArrowUpIcon from '@/assets/img/icons/arrow-up.svg?component';
 import ArrowDownIcon from '@/assets/img/icons/arrow-down.svg?component';
 import HostInfo from "~/components/Info/HostInfo.vue";
-import DeploymentList from '~/components/List/AccountDeploymentsList.vue';
+import DeploymentList from '~/components/List/DeploymentList.vue';
 import NodeBenchmarkHistogram from "~/components/BenchmarkHistogram.vue";
 import UptimeChart from "~/components/UptimeChart.vue";
 import UptimeRewards from "~/components/UptimeRewards.vue";

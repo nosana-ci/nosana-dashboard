@@ -191,32 +191,18 @@ const selectGoogleLogin = async () => {
       throw new Error('Popup blocked. Please allow popups for this site.');
     }
     
-    // Listen for the popup to complete authentication
-    const checkPopup = setInterval(() => {
-      try {
-        if (popup?.closed) {
-          clearInterval(checkPopup);
-          googleLoading.value = false;
-          return;
-        }
-        
-        // Check if popup has been redirected to our domain with a code
-        if (popup?.location.href.includes(window.location.origin)) {
-          const popupUrl = new URL(popup.location.href);
-          const code = popupUrl.searchParams.get('code');
-          
-          if (code) {
-            clearInterval(checkPopup);
-            popup.close();
-            
-            // Process the authentication code
-            authenticateLogin(code);
-          }
-        }
-      } catch (e) {
-        // Cross-origin restrictions - popup hasn't returned to our domain yet
+    // Listen for postMessage from redirect page
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      
+      if (event.data.type === 'GOOGLE_AUTH_CODE' && event.data.code) {
+        window.removeEventListener('message', handleMessage);
+        popup?.close();
+        authenticateLogin(event.data.code);
       }
-    }, 1000);
+    };
+    
+    window.addEventListener('message', handleMessage);
     
   } catch (error) {
     if (popup) popup.close();
