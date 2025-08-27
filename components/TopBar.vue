@@ -137,7 +137,7 @@ const getWalletAddress = () => {
 
 
 const getUserName = () => {
-  return session.value?.providerUsername || session.value?.name || session.value?.email || 'User';
+  return session.value?.email || session.value?.providerUsername || session.value?.name || 'User';
 };
 
 const getUserInitials = () => {
@@ -368,7 +368,7 @@ interface PrioFeeConfig {
   strategy: 'low' | 'medium' | 'high' | 'veryHigh';
   staticFee: number;
   dynamicPriorityFee: boolean;
-  maximumPriorityFee: number;
+  maxPriorityFee: number;
 }
 
 // Priority fee configuration mapping
@@ -377,25 +377,25 @@ const PRIO_FEE_CONFIGS: Record<string, PrioFeeConfig> = {
     strategy: 'low',
     staticFee: 10000,
     dynamicPriorityFee: true,
-    maximumPriorityFee: 1000000
+    maxPriorityFee: 1000000
   },
   medium: {
     strategy: 'medium',
     staticFee: 100000,
     dynamicPriorityFee: true,
-    maximumPriorityFee: 15000000
+    maxPriorityFee: 15000000
   },
   high: {
     strategy: 'high',
     staticFee: 100000,
     dynamicPriorityFee: true,
-    maximumPriorityFee: 15000000
+    maxPriorityFee: 15000000
   },
   veryHigh: {
     strategy: 'veryHigh',
     staticFee: 100000,
     dynamicPriorityFee: true,
-    maximumPriorityFee: 15000000
+    maxPriorityFee: 15000000
   }
 };
 

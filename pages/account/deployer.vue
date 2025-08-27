@@ -1,7 +1,7 @@
 <template>
   <div>
     <TopBar 
-      :title="status === 'authenticated' ? 'Hi ' + userData?.name : 'My Account'"
+      :title="status === 'authenticated' ? 'Hi ' + (userData?.email || userData?.name || 'User') : 'My Account'"
       :subtitle="'Your personal overview'" 
       ref="topBar"
       v-model="showSettingsModal"

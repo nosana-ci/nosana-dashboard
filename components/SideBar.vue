@@ -171,22 +171,53 @@
     </div>
   </aside>
   <nav class="navbar is-hidden-desktop is-fixed-top has-shadow">
-    <div class="navbar-brand">
+    <div class="navbar-brand is-flex is-align-items-center is-justify-content-space-between" style="width: 100%;">
       <nuxt-link to="/" class="navbar-item" @click="showMenu = false">
         <logo width="135px" :animated="true" class="light-only" />
         <logo width="135px" :white="true" class="dark-only" :animated="true" />
       </nuxt-link>
 
-      <a
-        role="button"
-        class="navbar-burger"
-        :class="{ 'is-active': showMenu }"
-        @click="showMenu = !showMenu"
-      >
-        <span aria-hidden="true"></span>
-        <span aria-hidden="true"></span>
-        <span aria-hidden="true"></span>
-      </a>
+      <div class="is-flex is-align-items-center">
+        <!-- Simple mobile user avatar -->
+        <div v-if="connected || status === 'authenticated'" class="dropdown mobile-avatar-dropdown mr-3" :class="{ 'is-active': showMobileDropdown }">
+          <div class="dropdown-trigger">
+            <span class="mobile-avatar-trigger" @click="showMobileDropdown = !showMobileDropdown">
+              <template v-if="connected && wallet">
+                <img v-if="wallet.adapter.icon" :src="wallet.adapter.icon" :alt="wallet.adapter.name + ' icon'" class="wallet-icon" />
+                <span v-else>W</span>
+              </template>
+              <template v-else>
+                {{ (data?.email && data.email.charAt(0).toUpperCase()) || 'U' }}
+              </template>
+            </span>
+          </div>
+          <div class="dropdown-menu">
+            <div class="dropdown-content">
+              <div class="dropdown-item">
+                <p class="is-size-7 has-text-grey mb-0">{{ connected ? getWalletAddress() : (data?.email || '') }}</p>
+              </div>
+              <hr class="dropdown-divider">
+              <a class="dropdown-item logout-item" @click="handleLogout">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" class="dropdown-icon">
+                  <path d="M6 2H3C2.44772 2 2 2.44772 2 3V13C2 13.5523 2.44772 14 3 14H6M10 6L14 10M14 10L10 14M14 10H6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Log out
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <a
+          role="button"
+          class="navbar-burger"
+          :class="{ 'is-active': showMenu }"
+          @click="showMenu = !showMenu"
+        >
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+        </a>
+      </div>
     </div>
   </nav>
 </template>
@@ -195,6 +226,7 @@
 const showMenu = ref(false);
 const showExplorerDropdown = ref(false);
 const connectingFromSidebar = ref(false);
+const showMobileDropdown = ref(false);
 import JobBuilderIcon from "@/assets/img/icons/sidebar/job-builder.svg?component";
 import ExplorerIcon from "@/assets/img/icons/sidebar/explorer.svg?component";
 import UserIcon from "@/assets/img/icons/sidebar/user.svg?component";
@@ -203,8 +235,8 @@ import { useWallet } from "solana-wallets-vue";
 import { computed, onMounted, watch, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
-const { connected } = useWallet();
-const { status } = useAuth();
+const { connected, disconnect, publicKey, wallet } = useWallet();
+const { status, signOut, data } = useAuth();
 const route = useRoute();
 const router = useRouter();
 const { openBothModal, openWalletModal } = useLoginModal();
@@ -248,9 +280,34 @@ const isActive = (paths: string[]) => {
   return paths.includes(route.path);
 };
 
+// Handle logout
+const handleLogout = async () => {
+  showMobileDropdown.value = false;
+  try {
+    if (connected.value) {
+      await disconnect();
+    } else if (status.value === 'authenticated') {
+      const redirect = window.location.pathname === '/account/deployer' ? true : false;
+      await signOut({ redirect: false });
+      if (redirect) {
+        await navigateTo('/');
+      }
+    }
+  } catch (error) {
+    console.error('Error logging out:', error);
+  }
+};
+
 // Toggle dark mode
 const toggleDarkMode = () => {
   useColorMode().preference = useColorMode().value === 'dark' ? 'light' : 'dark';
+};
+
+// Format wallet address for display
+const getWalletAddress = () => {
+  if (!publicKey?.value) return '';
+  const address = publicKey.value.toBase58();
+  return `${address.slice(0, 4)}..${address.slice(-4)}`;
 };
 
 </script>
@@ -670,5 +727,90 @@ const toggleDarkMode = () => {
 .dark-mode .sidebar-theme-toggle:hover {
   background-color: #374151;
   color: #d1d5db;
+}
+
+/* Mobile avatar styling - no blue highlight */
+.mobile-avatar-tag {
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-avatar-tag:hover {
+  opacity: 0.8;
+}
+
+.mobile-avatar-tag:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+/* Cleaner mobile avatar trigger */
+.mobile-avatar-trigger {
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 9999px;
+  background: $grey-lightest;
+  padding: 0;
+  overflow: hidden;
+}
+
+.mobile-avatar-trigger img.wallet-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+}
+
+.dark-mode .mobile-avatar-trigger {
+  background: #363636;
+}
+
+/* Make fallback initial white inside avatar */
+.mobile-avatar-trigger span {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+/* Match desktop red logout style in mobile dropdown */
+.mobile-avatar-dropdown .dropdown-item.logout-item {
+  color: #dc2626;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-left: 1rem;
+}
+
+.mobile-avatar-dropdown .dropdown-item.logout-item:hover {
+  background-color: #fef2f2;
+}
+
+.mobile-avatar-dropdown .dropdown-item.logout-item .dropdown-icon {
+  color: #dc2626;
+}
+
+/* Ensure mobile avatar dropdown stays within viewport */
+.mobile-avatar-dropdown .dropdown-menu {
+  left: auto !important;
+  right: 0 !important;
+  transform: none !important;
+  width: max-content;
+  min-width: 180px;
+  max-width: calc(100vw - 16px);
+}
+
+.mobile-avatar-dropdown .dropdown-content,
+.mobile-avatar-dropdown .dropdown-item {
+  white-space: normal !important;
+}
+
+.mobile-avatar-dropdown .dropdown-content {
+  max-height: 60vh;
+  overflow-y: auto;
 }
 </style>
