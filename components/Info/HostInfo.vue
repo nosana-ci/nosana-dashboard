@@ -78,7 +78,8 @@
             </span>
           </span>
           <span class="quick-detail-value">
-            <span v-if="!nodeRanking || typeof nodeRanking.uptimePercentage === 'undefined'">
+            <span v-if="loadingRanking || !nodeSpecs?.marketAddress">...</span>
+            <span v-else-if="!nodeRanking || typeof nodeRanking.uptimePercentage === 'undefined'">
               <span
                 class="has-tooltip-arrow"
                 data-tooltip="This host hasn't been online long enough to calculate availibily"
@@ -441,24 +442,16 @@ watch(isNode, (val) => {
 });
 
 // When specs are loaded, retrieve node ranking
-let rankingAPInstance: any = null;
-watch(
-  nodeSpecs,
-  (specs) => {
-    if (specs?.marketAddress) {
-      if (!rankingAPInstance) {
-        // Create new instance with data and execute it
-        rankingAPInstance = useAPI(
-          `/api/benchmarks/node-report?node=${props.address}`,
-          {
-            // @ts-ignore
-            disableToastOnError: true,
-          }
-        );
-      }
-    }
-  },
-  { immediate: true }
+const { data: rankingData, pending: loadingRanking } = useAPI(
+  () => 
+    nodeSpecs.value?.marketAddress 
+      ? `/api/benchmarks/node-report?node=${props.address}` 
+      : '',
+  {
+    // @ts-ignore
+    disableToastOnError: true,
+    watch: [() => props.address, nodeSpecs]
+  }
 );
 
 interface NodeRanking {
@@ -468,9 +461,12 @@ interface NodeRanking {
 }
 
 const nodeRanking: ComputedRef<NodeRanking | null> = computed(() => {
-  if (rankingAPInstance?.data?.value) {
-    if (rankingAPInstance.data.value.node === props.address) {
-      return rankingAPInstance.data.value;
+  if (rankingData?.value) {
+    if (rankingData.value.node === props.address) {
+      return {
+        ...rankingData.value,
+        participationRate: rankingData.value.antiSpoofSuccessRate || 0
+      };
     }
   }
   return null;

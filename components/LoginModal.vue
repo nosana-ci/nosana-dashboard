@@ -271,7 +271,7 @@ const handleWalletConnect = async () => {
     if (wallets.value && wallets.value.length > 0) {
       showWalletModal.value = true;
     } else {
-      toast.error("No wallets found. Please install a Solana wallet like Phantom.");
+      toast.error("No wallets found");
     }
   } catch (error) {
     console.error("Error preparing wallet selection:", error);
