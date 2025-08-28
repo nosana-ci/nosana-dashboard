@@ -1,5 +1,5 @@
-import svgLoader from 'vite-svg-loader';
-import { nodePolyfills } from 'vite-plugin-node-polyfills';
+import svgLoader from "vite-svg-loader";
+import { nodePolyfills } from "vite-plugin-node-polyfills";
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 
@@ -8,48 +8,75 @@ export default defineNuxtConfig({
   ssr: false,
   css: ["~/assets/styles/global.scss"],
   dir: {
-    public: 'static',
+    public: "static",
   },
-  modules: ['@nuxtjs/google-fonts', '@vueuse/nuxt', '@nuxtjs/color-mode', '@sidebase/nuxt-auth'],
+  pwa: {
+    manifest: {
+      name: "Nosana Dashboard",
+      short_name: "nosana",
+      theme_color: "#10E80C",
+      background_color: "#000000",
+      display: "standalone",
+      description: "Nosana Dashboard",
+      icons: [
+        {
+          src: "icon.png",
+          sizes: "150x150",
+          type: "image/png",
+        },
+      ],
+    },
+  },
+  modules: [
+    "@nuxtjs/google-fonts",
+    "@vueuse/nuxt",
+    "@nuxtjs/color-mode",
+    "@sidebase/nuxt-auth",
+    "@vite-pwa/nuxt",
+  ],
   googleFonts: {
     preload: true,
     families: {
       Outfit: [300, 400, 700],
-      'Space Grotesk': [400]
+      "Space Grotesk": [400],
     },
   },
   colorMode: {
-    preference: 'light', // default value of $colorMode.preference
-    fallback: 'light', // fallback value if not system preference found
-    hid: 'nuxt-color-mode-script',
-    globalName: '__NUXT_COLOR_MODE__',
-    componentName: 'ColorScheme',
-    classPrefix: '',
-    classSuffix: '-mode',
-    storageKey: 'nuxt-color-mode'
+    preference: "light", // default value of $colorMode.preference
+    fallback: "light", // fallback value if not system preference found
+    hid: "nuxt-color-mode-script",
+    globalName: "__NUXT_COLOR_MODE__",
+    componentName: "ColorScheme",
+    classPrefix: "",
+    classSuffix: "-mode",
+    storageKey: "nuxt-color-mode",
   },
   runtimeConfig: {
     public: {
       rpcUrl: process.env.RPC_URL,
       apiBase: process.env.API_BASE,
-      oldApiBase: process.env.OLD_API_BASE || 'https://backend.k8s.prd.nos.ci',
-      network: process.env.NETWORK || 'mainnet',
+      oldApiBase: process.env.OLD_API_BASE || "https://backend.k8s.prd.nos.ci",
+      network: process.env.NETWORK || "mainnet",
       nodeDomain: process.env.NODE_DOMAIN,
-      frpServer: process.env.FRP_SERVER || 'node.k8s.prd.nos.ci',
+      frpServer: process.env.FRP_SERVER || "node.k8s.prd.nos.ci",
       googleRedirectUri: process.env.GOOGLE_REDIRECT_URI,
       googleClientId: process.env.GOOGLE_CLIENT_ID,
       twitterClientId: process.env.TWITTER_CLIENT_ID,
       twitterRedirectUri: process.env.TWITTER_REDIRECT_URI,
-    }
+    },
   },
   auth: {
     baseURL: process.env.NUXT_PUBLIC_API_BASE,
     provider: {
-      type: 'local',
+      type: "local",
       endpoints: {
-        signIn: { path: '/api/auth/login', method: 'post', propertyName: 'token' },
-        getSession: { path: '/api/auth/session', method: 'get' },
-        signOut: false
+        signIn: {
+          path: "/api/auth/login",
+          method: "post",
+          propertyName: "token",
+        },
+        getSession: { path: "/api/auth/session", method: "get" },
+        signOut: false,
       },
       token: {
         type: false,
@@ -57,13 +84,13 @@ export default defineNuxtConfig({
       },
       session: {
         dataType: {
-          id: 'string',
-          name: 'string',
-          email: 'string',
-          address: 'string',
-          generatedAddress: 'string',
-          providerUsername: 'string',
-          type: 'string',
+          id: "string",
+          name: "string",
+          email: "string",
+          address: "string",
+          generatedAddress: "string",
+          providerUsername: "string",
+          type: "string",
         },
       },
     },
@@ -79,12 +106,12 @@ export default defineNuxtConfig({
     },
     plugins: [
       svgLoader({
-        defaultImport: 'url',
+        defaultImport: "url",
       }),
       nodePolyfills({
         // To exclude specific polyfills, add them to this list.
         exclude: [
-          'fs', // Excludes the polyfill for `fs` and `node:fs`.
+          "fs", // Excludes the polyfill for `fs` and `node:fs`.
         ],
         // Whether to polyfill specific globals.
         globals: {
@@ -98,8 +125,8 @@ export default defineNuxtConfig({
     ],
     resolve: {
       alias: {
-        stream: 'rollup-plugin-node-polyfills/polyfills/stream',
-        events: 'rollup-plugin-node-polyfills/polyfills/events',
+        stream: "rollup-plugin-node-polyfills/polyfills/stream",
+        events: "rollup-plugin-node-polyfills/polyfills/events",
       },
     },
     build: {
@@ -108,11 +135,11 @@ export default defineNuxtConfig({
     },
     optimizeDeps: {
       include: ["@solana/web3.js", "buffer"],
-      exclude: ['vue-demi'],
+      exclude: ["vue-demi"],
       esbuildOptions: {
         target: "esnext",
         define: {
-          global: 'globalThis',
+          global: "globalThis",
         },
       },
     },
@@ -124,17 +151,17 @@ export default defineNuxtConfig({
         scss: {
           sourceMap: false,
           additionalData: '@import "@/assets/styles/variables.scss";',
-          silenceDeprecations: ['mixed-decls', 'slash-div']
+          silenceDeprecations: ["mixed-decls", "slash-div"],
         },
       },
     },
-    devBundler: 'legacy',
+    devBundler: "legacy",
     server: {
       watch: {
         usePolling: true,
-        interval: 300
-      }
+        interval: 300,
+      },
     },
   },
   components: true,
-})
+});
