@@ -45,6 +45,20 @@ const handleLoginSuccess = () => {
   }
   // If no redirect path specified, stay on the current page (do nothing)
 };
+
+// Handle OAuth redirect for Google login popup
+onMounted(() => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const code = urlParams.get('code');
+  
+  if (code && window.opener) {
+    window.opener.postMessage({
+      type: 'GOOGLE_AUTH_CODE',
+      code: code
+    }, window.location.origin);
+    window.close();
+  }
+});
 </script>
 
 <style lang="scss" scoped>

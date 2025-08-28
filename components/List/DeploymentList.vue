@@ -55,6 +55,7 @@
     </div>
   </div>
 
+  <div class="table-container">
   <table class="table is-fullwidth is-striped is-hoverable mb-0" :class="{ 'is-small': small }">
     <thead>
       <tr>
@@ -74,7 +75,7 @@
       <tr v-else-if="!jobs.length">
         <td colspan="5">No deployments</td>
       </tr>
-      <tr v-for="job in jobs" v-else :key="job.address" class="clickable-row">
+      <tr v-for="job in jobs" v-else :key="job.address" class="clickable-row" @click="navigateToJob(job.address, $event)" @auxclick="navigateToJob(job.address, $event)">
         <td>
           <NuxtLink :to="`/jobs/${job.address}`" class="clickable-row-link">
             <span class="clickable-row-cell-content is-family-monospace address has-text-black">
@@ -157,6 +158,7 @@
       </tr>
     </tbody>
   </table>
+  </div>
   <pagination v-if="totalJobs && totalJobs > perPage" v-model="page" class="pagination is-centered mt-4"
     :total-page="Math.ceil(totalJobs / perPage)" :max-page="6">
   </pagination>
@@ -191,7 +193,7 @@ const { data: testgridMarkets, pending: loadingTestgridMarkets } = await useAPI(
 
 const timestamp = useTimestamp({ interval: 1000 });
 const route = useRoute();
-const isHostPage = computed(() => route.path.startsWith('/host/'));
+const isHostPage = computed(() => route.path.startsWith('/host/') || route.path === '/account/host');
 const props = defineProps({
   jobs: {
     type: Array as PropType<Array<ExtendedJob>>,
@@ -232,6 +234,23 @@ const changeState = (newState: number | null) => {
   state.value = newState;
 }
 const page = defineModel<number>('page', { default: 1 })
+
+// Full-row navigation with support for Ctrl/Cmd/middle-click
+const navigateToJob = (address: string, event: MouseEvent) => {
+  const url = `/jobs/${address}`;
+  // Middle click
+  if (event.type === 'auxclick' && (event as MouseEvent).button === 1) {
+    window.open(url, '_blank');
+    return;
+  }
+  // Ctrl/Cmd click
+  if (event.ctrlKey || event.metaKey) {
+    window.open(url, '_blank');
+    return;
+  }
+  // Regular left-click
+  navigateTo(url);
+};
 
 // Dynamic height management to prevent layout shift during loading
 const containerRef = ref<HTMLElement>()
