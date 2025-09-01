@@ -10,7 +10,7 @@ export default defineNuxtConfig({
   dir: {
     public: 'static',
   },
-  modules: ['@nuxtjs/google-fonts', '@vueuse/nuxt', '@nuxtjs/color-mode', '@sidebase/nuxt-auth'],
+  modules: ['@nuxtjs/google-fonts', '@vueuse/nuxt', '@nuxtjs/color-mode', '@sidebase/nuxt-auth', 'nuxt-gtag'],
   googleFonts: {
     preload: true,
     families: {
@@ -41,6 +41,10 @@ export default defineNuxtConfig({
       twitterClientId: process.env.TWITTER_CLIENT_ID,
       twitterRedirectUri: process.env.TWITTER_REDIRECT_URI,
     }
+  },
+  gtag: {
+    enabled: process.env.NODE_ENV === 'production',
+    id: 'G-HNDP62SH8M'
   },
   auth: {
     baseURL: process.env.NUXT_PUBLIC_API_BASE,
