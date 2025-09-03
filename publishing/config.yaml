@@ -1,0 +1,53 @@
+publisher:
+  name: Nosana
+  website: https://nosana.com
+  email: hello@nosana.com
+app:
+  name: Nosana Dashboard
+  address: 6XNQdX9oGGL6ryZzcVAmfUcMfAP9KxYvaDCTEA8KfzzK
+  android_package: com.nosana.dashboard.twa
+  urls:
+    license_url: https://dashboard.nosana.com/tos
+    copyright_url: https://dashboard.nosana.com/tos
+    privacy_policy_url: https://dashboard.nosana.com/privacy-policy
+    website: https://dashboard.nosana.com
+  media:
+    - purpose: icon
+      uri: ./media/icon.png
+release:
+  address: Faty2RXYxsSneADmkuEJFYb3gg3KiaEjCefZiQwXTdcf
+  media:
+    - purpose: icon
+      uri: ./media/icon.png
+    - purpose: banner
+      uri: ./media/banner.png
+    - purpose: featureGraphic
+      uri: ./media/feature_graphic.png
+    - purpose: screenshot
+      uri: ./media/screenshot_1.png
+    - purpose: video
+      uri: ./media/demo.mp4
+    - purpose: screenshot
+      uri: ./media/screenshot_2.png
+    - purpose: screenshot
+      uri: ./media/screenshot_3.png
+    - purpose: screenshot
+      uri: ./media/screenshot_4.png
+  files:
+    - purpose: install
+      uri: ./files/app-release-signed.apk
+  catalog:
+    en-US:
+      name: Nosana Dashboard
+      short_description: Powering the AI revolution
+      long_description: Powering the AI Revolution - On-Demand GPU Compute
+      new_in_version: First release.
+      saga_features: Connect with your native solana wallet.
+solana_mobile_dapp_publisher_portal:
+  testing_instructions: Login with either google account or wallet on your solana phone with solana mobile wallet adapter
+lastSubmittedVersionOnChain:
+  address: Faty2RXYxsSneADmkuEJFYb3gg3KiaEjCefZiQwXTdcf
+  version_code: 1
+  apk_hash: SEe52ekFQE5vEj+FCsLTwD3agQNxKJNZSoOmdEYx9XY=
+lastUpdatedVersionOnStore:
+  address: Faty2RXYxsSneADmkuEJFYb3gg3KiaEjCefZiQwXTdcf

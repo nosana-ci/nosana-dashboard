@@ -1,0 +1,49 @@
+{
+  "assets": {
+    "./media/icon.png": {
+      "path": "./media/icon.png",
+      "sha256": "P4dGhA8/x4p1v5V2qvxHeglhWmSXeNUKlLmTm6d7VZQ=",
+      "uri": "https://arweave.net/NAz__EWNy0BdugSrU6AMsBLop_PSuqW01g2KZqBWhHw"
+    },
+    "./media/banner.png": {
+      "path": "./media/banner.png",
+      "sha256": "xsXLXAe5juN8pp2Gil2Ia69pedwZF/Cp04hDwyNcKN0=",
+      "uri": "https://arweave.net/voibS8aEnF5Opfte3POOzMScYMkhI9Ctqas1Bqz_h2M"
+    },
+    "./media/screenshot_2.png": {
+      "path": "./media/screenshot_2.png",
+      "sha256": "sRcWJmCe1uMJgNIhGrioyvp5caQsneP5ZmayEHiDdho=",
+      "uri": "https://arweave.net/LRpJp0Wtfijlx_uEasgzg4G3Q9nuTF9R65p6aws-6Ys"
+    },
+    "./media/feature_graphic.png": {
+      "path": "./media/feature_graphic.png",
+      "sha256": "kUAx0+lX8G9NY1CyCIK2LurXZi3sn6Mkk7ir7BggEcY=",
+      "uri": "https://arweave.net/7dQeyWaxgLTjQ_-zu1lLTlXzttZqAJjR7p5t7irDGeg"
+    },
+    "./media/screenshot_4.png": {
+      "path": "./media/screenshot_4.png",
+      "sha256": "DzUkF9bP2aWmn+1qcl0DeWCZBlVxRm0Z8bJRV8D40Ns=",
+      "uri": "https://arweave.net/LzGhu1VjdSCYOh_2g5nGzfHXwL57GhSAnSpIPH7yNyg"
+    },
+    "./media/screenshot_3.png": {
+      "path": "./media/screenshot_3.png",
+      "sha256": "/+QS7uAIGaP0nnaQAy7u54fUKEWq9uaAzQp/a1ZYfP8=",
+      "uri": "https://arweave.net/raz5IP-zZ1OGVijvf3mKTbRGgh3DP3Z9usr0h17KS5s"
+    },
+    "./media/screenshot_1.png": {
+      "path": "./media/screenshot_1.png",
+      "sha256": "s64sg8YpZHyOU3NywjjNQgCraHtsNIZr7ZQQKd/Efv0=",
+      "uri": "https://arweave.net/Afhj1QkJbpxbMh0N0BfHIsdL2e5qfO6oiDrgme7rND0"
+    },
+    "./files/app-release-signed.apk": {
+      "path": "./files/app-release-signed.apk",
+      "sha256": "SEe52ekFQE5vEj+FCsLTwD3agQNxKJNZSoOmdEYx9XY=",
+      "uri": "https://arweave.net/vc7yA0PGOM4ihfO0bOOTx0h1i3BW335V2pxx8DPt7NY"
+    },
+    "./media/demo.mp4": {
+      "path": "./media/demo.mp4",
+      "sha256": "gxAm01NrFEdRrYgt0LbrMX8M5yc3GGzRezXUz5QH/Ok=",
+      "uri": "https://arweave.net/fMzkvBabKzaVRcRveO95jFHZozpSiTs8AOZ8-iXnr5Y"
+    }
+  }
+}
