@@ -21,3 +21,7 @@ logs
 # Local env files
 .env.local
 .env.*.local
+
+# android generated files
+android/*
+!android/twa-manifest.json
