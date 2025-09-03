@@ -15,7 +15,7 @@ export default defineNuxtConfig({
       name: "Nosana Dashboard",
       short_name: "nosana",
       theme_color: "#10E80C",
-      background_color: "#000000",
+      background_color: "#ffffff",
       display: "standalone",
       description: "Nosana Dashboard",
       icons: [
@@ -32,6 +32,7 @@ export default defineNuxtConfig({
     "@vueuse/nuxt",
     "@nuxtjs/color-mode",
     "@sidebase/nuxt-auth",
+    "nuxt-gtag",
     "@vite-pwa/nuxt",
   ],
   googleFonts: {
@@ -64,6 +65,10 @@ export default defineNuxtConfig({
       twitterClientId: process.env.TWITTER_CLIENT_ID,
       twitterRedirectUri: process.env.TWITTER_REDIRECT_URI,
     },
+  },
+  gtag: {
+    enabled: process.env.NODE_ENV === "production",
+    id: "G-HNDP62SH8M",
   },
   auth: {
     baseURL: process.env.NUXT_PUBLIC_API_BASE,

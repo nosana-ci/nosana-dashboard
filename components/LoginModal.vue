@@ -117,7 +117,7 @@ const emit = defineEmits<{
   success: [];
 }>();
 
-const { connected, disconnect, select, wallets } = useWallet();
+const { connected, disconnect, select, connect, wallets, wallet, readyState } = useWallet();
 const { status, signOut } = useAuth();
 const router = useRouter();
 const toast = useToast();
@@ -267,11 +267,11 @@ const handleWalletConnect = async () => {
     if (status.value === "authenticated") {
       await signOut({ redirect: false });
     }
-    
+
     if (wallets.value && wallets.value.length > 0) {
       showWalletModal.value = true;
     } else {
-      toast.error("No wallets found. Please install a Solana wallet like Phantom.");
+      toast.error("No wallets found");
     }
   } catch (error) {
     console.error("Error preparing wallet selection:", error);
@@ -284,7 +284,12 @@ const selectWallet = async (walletName: string) => {
   showWalletModal.value = false;
   
   try {
+    console.log("selecting wallet", walletName);
     await select(walletName as any);
+    console.log("readyState", readyState.value);
+    await connect();
+    console.log("connected?", connected.value);
+    console.log("wallet", wallet.value);
   } catch (error) {
     console.error("Error selecting wallet:", error);
     toast.error(`Failed to connect to ${walletName}. Please try again.`);
