@@ -2,7 +2,7 @@
       "relation": ["delegate_permission/common.handle_all_urls"],
       "target": {
         "namespace": "android_app",
-        "package_name": "app.nosana.twa",
-        "sha256_cert_fingerprints": ["FE:27:0E:2E:92:EC:41:78:6D:41:00:34:33:1E:BA:E5:D7:75:93:69:62:38:71:60:00:B4:71:E8:83:14:D0:57"]
+        "package_name": "com.nosana.dashboard.twa",
+        "sha256_cert_fingerprints": ["AD:2C:44:BE:DD:3D:C7:2F:75:FB:B4:E9:1E:C1:AD:B0:CF:FF:8E:27:AA:F4:04:F3:04:55:42:82:78:D8:EE:EF"]
       }
     }]

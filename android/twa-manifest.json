@@ -1,29 +1,29 @@
 {
-  "packageId": "app.nosana.twa",
-  "host": "53ab5b8e3e7c.ngrok-free.app",
+  "packageId": "com.nosana.dashboard.twa",
+  "host": "dashboard.nosana.com",
   "name": "Nosana Dashboard",
   "launcherName": "nosana",
-  "display": "fullscreen",
+  "display": "standalone",
   "themeColor": "#10E80C",
   "themeColorDark": "#000000",
   "navigationColor": "#000000",
   "navigationColorDark": "#000000",
   "navigationDividerColor": "#000000",
   "navigationDividerColorDark": "#000000",
-  "backgroundColor": "#000000",
+  "backgroundColor": "#FFFFFF",
   "enableNotifications": true,
   "startUrl": "/",
-  "iconUrl": "https://53ab5b8e3e7c.ngrok-free.app/logo-vertical.png",
+  "iconUrl": "https://dashboard.nosana.com/icon-512x512.png",
   "splashScreenFadeOutDuration": 300,
   "signingKey": {
-    "path": "/home/laurens/nosana/dashboard/android/android.keystore",
+    "path": "/home/laurens/nosana/android.keystore",
     "alias": "android"
   },
-  "appVersionName": "2",
-  "appVersionCode": 2,
+  "appVersionName": "1",
+  "appVersionCode": 1,
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
-  "webManifestUrl": "https://53ab5b8e3e7c.ngrok-free.app/manifest.webmanifest",
+  "webManifestUrl": "https://dashboard.nosana.com/manifest.webmanifest",
   "fallbackType": "customtabs",
   "features": {},
   "alphaDependencies": {
@@ -32,12 +32,12 @@
   "enableSiteSettingsShortcut": true,
   "isChromeOSOnly": false,
   "isMetaQuest": false,
-  "fullScopeUrl": "https://53ab5b8e3e7c.ngrok-free.app/",
+  "fullScopeUrl": "https://dashboard.nosana.com/",
   "minSdkVersion": 21,
   "orientation": "default",
   "fingerprints": [
     {
-      "value": "FE:27:0E:2E:92:EC:41:78:6D:41:00:34:33:1E:BA:E5:D7:75:93:69:62:38:71:60:00:B4:71:E8:83:14:D0:57"
+      "value": "AD:2C:44:BE:DD:3D:C7:2F:75:FB:B4:E9:1E:C1:AD:B0:CF:FF:8E:27:AA:F4:04:F3:04:55:42:82:78:D8:EE:EF"
     }
   ],
   "additionalTrustedOrigins": [],
@@ -45,5 +45,5 @@
   "protocolHandlers": [],
   "fileHandlers": [],
   "launchHandlerClientMode": "",
-  "appVersion": "2"
+  "appVersion": "1"
 }
