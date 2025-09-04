@@ -330,8 +330,8 @@ async function confirmSwap() {
     return;
   }
 
-  // Use the raw numeric value to ensure correct API processing
-  let amountToSwap = customSwapAmount.value || requiredAmount.value;
+  // Swap expects source token amount (ExactIn)
+  let amountToSwap = sourceAmount.value;
   amountToSwap = amountToSwap < 0 ? 0 : amountToSwap;
   
   // We don't need to add buffer here since it's already included in requiredAmount
