@@ -111,11 +111,19 @@
   <!-- Moved Earnings History Section End -->
 
   <!-- Uptime Container -->
-  <!-- <div class="box mt-5">
-    <UptimeChart v-if="publicKey" :node-address="publicKey.toString()" />
+  <div 
+    class="box mt-5" 
+    v-if="publicKey && nodeSpecs && (
+      (nodeSpecs.claimableUptimeNosRewards && nodeSpecs.claimableUptimeNosRewards > 0) ||
+      (nodeSpecs.totalClaimedUptimeNosRewards && nodeSpecs.totalClaimedUptimeNosRewards > 0) ||
+      nodeSpecs.marketAddress === 'Ekro9NTNqLbnMkN7x7y2rY9AeTkazcHj2PPaTxT1Cogz'
+    )"
+  >
+    <UptimeChart :node-address="publicKey.toString()" />
 
     <hr class="my-4">
     <UptimeRewards 
+      v-if="nodeSpecs"
       :node-specs="nodeSpecs"
       :loading-node-specs="loadingNodeSpecs"
       :connected="connected"
@@ -123,7 +131,7 @@
       :wallet="wallet"
       @refresh-node-specs="refreshNodeSpecs"
     />
-  </div> -->
+  </div>
 
   <!-- <h3 class="title is-4 mt-5 mb-4">Info</h3> -->
   <div class="box">
