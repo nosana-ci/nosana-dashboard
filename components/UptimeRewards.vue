@@ -1,18 +1,10 @@
 <template>
   <div class="mt-5">
-    <!-- <h3 class="title is-4 mb-4">
-      Uptime Rewards
-    </h3> -->
-    <!-- <p class="has-text-grey-dark mb-2">
-      Earn NOS tokens for keeping your node online and available 24/7.<br>
-      These rewards are separate from job execution earnings and not included in the earnings history above.
-    </p> -->
-
     <div class="is-flex is-align-items-center mb-3">
       <h4 class="subtitle is-6 mb-0">Uptime Rewards</h4>
       <span
         class="has-tooltip-arrow ml-2"
-        data-tooltip="Earn NOS tokens for keeping your node online and available 24/7. These rewards are separate from job execution earnings and not included in the earnings history above."
+        data-tooltip="Earn NOS tokens for keeping your node online and available 24/7. These rewards are separate from job execution earnings."
       >
         <img
           src="~/assets/img/icons/info.svg"
@@ -252,24 +244,4 @@ const claimRewards = async () => {
   font-size: 0.9rem;
   line-height: 1.4;
 }
-
-/* .info-icon {
-  cursor: help;
-  color: #3273dc; 
-  font-weight: bold;
-  font-size: 1rem; 
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.25em;
-  height: 1.25em;
-  border: 1px solid transparent; 
-  border-radius: 50%; 
-}
-
-
- .info-icon:hover {
-  background-color: #f0f0f0;
-  border-color: #dbdbdb;
-} */
 </style>
