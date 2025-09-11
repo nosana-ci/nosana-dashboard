@@ -30,7 +30,20 @@
         </div>
         <div class="column is-12">
           <div class="box has-text-centered">
-            <p class="heading">Forecasted Monthly</p>
+            <p class="heading">Forecasted Monthly
+              <span
+                class="has-tooltip-arrow"
+                data-tooltip="This is a forecast of what your earnings will be for the rest of the month based on your earnings this month so far."
+                style="font-weight: normal; text-transform: none; letter-spacing: normal;"
+              >
+              <img
+                src="~/assets/img/icons/info.svg"
+                style="height: 0.8rem; vertical-align: top;"
+                alt="Info"
+              />
+            </span>
+
+            </p>
             <p class="title is-4 mb-1" v-if="!loadingHistory" style="height: 100%;">
               ${{ forecastAmountCombined.toFixed(2) }}
             </p>
@@ -669,7 +682,7 @@ const chartData = computed(() => {
   // Only add Uptime Earnings dataset if there are actual uptime earnings
   if (uptimeEarningsAllTime.value > 0) {
     datasets.push({
-      label: 'Uptime Earnings',
+      label: 'Uptime Rewards',
       data: uptimeEarningsData,
       backgroundColor: uptimeBlue,
       borderColor: 'rgba(255, 255, 255, 0.7)',
