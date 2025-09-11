@@ -10,7 +10,7 @@
           <div class="box has-text-centered" style="height: 100%;">
             <p class="heading">Current Month</p>
             <p class="title is-4 mb-1" v-if="!loadingHistory">
-              ${{ displayedEarnedThisMonth.toFixed(2) }}
+              ${{ earnedThisMonthCombined.toFixed(2) }}
             </p>
             <p class="title is-4 mb-1" v-else>-</p>
             <p class="has-text-grey is-size-7 mb-0" v-if="displayedPctChangeSoFar != null">
@@ -32,7 +32,7 @@
           <div class="box has-text-centered">
             <p class="heading">Forecasted Monthly</p>
             <p class="title is-4 mb-1" v-if="!loadingHistory" style="height: 100%;">
-              ${{ displayedForecastAmount.toFixed(2) }}
+              ${{ forecastAmountCombined.toFixed(2) }}
             </p>
             <p class="title is-4 mb-1" v-else>-</p>
             <p class="has-text-grey is-size-7 mb-0" v-if="displayedPctChangeForecast != null">
@@ -57,7 +57,7 @@
               class="title is-flex is-align-items-center is-justify-content-center"
               v-if="!loadingHistory"
             >
-              ${{ totalEarnedAllTime.toFixed(2) }}
+              ${{ totalEarnedAllTimeCombined.toFixed(2) }}
             </p>
             <p class="title is-flex is-align-items-center is-justify-content-center" v-else>-</p>
           </div>  
@@ -80,7 +80,7 @@
                   :class="{ 'is-primary': selectedPeriod === period }"
                   @click="() => {
                     selectedPeriod = period as 'daily' | '3' | '3000';
-                    refreshEarningsHistory();
+                    refreshEarningsHistoryData();
                   }"
                 >
                   {{ period === 'daily' ? 'Daily (30D)' : (period === '3000' ? 'All time' : `${period}M`) }}
@@ -374,10 +374,71 @@ const {
     sameDayComparison: null
   }),
   immediate: true,
-  watch: false
+  watch: [earningsHistoryEndpoint]
 });
 
-const loadingHistory = computed(() => loadingEarnings.value); // Main loading state for chart
+// --- Uptime Earnings ---
+const uptimeEarningsEndpoint = computed(() => {
+  if (!activeAddress.value) return undefined;
+
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  const minStartDate = new Date("2025-01-14");
+  let calculatedStartDate: Date;
+
+  const formatDate = (date: Date) => {
+    return date.toISOString().split("T")[0];
+  };
+
+  if (selectedPeriod.value === "daily") {
+    calculatedStartDate = new Date(today);
+    calculatedStartDate.setDate(today.getDate() - 30);
+  } else {
+    const monthsAgo =
+      selectedPeriod.value === "3000" ? 999 : parseInt(selectedPeriod.value);
+    calculatedStartDate = new Date(
+      today.getFullYear(),
+      today.getMonth() - monthsAgo + 1,
+      1
+    );
+  }
+
+  const finalStartDate = new Date(
+    Math.max(calculatedStartDate.getTime(), minStartDate.getTime())
+  );
+  const endDateString = formatDate(yesterday);
+  const startDateString = formatDate(finalStartDate);
+
+  return `/api/nodes/heartbeats/uptime/${activeAddress.value}?startDate=${startDateString}&endDate=${endDateString}`;
+});
+
+const {
+  data: uptimeEarnings,
+  pending: loadingUptimeEarnings,
+  refresh: refreshUptimeEarnings,
+} = useAPI(
+  () => {
+    const endpoint = uptimeEarningsEndpoint.value;
+    if (!endpoint) {
+      return "";
+    }
+    return endpoint;
+  },
+  {
+    default: () => [],
+    immediate: true,
+    watch: [uptimeEarningsEndpoint],
+  }
+);
+
+const loadingHistory = computed(() => loadingEarnings.value || loadingUptimeEarnings.value); // Main loading state for chart
+
+// Update refresh function to refresh both datasets
+const refreshEarningsHistoryData = () => {
+  refreshEarningsHistory();
+  refreshUptimeEarnings();
+};
 
 // --- Computed Stats for Status Boxes (Raw from API) ---
 const totalEarnedAllTime = computed(() => {
@@ -385,7 +446,7 @@ const totalEarnedAllTime = computed(() => {
 });
 
 const earnedThisMonth = computed(() => {
-  return earningsHistory.value?.sameDayComparison?.currentMonthEarned || 0;
+  return earningsHistory.value?.currentMonth?.currentMonthEarned || 0;
 });
 
 const forecastAmount = computed(() => {
@@ -398,6 +459,61 @@ const pctChangeSoFar = computed(() => {
 
 const pctChangeForecastFromLastMonth = computed(() => {
   return earningsHistory.value?.comparison?.pctChange ?? null;
+});
+
+// --- Uptime Earnings Computed Properties ---
+const uptimeEarningsAllTime = computed(() => {
+  if (!uptimeEarnings.value || !Array.isArray(uptimeEarnings.value)) {
+    return 0;
+  }
+  return uptimeEarnings.value.reduce((total, item) => {
+    return total + (parseFloat(item.usdAmount) || 0);
+  }, 0);
+});
+
+const uptimeEarningsThisMonth = computed(() => {
+  if (!uptimeEarnings.value || !Array.isArray(uptimeEarnings.value)) {
+    return 0;
+  }
+  
+  const today = new Date();
+  const currentMonth = today.getMonth();
+  const currentYear = today.getFullYear();
+  
+  return uptimeEarnings.value.reduce((total, item) => {
+    if (item.dayStart) {
+      const itemDate = new Date(item.dayStart + 'T00:00:00Z');
+      if (itemDate.getMonth() === currentMonth && itemDate.getFullYear() === currentYear) {
+        return total + (parseFloat(item.usdAmount) || 0);
+      }
+    }
+    return total;
+  }, 0);
+});
+
+const uptimeEarningsForecasted = computed(() => {
+  // Calculate average daily uptime earnings from current month and project for full month
+  const today = new Date();
+  const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+  const daysPassed = today.getDate();
+  
+  if (daysPassed === 0) return 0;
+  
+  const avgDailyUptimeEarnings = uptimeEarningsThisMonth.value / daysPassed;
+  return avgDailyUptimeEarnings * daysInMonth;
+});
+
+// --- Combined Totals ---
+const totalEarnedAllTimeCombined = computed(() => {
+  return totalEarnedAllTime.value + uptimeEarningsAllTime.value;
+});
+
+const earnedThisMonthCombined = computed(() => {
+  return earnedThisMonth.value + uptimeEarningsThisMonth.value;
+});
+
+const forecastAmountCombined = computed(() => {
+  return forecastAmount.value + uptimeEarningsForecasted.value;
 });
 
 // --- Persistent Refs for Display --- //
@@ -422,7 +538,7 @@ watch(earningsHistory, (newData) => {
 
 // --- End Computed Stats & Persistent Refs ---
 
-// Transform earnings history for single-color stacked bar chart
+// Transform earnings history for multi-dataset stacked bar chart
 const chartData = computed(() => {
   if (!earningsHistory.value?.results && !loadingEarnings.value) {
     return { labels: [], datasets: [] };
@@ -484,37 +600,88 @@ const chartData = computed(() => {
   }
   // --- End Label Generation ---
 
-  // Prepare data points array initialized with zeros
-  const dataPoints = new Array(allLabels.length).fill(0);
+  // Prepare data points arrays initialized with zeros
+  const deploymentEarningsData = new Array(allLabels.length).fill(0);
+  const uptimeEarningsData = new Array(allLabels.length).fill(0);
 
-  // Populate data points from API results
+  // Populate deployment earnings data points from API results
   (earningsHistory.value?.results || []).forEach((item: MonthlyResult) => {
     // period key will be YYYY-MM-DD for daily, YYYY-MM for monthly
     const periodKey = item.period;
     const index = periodToIndexMap[periodKey];
     if (index !== undefined) {
-      dataPoints[index] = item.total_usd;
+      deploymentEarningsData[index] = item.total_usd;
     }
   });
 
-  // Define Nosana green color and a slightly brighter version for hover
-  const nosanaGreen = '#10E80C';
-  const nosanaGreenHover = '#33ff33'; // Simple brighter green
+  // Populate uptime earnings data points
+  if (uptimeEarnings.value && Array.isArray(uptimeEarnings.value)) {
+    if (selectedPeriod.value === "daily") {
+      // For daily view, use dayStart directly
+      uptimeEarnings.value.forEach((item: any) => {
+        if (item.dayStart && item.usdAmount) {
+          const periodKey = item.dayStart; // YYYY-MM-DD format
+          const index = periodToIndexMap[periodKey];
+          if (index !== undefined) {
+            uptimeEarningsData[index] = parseFloat(item.usdAmount);
+          }
+        }
+      });
+    } else {
+      // For monthly view, aggregate by month
+      const monthlyUptimeMap: { [key: string]: number } = {};
+      uptimeEarnings.value.forEach((item: any) => {
+        if (item.dayStart && item.usdAmount) {
+          const monthKey = item.dayStart.substring(0, 7); // YYYY-MM
+          monthlyUptimeMap[monthKey] =
+            (monthlyUptimeMap[monthKey] || 0) + parseFloat(item.usdAmount);
+        }
+      });
 
-  // Create a single dataset for total earnings
-  const dataset = {
-    label: 'Total Earnings',
-    data: dataPoints,
-    backgroundColor: nosanaGreen,
-    borderColor: 'rgba(255, 255, 255, 0.7)',
-    borderWidth: 1,
-    hoverBackgroundColor: nosanaGreenHover,
-    hoverBorderColor: 'white',
-  };
+      Object.entries(monthlyUptimeMap).forEach(([monthKey, totalUsd]) => {
+        const index = periodToIndexMap[monthKey];
+        if (index !== undefined) {
+          uptimeEarningsData[index] = totalUsd;
+        }
+      });
+    }
+  }
+
+  // Define colors
+  const nosanaGreen = '#10E80C';
+  const nosanaGreenHover = '#33ff33';
+  const uptimeBlue = '#3273dc';
+  const uptimeBlueHover = '#5a9cff';
+
+  // Create datasets
+  const datasets = [
+    {
+      label: 'Deployment Earnings',
+      data: deploymentEarningsData,
+      backgroundColor: nosanaGreen,
+      borderColor: 'rgba(255, 255, 255, 0.7)',
+      borderWidth: 1,
+      hoverBackgroundColor: nosanaGreenHover,
+      hoverBorderColor: 'white',
+    }
+  ];
+
+  // Only add Uptime Earnings dataset if there are actual uptime earnings
+  if (uptimeEarningsAllTime.value > 0) {
+    datasets.push({
+      label: 'Uptime Earnings',
+      data: uptimeEarningsData,
+      backgroundColor: uptimeBlue,
+      borderColor: 'rgba(255, 255, 255, 0.7)',
+      borderWidth: 1,
+      hoverBackgroundColor: uptimeBlueHover,
+      hoverBorderColor: 'white',
+    });
+  }
 
   return {
-    labels: allLabels, // Use the generated labels
-    datasets: [dataset],
+    labels: allLabels,
+    datasets,
     _internalPeriodMap: periodToIndexMap
   };
 });
@@ -529,6 +696,10 @@ const chartOptions = computed(() => {
     responsive: true,
     maintainAspectRatio: false,
     devicePixelRatio: 2,
+    interaction: {
+      mode: 'index',
+      intersect: false
+    },
     layout: {
       padding: {
         left: 5,
@@ -539,7 +710,19 @@ const chartOptions = computed(() => {
     },
     plugins: {
       legend: {
-        display: false,
+        display: true,
+        position: 'top' as const,
+        labels: {
+          color: textColor,
+          font: {
+            fontFamily: "'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif",
+            size: 12,
+            weight: 'normal' as const,
+          },
+          usePointStyle: true,
+          pointStyle: 'rect',
+          padding: 20,
+        }
       },
       tooltip: {
         backgroundColor: 'rgba(0, 0, 0, 0.8)',
@@ -558,7 +741,7 @@ const chartOptions = computed(() => {
         bodyColor: '#ffffff',
         padding: 12,
         cornerRadius: 4,
-        displayColors: false,
+        displayColors: true,
         boxPadding: 4,
         callbacks: {
           title: function(tooltipItems: any) {
@@ -583,7 +766,11 @@ const chartOptions = computed(() => {
           },
           label: function(context: any) {
             const earned = context.parsed.y;
-            return `Total Earned: $${earned.toFixed(2)}`;
+            return `${context.dataset.label}: $${earned.toFixed(2)}`;
+          },
+          afterBody: function(tooltipItems: any) {
+            const totalEarned = tooltipItems.reduce((sum: number, item: any) => sum + item.parsed.y, 0);
+            return [`Total: $${totalEarned.toFixed(2)}`];
           }
         }
       },
@@ -593,6 +780,7 @@ const chartOptions = computed(() => {
     },
     scales: {
       x: {
+        stacked: true,
         grid: {
           display: false
         },
@@ -612,6 +800,8 @@ const chartOptions = computed(() => {
         }
       },
       y: {
+        stacked: true,
+        beginAtZero: true,
         grid: {
           color: isDark ? '#444444' : '#e5e5e5',
           drawBorder: false,
