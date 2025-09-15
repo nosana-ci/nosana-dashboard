@@ -66,9 +66,10 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
 import { useToast } from "vue-toastification";
+import { trackEvent } from "~/utils/analytics";
 
 const config = useRuntimeConfig().public;
-const { token } = useAuth();
+const { token, data: userData } = useAuth();
 const toast = useToast();
 
 // State
@@ -136,6 +137,15 @@ const claimCreditCode = async () => {
       triggerCreditRefresh();
       
       closeClaimModal();
+      try {
+        trackEvent('credit_claimed', {
+          amount: data.amount,
+          code: claimCode.value.trim(),
+          user_id: userData.value?.generatedAddress,
+        });
+      } catch (error) {
+        console.warn("Error tracking credit claimed:", error);
+      }
     } else {
       const errorData = await response.json();
       toast.error(errorData.message || "Failed to claim credit code");

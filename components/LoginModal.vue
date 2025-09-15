@@ -100,6 +100,7 @@ import { useWallet } from 'solana-wallets-vue';
 import { useRouter } from 'vue-router';
 import { useToast } from 'vue-toastification';
 import { generateCodeVerifier, generateCodeChallenge } from '~/utils/pkce';
+import { trackEvent } from '~/utils/analytics';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -118,7 +119,7 @@ const emit = defineEmits<{
 }>();
 
 const { connected, disconnect, select, connect, wallets, wallet, readyState } = useWallet();
-const { status, signOut } = useAuth();
+const { status, signOut, data: userData } = useAuth();
 const router = useRouter();
 const toast = useToast();
 const config = useRuntimeConfig().public;
@@ -158,6 +159,17 @@ const modalSubtitle = computed(() => {
 
 const closeModal = () => {
   emit('close');
+};
+
+// used for event tracking, we can assume sign up if account was created within the last 10 seconds
+const checkIsSignUp = (createdAt: string | undefined): boolean => {
+  if (!createdAt) return false;
+  
+  const createdAtTime = new Date(createdAt).getTime();
+  const now = Date.now();
+  const timeDifference = now - createdAtTime;
+  
+  return timeDifference <= 10000;
 };
 
 // Google login logic (copied from original login page)
@@ -240,6 +252,18 @@ const authenticateLogin = async (code: string) => {
     config.auth.provider.endpoints.signIn = originalEndpoint;
 
     googleLoading.value = false;
+
+    try {
+      // Check if this is a sign-up vs login based on created_at timestamp
+      const isSignUp = checkIsSignUp(userData.value?.created_at);
+      const eventType = isSignUp ? 'sign_up' : 'login';
+      trackEvent(eventType, {
+        user_id: userData.value?.generatedAddress,
+        provider: 'google',
+      });
+    } catch (error) {
+      console.warn('Error tracking Google login:', error);
+    }
     
     // Close modal and emit success
     // Small delay to ensure auth state is fully set before redirect
@@ -417,6 +441,18 @@ const authenticateTwitterLogin = async (code: string, state: string, codeVerifie
     config.auth.provider.endpoints.signIn = originalEndpoint;
 
     twitterLoading.value = false;
+
+    try {
+      const isSignUp = checkIsSignUp(userData.value?.created_at);
+      const eventType = isSignUp ? 'sign_up' : 'login';
+      
+      trackEvent(eventType, {
+        user_id: userData.value?.generatedAddress,
+        provider: 'twitter',
+      });
+    } catch (error) {
+      console.warn('Error tracking Twitter login:', error);
+    }
     
     // Close modal and emit success
     setTimeout(() => {

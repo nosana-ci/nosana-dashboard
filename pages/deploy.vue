@@ -223,11 +223,11 @@
 
 <script lang="ts" setup>
 import type { Market, JobDefinition } from "@nosana/sdk";
-import JsonEditorVue from 'json-editor-vue';
-import { Mode, ValidationSeverity } from 'vanilla-jsoneditor';
+import { trackEvent } from "~/utils/analytics";
+import { ValidationSeverity } from 'vanilla-jsoneditor';
 import 'vanilla-jsoneditor/themes/jse-theme-dark.css';
 import { useToast } from "vue-toastification";
-import { WalletMultiButton, WalletModalProvider, useWallet } from "solana-wallets-vue";
+import { useWallet } from "solana-wallets-vue";
 import TopBar from '~/components/TopBar.vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useDebounceFn, useScrollLock } from "@vueuse/core";
@@ -512,6 +512,16 @@ const computedDockerImage = computed(() => {
 
 const marketName = computed(() => {
   if (!selectedMarket.value) return null;
+
+try {
+  trackEvent('gpu_selected', {
+    user_id: userData.value?.generatedAddress,
+    market: testgridMarkets.value.find(
+      (tgm: any) => tgm.address === selectedMarket.value?.address.toString())?.name || selectedMarket.value.address.toString()});
+} catch (error) {
+  console.warn("Error tracking GPU job created:", error);
+}
+  
   return testgridMarkets.value.find(
     (tgm: any) => tgm.address === selectedMarket.value?.address.toString()
   )?.name || selectedMarket.value.address.toString();
@@ -657,6 +667,28 @@ const createDeployment = async () => {
         clearDeployState();
         // Refresh credit balance after successful deployment
         await refreshCreditBalance();
+        try {
+          trackEvent('credit_used', {
+            user_id: userData.value?.generatedAddress,
+            job_id: data.jobAddress,
+            market: marketName.value,
+            credits_used: data.creditsUsed,
+            cost_usd: data.costUsd,
+            remaining_credits: creditBalance.value,
+          });
+          trackEvent('gpu_job_created', {
+            user_id: userData.value?.generatedAddress,
+            job_id: data.jobAddress,
+            market: marketName.value,
+            credits_used: data.creditsUsed,
+            cost_usd: data.costUsd,
+            hours: hours.value,
+            remaining_credits: creditBalance.value,
+            type: 'credit',
+          });
+        } catch (error) {
+          console.warn("Error tracking credit used:", error);
+        }
         setTimeout(() => {
           router.push('/jobs/' + data.jobAddress);
         }, 3000);
@@ -680,6 +712,20 @@ const createDeployment = async () => {
       ) as { tx: string; job: string; run: string };
       
       toast.success(`Successfully created deployment ${response.job}`);
+
+      try {
+        trackEvent('gpu_job_created', {
+          user_id: publicKey.value?.toString(),
+          job_id: response.job,
+          market: marketName.value,
+          cost_usd: estimatedCost.value,
+          hours: hours.value,
+          type: 'wallet',
+        });
+      } catch (error) {
+        console.warn("Error tracking GPU job created:", error);
+      }
+
       // Clear saved deploy state after successful deployment
       clearDeployState();
       setTimeout(() => {
@@ -1206,7 +1252,7 @@ const refreshCreditBalance = async () => {
 
     if (response.ok) {
       const data = await response.json();
-      creditBalance.value = data.assignedCredits || 0;
+      creditBalance.value = data.assignedCredits - data.settledCredits - data.reservedCredits || 0;
     } else {
       console.error('Failed to fetch credit balance');
     }

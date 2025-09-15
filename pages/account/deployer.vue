@@ -1124,6 +1124,16 @@ const claimInvitation = async () => {
     // Reload invitation to show it's claimed
     await loadInvitation();
     
+    try {
+      trackEvent('credit_claimed', {
+        amount: response.amount,
+        code: invitationToken.value,
+        user_id: userData.value?.generatedAddress,
+      });
+    } catch (error) {
+      console.warn("Error tracking credit invitation claimed:", error);
+    }
+    
   } catch (err) {
     console.error('Error claiming invitation:', err);
     toast.error(err.data?.message || 'Failed to claim invitation');

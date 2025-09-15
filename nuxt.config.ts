@@ -96,6 +96,7 @@ export default defineNuxtConfig({
           generatedAddress: "string",
           providerUsername: "string",
           type: "string",
+          created_at: "string",
         },
       },
     },
