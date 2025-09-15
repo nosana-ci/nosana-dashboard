@@ -515,7 +515,7 @@ const marketName = computed(() => {
 
 try {
   trackEvent('gpu_selected', {
-    user_id: userData.value?.generatedAddress,
+    user_id: userData.value?.generatedAddress || publicKey.value?.toString(),
     market: testgridMarkets.value.find(
       (tgm: any) => tgm.address === selectedMarket.value?.address.toString())?.name || selectedMarket.value.address.toString()});
 } catch (error) {

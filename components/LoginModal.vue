@@ -118,7 +118,7 @@ const emit = defineEmits<{
   success: [];
 }>();
 
-const { connected, disconnect, select, connect, wallets, wallet, readyState } = useWallet();
+const { connected, disconnect, select, connect, wallets, publicKey, wallet, readyState } = useWallet();
 const { status, signOut, data: userData } = useAuth();
 const router = useRouter();
 const toast = useToast();
@@ -310,10 +310,17 @@ const selectWallet = async (walletName: string) => {
   try {
     console.log("selecting wallet", walletName);
     await select(walletName as any);
-    console.log("readyState", readyState.value);
     await connect();
-    console.log("connected?", connected.value);
-    console.log("wallet", wallet.value);
+    console.log("connected", connected.value);
+    try {
+      trackEvent('wallet_connected', {
+        user_id: publicKey.value?.toString(),
+        wallet: walletName,
+      });
+    } catch (error) {
+      console.warn('Error tracking wallet connected:', error);
+    }
+    
   } catch (error) {
     console.error("Error selecting wallet:", error);
     toast.error(`Failed to connect to ${walletName}. Please try again.`);

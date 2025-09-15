@@ -5,10 +5,8 @@
  * @param eventValue Optional numeric value associated with the event (default: 1)
  */
 export function trackLinkClick(eventLabel: string, eventCategory: string = 'primary', eventValue: number = 1): void {
-  console.log('trackLinkClick', eventLabel, eventCategory, eventValue, (window as any).gtag);
-  
-  if ((window as any).gtag) {
-    (window as any).gtag('event', eventLabel, {
+  if (process.env.NODE_ENV === 'production') {
+    useTrackEvent(eventLabel, {
       event_category: eventCategory,
       event_label: eventLabel,
       value: eventValue
@@ -22,9 +20,8 @@ export function trackLinkClick(eventLabel: string, eventCategory: string = 'prim
  * @param parameters Additional event parameters
  */
 export function trackEvent(eventName: string, parameters: Record<string, any> = {}): void {
-  console.log('trackEvent', eventName, parameters, (window as any).gtag);
-  
-  if ((window as any).gtag) {
-    (window as any).gtag('event', eventName, parameters);
+  console.log('GA', eventName, parameters, process.env.NODE_ENV);
+  if (process.env.NODE_ENV === 'production') {
+    useTrackEvent(eventName, parameters);
   }
 }
