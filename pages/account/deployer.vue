@@ -193,6 +193,9 @@
         <h3 class="title is-4 mb-7">Deployments</h3>
         <ListDeploymentsList job-type="posted" :items-per-page="10" class="mb-6 deployments-list" @update:total-deployments="totalDeployments = $event" />
         
+        <!-- API Tokens Section -->
+        <ApiKeys class="pb-5" v-if="status === 'authenticated'" />
+        
         <div class="columns mt-6">
           <div class="column is-4">
             <h3 class="title is-4 mb-4">Welcome to Nosana</h3>
@@ -361,6 +364,7 @@ import {
 } from 'chart.js';
 import { useRouter } from "vue-router";
 import OnboardModal from '~/components/Account/OnboardModal.vue';
+import ApiKeys from '~/components/Account/ApiKeys.vue';
 
 const config = useRuntimeConfig().public;
 ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale);
