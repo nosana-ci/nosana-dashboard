@@ -154,10 +154,10 @@
     <div
       class="is-flex is-justify-content-space-between is-align-items-center mt-auto"
     >
-      <nuxt-link to="/status" @click="showMenu = false">
+      <a href="https://nosana.statuspage.io" target="_blank" rel="noopener" @click="showMenu = false">
         <div class="status-dot dot-online"></div>
-        Healthy
-      </nuxt-link>
+        Status
+      </a>
       <button 
         class="sidebar-theme-toggle"
         @click="toggleDarkMode"
