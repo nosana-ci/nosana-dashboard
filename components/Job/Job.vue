@@ -436,10 +436,10 @@
           :hasArtifacts="false"
           :isConnecting="isConnecting"
           :logConnectionEstablished="connectionEstablished"
-          :systemLogs="systemLogs"
-          :containerLogs="containerLogs"
-          :progressBars="progressBars"
-          :resourceProgressBars="resourceProgressBars"
+          :systemLogs="[]"
+          :containerLogs="[]"
+          :progressBars="getFlogProgressBars()"
+          :resourceProgressBars="new Map()"
           :showChatTab="isChatServiceReady"
           :chatServiceUrl="chatServiceUrl"
           :chatApiConfig="chatApiConfig"
@@ -447,6 +447,11 @@
           :jobNodeReport="jobNodeReport"
           :loadingJobNodeSpecs="loadingNodeSpecs"
           :isQueuedJob="isQueuedJob"
+          :activeLogs="(flogActiveLogs as unknown as any[])"
+          :opIds="flogTabs.filter(t => t !== 'system')"
+          :filters="{ value: { opId: flogActiveTab === 'system' ? null : flogActiveTab, types: new Set(['container','info','error']) } }"
+          :selectOp="(opId: string | null) => setFlogActiveTab(opId ?? 'system')"
+          :toggleType="() => {}"
           v-model:activeTab="activeTab"
           ref="jobTabsRef"
         />
@@ -462,11 +467,7 @@
     :closeExtendModal="props.modal.close"
     :userBalances="userBalances"
   />
-  <LogSubscription
-    :initLogs="initLogs"
-    :closeLogs="closeLogs"
-    :isJobPoster="props.isJobPoster"
-  />
+  <!-- Legacy log subscription removed for flog-only logs -->
 
   <!-- Chat Popup -->
   <div v-if="showChatPopup" class="modal is-active">
@@ -497,7 +498,7 @@ import JobTabs from "~/components/Job/Tabs.vue";
 import SecondsFormatter from "~/components/SecondsFormatter.vue";
 
 import LogSubscription from "./LogSubscription.vue";
-import { useJobLogs } from "~/composables/jobs/useJobLogs";
+import { useFLogs } from "~/composables/jobs/useFLogs";
 import { useTemplates } from "~/composables/useTemplates";
 import { useToast } from "vue-toastification";
 import { useNosanaWallet } from "~/composables/useNosanaWallet";
@@ -961,22 +962,45 @@ const hasOpenaiEndpoint = computed(() => {
   return false;
 });
 
+const jobType = computed(() => props.job.jobDefinition?.state?.["nosana/job-type"] || null);
+const isParallelByEndpoints = computed(() => {
+  try {
+    const ids = new Set<string>();
+    for (const [, endpoint] of props.endpoints.entries()) {
+      if (endpoint.opId) ids.add(endpoint.opId);
+      if (ids.size > 1) return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+});
+const logsMode = computed<'legacy' | 'parallel'>(() => {
+  const explicit = jobType.value === 'parallel';
+  const opsCount = props.job.jobDefinition?.ops?.length || 0;
+  return explicit || opsCount > 1 || isParallelByEndpoints.value ? 'parallel' : 'legacy';
+});
+
 const {
+  tabs: flogTabs,
+  activeTab: flogActiveTab,
+  setActiveTab: setFlogActiveTab,
+  activeLogs: flogActiveLogs,
   isConnecting,
   connectionEstablished,
-  systemLogs,
-  containerLogs,
-  progressBars,
-  resourceProgressBars,
-  initLogs,
-  closeLogs,
-} = useJobLogs(
+  progressBars: flogProgressBarsRef,
+  resourceProgressBars: flogResourceBarsRef,
+} = useFLogs(
   props.job.address,
   computed(() => props.job.node),
-  props.endpoints,
   shouldConnect,
   getAuth
 );
+
+// Expose flog progress bars (directly from useFLogs)
+function getFlogProgressBars(): Map<string, any> {
+  return flogProgressBarsRef.value as unknown as Map<string, any>;
+}
 
 // Structure to hold API configuration extracted from health check
 const chatApiConfig = ref<{
