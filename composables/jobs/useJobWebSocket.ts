@@ -5,9 +5,14 @@ export function useJobWebSocket(
   host: string | Ref<string>,
   getAuth: () => Promise<string | Headers>,
   addLog: (log: string, isSystemLog: boolean) => void,
-  handleProgressEvent: (event: MessageEvent) => void,
+  onMessage: (event: MessageEvent) => void,
   maxRetries = 3,
-  retryDelay = 3000
+  retryDelay = 3000,
+  options: {
+    path?: "/log" | "/flog";
+    filters?: { group?: string; opId?: string; type?: string };
+    disableFallback?: boolean;
+  } = {}
 ) {
   const frpServer = useRuntimeConfig().public.nodeDomain;
 
@@ -16,6 +21,8 @@ export function useJobWebSocket(
   const retryCount = ref<number>(0);
   const connectionEstablished = ref<boolean>(false);
   const allowRetry = ref<boolean>(true);
+  const currentOptions = ref(options);
+  const hasFallenBackToLegacy = ref<boolean>(false);
 
   const initConnection = () => {
     // Avoid interrupting an in-flight connection attempt
@@ -42,7 +49,8 @@ export function useJobWebSocket(
       return;
     }
 
-    const websocketUrl = `wss://${currentHost}.${frpServer}/log`;
+    const urlPath = (currentOptions.value.path ?? "/log").replace(/^\//, "");
+    const websocketUrl = `wss://${currentHost}.${frpServer}/${urlPath}`;
     let connectionTimeout: NodeJS.Timeout;
     const socket = new WebSocket(websocketUrl);
     isConnecting.value = true;
@@ -63,12 +71,16 @@ export function useJobWebSocket(
         }, 10000);
 
         const payload = {
-          path: "/log",
+          path: currentOptions.value.path ?? "/log",
           headers: { Authorization: header },
           header, // legacy field
           body: {
             jobAddress,
             address: currentHost,
+            // Only include filters for /flog
+            ...(currentOptions.value.path === "/flog" && currentOptions.value.filters
+              ? currentOptions.value.filters
+              : {}),
           },
         };
         socket.send(JSON.stringify(payload));
@@ -88,7 +100,7 @@ export function useJobWebSocket(
         clearTimeout(connectionTimeout);
         retryCount.value = 0;
         // console.log('[ws] message', event.data);
-        handleProgressEvent(event);
+        onMessage(event);
       } catch (error) {
         console.error("Error handling WebSocket message:", error);
       }
@@ -121,6 +133,14 @@ export function useJobWebSocket(
   const handleRetry = (reason: string) => {
     retryCount.value += 1;
     
+    // If parallel route fails quickly, fall back to legacy once
+    if (!connectionEstablished.value && (currentOptions.value.path === '/flog') && !hasFallenBackToLegacy.value && !currentOptions.value.disableFallback) {
+      hasFallenBackToLegacy.value = true;
+      addLog(`${reason}. Falling back to legacy /log route...`, true);
+      updatePath('/log');
+      return;
+    }
+
     if (retryCount.value <= maxRetries) {
       addLog(`${reason}. Retrying connection (${retryCount.value}/${maxRetries})...`, true);
       
@@ -135,6 +155,21 @@ export function useJobWebSocket(
     }
   };
 
+  const updateFilters = (filters?: { group?: string; opId?: string; type?: string }) => {
+    currentOptions.value = {
+      ...currentOptions.value,
+      filters: filters,
+    };
+    // Reconnect with new filters if currently connected or connecting
+    if (webSocket.value) {
+      try { allowRetry.value = false; webSocket.value.close(); } catch {}
+      allowRetry.value = true;
+    }
+    retryCount.value = 0;
+    connectionEstablished.value = false;
+    connectWebSocket();
+  };
+
   const closeConnection = () => {
     if (webSocket.value) {
       allowRetry.value = false;
@@ -145,10 +180,26 @@ export function useJobWebSocket(
     isConnecting.value = false;
   };
 
+  const updatePath = (path: "/log" | "/flog") => {
+    currentOptions.value = {
+      ...currentOptions.value,
+      path,
+    };
+    if (webSocket.value) {
+      try { allowRetry.value = false; webSocket.value.close(); } catch {}
+      allowRetry.value = true;
+    }
+    retryCount.value = 0;
+    connectionEstablished.value = false;
+    connectWebSocket();
+  };
+
   return {
     isConnecting,
     connectionEstablished,
     initConnection,
     closeConnection,
+    updateFilters,
+    updatePath,
   };
 }

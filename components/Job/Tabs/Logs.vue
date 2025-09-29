@@ -2,19 +2,17 @@
   <div class="logs-tab-container">
     <div class="logs-container" ref="logsContainerRef">
       <div class="logs-header" v-if="job.isRunning && isJobPoster && logConnectionEstablished">
-        <div class="tabs is-toggle is-small is-rounded log-type-switcher">
-          <ul>
-            <li :class="{ 'is-active': activeLogTab === 'container' }">
-              <a @click="activeLogTab = 'container'">
-                <span>Container</span>
-              </a>
-            </li>
-            <li :class="{ 'is-active': activeLogTab === 'system' }">
-              <a @click="activeLogTab = 'system'">
-                <span>System</span>
-              </a>
-            </li>
-          </ul>
+        <div class="parallel-controls">
+          <div class="tabs is-toggle is-small is-rounded log-type-switcher">
+            <ul>
+              <li :class="{ 'is-active': selectedOpId === null }">
+                <a @click="handleSelectOp(null)"><span>System</span></a>
+              </li>
+              <li v-for="op in opIds" :key="op" :class="{ 'is-active': selectedOpId === op }">
+                <a @click="handleSelectOp(op)"><span>{{ op }}</span></a>
+              </li>
+            </ul>
+          </div>
         </div>
         <button
           v-if="job.isRunning && isJobPoster"
@@ -31,22 +29,11 @@
         <transition name="logs-fade" mode="out-in">
           <div v-if="job.isRunning" class="logs-running-container" key="logs-running">
             <div v-if="isJobPoster" class="logs-viewers-wrapper">
-              <JobLogViewer
-                v-show="activeLogTab === 'container'"
-                :logs="containerLogs"
+              <FLogViewer
+                :logs="activeLogs || []"
                 :isConnecting="isConnecting"
-                :progressBars="new Map()"
-                :resourceProgressBars="new Map()"
+                :progressBars="parallelProgressBars"
                 ref="containerLogViewer"
-                empty-message="No container logs yet. Waiting for the host to download and start the container..."
-              />
-              <JobLogViewer
-                v-show="activeLogTab === 'system'"
-                :logs="systemLogs"
-                :isConnecting="isConnecting"
-                :progressBars="progressBars"
-                :resourceProgressBars="resourceProgressBars"
-                ref="systemLogViewer"
               />
             </div>
             <div v-else class="has-text-centered p-4">Please connect your wallet to view logs.</div>
@@ -72,29 +59,24 @@
     <FullscreenModal :isOpen="logModal.isOpen.value" title="Logs" @close="logModal.close">
       <div class="fullscreen-logs-wrapper">
         <div class="logs-header">
-          <div class="tabs is-toggle is-small is-rounded log-type-switcher">
-            <ul>
-              <li :class="{ 'is-active': activeLogTab === 'container' }">
-                <a @click="activeLogTab = 'container'">
-                  <span>Container</span>
-                </a>
-              </li>
-              <li :class="{ 'is-active': activeLogTab === 'system' }">
-                <a @click="activeLogTab = 'system'">
-                  <span>System</span>
-                </a>
-              </li>
-            </ul>
-          </div>
+            <div class="tabs is-toggle is-small is-rounded log-type-switcher">
+              <ul>
+                <li :class="{ 'is-active': selectedOpId === null }">
+                  <a @click="handleSelectOp(null)"><span>System</span></a>
+                </li>
+                <li v-for="op in opIds" :key="op" :class="{ 'is-active': selectedOpId === op }">
+                  <a @click="handleSelectOp(op)"><span>{{ op }}</span></a>
+                </li>
+              </ul>
+            </div>
         </div>
         <template v-if="job.isRunning">
-          <JobLogViewer
+          <FLogViewer
             v-if="isJobPoster"
-            :logs="activeLogTab === 'container' ? containerLogs : systemLogs"
+            :logs="activeLogs || []"
             :isConnecting="isConnecting"
-            :progressBars="activeLogTab === 'system' ? progressBars : new Map()"
-            :resourceProgressBars="activeLogTab === 'system' ? resourceProgressBars : new Map()"
             :fullscreen="true"
+            :progressBars="parallelProgressBars"
             ref="fullscreenLogViewerInstance"
             class="fullscreen-viewer" 
           />
@@ -120,13 +102,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick } from 'vue';
-import JobLogViewer from "../LogViewer.vue";
+import { ref, watch, nextTick, computed } from 'vue';
 import JobResult from "../Result.vue";
+import FLogViewer from "~/components/Job/FLogViewer.vue";
 import FullscreenModal from '~/components/Common/FullscreenModal.vue';
 import { useModal } from '~/composables/jobs/useModal';
 import type { UseJob } from "~/composables/jobs/useJob";
-import type { LogEntry, ProgressBar } from "~/composables/jobs/useJobLogs";
+// Use a relaxed local type for flog viewer compatibility
+type AnyLogEntry = { id: number; content: string; timestamp: number; html?: boolean };
+import type { LogEntry, ProgressBar } from "~/composables/jobs/logTypes";
 
 interface Props {
   job: UseJob;
@@ -138,34 +122,34 @@ interface Props {
   containerLogs: LogEntry[];
   progressBars: Map<string, ProgressBar>;
   resourceProgressBars: Map<string, any>;
+  // Optional parallel mode props
+  activeLogs?: AnyLogEntry[];
+  opIds?: string[];
+  filters?: any;
+  selectOp?: (opId: string | null) => void;
+  toggleType?: (type: 'container' | 'info' | 'error') => void;
 }
 
 const props = defineProps<Props>();
 
-const activeLogTab = ref<'container' | 'system'>('system');
 const logsContainerRef = ref<HTMLElement | null>(null);
 const containerLogViewer = ref<any>(null);
-const systemLogViewer = ref<any>(null);
 const fullscreenLogViewerInstance = ref<any>(null);
 
 const logModal = useModal();
 const hasAutoSwitched = ref(false);
 
-// Set initial tab state
-if (props.containerLogs.length > 0) {
-  activeLogTab.value = 'container';
-  hasAutoSwitched.value = true;
-} else if (props.systemLogs.length > 0) {
-  activeLogTab.value = 'system';
-}
-
-// Logic to auto-switch to container logs ONCE.
-watch(() => props.containerLogs.length, (newLength) => {
-  if (newLength > 0 && !hasAutoSwitched.value) {
-    activeLogTab.value = 'container';
-    hasAutoSwitched.value = true;
-  }
+const parallelProgressBars = computed(() => props.progressBars);
+const selectedOpId = computed<string | null>({
+  get: () => props.filters?.value?.opId ?? null,
+  set: () => {},
 });
+const types = computed<Set<'container' | 'info' | 'error'>>({
+  get: () => props.filters?.value?.types ?? new Set(['container','info','error']),
+  set: () => {},
+});
+
+// Legacy mode is removed; controls are always for parallel flogs
 
 const scrollToContentBottom = (isModal: boolean) => {
   nextTick(() => {
@@ -178,10 +162,8 @@ const scrollToContentBottom = (isModal: boolean) => {
       }
     } else {
       if (props.job.isRunning) {
-        if (activeLogTab.value === 'container' && containerLogViewer.value && containerLogViewer.value.scrollToBottom) {
+        if (containerLogViewer.value && containerLogViewer.value.scrollToBottom) {
           containerLogViewer.value.scrollToBottom();
-        } else if (activeLogTab.value === 'system' && systemLogViewer.value && systemLogViewer.value.scrollToBottom) {
-          systemLogViewer.value.scrollToBottom();
         }
       } else if (props.job.isCompleted && logsContainerRef.value) {
         const inlineResultEl = logsContainerRef.value.querySelector('.logs-content .job-result-container');
@@ -210,6 +192,10 @@ watch(() => props.job.isCompleted, (isCompleted) => {
 defineExpose({
   scrollToBottomOnOpen
 });
+
+function handleSelectOp(opId: string | null) {
+  props.selectOp && props.selectOp(opId);
+}
 </script>
 
 <style lang="scss" scoped>
@@ -247,7 +233,7 @@ defineExpose({
   justify-content: flex-end;
   align-items: center;
   position: absolute;
-  top: 1.2rem;
+  top: 0.2rem;
   right: 0.5rem;
   z-index: 10;
   pointer-events: none;
@@ -293,8 +279,7 @@ html.dark-mode .log-type-switcher.tabs.is-toggle li.is-active a {
 
 .fullscreen-logs-button {
   pointer-events: auto;
-  position: relative; /* Use relative to allow nudging */
-  top: -11px; /* Nudge up slightly for perfect alignment */
+  position: relative; /* align with chips inside the header */
   background-color: rgba(255, 255, 255, 0.8) !important;
   backdrop-filter: blur(4px);
   
@@ -316,7 +301,7 @@ html.dark-mode .fullscreen-logs-button {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  padding-top: 1rem;
+  padding-top: 0;
 
   & > * {
     flex-grow: 1;
@@ -386,5 +371,32 @@ html.dark-mode .logs-content .has-text-centered {
 
 .fullscreen-logs-wrapper .fullscreen-logs-button {
   display: none;
+}
+
+.parallel-controls .type-chips.subtle {
+  display: flex;
+  gap: 0.5rem;
+}
+.type-chips.subtle .chip {
+  pointer-events: auto;
+  border: none;
+  background: rgba(255,255,255,0.2);
+  color: #fff;
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  transition: all 0.15s ease;
+}
+.type-chips.subtle .chip.active {
+  background: rgba(16, 232, 12, 0.85);
+  color: #111;
+}
+.type-chips.subtle .chip:nth-child(2).active {
+  background: rgba(47, 159, 255, 0.9);
+  color: #fff;
+}
+.type-chips.subtle .chip:nth-child(3).active {
+  background: rgba(232, 71, 86, 0.9);
+  color: #fff;
 }
 </style>

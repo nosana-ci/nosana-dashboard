@@ -64,6 +64,11 @@
     :containerLogs="props.containerLogs"
     :progressBars="props.progressBars"
     :resourceProgressBars="props.resourceProgressBars"
+    :activeLogs="props.activeLogs"
+    :opIds="props.opIds"
+    :filters="props.filters"
+    :selectOp="props.selectOp"
+    :toggleType="props.toggleType"
       :logsTextForCopy="logsTextForCopy"
       :copyToClipboard="copyToClipboard"
     ref="logsView"
@@ -211,7 +216,9 @@ import JobChatView from "./Tabs/Chat.vue";
 // Note: Info components no longer needed for simplified More Details tab
 
 import type { Endpoints, UseJob } from "~/composables/jobs/useJob";
-import type { LogEntry, ProgressBar } from "~/composables/jobs/useJobLogs";
+// Relax log entry typing to support flog entries
+type AnyLogEntry = { id: number; content: string; timestamp: number; html?: boolean };
+import type { ProgressBar } from "~/composables/jobs/useJobLogs";
 
 // Define NodeReport interface if not already globally available
 interface NodeReportData {
@@ -228,8 +235,8 @@ interface Props {
   hasArtifacts: boolean;
   isConnecting: boolean;
   logConnectionEstablished: boolean;
-  systemLogs: LogEntry[];
-  containerLogs: LogEntry[];
+  systemLogs: AnyLogEntry[];
+  containerLogs: AnyLogEntry[];
   progressBars: Map<string, ProgressBar>;
   resourceProgressBars: Map<string, any>;
   showChatTab?: boolean;
@@ -242,6 +249,12 @@ interface Props {
   activeTab: string; // Prop for active tab
   logsTextForCopy?: string;
   copyToClipboard?: (text: string | undefined, type: string) => Promise<void>;
+  // Optional parallel logs props forwarded to child
+  activeLogs?: AnyLogEntry[];
+  opIds?: string[];
+  filters?: any;
+  selectOp?: (opId: string | null) => void;
+  toggleType?: (type: 'container' | 'info' | 'error') => void;
 
   // Props for HostSpecifications (to be passed from Job.vue)
   jobCombinedSpecs: any | null;
