@@ -5,6 +5,7 @@ import {
   type JobDefinition,
 } from "@nosana/sdk";
 import { useToast } from "vue-toastification";
+import { useWallet } from "solana-wallets-vue";
 
 /**
  * Helper to convert job state to a number, normalizing "RUNNING", "QUEUED", etc.
@@ -62,6 +63,8 @@ export function useJob(jobId: string) {
   const { nosana } = useSDK();
   const { getIpfs } = useIpfs();
   const { status, data: userData, token } = useAuth();
+  const { connected, publicKey } = useWallet();
+  const { ensureAuth } = useAuthHeader();
   const { data, pending, refresh } = useAPI("/api/jobs/" + jobId, {
     watch: false,
   });
@@ -276,20 +279,62 @@ export function useJob(jobId: string) {
         pauseJobPolling();
       }
 
-      try {
-        if (
-          jobResult.ipfsResult &&
-          jobResult.ipfsResult !==
-            "QmNLei78zWmzUdbeRB3CiUfAizWUrbeeZh5K1rhAQKCh51"
-        ) {
-          const resultResponse = await getIpfs(jobResult.ipfsResult);
-          jobObject.hasResultsRegex = resultResponse.opStates.some(
-            (op: any) => op.results
-          );
-          jobObject.results = resultResponse;
+      // Determine if current user is the job poster
+      const activeAddress = computed(() => {
+        if (status.value === 'authenticated' && (userData.value as any)?.generatedAddress) {
+          return (userData.value as any).generatedAddress as string;
         }
-      } catch (error) {
-        toast.error(`Error fetching IPFS result: ${JSON.stringify(error)}`);
+        if (connected.value && publicKey.value) {
+          return publicKey.value.toString();
+        }
+        return null;
+      });
+
+      const isPoster = Boolean(
+        activeAddress.value &&
+        jobResult.project &&
+        activeAddress.value === jobResult.project.toString()
+      );
+
+      const isConfidentialJob = Boolean((jobResult as any)?.jobDefinition?.logistics);
+
+      if (isConfidentialJob && isPoster && state !== 1) {
+        try {
+          const nodeDomain = useRuntimeConfig().public.nodeDomain;
+          const nodeAddress = (jobResult.node as any)?.toString?.() || (jobResult.node as any);
+          const url = `https://${nodeAddress}.${nodeDomain}/job-result/${jobId}`;
+          const authHeader = await ensureAuth();
+          const flowState: any = await $fetch(url, {
+            method: 'GET',
+            headers: {
+              authorization: authHeader,
+            },
+          });
+          const parsed = typeof flowState === 'string' ? JSON.parse(flowState) : flowState;
+          if (parsed && parsed.opStates) {
+            jobObject.results = parsed;
+            jobObject.hasResultsRegex = parsed.opStates.some((op: any) => op.results);
+          }
+        } catch (error) {
+          // Silently ignore if not available yet; do not override non-confidential flow
+        }
+      } else {
+        // Non-confidential flow: fetch IPFS results if available
+        try {
+          if (
+            jobResult.ipfsResult &&
+            jobResult.ipfsResult !==
+              "QmNLei78zWmzUdbeRB3CiUfAizWUrbeeZh5K1rhAQKCh51"
+          ) {
+            const resultResponse = await getIpfs(jobResult.ipfsResult);
+            jobObject.hasResultsRegex = resultResponse.opStates?.some(
+              (op: any) => op.results
+            ) || false;
+            jobObject.results = resultResponse;
+          }
+        } catch (error) {
+          toast.error(`Error fetching IPFS result: ${JSON.stringify(error)}`);
+        }
       }
 
       job.value = jobObject;

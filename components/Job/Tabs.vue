@@ -1,7 +1,7 @@
 <template>
   <div class="tabs is-boxed job-tabs-condensed">
     <ul>
-      <li v-if="!job.isRunning || (isJobPoster && logConnectionEstablished)" :class="{ 'is-active': activeTab === 'logs' }">
+      <li v-if="canShowLogsTab" :class="{ 'is-active': activeTab === 'logs' }">
         <a @click.prevent="handleTabClick('logs')">Logs</a>
       </li>
       <li v-if="hasResultsSection" :class="{ 'is-active': activeTab === 'result' }">
@@ -50,7 +50,7 @@
       class="job-definition-editor" 
   />
   </div>
-  <div v-if="activeTab === 'logs'" class="logs-wrapper">
+  <div v-if="activeTab === 'logs' && canShowLogsTab" class="logs-wrapper">
   <JobLogsView
     :job="props.job"
     :endpoints="props.endpoints"
@@ -74,9 +74,7 @@
     ref="logsView"
   />
   </div>
-  <div v-else-if="activeTab === 'logs' && !props.isJobPoster">
-    <!-- Placeholder or message if logs are not available for non-posters -->
-  </div>
+  <div v-else-if="activeTab === 'logs' && !canShowLogsTab"></div>
   <div v-if="activeTab === 'result' && props.job.results" class="job-definition-container">
     <button 
       class="button is-small is-light copy-button"
@@ -231,6 +229,7 @@ interface Props {
   job: UseJob;
   endpoints: Endpoints;
   isJobPoster: boolean;
+  isConfidential?: boolean;
   jobDefinition: JobDefinition;
   hasArtifacts: boolean;
   isConnecting: boolean;
@@ -276,8 +275,15 @@ watch(() => props.job.address, (newAddress, oldAddress) => {
 const logsView = ref<any>(null);
 const colorMode = useColorMode();
 
-watch(() => [props.job.isRunning, props.logConnectionEstablished, props.activeTab], () => {
-  const logsTabVisible = !props.job.isRunning || (props.isJobPoster && props.logConnectionEstablished);
+const canShowLogsTab = computed(() => {
+  const baseVisible = !props.job.isRunning || (props.isJobPoster && props.logConnectionEstablished);
+  // If confidential and not the poster, hide logs entirely
+  if (props.isConfidential && !props.isJobPoster) return false;
+  return baseVisible;
+});
+
+watch(() => [props.job.isRunning, props.logConnectionEstablished, props.activeTab, props.isConfidential, props.isJobPoster], () => {
+  const logsTabVisible = canShowLogsTab.value;
   if (props.activeTab === 'logs' && !logsTabVisible) {
     // Logs tab is not visible, but it's the active one.
     // Switch to another tab, in this case 'info' (Job Definition).

@@ -432,6 +432,7 @@
           :job="props.job"
           :endpoints="props.endpoints"
           :isJobPoster="props.isJobPoster"
+          :isConfidential="isConfidential"
           :jobDefinition="props.job.jobDefinition"
           :hasArtifacts="false"
           :isConnecting="isConnecting"
@@ -981,6 +982,14 @@ const logsMode = computed<'legacy' | 'parallel'>(() => {
   return explicit || opsCount > 1 || isParallelByEndpoints.value ? 'parallel' : 'legacy';
 });
 
+const isConfidential = computed<boolean>(() => {
+  try {
+    return Boolean((props.job.jobDefinition as any)?.logistics);
+  } catch {
+    return false;
+  }
+});
+
 const {
   tabs: flogTabs,
   activeTab: flogActiveTab,
@@ -1086,7 +1095,7 @@ watch(
         isChatServiceReady.value = false; // Disable chat tab
       }
     } else {
-      isChatServiceReady.value = false; // Disable chat tab if no URL or endpoint info
+      isChatServiceReady.value = false;
     }
   },
   { deep: true }
@@ -1094,7 +1103,9 @@ watch(
 
 watch(connectionEstablished, (newValue, oldValue) => {
   if (newValue && !oldValue) {
-    activeTab.value = "logs";
+    if (!(isConfidential.value && !props.isJobPoster)) {
+      activeTab.value = "logs";
+    }
   }
 });
 
