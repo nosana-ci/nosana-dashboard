@@ -4,7 +4,7 @@
       <li v-if="canShowLogsTab" :class="{ 'is-active': activeTab === 'logs' }">
         <a @click.prevent="handleTabClick('logs')">Logs</a>
       </li>
-      <li v-if="hasResultsSection" :class="{ 'is-active': activeTab === 'result' }">
+      <li v-if="hasResultsSection || (props.isConfidential && props.isJobPoster)" :class="{ 'is-active': activeTab === 'result' }">
         <a @click.prevent="handleTabClick('result')">Result</a>
       </li>
       <li :class="{ 'is-active': activeTab === 'info' }">

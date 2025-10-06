@@ -40,7 +40,7 @@
           </div>
           <div v-else-if="loading" class="has-text-centered p-4" key="loading">Loading logs..</div>
           <div v-else-if="job.isCompleted && !job.results" class="has-text-centered p-4" key="no-results">
-            The job was prematurely stopped so no logs are available.
+            The job was stopped, waiting for host to upload the results.
           </div>
           <div v-else-if="!job.results" class="has-text-centered p-4" key="no-logs">No logs available.</div>
           <div v-else-if="job.results && job.results[0] === 'nos/secret'" class="has-text-centered p-4" key="secret-results">
@@ -84,7 +84,7 @@
         </template>
         <div v-else-if="loading" class="has-text-centered p-4">Loading logs..</div>
         <div v-else-if="job.isCompleted && !job.results" class="has-text-centered p-4">
-          The job was prematurely stopped so no logs are available.
+          The job was stopped, waiting for host to upload the results.
         </div>
         <div v-else-if="!job.results" class="has-text-centered p-4">No logs available.</div>
         <div v-else-if="job.results && job.results[0] === 'nos/secret'" class="has-text-centered p-4">

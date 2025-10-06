@@ -43,7 +43,8 @@
                           {{ formattedDockerImage.split("/").pop() }}
                         </template>
                         <template v-else>
-                          <span class="icon-text">
+                          <span v-if="isConfidential" class="has-text-grey">Confidential Job</span>
+                          <span v-else class="icon-text">
                             <span class="icon is-small">
                               <i class="fas fa-spinner fa-spin"></i>
                             </span>
@@ -188,7 +189,7 @@
       <!-- Service Endpoints Row -->
       <div
         v-if="
-          props.job.isRunning && props.endpoints && props.endpoints.size > 0
+          props.job.isRunning && props.isJobPoster && props.endpoints && props.endpoints.size > 0
         "
         class="service-endpoints px-5 py-2"
       >

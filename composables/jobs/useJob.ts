@@ -299,10 +299,11 @@ export function useJob(jobId: string) {
       const isConfidentialJob = Boolean((jobResult as any)?.jobDefinition?.logistics);
 
       if (isConfidentialJob && isPoster && state !== 1) {
+        // Confidential flow: fetch results from node
         try {
           const nodeDomain = useRuntimeConfig().public.nodeDomain;
           const nodeAddress = (jobResult.node as any)?.toString?.() || (jobResult.node as any);
-          const url = `https://${nodeAddress}.${nodeDomain}/job-result/${jobId}`;
+          const url = `https://${nodeAddress}.${nodeDomain}/job/${jobId}/results`;
           const authHeader = await ensureAuth();
           const flowState: any = await $fetch(url, {
             method: 'GET',
@@ -314,9 +315,9 @@ export function useJob(jobId: string) {
           if (parsed && parsed.opStates) {
             jobObject.results = parsed;
             jobObject.hasResultsRegex = parsed.opStates.some((op: any) => op.results);
+            jobObject.jobStatus = parsed.status as any;
           }
         } catch (error) {
-          // Silently ignore if not available yet; do not override non-confidential flow
         }
       } else {
         // Non-confidential flow: fetch IPFS results if available
@@ -345,42 +346,88 @@ export function useJob(jobId: string) {
     }
   );
 
-  watch(job, (job) => {
+  watch(job, (job: UseJob | null) => {
     if (job === null) return;
-    if (job.jobDefinition) {
-      const setEndpointStatus = (
-        service: string,
-        status: "ONLINE" | "OFFLINE"
-      ) => {
-        const serviceObj = endpoints.value.get(service);
-        if (!serviceObj) return;
-        endpoints.value.set(service, {
-          ...serviceObj,
-          status,
-        });
-        endpoints.value = new Map(endpoints.value);
-      };
-
-      const services = getJobExposedServices(job.jobDefinition, jobId);
-      for (const { hash, port, opId, opIndex, hasHealthCheck } of services) {
-        const url = `https://${hash}.${useRuntimeConfig().public.nodeDomain}`;
-
-        if (endpoints.value.has(url) || hash === "private") continue;
-
-        endpoints.value.set(url, {
-          status: "UNKNOWN",
-          url,
-          opId,
-          opIndex,
-          port: Number(port),
-          hasHealthCheck,
-          setStatus: (status: "ONLINE" | "OFFLINE") => {
-            setEndpointStatus(url, status);
-          },
-        });
-      }
+    if (!job.jobDefinition) {
+      loading.value = false;
+      return;
     }
-    loading.value = false;
+
+    const setEndpointStatus = (
+      service: string,
+      status: "ONLINE" | "OFFLINE"
+    ) => {
+      const serviceObj = endpoints.value.get(service);
+      if (!serviceObj) return;
+      endpoints.value.set(service, {
+        ...serviceObj,
+        status,
+      });
+      endpoints.value = new Map(endpoints.value);
+    };
+
+    const sdkServices = getJobExposedServices(job.jobDefinition, jobId);
+    const metaByPort = new Map<number, { opId: string; opIndex: number; hasHealthCheck: boolean }>();
+    for (const { port, opId, opIndex, hasHealthCheck } of sdkServices) {
+      metaByPort.set(Number(port), { opId, opIndex, hasHealthCheck });
+    }
+
+    const config = useRuntimeConfig();
+    const getEndpointsFromNode = async () => {
+      let usedNode = false;
+      try {
+        const nodeAddress = (job.node as any)?.toString?.() || (job.node as any);
+          const authHeader = await ensureAuth();
+          const url = `https://${nodeAddress}.${config.public.nodeDomain}/job/${jobId}/endpoints`;
+          const resp: { urls?: Record<string, { type: string; port: number; url?: string }>; status?: "ONLINE" | "OFFLINE" } = await $fetch(url, {
+            method: 'GET',
+            headers: { authorization: authHeader },
+          });
+          if (resp && resp.urls) {
+            const statusFromNode = resp.status === 'ONLINE' ? 'ONLINE' : resp.status === 'OFFLINE' ? 'OFFLINE' : 'UNKNOWN';
+            for (const k of Object.keys(resp.urls)) {
+              const item = resp.urls[k];
+              if (!item || !item.url) continue;
+              const portNum = Number(item.port);
+              const meta = metaByPort.get(portNum);
+              const endpointUrl = item.url as string;
+              if (endpoints.value.has(endpointUrl)) continue;
+              endpoints.value.set(endpointUrl, {
+                status: statusFromNode as any,
+                url: endpointUrl,
+                opId: meta?.opId ?? '',
+                opIndex: meta?.opIndex ?? 0,
+                port: portNum,
+                hasHealthCheck: Boolean(meta?.hasHealthCheck),
+                setStatus: (s: "ONLINE" | "OFFLINE") => setEndpointStatus(endpointUrl, s),
+              });
+            }
+            usedNode = true;
+        }
+      } catch {}
+      return usedNode;
+    };
+
+    (async () => {
+      const haveNodeEndpoints = await getEndpointsFromNode();
+      if (!haveNodeEndpoints) {
+        // Fallback: original behavior for public endpoints only
+        for (const { hash, port, opId, opIndex, hasHealthCheck } of sdkServices) {
+          const url = `https://${hash}.${config.public.nodeDomain}`;
+          if (hash === 'private' || endpoints.value.has(url)) continue;
+          endpoints.value.set(url, {
+            status: 'UNKNOWN',
+            url,
+            opId,
+            opIndex,
+            port: Number(port),
+            hasHealthCheck,
+            setStatus: (s: "ONLINE" | "OFFLINE") => setEndpointStatus(url, s),
+          });
+        }
+      }
+      loading.value = false;
+    })();
   });
 
   return {
