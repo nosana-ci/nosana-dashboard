@@ -277,7 +277,6 @@ const colorMode = useColorMode();
 
 const canShowLogsTab = computed(() => {
   const baseVisible = !props.job.isRunning || (props.isJobPoster && props.logConnectionEstablished);
-  // If confidential and not the poster, hide logs entirely
   if (props.isConfidential && !props.isJobPoster) return false;
   return baseVisible;
 });
