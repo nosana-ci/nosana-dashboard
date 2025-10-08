@@ -174,19 +174,6 @@ const chartOptions = computed(() => ({
       position: 'top' as const,
       align: 'end' as const,
     },
-    tooltip: {
-      callbacks: {
-        afterLabel: (context: any) => {
-          if (!templateData.value) return '';
-          const template = templateData.value.templates[context.dataIndex];
-          if (context.datasetIndex === 0) {
-            return `Benchmark Count: ${template.node.benchmarkCount}`;
-          } else {
-            return `Benchmark Count: ${template.market.benchmarkCount}`;
-          }
-        },
-      },
-    },
   },
 }));
 </script>
