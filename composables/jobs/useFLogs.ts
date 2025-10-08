@@ -303,6 +303,52 @@ export function useFLogs(
             }
           } catch {}
         }
+        // Handle resource progress bar messages (process-bar-start, process-bar-update, process-bar-stop)
+        if (possibleMsg && typeof possibleMsg === 'object' && possibleMsg.type === 'process-bar-start') {
+          const payload = possibleMsg.payload;
+          if (payload) {
+            const total = payload.total || 100;
+            const startValue = payload.startValue || 0;
+            const bar = {
+              id: 'resource-download',
+              current: startValue,
+              total: total,
+              currentDisplay: startValue,
+              totalDisplay: total,
+              status: 'Resource',
+              currentFormat: '',
+              totalFormat: '',
+              completed: false,
+              metadata: payload.payload || {},
+            };
+            resourceProgressBars.value.set('resource-download', bar);
+          }
+          return;
+        }
+        if (possibleMsg && typeof possibleMsg === 'object' && possibleMsg.type === 'process-bar-update') {
+          const payload = possibleMsg.payload;
+          const bar = resourceProgressBars.value.get('resource-download');
+          if (payload && bar) {
+            bar.current = payload.current || 0;
+            bar.currentDisplay = payload.current || 0;
+            if (payload.payload) {
+              bar.metadata = { ...bar.metadata, ...payload.payload };
+            }
+          }
+          return;
+        }
+        if (possibleMsg && typeof possibleMsg === 'object' && possibleMsg.type === 'process-bar-stop') {
+          const bar = resourceProgressBars.value.get('resource-download');
+          if (bar) {
+            bar.completed = true;
+            bar.current = bar.total;
+            setTimeout(() => {
+              resourceProgressBars.value.delete('resource-download');
+            }, 1000);
+          }
+          return;
+        }
+        
         if (possibleMsg && typeof possibleMsg === 'object' && possibleMsg.type === 'multi-process-bar-update' && possibleMsg.payload?.event) {
           handleProgressEvent(possibleMsg.payload.event);
           return;
@@ -340,6 +386,13 @@ export function useFLogs(
           const inlineBarPattern = /^(Downloading|Extracting|Pulling fs layer|Resource)\s*\|\s*[^|]+\|\s*[0-9.]+\s*(KB|MB|GB)\/[0-9.]+\s*(KB|MB|GB)$/;
           if (inlineBarPattern.test(asStringRaw.trim())) {
             return;
+          }
+          // Filter raw JSON progress bar messages (process-bar-start, process-bar-update, process-bar-stop)
+          if (typeof msgVal === 'object' && msgVal !== null) {
+            const type = (msgVal as any).type;
+            if (type === 'process-bar-start' || type === 'process-bar-update' || type === 'process-bar-stop') {
+              return;
+            }
           }
 
           const entry: FLogMessage = {
