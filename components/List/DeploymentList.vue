@@ -148,11 +148,6 @@
               :status="job.state === 2 && job.jobStatus ? (job.jobStatus === 'success' ? 'SUCCESS' : 'FAILED') : job.state"
               :image-only="small"
             ></JobStatus>
-            <span
-              v-if="isHostPage && job.project.toString() === 'jobtF7TBbGWxFf4X7pJcG63fWbcpSzEizMrDxZ1t5i2' && (job.state === 1 || (job.state === 2 && job.timeStart && job.timeEnd))"
-              class="tag is-small is-info ml-1"
-              title="Benchmark job"
-            >B</span>
           </div>
         </td>
       </tr>

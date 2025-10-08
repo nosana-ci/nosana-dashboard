@@ -190,40 +190,13 @@
     </div>
   </div>
   
-  <!-- Benchmark Histograms -->
-  <div class="columns" v-if="activeAddress && nodeSpecs && benchmarkMarketId">
-    <div class="column is-6">
-      <NodeBenchmarkHistogram
-        title="LLM Performance"
-        type="llm"
-        :node-id="activeAddress"
-        :market-id="benchmarkMarketId"
-        default-metric="averageTokensPerSecond"
-        :metrics="[
-          { value: 'averageTokensPerSecond', label: 'Tokens / Second' },
-          { value: 'avgClockSpeed', label: 'Clock Speed (MHz)' },
-          { value: 'avgWattage', label: 'Power Usage (W)' },
-          { value: 'avgTemperature', label: 'Temperature (°C)' },
-        ]"
-        x-axis-label="Concurrent Users"
-      />
-    </div>
-    <div class="column is-6">
-      <NodeBenchmarkHistogram
-        title="Image Generation Performance"
-        type="image-gen"
-        :node-id="activeAddress"
-        :market-id="benchmarkMarketId"
-        default-metric="imagesPerSecond"
-        :metrics="[
-          { value: 'imagesPerSecond', label: 'Images / Second' },
-          { value: 'avgClockSpeed', label: 'Clock Speed (MHz)' },
-          { value: 'avgWattage', label: 'Power Usage (W)' },
-          { value: 'avgTemperature', label: 'Temperature (°C)' },
-        ]"
-        x-axis-label="Batch Size"
-      />
-    </div>
+  <!-- Template Performance Comparison -->
+  <div v-if="activeAddress && nodeSpecs">
+    <TemplatePerformanceChart
+      title="Template Performance Comparison"
+      :node-id="activeAddress"
+      default-metric="tokensPerSecond"
+    />
   </div>
   
   <!-- Deployments ran list moved from HostInfo to here -->
@@ -260,7 +233,7 @@ import ArrowUpIcon from '@/assets/img/icons/arrow-up.svg?component';
 import ArrowDownIcon from '@/assets/img/icons/arrow-down.svg?component';
 import HostInfo from "~/components/Info/HostInfo.vue";
 import DeploymentList from '~/components/List/DeploymentList.vue';
-import NodeBenchmarkHistogram from "~/components/BenchmarkHistogram.vue";
+import TemplatePerformanceChart from "~/components/TemplatePerformanceChart.vue";
 import UptimeChart from "~/components/UptimeChart.vue";
 import UptimeRewards from "~/components/UptimeRewards.vue";
 import HostSpecifications from "~/components/Info/HostSpecifications.vue";

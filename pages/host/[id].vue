@@ -13,40 +13,13 @@
     </div>
   </div>
   
-  <!-- Benchmark Histograms -->
-  <div class="columns" v-if="nodeSpecs && benchmarkMarketId">
-    <div class="column is-6">
-      <NodeBenchmarkHistogram
-        title="LLM Performance"
-        type="llm"
-        :node-id="address"
-        :market-id="benchmarkMarketId"
-        default-metric="averageTokensPerSecond"
-        :metrics="[
-          { value: 'averageTokensPerSecond', label: 'Tokens / Second' },
-          { value: 'avgClockSpeed', label: 'Clock Speed (MHz)' },
-          { value: 'avgWattage', label: 'Power Usage (W)' },
-          { value: 'avgTemperature', label: 'Temperature (°C)' },
-        ]"
-        x-axis-label="Concurrent Users"
-      />
-    </div>
-    <div class="column is-6">
-      <NodeBenchmarkHistogram
-        title="Image Generation Performance"
-        type="image-gen"
-        :node-id="address"
-        :market-id="benchmarkMarketId"
-        default-metric="imagesPerSecond"
-        :metrics="[
-          { value: 'imagesPerSecond', label: 'Images / Second' },
-          { value: 'avgClockSpeed', label: 'Clock Speed (MHz)' },
-          { value: 'avgWattage', label: 'Power Usage (W)' },
-          { value: 'avgTemperature', label: 'Temperature (°C)' },
-        ]"
-        x-axis-label="Batch Size"
-      />
-    </div>
+  <!-- Template Performance Comparison -->
+  <div v-if="nodeSpecs">
+    <TemplatePerformanceChart
+      title="Template Performance Comparison"
+      :node-id="address"
+      default-metric="tokensPerSecond"
+    />
   </div>
   
   <!-- Deployments ran list moved from HostInfo to here -->
@@ -66,7 +39,7 @@
 import GeneralInfo from "~/components/Info/GeneralInfo.vue";
 import HostInfo from "~/components/Info/HostInfo.vue";
 import DeploymentList from "~/components/List/DeploymentList.vue";
-import NodeBenchmarkHistogram from "~/components/BenchmarkHistogram.vue";
+import TemplatePerformanceChart from "~/components/TemplatePerformanceChart.vue";
 import { ref, computed, watch } from 'vue';
 import type { Ref, ComputedRef } from 'vue';
 
