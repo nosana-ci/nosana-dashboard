@@ -36,291 +36,118 @@
     </div>
 
     <div v-else-if="deployment">
-      <!-- Sticky header + tabs -->
-      <div class="box sticky-subheader">
-        <div class="level mb-2">
-          <div
-            class="level-left is-flex is-flex-direction-column is-align-items-flex-start"
-          >
-            <div class="has-text-weight-semibold is-size-3">
-              {{ deployment.name }}
-            </div>
-            <div class="is-flex is-align-items-center is-flex-wrap-wrap gap-2">
-              <span class="is-family-monospace is-size-7 mr-2">{{ deployment.id }}</span>
-              <span class="sep">•</span>
-              <span class="is-flex is-align-items-center ml-2">
-                <span class="status-dot" :class="statusDotClass"></span>
-                <span class="ml-1">{{ deployment.status }}</span>
-              </span>
-            </div>
+      <!-- Unified Card -->
+      <div class="box" style="padding: 0; overflow: hidden;">
+        <!-- Header Section -->
+        <div style="padding: 1.5rem; border-bottom: 1px solid #dbdbdb;">
+        <div class="is-flex is-justify-content-space-between is-align-items-center mb-4">
+          <div>
+            <h1 class="title is-3 mb-2">{{ deployment.name }}</h1>
+            <p class="is-size-7 has-text-grey is-family-monospace">{{ deployment.id }}</p>
           </div>
-          <div class="level-right">
-            <div class="buttons">
-              <button
-                class="button"
-                :class="[activeTab === 'overview' ? 'is-dark' : 'is-outlined']"
-                @click="activeTab = 'overview'"
-              >
-                Overview
-              </button>
-              <button
-                class="button"
-                :class="[activeTab === 'events' ? 'is-dark' : 'is-outlined']"
-                @click="activeTab = 'events'"
-              >
-                Events
-              </button>
-              <button
-                class="button"
-                :class="[
-                  activeTab === 'job-definition' ? 'is-dark' : 'is-outlined',
-                ]"
-                @click="activeTab = 'job-definition'"
-              >
-                Job Definition
-              </button>
-              <button
-                class="button"
-                :class="[activeTab === 'actions' ? 'is-dark' : 'is-outlined']"
-                @click="activeTab = 'actions'"
-              >
-                Actions
-              </button>
+          <div class="tag is-outlined is-light" :class="statusClass(deployment.status)">
+            <img class="mr-2" :src="`/img/icons/status/${getStatusIcon(deployment.status)}.svg`" />
+            <span>{{ deployment.status }}</span>
+          </div>
+        </div>
+
+          <!-- Quick Stats -->
+          <div class="columns is-mobile mb-0">
+            <div class="column">
+              <p class="heading">Vault Balance</p>
+              <p class="title is-6">{{ vaultBalance.NOS.toFixed(2) }} NOS</p>
+            </div>
+            <div class="column">
+              <p class="heading">Strategy</p>
+              <p class="title is-6">{{ deployment.strategy }}</p>
+            </div>
+            <div class="column">
+              <p class="heading">Replicas</p>
+              <p class="title is-6">{{ deployment.replicas }}</p>
+            </div>
+            <div class="column">
+              <p class="heading">Timeout</p>
+              <p class="title is-6">{{ Math.floor(deployment.timeout / 3600) }}h</p>
             </div>
           </div>
         </div>
-        <div class="py-1 mb-3">
-          <hr />
+
+        <!-- Tabs -->
+        <div class="tabs" style="margin-bottom: 0;">
+          <ul>
+            <li :class="{ 'is-active': activeTab === 'overview' }">
+              <a @click="activeTab = 'overview'">Overview</a>
+            </li>
+            <li :class="{ 'is-active': activeTab === 'actions' }">
+              <a @click="activeTab = 'actions'">Control</a>
+            </li>
+            <li :class="{ 'is-active': activeTab === 'events' }">
+              <a @click="activeTab = 'events'">Events</a>
+            </li>
+            <li :class="{ 'is-active': activeTab === 'job-definition' }">
+              <a @click="activeTab = 'job-definition'">Definition</a>
+            </li>
+          </ul>
         </div>
-      </div>
-      
-      <!-- Tab Content -->
-      <div class="box">
+        
+        <!-- Tab Content -->
+        <div style="padding: 1.5rem;">
         <!-- Overview Tab -->
         <div v-if="activeTab === 'overview'">
-          <h2 class="title is-4 mb-4">Overview</h2>
 
-          <div class="columns is-multiline">
-            <div class="column is-4">
-              <div class="field">
-                <label class="label">Name</label>
-                <p class="content">{{ deployment.name }}</p>
-              </div>
-            </div>
-            <div class="column is-4">
-              <div class="field">
-                <label class="label">Status</label>
-                <span class="tag" :class="statusClass(deployment.status)">
-                  {{ deployment.status }}
-                </span>
-              </div>
-            </div>
-            <div class="column is-4">
-              <div class="field">
-                <label class="label">Balance</label>
-                <p class="content">
-                  <!-- {{ deployment.balance.NOS }} NOS,
-                  {{ deployment.balance.SOL }} SOL -->
-                </p>
-              </div>
-            </div>
-            <div class="column is-4">
-              <div class="field">
-                <label class="label">Strategy</label>
-                <p class="content">{{ deployment.strategy }}</p>
-              </div>
-            </div>
-            <div class="column is-4">
-              <div class="field">
-                <label class="label">Replicas</label>
-                <p class="content">{{ deployment.replicas }}</p>
-              </div>
-            </div>
-            <div class="column is-4">
-              <div class="field">
-                <label class="label">Timeout</label>
-                <p class="content">
-                  {{ Math.floor(deployment.timeout / 3600) }} hours
-                </p>
-              </div>
-            </div>
-            <div class="column is-4">
-              <div class="field">
-                <label class="label">Market</label>
-                <p class="content">
-                  <span v-if="marketData">
-                    {{ marketData.name }}
-                  </span>
-                  <span v-else-if="loadingMarket" class="has-text-grey">
-                    Loading market...
-                  </span>
-                  <span v-else class="is-family-monospace is-size-7">
-                    {{ deployment.market }}
-                  </span>
-                </p>
-              </div>
-            </div>
-            <div class="column is-4">
-              <div class="field">
-                <label class="label">Created</label>
-                <p class="content">{{ formatDate(deployment.created_at) }}</p>
-              </div>
-            </div>
-            <div class="column is-4">
-              <div class="field">
-                <label class="label">Updated</label>
-                <p class="content">{{ formatDate(deployment.updated_at) }}</p>
+          <!-- Endpoints -->
+          <div v-if="deploymentEndpoints.length > 0" class="mb-5">
+            <h2 class="title is-5 mb-3">Endpoints</h2>
+            <div v-for="endpoint in deploymentEndpoints" :key="`${endpoint.opId}-${endpoint.port}`" class="notification is-light">
+              <div class="is-flex is-justify-content-space-between is-align-items-center">
+                <div>
+                  <p class="has-text-weight-semibold mb-1">{{ endpoint.opId }} <span class="tag is-white is-small ml-2">Port {{ endpoint.port }}</span></p>
+                  <a :href="endpoint.url" target="_blank" class="is-size-7 has-text-link">
+                    {{ endpoint.url }} ↗
+                  </a>
+                </div>
+                <span class="tag" :class="endpoint.statusClass">{{ endpoint.status }}</span>
               </div>
             </div>
           </div>
 
-          <!-- Deployment Endpoints Section -->
-          <div class="mt-5" v-if="deploymentEndpoints.length > 0">
-            <h3 class="title is-5 mb-4">Deployment Endpoints</h3>
-            <div class="table-container">
-              <table class="table is-fullwidth is-striped">
-                <thead>
-                  <tr>
-                    <th>Operation ID</th>
-                    <th>Port</th>
-                    <th>Endpoint</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="endpoint in deploymentEndpoints" :key="`${endpoint.opId}-${endpoint.port}`">
-                    <td class="is-family-monospace is-size-7">{{ endpoint.opId }}</td>
-                    <td>{{ endpoint.port }}</td>
-                    <td>
-                      <a :href="endpoint.url" target="_blank" class="is-size-7">
-                        {{ endpoint.url }}
-                      </a>
-                    </td>
-                    <td>
-                      <span class="tag is-small" :class="endpoint.statusClass">
-                        {{ endpoint.status }}
-                      </span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- Job Activity Section -->
-          <div class="mt-5">
-            <h3 class="title is-5 mb-4">Job Activity</h3>
+          <!-- Jobs -->
+          <div>
+            <h2 class="title is-5 mb-3">Jobs <span class="tag is-light">{{ activeJobs.length }}</span></h2>
             
-            <div class="tabs is-boxed">
-              <ul>
-                <li :class="{ 'is-active': jobActivityTab === 'active' }">
-                  <a @click="jobActivityTab = 'active'">
-                    Active ({{ activeJobs.length }})
-                  </a>
-                </li>
-                <li :class="{ 'is-active': jobActivityTab === 'history' }">
-                  <a @click="jobActivityTab = 'history'">
-                    History ({{ historicalJobs.length }})
-                  </a>
-                </li>
-              </ul>
+            <div v-if="activeJobs.length === 0" class="notification is-light has-text-centered">
+              <p class="has-text-grey">
+                <span v-if="deployment.status === 'DRAFT'">Start deployment to create jobs</span>
+                <span v-else>No jobs yet</span>
+              </p>
             </div>
-
-            <!-- Active Jobs -->
-            <div v-if="jobActivityTab === 'active'">
-              <div v-if="activeJobs.length === 0" class="notification is-light">
-                <div class="has-text-centered py-4">
-                  <span class="icon is-large has-text-grey-light">
-                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none">
-                      <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z" stroke="currentColor" stroke-width="1.5" fill="none"/>
-                    </svg>
-                  </span>
-                  <p class="has-text-grey mt-3">
-                    <strong>No active jobs</strong>
-                  </p>
-                  <p class="has-text-grey-light is-size-7">
-                    <span v-if="deployment.status === 'DRAFT'">
-                      Start the deployment to begin running jobs
-                    </span>
-                    <span v-else-if="deployment.status === 'STOPPED'">
-                      This deployment is currently stopped
-                    </span>
-                    <span v-else>
-                      Jobs will appear here once they start running
-                    </span>
-                  </p>
+            
+            <div v-else>
+              <div 
+                v-for="job in activeJobs" 
+                :key="job.job" 
+                class="notification is-light is-clickable mb-2"
+                @click="navigateToJob(job.job)"
+                style="cursor: pointer;"
+              >
+                <div class="is-flex is-justify-content-space-between is-align-items-center">
+                  <div class="is-flex-grow-1">
+                    <div class="is-flex is-align-items-center mb-2">
+                      <JobStatus :status="job.state || 0" class="mr-2" />
+                      <p class="is-family-monospace is-size-7 has-text-grey">{{ job.job }}</p>
+                    </div>
+                    <p class="is-size-7">{{ formatDate(job.created_at) }}</p>
+                  </div>
+                  <a
+                    :href="`https://solscan.io/tx/${job.tx}`"
+                    target="_blank"
+                    class="button is-small is-white"
+                    @click.stop
+                    title="View transaction"
+                  >
+                    TX ↗
+                  </a>
                 </div>
-              </div>
-              <div v-else class="table-container">
-                <table class="table is-fullwidth is-striped is-hoverable">
-                  <thead>
-                    <tr>
-                      <th>Job ID</th>
-                      <th>Status</th>
-                      <th>Transaction</th>
-                      <th>Created</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="job in activeJobs" :key="job.job" class="is-clickable" @click="$router.push(`/jobs/${job.job}`)">
-                      <td class="is-family-monospace is-size-7">{{ job.job }}</td>
-                      <td>
-                        <span class="tag is-info is-small">Active</span>
-                      </td>
-                      <td>
-                        <a :href="`https://solscan.io/tx/${job.tx}`" target="_blank" class="is-family-monospace is-size-7" @click.stop>
-                          {{ job.tx.slice(0, 8) }}...{{ job.tx.slice(-8) }}
-                        </a>
-                      </td>
-                      <td class="is-size-7">{{ formatDate(job.created_at) }}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <!-- Historical Jobs -->
-            <div v-if="jobActivityTab === 'history'">
-              <div v-if="historicalJobs.length === 0" class="notification is-light">
-                <div class="has-text-centered py-4">
-                  <span class="icon is-large has-text-grey-light">
-                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none">
-                      <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="1.5" fill="none"/>
-                    </svg>
-                  </span>
-                  <p class="has-text-grey mt-3">
-                    <strong>No job history yet</strong>
-                  </p>
-                  <p class="has-text-grey-light is-size-7">
-                    Completed and stopped jobs will appear here
-                  </p>
-                </div>
-              </div>
-              <div v-else class="table-container">
-                <table class="table is-fullwidth is-striped is-hoverable">
-                  <thead>
-                    <tr>
-                      <th>Job ID</th>
-                      <th>Status</th>
-                      <th>Transaction</th>
-                      <th>Created</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="job in historicalJobs" :key="job.job" class="is-clickable" @click="$router.push(`/jobs/${job.job}`)">
-                      <td class="is-family-monospace is-size-7">{{ job.job }}</td>
-                      <td>
-                        <span class="tag is-dark is-small">Completed</span>
-                      </td>
-                      <td>
-                        <a :href="`https://solscan.io/tx/${job.tx}`" target="_blank" class="is-family-monospace is-size-7" @click.stop>
-                          {{ job.tx.slice(0, 8) }}...{{ job.tx.slice(-8) }}
-                        </a>
-                      </td>
-                      <td class="is-size-7">{{ formatDate(job.created_at) }}</td>
-                    </tr>
-                  </tbody>
-                </table>
               </div>
             </div>
           </div>
@@ -328,112 +155,80 @@
 
         <!-- Events Tab -->
         <div v-if="activeTab === 'events'">
-          <h2 class="title is-4 mb-4">Deployment Events</h2>
+          <h2 class="title is-4 mb-4">Deployment Events & Tasks</h2>
 
-          <!-- Queued Events Section -->
-          <div class="mb-6">
-            <h3 class="title is-5 mb-3">
-              Queued Events ({{ queuedEvents.length }})
-            </h3>
-            <div v-if="queuedEvents.length === 0" class="notification is-light">
-              <div class="has-text-centered py-3">
-                <span class="icon has-text-grey-light">
-                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
-                    <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke="currentColor" stroke-width="1.5" fill="none"/>
+          <!-- Tasks -->
+          <div class="mb-5">
+            <div class="is-flex is-justify-content-space-between is-align-items-center mb-3">
+              <h2 class="title is-5 mb-0">Tasks <span class="tag is-light">{{ tasks.length }}</span></h2>
+              <button 
+                class="button is-small" 
+                @click="loadTasks"
+                :class="{ 'is-loading': tasksLoading }"
+                :disabled="tasksLoading"
+              >
+                <span class="icon is-small">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                    <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
                 </span>
-                <p class="has-text-grey mt-2">
-                  <strong>No queued events</strong>
-                </p>
-                <p class="has-text-grey-light is-size-7">
-                  Events will appear here when scheduled
-                </p>
-              </div>
+              </button>
             </div>
-            <div v-else class="table-container">
-              <table class="table is-fullwidth is-striped">
-                <thead>
-                  <tr>
-                    <th>Event Type</th>
-                    <th>Scheduled For</th>
-                    <th>Replica Count</th>
-                    <th>Market</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="event in queuedEvents" :key="event.id">
-                    <td>
-                      <span class="tag is-info is-light">{{ event.type }}</span>
-                    </td>
-                    <td class="is-size-7">{{ formatDate(event.scheduled_at) }}</td>
-                    <td>{{ event.replicas }}</td>
-                    <td class="is-family-monospace is-size-7">{{ event.market }}</td>
-                    <td>
-                      <span class="tag is-warning is-small">Queued</span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+            
+            <div v-if="tasks.length === 0 && !tasksLoading" class="notification is-light has-text-centered">
+              <p class="has-text-grey">No tasks yet</p>
+            </div>
+            
+            <div v-else-if="tasks.length > 0">
+              <div v-for="task in tasks" :key="task.id" class="notification is-light mb-2">
+                <div class="is-flex is-justify-content-space-between is-align-items-center">
+                  <div class="is-flex-grow-1">
+                    <div class="is-flex is-align-items-center mb-2">
+                      <span class="tag" :class="getTaskStatusClass(task.status)">{{ task.status || 'PENDING' }}</span>
+                      <span class="tag is-white is-small ml-2">{{ task.type || 'Job' }}</span>
+                    </div>
+                    <p class="is-family-monospace is-size-7 has-text-grey">{{ task.id }}</p>
+                  </div>
+                  <div style="min-width: 140px; text-align: right;">
+                    <p class="is-size-7 has-text-grey">{{ formatDate(task.updated_at) }}</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          <!-- Historical Events Section -->
+          <!-- Events -->
           <div>
-            <h3 class="title is-5 mb-3">
-              Historical Events ({{ historicalEvents.length }})
-            </h3>
-            <div v-if="historicalEvents.length === 0" class="notification is-light">
-              <div class="has-text-centered py-3">
-                <span class="icon has-text-grey-light">
-                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
-                    <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="1.5" fill="none"/>
-                  </svg>
-                </span>
-                <p class="has-text-grey mt-2">
-                  <strong>No historical events</strong>
-                </p>
-                <p class="has-text-grey-light is-size-7">
-                  Past deployment and job events will appear here
-                </p>
-              </div>
+            <h2 class="title is-5 mb-3">Events <span class="tag is-light">{{ deploymentEvents.length }}</span></h2>
+            
+            <div v-if="deploymentEvents.length === 0" class="notification is-light has-text-centered">
+              <p class="has-text-grey">No events yet</p>
             </div>
-            <div v-else class="events-container">
+            
+            <div v-else>
               <div
-                v-for="event in historicalEvents"
-                :key="event.id || (event.created_at + event.type)"
-                class="box mb-3"
-                :class="{ 'event-error': event.type.includes('ERROR') }"
+                v-for="(event, index) in deploymentEvents"
+                :key="index"
+                class="notification is-light mb-2"
               >
-                <div class="level mb-2">
-                  <div class="level-left">
-                    <div class="level-item">
-                      <span class="tag" :class="eventTypeClass(event.type)">
-                        {{ event.type }}
-                      </span>
+                <div class="is-flex is-justify-content-space-between is-align-items-start">
+                  <div class="is-flex-grow-1">
+                    <div class="is-flex is-align-items-center mb-2">
+                      <span class="tag" :class="eventTypeClass(event.type)">{{ event.type }}</span>
+                      <span class="tag is-white is-small ml-2">{{ event.category }}</span>
                     </div>
-                    <div class="level-item">
-                      <span class="tag is-small" :class="event.source === 'deployment' ? 'is-primary' : 'is-info'">
-                        {{ event.source || event.category }}
-                      </span>
-                    </div>
+                    <p class="is-size-7" :class="{ 'is-family-monospace': event.message.length > 200 }" style="white-space: pre-wrap; word-break: break-word;">{{ event.message }}</p>
                   </div>
-                  <div class="level-right">
-                    <div class="level-item">
-                      <span class="has-text-grey is-size-7">
-                        {{ formatDate(event.created_at || event.timestamp || '') }}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="content">
-                  <p>{{ event.message || event.details }}</p>
-
-                  <div v-if="event.tx" class="mt-2">
-                    <label class="label is-small">Transaction:</label>
-                    <a :href="`https://solscan.io/tx/${event.tx}`" target="_blank" class="is-family-monospace is-size-7">
-                      {{ event.tx }}
+                  <div class="ml-3" style="min-width: 140px; text-align: right;">
+                    <p class="is-size-7 has-text-grey">{{ formatDate(event.created_at) }}</p>
+                    <a
+                      v-if="event.tx"
+                      :href="`https://solscan.io/tx/${event.tx}`"
+                      target="_blank"
+                      class="button is-small is-white mt-2"
+                      title="View transaction"
+                    >
+                      TX ↗
                     </a>
                   </div>
                 </div>
@@ -475,70 +270,284 @@
 
         <!-- Actions Tab -->
         <div v-if="activeTab === 'actions'">
-          <h2 class="title is-4 mb-4">Deployment Actions</h2>
+          <!-- All Actions in One Row -->
+          <div class="columns">
+            <!-- Deployment Control -->
+            <div class="column is-narrow">
+              <label class="label is-small">Deployment</label>
+              <div class="field is-grouped">
+                <p class="control" v-if="canStart">
+                  <button
+                    class="button is-success"
+                    @click="startDeployment"
+                    :class="{ 'is-loading': actionLoading }"
+                    :disabled="actionLoading"
+                  >
+                    <span class="icon is-small"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M8 5v14l11-7z" fill="currentColor"/></svg></span>
+                    <span>Start</span>
+                  </button>
+                </p>
 
-          <!-- Deployment Control -->
-          <div class="field">
-            <label class="label">Deployment Control</label>
-            <div class="buttons">
-              <button
-                v-if="canStart"
-                class="button is-success"
-                @click="startDeployment"
-                :class="{ 'is-loading': actionLoading }"
-                :disabled="actionLoading"
-              >
-                <span class="icon">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path d="M8 5v14l11-7z" fill="currentColor"/>
-                  </svg>
-                </span>
-                <span>Start Deployment</span>
-              </button>
+                <p class="control" v-if="canStop">
+                  <button
+                    class="button is-warning"
+                    @click="stopDeployment"
+                    :class="{ 'is-loading': actionLoading }"
+                    :disabled="actionLoading"
+                  >
+                    <span class="icon is-small"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M6 6h12v12H6V6z" fill="currentColor"/></svg></span>
+                    <span>Stop</span>
+                  </button>
+                </p>
 
-              <button
-                v-if="canStop"
-                class="button is-warning"
-                @click="stopDeployment"
-                :class="{ 'is-loading': actionLoading }"
-                :disabled="actionLoading"
-              >
-                <span class="icon">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path d="M6 6h12v12H6V6z" fill="currentColor"/>
-                  </svg>
-                </span>
-                <span>Stop Deployment</span>
-              </button>
-
-              <button
-                v-if="canArchive"
-                class="button is-danger"
-                @click="archiveDeployment"
-                :class="{ 'is-loading': actionLoading }"
-                :disabled="actionLoading"
-              >
-                <span class="icon">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path d="M3 3h18v4H3V3zm2 6h14v12H5V9z" fill="currentColor"/>
-                  </svg>
-                </span>
-                <span>Archive Deployment</span>
-              </button>
+                <p class="control" v-if="canArchive">
+                  <button
+                    class="button is-danger"
+                    @click="archiveDeployment"
+                    :class="{ 'is-loading': actionLoading }"
+                    :disabled="actionLoading"
+                  >
+                    <span class="icon is-small"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M3 3h18v4H3V3zm2 6h14v12H5V9z" fill="currentColor"/></svg></span>
+                    <span>Archive</span>
+                  </button>
+                </p>
+              </div>
             </div>
-            <p class="help">{{ statusHelpText }}</p>
-          </div>
 
-          <!-- Deployment Info -->
-          <div class="notification is-info is-light mt-5">
-            <p class="mb-2"><strong>Current Status:</strong> {{ deployment.status }}</p>
-            <p class="mb-2"><strong>Strategy:</strong> {{ deployment.strategy }}</p>
-            <p class="mb-2"><strong>Replicas:</strong> {{ deployment.replicas }}</p>
-            <p><strong>Active Jobs:</strong> {{ deployment.jobs?.length || 0 }}</p>
+            <!-- Replicas -->
+            <div class="column">
+              <label class="label is-small">Replicas</label>
+              <div class="field has-addons">
+                <div class="control is-expanded">
+                  <input
+                    type="number"
+                    class="input"
+                    v-model.number="newReplicaCount"
+                    min="1"
+                    max="100"
+                    :placeholder="deployment.replicas.toString()"
+                    :disabled="actionLoading || deployment.status === 'ARCHIVED'"
+                  />
+                </div>
+                <div class="control">
+                  <button
+                    class="button is-info"
+                    @click="updateReplicas"
+                    :class="{ 'is-loading': actionLoading }"
+                    :disabled="actionLoading || !newReplicaCount || newReplicaCount < 1 || deployment.status === 'ARCHIVED'"
+                  >
+                    Update
+                  </button>
+                </div>
+              </div>
+              <p class="help">Current: {{ deployment.replicas }}</p>
+            </div>
+
+            <!-- Timeout -->
+            <div class="column">
+              <label class="label is-small">Timeout (hours)</label>
+              <div class="field has-addons">
+                <div class="control is-expanded">
+                  <input
+                    type="number"
+                    class="input"
+                    v-model.number="newTimeoutHours"
+                    min="0.0167"
+                    step="0.1"
+                    :placeholder="(deployment.timeout / 3600).toFixed(2)"
+                    :disabled="actionLoading || deployment.status === 'ARCHIVED'"
+                  />
+                </div>
+                <div class="control">
+                  <button
+                    class="button is-info"
+                    @click="updateJobTimeout"
+                    :class="{ 'is-loading': actionLoading }"
+                    :disabled="actionLoading || !newTimeoutHours || newTimeoutHours < 0.0167 || deployment.status === 'ARCHIVED'"
+                  >
+                    Update
+                  </button>
+                </div>
+              </div>
+              <p class="help">Current: {{ (deployment.timeout / 3600).toFixed(2) }}h</p>
+            </div>
+
+            <!-- Vault -->
+            <div class="column">
+              <label class="label is-small">Vault</label>
+              <div class="field is-grouped">
+                <p class="control">
+                  <button
+                    class="button is-success"
+                    @click="showTopupModal = true"
+                    :disabled="actionLoading || deployment.status === 'ARCHIVED'"
+                  >
+                    <span class="icon is-small"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 5v14m7-7H5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>
+                    <span>Top Up</span>
+                  </button>
+                </p>
+
+                <p class="control">
+                  <button
+                    class="button"
+                    @click="withdrawFromVault"
+                    :class="{ 'is-loading': actionLoading }"
+                    :disabled="actionLoading || deployment.status === 'ARCHIVED' || (vaultBalance.NOS === 0 && vaultBalance.SOL === 0)"
+                  >
+                    <span>Withdraw</span>
+                  </button>
+                </p>
+              </div>
+              <p class="help">{{ vaultBalance.NOS.toFixed(2) }} NOS · {{ vaultBalance.SOL.toFixed(4) }} SOL</p>
+            </div>
+          </div>
+        </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top-up Modal -->
+  <div class="modal" :class="{ 'is-active': showTopupModal }">
+    <div class="modal-background" @click="showTopupModal = false"></div>
+    <div class="modal-card">
+      <header class="modal-card-head">
+        <p class="modal-card-title">Top Up Vault</p>
+        <button class="delete" aria-label="close" @click="showTopupModal = false"></button>
+      </header>
+      <section class="modal-card-body">
+        <div class="columns">
+          <div class="column">
+            <div class="field">
+              <label class="label">Current Vault Balance</label>
+              <p class="content mb-2">
+                <strong>{{ vaultBalance.NOS.toFixed(2) }} NOS</strong>
+              </p>
+              <p class="content">
+                <strong>{{ vaultBalance.SOL.toFixed(4) }} SOL</strong>
+              </p>
+            </div>
+          </div>
+          <div class="column">
+            <div class="field">
+              <label class="label">Your Wallet Balance</label>
+              <p class="content mb-2">
+                <strong>{{ userNosBalance.toFixed(2) }} NOS</strong>
+              </p>
+              <p class="content">
+                <strong>{{ userSolBalance.toFixed(4) }} SOL</strong>
+              </p>
+            </div>
           </div>
         </div>
 
-      </div>
+        <!-- NOS Input -->
+        <div class="field">
+          <label class="label">NOS Amount to Add</label>
+          <div class="field has-addons">
+            <div class="control is-expanded">
+              <input
+                v-model.number="topupNosAmount"
+                class="input"
+                type="number"
+                placeholder="0.00"
+                min="0"
+                step="0.01"
+                :max="userNosBalance"
+              />
+            </div>
+            <div class="control">
+              <button 
+                class="button"
+                @click="topupNosAmount = Math.floor(userNosBalance / 2 * 100) / 100"
+                :disabled="userNosBalance <= 0"
+              >
+                HALF
+              </button>
+            </div>
+            <div class="control">
+              <button 
+                class="button"
+                @click="topupNosAmount = Math.floor(userNosBalance * 100) / 100"
+                :disabled="userNosBalance <= 0"
+              >
+                MAX
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- SOL Input -->
+        <div class="field">
+          <label class="label">SOL Amount to Add</label>
+          <div class="field has-addons">
+            <div class="control is-expanded">
+              <input
+                v-model.number="topupSolAmount"
+                class="input"
+                type="number"
+                placeholder="0.00"
+                min="0"
+                step="0.001"
+                :max="userSolBalance"
+              />
+            </div>
+            <div class="control">
+              <button 
+                class="button"
+                @click="topupSolAmount = Math.floor(userSolBalance / 2 * 10000) / 10000"
+                :disabled="userSolBalance <= 0"
+              >
+                HALF
+              </button>
+            </div>
+            <div class="control">
+              <button 
+                class="button"
+                @click="topupSolAmount = Math.floor(userSolBalance * 10000) / 10000"
+                :disabled="userSolBalance <= 0"
+              >
+                MAX
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="notification is-info is-light">
+          <p class="is-size-7">
+            <strong>Note:</strong> This will transfer tokens from your wallet to the deployment vault.
+            The vault is used to pay for compute resources. You can add NOS, SOL, or both.
+          </p>
+        </div>
+      </section>
+      <footer class="modal-card-foot">
+        <button
+          class="button is-primary"
+          @click="topupVault"
+          :class="{ 'is-loading': topupLoading }"
+          :disabled="topupLoading || ((!topupNosAmount || topupNosAmount <= 0) && (!topupSolAmount || topupSolAmount <= 0))"
+        >
+          <span v-if="topupNosAmount > 0 && topupSolAmount > 0">
+            Top Up {{ topupNosAmount }} NOS + {{ topupSolAmount }} SOL
+          </span>
+          <span v-else-if="topupNosAmount > 0">
+            Top Up {{ topupNosAmount }} NOS
+          </span>
+          <span v-else-if="topupSolAmount > 0">
+            Top Up {{ topupSolAmount }} SOL
+          </span>
+          <span v-else>
+            Top Up Vault
+          </span>
+        </button>
+        <button
+          class="button"
+          @click="showTopupModal = false"
+          :disabled="topupLoading"
+        >
+          Cancel
+        </button>
+      </footer>
     </div>
   </div>
 </template>
@@ -549,31 +558,23 @@ import type { Deployment, JobDefinition } from "@nosana/sdk";
 import { Mode, ValidationSeverity } from "vanilla-jsoneditor";
 import JsonEditorVue from "json-editor-vue";
 import { useToast } from "vue-toastification";
+import JobStatus from "~/components/Job/Status.vue";
 
 // Types
 interface DeploymentJob {
   job: string;
   tx: string;
   created_at: string;
+  state?: number;
+  market?: string;
 }
 
-interface QueuedEvent {
-  id: string;
+interface DeploymentEvent {
   type: string;
-  scheduled_at: string;
-  replicas: number;
-  market: string;
-}
-
-interface HistoricalEvent {
-  id?: string;
-  type: string;
-  source?: string;
-  category?: string;
-  timestamp?: string;
-  created_at?: string;
-  message?: string;
-  details?: string;
+  category: string;
+  message: string;
+  created_at: string;
+  deploymentId: string;
   tx?: string;
 }
 
@@ -581,7 +582,7 @@ interface HistoricalEvent {
 const route = useRoute();
 const router = useRouter();
 const toast = useToast();
-const { connected } = useWallet();
+const { connected, wallet, publicKey } = useWallet();
 const { nosana } = useSDK();
 const { getIpfs } = useIpfs();
 
@@ -593,7 +594,18 @@ const loading = ref(true);
 const error = ref<string | null>(null);
 const activeTab = ref("overview");
 const actionLoading = ref(false);
-const jobActivityTab = ref<'active' | 'history'>('active');
+const vaultBalance = ref<{ SOL: number; NOS: number }>({ SOL: 0, NOS: 0 });
+const topupNosAmount = ref<number>(0);
+const topupSolAmount = ref<number>(0);
+const topupLoading = ref(false);
+const newReplicaCount = ref<number | null>(null);
+const newTimeoutHours = ref<number | null>(null);
+const authHeader = ref<string>('');
+const showTopupModal = ref(false);
+const userNosBalance = ref<number>(0);
+const userSolBalance = ref<number>(0);
+const tasks = ref<any[]>([]);
+const tasksLoading = ref(false);
 // Status dot helper
 const statusDotClass = computed(() => {
   switch (deployment.value?.status?.toUpperCase()) {
@@ -622,7 +634,7 @@ const statusDotClass = computed(() => {
 const statusClass = (status: string) => {
   switch (status?.toUpperCase()) {
     case "RUNNING":
-      return "is-success";
+      return "is-info";
     case "ERROR":
       return "is-danger";
     case "STOPPED":
@@ -639,6 +651,24 @@ const statusClass = (status: string) => {
       return "is-grey";
     default:
       return "is-light";
+  }
+};
+
+const getStatusIcon = (status: string) => {
+  switch (status?.toUpperCase()) {
+    case "RUNNING":
+    case "STARTING":
+      return "running";
+    case "STOPPED":
+    case "STOPPING":
+      return "stopped";
+    case "ERROR":
+    case "INSUFFICIENT_FUNDS":
+      return "failed";
+    case "DRAFT":
+      return "queued";
+    default:
+      return "stopped";
   }
 };
 
@@ -691,32 +721,57 @@ const loadMarket = async (marketId: string) => {
   }
 };
 
-const loadDeployment = async () => {
+const loadDeployment = async (silent = false) => {
   if (!connected.value) {
     error.value = "Please connect your wallet first";
-    loading.value = false;
+    if (!silent) loading.value = false;
     return;
   }
 
   try {
-    loading.value = true;
+    if (!silent) loading.value = true;
     error.value = null;
 
     const deploymentId = route.params.id as string;
-    console.log("Loading deployment:", deploymentId);
-
+    console.log('=== LOADING DEPLOYMENT ===');
+    console.log('Deployment ID:', deploymentId);
+    
     const result = await nosana.value.deployments.get(deploymentId);
-    console.log("Deployment loaded:", result);
-
-    let vaultBalance = { SOL: 0, NOS: 0 };
+    console.log('Full deployment object:', result);
+    console.log('Deployment properties:', {
+      id: result.id,
+      name: result.name,
+      status: result.status,
+      strategy: result.strategy,
+      replicas: result.replicas,
+      timeout: result.timeout,
+      market: result.market,
+      ipfs_definition_hash: result.ipfs_definition_hash,
+      jobs: result.jobs,
+      events: result.events,
+      endpoints: result.endpoints,
+      created_at: result.created_at,
+      updated_at: result.updated_at,
+    });
+    
     if (result.vault) {
       try {
         const balance = await result.vault.getBalance();
-        console.log("Vault balance:", balance);
-        vaultBalance = balance;
+        vaultBalance.value = balance;
       } catch (balanceError) {
         console.error("Error fetching vault balance:", balanceError);
       }
+    }
+
+    // Fetch user's NOS and SOL balance
+    try {
+      const nosBalance = await nosana.value.solana.getNosBalance();
+      userNosBalance.value = nosBalance?.uiAmount ?? 0;
+      
+      const solBalance = await nosana.value.solana.getSolBalance();
+      userSolBalance.value = solBalance / 1e9;
+    } catch (balanceError) {
+      console.error("Error fetching user balances:", balanceError);
     }
 
     deployment.value = result as Deployment;
@@ -725,13 +780,26 @@ const loadDeployment = async () => {
       await loadMarket(result.market.toString());
     }
 
-    // Load job definition
     await loadJobDefinition();
+    
+    // Load job states
+    if (result.jobs && result.jobs.length > 0) {
+      for (const job of result.jobs) {
+        try {
+          const { data } = await useAPI(`/api/jobs/${job.job}`);
+          if (data.value?.state !== undefined) {
+            jobStates.value[job.job] = data.value.state;
+          }
+        } catch (err) {
+          console.warn(`Failed to fetch state for job ${job.job}`);
+        }
+      }
+    }
   } catch (err: any) {
     console.error("Error loading deployment:", err);
     error.value = `Failed to load deployment: ${err.message}`;
   } finally {
-    loading.value = false;
+    if (!silent) loading.value = false;
   }
 };
 
@@ -783,71 +851,105 @@ const statusHelpText = computed(() => {
 });
 
 // Job activity split
+// Note: Deployment jobs don't include state info, so we show all jobs
+// Users can click through to see individual job details
+const jobStates = ref<Record<string, number>>({});
+
 const activeJobs = computed((): DeploymentJob[] => {
-  // For now, treat all jobs as active since we don't have job status
-  // In the future, filter by job.status === 'RUNNING' || 'QUEUED'
-  return (deployment.value?.jobs as DeploymentJob[]) || [];
+  const jobs = (deployment.value?.jobs as DeploymentJob[]) || [];
+  // Enrich jobs with fetched states and reverse to show most recent first
+  return jobs.map(job => ({
+    ...job,
+    state: jobStates.value[job.job] ?? 0
+  })).reverse();
 });
 
 const historicalJobs = computed((): DeploymentJob[] => {
-  // For now, empty since we don't have job status
-  // In the future, filter by job.status === 'COMPLETED' || 'STOPPED'
+  // Historical jobs would need to be fetched separately or filtered by date
+  // For now, empty since deployment.jobs doesn't include state
   return [];
 });
 
-// Deployment endpoints
+// Deployment endpoints - use API-provided endpoints
 const deploymentEndpoints = computed(() => {
-  if (!deployment.value?.id || !jobDefinitionModel.value?.ops) return [];
+  if (!deployment.value?.endpoints) {
+    console.log('deploymentEndpoints: No endpoints from API');
+    return [];
+  }
   
-  const endpoints: Array<{
-    opId: string;
-    port: number;
-    url: string;
-    status: string;
-    statusClass: string;
-  }> = [];
+  console.log('=== DEPLOYMENT ENDPOINTS ===');
+  console.log('Using endpoints from API:', deployment.value.endpoints);
   
-  const deploymentId = deployment.value.id;
-  const config = useRuntimeConfig();
+  // Check if deployment is running
+  const isRunning = deployment.value.status === 'RUNNING';
+  console.log('Deployment status:', deployment.value.status, 'isRunning:', isRunning);
   
-  jobDefinitionModel.value.ops.forEach((op: any) => {
-    if (op.type === 'container/run' && op.args?.expose) {
-      const exposeArray = Array.isArray(op.args.expose) ? op.args.expose : [op.args.expose];
-      
-      exposeArray.forEach((expose: any) => {
-        const port = typeof expose === 'number' ? expose : expose?.port;
-        if (port) {
-          endpoints.push({
-            opId: op.id || 'main',
-            port,
-            url: `https://${deploymentId}.${config.public.nodeDomain}:${port}`,
-            status: deployment.value?.status === 'RUNNING' ? 'Online' : 'Offline',
-            statusClass: deployment.value?.status === 'RUNNING' ? 'is-success' : 'is-light'
-          });
-        }
-      });
-    }
-  });
+  // Map API endpoints to our format with status
+  const endpoints = deployment.value.endpoints.map((endpoint: any) => ({
+    opId: endpoint.opId,
+    port: endpoint.port,
+    url: endpoint.url,
+    status: isRunning ? 'Online' : 'Offline',
+    statusClass: isRunning ? 'is-success' : 'is-light'
+  }));
+  
+  console.log('Final endpoints with status:', endpoints);
   
   return endpoints;
 });
 
-// Events split: queued vs historical
-const queuedEvents = computed((): QueuedEvent[] => {
-  // Queued events have a unique shape with scheduled_at, replicas, market
-  // They are future events that haven't been executed yet
-  if (!deployment.value?.schedule) return [];
-  
-  // For SCHEDULED deployments, parse schedule and generate queued events
-  // This is a placeholder - actual implementation would parse cron schedule
-  return [];
+// All deployment events
+const deploymentEvents = computed((): DeploymentEvent[] => {
+  const events = (deployment.value?.events as DeploymentEvent[]) || [];
+  // Reverse to show most recent first
+  return [...events].reverse();
 });
 
-const historicalEvents = computed((): HistoricalEvent[] => {
-  // Historical events are past events from both deployment and jobs
-  // They share the same object shape with type, timestamp/created_at, message/details
-  return (deployment.value?.events as HistoricalEvent[]) || [];
-});
+// Vault top-up function
+const topupVault = async () => {
+  if (!deployment.value || !connected.value) {
+    toast.error("Please connect your wallet first");
+    return;
+  }
+
+  if ((!topupNosAmount.value || topupNosAmount.value <= 0) && 
+      (!topupSolAmount.value || topupSolAmount.value <= 0)) {
+    toast.error("Please enter a valid amount for NOS or SOL");
+    return;
+  }
+
+  if (!deployment.value.vault) {
+    toast.error("No vault found for this deployment");
+    return;
+  }
+
+  try {
+    topupLoading.value = true;
+    
+    await deployment.value.vault.topup({ 
+      NOS: topupNosAmount.value || 0,
+      SOL: topupSolAmount.value || 0
+    });
+    
+    const amounts = [];
+    if (topupNosAmount.value > 0) amounts.push(`${topupNosAmount.value} NOS`);
+    if (topupSolAmount.value > 0) amounts.push(`${topupSolAmount.value} SOL`);
+    
+    toast.success(`Successfully topped up vault with ${amounts.join(' and ')}`);
+    
+    // Reset and refresh
+    topupNosAmount.value = 0;
+    topupSolAmount.value = 0;
+    showTopupModal.value = false;
+    
+    await loadDeployment();
+  } catch (err: any) {
+    console.error("Vault topup error:", err);
+    toast.error(`Failed to top up vault: ${err.message || err.toString()}`);
+  } finally {
+    topupLoading.value = false;
+  }
+};
 
 // Generic deployment action handler
 const executeDeploymentAction = async (
@@ -862,13 +964,28 @@ const executeDeploymentAction = async (
 
   try {
     actionLoading.value = true;
+    const previousStatus = deployment.value.status;
     await action();
     toast.success(successMessage);
-    
+
     if (shouldRedirect) {
       setTimeout(() => router.push("/deployment"), 2000);
     } else {
-      await loadDeployment();
+      // Poll for status change (max 10 seconds)
+      let attempts = 0;
+      const maxAttempts = 20;
+      const transitionalStates = ['STARTING', 'STOPPING'];
+      
+      while (attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        await loadDeployment(true); // Silent reload during polling
+        
+        // Stop polling if we reach a final state
+        if (deployment.value && !transitionalStates.includes(deployment.value.status)) {
+          break;
+        }
+        attempts++;
+      }
     }
   } catch (err: any) {
     console.error("Deployment action error:", err);
@@ -901,6 +1018,155 @@ const archiveDeployment = async () => {
     "Deployment archived successfully",
     true
   );
+};
+
+const updateReplicas = async () => {
+  if (!newReplicaCount.value || newReplicaCount.value < 1) {
+    toast.error("Replica count must be at least 1");
+    return;
+  }
+
+  await executeDeploymentAction(
+    () => deployment.value!.updateReplicaCount(newReplicaCount.value!),
+    `Replica count updated to ${newReplicaCount.value}`
+  );
+  
+  newReplicaCount.value = null;
+};
+
+const updateJobTimeout = async () => {
+  if (!newTimeoutHours.value || newTimeoutHours.value < 0.0167) {
+    toast.error("Timeout must be at least 1 minute (0.0167 hours)");
+    return;
+  }
+
+  const timeoutSeconds = Math.floor(newTimeoutHours.value * 3600);
+  
+  await executeDeploymentAction(
+    () => deployment.value!.updateTimeout(timeoutSeconds),
+    `Job timeout updated to ${newTimeoutHours.value} hours`
+  );
+  
+  newTimeoutHours.value = null;
+};
+
+const withdrawFromVault = async () => {
+  if (!confirm("Withdraw all funds from the vault? This will return all SOL and NOS to your wallet.")) {
+    return;
+  }
+
+  actionLoading.value = true;
+  try {
+    await deployment.value!.vault.withdraw();
+    toast.success("Funds withdrawn successfully");
+    
+    // Reload vault balance
+    vaultBalance.value = await deployment.value!.vault.getBalance();
+    
+    // Reload user balances
+    const { nosana } = useSDK();
+    if (nosana.value) {
+      const nosBalance = await nosana.value.solana.getNosBalance();
+      const solBalance = await nosana.value.solana.getSolBalance();
+      userNosBalance.value = typeof nosBalance === 'number' ? nosBalance : 0;
+      userSolBalance.value = typeof solBalance === 'number' ? solBalance : 0;
+    }
+  } catch (err: any) {
+    console.error("Vault withdrawal error:", err);
+    toast.error(`Failed to withdraw from vault: ${err.message}`);
+  } finally {
+    actionLoading.value = false;
+  }
+};
+
+const generateAuth = async () => {
+  actionLoading.value = true;
+  try {
+    const header = await deployment.value!.generateAuthHeader();
+    authHeader.value = header;
+    toast.success("Authentication header generated successfully");
+  } catch (err: any) {
+    console.error("Generate auth error:", err);
+    toast.error(`Failed to generate auth header: ${err.message}`);
+  } finally {
+    actionLoading.value = false;
+  }
+};
+
+const copyToClipboard = async (text: string) => {
+  try {
+    await navigator.clipboard.writeText(text);
+    toast.success("Copied to clipboard");
+  } catch (err) {
+    toast.error("Failed to copy to clipboard");
+  }
+};
+
+const navigateToJob = (jobId: string) => {
+  router.push(`/jobs/${jobId}`);
+};
+
+const getJobStateText = (state: number): string => {
+  switch (state) {
+    case 0: return 'QUEUED';
+    case 1: return 'RUNNING';
+    case 2: return 'COMPLETED';
+    case 3: return 'STOPPED';
+    default: return 'UNKNOWN';
+  }
+};
+
+const getJobStateClass = (state: number): string => {
+  switch (state) {
+    case 0: return 'is-info'; // QUEUED
+    case 1: return 'is-success'; // RUNNING
+    case 2: return 'is-dark'; // COMPLETED
+    case 3: return 'is-warning'; // STOPPED
+    default: return 'is-light'; // UNKNOWN
+  }
+};
+
+const getTaskStatusClass = (status: string): string => {
+  switch (status?.toUpperCase()) {
+    case 'PENDING': return 'is-info';
+    case 'RUNNING': return 'is-success';
+    case 'COMPLETED': return 'is-dark';
+    case 'FAILED': return 'is-danger';
+    case 'CANCELLED': return 'is-warning';
+    default: return 'is-light';
+  }
+};
+
+const loadTasks = async () => {
+  if (!deployment.value) {
+    console.log('loadTasks: No deployment loaded');
+    return;
+  }
+  
+  console.log('=== LOADING TASKS ===');
+  console.log('Deployment ID:', deployment.value.id);
+  
+  tasksLoading.value = true;
+  try {
+    const result = await deployment.value.getTasks();
+    console.log('Tasks API response:', result);
+    console.log('Number of tasks:', result.length);
+    if (result.length > 0) {
+      console.log('First task example:', result[0]);
+    }
+    tasks.value = result;
+  } catch (err: any) {
+    console.error("Load tasks error:", err);
+    console.error("Error details:", {
+      message: err.message,
+      stack: err.stack,
+      response: err.response,
+    });
+    toast.error(`Failed to load tasks: ${err.message}`);
+    tasks.value = [];
+  } finally {
+    tasksLoading.value = false;
+  }
 };
 
 // Watchers

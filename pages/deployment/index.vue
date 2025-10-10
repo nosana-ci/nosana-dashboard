@@ -143,14 +143,28 @@ const loadDeployments = async () => {
     const list = await nosana.value.deployments.list()
     console.log('Deployments loaded:', list)
     
-    deployments.value = list.map(d => ({
-      id: d.id,
-      name: d.name,
-      status: d.status,
-      jobs: d.jobs,
-      balance: { SOL: 0, NOS: 0 }
-    }))
+    // Fetch vault balances for each deployment
+    const deploymentsWithBalances = await Promise.all(
+      list.map(async (d) => {
+        let balance = { SOL: 0, NOS: 0 }
+        if (d.vault) {
+          try {
+            balance = await d.vault.getBalance()
+          } catch (err) {
+            console.warn(`Failed to fetch balance for deployment ${d.id}:`, err)
+          }
+        }
+        return {
+          id: d.id,
+          name: d.name,
+          status: d.status,
+          jobs: d.jobs,
+          balance
+        }
+      })
+    )
     
+    deployments.value = deploymentsWithBalances
     console.log('Processed deployments:', deployments.value)
   } catch (error: any) {
     console.error('Error loading deployments:', error)
