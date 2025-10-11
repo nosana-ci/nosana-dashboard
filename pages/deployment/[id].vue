@@ -58,6 +58,10 @@
               <p class="title is-6">{{ vaultBalance.NOS.toFixed(2) }} NOS</p>
             </div>
             <div class="column">
+              <p class="heading">Vault Balance (SOL)</p>
+              <p class="title is-6">{{ vaultBalance.SOL.toFixed(4) }} SOL</p>
+            </div>
+            <div class="column">
               <p class="heading">Strategy</p>
               <p class="title is-6">{{ deployment.strategy }}</p>
             </div>
