@@ -23,7 +23,7 @@
         </div>
       </div>
 
-      <table class="table is-fullwidth is-striped deployment-table">
+      <table class="table is-fullwidth deployment-table">
         <thead>
           <tr>
             <th>Deployment</th>
@@ -53,15 +53,12 @@
             @click="$router.push(`/deployment/${deployment.id}`)"
           >
             <td>
-              <div>
-                <div class="has-text-weight-semibold">{{ deployment.name }}</div>
-                <div class="is-size-7 has-text-grey is-family-monospace">{{ deployment.id }}</div>
-              </div>
+              {{ deployment.name }}
             </td>
-            <td class="is-vcentered">
+            <td>
               <span class="tag" :class="statusClass(deployment.status)">{{ deployment.status }}</span>
             </td>
-            <td class="is-vcentered">{{ deployment.jobs?.length || 0 }} Jobs</td>
+            <td>{{ deployment.jobs?.length || 0 }} Jobs</td>
             <td>
               <div>{{ (deployment.balance?.NOS || 0).toFixed(2) }} NOS</div>
               <div class="is-size-7 has-text-grey">{{ (deployment.balance?.SOL || 0).toFixed(2) }} SOL</div>
@@ -205,6 +202,13 @@ watch(connected, (newConnected) => {
 .box {
   .table {
     margin-left: 0;
+  }
+}
+
+.deployment-table {
+  td, th {
+    padding: 0.3rem 0.3rem !important;
+    vertical-align: middle;
   }
 }
 </style>
