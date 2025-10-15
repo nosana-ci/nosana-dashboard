@@ -13,7 +13,22 @@
 
     <div v-else class="columns is-multiline">
       <div class="column is-9-fullhd is-12">
-        <!-- Step 1: Choose model -->
+        <!-- Name your deployment -->
+        <div class="box has-background-white" style="border: none;">
+          <div class="field">
+            <div class="control">
+              <input 
+                class="input" 
+                type="text" 
+                v-model="deploymentName"
+                placeholder="Enter deployment name"
+                maxlength="50"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Choose model -->
         <DeployJobDefinition
           :selectedTemplate="selectedTemplate"
           v-model:jobDefinition="jobDefinition"
@@ -23,95 +38,9 @@
           @openReadme="openReadmeModal"
         />
 
-        <!-- Step 2: Configure Deployment -->
-        <h2 class="title pt-0 pb-0 mb-3 mt-5">2. Configure Deployment</h2>
-        <div class="box has-background-white" style="border: none">
-          <div class="columns">
-            <div class="column is-6">
-              <div class="field">
-                <label class="label">Deployment Name</label>
-                <div class="control">
-                  <input
-                    class="input"
-                    type="text"
-                    placeholder="Enter deployment name"
-                    v-model="deploymentName"
-                    maxlength="50"
-                  />
-                </div>
-              </div>
-            </div>
-            <div class="column is-3">
-              <div class="field">
-                <label class="label">Replicas</label>
-                <div class="control">
-                  <input
-                    class="input"
-                    type="number"
-                    min="1"
-                    max="100"
-                    v-model.number="replicas"
-                  />
-                </div>
-              </div>
-            </div>
-            <div class="column is-3">
-              <div class="field">
-                <label class="label">Timeout (hours)</label>
-                <div class="control">
-                  <input
-                    class="input"
-                    type="number"
-                    min="1"
-                    v-model.number="timeout"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="field">
-            <label class="label">Strategy</label>
-            <div class="control">
-              <div class="select is-fullwidth">
-                <select v-model="strategy">
-                  <option value="SIMPLE">Simple</option>
-                  <option value="SIMPLE-EXTEND">Simple Extend</option>
-                  <option value="SCHEDULED">Scheduled</option>
-                  <option value="INFINITE">Infinite</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          <div v-if="strategy === 'SCHEDULED'" class="field">
-            <label class="label">Schedule (Cron expression)</label>
-            <div class="control">
-              <input
-                v-model="schedule"
-                class="input"
-                type="text"
-                placeholder="0 0 * * * (daily at midnight)"
-                required
-              />
-            </div>
-          </div>
-        </div>
-
-        <!-- Step 3: Select GPU -->
-        <h2 class="title pt-0 pb-0 mb-3 mt-5">3. Select your GPU</h2>
-        <div class="nav-tabs is-flex">
-          <div
-            class="nav-tabs-item p-3 px-5 mr-3"
-            :class="{ 'is-active has-background-white': gpuTab === 'simple' }"
-            @click="gpuTab = 'simple'"
-          >
-            Device
-          </div>
-        </div>
-        <div class="box has-background-white" style="border: none">
+        <!-- Select GPU -->
+        <div class="box has-background-white" style="border: none; margin-top: 1.5rem;">
           <DeploySimpleGpuSelection
-            v-if="gpuTab === 'simple'"
             :markets="markets || null"
             :testgridMarkets="testgridMarkets"
             :loadingMarkets="loadingMarkets"
@@ -130,75 +59,62 @@
 
       <div class="column is-3-fullhd is-12">
         <div class="summary">
-          <h1 class="title is-4 mb-2">Summary</h1>
-          <div class="box has-background-white" style="border: none">
-            <div class="is-flex is-justify-content-space-between">
-              <h3 class="title is-4">Estimated Cost</h3>
-              <h3 class="title is-4" v-if="selectedMarket">
+          <div class="box has-background-white" style="border: none; padding: 1.5rem;">
+            <!-- Cost Summary -->
+            <div class="mb-4">
+              <p class="has-text-grey is-size-7 mb-2" style="text-transform: uppercase; letter-spacing: 0.5px; font-weight: 500;">Cost</p>
+              <h3 class="title is-3 mb-1" style="color: #202124;" v-if="selectedMarket">
                 ${{ (hourlyPrice * replicas * timeout).toFixed(3) }}
               </h3>
-              <p v-else>Select a GPU</p>
-            </div>
-
-            <div class="is-flex is-justify-content-space-between has-text-grey">
-              <p>Deployment:</p>
-              <p
-                v-if="deploymentName"
-                style="
-                  text-overflow: ellipsis;
-                  text-align: right;
-                  flex-basis: 70%;
-                "
-              >
-                {{ deploymentName }}
+              <p class="has-text-grey" v-else>Select a GPU to see pricing</p>
+              <p class="has-text-grey is-size-7" v-if="selectedMarket">
+                ${{ (hourlyPrice * replicas).toFixed(3) }}/hour
               </p>
-              <p v-else>-</p>
             </div>
 
-            <div class="is-flex is-justify-content-space-between has-text-grey">
-              <p>Model:</p>
-              <p
-                v-if="computedJobTitle"
-                style="
-                  text-overflow: ellipsis;
-                  text-align: right;
-                  flex-basis: 70%;
-                "
-              >
-                {{ computedJobTitle }}
-              </p>
-              <p v-else>-</p>
+            <hr style="background-color: #e8eaed; margin: 1.5rem 0;" />
+
+            <!-- Configuration Summary -->
+            <div class="mb-4">
+              <p class="has-text-grey is-size-7 mb-3" style="text-transform: uppercase; letter-spacing: 0.5px; font-weight: 500;">Configuration</p>
+              
+              <div class="mb-2" style="display: flex; justify-content: space-between; align-items: start;">
+                <span class="has-text-grey is-size-7">Deployment</span>
+                <span class="has-text-dark is-size-7" style="text-align: right; max-width: 60%; overflow: hidden; text-overflow: ellipsis;">
+                  {{ deploymentName || '-' }}
+                </span>
+              </div>
+              
+              <div class="mb-2" style="display: flex; justify-content: space-between; align-items: start;">
+                <span class="has-text-grey is-size-7">Model</span>
+                <span class="has-text-dark is-size-7" style="text-align: right; max-width: 60%; overflow: hidden; text-overflow: ellipsis;">
+                  {{ computedJobTitle || '-' }}
+                </span>
+              </div>
+              
+              <div style="display: flex; justify-content: space-between; align-items: start;">
+                <span class="has-text-grey is-size-7">GPU</span>
+                <span class="has-text-dark is-size-7" style="text-align: right; max-width: 60%; overflow: hidden; text-overflow: ellipsis;">
+                  {{ selectedMarket ? marketName : '-' }}
+                </span>
+              </div>
             </div>
 
-            <div class="is-flex is-justify-content-space-between has-text-grey">
-              <p>GPU</p>
-              <p v-if="selectedMarket">{{ marketName }}</p>
-              <p v-else>-</p>
-            </div>
+            <hr style="background-color: #e8eaed; margin: 1.5rem 0;" />
 
-            <div class="is-flex is-justify-content-space-between has-text-grey">
-              <p>Replicas</p>
-              <p>{{ replicas }}</p>
-            </div>
-
-            <div class="is-flex is-justify-content-space-between has-text-grey">
-              <p>Strategy</p>
-              <p>{{ strategy }}</p>
-            </div>
-
-            <div class="is-flex is-justify-content-space-between has-text-grey">
-              <p>Timeout (hours)</p>
-              <p>{{ timeout }}</p>
-            </div>
-
-            <hr />
-            <div class="is-flex is-justify-content-space-between">
-              <h3 class="title is-4 mb-0">Per Hour</h3>
-              <h3 class="title is-4" v-if="selectedMarket">
-                ${{ (hourlyPrice * replicas).toFixed(3) }}
-              </h3>
-            </div>
-            <hr />
+            <!-- Advanced Settings Button -->
+            <button 
+              class="button is-light is-fullwidth mb-4" 
+              @click="showDeploymentSettingsModal = true"
+              style="border: 1px solid #e8eaed;"
+            >
+              <span class="icon is-small">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z" fill="currentColor"/>
+                </svg>
+              </span>
+              <span>Advanced Deployment Settings</span>
+            </button>
 
             <ClientOnly>
               <!-- Show login button when not authenticated -->
@@ -308,6 +224,78 @@
       :templates="groupedTemplates || []"
       @select-template="selectTemplateFromModal"
     />
+
+    <!-- Advanced Deployment Settings Modal -->
+    <div class="modal" :class="{ 'is-active': showDeploymentSettingsModal }">
+      <div class="modal-background" @click="showDeploymentSettingsModal = false"></div>
+      <div class="modal-card" style="max-width: 500px;">
+        <header class="modal-card-head">
+          <p class="modal-card-title">Advanced Deployment Settings</p>
+          <button class="delete" aria-label="close" @click="showDeploymentSettingsModal = false"></button>
+        </header>
+        <section class="modal-card-body">
+          <div class="field">
+            <label class="label">Deployment Strategy</label>
+            <div class="control">
+              <div class="select is-fullwidth">
+                <select v-model="strategy">
+                  <option value="SIMPLE">Simple</option>
+                  <option value="SIMPLE-EXTEND">Simple Extend</option>
+                  <option value="SCHEDULED">Scheduled</option>
+                  <option value="INFINITE">Infinite</option>
+                </select>
+              </div>
+            </div>
+            <p class="help">Choose how your deployment manages job instances</p>
+          </div>
+          
+          <div v-if="strategy === 'SCHEDULED'" class="field">
+            <label class="label">Schedule (Cron Expression)</label>
+            <div class="control">
+              <input
+                v-model="schedule"
+                class="input"
+                type="text"
+                placeholder="0 0 * * * (daily at midnight)"
+                required
+              />
+            </div>
+            <p class="help">Define when jobs should run using cron syntax</p>
+          </div>
+          
+          <div class="field">
+            <label class="label">Replica Count</label>
+            <div class="control">
+              <input
+                class="input"
+                type="number"
+                v-model.number="replicas"
+                min="1"
+                max="100"
+              />
+            </div>
+            <p class="help">Number of parallel instances to run (1-100)</p>
+          </div>
+          
+          <div class="field">
+            <label class="label">Container Timeout (hours)</label>
+            <div class="control">
+              <input
+                class="input"
+                type="number"
+                v-model.number="timeout"
+                min="1"
+              />
+            </div>
+            <p class="help">Maximum runtime before auto-shutdown</p>
+          </div>
+        </section>
+        <footer class="modal-card-foot" style="justify-content: flex-end;">
+          <button class="button" @click="showDeploymentSettingsModal = false">Cancel</button>
+          <button class="button is-secondary" @click="showDeploymentSettingsModal = false">Save Settings</button>
+        </footer>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -395,7 +383,8 @@ const selectedMarket = ref<Market | null>(null);
 const selectedTemplate = ref<Template | null>(null);
 const timeout = ref(1);
 const isCreatingDeployment = ref(false);
-const showSettingsModal = ref(false);
+const showSettingsModal = ref(false); // For priority fee settings (TopBar)
+const showDeploymentSettingsModal = ref(false); // For deployment settings
 const showSwapModal = ref(false);
 const skipAutoSelection = ref(false);
 const isUpdatingFromJobDef = ref(false);
@@ -1044,15 +1033,13 @@ watch(showTemplateModal, (isOpen) => {
 }
 
 .summary {
-  position: fixed;
-  top: 23px;
-  right: 20px;
-  width: 20%;
-  max-width: 400px;
-  padding: 1 1rem 1rem;
+  position: sticky !important;
+  top: 1rem !important;
+  align-self: flex-start !important;
+  max-height: calc(100vh - 2rem) !important;
+  overflow-y: auto !important;
   z-index: 15;
   background: transparent;
-  margin-top: 78px;
 }
 
 .dark-mode .summary {
@@ -1063,11 +1050,10 @@ watch(showTemplateModal, (isOpen) => {
   .summary {
     position: static;
     top: auto;
-    right: auto;
-    width: 100%;
-    max-width: none;
+    align-self: auto;
+    max-height: none;
+    overflow-y: visible;
     margin-top: 1.5rem !important;
-    padding: 0;
     background: transparent;
   }
 }
@@ -1114,13 +1100,11 @@ watch(showTemplateModal, (isOpen) => {
 
 @media screen and (min-width: 1920px) {
   .summary {
-    position: static !important;
-    top: auto !important;
-    right: auto !important;
-    width: 100% !important;
-    max-width: none !important;
-    margin-top: 1.5rem !important;
-    padding: 0 !important;
+    position: sticky !important;
+    top: 1rem !important;
+    align-self: flex-start !important;
+    max-height: calc(100vh - 2rem) !important;
+    overflow-y: auto !important;
     background: transparent !important;
   }
 }

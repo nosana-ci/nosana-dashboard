@@ -13,7 +13,23 @@
     
     <div v-else class="columns is-multiline">
       <div class="column is-9-fullhd is-12">
-        <!-- Choose model -->
+        <!-- Step 1: Name your deployment -->
+        <h2 class="title is-5 mb-3">1. Name your deployment</h2>
+        <div class="box has-background-white" style="border: none;">
+          <div class="field">
+            <label class="label">Deployment name</label>
+            <div class="control">
+              <input 
+                class="input" 
+                type="text" 
+                placeholder="Enter deployment name"
+                maxlength="50"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: Choose model -->
         <DeployJobDefinition
           :selectedTemplate="selectedTemplate"
           v-model:jobDefinition="jobDefinition"
@@ -22,27 +38,10 @@
           @showTemplateModal="showTemplateModal = true"
           @openReadme="openReadmeModal"
         />
-        <!-- Define deployment -->
-        <h2 class="title pt-0 pb-0 mb-3 mt-5">2. Select your GPU</h2>
-        <div class="nav-tabs is-flex">
-          <div
-            class="nav-tabs-item p-3 px-5 mr-3"
-            :class="{ 'is-active has-background-white': gpuTab === 'simple' }"
-            @click="gpuTab = 'simple'"
-          >
-            Device
-          </div>
-          <div
-            class="nav-tabs-item p-3 px-5 mr-3"
-            :class="{ 'is-active has-background-white': gpuTab === 'advanced' }"
-            @click="gpuTab = 'advanced'"
-          >
-            Advanced Search
-          </div>
-        </div>
+        <!-- Step 3: Select GPU -->
+        <h2 class="title is-5 mb-3 mt-5">3. Select your GPU</h2>
         <div class="box has-background-white" style="border: none;">
           <DeploySimpleGpuSelection
-            v-if="gpuTab === 'simple'"
             :markets="markets || null"
             :testgridMarkets="testgridMarkets"
             :loadingMarkets="loadingMarkets"
@@ -55,23 +54,6 @@
             @selectedMarket="selectedMarket = $event"
             @update:activeFilter="activeFilter = $event"
             @update:gpuTypeCheckbox="gpuTypeCheckbox = $event"
-          />
-          <DeployAdvancedGpuSelection
-            v-else-if="gpuTab === 'advanced'"
-            :gpuFilters="gpuFilters"
-            :selectedGpuGroup="selectedGpuGroup"
-            :filterValues="filterValues"
-            :availableHosts="availableHosts"
-            :loadingHosts="loadingHosts"
-            :selectedHostAddress="selectedHostAddress"
-            :forceUpdateCounter="forceUpdateCounter"
-            :marketsData="testgridMarkets"
-            @update:selectedGpuGroup="selectedGpuGroup = $event"
-            @update:filterValues="filterValues = $event"
-            @update:selectedHostAddress="selectedHostAddress = $event"
-            @update:forceUpdateCounter="forceUpdateCounter = $event"
-            @selectedMarket="handleAdvancedMarketSelection"
-            @searchGpus="debouncedSearch"
           />
         </div>
       </div>
@@ -98,19 +80,50 @@
               <p v-if="selectedMarket">{{ marketName }}</p>
               <p v-else>-</p>
             </div>
-            <div class="mt-4 is-flex is-justify-content-space-between has-text-grey">
-              <p>Auto-shutdown time (hours)</p>
-              <div class="is-flex is-align-items-center">
+            <hr />
+            
+            <!-- Deployment Settings -->
+            <h3 class="title is-6 mt-4 mb-3">Deployment Settings</h3>
+            
+            <div class="field">
+              <label class="label is-small">Deployment strategy</label>
+              <div class="control">
+                <div class="select is-fullwidth is-small">
+                  <select v-model="deploymentStrategy">
+                    <option value="SIMPLE">Simple</option>
+                    <option value="ROLLING">Rolling</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            
+            <div class="field">
+              <label class="label is-small">Replica count</label>
+              <div class="control">
                 <input
-                  class="input"
+                  class="input is-small"
                   type="number"
-                  v-model="hours"
+                  v-model.number="replicaCount"
+                  min="1"
+                  max="10"
+                />
+              </div>
+              <p class="help is-size-7">Number of instances to run</p>
+            </div>
+            
+            <div class="field">
+              <label class="label is-small">Container timeout (hours)</label>
+              <div class="control">
+                <input
+                  class="input is-small"
+                  type="number"
+                  v-model.number="hours"
                   min="0"
                   max="500"
-                  style="width: 60px; height: 28px;"
+                  step="0.1"
                 />
-                <div class="ml-2"></div>
               </div>
+              <p class="help is-size-7">Auto-shutdown time</p>
             </div>
             <hr />
             <div class="is-flex is-justify-content-space-between">
@@ -320,6 +333,9 @@ const gpuTypeCheckbox = ref<string[]>(config.public.network === 'devnet' ? ["PRE
 const activeFilter = ref(config.public.network === 'devnet' ? "ALL" : "PREMIUM");
 const selectedMarket = ref<Market | null>(null);
 const selectedTemplate = ref<Template | null>(null);
+const deploymentName = ref<string>('');
+const deploymentStrategy = ref<string>('SIMPLE');
+const replicaCount = ref<number>(1);
 const hours = ref(1);
 const isCreatingDeployment = ref(false);
 const showSettingsModal = ref(false);

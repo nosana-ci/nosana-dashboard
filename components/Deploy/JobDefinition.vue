@@ -1,55 +1,63 @@
 <template>
   <div>
-    <h2 class="title pt-0 pb-0 mb-3">1. Define your model</h2>
     <div
       class="box has-background-white"
-      :style="{ overflowY: 'scroll', border: 'none', height: 'auto' }"
+      :style="{ overflowY: 'scroll', border: 'none', height: 'auto', marginTop: '1.5rem' }"
     >
       <div>
         <!-- START: New Template Info Box (above editor) -->
         <div class="px-3 pt-0 pb-2" style="width: 100%; display: flex;">
           <div class="is-flex is-align-items-start is-justify-content-space-between" style="width: 100%;">
-            <div v-if="selectedTemplate && selectedTemplate.id !== 'custom'" class="is-flex is-align-items-start">
-              <img 
-                v-if="selectedTemplate.icon || selectedTemplate.avatar_url"
-                :src="selectedTemplate.icon || selectedTemplate.avatar_url"
-                alt="Template Icon"
-                class="mr-2" 
-                style="height: 24px; width: 24px; border-radius: 4px; object-fit: contain; flex-shrink: 0; margin-top: 7px;"
-              />
-              <div>
+            <!-- Left side: Icon + Title + README button grouped together -->
+            <div class="is-flex is-align-items-start" style="gap: 0.5rem;">
+              <div v-if="selectedTemplate && selectedTemplate.id !== 'custom'" class="is-flex is-align-items-start">
+                <img 
+                  v-if="selectedTemplate.icon || selectedTemplate.avatar_url"
+                  :src="selectedTemplate.icon || selectedTemplate.avatar_url"
+                  alt="Template Icon"
+                  class="mr-2" 
+                  style="height: 24px; width: 24px; border-radius: 4px; object-fit: contain; flex-shrink: 0; margin-top: 7px;"
+                />
+                <div>
+                  <div class="is-flex is-align-items-center">
+                    <h3 class="is-size-5 has-text-weight-semibold has-text-black mb-0">
+                      {{ computedJobTitle }}
+                    </h3>
+                  </div>
+                  <p v-if="computedDockerImage" class="is-size-7 has-text-grey" style="line-height: 1; margin-top: 0; margin-bottom: 4px;">
+                    {{ computedDockerImage }}
+                  </p>
+                </div>
+              </div>
+              <div v-else>
                 <h3 class="is-size-5 has-text-weight-semibold has-text-black mb-0">
                   {{ computedJobTitle }}
                 </h3>
                 <p v-if="computedDockerImage" class="is-size-7 has-text-grey" style="line-height: 1; margin-top: 0; margin-bottom: 4px;">
                   {{ computedDockerImage }}
                 </p>
+                 <p v-else class="is-size-7 has-text-grey" style="line-height: 1; margin-top: 0;">
+                  Configure job in editor
+                </p>
+              </div>
+              <!-- README button placed next to title, vertically centered -->
+              <div
+                v-if="selectedTemplate && selectedTemplate.readme"
+                style="align-self: center;"
+              >
                 <button
-                    v-if="selectedTemplate && selectedTemplate.readme"
-                    class="button is-light is-small readme-button"
-                    @click="openReadmeModal(selectedTemplate.readme!)"
-                    title="View template documentation"
-                    style="margin-top: 2px;"
+                  class="button is-light is-small readme-button"
+                  @click="openReadmeModal(selectedTemplate.readme!)"
+                  title="View template documentation"
                 >
-                    <span class="icon is-small">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" fill="currentColor"/>
-                      </svg>
-                    </span>
-                    <span>README</span>
+                  <span class="icon is-small">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" fill="currentColor"/>
+                    </svg>
+                  </span>
+                  <span>README</span>
                 </button>
               </div>
-            </div>
-            <div v-else>
-              <h3 class="is-size-5 has-text-weight-semibold has-text-black mb-0">
-                {{ computedJobTitle }}
-              </h3>
-              <p v-if="computedDockerImage" class="is-size-7 has-text-grey" style="line-height: 1; margin-top: 0; margin-bottom: 4px;">
-                {{ computedDockerImage }}
-              </p>
-               <p v-else class="is-size-7 has-text-grey" style="line-height: 1; margin-top: 0;">
-                Configure job in editor
-              </p>
             </div>
             <div class="is-flex is-align-items-start" style="margin-top: 6px;">
               <!-- Select Template Button -->
@@ -65,52 +73,53 @@
                   </span>
                   <span>Select Template</span>
               </button>
-              <!-- New Collapse Button: Only shown when editor is EXPANDED -->
+              <!-- Edit Job Definition Button -->
               <button
-                  v-if="!isEditorCollapsed"
                   class="button is-outlined is-small action-button"
-                  @click="isEditorCollapsed = true"
-                  title="Collapse job definition" 
+                  @click="showEditorModal = true"
+                  title="Edit job definition" 
               >
                   <span class="icon is-small">
-                    <img src="~/assets/img/icons/arrow-collapse.svg" alt="Collapse" style="height: 16px; width: 16px;" />
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="currentColor"/>
+                    </svg>
                   </span>
-                  <span>Collapse</span>
+                  <span>Edit</span>
               </button>
             </div>
           </div>
         </div>
         <!-- END: New Template Info Box -->
-
-        <div class="columns builder-columns" style="margin-top: 0;">
-          <div class="column is-12">
-            <div
-              class="field full-height editor-wrapper"
-              @click="isEditorCollapsed ? (isEditorCollapsed = false) : undefined"
-              :class="{ 'is-clickable-to-expand': isEditorCollapsed }"
-            >
-              <div class="control full-height">
-                <JsonEditorVue 
-                    :validator="validator" 
-                    :class="{ 
-                      'jse-theme-dark': $colorMode.value === 'dark',
-                      'editor-collapsed': isEditorCollapsed
-                    }" 
-                    v-model="jobDefinition" 
-                    :mode="Mode.text" 
-                    :mainMenuBar="false" 
-                    :statusBar="false" 
-                    :stringified="false" 
-                    class="full-height-editor" 
-                    :style="{ height: isEditorCollapsed ? '150px' : 'auto' }" />
-              </div>
-              <div v-if="isEditorCollapsed" class="expand-indicator">
-                <span>Expand</span>
-                <img src="~/assets/img/icons/arrow-expand.svg" alt="Expand" style="height: 16px; width: 16px;" />
-              </div>
+      </div>
+    </div>
+    
+    <!-- Job Definition Editor Modal -->
+    <div class="modal" :class="{ 'is-active': showEditorModal }">
+      <div class="modal-background" @click="showEditorModal = false"></div>
+      <div class="modal-card" style="width: 90%; max-width: 1200px;">
+        <header class="modal-card-head">
+          <p class="modal-card-title">Edit Job Definition</p>
+          <button class="delete" aria-label="close" @click="showEditorModal = false"></button>
+        </header>
+        <section class="modal-card-body" style="min-height: 500px;">
+          <div class="field full-height">
+            <div class="control full-height">
+              <JsonEditorVue 
+                  :validator="validator" 
+                  :class="{ 'jse-theme-dark': $colorMode.value === 'dark' }" 
+                  v-model="jobDefinition" 
+                  :mode="Mode.text" 
+                  :mainMenuBar="false" 
+                  :statusBar="false" 
+                  :stringified="false" 
+                  style="height: 500px;" />
             </div>
           </div>
-        </div>
+        </section>
+        <footer class="modal-card-foot">
+          <button class="button is-success" @click="showEditorModal = false">Save changes</button>
+          <button class="button" @click="showEditorModal = false">Cancel</button>
+        </footer>
       </div>
     </div>
   </div>
@@ -140,6 +149,9 @@ const emit = defineEmits<{
 
 // Get props
 const props = defineProps<Props>();
+
+// Modal state
+const showEditorModal = ref(false);
 
 // Create reactive refs for two-way binding
 const isEditorCollapsed = computed({

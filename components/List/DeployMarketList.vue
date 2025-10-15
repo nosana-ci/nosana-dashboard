@@ -1,77 +1,51 @@
 <template>
-  <div class="table-container">
-    <table class="table is-fullwidth is-hoverable">
-      <thead>
-        <tr>
-          <th>GPU</th>
-          <th>Price</th>
-          <th>Availability</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-if="!filteredMarkets.length">
-          <td colspan="3">No GPUs available</td>
-        </tr>
-        <nuxt-link v-for="market in filteredMarkets" v-else :key="market.address.toString()"
-          :to="`/markets/${market.address.toString()}`" custom>
-          <template #default="{ navigate }">
-            <tr
-              class="is-clickable"
-              :class="{
-                'is-incompatible': !isMarketCompatible(market)
-              }"
-              @click="isMarketCompatible(market) && (select ? (selectedMarket = market) : navigate())">
-              <td class="py-2">
-                <div :class="{ 'has-tooltip-arrow': !isMarketCompatible(market) }"
-                     :data-tooltip="!isMarketCompatible(market) ? 'This GPU does not meet the required VRAM specifications for your job.' : null">
-                  <span class="market-select-indicator" 
-                        :class="{ 'selected': selectedMarket && selectedMarket.address.toString() === market.address.toString() }"></span>
-                  <img v-if="showLogo" src="~/assets/img/icons/nvidia.svg" alt="NVIDIA" class="gpu-logo" />
-                  <span>{{ getMarketName(market) }}</span>
-                </div>
-              </td>
-              <td class="py-3">
-                <span v-if="loadingStats">...</span>
-                <span v-else>
+  <div>
+    <div v-if="!filteredMarkets.length" class="has-text-centered py-5">
+      <p class="has-text-grey">No GPUs available</p>
+    </div>
+    <div v-else class="gpu-grid">
+      <nuxt-link v-for="market in filteredMarkets" :key="market.address.toString()"
+        :to="`/markets/${market.address.toString()}`" custom>
+        <template #default="{ navigate }">
+          <div
+            class="gpu-card"
+            :class="{
+              'is-selected': selectedMarket && selectedMarket.address.toString() === market.address.toString(),
+              'is-incompatible': !isMarketCompatible(market)
+            }"
+            :data-tooltip="!isMarketCompatible(market) ? 'This GPU does not meet the required VRAM specifications for your job.' : null"
+            @click="isMarketCompatible(market) && (select ? (selectedMarket = market) : navigate())"
+          >
+            <div class="gpu-card-header">
+              <img v-if="showLogo" src="~/assets/img/icons/nvidia.svg" alt="NVIDIA" class="gpu-logo" />
+              <h3 class="gpu-name">{{ getMarketName(market) }}</h3>
+            </div>
+            <div class="gpu-card-body">
+              <div class="gpu-info-row">
+                <span class="gpu-label">Price</span>
+                <span class="gpu-value">
+                  <span v-if="loadingStats">...</span>
                   <CurrentMarketPrice
+                    v-else
                     :marketAddressOrData="market"
                     :marketsData="testgridMarkets"
                     :decimalPlaces="3" />
                 </span>
-              </td>
-              <td class="py-3">
-                <span v-if="market.queueType === 1">
+              </div>
+              <div class="gpu-info-row">
+                <span class="gpu-label">Available</span>
+                <span class="gpu-value">
                   <span v-if="loadingRunningJobs">...</span>
-                  <template v-else>
-                    <span>
-                      {{ market.queue.length }} /
-                      <span v-if="runningJobs">
-                        {{ market.queue.length + getRunningJobCount(market) }}
-                      </span>
-                      <span v-else>?</span>
-                    </span>
-                    <span> hosts</span>
-                  </template>
-                </span>
-                <span v-else>
-                  <span v-if="loadingRunningJobs">0 / ...</span>
                   <span v-else>
-                    0 /
-                    <span v-if="runningJobs">
-                      {{ getRunningJobCount(market) }}
-                    </span>
-                    <span v-else>?</span>
-                    <span> hosts</span>
+                    {{ market.queue.length }}
                   </span>
-                  <br>
-                  <small v-if="market.queueType === 0">{{ market.queue.length }} deployments queued</small>
                 </span>
-              </td>
-            </tr>
-          </template>
-        </nuxt-link>
-      </tbody>
-    </table>
+              </div>
+            </div>
+          </div>
+        </template>
+      </nuxt-link>
+    </div>
   </div>
 </template>
 
@@ -535,5 +509,122 @@ td {
 
 .warning-icon {
   filter: invert(73%) sepia(45%) saturate(5600%) hue-rotate(359deg) brightness(101%) contrast(106%);
+}
+
+/* Grid layout styles */
+.gpu-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.gpu-card {
+  background: white;
+  border: 2px solid #e8eaed;
+  border-radius: 8px;
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.gpu-card:hover {
+  border-color: #10E80C;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.gpu-card.is-selected {
+  border-color: #10E80C;
+  background: #f0fff0;
+  box-shadow: 0 2px 8px rgba(16, 232, 12, 0.2);
+}
+
+.gpu-card.is-incompatible {
+  opacity: 0.5;
+  cursor: not-allowed;
+  border-color: #e0e0e0;
+}
+
+.gpu-card.is-incompatible:hover {
+  border-color: #e0e0e0;
+  box-shadow: none;
+}
+
+.gpu-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #e8eaed;
+}
+
+.gpu-logo {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+
+.gpu-name {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #202124;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gpu-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.gpu-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.875rem;
+}
+
+.gpu-label {
+  color: #5f6368;
+  font-weight: 500;
+}
+
+.gpu-value {
+  color: #202124;
+  text-align: right;
+}
+
+/* Dark mode styles */
+.dark-mode .gpu-card {
+  background: #2c2c2c;
+  border-color: #3a3a3a;
+}
+
+.dark-mode .gpu-card:hover {
+  border-color: #10E80C;
+}
+
+.dark-mode .gpu-card.is-selected {
+  background: #0d2e0c;
+  border-color: #10E80C;
+}
+
+.dark-mode .gpu-card-header {
+  border-bottom-color: #3a3a3a;
+}
+
+.dark-mode .gpu-name {
+  color: #e8eaed;
+}
+
+.dark-mode .gpu-label {
+  color: #9e9e9e;
+}
+
+.dark-mode .gpu-value {
+  color: #e8eaed;
 }
 </style>
