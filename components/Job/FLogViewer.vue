@@ -36,6 +36,27 @@
         </progress>
       </div>
 
+      <!-- Resource progress bars (for process-bar-* messages like model downloads) -->
+      <div
+        v-for="bar in activeResourceProgressBars"
+        :key="bar.id"
+        class="progress-bar-container mb-4"
+      >
+        <div class="progress-text is-success">
+          {{ bar.status }} | {{ bar.current.toFixed(2) }} GB / {{ bar.total.toFixed(2) }} GB
+          <span v-if="bar.metadata && bar.metadata.totalFiles">
+            | {{ bar.metadata.totalFiles }} {{ bar.metadata.totalFiles === 1 ? 'file' : 'files' }}
+          </span>
+        </div>
+        <progress
+          class="progress is-success"
+          :value="bar.current"
+          :max="bar.total"
+        >
+          {{ ((bar.current / bar.total) * 100).toFixed(0) }}%
+        </progress>
+      </div>
+
       <div class="log-bottom-spacer"></div>
     </div>
   </div>
@@ -53,6 +74,7 @@
     logs: LogEntry[];
     fullscreen?: boolean;
     progressBars?: Map<string, ProgressBar>;
+    resourceProgressBars?: Map<string, any>;
   }
   
   const props = defineProps<Props>();
@@ -61,6 +83,10 @@
 
   const activeProgressBars = computed(() =>
     Array.from((props.progressBars || new Map()).values()).filter((b) => !b.completed)
+  );
+  
+  const activeResourceProgressBars = computed(() =>
+    Array.from((props.resourceProgressBars || new Map()).values()).filter((b) => !b.completed)
   );
   
   function scrollToBottom(force: boolean = false) {
@@ -75,6 +101,7 @@
   watch([
     () => props.logs.length,
     () => activeProgressBars.value.length,
+    () => activeResourceProgressBars.value.length,
   ], () => scrollToBottom());
   
   function handleScroll() {

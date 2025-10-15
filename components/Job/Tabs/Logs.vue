@@ -21,6 +21,7 @@
                 :logs="activeLogs || []"
                 :isConnecting="isConnecting"
                 :progressBars="parallelProgressBars"
+                :resourceProgressBars="resourceProgressBars"
                 ref="containerLogViewer"
               />
             </div>
@@ -53,6 +54,7 @@
             :isConnecting="isConnecting"
             :fullscreen="true"
             :progressBars="parallelProgressBars"
+            :resourceProgressBars="resourceProgressBars"
             ref="fullscreenLogViewerInstance"
             class="fullscreen-viewer" 
           />

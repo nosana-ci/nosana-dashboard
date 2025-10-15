@@ -458,7 +458,7 @@
           :systemLogs="[]"
           :containerLogs="[]"
           :progressBars="getFlogProgressBars()"
-          :resourceProgressBars="new Map()"
+          :resourceProgressBars="flogResourceBarsRef"
           :showChatTab="isChatServiceReady"
           :chatServiceUrl="chatServiceUrl"
           :chatApiConfig="chatApiConfig"
