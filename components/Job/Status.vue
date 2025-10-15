@@ -1,6 +1,6 @@
 <template>
   <div v-if="!imageOnly" class="tag is-outlined is-light" :class="{
-    'is-success': statusString === 'SUCCESS',
+    'is-success': statusString === 'SUCCESS' || statusString === 'COMPLETED',
     'is-info': statusString === 'RUNNING' || statusString === 'PENDING',
     'is-warning': statusString === 'QUEUED',
     'is-danger': statusString === 'FAILED' || statusString === 'YAML_ERROR',

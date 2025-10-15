@@ -218,7 +218,6 @@ const isDarkMode = computed(() =>
 
   @media screen and (max-width: 450px) {
     flex-direction: column;
-    padding: 0.75rem;
   }
 }
 

@@ -5,29 +5,6 @@
       subtitle="Find information about and manage your deployment here."
     />
 
-    <NuxtLink
-      to="/deployment"
-      class="mt-3 mb-5 has-text-dark is-flex is-align-items-center"
-    >
-      <span class="icon is-small mr-1" aria-hidden="true">
-        <svg
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M15 18L9 12L15 6"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-        </svg>
-      </span>
-      <span>Back</span>
-    </NuxtLink>
     <Loader v-if="loading" />
     <div v-else-if="error" class="box">
       <div class="notification is-danger">
@@ -40,118 +17,223 @@
       <div class="box" style="padding: 0; overflow: hidden;">
         <!-- Header Section -->
         <div style="padding: 1.5rem; border-bottom: 1px solid #dbdbdb;">
-        <div class="is-flex is-justify-content-space-between is-align-items-center mb-4">
-          <div>
-            <h1 class="title is-3 mb-2">{{ deployment.name }}</h1>
-            <p class="is-size-7 has-text-grey is-family-monospace">{{ deployment.id }}</p>
-          </div>
-          <div class="tag is-outlined is-light" :class="statusClass(deployment.status)">
-            <img class="mr-2" :src="`/img/icons/status/${getStatusIcon(deployment.status)}.svg`" />
-            <span>{{ deployment.status }}</span>
-          </div>
-        </div>
-
-          <!-- Quick Stats -->
-          <div class="columns is-mobile mb-0">
-            <div class="column">
-              <p class="heading">Vault Balance</p>
-              <p class="title is-6">{{ vaultBalance.NOS.toFixed(2) }} NOS</p>
+          <div class="is-flex is-justify-content-space-between is-align-items-center">
+            <div class="is-flex is-align-items-center">
+              <NuxtLink to="/account/deployer" class="button is-ghost" style="padding: 0.25rem; margin-right: 1rem;">
+                <span class="icon is-small">
+                  <img src="/assets/img/icons/arrow-up.svg" style="width: 14px; height: 14px; transform: rotate(-90deg);" />
+                </span>
+              </NuxtLink>
+              <div>
+                <h1 class="title is-4" style="font-weight: 400; margin: 0;">{{ deployment.name }}</h1>
+              </div>
+              <div class="tag is-outlined is-light" style="margin-left: 2rem;" :class="statusClass(deployment.status)">
+                <img class="mr-2" :src="`/img/icons/status/${getStatusIcon(deployment.status)}.svg`" />
+                <span>{{ deployment.status }}</span>
+              </div>
             </div>
-            <div class="column">
-              <p class="heading">Vault Balance (SOL)</p>
-              <p class="title is-6">{{ vaultBalance.SOL.toFixed(4) }} SOL</p>
-            </div>
-            <div class="column">
-              <p class="heading">Strategy</p>
-              <p class="title is-6">{{ deployment.strategy }}</p>
-            </div>
-            <div class="column">
-              <p class="heading">Replicas</p>
-              <p class="title is-6">{{ deployment.replicas }}</p>
-            </div>
-            <div class="column">
-              <p class="heading">Timeout</p>
-              <p class="title is-6">{{ Math.floor(deployment.timeout / 3600) }}h</p>
+            <!-- Tabs -->
+            <div class="deployment-tabs">
+              <button 
+                v-for="tab in ['overview', 'events', 'logs', 'job-definition', 'actions']"
+                :key="tab"
+                @click="activeTab = tab"
+                :class="{ 'is-active': activeTab === tab }"
+                class="tab-button"
+              >
+                {{ tab === 'job-definition' ? 'Definition' : tab.charAt(0).toUpperCase() + tab.slice(1) }}
+              </button>
             </div>
           </div>
-        </div>
-
-        <!-- Tabs -->
-        <div class="tabs" style="margin-bottom: 0;">
-          <ul>
-            <li :class="{ 'is-active': activeTab === 'overview' }">
-              <a @click="activeTab = 'overview'">Overview</a>
-            </li>
-            <li :class="{ 'is-active': activeTab === 'actions' }">
-              <a @click="activeTab = 'actions'">Control</a>
-            </li>
-            <li :class="{ 'is-active': activeTab === 'events' }">
-              <a @click="activeTab = 'events'">Events</a>
-            </li>
-            <li :class="{ 'is-active': activeTab === 'job-definition' }">
-              <a @click="activeTab = 'job-definition'">Definition</a>
-            </li>
-          </ul>
         </div>
         
         <!-- Tab Content -->
         <div style="padding: 1.5rem;">
         <!-- Overview Tab -->
         <div v-if="activeTab === 'overview'">
-
-          <!-- Endpoints -->
-          <div v-if="deploymentEndpoints.length > 0" class="mb-5">
-            <h2 class="title is-5 mb-3">Endpoints</h2>
-            <div v-for="endpoint in deploymentEndpoints" :key="`${endpoint.opId}-${endpoint.port}`" class="notification is-light">
-              <div class="is-flex is-justify-content-space-between is-align-items-center">
-                <div>
-                  <p class="has-text-weight-semibold mb-1">{{ endpoint.opId }} <span class="tag is-white is-small ml-2">Port {{ endpoint.port }}</span></p>
-                  <a :href="endpoint.url" target="_blank" class="is-size-7 has-text-link">
-                    {{ endpoint.url }} ↗
-                  </a>
-                </div>
-                <span class="tag" :class="endpoint.statusClass">{{ endpoint.status }}</span>
-              </div>
+          
+          <!-- Deployment Details Section -->
+          <div class="mb-5">
+            <h2 class="title is-5 has-text-weight-normal mb-3" style="color: #202124;">Deployment details</h2>
+            <div class="box" style="padding: 0;">
+              <table class="table is-fullwidth" style="margin: 0;">
+                <tbody>
+                  <tr>
+                    <td style="width: 250px; color: #5f6368; border-bottom: 1px solid #e8eaed; padding: 12px 16px; font-weight: 500;">
+                      Deployment strategy
+                    </td>
+                    <td style="border-bottom: 1px solid #e8eaed; padding: 12px 16px;">{{ deployment.strategy }}</td>
+                  </tr>
+                  <tr>
+                    <td style="color: #5f6368; border-bottom: 1px solid #e8eaed; padding: 12px 16px; font-weight: 500;">
+                      Replicas count
+                    </td>
+                    <td style="border-bottom: 1px solid #e8eaed; padding: 12px 16px;">{{ deployment.replicas }}</td>
+                  </tr>
+                  <tr>
+                    <td style="color: #5f6368; border-bottom: 1px solid #e8eaed; padding: 12px 16px; font-weight: 500;">
+                      Always
+                    </td>
+                    <td style="border-bottom: 1px solid #e8eaed; padding: 12px 16px;">{{ deployment.always ? 'Yes' : 'No' }}</td>
+                  </tr>
+                  <tr>
+                    <td style="color: #5f6368; border-bottom: 1px solid #e8eaed; padding: 12px 16px; font-weight: 500;">
+                      Restart policy
+                    </td>
+                    <td style="border-bottom: 1px solid #e8eaed; padding: 12px 16px;">{{ deployment.restart || 'Never' }}</td>
+                  </tr>
+                  <tr>
+                    <td style="color: #5f6368; border-bottom: 1px solid #e8eaed; padding: 12px 16px; font-weight: 500;">
+                      Container creation timeout
+                    </td>
+                    <td style="border-bottom: 1px solid #e8eaed; padding: 12px 16px;">{{ Math.floor(deployment.timeout / 3600) }} hours</td>
+                  </tr>
+                  <tr>
+                    <td style="color: #5f6368; padding: 12px 16px; font-weight: 500;">
+                      Created on
+                    </td>
+                    <td style="padding: 12px 16px;">{{ formatDate(deployment.created_at) }}</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
 
-          <!-- Jobs -->
+          <!-- Endpoints Section -->
+          <div v-if="deploymentEndpoints.length > 0" class="mb-5">
+            <h2 class="title is-5 has-text-weight-normal mb-3" style="color: #202124;">Endpoints</h2>
+            <div class="box" style="padding: 0;">
+              <table class="table is-fullwidth" style="margin: 0;">
+                <thead>
+                  <tr style="background: #f8f9fa;">
+                    <th style="color: #5f6368; font-weight: 500; padding: 12px 16px; border-bottom: 1px solid #e8eaed;">Operation</th>
+                    <th style="color: #5f6368; font-weight: 500; padding: 12px 16px; border-bottom: 1px solid #e8eaed;">Port</th>
+                    <th style="color: #5f6368; font-weight: 500; padding: 12px 16px; border-bottom: 1px solid #e8eaed;">URL</th>
+                    <th style="color: #5f6368; font-weight: 500; padding: 12px 16px; border-bottom: 1px solid #e8eaed;">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="endpoint in deploymentEndpoints" :key="`${endpoint.opId}-${endpoint.port}`">
+                    <td style="padding: 12px 16px; border-bottom: 1px solid #e8eaed;">{{ endpoint.opId }}</td>
+                    <td style="padding: 12px 16px; border-bottom: 1px solid #e8eaed;">{{ endpoint.port }}</td>
+                    <td style="padding: 12px 16px; border-bottom: 1px solid #e8eaed;">
+                      <a :href="endpoint.url" target="_blank" class="has-text-link">{{ endpoint.url }} ↗</a>
+                    </td>
+                    <td style="padding: 12px 16px; border-bottom: 1px solid #e8eaed;">
+                      <span class="tag is-small" :class="endpoint.statusClass">{{ endpoint.status }}</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Job Activity Section -->
           <div>
-            <h2 class="title is-5 mb-3">Jobs <span class="tag is-light">{{ activeJobs.length }}</span></h2>
+            <h2 class="title is-5 has-text-weight-normal mb-3" style="color: #202124;">Job activity</h2>
             
-            <div v-if="activeJobs.length === 0" class="notification is-light has-text-centered">
-              <p class="has-text-grey">
-                <span v-if="deployment.status === 'DRAFT'">Start deployment to create jobs</span>
-                <span v-else>No jobs yet</span>
-              </p>
+            <!-- Job Activity Tabs -->
+            <div class="tabs is-small mb-0">
+              <ul>
+                <li :class="{ 'is-active': jobActivityTab === 'running' }">
+                  <a @click="jobActivityTab = 'running'">Running <span class="tag is-light is-small ml-2">{{ activeJobs.length }}</span></a>
+                </li>
+                <li :class="{ 'is-active': jobActivityTab === 'history' }">
+                  <a @click="jobActivityTab = 'history'">History <span class="tag is-light is-small ml-2">{{ historicalJobs.length }}</span></a>
+                </li>
+              </ul>
             </div>
             
-            <div v-else>
-              <div 
-                v-for="job in activeJobs" 
-                :key="job.job" 
-                class="notification is-light is-clickable mb-2"
-                @click="navigateToJob(job.job)"
-                style="cursor: pointer;"
-              >
-                <div class="is-flex is-justify-content-space-between is-align-items-center">
-                  <div class="is-flex-grow-1">
-                    <div class="is-flex is-align-items-center mb-2">
-                      <JobStatus :status="job.state || 0" class="mr-2" />
-                      <p class="is-family-monospace is-size-7 has-text-grey">{{ job.job }}</p>
-                    </div>
-                    <p class="is-size-7">{{ formatDate(job.created_at) }}</p>
-                  </div>
-                  <a
-                    :href="`https://solscan.io/tx/${job.tx}`"
-                    target="_blank"
-                    class="button is-small is-white"
-                    @click.stop
-                    title="View transaction"
-                  >
-                    TX ↗
-                  </a>
-                </div>
+            <!-- Running Jobs -->
+            <div v-if="jobActivityTab === 'running'">
+              <div v-if="activeJobs.length === 0" class="box has-text-centered" style="padding: 2rem;">
+                <p class="has-text-grey">
+                  <span v-if="deployment.status === 'DRAFT'">Start deployment to create jobs</span>
+                  <span v-else>No running jobs</span>
+                </p>
+              </div>
+              
+              <div v-else class="box" style="padding: 0;">
+                <table class="table is-fullwidth" style="margin: 0;">
+                  <thead>
+                  <tr style="background: #f8f9fa;">
+                    <th style="color: #5f6368; font-weight: 500; padding: 12px 16px; border-bottom: 1px solid #e8eaed;">Name</th>
+                    <th style="color: #5f6368; font-weight: 500; padding: 12px 16px; border-bottom: 1px solid #e8eaed;">Status</th>
+                    <th style="color: #5f6368; font-weight: 500; padding: 12px 16px; border-bottom: 1px solid #e8eaed;">Restarts</th>
+                    <th style="color: #5f6368; font-weight: 500; padding: 12px 16px; border-bottom: 1px solid #e8eaed;">Created on</th>
+                    <th style="color: #5f6368; font-weight: 500; padding: 12px 16px; border-bottom: 1px solid #e8eaed;"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      v-for="job in activeJobs"
+                      :key="job.job"
+                    >
+                      <td style="padding: 12px 16px; border-bottom: 1px solid #e8eaed;">
+                        <span class="is-family-monospace is-size-7">{{ job.job }}</span>
+                      </td>
+                      <td style="padding: 12px 16px; border-bottom: 1px solid #e8eaed;">
+                        <JobStatus :status="job.state || 0" />
+                      </td>
+                      <td style="padding: 12px 16px; border-bottom: 1px solid #e8eaed;">0</td>
+                      <td style="padding: 12px 16px; border-bottom: 1px solid #e8eaed;">{{ formatDate(job.created_at) }}</td>
+                      <td style="padding: 12px 16px; border-bottom: 1px solid #e8eaed;">
+                        <a
+                          :href="`/jobs/${job.job}`"
+                          target="_blank"
+                          style="color: #1967D2; text-decoration: none;"
+                        >
+                          View job ↗
+                        </a>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            
+            <!-- Historical Jobs -->
+            <div v-if="jobActivityTab === 'history'">
+              <div v-if="historicalJobs.length === 0" class="box has-text-centered" style="padding: 2rem;">
+                <p class="has-text-grey">No completed jobs yet</p>
+              </div>
+              
+              <div v-else class="box" style="padding: 0;">
+                <table class="table is-fullwidth" style="margin: 0;">
+                  <thead>
+                  <tr style="background: #f8f9fa;">
+                    <th style="color: #5f6368; font-weight: 500; padding: 12px 16px; border-bottom: 1px solid #e8eaed;">Name</th>
+                    <th style="color: #5f6368; font-weight: 500; padding: 12px 16px; border-bottom: 1px solid #e8eaed;">Status</th>
+                    <th style="color: #5f6368; font-weight: 500; padding: 12px 16px; border-bottom: 1px solid #e8eaed;">Restarts</th>
+                    <th style="color: #5f6368; font-weight: 500; padding: 12px 16px; border-bottom: 1px solid #e8eaed;">Created on</th>
+                    <th style="color: #5f6368; font-weight: 500; padding: 12px 16px; border-bottom: 1px solid #e8eaed;"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      v-for="job in historicalJobs"
+                      :key="job.job"
+                    >
+                      <td style="padding: 12px 16px; border-bottom: 1px solid #e8eaed;">
+                        <span class="is-family-monospace is-size-7">{{ job.job }}</span>
+                      </td>
+                      <td style="padding: 12px 16px; border-bottom: 1px solid #e8eaed;">
+                        <JobStatus :status="job.state || 0" />
+                      </td>
+                      <td style="padding: 12px 16px; border-bottom: 1px solid #e8eaed;">0</td>
+                      <td style="padding: 12px 16px; border-bottom: 1px solid #e8eaed;">{{ formatDate(job.created_at) }}</td>
+                      <td style="padding: 12px 16px; border-bottom: 1px solid #e8eaed;">
+                        <a
+                          :href="`/jobs/${job.job}`"
+                          target="_blank"
+                          style="color: #1967D2; text-decoration: none;"
+                        >
+                          View job ↗
+                        </a>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
@@ -238,6 +320,14 @@
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+
+        <!-- Logs Tab -->
+        <div v-if="activeTab === 'logs'">
+          <h2 class="title is-4 mb-4">Deployment Logs</h2>
+          <div class="notification is-light has-text-centered">
+            <p class="has-text-grey">Deployment logs will be displayed here</p>
           </div>
         </div>
 
@@ -597,6 +687,7 @@ const loadingMarket = ref(false);
 const loading = ref(true);
 const error = ref<string | null>(null);
 const activeTab = ref("overview");
+const jobActivityTab = ref("running");
 const actionLoading = ref(false);
 const vaultBalance = ref<{ SOL: number; NOS: number }>({ SOL: 0, NOS: 0 });
 const topupNosAmount = ref<number>(0);
@@ -642,7 +733,7 @@ const statusClass = (status: string) => {
     case "ERROR":
       return "is-danger";
     case "STOPPED":
-      return "is-dark";
+      return "is-stopped";
     case "DRAFT":
       return "is-light";
     case "STARTING":
@@ -862,16 +953,25 @@ const jobStates = ref<Record<string, number>>({});
 const activeJobs = computed((): DeploymentJob[] => {
   const jobs = (deployment.value?.jobs as DeploymentJob[]) || [];
   // Enrich jobs with fetched states and reverse to show most recent first
-  return jobs.map(job => ({
+  const enrichedJobs = jobs.map(job => ({
     ...job,
     state: jobStates.value[job.job] ?? 0
   })).reverse();
+  
+  // Filter for running jobs (states: QUEUED=0, RUNNING=1)
+  return enrichedJobs.filter(job => job.state === 0 || job.state === 1);
 });
 
 const historicalJobs = computed((): DeploymentJob[] => {
-  // Historical jobs would need to be fetched separately or filtered by date
-  // For now, empty since deployment.jobs doesn't include state
-  return [];
+  const jobs = (deployment.value?.jobs as DeploymentJob[]) || [];
+  // Enrich jobs with fetched states and reverse to show most recent first
+  const enrichedJobs = jobs.map(job => ({
+    ...job,
+    state: jobStates.value[job.job] ?? 0
+  })).reverse();
+  
+  // Filter for completed/stopped jobs (states: DONE=2, STOPPED=3, TIMEOUT=4, ERROR=5)
+  return enrichedJobs.filter(job => job.state >= 2);
 });
 
 // Deployment endpoints - use API-provided endpoints
@@ -1242,6 +1342,71 @@ useHead({
 
   .box {
     border-left: 4px solid transparent;
+  }
+}
+
+.deployment-tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.tab-button {
+  background: white;
+  border: 1px solid #e8eaed;
+  color: #5f6368;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #f8f9fa;
+  }
+
+  &.is-active {
+    background: #363636;
+    color: white;
+    border-color: #363636;
+  }
+}
+
+.dark-mode .tab-button {
+  background: #2a2a2a;
+  border-color: #404040;
+  color: #e0e0e0;
+
+  &:hover {
+    background: #333333;
+  }
+
+  &.is-active {
+    background: #f5f5f5;
+    color: #1a1a1a;
+    border-color: #f5f5f5;
+  }
+}
+
+.tag.is-stopped {
+  background-color: #f8f9fa !important;
+  border-color: #dee2e6 !important;
+  color: #6c757d !important;
+  
+  img {
+    width: 12px !important;
+    height: 12px !important;
+  }
+}
+
+.dark-mode .tag.is-stopped {
+  background-color: #2c2c2c !important;
+  border-color: #3a3a3a !important;
+  color: #9e9e9e !important;
+  
+  img {
+    width: 12px !important;
+    height: 12px !important;
   }
 }
 </style>
