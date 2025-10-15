@@ -394,24 +394,25 @@ const getNodeUrl = () => {
 };
 
 const buildOperations = () => {
-  if (!jobInfo.value) {
-    loading.value = true;
-    return;
-  }
-  
   try {
     const ops: Operation[] = [];
-    const jobDefinition = jobInfo.value.jobDefinition;
-    const endpointsData = jobInfo.value.endpoints?.urls || {};
     
+    // Use jobInfo when available
+    const jobDefinition = jobInfo.value?.jobDefinition ?? (props.job?.jobDefinition || null);
+    const endpointsData = jobInfo.value?.endpoints?.urls || {};
+    
+    // Derive operation statuses from jobInfo first, then fall back to completed IPFS results
     let operationStatuses: Record<string, string> = {};
-    
-    if (jobInfo.value.operations?.all) {
+    if (jobInfo.value?.operations?.all) {
       operationStatuses = jobInfo.value.operations.all;
-    } else if (jobInfo.value.operations?.opStates) {
+    } else if (jobInfo.value?.operations?.opStates) {
       const opStates = jobInfo.value.operations.opStates;
       for (const opState of opStates) {
         operationStatuses[opState.operationId] = opState.status;
+      }
+    } else if (props.job?.results?.opStates && Array.isArray(props.job.results.opStates)) {
+      for (const opState of props.job.results.opStates) {
+        operationStatuses[opState.operationId] = opState.status || 'unknown';
       }
     }
     
@@ -462,6 +463,11 @@ const buildOperations = () => {
 watch(jobInfo, () => {
   buildOperations();
 }, { immediate: true });
+
+// Rebuild when job results arrive
+watch(() => [props.job?.results, props.job?.jobDefinition, props.job?.isCompleted], () => {
+  buildOperations();
+}, { immediate: true, deep: true });
 
 // Group operations by their group property
 const groupedOperations = computed(() => {

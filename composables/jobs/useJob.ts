@@ -358,19 +358,6 @@ export function useJob(jobId: string) {
       return;
     }
 
-    const setEndpointStatus = (
-      service: string,
-      status: "ONLINE" | "OFFLINE"
-    ) => {
-      const serviceObj = endpoints.value.get(service);
-      if (!serviceObj) return;
-      endpoints.value.set(service, {
-        ...serviceObj,
-        status,
-      });
-      endpoints.value = new Map(endpoints.value);
-    };
-
     const sdkServices = getJobExposedServices(job.jobDefinition, jobId);
     const metaByPort = new Map<number, { opId: string; opIndex: number; hasHealthCheck: boolean }>();
     for (const { port, opId, opIndex, hasHealthCheck } of sdkServices) {
