@@ -3,7 +3,7 @@
   <div class="card">
     <!-- New Compact Header Design -->
     <div class="compact-job-header">
-      <!-- Row 1: Title and All 3 Addresses -->
+      <!-- Row 1: Addresses -->
       <div class="header-row-1">
         <!-- Top Bar: Title and Actions -->
         <div class="header-top-bar">
