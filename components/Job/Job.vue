@@ -5,20 +5,61 @@
     <div class="compact-job-header">
       <!-- Row 1: Title and All 3 Addresses -->
       <div class="header-row-1">
-        <!-- Title Section (spans full width) -->
-        <div class="title-section">
-          <img
-            v-if="templateForJob && (templateForJob.icon || (templateForJob as any).avatar_url)"
-            :src="templateForJob.icon || (templateForJob as any).avatar_url"
-            alt="Template Icon"
-            class="template-icon"
-          />
+        <!-- Top Bar: Title and Actions -->
+        <div class="header-top-bar">
+          <!-- Title Section -->
+          <div class="title-section">
+            <img
+              v-if="templateForJob && (templateForJob.icon || (templateForJob as any).avatar_url)"
+              :src="templateForJob.icon || (templateForJob as any).avatar_url"
+              alt="Template Icon"
+              class="template-icon"
+            />
+          </div>
+
+          <!-- Actions Dropdown Widget -->
+          <div class="actions-widget actions-widget-mobile">
+            <button
+              @click="toggleActionsDropdown"
+              class="actions-dropdown-btn"
+            >
+              <span>Actions</span>
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+            
+            <div v-if="showActionsDropdown" class="actions-dropdown-menu">
+              <button
+                @click="handleActionClick(repostJob)"
+                class="dropdown-item"
+              >
+                Redeploy
+              </button>
+              <button
+                @click="handleActionClick(openExtendModal)"
+                :disabled="!props.job.isRunning || !props.isJobPoster"
+                :class="{ 'is-disabled': !props.job.isRunning || !props.isJobPoster, 'is-loading': loadingExtend }"
+                class="dropdown-item"
+              >
+                Extend
+              </button>
+              <button
+                @click="handleActionClick(stopJob)"
+                :disabled="!(props.job.isRunning || props.job.state === 0) || !props.isJobPoster"
+                :class="{ 'is-disabled': !(props.job.isRunning || props.job.state === 0) || !props.isJobPoster, 'is-loading': loading }"
+                class="dropdown-item"
+              >
+                {{ props.job.state === 0 ? 'Delist' : 'Stop' }}
+              </button>
+            </div>
+          </div>
         </div>
 
         <!-- Address Grid (aligned with Row 2) -->
         <div class="address-grid">
           <!-- Job address - Column 1 (aligns with GPU) -->
-          <div class="address-item" style="grid-column: 1;">
+          <div class="address-item address-item-1">
             <span class="address-label">Job address</span>
             <div class="address-value-row">
               <span class="status-dot"></span>
@@ -29,7 +70,7 @@
           </div>
           
           <!-- Deployer address - Column 3 (aligns with GPU Pool) -->
-          <div class="address-item" style="grid-column: 3;">
+          <div class="address-item address-item-3">
             <span class="address-label">Deployer address</span>
             <div class="address-value-row">
               <span class="status-dot"></span>
@@ -40,7 +81,7 @@
           </div>
           
           <!-- Host address - Column 5 (aligns with Duration) -->
-          <div class="address-item" style="grid-column: 5;">
+          <div class="address-item address-item-5">
             <span class="address-label">Host address</span>
             <div 
               v-if="props.job.node && props.job.node.toString() !== '11111111111111111111111111111111'"
@@ -58,8 +99,8 @@
             <span v-else class="address-value has-text-grey-light">Not assigned yet</span>
           </div>
 
-          <!-- Actions Dropdown Widget - Column 6 (aligns with Price) -->
-          <div class="actions-widget" style="grid-column: 6;">
+          <!-- Actions Dropdown Widget -->
+          <div class="actions-widget actions-widget-desktop address-item-6">
             <button
               @click="toggleActionsDropdown"
               class="actions-dropdown-btn"
@@ -166,7 +207,7 @@
 
        <!-- Row 3: Specs Grid -->
       <div class="header-row-3">
-        <div class="spec-grid-item" style="grid-column: 1;">
+        <div class="spec-grid-item">
           <span class="spec-grid-label">RAM</span>
           <span class="spec-grid-value">
             <span v-if="combinedSpecs?.ram">{{ combinedSpecs.ram }} GB</span>
@@ -174,7 +215,7 @@
             <span v-else class="has-text-grey-light">--</span>
           </span>
         </div>
-        <div class="spec-grid-item" style="grid-column: 2;">
+        <div class="spec-grid-item">
           <span class="spec-grid-label">DISK SPACE</span>
           <span class="spec-grid-value">
             <span v-if="combinedSpecs?.diskSpace">{{ combinedSpecs.diskSpace }} GB</span>
@@ -182,7 +223,7 @@
             <span v-else class="has-text-grey-light">--</span>
           </span>
         </div>
-        <div class="spec-grid-item" style="grid-column: 3;">
+        <div class="spec-grid-item">
           <span class="spec-grid-label">NVIDIA Driver</span>
           <span class="spec-grid-value">
             <span v-if="combinedSpecs?.nvmlVersion">{{ combinedSpecs.nvmlVersion }}</span>
@@ -190,7 +231,7 @@
             <span v-else class="has-text-grey-light">--</span>
           </span>
         </div>
-        <div class="spec-grid-item" style="grid-column: 4;">
+        <div class="spec-grid-item">
           <span class="spec-grid-label">CUDA Driver</span>
           <span class="spec-grid-value">
             <span v-if="combinedSpecs?.cudaVersion">{{ combinedSpecs.cudaVersion }}</span>
@@ -198,7 +239,7 @@
             <span v-else class="has-text-grey-light">--</span>
           </span>
         </div>
-        <div class="spec-grid-item" style="grid-column: 5;">
+        <div class="spec-grid-item">
           <span class="spec-grid-label">INTERNET SPEED</span>
           <span class="spec-grid-value">
             <span v-if="combinedSpecs?.download">{{ combinedSpecs.download }} Mbps</span>
@@ -206,7 +247,7 @@
             <span v-else class="has-text-grey-light">--</span>
           </span>
         </div>
-        <div class="spec-grid-item" style="grid-column: 6;">
+        <div class="spec-grid-item">
           <span class="spec-grid-label">STATUS</span>
           <span class="spec-grid-value">
             <JobStatus
@@ -1227,20 +1268,45 @@ onUnmounted(() => {
 .compact-job-header {
   background: #ffffff;
   border-radius: 8px;
-  padding: 0.5rem 1.5rem 1rem 1.5rem;
+  padding: 1rem 1.5rem 1rem 1.5rem;
   border: none;
   box-shadow: none;
+  
+  @media (max-width: 767px) {
+    padding: 0.75rem 1rem 0.75rem 1rem;
+  }
 }
 
 .header-row-1 {
   margin-bottom: 1.25rem;
+  
+  @media (max-width: 1023px) {
+    margin-bottom: 1rem;
+  }
+}
+
+.header-top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  gap: 1rem;
+  
+  @media (max-width: 1023px) {
+    margin-bottom: 0.75rem;
+  }
+  
+  @media (min-width: 1024px) {
+    margin-bottom: 0;
+  }
 }
 
 .title-section {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  margin-bottom: 1rem;
+  flex: 1;
+  min-width: 0;
   
   .template-icon {
     width: 32px;
@@ -1266,19 +1332,48 @@ onUnmounted(() => {
 
 .address-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: 1fr;
+  gap: 1rem;
   position: relative;
   
+  @media (min-width: 480px) {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.25rem;
+  }
+  
   @media (min-width: 768px) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  @media (min-width: 1024px) {
     grid-template-columns: repeat(6, 1fr);
+    gap: 1.5rem;
   }
   
   .address-item {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
-    overflow: visible;
+    min-width: 0;
+    overflow: hidden;
+  }
+  
+  @media (min-width: 1024px) {
+    .address-item-1 {
+      grid-column: 1;
+    }
+    
+    .address-item-3 {
+      grid-column: 3;
+    }
+    
+    .address-item-5 {
+      grid-column: 5;
+    }
+    
+    .address-item-6 {
+      grid-column: 6;
+    }
   }
   
   .address-label {
@@ -1292,6 +1387,10 @@ onUnmounted(() => {
     align-items: center;
     gap: 0.375rem;
     min-width: 0;
+    
+    @media (max-width: 1023px) {
+      gap: 0;
+    }
   }
   
   .status-dot {
@@ -1300,6 +1399,10 @@ onUnmounted(() => {
     border-radius: 50%;
     background: #10e80c;
     flex-shrink: 0;
+    
+    @media (max-width: 1023px) {
+      display: none;
+    }
   }
   
   .address-link {
@@ -1308,6 +1411,13 @@ onUnmounted(() => {
     text-decoration: none;
     font-weight: 500;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    
+    @media (max-width: 767px) {
+      font-size: 0.8125rem;
+    }
     
     &:hover {
       color: #10e80c;
@@ -1318,6 +1428,13 @@ onUnmounted(() => {
     font-size: 0.875rem;
     color: #1a1a1a;
     font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    
+    @media (max-width: 767px) {
+      font-size: 0.8125rem;
+    }
     
     &.has-text-grey-light {
       color: #b5b5b5;
@@ -1328,13 +1445,29 @@ onUnmounted(() => {
 .actions-widget {
   position: relative;
   display: flex;
-  justify-content: flex-end;
-  align-items: flex-start;
+  flex-shrink: 0;
+}
+
+.actions-widget-mobile {
+  @media (min-width: 1024px) {
+    display: none;
+  }
+}
+
+.actions-widget-desktop {
+  display: none;
+  
+  @media (min-width: 1024px) {
+    display: flex;
+    justify-content: flex-end;
+    align-items: flex-start;
+  }
 }
 
 .actions-dropdown-btn {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
   background: #ffffff;
   border: 1px solid #e0e0e0;
@@ -1346,6 +1479,13 @@ onUnmounted(() => {
   cursor: pointer;
   transition: all 0.2s ease;
   min-width: 100px;
+  white-space: nowrap;
+  
+  @media (max-width: 767px) {
+    font-size: 0.8125rem;
+    padding: 0.5rem 0.875rem;
+    min-width: 90px;
+  }
   
   &:hover {
     background: #f5f5f5;
@@ -1421,12 +1561,26 @@ onUnmounted(() => {
 
 .header-row-2 {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: 1fr;
+  gap: 1rem;
   margin-bottom: 1rem;
   
+  @media (min-width: 480px) {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.25rem;
+  }
+  
   @media (min-width: 768px) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  @media (min-width: 1024px) {
     grid-template-columns: repeat(6, 1fr);
+    gap: 1.5rem;
+  }
+  
+  @media (max-width: 767px) {
+    margin-bottom: 0.75rem;
   }
 }
 
@@ -1446,6 +1600,10 @@ onUnmounted(() => {
     font-size: 0.9375rem;
     color: #1a1a1a;
     font-weight: 600;
+    
+    @media (max-width: 767px) {
+      font-size: 0.875rem;
+    }
     
     .market-link {
       color: #1a1a1a;
@@ -1475,11 +1633,21 @@ onUnmounted(() => {
 
 .header-row-3 {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  
+  @media (min-width: 480px) {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.25rem;
+  }
   
   @media (min-width: 768px) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  @media (min-width: 1024px) {
     grid-template-columns: repeat(6, 1fr);
+    gap: 1.5rem;
   }
 }
 
@@ -1501,6 +1669,10 @@ onUnmounted(() => {
     color: #1a1a1a;
     font-weight: 700;
     line-height: 1.2;
+    
+    @media (max-width: 767px) {
+      font-size: 1rem;
+    }
     
     // Ensure JobPrice component aligns properly
     :deep(.job-price) {
