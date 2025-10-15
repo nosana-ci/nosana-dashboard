@@ -388,6 +388,8 @@ export function useFLogs(
     connectionEstablished,
     progressBars,
     resourceProgressBars,
+    logsByOp,
+    systemLogs,
   };
 }
 

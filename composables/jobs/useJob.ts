@@ -6,6 +6,8 @@ import {
 } from "@nosana/sdk";
 import { useToast } from "vue-toastification";
 import { useWallet } from "solana-wallets-vue";
+import { EventSourcePolyfill } from "event-source-polyfill";
+import type { JobInfo } from "~/composables/jobs/types";
 
 /**
  * Helper to convert job state to a number, normalizing "RUNNING", "QUEUED", etc.
@@ -50,7 +52,6 @@ export type Endpoints = Map<
     opId: string;
     hasHealthCheck: boolean;
     status: "ONLINE" | "OFFLINE" | "UNKNOWN";
-    setStatus: (status: "ONLINE" | "OFFLINE") => void;
   }
 >;
 
@@ -58,6 +59,7 @@ export function useJob(jobId: string) {
   const job = ref<UseJob | null>(null);
   const loading = ref(true);
   const endpoints = ref<Endpoints>(new Map() as Endpoints);
+  const jobInfo = ref<JobInfo | null>(null);
 
   const toast = useToast();
   const { nosana } = useSDK();
@@ -346,6 +348,9 @@ export function useJob(jobId: string) {
     }
   );
 
+  let eventSource: EventSourcePolyfill | null = null;
+  let currentNodeAddress: string | null = null;
+
   watch(job, (job: UseJob | null) => {
     if (job === null) return;
     if (!job.jobDefinition) {
@@ -373,66 +378,101 @@ export function useJob(jobId: string) {
     }
 
     const config = useRuntimeConfig();
-    const getEndpointsFromNode = async () => {
-      let usedNode = false;
+    const nodeAddress = (job.node as any)?.toString?.() || (job.node as any);
+    
+
+    if (eventSource && currentNodeAddress === nodeAddress && (eventSource as any).readyState !== 2) {
+      return;
+    }
+    
+    if (eventSource) {
+      eventSource.close();
+      eventSource = null;
+    }
+    
+    currentNodeAddress = nodeAddress;
+    
+    (async () => {
       try {
         const nodeAddress = (job.node as any)?.toString?.() || (job.node as any);
-          const authHeader = await ensureAuth();
-          const url = `https://${nodeAddress}.${config.public.nodeDomain}/job/${jobId}/endpoints`;
-          const resp: { urls?: Record<string, { type: string; port: number; url?: string }>; status?: "ONLINE" | "OFFLINE" } = await $fetch(url, {
-            method: 'GET',
-            headers: { authorization: authHeader },
-          });
-          if (resp && resp.urls) {
-            const statusFromNode = resp.status === 'ONLINE' ? 'ONLINE' : resp.status === 'OFFLINE' ? 'OFFLINE' : 'UNKNOWN';
-            for (const k of Object.keys(resp.urls)) {
-              const item = resp.urls[k];
-              if (!item || !item.url) continue;
-              const portNum = Number(item.port);
-              const meta = metaByPort.get(portNum);
-              const endpointUrl = item.url as string;
-              if (endpoints.value.has(endpointUrl)) continue;
-              endpoints.value.set(endpointUrl, {
-                status: statusFromNode as any,
-                url: endpointUrl,
-                opId: meta?.opId ?? '',
-                opIndex: meta?.opIndex ?? 0,
-                port: portNum,
-                hasHealthCheck: Boolean(meta?.hasHealthCheck),
-                setStatus: (s: "ONLINE" | "OFFLINE") => setEndpointStatus(endpointUrl, s),
-              });
+        const authHeader = await ensureAuth();
+        const sseUrl = `https://${nodeAddress}.${config.public.nodeDomain}/job/${jobId}/info`;
+        
+        eventSource = new EventSourcePolyfill(sseUrl, {
+          headers: {
+            'Authorization': authHeader
+          }
+        });
+        
+        const handleInfo = (event: MessageEvent) => {
+          try {
+            const info = JSON.parse(event.data) as JobInfo;
+            
+            jobInfo.value = info;
+            
+            if (info && info.endpoints && info.endpoints.urls) {
+              const newEndpoints = new Map(endpoints.value);
+              
+              for (const k of Object.keys(info.endpoints.urls)) {
+                const item = info.endpoints.urls[k];
+                if (!item || !item.url) continue;
+                const portNum = Number(item.port);
+                const meta = metaByPort.get(portNum);
+                const endpointUrl = item.url as string;
+                newEndpoints.set(endpointUrl, {
+                  status: item.status,
+                  url: endpointUrl,
+                  opId: item.opId || meta?.opId || '',
+                  opIndex: meta?.opIndex ?? 0,
+                  port: portNum,
+                  hasHealthCheck: Boolean(meta?.hasHealthCheck)
+                });
+              }
+              
+              endpoints.value = newEndpoints;
             }
-            usedNode = true;
-        }
-      } catch {}
-      return usedNode;
-    };
+            
+            loading.value = false;
+          } catch (parseError) {
+            console.error('Failed to parse SSE message:', parseError);
+          }
+        };
 
-    (async () => {
-      const haveNodeEndpoints = await getEndpointsFromNode();
-      if (!haveNodeEndpoints) {
-        // Fallback: original behavior for public endpoints only
-        for (const { hash, port, opId, opIndex, hasHealthCheck } of sdkServices) {
-          const url = `https://${hash}.${config.public.nodeDomain}`;
-          if (hash === 'private' || endpoints.value.has(url)) continue;
-          endpoints.value.set(url, {
-            status: 'UNKNOWN',
-            url,
-            opId,
-            opIndex,
-            port: Number(port),
-            hasHealthCheck,
-            setStatus: (s: "ONLINE" | "OFFLINE") => setEndpointStatus(url, s),
-          });
-        }
+        try {
+          (eventSource as any).addEventListener?.('message', handleInfo as any);
+        } catch {}
+        try {
+          (eventSource as any).addEventListener?.('flow:updated', handleInfo as any);
+        } catch {}
+        
+        eventSource.onerror = (error) => {
+          console.error('SSE connection error:', error);
+
+          loading.value = false;
+        };
+        
+        eventSource.onopen = () => {
+          console.log('SSE connection opened for job info');
+        };
+      } catch (error) {
+        console.error('Failed to create EventSource:', error);
+        loading.value = false;
       }
-      loading.value = false;
     })();
+  });
+
+  // Cleanup on unmount
+  onBeforeUnmount(() => {
+    if (eventSource) {
+      eventSource.close();
+      eventSource = null;
+    }
   });
 
   return {
     job,
     endpoints,
     loading,
+    jobInfo,
   };
 }

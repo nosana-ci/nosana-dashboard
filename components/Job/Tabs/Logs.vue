@@ -2,18 +2,6 @@
   <div class="logs-tab-container">
     <div class="logs-container" ref="logsContainerRef">
       <div class="logs-header" v-if="job.isRunning && isJobPoster && logConnectionEstablished">
-        <div class="parallel-controls">
-          <div class="tabs is-toggle is-small is-rounded log-type-switcher">
-            <ul>
-              <li :class="{ 'is-active': selectedOpId === null }">
-                <a @click="handleSelectOp(null)"><span>System</span></a>
-              </li>
-              <li v-for="op in opIds" :key="op" :class="{ 'is-active': selectedOpId === op }">
-                <a @click="handleSelectOp(op)"><span>{{ op }}</span></a>
-              </li>
-            </ul>
-          </div>
-        </div>
         <button
           v-if="job.isRunning && isJobPoster"
           class="button is-small is-text fullscreen-logs-button"
@@ -56,20 +44,8 @@
       </div>
     </div>
 
-    <FullscreenModal :isOpen="logModal.isOpen.value" title="Logs" @close="logModal.close">
+    <FullscreenModal :isOpen="logModal.isOpen.value" title="System Logs" @close="logModal.close">
       <div class="fullscreen-logs-wrapper">
-        <div class="logs-header">
-            <div class="tabs is-toggle is-small is-rounded log-type-switcher">
-              <ul>
-                <li :class="{ 'is-active': selectedOpId === null }">
-                  <a @click="handleSelectOp(null)"><span>System</span></a>
-                </li>
-                <li v-for="op in opIds" :key="op" :class="{ 'is-active': selectedOpId === op }">
-                  <a @click="handleSelectOp(op)"><span>{{ op }}</span></a>
-                </li>
-              </ul>
-            </div>
-        </div>
         <template v-if="job.isRunning">
           <FLogViewer
             v-if="isJobPoster"
@@ -193,9 +169,6 @@ defineExpose({
   scrollToBottomOnOpen
 });
 
-function handleSelectOp(opId: string | null) {
-  props.selectOp && props.selectOp(opId);
-}
 </script>
 
 <style lang="scss" scoped>
@@ -228,9 +201,16 @@ function handleSelectOp(opId: string | null) {
   padding-top: 0 !important;
 }
 
+.logs-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #363636;
+  padding: 0.5rem 1rem;
+}
+
 .logs-header {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   align-items: center;
   position: absolute;
   top: 0.2rem;

@@ -4,14 +4,17 @@
       <li v-if="canShowLogsTab" :class="{ 'is-active': activeTab === 'logs' }">
         <a @click.prevent="handleTabClick('logs')">Logs</a>
       </li>
-      <li v-if="hasResultsSection || (props.isConfidential && props.isJobPoster)" :class="{ 'is-active': activeTab === 'result' }">
+      <li v-if="props.job.isCompleted && (hasResultsSection || (props.isConfidential && props.isJobPoster))" :class="{ 'is-active': activeTab === 'result' }">
         <a @click.prevent="handleTabClick('result')">Result</a>
       </li>
       <li :class="{ 'is-active': activeTab === 'info' }">
         <a @click.prevent="handleTabClick('info')">Job Definition</a>
       </li>
-      <li :class="{ 'is-active': activeTab === 'details' }">
-        <a @click.prevent="handleTabClick('details')">More Details</a>
+      <li
+        v-if="props.isJobPoster"
+        :class="{ 'is-active': activeTab === 'groups' }"
+      >
+        <a @click.prevent="handleTabClick('groups')">Groups</a>
       </li>
       <li
         v-if="hasArtifacts"
@@ -107,95 +110,17 @@
     :job="props.job" 
     :chatServiceUrl="chatServiceUrl" 
     :chatApiConfig="chatApiConfig" />
-  <div v-if="activeTab === 'details'" class="details-tab-content">
-    <div class="columns is-multiline">
-      <!-- Started -->
-      <div v-if="props.job && props.job.timeStart" class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
-        <div class="quick-detail-item">
-          <span class="quick-detail-label">Started</span>
-          <span class="quick-detail-value">
-            {{ formatStartTime(props.job.timeStart) }}
-            <span class="has-text-grey is-size-7"> ({{ formatTimeAgo(props.job.timeStart) }})</span>
-          </span>
-        </div>
-      </div>
-
-      <!-- NVIDIA Driver -->
-      <div v-if="hostSpecs && hostSpecs.nvmlVersion" class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
-        <div class="quick-detail-item">
-          <span class="quick-detail-label">NVIDIA Driver</span>
-          <span class="quick-detail-value">{{ hostSpecs.nvmlVersion }}</span>
-        </div>
-      </div>
-
-      <!-- CUDA Version -->
-      <div v-if="hostSpecs && hostSpecs.cudaVersion" class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
-        <div class="quick-detail-item">
-          <span class="quick-detail-label">CUDA Version</span>
-          <span class="quick-detail-value">{{ hostSpecs.cudaVersion }}</span>
-        </div>
-      </div>
-
-      <!-- System Environment -->
-      <div v-if="hostSpecs && hostSpecs.systemEnvironment" class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
-        <div class="quick-detail-item">
-          <span class="quick-detail-label">System Environment</span>
-          <span class="quick-detail-value">{{ hostSpecs.systemEnvironment }}</span>
-        </div>
-      </div>
-
-      <!-- Solana address -->
-      <div v-if="props.job" class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
-        <div class="quick-detail-item">
-          <span class="quick-detail-label">Solana address</span>
-          <span class="quick-detail-value">
-            <a :href="`https://solscan.io/account/${props.job.address}`" target="_blank" class="address is-family-monospace">
-              {{ props.job.address }}
-            </a>
-          </span>
-        </div>
-      </div>
-
-      <!-- Host address -->
-      <div v-if="props.job && props.job.node && props.job.node.toString() !== '11111111111111111111111111111111'" class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
-        <div class="quick-detail-item">
-          <span class="quick-detail-label">Host address</span>
-          <span class="quick-detail-value">
-            <nuxt-link class="address is-family-monospace" :to="`/host/${props.job.node}`">
-              {{ props.job.node }}
-            </nuxt-link>
-          </span>
-        </div>
-      </div>
-
-      <!-- Deployer address -->
-      <div v-if="props.job" class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
-        <div class="quick-detail-item">
-          <span class="quick-detail-label">Deployer address</span>
-          <span class="quick-detail-value">
-            <nuxt-link class="address is-family-monospace" :to="`/deployer/${props.job.project}`">
-              {{ props.job.project }}
-            </nuxt-link>
-          </span>
-        </div>
-      </div>
-
-      <!-- GPU pool -->
-      <div v-if="props.job" class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
-        <div class="quick-detail-item">
-          <span class="quick-detail-label">GPU pool</span>
-          <span class="quick-detail-value">
-            <nuxt-link class="address is-family-monospace" :to="`/markets/${props.job.market}`">
-              <span v-if="apiMarkets && apiMarkets.find((tgm: any) => tgm.address === props.job.market)">
-                {{ apiMarkets.find((tgm: any) => tgm.address === props.job.market)?.name || props.job.market }}
-              </span>
-              <span v-else>{{ props.job.market }}</span>
-            </nuxt-link>
-          </span>
-        </div>
-      </div>
-    </div>
-  </div>
+  <JobGroups
+    v-if="activeTab === 'groups'"
+    :job="props.job"
+    :isJobPoster="props.isJobPoster"
+    :opIds="props.opIds"
+    :activeLogs="props.activeLogs"
+    :selectOp="props.selectOp"
+    :logsByOp="props.logsByOp"
+    :systemLogsMap="props.systemLogsMap"
+    :jobInfo="props.jobInfo"
+  />
 </template>
 
 <script setup lang="ts">
@@ -211,9 +136,10 @@ import JobResultsView from "./Tabs/Results.vue";
 import JobArtifactsView from "./Tabs/Artifacts.vue";
 import JobDefinitionView from "./Tabs/JobDefinition.vue";
 import JobChatView from "./Tabs/Chat.vue";
-// Note: Info components no longer needed for simplified More Details tab
+import JobGroups from "./Tabs/Groups.vue";
 
 import type { Endpoints, UseJob } from "~/composables/jobs/useJob";
+import type { JobInfo } from "~/composables/jobs/types";
 // Relax log entry typing to support flog entries
 type AnyLogEntry = { id: number; content: string; timestamp: number; html?: boolean };
 import type { ProgressBar } from "~/composables/jobs/useJobLogs";
@@ -260,6 +186,11 @@ interface Props {
   jobNodeReport: NodeReportData | null;
   loadingJobNodeSpecs: boolean;
   isQueuedJob: boolean;
+  
+  // Full log maps from useFLogs
+  logsByOp?: Map<string, AnyLogEntry[]>;
+  systemLogsMap?: AnyLogEntry[];
+  jobInfo?: JobInfo | null;
 }
 
 const props = defineProps<Props>();
@@ -276,16 +207,25 @@ const logsView = ref<any>(null);
 const colorMode = useColorMode();
 
 const canShowLogsTab = computed(() => {
-  const baseVisible = !props.job.isRunning || (props.isJobPoster && props.logConnectionEstablished);
+  if (props.job.isCompleted) return false;
+  
+  if (!props.job.isRunning) return false;
+  
   if (props.isConfidential && !props.isJobPoster) return false;
-  return baseVisible;
+  
+  return props.isJobPoster && props.logConnectionEstablished;
 });
 
-watch(() => [props.job.isRunning, props.logConnectionEstablished, props.activeTab, props.isConfidential, props.isJobPoster], () => {
+watch(() => [props.job.isRunning, props.job.isCompleted, props.logConnectionEstablished, props.activeTab, props.isConfidential, props.isJobPoster], () => {
   const logsTabVisible = canShowLogsTab.value;
   if (props.activeTab === 'logs' && !logsTabVisible) {
-    // Logs tab is not visible, but it's the active one.
-    // Switch to another tab, in this case 'info' (Job Definition).
+    emit('update:activeTab', props.isJobPoster ? 'groups' : 'info');
+  }
+}, { immediate: true });
+
+// Ensure we leave the Groups tab when the user is not the job poster (e.g., after logout)
+watch(() => [props.isJobPoster, props.activeTab], () => {
+  if (props.activeTab === 'groups' && !props.isJobPoster) {
     emit('update:activeTab', 'info');
   }
 }, { immediate: true });
@@ -563,80 +503,9 @@ html.dark-mode {
   margin-top: 0.2rem !important;
 }
 
-// Remove padding from details tab
 div[class*="has-background-white"] {
   padding-top: 0.2rem !important;
   padding-bottom: 0.2rem !important;
 }
 
-// Add proper spacing for details tab content
-.details-tab-content {
-  margin-top: 1.5rem;
-  padding: 0 0.75rem;
-  
-  .quick-detail-item {
-    padding: 0.2rem 0.5rem;
-    border-radius: 4px;
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-
-    .quick-detail-label {
-      font-size: 0.7rem;
-      font-weight: 600;
-      color: #7a7a7a;
-      text-transform: uppercase;
-      margin-bottom: 0.1rem;
-    }
-
-    .quick-detail-value {
-      font-size: 0.85rem;
-      font-weight: 500;
-      color: #363636;
-      word-break: break-word;
-      
-      .address {
-        word-break: break-all;
-        white-space: normal;
-        display: inline-block;
-        line-height: 1.3;
-        font-size: 0.8rem;
-      }
-
-      .has-text-grey {
-        font-size: 0.75rem;
-      }
-    }
-  }
-  
-  .no-padding {
-    padding: 0 !important;
-  }
-}
-
-// Dark mode styling for quick detail items
-html.dark-mode {
-  .details-tab-content .quick-detail-item {
-    .quick-detail-label {
-      color: #b0b0b0;
-    }
-    
-    .quick-detail-value,
-    .quick-detail-value .address,
-    .quick-detail-value .has-text-grey {
-      color: #ffffff;
-    }
-    
-    .quick-detail-value a,
-    .quick-detail-value nuxt-link,
-    .quick-detail-value .address {
-      color: #10E80C !important; // Nosana green for links in dark mode
-    }
-    
-    .quick-detail-value a:hover,
-    .quick-detail-value nuxt-link:hover {
-      color: #33ff33 !important; // Lighter green on hover
-    }
-  }
-}
 </style>
