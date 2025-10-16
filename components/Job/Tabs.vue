@@ -1,20 +1,18 @@
 <template>
   <div class="tabs is-boxed job-tabs-condensed">
     <ul>
-      <li v-if="canShowLogsTab" :class="{ 'is-active': activeTab === 'logs' }">
-        <a @click.prevent="handleTabClick('logs')">Logs</a>
-      </li>
-      <li v-if="props.job.isCompleted && (hasResultsSection || (props.isConfidential && props.isJobPoster))" :class="{ 'is-active': activeTab === 'result' }">
-        <a @click.prevent="handleTabClick('result')">Result</a>
-      </li>
-      <li :class="{ 'is-active': activeTab === 'info' }">
-        <a @click.prevent="handleTabClick('info')">Job Definition</a>
-      </li>
       <li
-        v-if="props.isJobPoster"
+        v-if="canShowGroupsTab"
         :class="{ 'is-active': activeTab === 'groups' }"
       >
-        <a @click.prevent="handleTabClick('groups')">Groups</a>
+        <a @click.prevent="handleTabClick('groups')">Overview</a>
+      </li>
+      <li v-if="canShowLogsTab" :class="{ 'is-active': activeTab === 'logs' }">
+        <a @click.prevent="handleTabClick('logs')">System Logs</a>
+      </li>
+      
+      <li :class="{ 'is-active': activeTab === 'info' }">
+        <a @click.prevent="handleTabClick('info')">Job Definition</a>
       </li>
       <li
         v-if="hasArtifacts"
@@ -78,32 +76,7 @@
   />
   </div>
   <div v-else-if="activeTab === 'logs' && !canShowLogsTab"></div>
-  <div v-if="activeTab === 'result' && props.job.results" class="job-definition-container">
-    <button 
-      class="button is-small is-light copy-button"
-      @click="copyToClipboard(JSON.stringify(structuredResults, null, 2), 'Results')"
-    >
-      <span class="icon is-small">
-        <img src="~/assets/img/icons/copy.svg" alt="Copy" />
-      </span>
-    </button>
-    <JsonEditorVue 
-      :validator="validator" 
-      :class="{ 
-        'jse-theme-dark': colorMode.value === 'dark'
-      }" 
-      v-model="structuredResults" 
-      :mode="Mode.text" 
-      :mainMenuBar="false" 
-      :statusBar="false" 
-      :stringified="false" 
-      :readOnly="true"
-      class="job-definition-editor"
-    />
-  </div>
-  <div v-else-if="activeTab === 'result' && !props.job.results">
-    <p class="p-4 has-text-centered">No results available for this job.</p>
-  </div>
+  
   <JobArtifactsView v-if="activeTab === 'artifacts'" :job="props.job" />
   <JobChatView 
     v-show="activeTab === 'chat' && showChatTab" 
@@ -124,7 +97,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, computed, watch } from 'vue';
+import { ref, nextTick, computed, watch, onMounted } from 'vue';
 import type { JobDefinition } from "@nosana/sdk";
 import JsonEditorVue from 'json-editor-vue';
 import { Mode } from 'vanilla-jsoneditor';
@@ -132,7 +105,6 @@ import 'vanilla-jsoneditor/themes/jse-theme-dark.css';
 import { useToast } from 'vue-toastification';
 
 import JobLogsView from "./Tabs/Logs.vue";
-import JobResultsView from "./Tabs/Results.vue";
 import JobArtifactsView from "./Tabs/Artifacts.vue";
 import JobDefinitionView from "./Tabs/JobDefinition.vue";
 import JobChatView from "./Tabs/Chat.vue";
@@ -216,19 +188,55 @@ const canShowLogsTab = computed(() => {
   return props.isJobPoster && props.logConnectionEstablished;
 });
 
-watch(() => [props.job.isRunning, props.job.isCompleted, props.logConnectionEstablished, props.activeTab, props.isConfidential, props.isJobPoster], () => {
-  const logsTabVisible = canShowLogsTab.value;
-  if (props.activeTab === 'logs' && !logsTabVisible) {
-    emit('update:activeTab', props.isJobPoster ? 'groups' : 'info');
-  }
-}, { immediate: true });
+// Groups tab visibility: show for posters always; for non-posters only when
+// job is non-confidential and completed (so data is available from IPFS)
+const canShowGroupsTab = computed(() => {
+  if (props.isJobPoster) return true;
+  if (props.isConfidential) return false;
+  return Boolean(props.job.isCompleted);
+});
 
-// Ensure we leave the Groups tab when the user is not the job poster (e.g., after logout)
-watch(() => [props.isJobPoster, props.activeTab], () => {
-  if (props.activeTab === 'groups' && !props.isJobPoster) {
-    emit('update:activeTab', 'info');
+
+// Compute visible tabs in left-to-right order and default to the leftmost
+const visibleTabs = computed(() => {
+  const tabs: string[] = [];
+  if (canShowGroupsTab.value) tabs.push('groups');
+  if (canShowLogsTab.value) tabs.push('logs');
+  tabs.push('info');
+  if (props.hasArtifacts) tabs.push('artifacts');
+  if (props.showChatTab) tabs.push('chat');
+  return tabs;
+});
+
+const firstVisibleTab = computed(() => visibleTabs.value[0] || 'info');
+
+const isTabVisible = (tabName: string) => visibleTabs.value.includes(tabName);
+
+// Keep active tab valid and default to the leftmost visible
+watch(
+  () => [
+    canShowLogsTab.value,
+    canShowGroupsTab.value,
+    props.job.isCompleted,
+    props.isConfidential,
+    props.isJobPoster,
+    props.hasArtifacts,
+    props.showChatTab,
+    props.activeTab,
+  ],
+  () => {
+    if (!isTabVisible(props.activeTab)) {
+      emit('update:activeTab', firstVisibleTab.value);
+    }
+  },
+  { immediate: true }
+);
+
+onMounted(() => {
+  if (props.activeTab !== firstVisibleTab.value) {
+    emit('update:activeTab', firstVisibleTab.value);
   }
-}, { immediate: true });
+});
 
 // Expose logsView ref for parent component to call scrollToBottomOnOpen
 defineExpose({ logsView });
@@ -314,11 +322,6 @@ const jobDefinitionModel = computed({
   set: () => {} // Read-only, so no setter needed
 });
 
-// Create a reactive model for the job results
-const jobResultsModel = computed({
-  get: () => props.job.results,
-  set: () => {} // Read-only, so no setter needed
-});
 
 // Validator function (can be empty for read-only)
 const validator = () => [];
@@ -356,37 +359,7 @@ const handleTabClick = (tabName: string) => {
   }
 };
 
-const hasResultsSection = computed(() => {
-  if (!props.jobDefinition?.ops) return false;
-  return props.jobDefinition.ops.some(op => op.results && Object.keys(op.results).length > 0);
-});
 
-// Extract structured results without logs
-const structuredResults = computed(() => {
-  if (!props.job.results?.opStates) return {};
-  
-  const results: any = {
-    status: props.job.results.status,
-    startTime: props.job.results.startTime,
-    endTime: props.job.results.endTime,
-    opStates: []
-  };
-  
-  for (const opState of props.job.results.opStates) {
-    if (opState.results && Object.keys(opState.results).length > 0) {
-      results.opStates.push({
-        operationId: opState.operationId,
-        status: opState.status,
-        startTime: opState.startTime,
-        endTime: opState.endTime,
-        exitCode: opState.exitCode,
-        results: opState.results
-      });
-    }
-  }
-  
-  return results;
-});
 
 </script>
 
@@ -444,6 +417,23 @@ const structuredResults = computed(() => {
   }
 }
 
+/* Empty state styling (match Groups) */
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 2rem;
+  color: #7a7a7a;
+}
+
+/* Container to match Groups' white card sizing */
+.results-groups-like-container {
+  padding: 1.5rem;
+  background: #ffffff;
+  border-radius: 8px;
+}
+
 // Dark mode styling for job definition
 html.dark-mode {
   .job-tabs-condensed {
@@ -475,6 +465,16 @@ html.dark-mode {
   background-color: #2c2c2c;
   border-color: #444;
     position: relative; /* For copy button positioning */
+  }
+
+  /* Match Groups dark-mode empty state color */
+  .empty-state {
+    color: #b0b0b0;
+  }
+
+  /* Dark mode for results container to match Groups */
+  .results-groups-like-container {
+    background: #2c2c2c;
   }
 
   // Update table background in dark mode

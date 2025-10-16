@@ -1132,14 +1132,6 @@ watch(
   { deep: true }
 ); // deep true for endpoints map
 
-watch(connectionEstablished, (newValue, oldValue) => {
-  if (newValue && !oldValue) {
-    if (!(isConfidential.value && !props.isJobPoster) && props.job.isRunning && !props.job.isCompleted) {
-      activeTab.value = "logs";
-    }
-  }
-});
-
 function activateChatAndClosePopup() {
   showChatPopup.value = false;
   isMainContentOpen.value = true; // Expand the job card
@@ -1154,7 +1146,7 @@ function activateChatAndClosePopup() {
   });
 }
 
-const activeTab = ref("logs");
+const activeTab = ref("groups");
 const jobTabsRef = ref<any>(null); // Ref for the JobTabs component
 
 // Watch for changes in table content (for real-time updates) - REMOVING THIS SECTION

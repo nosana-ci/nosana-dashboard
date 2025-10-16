@@ -18,7 +18,7 @@
       <span class="icon is-small has-text-grey-light">
         <i class="fas fa-box-open"></i>
       </span>
-      <span>No groups found</span>
+      <span>No groups available.</span>
     </div>
 
     <div v-else class="groups-table-container">
@@ -141,8 +141,23 @@
                               <span class="info-value">{{ formatTimestamp(getOpState(op.id)?.endTime) }}</span>
                             </div>
                             
+                            <div class="info-item">
+                              <span class="info-label">Job Results:</span>
+                              <span class="info-value">
+                              <a
+                                v-if="hasOpResults(op.id)"
+                                href="#"
+                                @click.stop.prevent="openResultsModal(op.id)"
+                              >
+                                View
+                              </a>
+                                <span v-else>-</span>
+                              </span>
+                            </div>
                           </div>
                         </div>
+                        
+                      
                         
                         <!-- Service Endpoints -->
                         <div class="op-info-section endpoints-section">
@@ -205,18 +220,23 @@
                           <h4 class="logs-title">LOGS</h4>
                         </div>
                         <div v-if="getOpLogs(op.id)?.length" class="op-logs-content">
+                          <button
+                            class="button is-small is-text fullscreen-logs-button"
+                            @click.stop="openLogModal(op.id)"
+                            title="Fullscreen Logs"
+                          >
+                            <span class="icon is-small">
+                              <img src="~/assets/img/icons/fullscreen.svg" alt="Fullscreen" />
+                            </span>
+                          </button>
                           <div class="op-logs-viewer">
-                            <div 
-                              v-for="(log, index) in getOpLogs(op.id)" 
+                            <div
+                              v-for="(log, index) in getOpLogs(op.id)"
                               :key="index"
-                              class="log-entry"
+                              class="row-count"
                             >
-                              <template v-if="log.html">
-                                <span v-html="log.content || log.log || log"></span>
-                              </template>
-                              <template v-else>
-                                {{ log.content || log.log || log }}
-                              </template>
+                              <span v-if="log.html" class="pre" v-html="log.content || log.log || log"></span>
+                              <span v-else class="pre">{{ log.content || log.log || log }}</span>
                             </div>
                           </div>
                         </div>
@@ -233,12 +253,56 @@
         </div>
       </template>
     </div>
+
+  <!-- Fullscreen Logs Modal -->
+  <FullscreenModal :isOpen="logModalOpen" :title="`Operation Logs - ${fullscreenOpId || ''}`" @close="closeLogModal">
+    <div class="fullscreen-logs-wrapper">
+      <div class="op-logs-content">
+        <div class="op-logs-viewer" ref="modalLogsContainerRef">
+          <template v-if="fullscreenOpId && getOpLogs(fullscreenOpId)?.length">
+            <div
+              v-for="(log, index) in getOpLogs(fullscreenOpId)"
+              :key="index"
+              class="row-count"
+            >
+              <span v-if="log.html" class="pre" v-html="log.content || log.log || log"></span>
+              <span v-else class="pre">{{ log.content || log.log || log }}</span>
+            </div>
+          </template>
+          <div v-else class="op-logs-empty">
+            <span class="has-text-grey-light">No logs available</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </FullscreenModal>
+  
+  <!-- Job Results Modal -->
+  <FullscreenModal :isOpen="resultsModalOpen" :title="`Job Results - ${resultsOpId || ''}`" @close="closeResultsModal">
+    <div class="fullscreen-logs-wrapper">
+      <div class="op-logs-content">
+        <div class="op-logs-viewer">
+          <template v-if="resultsOpId && hasOpResults(resultsOpId)">
+            <VueJsonPretty :data="getOpResults(resultsOpId)" show-icon show-line-number />
+          </template>
+          <div v-else class="op-logs-empty">
+            <span class="has-text-grey-light">No results available</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </FullscreenModal>
+  
+  
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import type { JobInfo, EndpointStatus } from "~/composables/jobs/types";
+import FullscreenModal from '~/components/Common/FullscreenModal.vue';
+import VueJsonPretty from 'vue-json-pretty';
+import 'vue-json-pretty/lib/styles.css';
 
 type AnyLogEntry = { id: number; content: string; timestamp: number; html?: boolean };
 
@@ -289,6 +353,37 @@ let pollInterval: NodeJS.Timeout | null = null;
 const { ensureAuth } = useAuthHeader();
 
 const jobInfo = computed<JobInfo | null>(() => props.jobInfo ?? null);
+
+// Fullscreen logs modal state
+const logModalOpen = ref(false);
+const fullscreenOpId = ref<string | null>(null);
+const modalLogsContainerRef = ref<HTMLElement | null>(null);
+
+const openLogModal = (opId: string) => {
+  fullscreenOpId.value = opId;
+  logModalOpen.value = true;
+  nextTick(() => {
+    if (modalLogsContainerRef.value) {
+      modalLogsContainerRef.value.scrollTop = modalLogsContainerRef.value.scrollHeight;
+    }
+  });
+};
+
+const closeLogModal = () => {
+  logModalOpen.value = false;
+};
+
+// Results modal per operation
+const resultsModalOpen = ref(false);
+const resultsOpId = ref<string | null>(null);
+const openResultsModal = (opId: string) => {
+  resultsOpId.value = opId;
+  resultsModalOpen.value = true;
+};
+const closeResultsModal = () => {
+  resultsModalOpen.value = false;
+  resultsOpId.value = null;
+};
 
 // Toggle operation expansion
 const toggleOpExpansion = (opId: string) => {
@@ -391,6 +486,28 @@ const getNodeUrl = () => {
   const config = useRuntimeConfig();
   const nodeAddress = (props.job.node as any)?.toString?.() || (props.job.node as any);
   return `https://${nodeAddress}.${config.public.nodeDomain}`;
+};
+
+// Per-operation results accessors
+const getOpResults = (opId: string) => {
+  try {
+    const jobRes = props.job?.results?.opStates;
+    if (Array.isArray(jobRes)) {
+      const entry = jobRes.find((r: any) => r.operationId === opId);
+      if (entry?.results && Object.keys(entry.results).length > 0) return entry.results;
+    }
+    const infoRes = (jobInfo.value as any)?.results?.opStates;
+    if (Array.isArray(infoRes)) {
+      const entry = infoRes.find((r: any) => r.operationId === opId);
+      if (entry?.results && Object.keys(entry.results).length > 0) return entry.results;
+    }
+  } catch {}
+  return null;
+};
+
+const hasOpResults = (opId: string) => {
+  const r = getOpResults(opId);
+  return r && typeof r === 'object' && Object.keys(r).length > 0;
 };
 
 const buildOperations = () => {
@@ -766,7 +883,7 @@ const restartGroup = async (groupName: string) => {
 
     th {
       padding: 0.875rem 1.25rem;
-      text-align: center;
+      text-align: left;
       font-weight: 600;
       font-size: 0.8125rem;
       text-transform: uppercase;
@@ -788,7 +905,7 @@ const restartGroup = async (groupName: string) => {
       cursor: pointer;
 
       &:hover {
-        background-color: #f9f9f9;
+        background-color: transparent;
       }
 
       &.is-expanded {
@@ -807,7 +924,13 @@ const restartGroup = async (groupName: string) => {
     td {
       padding: 1rem 1.25rem;
       vertical-align: middle;
-      text-align: center;
+      text-align: left;
+    }
+
+    td:nth-child(3),
+    td:nth-child(4),
+    td:nth-child(5) {
+      padding-left: 0.5rem;
     }
   }
 }
@@ -1010,6 +1133,9 @@ const restartGroup = async (groupName: string) => {
   margin-bottom: 0.75rem;
   background: #ffffff;
   flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .logs-title {
@@ -1052,6 +1178,7 @@ const restartGroup = async (groupName: string) => {
   flex: 1;
   border: 1px solid #e0e0e0;
   border-radius: 6px;
+  position: relative;
 }
 
 .op-logs-viewer {
@@ -1060,6 +1187,87 @@ const restartGroup = async (groupName: string) => {
   line-height: 1.6;
   color: #c9d1d9;
   padding: 1rem;
+}
+
+/* Keep JSON results background stable (disable VueJsonPretty line highlight) */
+:deep(.vjs-tree) {
+  background-color: transparent !important;
+}
+:deep(.vjs-tree *:hover),
+:deep(.vjs-tree *:active),
+:deep(.vjs-tree *:focus) {
+  background-color: transparent !important;
+}
+:deep(.vjs-tree .vjs-tree__line),
+:deep(.vjs-tree .vjs-tree__node) {
+  background-color: transparent !important;
+  transition: none !important;
+}
+
+/* Line numbering similar to Result.vue */
+.op-logs-content {
+  position: relative;
+  counter-reset: line;
+}
+.logs-floating-controls {
+  position: sticky;
+  top: 0;
+  display: flex;
+  justify-content: flex-end;
+  padding: 0;
+  height: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+.row-count {
+  word-break: break-word;
+  max-width: 100%;
+  padding-left: 40px;
+}
+.row-count:before {
+  counter-increment: line;
+  font-family: monospace;
+  font-weight: normal;
+  content: counter(line);
+  display: inline-block;
+  padding: 0 0.5em;
+  margin-right: 0.5em;
+  color: #9ca3af;
+  min-width: 50px;
+  text-align: right;
+  margin-left: -62px;
+}
+.pre { white-space: pre-wrap; }
+
+.fullscreen-logs-button {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  margin: 0;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  pointer-events: auto;
+  z-index: 4;
+}
+.fullscreen-logs-button .icon img { width: 16px; height: 16px; filter: invert(1); opacity: 0.9; }
+.fullscreen-logs-button:hover .icon img { opacity: 1; }
+
+.fullscreen-logs-wrapper {
+  position: relative;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.fullscreen-logs-wrapper .op-logs-content {
+  flex: 1;
+  height: 100%;
+  overflow: hidden;
+}
+.fullscreen-logs-wrapper .op-logs-viewer {
+  height: 100%;
+  min-height: 100%;
+  overflow-y: auto;
 }
 
 .log-entry {
@@ -1120,7 +1328,7 @@ const restartGroup = async (groupName: string) => {
   display: inline-flex;
   gap: 0.375rem;
   flex-wrap: wrap;
-  justify-content: center;
+  justify-content: flex-start;
 }
 
 .port-badge {
@@ -1296,7 +1504,7 @@ html.dark-mode {
       border-bottom-color: #333;
 
       &:hover {
-        background-color: #2a2a2a;
+        background-color: transparent;
       }
 
       &.is-expanded {

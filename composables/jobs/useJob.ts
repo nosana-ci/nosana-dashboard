@@ -340,6 +340,19 @@ export function useJob(jobId: string) {
         }
       }
 
+      // Preserve any live results previously received via SSE when REST polling doesn't include them yet
+      try {
+        if (!jobObject.results && job.value?.results) {
+          jobObject.results = job.value.results;
+        }
+        if (!jobObject.hasResultsRegex && job.value?.hasResultsRegex) {
+          jobObject.hasResultsRegex = job.value.hasResultsRegex;
+        }
+        if (!jobObject.jobStatus && job.value?.jobStatus) {
+          jobObject.jobStatus = job.value.jobStatus;
+        }
+      } catch {}
+
       job.value = jobObject;
     },
     {
@@ -351,21 +364,21 @@ export function useJob(jobId: string) {
   let eventSource: EventSourcePolyfill | null = null;
   let currentNodeAddress: string | null = null;
 
-  watch(job, (job: UseJob | null) => {
-    if (job === null) return;
-    if (!job.jobDefinition) {
+  watch(job, (currentJob: UseJob | null) => {
+    if (currentJob === null) return;
+    if (!currentJob.jobDefinition) {
       loading.value = false;
       return;
     }
 
-    const sdkServices = getJobExposedServices(job.jobDefinition, jobId);
+    const sdkServices = getJobExposedServices(currentJob.jobDefinition, jobId);
     const metaByPort = new Map<number, { opId: string; opIndex: number; hasHealthCheck: boolean }>();
     for (const { port, opId, opIndex, hasHealthCheck } of sdkServices) {
       metaByPort.set(Number(port), { opId, opIndex, hasHealthCheck });
     }
 
     const config = useRuntimeConfig();
-    const nodeAddress = (job.node as any)?.toString?.() || (job.node as any);
+    const nodeAddress = (currentJob.node as any)?.toString?.() || (currentJob.node as any);
     
 
     if (eventSource && currentNodeAddress === nodeAddress && (eventSource as any).readyState !== 2) {
@@ -381,7 +394,7 @@ export function useJob(jobId: string) {
     
     (async () => {
       try {
-        const nodeAddress = (job.node as any)?.toString?.() || (job.node as any);
+        const nodeAddress = (currentJob.node as any)?.toString?.() || (currentJob.node as any);
         const authHeader = await ensureAuth();
         const sseUrl = `https://${nodeAddress}.${config.public.nodeDomain}/job/${jobId}/info`;
         
@@ -397,6 +410,7 @@ export function useJob(jobId: string) {
             
             jobInfo.value = info;
             
+            // Update live endpoints from SSE
             if (info && info.endpoints && info.endpoints.urls) {
               const newEndpoints = new Map(endpoints.value);
               
@@ -418,6 +432,37 @@ export function useJob(jobId: string) {
               
               endpoints.value = newEndpoints;
             }
+            
+            // Update live results from SSE when available
+            try {
+              const sseResults: any = (info as any).results;
+              if (sseResults && job.value) {
+                const isConfidentialJob = Boolean((job.value as any)?.jobDefinition?.logistics);
+                const activeAddress = (() => {
+                  if (status.value === 'authenticated' && (userData.value as any)?.generatedAddress) {
+                    return (userData.value as any).generatedAddress as string;
+                  }
+                  if (connected.value && publicKey.value) {
+                    return publicKey.value.toString();
+                  }
+                  return null;
+                })();
+                const isPoster = Boolean(
+                  activeAddress && job.value.project && activeAddress === job.value.project.toString()
+                );
+
+                if (!isConfidentialJob || isPoster) {
+                  // Accept results in non-confidential jobs for everyone, or confidential only for poster
+                  job.value.results = sseResults;
+                  job.value.hasResultsRegex = Array.isArray(sseResults.opStates)
+                    ? sseResults.opStates.some((op: any) => op?.results)
+                    : false;
+                  if (sseResults.status) {
+                    job.value.jobStatus = sseResults.status as any;
+                  }
+                }
+              }
+            } catch {}
             
             loading.value = false;
           } catch (parseError) {

@@ -6,7 +6,7 @@
           v-if="job.isRunning && isJobPoster"
           class="button is-small is-text fullscreen-logs-button"
           @click="logModal.open"
-          title="Fullscreen Logs"
+          title="Fullscreen System Logs"
         >
           <span class="icon is-small">
             <img src="~/assets/img/icons/fullscreen.svg" alt="Fullscreen" />
