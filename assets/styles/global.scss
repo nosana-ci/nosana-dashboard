@@ -590,6 +590,26 @@
   width: 100%;
 }
 
+/* Ensure modal tooltips are not covered by header */
+.modal-card-head {
+  overflow: visible; /* let bubbles extend over the header edge */
+  position: relative;
+  z-index: 1;
+}
+.modal-card-body {
+  position: relative; /* create stacking context above header */
+  z-index: 2;
+}
+
+/* Prevent modal header/body from clipping tooltips by rendering them at viewport level */
+.modal .modal-card [data-tooltip] {
+  &::before,
+  &::after {
+    position: fixed !important;
+    z-index: 99999 !important;
+  }
+}
+
 button[disabled][data-tooltip] {
   pointer-events: auto;
   &:hover {
@@ -907,4 +927,50 @@ button[disabled][data-tooltip] {
 /* This is intentionally left empty. */
 /* The class is used as a semantic hook in the HTML. */
 .clickable-row-cell-content {
+}
+
+/* Global tooltip fixes - ensure tooltips render above and are not clipped */
+[data-tooltip] {
+  position: relative;
+  &::before,
+  &::after {
+    z-index: 1002 !important; /* above .modal (1001) */
+  }
+  &::before {
+    white-space: normal !important;
+    max-width: 360px !important;
+    min-width: 180px !important;
+    padding: 10px 12px !important;
+    line-height: 1.35 !important;
+    text-align: left !important;
+    border-radius: 8px !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18) !important;
+    word-break: keep-all !important;
+    overflow-wrap: anywhere !important;
+    hyphens: manual !important;
+  }
+}
+
+/* Global info icon styling for tooltips */
+.icon.has-tooltip-arrow {
+  color: #7a7a7a;
+  cursor: default;
+  vertical-align: middle;
+  margin-left: 0.25rem;
+  text-decoration: none !important;
+  border-bottom: none !important;
+  
+  &:hover {
+    color: #363636;
+    text-decoration: none !important;
+    border-bottom: none !important;
+  }
+}
+
+.dark-mode .icon.has-tooltip-arrow {
+  color: #b5b5b5;
+  
+  &:hover {
+    color: #f5f5f5;
+  }
 }

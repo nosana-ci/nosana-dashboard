@@ -1,6 +1,6 @@
 <template>
   <div>
-    <TopBar title="Deployments Overview" subtitle="Find information about your deployments here" />
+    <TopBar title="Deployments" subtitle="Find information about your deployments here" />
     
     <div class="box">
       <div class="level mb-4">
@@ -39,8 +39,8 @@
               <div class="mt-2 has-text-grey">Loading deployments...</div>
             </td>
           </tr>
-          <tr v-else-if="errorMessage">
-            <td colspan="4" class="has-text-centered has-text-danger">{{ errorMessage }}</td>
+          <tr v-else-if="deploymentsError">
+            <td colspan="4" class="has-text-centered has-text-danger">Failed to load deployments: {{ deploymentsError }}</td>
           </tr>
           <tr v-else-if="!deployments.length">
             <td colspan="4" class="has-text-centered has-text-grey">No deployments found</td>
@@ -71,7 +71,6 @@
 </template>
 
 <script setup lang="ts">
-import { useWallet } from 'solana-wallets-vue'
 
 // Types
 interface DeploymentJob {
@@ -94,10 +93,25 @@ interface Deployment {
 
 const searchQuery = ref('')
 const deployments = ref<Deployment[]>([])
-const loading = ref(true)
 
-const { connected } = useWallet()
-const { nosana } = useSDK()
+const { status, token } = useAuth()
+const router = useRouter()
+
+const isAuthenticated = computed(() => {
+  return status.value === 'authenticated' && token.value
+})
+
+// Use useAPI at top level for reactive fetching
+const { data: deploymentsData, error: deploymentsError, refresh: refreshDeployments, pending: loading } = await useAPI('/api/deployments', { 
+  auth: true,
+  default: () => []
+})
+
+watch(status, (authStatus) => {
+  if (authStatus === 'unauthenticated') {
+    router.push('/account/deployer')
+  }
+}, { immediate: true })
 
 const filteredDeployments = computed(() => {
   if (!searchQuery.value) return deployments.value
@@ -122,58 +136,24 @@ const statusClass = (status: string) => {
   }
 }
 
-const errorMessage = ref('')
-
-const loadDeployments = async () => {
-  if (!connected.value) {
-    errorMessage.value = 'Please connect your wallet first'
-    loading.value = false
-    return
+watch(deploymentsData, (data) => {
+  if (data) {
+    deployments.value = data.map((d: Deployment) => ({
+      id: d.id,
+      name: d.name,
+      status: d.status,
+      jobs: d.jobs,
+      balance: d.balance || { SOL: 0, NOS: 0 }
+    }))
   }
-  
-  try {
-    loading.value = true
-    errorMessage.value = ''
-    console.log('Loading deployments...')
-    
-    // Use SDK method which handles auth internally
-    const list = await nosana.value.deployments.list()
-    console.log('Deployments loaded:', list)
-    
-    // Fetch vault balances for each deployment
-    const deploymentsWithBalances = await Promise.all(
-      list.map(async (d) => {
-        let balance = { SOL: 0, NOS: 0 }
-        if (d.vault) {
-          try {
-            balance = await d.vault.getBalance()
-          } catch (err) {
-            console.warn(`Failed to fetch balance for deployment ${d.id}:`, err)
-          }
-        }
-        return {
-          id: d.id,
-          name: d.name,
-          status: d.status,
-          jobs: d.jobs,
-          balance
-        }
-      })
-    )
-    
-    deployments.value = deploymentsWithBalances
-    console.log('Processed deployments:', deployments.value)
-  } catch (error: any) {
-    console.error('Error loading deployments:', error)
-    errorMessage.value = `Failed to load deployments: ${error.message}`
-  } finally {
-    loading.value = false
-  }
-}
+}, { immediate: true })
 
-watch(connected, (newConnected) => {
-  if (newConnected) loadDeployments()
-  else deployments.value = []
+watch(isAuthenticated, (authenticated) => {
+  if (authenticated) {
+    refreshDeployments()
+  } else {
+    deployments.value = []
+  }
 }, { immediate: true })
 </script>
 

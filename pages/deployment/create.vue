@@ -119,20 +119,14 @@
             <ClientOnly>
               <!-- Show login button when not authenticated -->
               <button
-                v-if="!connected && status !== 'authenticated'"
+                v-if="status !== 'authenticated'"
                 class="button is-secondary is-fullwidth"
                 @click="handleLoginClick"
               >
                 Login
               </button>
               <!-- Show swap button for wallet users with insufficient balance -->
-              <button
-                v-else-if="connected && !canPostJob && selectedMarket"
-                class="button is-secondary is-fullwidth"
-                @click="openSwapModal"
-              >
-                Swap
-              </button>
+              
               <!-- Show insufficient credits message for Google users -->
               <div
                 v-else-if="
@@ -151,10 +145,7 @@
               </div>
               <!-- Show deploy button if any authentication method allows deployment -->
               <button
-                v-else-if="
-                  canCreateDeployment &&
-                  (connected || status === 'authenticated')
-                "
+                v-else-if="canCreateDeployment && status === 'authenticated'"
                 class="button is-secondary is-fullwidth"
                 @click="createDeployment"
               >
@@ -235,7 +226,15 @@
         </header>
         <section class="modal-card-body">
           <div class="field">
-            <label class="label">Deployment Strategy</label>
+            <label class="label">
+              Deployment Strategy
+              <span class="icon is-small has-tooltip-arrow has-tooltip-multiline" data-tooltip="How your deployment manages job instances">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                  <path d="M12 16v-4m0-4h.01" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </span>
+            </label>
             <div class="control">
               <div class="select is-fullwidth">
                 <select v-model="strategy">
@@ -250,7 +249,15 @@
           </div>
           
           <div v-if="strategy === 'SCHEDULED'" class="field">
-            <label class="label">Schedule (Cron Expression)</label>
+            <label class="label">
+              Schedule (Cron Expression)
+              <span class="icon is-small has-tooltip-arrow has-tooltip-multiline" data-tooltip="Cron expression for scheduling jobs">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                  <path d="M12 16v-4m0-4h.01" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </span>
+            </label>
             <div class="control">
               <input
                 v-model="schedule"
@@ -264,7 +271,15 @@
           </div>
           
           <div class="field">
-            <label class="label">Replica Count</label>
+            <label class="label">
+              Replica Count
+              <span class="icon is-small has-tooltip-arrow has-tooltip-multiline" data-tooltip="Number of parallel job instances (1-100)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                  <path d="M12 16v-4m0-4h.01" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </span>
+            </label>
             <div class="control">
               <input
                 class="input"
@@ -278,7 +293,15 @@
           </div>
           
           <div class="field">
-            <label class="label">Container Timeout (hours)</label>
+            <label class="label">
+              Container Timeout (hours)
+              <span class="icon is-small has-tooltip-arrow has-tooltip-multiline" data-tooltip="Maximum runtime before container auto-shutdown">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                  <path d="M12 16v-4m0-4h.01" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </span>
+            </label>
             <div class="control">
               <input
                 class="input"
@@ -305,11 +328,6 @@ import JsonEditorVue from "json-editor-vue";
 import { Mode, ValidationSeverity } from "vanilla-jsoneditor";
 import "vanilla-jsoneditor/themes/jse-theme-dark.css";
 import { useToast } from "vue-toastification";
-import {
-  WalletMultiButton,
-  WalletModalProvider,
-  useWallet,
-} from "solana-wallets-vue";
 import TopBar from "~/components/TopBar.vue";
 import { useRouter, useRoute } from "vue-router";
 import { useDebounceFn, useScrollLock } from "@vueuse/core";
@@ -358,7 +376,6 @@ const { nosana } = useSDK();
 const router = useRouter();
 const route = useRoute();
 const toast = useToast();
-const { connected, publicKey, wallet } = useWallet();
 const { status, data: userData, token } = useAuth();
 const loading = ref(false);
 
@@ -398,9 +415,6 @@ const strategy = ref("SIMPLE");
 const schedule = ref("0 0 * * *"); // Default schedule
 
 // Balance and price state
-const balance = ref<number>(0);
-const loadingBalance = ref(false);
-const errorBalance = ref<string | null>(null);
 const nosPrice = ref(0);
 
 // Credit balance state
@@ -409,12 +423,6 @@ const loadingCreditBalance = ref(false);
 const solPrice = ref(0);
 const usdcPrice = ref(0);
 const usdtPrice = ref(0);
-const userBalances = ref({
-  nos: 0,
-  sol: 0,
-  usdc: 0,
-  usdt: 0,
-});
 
 // Initialize filterValues with defaults
 const filterValues = ref<FilterValues>({
@@ -605,11 +613,8 @@ const requiredNos = computed(() => {
   return 0;
 });
 
-// Check if user can post job based on their authentication method and balance
+// Check if user can post job based on authentication and credits
 const canPostJob = computed(() => {
-  if (connected.value) {
-    return (balance.value || 0) >= requiredNos.value;
-  }
   if (status.value === "authenticated") {
     const costUSD = totalPrice.value || 0;
     return creditBalance.value >= costUSD;
@@ -619,7 +624,7 @@ const canPostJob = computed(() => {
 
 // Check if user is authenticated via any method
 const isAuthenticated = computed(() => {
-  return connected.value || status.value === "authenticated";
+  return status.value === "authenticated" && token.value;
 });
 
 const canCreateDeployment = computed(
@@ -647,27 +652,25 @@ const validator = (json: any) => {
   }[] = [];
   return errors;
 };
-
-// Helper function to ensure wallet is ready for transactions
-const ensureWalletReady = async (): Promise<boolean> => {
-  if (!connected.value || !publicKey.value) {
-    return false;
-  }
-
-  let attempts = 0;
-  const maxAttempts = 10;
-
-  while (attempts < maxAttempts) {
-    if (wallet.value?.adapter?.connected && wallet.value?.adapter?.publicKey) {
-      return true;
+// Credit balance fetch (API)
+const refreshCreditBalance = async () => {
+  if (status.value !== 'authenticated' || !token.value) return;
+  loadingCreditBalance.value = true;
+  try {
+    const data = await useApiFetch<any>("/api/credits/balance", { method: "GET", auth: true });
+    if (data) {
+      creditBalance.value =
+        (data.assignedCredits || 0) - (data.settledCredits || 0) - (data.reservedCredits || 0);
     }
-
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    attempts++;
+  } catch (error) {
+    console.error("Error fetching credit balance:", error);
+  } finally {
+    loadingCreditBalance.value = false;
   }
-
-  return false;
 };
+
+
+// No wallet flow in API mode
 
 const createDeployment = async () => {
   if (!canCreateDeployment.value) return;
@@ -696,97 +699,34 @@ const createDeployment = async () => {
     }
     const ipfsHash = await nosana.value.ipfs.pin(jobDefinition.value);
 
-    // Create deployment using the SDK
-    if (connected.value) {
-      // Wallet-based deployment creation
-      const walletReady = await ensureWalletReady();
-      if (!walletReady) {
-        throw new Error(
-          "Wallet is not ready for signing. Please reconnect your wallet and try again."
-        );
-      }
-
-      const deployment = await nosana.value.deployments.create({
-        name: deploymentName.value.trim(),
-        market: selectedMarket.value!.address.toString(),
-        replicas: replicas.value,
-        timeout: timeout.value * 3600,
-        ...(strategy.value === "SCHEDULED"
-          ? {
-              strategy: "SCHEDULED" as const,
-              schedule: schedule.value,
-            }
-          : {
-              strategy: strategy.value as
-                | "SIMPLE"
-                | "SIMPLE-EXTEND"
-                | "INFINITE",
-            }),
-        ipfs_definition_hash: ipfsHash,
-      });
-
-      toast.success(`Successfully created deployment ${deployment.id}`);
-      setTimeout(() => {
-        router.push("/deployment");
-      }, 3000);
-    } else if (status.value === 'authenticated' && token.value) {
-      // Credit-based deployment creation via API
-      const response = await fetch(`${config.public.apiBase}/api/deployments`, {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          Authorization: token.value as string,
-        },
-        body: JSON.stringify({
-          name: deploymentName.value.trim(),
-          market: selectedMarket.value!.address.toString(),
-          replicas: replicas.value,
-          timeout: timeout.value * 3600,
-          strategy: strategy.value as
-            | "SIMPLE"
-            | "SIMPLE-EXTEND"
-            | "SCHEDULED"
-            | "INFINITE",
-          ipfs_definition_hash: ipfsHash,
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        toast.success(`Successfully created deployment ${data.id}`);
-        await refreshCreditBalance();
-        setTimeout(() => {
-          router.push("/deployment");
-        }, 3000);
-      } else {
-        const errorText = await response.text();
-        let errorMessage = "Failed to create deployment";
-        try {
-          const errorData = JSON.parse(errorText);
-          errorMessage = errorData.message || errorMessage;
-        } catch {
-          errorMessage = errorText || errorMessage;
-        }
-        throw new Error(errorMessage);
-      }
-    } else {
-      throw new Error("Please connect your wallet or sign in to create a deployment");
+    // Create deployment via API (authenticated only)
+    if (status.value !== 'authenticated' || !token.value) {
+      throw new Error("Please sign in to create a deployment");
     }
+
+    const requestBody = {
+      name: deploymentName.value.trim(),
+      market: selectedMarket.value!.address.toString(),
+      replicas: replicas.value,
+      timeout: timeout.value * 3600,
+      ...(strategy.value === "SCHEDULED"
+        ? { strategy: "SCHEDULED" as const, schedule: schedule.value }
+        : { strategy: strategy.value as "SIMPLE" | "SIMPLE-EXTEND" | "INFINITE" }),
+      ipfs_definition_hash: ipfsHash,
+    };
+
+    const data = await useApiFetch('/api/deployments/list', {
+      method: 'POST',
+      body: requestBody,
+      auth: true,
+    });
+
+    toast.success(`Successfully created deployment ${data.id}`)
+    setTimeout(() => {
+      router.push(`/deployment/${data.id}`);
+    }, 2000);
   } catch (error: any) {
-    if (error.toString().toLowerCase().includes("user rejected")) {
-      toast.info("Transaction was cancelled.");
-    } else if (error.toString().toLowerCase().includes("wallet is not ready")) {
-      toast.error(
-        "Wallet connection issue. Please disconnect and reconnect your wallet, then try again."
-      );
-    } else if (error.toString().toLowerCase().includes("not connected")) {
-      toast.error(
-        "Wallet is not connected. Please connect your wallet and try again."
-      );
-    } else {
-      toast.error(`Error creating deployment: ${error.toString()}`);
-    }
+    toast.error(`Error creating deployment: ${error.message || error.toString()}`);
   } finally {
     isCreatingDeployment.value = false;
     loading.value = false;
@@ -898,59 +838,6 @@ watch(
   }
 );
 
-// Balance management functions (copied from deploy.vue)
-const refreshBalance = async () => {
-  if (!publicKey.value || !nosana.value) return;
-
-  loadingBalance.value = true;
-  errorBalance.value = null;
-
-  try {
-    const balanceData = await nosana.value.solana.getNosBalance(
-      publicKey.value.toString()
-    );
-    balance.value = balanceData?.uiAmount || 0;
-  } catch (error: any) {
-    errorBalance.value = error.toString();
-    console.error("Error fetching NOS balance:", error);
-  } finally {
-    loadingBalance.value = false;
-  }
-};
-
-const refreshAllBalances = async () => {
-  if (!publicKey.value || !nosana.value) return;
-
-  try {
-    const [nosBal, solBal, usdcBal, usdtBal] = await Promise.all([
-      nosana.value.solana.getNosBalance(),
-      nosana.value.solana.getSolBalance(),
-      nosana.value.solana.getUsdcBalance(),
-      nosana.value.solana.getUsdtBalance(),
-    ]);
-
-    userBalances.value = {
-      nos: nosBal?.uiAmount ?? 0,
-      sol: solBal / 1e9,
-      usdc: usdcBal?.uiAmount ?? 0,
-      usdt: usdtBal?.uiAmount ?? 0,
-    };
-    await refreshBalance();
-  } catch (error) {
-    console.error("Failed to refresh balances", error);
-  }
-};
-
-// Watch for wallet connection changes
-watch(
-  [publicKey, nosana],
-  async () => {
-    if (publicKey.value && nosana.value) {
-      await refreshAllBalances();
-    }
-  },
-  { immediate: true }
-);
 
 // Mounted hook
 onMounted(async () => {
@@ -962,22 +849,22 @@ onMounted(async () => {
     await getMarkets();
   }
 
-  if (publicKey.value && nosana.value) {
-    await refreshAllBalances();
+  // No wallet balances in API mode
+  if (status.value === 'authenticated' && token.value) {
+    await refreshCreditBalance();
   }
 });
 
-// Swap modal functions
-watch(
-  () => showSwapModal.value,
-  (newValue) => {
-    if (newValue === true) {
-      setTimeout(async () => {
-        await refreshAllBalances();
-      }, 50);
-    }
+// React to auth changes to keep credits fresh
+watch([status, token], async () => {
+  if (status.value === 'authenticated' && token.value) {
+    await refreshCreditBalance();
+  } else {
+    creditBalance.value = 0;
   }
-);
+}, { immediate: true });
+
+// No swap modal in API mode
 
 // README Modal functions
 const openReadmeModal = (readme: string) => {

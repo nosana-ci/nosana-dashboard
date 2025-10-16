@@ -14,7 +14,7 @@
 
     <div v-else-if="deployment">
       <!-- Unified Card -->
-      <div class="box" style="padding: 0; overflow: hidden;">
+      <div class="box" style="padding: 0; overflow: visible;">
         <!-- Header Section -->
         <div style="padding: 1.5rem; border-bottom: 1px solid #dbdbdb;">
           <div class="is-flex is-justify-content-space-between is-align-items-center">
@@ -66,14 +66,7 @@
                     <td>Replicas count</td>
                     <td>{{ deployment.replicas }}</td>
                   </tr>
-                  <tr>
-                    <td>Always</td>
-                    <td>{{ deployment.always ? 'Yes' : 'No' }}</td>
-                  </tr>
-                  <tr>
-                    <td>Restart policy</td>
-                    <td>{{ deployment.restart || 'Never' }}</td>
-                  </tr>
+                  
                   <tr>
                     <td>Container creation timeout</td>
                     <td>{{ Math.floor(deployment.timeout / 3600) }} hours</td>
@@ -235,15 +228,16 @@
 
         <!-- Events Tab -->
         <div v-if="activeTab === 'events'">
-          <!-- Tasks -->
+          <!-- Upcoming Tasks -->
           <div class="mb-5">
             <div class="is-flex is-justify-content-space-between is-align-items-center mb-3">
-              <h2 class="title is-5 mb-0">Tasks <span class="tag is-light">{{ tasks.length }}</span></h2>
+              <h2 class="title is-5 mb-0">Upcoming Tasks <span class="tag is-light">{{ tasks.length }}</span></h2>
               <button 
                 class="button is-small" 
                 @click="loadTasks"
                 :class="{ 'is-loading': tasksLoading }"
                 :disabled="tasksLoading"
+                data-tooltip="Refresh upcoming tasks"
               >
                 <span class="icon is-small">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
@@ -275,9 +269,9 @@
             </div>
           </div>
 
-          <!-- Events -->
+          <!-- History -->
           <div>
-            <h2 class="title is-5 mb-3">Events <span class="tag is-light">{{ deploymentEvents.length }}</span></h2>
+            <h2 class="title is-5 mb-3">History <span class="tag is-light">{{ deploymentEvents.length }}</span></h2>
             
             <div v-if="deploymentEvents.length === 0" class="notification is-light has-text-centered">
               <p class="has-text-grey">No events yet</p>
@@ -366,6 +360,7 @@
                     @click="startDeployment"
                     :class="{ 'is-loading': actionLoading }"
                     :disabled="actionLoading"
+                    data-tooltip="Start deployment and begin creating jobs"
                   >
                     <span class="icon is-small"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M8 5v14l11-7z" fill="currentColor"/></svg></span>
                     <span>Start</span>
@@ -378,6 +373,7 @@
                     @click="stopDeployment"
                     :class="{ 'is-loading': actionLoading }"
                     :disabled="actionLoading"
+                    data-tooltip="Stop deployment and halt all running jobs"
                   >
                     <span class="icon is-small"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M6 6h12v12H6V6z" fill="currentColor"/></svg></span>
                     <span>Stop</span>
@@ -390,6 +386,7 @@
                     @click="archiveDeployment"
                     :class="{ 'is-loading': actionLoading }"
                     :disabled="actionLoading"
+                    data-tooltip="Archive deployment (cannot be undone)"
                   >
                     <span class="icon is-small"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M3 3h18v4H3V3zm2 6h14v12H5V9z" fill="currentColor"/></svg></span>
                     <span>Archive</span>
@@ -400,7 +397,15 @@
 
             <!-- Replicas -->
             <div class="column">
-              <label class="label is-small">Replicas</label>
+                <label class="label is-small">
+                  Replicas
+                 <span class="icon is-small has-tooltip-arrow has-tooltip-multiline" data-tooltip="Number of parallel job instances">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                    <path d="M12 16v-4m0-4h.01" stroke-width="2" stroke-linecap="round"/>
+                  </svg>
+                </span>
+              </label>
               <div class="field has-addons">
                 <div class="control is-expanded">
                   <input
@@ -419,6 +424,7 @@
                     @click="updateReplicas"
                     :class="{ 'is-loading': actionLoading }"
                     :disabled="actionLoading || !newReplicaCount || newReplicaCount < 1 || deployment.status === 'ARCHIVED'"
+                    data-tooltip="Update replica count"
                   >
                     Update
                   </button>
@@ -429,7 +435,15 @@
 
             <!-- Timeout -->
             <div class="column">
-              <label class="label is-small">Timeout (hours)</label>
+                <label class="label is-small">
+                  Timeout (hours)
+                 <span class="icon is-small has-tooltip-arrow has-tooltip-multiline" data-tooltip="Maximum runtime before auto-shutdown">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                    <path d="M12 16v-4m0-4h.01" stroke-width="2" stroke-linecap="round"/>
+                  </svg>
+                </span>
+              </label>
               <div class="field has-addons">
                 <div class="control is-expanded">
                   <input
@@ -448,6 +462,7 @@
                     @click="updateJobTimeout"
                     :class="{ 'is-loading': actionLoading }"
                     :disabled="actionLoading || !newTimeoutHours || newTimeoutHours < 0.0167 || deployment.status === 'ARCHIVED'"
+                    data-tooltip="Update job timeout"
                   >
                     Update
                   </button>
@@ -456,34 +471,7 @@
               <p class="help">Current: {{ (deployment.timeout / 3600).toFixed(2) }}h</p>
             </div>
 
-            <!-- Vault -->
-            <div class="column">
-              <label class="label is-small">Vault</label>
-              <div class="field is-grouped">
-                <p class="control">
-                  <button
-                    class="button is-success"
-                    @click="showTopupModal = true"
-                    :disabled="actionLoading || deployment.status === 'ARCHIVED'"
-                  >
-                    <span class="icon is-small"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 5v14m7-7H5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>
-                    <span>Top Up</span>
-                  </button>
-                </p>
-
-                <p class="control">
-                  <button
-                    class="button"
-                    @click="withdrawFromVault"
-                    :class="{ 'is-loading': actionLoading }"
-                    :disabled="actionLoading || deployment.status === 'ARCHIVED' || (vaultBalance.NOS === 0 && vaultBalance.SOL === 0)"
-                  >
-                    <span>Withdraw</span>
-                  </button>
-                </p>
-              </div>
-              <p class="help">{{ vaultBalance.NOS.toFixed(2) }} NOS · {{ vaultBalance.SOL.toFixed(4) }} SOL</p>
-            </div>
+            
           </div>
         </div>
         </div>
@@ -491,153 +479,10 @@
     </div>
   </div>
 
-  <!-- Top-up Modal -->
-  <div class="modal" :class="{ 'is-active': showTopupModal }">
-    <div class="modal-background" @click="showTopupModal = false"></div>
-    <div class="modal-card">
-      <header class="modal-card-head">
-        <p class="modal-card-title">Top Up Vault</p>
-        <button class="delete" aria-label="close" @click="showTopupModal = false"></button>
-      </header>
-      <section class="modal-card-body">
-        <div class="columns">
-          <div class="column">
-            <div class="field">
-              <label class="label">Current Vault Balance</label>
-              <p class="content mb-2">
-                <strong>{{ vaultBalance.NOS.toFixed(2) }} NOS</strong>
-              </p>
-              <p class="content">
-                <strong>{{ vaultBalance.SOL.toFixed(4) }} SOL</strong>
-              </p>
-            </div>
-          </div>
-          <div class="column">
-            <div class="field">
-              <label class="label">Your Wallet Balance</label>
-              <p class="content mb-2">
-                <strong>{{ userNosBalance.toFixed(2) }} NOS</strong>
-              </p>
-              <p class="content">
-                <strong>{{ userSolBalance.toFixed(4) }} SOL</strong>
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <!-- NOS Input -->
-        <div class="field">
-          <label class="label">NOS Amount to Add</label>
-          <div class="field has-addons">
-            <div class="control is-expanded">
-              <input
-                v-model.number="topupNosAmount"
-                class="input"
-                type="number"
-                placeholder="0.00"
-                min="0"
-                step="0.01"
-                :max="userNosBalance"
-              />
-            </div>
-            <div class="control">
-              <button 
-                class="button"
-                @click="topupNosAmount = Math.floor(userNosBalance / 2 * 100) / 100"
-                :disabled="userNosBalance <= 0"
-              >
-                HALF
-              </button>
-            </div>
-            <div class="control">
-              <button 
-                class="button"
-                @click="topupNosAmount = Math.floor(userNosBalance * 100) / 100"
-                :disabled="userNosBalance <= 0"
-              >
-                MAX
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- SOL Input -->
-        <div class="field">
-          <label class="label">SOL Amount to Add</label>
-          <div class="field has-addons">
-            <div class="control is-expanded">
-              <input
-                v-model.number="topupSolAmount"
-                class="input"
-                type="number"
-                placeholder="0.00"
-                min="0"
-                step="0.001"
-                :max="userSolBalance"
-              />
-            </div>
-            <div class="control">
-              <button 
-                class="button"
-                @click="topupSolAmount = Math.floor(userSolBalance / 2 * 10000) / 10000"
-                :disabled="userSolBalance <= 0"
-              >
-                HALF
-              </button>
-            </div>
-            <div class="control">
-              <button 
-                class="button"
-                @click="topupSolAmount = Math.floor(userSolBalance * 10000) / 10000"
-                :disabled="userSolBalance <= 0"
-              >
-                MAX
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div class="notification is-info is-light">
-          <p class="is-size-7">
-            <strong>Note:</strong> This will transfer tokens from your wallet to the deployment vault.
-            The vault is used to pay for compute resources. You can add NOS, SOL, or both.
-          </p>
-        </div>
-      </section>
-      <footer class="modal-card-foot">
-        <button
-          class="button is-primary"
-          @click="topupVault"
-          :class="{ 'is-loading': topupLoading }"
-          :disabled="topupLoading || ((!topupNosAmount || topupNosAmount <= 0) && (!topupSolAmount || topupSolAmount <= 0))"
-        >
-          <span v-if="topupNosAmount > 0 && topupSolAmount > 0">
-            Top Up {{ topupNosAmount }} NOS + {{ topupSolAmount }} SOL
-          </span>
-          <span v-else-if="topupNosAmount > 0">
-            Top Up {{ topupNosAmount }} NOS
-          </span>
-          <span v-else-if="topupSolAmount > 0">
-            Top Up {{ topupSolAmount }} SOL
-          </span>
-          <span v-else>
-            Top Up Vault
-          </span>
-        </button>
-        <button
-          class="button"
-          @click="showTopupModal = false"
-          :disabled="topupLoading"
-        >
-          Cancel
-        </button>
-      </footer>
-    </div>
-  </div>
+  
 </template>
 
 <script setup lang="ts">
-import { useWallet } from "solana-wallets-vue";
 import type { Deployment, JobDefinition } from "@nosana/sdk";
 import { Mode, ValidationSeverity } from "vanilla-jsoneditor";
 import JsonEditorVue from "json-editor-vue";
@@ -666,8 +511,8 @@ interface DeploymentEvent {
 const route = useRoute();
 const router = useRouter();
 const toast = useToast();
-const { connected, wallet, publicKey } = useWallet();
-const { nosana } = useSDK();
+const { status, token } = useAuth();
+const isAuthenticated = computed(() => status.value === 'authenticated' && token.value)
 const { getIpfs } = useIpfs();
 
 // State
@@ -679,10 +524,6 @@ const error = ref<string | null>(null);
 const activeTab = ref("overview");
 const jobActivityTab = ref("running");
 const actionLoading = ref(false);
-const vaultBalance = ref<{ SOL: number; NOS: number }>({ SOL: 0, NOS: 0 });
-const topupNosAmount = ref<number>(0);
-const topupSolAmount = ref<number>(0);
-const topupLoading = ref(false);
 const newReplicaCount = ref<number | null>(null);
 const newTimeoutHours = ref<number | null>(null);
 const authHeader = ref<string>('');
@@ -807,8 +648,8 @@ const loadMarket = async (marketId: string) => {
 };
 
 const loadDeployment = async (silent = false) => {
-  if (!connected.value) {
-    error.value = "Please connect your wallet first";
+  if (!isAuthenticated.value) {
+    error.value = "Please log in to view deployments";
     if (!silent) loading.value = false;
     return;
   }
@@ -818,58 +659,21 @@ const loadDeployment = async (silent = false) => {
     error.value = null;
 
     const deploymentId = route.params.id as string;
-    console.log('=== LOADING DEPLOYMENT ===');
-    console.log('Deployment ID:', deploymentId);
-    
-    const result = await nosana.value.deployments.get(deploymentId);
-    console.log('Full deployment object:', result);
-    console.log('Deployment properties:', {
-      id: result.id,
-      name: result.name,
-      status: result.status,
-      strategy: result.strategy,
-      replicas: result.replicas,
-      timeout: result.timeout,
-      market: result.market,
-      ipfs_definition_hash: result.ipfs_definition_hash,
-      jobs: result.jobs,
-      events: result.events,
-      endpoints: result.endpoints,
-      created_at: result.created_at,
-      updated_at: result.updated_at,
+    const data = await useApiFetch<Deployment>(`/api/deployments/${deploymentId}`, {
+      method: 'GET',
+      auth: true,
     });
-    
-    if (result.vault) {
-      try {
-        const balance = await result.vault.getBalance();
-        vaultBalance.value = balance;
-      } catch (balanceError) {
-        console.error("Error fetching vault balance:", balanceError);
-      }
-    }
 
-    // Fetch user's NOS and SOL balance
-    try {
-      const nosBalance = await nosana.value.solana.getNosBalance();
-      userNosBalance.value = nosBalance?.uiAmount ?? 0;
-      
-      const solBalance = await nosana.value.solana.getSolBalance();
-      userSolBalance.value = solBalance / 1e9;
-    } catch (balanceError) {
-      console.error("Error fetching user balances:", balanceError);
-    }
+    deployment.value = data as Deployment;
 
-    deployment.value = result as Deployment;
-
-    if (result.market) {
-      await loadMarket(result.market.toString());
+    if (deployment.value.market) {
+      await loadMarket(deployment.value.market.toString());
     }
 
     await loadJobDefinition();
-    
-    // Load job states
-    if (result.jobs && result.jobs.length > 0) {
-      for (const job of result.jobs) {
+
+    if (deployment.value.jobs && deployment.value.jobs.length > 0) {
+      for (const job of deployment.value.jobs) {
         try {
           const { data } = await useAPI(`/api/jobs/${job.job}`);
           if (data.value?.state !== undefined) {
@@ -964,32 +768,17 @@ const historicalJobs = computed((): DeploymentJob[] => {
   return enrichedJobs.filter(job => job.state >= 2);
 });
 
-// Deployment endpoints - use API-provided endpoints
+// Deployment endpoints - use API-provided endpoints when available
 const deploymentEndpoints = computed(() => {
-  if (!deployment.value?.endpoints) {
-    console.log('deploymentEndpoints: No endpoints from API');
-    return [];
-  }
-  
-  console.log('=== DEPLOYMENT ENDPOINTS ===');
-  console.log('Using endpoints from API:', deployment.value.endpoints);
-  
-  // Check if deployment is running
+  if (!deployment.value?.endpoints) return [];
   const isRunning = deployment.value.status === 'RUNNING';
-  console.log('Deployment status:', deployment.value.status, 'isRunning:', isRunning);
-  
-  // Map API endpoints to our format with status
-  const endpoints = deployment.value.endpoints.map((endpoint: any) => ({
+  return deployment.value.endpoints.map((endpoint: any) => ({
     opId: endpoint.opId,
     port: endpoint.port,
     url: endpoint.url,
     status: isRunning ? 'Online' : 'Offline',
     statusClass: isRunning ? 'is-success' : 'is-light'
   }));
-  
-  console.log('Final endpoints with status:', endpoints);
-  
-  return endpoints;
 });
 
 // All deployment events
@@ -999,87 +788,28 @@ const deploymentEvents = computed((): DeploymentEvent[] => {
   return [...events].reverse();
 });
 
-// Vault top-up function
-const topupVault = async () => {
-  if (!deployment.value || !connected.value) {
-    toast.error("Please connect your wallet first");
-    return;
-  }
-
-  if ((!topupNosAmount.value || topupNosAmount.value <= 0) && 
-      (!topupSolAmount.value || topupSolAmount.value <= 0)) {
-    toast.error("Please enter a valid amount for NOS or SOL");
-    return;
-  }
-
-  if (!deployment.value.vault) {
-    toast.error("No vault found for this deployment");
-    return;
-  }
-
-  try {
-    topupLoading.value = true;
-    
-    await deployment.value.vault.topup({ 
-      NOS: topupNosAmount.value || 0,
-      SOL: topupSolAmount.value || 0
-    });
-    
-    const amounts = [];
-    if (topupNosAmount.value > 0) amounts.push(`${topupNosAmount.value} NOS`);
-    if (topupSolAmount.value > 0) amounts.push(`${topupSolAmount.value} SOL`);
-    
-    toast.success(`Successfully topped up vault with ${amounts.join(' and ')}`);
-    
-    // Reset and refresh
-    topupNosAmount.value = 0;
-    topupSolAmount.value = 0;
-    showTopupModal.value = false;
-    
-    await loadDeployment();
-  } catch (err: any) {
-    console.error("Vault topup error:", err);
-    toast.error(`Failed to top up vault: ${err.message || err.toString()}`);
-  } finally {
-    topupLoading.value = false;
-  }
-};
+// No vault actions in API mode
 
 // Generic deployment action handler
 const executeDeploymentAction = async (
-  action: () => Promise<void>,
+  actionUrl: string,
   successMessage: string,
   shouldRedirect = false
 ) => {
-  if (!deployment.value || !connected.value) {
-    toast.error("Please connect your wallet first");
+  if (!deployment.value || !isAuthenticated.value) {
+    toast.error("Please log in to perform this action");
     return;
   }
 
   try {
     actionLoading.value = true;
-    const previousStatus = deployment.value.status;
-    await action();
+    await useApiFetch(actionUrl, { method: 'POST', auth: true });
     toast.success(successMessage);
 
     if (shouldRedirect) {
       setTimeout(() => router.push("/deployment"), 2000);
     } else {
-      // Poll for status change (max 10 seconds)
-      let attempts = 0;
-      const maxAttempts = 20;
-      const transitionalStates = ['STARTING', 'STOPPING'];
-      
-      while (attempts < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        await loadDeployment(true); // Silent reload during polling
-        
-        // Stop polling if we reach a final state
-        if (deployment.value && !transitionalStates.includes(deployment.value.status)) {
-          break;
-        }
-        attempts++;
-      }
+      await loadDeployment(true);
     }
   } catch (err: any) {
     console.error("Deployment action error:", err);
@@ -1093,12 +823,12 @@ const executeDeploymentAction = async (
 
 // Deployment action methods
 const startDeployment = () => executeDeploymentAction(
-  () => deployment.value!.start(),
+  `/api/deployments/${deployment.value!.id}/start`,
   "Deployment started successfully"
 );
 
 const stopDeployment = () => executeDeploymentAction(
-  () => deployment.value!.stop(),
+  `/api/deployments/${deployment.value!.id}/stop`,
   "Deployment stopped successfully"
 );
 
@@ -1108,7 +838,7 @@ const archiveDeployment = async () => {
   }
   
   await executeDeploymentAction(
-    () => deployment.value!.archive(),
+    `/api/deployments/${deployment.value!.id}/archive`,
     "Deployment archived successfully",
     true
   );
@@ -1121,7 +851,7 @@ const updateReplicas = async () => {
   }
 
   await executeDeploymentAction(
-    () => deployment.value!.updateReplicaCount(newReplicaCount.value!),
+    `/api/deployments/${deployment.value!.id}/replicas`,
     `Replica count updated to ${newReplicaCount.value}`
   );
   
@@ -1134,44 +864,15 @@ const updateJobTimeout = async () => {
     return;
   }
 
-  const timeoutSeconds = Math.floor(newTimeoutHours.value * 3600);
-  
   await executeDeploymentAction(
-    () => deployment.value!.updateTimeout(timeoutSeconds),
+    `/api/deployments/${deployment.value!.id}/timeout`,
     `Job timeout updated to ${newTimeoutHours.value} hours`
   );
   
   newTimeoutHours.value = null;
 };
 
-const withdrawFromVault = async () => {
-  if (!confirm("Withdraw all funds from the vault? This will return all SOL and NOS to your wallet.")) {
-    return;
-  }
-
-  actionLoading.value = true;
-  try {
-    await deployment.value!.vault.withdraw();
-    toast.success("Funds withdrawn successfully");
-    
-    // Reload vault balance
-    vaultBalance.value = await deployment.value!.vault.getBalance();
-    
-    // Reload user balances
-    const { nosana } = useSDK();
-    if (nosana.value) {
-      const nosBalance = await nosana.value.solana.getNosBalance();
-      const solBalance = await nosana.value.solana.getSolBalance();
-      userNosBalance.value = typeof nosBalance === 'number' ? nosBalance : 0;
-      userSolBalance.value = typeof solBalance === 'number' ? solBalance : 0;
-    }
-  } catch (err: any) {
-    console.error("Vault withdrawal error:", err);
-    toast.error(`Failed to withdraw from vault: ${err.message}`);
-  } finally {
-    actionLoading.value = false;
-  }
-};
+// Vault functionality removed in API mode
 
 const generateAuth = async () => {
   actionLoading.value = true;
@@ -1265,12 +966,12 @@ const loadTasks = async () => {
 
 // Watchers
 watch(
-  connected,
-  (newConnected) => {
-    if (newConnected) {
+  isAuthenticated,
+  (authed) => {
+    if (authed) {
       loadDeployment();
     } else {
-      error.value = "Please connect your wallet first";
+      error.value = "Please log in to view deployments";
       deployment.value = null;
     }
   },
@@ -1399,4 +1100,5 @@ useHead({
     height: 12px !important;
   }
 }
+
 </style>
