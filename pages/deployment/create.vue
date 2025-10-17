@@ -15,6 +15,7 @@
       <div class="column is-9-fullhd is-12">
         <!-- Name your deployment -->
         <div class="box has-background-white" style="border: none;">
+          <h2 class="title is-5 mb-4" style="color: #202124;">Define your deployment</h2>
           <div class="field">
             <div class="control">
               <input 
@@ -40,6 +41,7 @@
 
         <!-- Select GPU -->
         <div class="box has-background-white" style="border: none; margin-top: 1.5rem;">
+          <h2 class="title is-5 mb-4" style="color: #202124;">Select instance</h2>
           <DeploySimpleGpuSelection
             :markets="markets || null"
             :testgridMarkets="testgridMarkets"
@@ -60,6 +62,7 @@
       <div class="column is-3-fullhd is-12">
         <div class="summary">
           <div class="box has-background-white" style="border: none; padding: 1.5rem;">
+            <h2 class="title is-5 mb-4" style="color: #202124;">Summary</h2>
             <!-- Cost Summary -->
             <div class="mb-4">
               <p class="has-text-grey is-size-7 mb-2" style="text-transform: uppercase; letter-spacing: 0.5px; font-weight: 500;">Cost</p>
