@@ -594,20 +594,27 @@
 .modal-card-head {
   overflow: visible; /* let bubbles extend over the header edge */
   position: relative;
-  z-index: 1;
+  z-index: auto !important; /* avoid creating stacking context above tooltips */
 }
 .modal-card-body {
   position: relative; /* create stacking context above header */
-  z-index: 2;
+  z-index: auto !important;
+  overflow: visible !important; /* prevent clipping tooltip bubbles */
 }
 
 /* Prevent modal header/body from clipping tooltips by rendering them at viewport level */
-.modal .modal-card [data-tooltip] {
+.modal.is-active .modal-card [data-tooltip] {
   &::before,
   &::after {
     position: fixed !important;
-    z-index: 99999 !important;
+    z-index: 1000000 !important; /* ensure above modal UI */
   }
+}
+
+/* Ensure the trigger itself participates in the higher stacking context */
+.modal.is-active .modal-card .has-tooltip-arrow {
+  position: relative !important;
+  z-index: 2003 !important;
 }
 
 button[disabled][data-tooltip] {
@@ -699,6 +706,7 @@ button[disabled][data-tooltip] {
 .modal-card {
   width: 360px;
   max-width: 90%;
+  overflow: visible !important; /* allow tooltips to escape card bounds */
 
   &-body {
     overflow: visible !important;
@@ -884,6 +892,7 @@ button[disabled][data-tooltip] {
 // Ensure all modals appear above profile dropdowns and other UI elements
 .modal {
   z-index: 1001 !important;
+  overflow: visible !important; /* prevent clipping inside modal container */
 }
 
 /* ==========================================================================
