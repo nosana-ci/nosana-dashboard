@@ -19,9 +19,9 @@
         <div style="padding: 1.5rem; border-bottom: 1px solid #dbdbdb;">
           <div class="is-flex is-justify-content-space-between is-align-items-center">
             <div class="is-flex is-align-items-center">
-              <NuxtLink to="/deployment" class="button is-ghost" style="padding: 0.25rem; margin-right: 1rem;">
+              <NuxtLink to="/deployments" class="button is-ghost back-button" style="padding: 0.5rem 1rem; margin-right: 1rem;">
                 <span class="icon is-small">
-                  <img src="/assets/img/icons/arrow-up.svg" style="width: 14px; height: 14px; transform: rotate(-90deg);" />
+                  <img src="/assets/img/icons/arrow-up.svg" style="width: 16px; height: 16px; transform: rotate(-90deg);" />
                 </span>
               </NuxtLink>
               <div>
@@ -32,10 +32,9 @@
                 <span>{{ deployment.status }}</span>
               </div>
             </div>
-            <!-- Tabs -->
             <div class="deployment-tabs">
               <button 
-                v-for="tab in ['overview', 'events', 'logs', 'job-definition', 'actions']"
+                v-for="tab in ['overview', 'logs', 'events', 'job-definition']"
                 :key="tab"
                 @click="activeTab = tab"
                 :class="{ 'is-active': activeTab === tab }"
@@ -43,6 +42,107 @@
               >
                 {{ tab === 'job-definition' ? 'Definition' : tab.charAt(0).toUpperCase() + tab.slice(1) }}
               </button>
+              <!-- Actions Dropdown -->
+              <div class="dropdown is-right" :class="{ 'is-active': isActionsDropdownOpen }" ref="actionsDropdown">
+                <div class="dropdown-trigger">
+                  <button 
+                    class="tab-button actions-button" 
+                    @click="isActionsDropdownOpen = !isActionsDropdownOpen"
+                    :class="{ 'is-loading': actionLoading }"
+                  >
+                    <span>Actions</span>
+                    <span class="icon is-small dropdown-arrow" :class="{ 'is-rotated': isActionsDropdownOpen }" style="margin-left: 0.25rem;">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                        <path d="M7 10l5 5 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </span>
+                  </button>
+                </div>
+                <div class="dropdown-menu">
+                  <div class="dropdown-content">
+                    <!-- Start Action -->
+                    <a 
+                      v-if="canStart"
+                      class="dropdown-item"
+                      @click="startDeployment(); isActionsDropdownOpen = false"
+                      :disabled="actionLoading"
+                    >
+                      <span class="icon is-small mr-2">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                          <path d="M8 5v14l11-7z" fill="currentColor"/>
+                        </svg>
+                      </span>
+                      <span>Start</span>
+                    </a>
+                    
+                    <!-- Stop Action -->
+                    <a 
+                      v-if="canStop"
+                      class="dropdown-item"
+                      @click="stopDeployment(); isActionsDropdownOpen = false"
+                      :disabled="actionLoading"
+                    >
+                      <span class="icon is-small mr-2">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                          <path d="M6 6h12v12H6V6z" fill="currentColor"/>
+                        </svg>
+                      </span>
+                      <span>Stop Deployment</span>
+                    </a>
+
+                    <!-- Archive Action -->
+                    <a 
+                      v-if="canArchive"
+                      class="dropdown-item"
+                      @click="archiveDeployment(); isActionsDropdownOpen = false"
+                      :disabled="actionLoading"
+                    >
+                      <span class="icon is-small mr-2">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                          <path d="M3 3h18v4H3V3zm2 6h14v12H5V9z" fill="currentColor"/>
+                        </svg>
+                      </span>
+                      <span>Archive</span>
+                    </a>
+
+                    <hr class="dropdown-divider" v-if="(canStart || canStop || canArchive) && deployment.status !== 'ARCHIVED'">
+
+                    <!-- Update Replicas Action -->
+                    <a 
+                      v-if="deployment.status !== 'ARCHIVED'"
+                      class="dropdown-item"
+                      @click="showReplicasModal = true; isActionsDropdownOpen = false"
+                      :disabled="actionLoading"
+                    >
+                      <span class="icon is-small mr-2">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <rect x="3" y="3" width="7" height="7" stroke-width="2"/>
+                          <rect x="14" y="3" width="7" height="7" stroke-width="2"/>
+                          <rect x="3" y="14" width="7" height="7" stroke-width="2"/>
+                          <rect x="14" y="14" width="7" height="7" stroke-width="2"/>
+                        </svg>
+                      </span>
+                      <span>Update Replicas</span>
+                    </a>
+
+                    <!-- Update Timeout Action -->
+                    <a 
+                      v-if="deployment.status !== 'ARCHIVED'"
+                      class="dropdown-item"
+                      @click="showTimeoutModal = true; isActionsDropdownOpen = false"
+                      :disabled="actionLoading"
+                    >
+                      <span class="icon is-small mr-2">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                          <path d="M12 6v6l4 2" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                      </span>
+                      <span>Update Timeout</span>
+                    </a>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -74,6 +174,10 @@
                   <tr>
                     <td>Created on</td>
                     <td>{{ formatDate(deployment.created_at) }}</td>
+                  </tr>
+                  <tr>
+                    <td>Last updated on</td>
+                    <td>{{ formatDate(deployment.updated_at) }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -346,135 +450,99 @@
           </div>
         </div>
 
-        <!-- Actions Tab -->
-        <div v-if="activeTab === 'actions'">
-          <!-- All Actions in One Row -->
-          <div class="columns">
-            <!-- Deployment Control -->
-            <div class="column is-narrow">
-              <label class="label is-small">Deployment</label>
-              <div class="field is-grouped">
-                <p class="control" v-if="canStart">
-                  <button
-                    class="button is-success"
-                    @click="startDeployment"
-                    :class="{ 'is-loading': actionLoading }"
-                    :disabled="actionLoading"
-                    data-tooltip="Start deployment and begin creating jobs"
-                  >
-                    <span class="icon is-small"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M8 5v14l11-7z" fill="currentColor"/></svg></span>
-                    <span>Start</span>
-                  </button>
-                </p>
+        </div>
+      </div>
+    </div>
 
-                <p class="control" v-if="canStop">
-                  <button
-                    class="button is-warning"
-                    @click="stopDeployment"
-                    :class="{ 'is-loading': actionLoading }"
-                    :disabled="actionLoading"
-                    data-tooltip="Stop deployment and halt all running jobs"
-                  >
-                    <span class="icon is-small"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M6 6h12v12H6V6z" fill="currentColor"/></svg></span>
-                    <span>Stop</span>
-                  </button>
-                </p>
-
-                <p class="control" v-if="canArchive">
-                  <button
-                    class="button is-danger"
-                    @click="archiveDeployment"
-                    :class="{ 'is-loading': actionLoading }"
-                    :disabled="actionLoading"
-                    data-tooltip="Archive deployment (cannot be undone)"
-                  >
-                    <span class="icon is-small"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M3 3h18v4H3V3zm2 6h14v12H5V9z" fill="currentColor"/></svg></span>
-                    <span>Archive</span>
-                  </button>
-                </p>
-              </div>
+    <!-- Update Replicas Modal -->
+    <div v-if="deployment" class="modal" :class="{ 'is-active': showReplicasModal }">
+      <div class="modal-background" @click="showReplicasModal = false"></div>
+      <div class="modal-card" style="max-width: 400px;">
+        <header class="modal-card-head">
+          <p class="modal-card-title">Update Replicas</p>
+          <button class="delete" @click="showReplicasModal = false"></button>
+        </header>
+        <section class="modal-card-body">
+          <div class="field">
+            <label class="label">
+              Replica Count
+              <span class="icon is-small has-tooltip-arrow" data-tooltip="Number of parallel job instances">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                  <path d="M12 16v-4m0-4h.01" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </span>
+            </label>
+            <div class="control">
+              <input
+                type="number"
+                class="input"
+                v-model.number="newReplicaCount"
+                min="1"
+                max="100"
+                :placeholder="deployment.replicas.toString()"
+              />
             </div>
-
-            <!-- Replicas -->
-            <div class="column">
-                <label class="label is-small">
-                  Replicas
-                 <span class="icon is-small has-tooltip-arrow has-tooltip-multiline" data-tooltip="Number of parallel job instances">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <circle cx="12" cy="12" r="10" stroke-width="2"/>
-                    <path d="M12 16v-4m0-4h.01" stroke-width="2" stroke-linecap="round"/>
-                  </svg>
-                </span>
-              </label>
-              <div class="field has-addons">
-                <div class="control is-expanded">
-                  <input
-                    type="number"
-                    class="input"
-                    v-model.number="newReplicaCount"
-                    min="1"
-                    max="100"
-                    :placeholder="deployment.replicas.toString()"
-                    :disabled="actionLoading || deployment.status === 'ARCHIVED'"
-                  />
-                </div>
-                <div class="control">
-                  <button
-                    class="button is-info"
-                    @click="updateReplicas"
-                    :class="{ 'is-loading': actionLoading }"
-                    :disabled="actionLoading || !newReplicaCount || newReplicaCount < 1 || deployment.status === 'ARCHIVED'"
-                    data-tooltip="Update replica count"
-                  >
-                    Update
-                  </button>
-                </div>
-              </div>
-              <p class="help">Current: {{ deployment.replicas }}</p>
-            </div>
-
-            <!-- Timeout -->
-            <div class="column">
-                <label class="label is-small">
-                  Timeout (hours)
-                 <span class="icon is-small has-tooltip-arrow has-tooltip-multiline" data-tooltip="Maximum runtime before auto-shutdown">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <circle cx="12" cy="12" r="10" stroke-width="2"/>
-                    <path d="M12 16v-4m0-4h.01" stroke-width="2" stroke-linecap="round"/>
-                  </svg>
-                </span>
-              </label>
-              <div class="field has-addons">
-                <div class="control is-expanded">
-                  <input
-                    type="number"
-                    class="input"
-                    v-model.number="newTimeoutHours"
-                    min="0.0167"
-                    step="0.1"
-                    :placeholder="(deployment.timeout / 3600).toFixed(2)"
-                    :disabled="actionLoading || deployment.status === 'ARCHIVED'"
-                  />
-                </div>
-                <div class="control">
-                  <button
-                    class="button is-info"
-                    @click="updateJobTimeout"
-                    :class="{ 'is-loading': actionLoading }"
-                    :disabled="actionLoading || !newTimeoutHours || newTimeoutHours < 0.0167 || deployment.status === 'ARCHIVED'"
-                    data-tooltip="Update job timeout"
-                  >
-                    Update
-                  </button>
-                </div>
-              </div>
-              <p class="help">Current: {{ (deployment.timeout / 3600).toFixed(2) }}h</p>
-            </div>
-
-            
+            <p class="help">Current: {{ deployment.replicas }}</p>
           </div>
-        </div>
-        </div>
+        </section>
+        <footer class="modal-card-foot" style="justify-content: flex-end;">
+          <button class="button" @click="showReplicasModal = false">Cancel</button>
+          <button 
+            class="button is-success"
+            @click="updateReplicas(); showReplicasModal = false"
+            :class="{ 'is-loading': actionLoading }"
+            :disabled="actionLoading || !newReplicaCount || newReplicaCount < 1"
+          >
+            Update
+          </button>
+        </footer>
+      </div>
+    </div>
+
+    <!-- Update Timeout Modal -->
+    <div v-if="deployment" class="modal" :class="{ 'is-active': showTimeoutModal }">
+      <div class="modal-background" @click="showTimeoutModal = false"></div>
+      <div class="modal-card" style="max-width: 400px;">
+        <header class="modal-card-head">
+          <p class="modal-card-title">Update Timeout</p>
+          <button class="delete" @click="showTimeoutModal = false"></button>
+        </header>
+        <section class="modal-card-body">
+          <div class="field">
+            <label class="label">
+              Timeout (hours)
+              <span class="icon is-small has-tooltip-arrow" data-tooltip="Maximum runtime before auto-shutdown">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                  <path d="M12 16v-4m0-4h.01" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </span>
+            </label>
+            <div class="control">
+              <input
+                type="number"
+                class="input"
+                v-model.number="newTimeoutHours"
+                min="0.0167"
+                step="0.1"
+                :placeholder="(deployment.timeout / 3600).toFixed(2)"
+              />
+            </div>
+            <p class="help">Current: {{ (deployment.timeout / 3600).toFixed(2) }}h</p>
+          </div>
+        </section>
+        <footer class="modal-card-foot" style="justify-content: flex-end;">
+          <button class="button" @click="showTimeoutModal = false">Cancel</button>
+          <button 
+            class="button is-success"
+            @click="updateJobTimeout(); showTimeoutModal = false"
+            :class="{ 'is-loading': actionLoading }"
+            :disabled="actionLoading || !newTimeoutHours || newTimeoutHours < 0.0167"
+          >
+            Update
+          </button>
+        </footer>
       </div>
     </div>
   </div>
@@ -532,6 +600,10 @@ const userNosBalance = ref<number>(0);
 const userSolBalance = ref<number>(0);
 const tasks = ref<any[]>([]);
 const tasksLoading = ref(false);
+const isActionsDropdownOpen = ref(false);
+const showReplicasModal = ref(false);
+const showTimeoutModal = ref(false);
+const actionsDropdown = ref<HTMLElement | null>(null);
 // Status dot helper
 const statusDotClass = computed(() => {
   switch (deployment.value?.status?.toUpperCase()) {
@@ -964,6 +1036,21 @@ const loadTasks = async () => {
   }
 };
 
+// Click outside handler to close dropdown
+const handleClickOutside = (event: MouseEvent) => {
+  if (actionsDropdown.value && !actionsDropdown.value.contains(event.target as Node)) {
+    isActionsDropdownOpen.value = false;
+  }
+};
+
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside);
+});
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside);
+});
+
 // Watchers
 watch(
   isAuthenticated,
@@ -1098,6 +1185,27 @@ useHead({
   img {
     width: 12px !important;
     height: 12px !important;
+  }
+}
+
+.dropdown-arrow {
+  transition: transform 0.2s ease;
+  transform: rotate(90deg);
+  
+  &.is-rotated {
+    transform: rotate(0deg);
+  }
+}
+
+.back-button.is-ghost {
+  border: none !important;
+  
+  &:hover,
+  &:focus,
+  &:active {
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
   }
 }
 

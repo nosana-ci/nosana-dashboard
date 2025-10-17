@@ -65,6 +65,80 @@
   &.is-text {
     text-decoration: none;
   }
+
+  &:focus,
+  &:focus-visible,
+  &:active,
+  &:focus:not(:active) {
+    outline: none !important;
+    box-shadow: none !important;
+  }
+
+  // Only apply border and background overrides to buttons without color classes
+  &:not(.is-primary):not(.is-secondary):not(.is-success):not(.is-danger):not(.is-warning):not(.is-info):not(.is-light):not(.is-dark):not(.is-link) {
+    &:hover,
+    &:focus,
+    &:focus-visible,
+    &:active,
+    &:focus:not(:active) {
+      border-color: #dbdbdb !important;
+      border-width: 1px !important;
+      background-color: inherit;
+    }
+  }
+}
+
+// Dropdown styling
+.dropdown-menu {
+  .dropdown-content {
+    background: white;
+    border: 1px solid #e8eaed;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    padding: 4px;
+  }
+
+  .dropdown-item {
+    color: #5f6368;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 8px 12px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    
+    &:hover {
+      background: #f8f9fa;
+      color: #202124;
+    }
+  }
+
+  .dropdown-divider {
+    background-color: #e8eaed;
+    margin: 4px 0;
+  }
+}
+
+.dark-mode {
+  .dropdown-menu {
+    .dropdown-content {
+      background: #2a2a2a;
+      border-color: #404040;
+    }
+
+    .dropdown-item {
+      color: #e0e0e0;
+      
+      &:hover {
+        background: #333333;
+        color: #ffffff;
+      }
+    }
+
+    .dropdown-divider {
+      background-color: #404040;
+    }
+  }
 }
 .table.is-narrow td,
 .table.is-narrow th {

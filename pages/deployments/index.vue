@@ -18,7 +18,7 @@
         </div>
         <div class="level-right">
           <div class="level-item">
-            <button class="button is-dark" @click="$router.push('/deployment/create')">Create new Deployment</button>
+            <button class="button is-dark" @click="$router.push('/deployments/create')">Create new Deployment</button>
           </div>
         </div>
       </div>
@@ -29,7 +29,7 @@
             <th>Deployment</th>
             <th>Status</th>
             <th>Active Jobs</th>
-            <th>Balance</th>
+            <th>Last Updated</th>
           </tr>
         </thead>
         <tbody>
@@ -50,18 +50,18 @@
             v-for="deployment in filteredDeployments" 
             :key="deployment.id" 
             class="is-clickable"
-            @click="$router.push(`/deployment/${deployment.id}`)"
+            @click="$router.push(`/deployments/${deployment.id}`)"
           >
             <td>
-              {{ deployment.name }}
+              <div class="deployment-name">{{ deployment.name }}</div>
+              <div class="is-size-7 is-family-monospace has-text-grey">{{ deployment.id }}</div>
             </td>
             <td>
               <span class="tag" :class="statusClass(deployment.status)">{{ deployment.status }}</span>
             </td>
             <td>{{ deployment.jobs?.length || 0 }} Jobs</td>
             <td>
-              <div>{{ (deployment.balance?.NOS || 0).toFixed(2) }} NOS</div>
-              <div class="is-size-7 has-text-grey">{{ (deployment.balance?.SOL || 0).toFixed(2) }} SOL</div>
+              <div>{{ formatDate(deployment.updated_at) }}</div>
             </td>
           </tr>
         </tbody>
@@ -89,6 +89,7 @@ interface Deployment {
     NOS: number
     SOL: number
   }
+  updated_at: string
 }
 
 const searchQuery = ref('')
@@ -136,6 +137,11 @@ const statusClass = (status: string) => {
   }
 }
 
+const formatDate = (dateString: string) => {
+  if (!dateString) return 'N/A'
+  return new Date(dateString).toLocaleString()
+}
+
 watch(deploymentsData, (data) => {
   if (data) {
     deployments.value = data.map((d: Deployment) => ({
@@ -143,7 +149,8 @@ watch(deploymentsData, (data) => {
       name: d.name,
       status: d.status,
       jobs: d.jobs,
-      balance: d.balance || { SOL: 0, NOS: 0 }
+      balance: d.balance || { SOL: 0, NOS: 0 },
+      updated_at: d.updated_at
     }))
   }
 }, { immediate: true })
@@ -189,6 +196,14 @@ watch(isAuthenticated, (authenticated) => {
   td, th {
     padding: 0.3rem 0.3rem !important;
     vertical-align: middle;
+  }
+  
+  tbody tr td:first-child {
+    color: inherit !important;
+  }
+  
+  .deployment-name {
+    color: #202124 !important;
   }
 }
 </style>
