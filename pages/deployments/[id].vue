@@ -218,18 +218,18 @@
             <h2 class="title is-5 mb-3">Job activity</h2>
             
             <!-- Job Activity Tabs -->
-            <div class="mb-3" style="display: flex; gap: 0.5rem;">
+            <div class="mb-3" style="display: flex; gap: 8px; margin-left: 1rem;">
               <button 
                 @click="jobActivityTab = 'running'"
-                class="button is-small"
-                :class="jobActivityTab === 'running' ? 'is-dark' : 'is-light'"
+                class="tab-button"
+                :class="{ 'is-active': jobActivityTab === 'running' }"
               >
                 Running
               </button>
               <button 
                 @click="jobActivityTab = 'history'"
-                class="button is-small"
-                :class="jobActivityTab === 'history' ? 'is-dark' : 'is-light'"
+                class="tab-button"
+                :class="{ 'is-active': jobActivityTab === 'history' }"
               >
                 History
               </button>
@@ -1126,44 +1126,6 @@ useHead({
 .deployment-tabs {
   display: flex;
   gap: 8px;
-}
-
-.tab-button {
-  background: white;
-  border: 1px solid #e8eaed;
-  color: #5f6368;
-  padding: 8px 16px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  transition: all 0.2s;
-
-  &:hover {
-    background: #f8f9fa;
-  }
-
-  &.is-active {
-    background: #363636;
-    color: white;
-    border-color: #363636;
-  }
-}
-
-.dark-mode .tab-button {
-  background: #2a2a2a;
-  border-color: #404040;
-  color: #e0e0e0;
-
-  &:hover {
-    background: #333333;
-  }
-
-  &.is-active {
-    background: #f5f5f5;
-    color: #1a1a1a;
-    border-color: #f5f5f5;
-  }
 }
 
 .tag.is-stopped {
