@@ -726,7 +726,7 @@ const createDeployment = async () => {
 
     toast.success(`Successfully created deployment ${data.id}`)
     setTimeout(() => {
-      router.push(`/deployment/${data.id}`);
+      router.push(`/deployments/${data.id}`);
     }, 2000);
   } catch (error: any) {
     toast.error(`Error creating deployment: ${error.message || error.toString()}`);
