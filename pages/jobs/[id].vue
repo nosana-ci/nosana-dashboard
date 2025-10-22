@@ -15,6 +15,7 @@
         :endpoints="endpoints"
         :nosPrice="nosPrice"
         :isJobPoster="isJobPoster"
+        :jobInfo="jobInfo"
       />
       <div v-else-if="loading" class="loading-message">Loading job..</div>
       <div v-else class="not-found-message">Job not found</div>
@@ -31,7 +32,7 @@ const { params } = useRoute();
 
 const jobId = ref<string>(params.id as string);
 
-const { job, modal, endpoints, nosPrice, isJobPoster, loading } = useJobPage(
+const { job, modal, endpoints, nosPrice, isJobPoster, loading, jobInfo } = useJobPage(
   jobId.value
 );
 </script>
