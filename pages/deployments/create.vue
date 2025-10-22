@@ -711,14 +711,14 @@ const createDeployment = async () => {
       name: deploymentName.value.trim(),
       market: selectedMarket.value!.address.toString(),
       replicas: replicas.value,
-      timeout: timeout.value * 3600,
+      timeout: Math.min(timeout.value * 60, 1440), // Convert hours to minutes, max 24 hours
       ...(strategy.value === "SCHEDULED"
         ? { strategy: "SCHEDULED" as const, schedule: schedule.value }
         : { strategy: strategy.value as "SIMPLE" | "SIMPLE-EXTEND" | "INFINITE" }),
-      ipfs_definition_hash: ipfsHash,
+      job_definition: jobDefinition.value,
     };
 
-    const data = await useApiFetch('/api/deployments/list', {
+    const data = await useApiFetch('/api/deployments/create', {
       method: 'POST',
       body: requestBody,
       auth: true,

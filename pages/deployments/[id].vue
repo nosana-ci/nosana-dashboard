@@ -923,7 +923,7 @@ const updateReplicas = async () => {
   }
 
   await executeDeploymentAction(
-    `/api/deployments/${deployment.value!.id}/replicas`,
+    `/api/deployments/${deployment.value!.id}/update-replica-count`,
     `Replica count updated to ${newReplicaCount.value}`
   );
   
@@ -937,7 +937,7 @@ const updateJobTimeout = async () => {
   }
 
   await executeDeploymentAction(
-    `/api/deployments/${deployment.value!.id}/timeout`,
+    `/api/deployments/${deployment.value!.id}/update-timeout`,
     `Job timeout updated to ${newTimeoutHours.value} hours`
   );
   
