@@ -45,13 +45,8 @@
         </button>
       </div>
       <JobStatus
-        :status="
-          job.isCompleted && job.jobStatus
-            ? job.jobStatus === 'success'
-              ? 'SUCCESS'
-              : 'FAILED'
-            : job.state
-        "
+        :status="job.jobStatus ?? 'null'"
+        :fallbackState="job.state"
       >
       </JobStatus>
     </div>

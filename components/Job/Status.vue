@@ -18,25 +18,80 @@ const props = defineProps({
     type: [String, Number],
     required: true,
   },
+  fallbackState: {
+    type: [String, Number],
+    required: false,
+    default: undefined,
+  },
   imageOnly: {
     type: Boolean,
     default: false,
   },
 });
+
+const mapNumericState = (val: number): string => {
+  if (val === 0) return 'QUEUED';
+  if (val === 1) return 'RUNNING';
+  if (val === 2) return 'COMPLETED';
+  if (val === 3) return 'STOPPED';
+  return 'STOPPED';
+};
+
+const normalizeStringStatus = (val: string): string | null => {
+  const v = val.toLowerCase().trim();
+  if (v === 'success') return 'SUCCESS';
+  if (v === 'failed') return 'FAILED';
+  if (v === 'stopped') return 'STOPPED';
+  if (v === 'queued') return 'QUEUED';
+  if (v === 'running') return 'RUNNING';
+  if (v === 'completed') return 'COMPLETED';
+  return null;
+};
+
 const statusString = computed(() => {
-  if (typeof props.status !== 'string') {
-    let string = 'STOPPED';
-    if (props.status === 0) {
-      string = 'QUEUED';
-    } else if (props.status === 1) {
-      string = 'RUNNING';
-    } else if (props.status === 2) {
-      string = 'COMPLETED';
+  const primary = props.status as any;
+  let resolved: string | null = null;
+  let used: 'primary' | 'fallback' = 'primary';
+
+  if (typeof primary === 'number') {
+    resolved = mapNumericState(primary);
+  } else if (typeof primary === 'string') {
+    const lowered = primary.toLowerCase().trim();
+    if (lowered !== 'null' && lowered !== 'undefined' && lowered !== '') {
+      const normalized = normalizeStringStatus(primary);
+      if (normalized) {
+        resolved = normalized;
+      } else {
+        used = 'fallback';
+      }
+    } else {
+      used = 'fallback';
     }
-    return string;
+  } else {
+    used = 'fallback';
   }
-  return props.status
-})
+
+  if (used === 'fallback' || !resolved) {
+    const fb = props.fallbackState as any;
+    if (typeof fb === 'number') {
+      resolved = mapNumericState(fb);
+    } else if (typeof fb === 'string') {
+      const lowered = fb.toLowerCase().trim();
+      if (lowered === 'null' || lowered === 'undefined' || lowered === '') {
+        resolved = 'STOPPED';
+      } else {
+        const normalized = normalizeStringStatus(fb);
+        resolved = normalized ?? 'STOPPED';
+      }
+    } else {
+      resolved = 'STOPPED';
+    }
+    used = 'fallback';
+  }
+
+ 
+  return resolved as string;
+});
 
 const getIcon = (status: string) => {
   let icon = 'stopped';
