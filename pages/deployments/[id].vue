@@ -158,6 +158,21 @@
                       </span>
                       <span>Update Schedule</span>
                     </a>
+
+                    <!-- Create Revision Action -->
+                    <a 
+                      v-if="deployment.status !== 'ARCHIVED'"
+                      class="dropdown-item"
+                      @click="showRevisionModal = true; isActionsDropdownOpen = false"
+                      :disabled="actionLoading"
+                    >
+                      <span class="icon is-small mr-2">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" stroke-width="2"/>
+                        </svg>
+                      </span>
+                      <span>Create Revision</span>
+                    </a>
                   </div>
                 </div>
               </div>
@@ -195,7 +210,7 @@
                     <td>Schedule</td>
                     <td>
                       <div class="is-flex is-flex-direction-column">
-                        <span class="is-family-monospace has-text-weight-semibold">{{ deployment.schedule }}</span>
+                        <span class="is-family-monospace">{{ deployment.schedule }}</span>
                         <span class="is-size-7 has-text-grey mt-1">{{ parseCronExpression(deployment.schedule) }}</span>
                       </div>
                     </td>
@@ -656,6 +671,51 @@
         </footer>
       </div>
     </div>
+
+    <!-- Create Revision Modal -->
+    <div v-if="deployment" class="modal" :class="{ 'is-active': showRevisionModal }">
+      <div class="modal-background" @click="showRevisionModal = false"></div>
+      <div class="modal-card" style="width: 90%; max-width: 1200px;">
+        <header class="modal-card-head">
+          <p class="modal-card-title">Create New Revision</p>
+          <button class="delete" @click="showRevisionModal = false"></button>
+        </header>
+        <section class="modal-card-body" style="min-height: 500px;">
+          <div class="content mb-4">
+            <p class="has-text-grey">
+              Create a new revision of this deployment with updated job definition. 
+              This will become the active revision and will be used for new job instances.
+            </p>
+          </div>
+          <div class="field full-height">
+            <label class="label">Job Definition</label>
+            <div class="control full-height">
+              <JsonEditorVue 
+                :validator="validator" 
+                :class="{ 'jse-theme-dark': $colorMode.value === 'dark' }" 
+                v-model="revisionJobDefinition" 
+                :mode="Mode.text" 
+                :mainMenuBar="false" 
+                :statusBar="false" 
+                :stringified="false" 
+                style="height: 500px;" 
+              />
+            </div>
+          </div>
+        </section>
+        <footer class="modal-card-foot" style="justify-content: flex-end;">
+          <button class="button" @click="showRevisionModal = false">Cancel</button>
+          <button 
+            class="button is-success"
+            @click="createRevision()"
+            :class="{ 'is-loading': actionLoading }"
+            :disabled="actionLoading"
+          >
+            Create Revision
+          </button>
+        </footer>
+      </div>
+    </div>
   </div>
 
   
@@ -723,6 +783,8 @@ const isActionsDropdownOpen = ref(false);
 const showReplicasModal = ref(false);
 const showTimeoutModal = ref(false);
 const showScheduleModal = ref(false);
+const showRevisionModal = ref(false);
+const revisionJobDefinition = ref<JobDefinition | null>(null);
 const actionsDropdown = ref<HTMLElement | null>(null);
 const statusPollingInterval = ref<NodeJS.Timeout | null>(null);
 const jobPollingInterval = ref<NodeJS.Timeout | null>(null);
@@ -1353,6 +1415,41 @@ const updateSchedule = async () => {
   }
 };
 
+const createRevision = async () => {
+  if (!revisionJobDefinition.value) {
+    toast.error("Please provide a valid job definition");
+    return;
+  }
+
+  if (!deployment.value || !isAuthenticated.value) {
+    toast.error("Please log in to perform this action");
+    return;
+  }
+
+  try {
+    actionLoading.value = true;
+    const result = await useApiFetch(`/api/deployments/${deployment.value!.id}/create-revision`, { 
+      method: 'POST', 
+      auth: true,
+      body: revisionJobDefinition.value
+    });
+    
+    toast.success("New revision created successfully!");
+    showRevisionModal.value = false;
+    
+    // Wait a moment for backend to process, then refresh
+    await new Promise(resolve => setTimeout(resolve, 500));
+    await loadDeployment(true);
+    
+  } catch (error: any) {
+    console.error('Create revision error:', error);
+    const errorMessage = error.data?.message || error.message || 'Failed to create revision';
+    toast.error(`Error creating revision: ${errorMessage}`);
+  } finally {
+    actionLoading.value = false;
+  }
+};
+
 const isValidCronExpression = (cron: string): boolean => {
   if (!cron) return false;
   
@@ -1624,6 +1721,17 @@ watch(
     }
   },
   { immediate: true }
+);
+
+// Watch revision modal to initialize job definition
+watch(
+  () => showRevisionModal.value,
+  (isOpen) => {
+    if (isOpen && jobDefinitionModel.value) {
+      // Initialize revision job definition with current job definition
+      revisionJobDefinition.value = JSON.parse(JSON.stringify(jobDefinitionModel.value));
+    }
+  }
 );
 
 // Head
