@@ -690,6 +690,18 @@ const jobDefinitionModel = ref<any>(null);
 const loadingJobDefinition = ref(false);
 
 const loadJobDefinition = async () => {
+  // Try to get job definition from deployment revisions first
+  if (deployment.value?.revisions && deployment.value.revisions.length > 0) {
+    const activeRevision = deployment.value.revisions.find(r => r.revision === deployment.value.active_revision) 
+      || deployment.value.revisions[deployment.value.revisions.length - 1];
+    
+    if (activeRevision?.job_definition) {
+      jobDefinitionModel.value = activeRevision.job_definition;
+      return;
+    }
+  }
+
+  // Fallback to IPFS if no job definition in revisions
   if (!deployment.value?.ipfs_definition_hash) {
     jobDefinitionModel.value = null;
     return;

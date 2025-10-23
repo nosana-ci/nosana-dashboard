@@ -411,19 +411,32 @@ export function useJob(jobId: string) {
             jobInfo.value = info;
             
             // Update live endpoints from SSE
-            if (info && info.endpoints && info.endpoints.urls) {
+            let endpointsData = null;
+            
+            // Check new format first (info.secrets[jobId])
+            if (info?.secrets?.[jobId]) {
+              endpointsData = info.secrets[jobId];
+            }
+            // Fallback to legacy format (info.endpoints.urls)
+            else if (info?.endpoints?.urls) {
+              endpointsData = info.endpoints.urls;
+            }
+            
+            if (endpointsData) {
               const newEndpoints = new Map(endpoints.value);
               
-              for (const k of Object.keys(info.endpoints.urls)) {
-                const item = info.endpoints.urls[k];
-                if (!item || !item.url) continue;
-                const portNum = Number(item.port);
+              for (const [key, item] of Object.entries(endpointsData)) {
+                const endpoint = item as any;
+                if (!endpoint?.url) continue;
+                
+                const portNum = Number(endpoint.port);
                 const meta = metaByPort.get(portNum);
-                const endpointUrl = item.url as string;
+                const endpointUrl = endpoint.url as string;
+                
                 newEndpoints.set(endpointUrl, {
-                  status: item.status,
+                  status: endpoint.status,
                   url: endpointUrl,
-                  opId: item.opId || meta?.opId || '',
+                  opId: endpoint.opID || endpoint.opId || meta?.opId || '',
                   opIndex: meta?.opIndex ?? 0,
                   port: portNum,
                   hasHealthCheck: Boolean(meta?.hasHealthCheck)
