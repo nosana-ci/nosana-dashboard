@@ -602,7 +602,7 @@ export function useJob(jobId: string) {
         };
         
         eventSource.onopen = () => {
-          console.log('SSE connection opened for job info');
+          // SSE connection opened
         };
       } catch (error) {
         console.error('Failed to create EventSource:', error);
