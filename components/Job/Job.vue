@@ -252,10 +252,12 @@
           <span class="spec-grid-value">
             <JobStatus
               :status="
-                props.job.isCompleted && props.job.jobStatus
+                props.job.jobStatus != null
                   ? props.job.jobStatus === 'success'
                     ? 'SUCCESS'
-                    : 'FAILED'
+                    : props.job.jobStatus === 'stopped'
+                      ? 'STOPPED'
+                      : 'FAILED'
                   : props.job.state
               "
             />
@@ -1349,6 +1351,11 @@ onUnmounted(() => {
     min-width: 0;
     overflow: hidden;
   }
+    .address-item-1,
+    .address-item-3,
+    .address-item-5 {
+      overflow: visible;
+    }
   
   @media (min-width: 1024px) {
     .address-item-1 {
@@ -1413,6 +1420,13 @@ onUnmounted(() => {
     
     &:hover {
       color: #10e80c;
+    }
+  }
+  
+  @media (min-width: 1700px) {
+    .address-link {
+      overflow: visible;
+      text-overflow: clip;
     }
   }
   
@@ -1755,6 +1769,25 @@ html.dark-mode {
     
     &.is-disabled {
       opacity: 0.3;
+    }
+  }
+  
+  .address-grid {
+    .address-label {
+      color: #999;
+    }
+    
+    .address-link,
+    .address-value {
+      color: #ffffff;
+      
+      &:hover {
+        color: #10e80c;
+      }
+    }
+    
+    .address-value.has-text-grey-light {
+      color: #666;
     }
   }
   

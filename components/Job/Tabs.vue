@@ -11,7 +11,7 @@
         <a @click.prevent="handleTabClick('logs')">System Logs</a>
       </li>
       
-      <li :class="{ 'is-active': activeTab === 'info' }">
+      <li v-if="!props.isConfidential" :class="{ 'is-active': activeTab === 'info' }">
         <a @click.prevent="handleTabClick('info')">Job Definition</a>
       </li>
       <li
@@ -28,7 +28,7 @@
       </li>
     </ul>
   </div>
-  <div v-if="activeTab === 'info'" class="job-definition-container">
+  <div v-if="activeTab === 'info' && !props.isConfidential" class="job-definition-container">
     <button 
       class="button is-small is-light copy-button"
       @click="copyToClipboard(JSON.stringify(jobDefinitionModel, null, 2), 'Job Definition')"
@@ -104,11 +104,11 @@ import { Mode } from 'vanilla-jsoneditor';
 import 'vanilla-jsoneditor/themes/jse-theme-dark.css';
 import { useToast } from 'vue-toastification';
 
-import JobLogsView from "./Tabs/Logs.vue";
+import JobLogsView from "./Tabs/SystemLogs.vue";
 import JobArtifactsView from "./Tabs/Artifacts.vue";
 import JobDefinitionView from "./Tabs/JobDefinition.vue";
 import JobChatView from "./Tabs/Chat.vue";
-import JobGroups from "./Tabs/Groups.vue";
+import JobGroups from "./Tabs/Overview.vue";
 
 import type { Endpoints, UseJob } from "~/composables/jobs/useJob";
 import type { JobInfo } from "~/composables/jobs/types";
@@ -202,7 +202,7 @@ const visibleTabs = computed(() => {
   const tabs: string[] = [];
   if (canShowGroupsTab.value) tabs.push('groups');
   if (canShowLogsTab.value) tabs.push('logs');
-  tabs.push('info');
+  if (!props.isConfidential) tabs.push('info');
   if (props.hasArtifacts) tabs.push('artifacts');
   if (props.showChatTab) tabs.push('chat');
   return tabs;

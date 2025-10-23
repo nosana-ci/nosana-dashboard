@@ -299,10 +299,70 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
-import type { JobInfo, EndpointStatus } from "~/composables/jobs/types";
 import FullscreenModal from '~/components/Common/FullscreenModal.vue';
 import VueJsonPretty from 'vue-json-pretty';
 import 'vue-json-pretty/lib/styles.css';
+
+type EndpointStatus = 'ONLINE' | 'OFFLINE' | 'UNKNOWN';
+
+interface EndpointUrlItem {
+  opId?: string;
+  opID?: string;
+  url: string;
+  port: number | string;
+  status?: EndpointStatus | string;
+}
+type EndpointUrls = Record<string, EndpointUrlItem>;
+interface EndpointsSection { urls: EndpointUrls }
+
+interface SecretEndpoint {
+  opID?: string;
+  opId?: string;
+  port: number | string;
+  url: string;
+  status?: EndpointStatus | string;
+}
+type SecretsGroup = Record<string, SecretEndpoint>;
+type SecretsPayload = Record<string, SecretsGroup> & { urlmode?: string };
+
+interface SseOpState {
+  operationId: string;
+  group?: string;
+  status: string;
+  startTime?: number;
+  endTime?: number;
+  exitCode?: number | null;
+  results?: unknown;
+  logs?: Array<{ log?: string; type?: string } | string>;
+}
+
+type TaskStatusMap = Record<string, string>;
+interface SseOperations {
+  all?: TaskStatusMap | null;
+  currentGroup?: string;
+  currentGroupStatus?: TaskStatusMap | null;
+}
+
+interface LocalJobInfo {
+  status: string;
+  startTime?: number;
+  endTime?: number | null;
+  secrets?: SecretsPayload;
+  errors?: unknown[];
+  opStates?: SseOpState[];
+  operations?: SseOperations | null;
+  endpoints?: EndpointsSection;
+  results?: { status?: string; startTime?: number; endTime?: number; opStates?: SseOpState[] };
+}
+
+interface JobLike {
+  address: string;
+  node?: string | { toString(): string };
+  isCompleted?: boolean;
+  timeEnd?: number;
+  results?: { opStates?: SseOpState[]; secrets?: SecretsPayload };
+  jobDefinition?: { ops?: Array<{ id: string; args?: { image?: string } }> };
+}
 
 type AnyLogEntry = { id: number; content: string; timestamp: number; html?: boolean };
 
@@ -316,22 +376,22 @@ interface Operation {
 }
 
 interface Props {
-  job: any;
+  job: JobLike;
   isJobPoster: boolean;
   opIds?: string[];
   activeLogs?: AnyLogEntry[];
   selectOp?: (opId: string | null) => void;
   logsByOp?: Map<string, AnyLogEntry[]>;
   systemLogsMap?: AnyLogEntry[];
-  jobInfo?: JobInfo | null;
+  jobInfo?: LocalJobInfo | null;
 }
 
 const props = defineProps<Props>();
 
 const isJobCompleted = computed(() => {
   try {
-    if ((props as any)?.job?.isCompleted !== undefined) return Boolean((props as any).job.isCompleted);
-    if ((props as any)?.job?.timeEnd) return true;
+    if (props?.job?.isCompleted !== undefined) return Boolean(props.job.isCompleted);
+    if (props?.job?.timeEnd) return true;
   } catch (_) {}
   const completedStatuses = new Set(['finished', 'success']);
   if (Array.isArray(operations.value) && operations.value.length > 0) {
@@ -352,7 +412,7 @@ let pollInterval: NodeJS.Timeout | null = null;
 
 const { ensureAuth } = useAuthHeader();
 
-const jobInfo = computed<JobInfo | null>(() => props.jobInfo ?? null);
+const jobInfo = computed<LocalJobInfo | null>(() => props.jobInfo ?? null);
 
 // Fullscreen logs modal state
 const logModalOpen = ref(false);
@@ -405,7 +465,7 @@ const getOpLogs = (opId: string) => {
     if (logs && logs.length > 0) {
       // Filter by clearedAt timestamp if operation was restarted
       return clearedAt
-        ? logs.filter(l => (l as any)?.timestamp ? (l as any).timestamp >= clearedAt : false)
+        ? logs.filter(l => (l?.timestamp ?? 0) >= clearedAt)
         : logs;
     }
   }
@@ -415,16 +475,17 @@ const getOpLogs = (opId: string) => {
   
   const jobResults = props.job?.results?.opStates;
   if (jobResults && Array.isArray(jobResults)) {
-    const entry = jobResults.find((r: any) => r.operationId === opId);
+    const entry = jobResults.find((r) => r.operationId === opId);
     if (entry?.logs && Array.isArray(entry.logs)) {
-      return entry.logs.map((logEntry: any, index: number) => {
-        const logText = logEntry.log || logEntry;
-        const logType = logEntry.type || 'stdout';
+      return entry.logs.map((logEntry, index: number) => {
+        const isString = typeof logEntry === 'string';
+        const logText = isString ? (logEntry as string) : ((logEntry as { log?: string }).log ?? '');
+        const logType = isString ? 'stdout' : ((logEntry as { type?: string }).type ?? 'stdout');
         return {
           id: index,
           content: logText,
           log: logText,
-          timestamp: entry.startTime + index,
+          timestamp: (entry.startTime ?? 0) + index,
           html: false,
           type: logType
         };
@@ -435,7 +496,14 @@ const getOpLogs = (opId: string) => {
   // Fallback to jobInfo.value.results if available
   const results = jobInfo.value?.results?.opStates;
   if (results && Array.isArray(results)) {
-    const entry = results.find((r: any) => r.operationId === opId);
+    const entry = results.find((r) => r.operationId === opId);
+    if (entry?.logs) return entry.logs;
+  }
+
+  // Finally, check top-level SSE opStates for logs
+  const liveOpStates = jobInfo.value?.opStates;
+  if (Array.isArray(liveOpStates)) {
+    const entry = liveOpStates.find((r) => r.operationId === opId);
     if (entry?.logs) return entry.logs;
   }
   
@@ -444,17 +512,25 @@ const getOpLogs = (opId: string) => {
 
 // Get operation state
 const getOpState = (opId: string) => {
-  // First check jobInfo for running job state
-  const opStates = jobInfo.value?.operations?.opStates;
+  // Prefer top-level SSE opStates
+  const liveOpStates = jobInfo.value?.opStates;
+  if (Array.isArray(liveOpStates)) {
+    const state = liveOpStates.find((s) => s.operationId === opId);
+    if (state) return state;
+  }
+
+  // Then check jobInfo.operations.opStates
+  // Note: operations.opStates no longer present in SSE; kept for backward compat if ever provided
+  const opStates = (jobInfo.value as unknown as { operations?: { opStates?: SseOpState[] } })?.operations?.opStates;
   if (opStates) {
-    const state = opStates.find((state: any) => state.operationId === opId);
+    const state = opStates.find((state) => state.operationId === opId);
     if (state) return state;
   }
   
   // For completed jobs, use IPFS results
   const jobResults = props.job?.results?.opStates;
   if (jobResults && Array.isArray(jobResults)) {
-    const entry = jobResults.find((r: any) => r.operationId === opId);
+    const entry = jobResults.find((r) => r.operationId === opId);
     if (entry) {
       return {
         operationId: entry.operationId,
@@ -484,21 +560,32 @@ const formatTimestamp = (timestamp: number | null | undefined) => {
 
 const getNodeUrl = () => {
   const config = useRuntimeConfig();
-  const nodeAddress = (props.job.node as any)?.toString?.() || (props.job.node as any);
-  return `https://${nodeAddress}.${config.public.nodeDomain}`;
+  const raw = props.job.node;
+  const nodeAddress = typeof raw === 'string' ? raw : raw?.toString?.();
+  return `https://${nodeAddress ?? ''}.${config.public.nodeDomain}`;
 };
 
 // Per-operation results accessors
 const getOpResults = (opId: string) => {
   try {
-    const jobRes = props.job?.results?.opStates;
-    if (Array.isArray(jobRes)) {
-      const entry = jobRes.find((r: any) => r.operationId === opId);
+    // Prefer live SSE opStates
+    const liveOpStates = jobInfo.value?.opStates;
+    if (Array.isArray(liveOpStates)) {
+      const entry = liveOpStates.find((r) => r.operationId === opId);
       if (entry?.results && Object.keys(entry.results).length > 0) return entry.results;
     }
-    const infoRes = (jobInfo.value as any)?.results?.opStates;
+
+    // Fallback to jobInfo.results.opStates
+    const infoRes = jobInfo.value?.results?.opStates;
     if (Array.isArray(infoRes)) {
-      const entry = infoRes.find((r: any) => r.operationId === opId);
+      const entry = infoRes.find((r) => r.operationId === opId);
+      if (entry?.results && Object.keys(entry.results).length > 0) return entry.results;
+    }
+
+    // Finally, props.job.results.opStates
+    const jobRes = props.job?.results?.opStates;
+    if (Array.isArray(jobRes)) {
+      const entry = jobRes.find((r) => r.operationId === opId);
       if (entry?.results && Object.keys(entry.results).length > 0) return entry.results;
     }
   } catch {}
@@ -514,18 +601,20 @@ const buildOperations = () => {
   try {
     const ops: Operation[] = [];
     
-    // Use jobInfo when available
-    const jobDefinition = jobInfo.value?.jobDefinition ?? (props.job?.jobDefinition || null);
-    const endpointsData = jobInfo.value?.endpoints?.urls || {};
+    // Prefer jobInfo.jobDefinition (fetched from node for confidential jobs), then fall back to REST jobDefinition
+    const jobDefinition = jobInfo.value?.jobDefinition || props.job?.jobDefinition || null;
+    const endpointsData: EndpointUrls = jobInfo.value?.endpoints?.urls ?? ({} as EndpointUrls);
     
     // Derive operation statuses from jobInfo first, then fall back to completed IPFS results
     let operationStatuses: Record<string, string> = {};
     if (jobInfo.value?.operations?.all) {
-      operationStatuses = jobInfo.value.operations.all;
-    } else if (jobInfo.value?.operations?.opStates) {
-      const opStates = jobInfo.value.operations.opStates;
-      for (const opState of opStates) {
-        operationStatuses[opState.operationId] = opState.status;
+      operationStatuses = jobInfo.value.operations.all ?? {};
+    } else if (jobInfo.value?.opStates) {
+      const liveOpStates = jobInfo.value.opStates;
+      for (const opState of liveOpStates) {
+        if (opState && opState.operationId) {
+          operationStatuses[opState.operationId] = opState.status || 'unknown';
+        }
       }
     } else if (props.job?.results?.opStates && Array.isArray(props.job.results.opStates)) {
       for (const opState of props.job.results.opStates) {
@@ -535,41 +624,119 @@ const buildOperations = () => {
     
     // Create a map of opId to endpoints
     const endpointsByOpId = new Map<string, Array<{ port: number; url: string; status: string }>>();
-    for (const [hash, endpoint] of Object.entries(endpointsData)) {
-      const ep = endpoint as any;
-      if (ep.opId) {
-        if (!endpointsByOpId.has(ep.opId)) {
-          endpointsByOpId.set(ep.opId, []);
+    const seenEndpointKeys = new Set<string>();
+    const addEndpoint = (opId: string | undefined, port: number, url: string, status: string) => {
+      if (!opId || !url || Number.isNaN(port)) return;
+      const key = `${opId}::${port}::${url}`;
+      if (seenEndpointKeys.has(key)) return;
+      seenEndpointKeys.add(key);
+      if (!endpointsByOpId.has(opId)) {
+        endpointsByOpId.set(opId, []);
+      }
+      endpointsByOpId.get(opId)!.push({ port, url, status });
+    };
+
+    // 1) from endpoints.urls (existing)
+    for (const [, ep] of Object.entries(endpointsData)) {
+      const opIdFromUrls = ep.opId || ep.opID;
+      const port = Number(ep.port);
+      const url = ep.url;
+      const status = (ep.status as string) || 'UNKNOWN';
+      addEndpoint(opIdFromUrls, port, url, status);
+    }
+
+    // 2) from SSE secrets shape
+    const secrets = jobInfo.value?.secrets;
+    if (secrets && typeof secrets === 'object') {
+      for (const [bucketKey, bucketVal] of Object.entries(secrets as SecretsPayload)) {
+        if (bucketKey === 'urlmode') continue; // skip meta
+        const group = bucketVal as SecretsGroup;
+        if (!group || typeof group !== 'object') continue;
+        for (const [, entryVal] of Object.entries(group)) {
+          const ep = entryVal as SecretEndpoint;
+          if (!ep || typeof ep !== 'object') continue;
+          const opId = ep.opID || ep.opId;
+          const port = Number(ep.port);
+          const url = ep.url;
+          const status = (ep.status as string) || 'UNKNOWN';
+          addEndpoint(opId, port, url, status);
         }
-        endpointsByOpId.get(ep.opId)!.push({
-          port: ep.port,
-          url: ep.url,
-          status: ep.status || 'UNKNOWN',
-        });
+      }
+    }
+
+    // 3) from IPFS results secrets (job.results.secrets)
+    const ipfsSecrets = props.job?.results?.secrets;
+    if (ipfsSecrets && typeof ipfsSecrets === 'object') {
+      for (const [bucketKey, bucketVal] of Object.entries(ipfsSecrets as SecretsPayload)) {
+        if (bucketKey === 'urlmode') continue;
+        const group = bucketVal as SecretsGroup;
+        if (!group || typeof group !== 'object') continue;
+        for (const [, entryVal] of Object.entries(group)) {
+          const ep = entryVal as SecretEndpoint;
+          if (!ep || typeof ep !== 'object') continue;
+          const opId = ep.opID || ep.opId;
+          const port = Number(ep.port);
+          const url = ep.url;
+          const status = (ep.status as string) || 'UNKNOWN';
+          addEndpoint(opId, port, url, status);
+        }
       }
     }
     
-    if (jobDefinition && jobDefinition.ops) {
-      for (const opDef of jobDefinition.ops) {
-        const opId = opDef.id;
-        const status = operationStatuses[opId] || 'unknown';
-        const group = opDef.execution?.group || opId;
-        
-        ops.push({
-          id: opId,
-          name: opId,
-          image: opDef.args?.image || '--',
-          ports: endpointsByOpId.get(opId) || [],
-          status: status,
-          group: group,
-        });
+    // Build from SSE opStates / operations only
+    const liveOpStates = jobInfo.value?.opStates ?? [];
+    const opIdsFromStatuses = Object.keys(operationStatuses || {});
+    const opIdsFromLive = Array.isArray(liveOpStates)
+      ? liveOpStates.map((s) => s?.operationId).filter((v): v is string => Boolean(v))
+      : [];
+    const opIdsFromEndpoints = Array.from(endpointsByOpId.keys());
+    const uniqueOpIds = Array.from(new Set([
+      ...opIdsFromStatuses,
+      ...opIdsFromLive,
+      ...opIdsFromEndpoints,
+    ]));
+
+    // Grouping: use group from top-level opStates; fallback to "default" if missing
+    const groupByOpId: Record<string, string> = {};
+    for (const s of liveOpStates) {
+      if (s?.operationId && s?.group) groupByOpId[s.operationId] = s.group;
+    }
+    // augment with IPFS results groups
+    const ipfsOpStates = props.job?.results?.opStates ?? [];
+    for (const s of ipfsOpStates) {
+      if (s?.operationId && s?.group && !groupByOpId[s.operationId]) {
+        groupByOpId[s.operationId] = s.group;
       }
+    }
+
+    // Optional image lookup from REST jobDefinition (not from SSE)
+    const imageByOpId: Record<string, string> = {};
+    if (jobDefinition?.ops && Array.isArray(jobDefinition.ops)) {
+      for (const opDef of jobDefinition.ops) {
+        if (opDef?.id) imageByOpId[opDef.id] = opDef?.args?.image || '--';
+      }
+    }
+
+    for (const opId of uniqueOpIds) {
+      const status = operationStatuses[opId]
+        || (liveOpStates?.find?.((s) => s?.operationId === opId)?.status)
+        || 'unknown';
+      const groupName = groupByOpId[opId] || 'default';
+      const image = imageByOpId[opId] || '--';
+      ops.push({
+        id: opId,
+        name: opId,
+        image,
+        ports: endpointsByOpId.get(opId) || [],
+        status: status,
+        group: groupName,
+      });
     }
     
     operations.value = ops;
     loading.value = false;
     error.value = null;
-  } catch (err: any) {
+  } catch (err) {
     console.error('Error building operations:', err);
     error.value = 'Failed to load operations';
     loading.value = false;
@@ -1371,12 +1538,17 @@ const restartGroup = async (groupName: string) => {
     color: #c62828;
   }
 
-  &.status-stopped,
+  &.status-stopped{
+    background: #f5f5f5;
+    color: #000000b3;
+  }
+
   &.status-stopping,
   &.status-restarting {
     background: #fff3e0;
     color: #e65100;
   }
+
 
   &.status-pending {
     background: #fff8e1;

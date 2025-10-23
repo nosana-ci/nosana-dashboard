@@ -317,7 +317,6 @@ export function useJob(jobId: string) {
           if (parsed && parsed.opStates) {
             jobObject.results = parsed;
             jobObject.hasResultsRegex = parsed.opStates.some((op: any) => op.results);
-            jobObject.jobStatus = parsed.status as any;
           }
         } catch (error) {
         }
@@ -348,9 +347,7 @@ export function useJob(jobId: string) {
         if (!jobObject.hasResultsRegex && job.value?.hasResultsRegex) {
           jobObject.hasResultsRegex = job.value.hasResultsRegex;
         }
-        if (!jobObject.jobStatus && job.value?.jobStatus) {
-          jobObject.jobStatus = job.value.jobStatus;
-        }
+        
       } catch {}
 
       job.value = jobObject;
@@ -363,15 +360,90 @@ export function useJob(jobId: string) {
 
   let eventSource: EventSourcePolyfill | null = null;
   let currentNodeAddress: string | null = null;
+  let completedSseAttempted = false;
+  let fetchingJobDefinition = false;
+  let fetchedConfidentialJobDefinition = false;
+  let retriedConfidentialJobDefinition = false;
+
+  async function fetchConfidentialJobDefinitionOnce() {
+    try {
+      if (!job.value) return;
+      const isConfidentialJob = Boolean((job.value as any)?.jobDefinition?.logistics);
+      if (!isConfidentialJob) return;
+
+      const activeAddress = (() => {
+        if (status.value === 'authenticated' && (userData.value as any)?.generatedAddress) {
+          return (userData.value as any).generatedAddress as string;
+        }
+        if (connected.value && publicKey.value) {
+          return publicKey.value.toString();
+        }
+        return null;
+      })();
+      const isPoster = Boolean(
+        activeAddress && job.value.project && activeAddress === job.value.project.toString()
+      );
+      if (!isPoster) return;
+
+      if (fetchingJobDefinition || fetchedConfidentialJobDefinition) return;
+
+      fetchingJobDefinition = true;
+      const nodeDomain = useRuntimeConfig().public.nodeDomain;
+      const nodeAddr = (job.value.node as any)?.toString?.() || (job.value as any)?.node;
+      const url = `https://${nodeAddr}.${nodeDomain}/job/${jobId}/job-definition`;
+      const authHeader = await ensureAuth();
+      const response = await $fetch<any>(url, {
+        method: 'GET',
+        headers: { authorization: authHeader },
+      });
+      const parsed = typeof response === 'string' ? JSON.parse(response) : response;
+      if (parsed) {
+        jobInfo.value = { ...(jobInfo.value as any), jobDefinition: parsed } as any;
+        fetchedConfidentialJobDefinition = true;
+      } else {
+        fetchedConfidentialJobDefinition = true;
+      }
+    } catch (err: any) {
+      const message: string | undefined = typeof err?.data === 'string' ? err.data : undefined;
+      if (!retriedConfidentialJobDefinition && message && message.toLowerCase().includes('job definition has not yet been set')) {
+        retriedConfidentialJobDefinition = true;
+        setTimeout(() => {
+          fetchingJobDefinition = false;
+          fetchConfidentialJobDefinitionOnce();
+        }, 5000);
+        return;
+      }
+      // Mark as fetched to prevent repeated calls causing flicker
+      fetchedConfidentialJobDefinition = true;
+    } finally {
+      fetchingJobDefinition = false;
+    }
+  }
 
   watch(job, (currentJob: UseJob | null) => {
     if (currentJob === null) return;
-    if (!currentJob.jobDefinition) {
+
+    const isCompleted = Boolean(
+      (currentJob as any)?.isCompleted === true ||
+      getStateNumber((currentJob as any)?.state ?? -1) === 2
+    );
+
+    // If job is completed and we've already attempted a one-shot SSE, ensure any existing SSE is closed and never reconnect
+    if (isCompleted && completedSseAttempted) {
+      if (eventSource) {
+        try { eventSource.close(); } catch {}
+        eventSource = null;
+      }
       loading.value = false;
       return;
     }
 
-    const sdkServices = getJobExposedServices(currentJob.jobDefinition, jobId);
+    // Proactively fetch confidential job-definition once for poster
+    fetchConfidentialJobDefinitionOnce();
+
+    const sdkServices = currentJob.jobDefinition
+      ? getJobExposedServices(currentJob.jobDefinition, jobId)
+      : [];
     const metaByPort = new Map<number, { opId: string; opIndex: number; hasHealthCheck: boolean }>();
     for (const { port, opId, opIndex, hasHealthCheck } of sdkServices) {
       metaByPort.set(Number(port), { opId, opIndex, hasHealthCheck });
@@ -380,8 +452,19 @@ export function useJob(jobId: string) {
     const config = useRuntimeConfig();
     const nodeAddress = (currentJob.node as any)?.toString?.() || (currentJob.node as any);
     
+    // For completed jobs: perform exactly one SSE attempt, then never reconnect
+    const oneShot = isCompleted;
+    if (oneShot) {
+      // Close any existing SSE to prevent auto-reconnects from a running-state connection
+      if (eventSource) {
+        try { eventSource.close(); } catch {}
+        eventSource = null;
+      }
+      completedSseAttempted = true;
+    }
 
-    if (eventSource && currentNodeAddress === nodeAddress && (eventSource as any).readyState !== 2) {
+    // Only reuse the existing SSE connection if NOT in one-shot mode
+    if (!oneShot && eventSource && currentNodeAddress === nodeAddress && (eventSource as any).readyState !== 2) {
       return;
     }
     
@@ -391,7 +474,7 @@ export function useJob(jobId: string) {
     }
     
     currentNodeAddress = nodeAddress;
-    
+
     (async () => {
       try {
         const nodeAddress = (currentJob.node as any)?.toString?.() || (currentJob.node as any);
@@ -408,7 +491,15 @@ export function useJob(jobId: string) {
           try {
             const info = JSON.parse(event.data) as JobInfo;
             
-            jobInfo.value = info;
+            // Preserve existing jobDefinition to avoid flicker if SSE message lacks it
+            try {
+              const previousJobDefinition = (jobInfo.value as any)?.jobDefinition;
+              jobInfo.value = { ...(info as any), jobDefinition: previousJobDefinition ?? (info as any)?.jobDefinition } as any;
+            } catch {
+              jobInfo.value = info;
+            }
+
+            // Do not repeatedly fetch job-definition on every SSE update
             
             // Update live endpoints from SSE
             let endpointsData = null;
@@ -470,14 +561,20 @@ export function useJob(jobId: string) {
                   job.value.hasResultsRegex = Array.isArray(sseResults.opStates)
                     ? sseResults.opStates.some((op: any) => op?.results)
                     : false;
-                  if (sseResults.status) {
-                    job.value.jobStatus = sseResults.status as any;
-                  }
+                  
                 }
               }
             } catch {}
             
             loading.value = false;
+
+            // For completed jobs, close immediately after first message and do not reconnect
+            if (oneShot) {
+              try { (eventSource as any)?.removeEventListener?.('message', handleInfo as any); } catch {}
+              try { (eventSource as any)?.removeEventListener?.('flow:updated', handleInfo as any); } catch {}
+              try { eventSource?.close(); } catch {}
+              eventSource = null;
+            }
           } catch (parseError) {
             console.error('Failed to parse SSE message:', parseError);
           }
@@ -494,6 +591,14 @@ export function useJob(jobId: string) {
           console.error('SSE connection error:', error);
 
           loading.value = false;
+
+          // For completed jobs, never retry after an error; rely on existing results as fallback
+          if (oneShot) {
+            try { (eventSource as any)?.removeEventListener?.('message', handleInfo as any); } catch {}
+            try { (eventSource as any)?.removeEventListener?.('flow:updated', handleInfo as any); } catch {}
+            try { eventSource?.close(); } catch {}
+            eventSource = null;
+          }
         };
         
         eventSource.onopen = () => {
