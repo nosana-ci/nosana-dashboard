@@ -414,9 +414,26 @@
         </div>
 
         <!-- Logs Tab -->
-        <div v-if="activeTab === 'logs'">
-          <div class="notification is-light has-text-centered">
-            <p class="has-text-grey">Deployment logs will be displayed here</p>
+        <div v-if="activeTab === 'logs'" class="deployment-logs-container">
+          <div v-if="activeJobs.length === 0" class="notification is-light has-text-centered">
+            <p class="has-text-grey">No running jobs to show logs for</p>
+          </div>
+          <div v-else class="deployment-logs-content">
+            <!-- Job Tabs -->
+            <div class="tabs is-boxed job-tabs-condensed">
+              <ul>
+                <li v-for="job in activeJobs" :key="job.job" :class="{ 'is-active': activeLogsJobId === job.job }">
+                  <a @click="activeLogsJobId = job.job">
+                    Job {{ job.job.slice(0, 8) }}...
+                  </a>
+                </li>
+              </ul>
+            </div>
+            
+            <!-- Selected Job Logs -->
+            <div v-if="activeLogsJobId" class="selected-job-logs">
+              <JobLogsContainer :job-id="activeLogsJobId" />
+            </div>
           </div>
         </div>
 
@@ -556,6 +573,7 @@ import { Mode, ValidationSeverity } from "vanilla-jsoneditor";
 import JsonEditorVue from "json-editor-vue";
 import { useToast } from "vue-toastification";
 import JobStatus from "~/components/Job/Status.vue";
+import JobLogsContainer from "~/components/Job/LogsContainer.vue";
 import { useJob } from "~/composables/jobs/useJob";
 
 // Types
@@ -591,6 +609,7 @@ const loadingMarket = ref(false);
 const loading = ref(true);
 const error = ref<string | null>(null);
 const activeTab = ref("overview");
+const activeLogsJobId = ref<string | null>(null);
 const jobActivityTab = ref("running");
 const actionLoading = ref(false);
 const newReplicaCount = ref<number | null>(null);
@@ -1285,6 +1304,17 @@ onUnmounted(() => {
   jobEndpointsMap.value.clear();
 });
 
+// Auto-select first job when switching to logs tab
+watch(
+  () => [activeTab.value, activeJobs.value],
+  ([newTab, jobs]) => {
+    if (newTab === 'logs' && jobs.length > 0 && !activeLogsJobId.value) {
+      activeLogsJobId.value = jobs[0].job;
+    }
+  },
+  { immediate: true }
+);
+
 // Watchers
 watch(
   isAuthenticated,
@@ -1423,6 +1453,61 @@ useHead({
     background-color: transparent !important;
     border: none !important;
     box-shadow: none !important;
+  }
+}
+
+// Deployment logs styling
+.deployment-logs-container {
+  .deployment-logs-content {
+    background-color: #ffffff;
+    border-radius: 4px;
+    margin-top: 0.2rem;
+  }
+
+  .job-tabs-condensed {
+    margin-bottom: 0 !important;
+    
+    ul {
+      border-bottom-width: 1px !important;
+      
+      li a {
+        padding: 0.4em 0.8em;
+        font-size: 0.9rem;
+      }
+    }
+  }
+
+  .selected-job-logs {
+    min-height: 400px;
+  }
+}
+
+// Dark mode support
+html.dark-mode {
+  .deployment-logs-container .deployment-logs-content {
+    background-color: #2c2c2c;
+  }
+
+  .deployment-logs-container .job-tabs-condensed {
+    background-color: #2c2c2c;
+    
+    ul {
+      border-bottom-color: #444;
+      
+      li a {
+        color: #ffffff;
+        
+        &:hover {
+          background-color: #363636;
+        }
+      }
+      
+      li.is-active a {
+        background-color: #2c2c2c;
+        border-bottom-color: #444;
+        color: #ffffff;
+      }
+    }
   }
 }
 
