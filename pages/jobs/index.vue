@@ -23,6 +23,7 @@
 </template>
 
 <script setup lang="ts">
+import { onBeforeUnmount } from 'vue';
 import JobBuilderIcon from '@/assets/img/icons/sidebar/job-builder.svg?component';
 import DeploymentList from "~/components/List/DeploymentList.vue";
 import Search from "~/components/Search.vue";
@@ -42,6 +43,11 @@ watch(jobsUrl, () => {
 })
 const { data: jobs, pending: loadingJobs, refresh: refreshJobs } = await useAPI(jobsUrl, { watch: [jobsUrl] });
 
-// Fetch jobs every 30 seconds
-useIntervalFn(refreshJobs, 30000);
+// Fetch jobs every 30 seconds with cleanup
+const { pause: pauseJobsPolling, resume: resumeJobsPolling } = useIntervalFn(refreshJobs, 30000);
+
+// Cleanup on unmount
+onBeforeUnmount(() => {
+  pauseJobsPolling();
+});
 </script>

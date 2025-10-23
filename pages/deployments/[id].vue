@@ -556,6 +556,7 @@ import { Mode, ValidationSeverity } from "vanilla-jsoneditor";
 import JsonEditorVue from "json-editor-vue";
 import { useToast } from "vue-toastification";
 import JobStatus from "~/components/Job/Status.vue";
+import { useJob } from "~/composables/jobs/useJob";
 
 // Types
 interface DeploymentJob {
@@ -604,6 +605,8 @@ const isActionsDropdownOpen = ref(false);
 const showReplicasModal = ref(false);
 const showTimeoutModal = ref(false);
 const actionsDropdown = ref<HTMLElement | null>(null);
+const statusPollingInterval = ref<NodeJS.Timeout | null>(null);
+const jobPollingInterval = ref<NodeJS.Timeout | null>(null);
 // Status dot helper
 const statusDotClass = computed(() => {
   switch (deployment.value?.status?.toUpperCase()) {
@@ -816,6 +819,102 @@ const statusHelpText = computed(() => {
 // Users can click through to see individual job details
 const jobStates = ref<Record<string, number>>({});
 
+// SSE-based endpoint status aggregation per job
+const jobEndpointsMap = ref<Map<string, Map<string, any>>>(new Map());
+
+// Track useJob instances for proper cleanup
+const activeJobInstances = ref<Map<string, { 
+  stopWatching: () => void;
+  cleanup?: () => void;
+}>>(new Map());
+
+// Clean up job instances that are no longer running
+const cleanupJobInstances = (currentRunningJobIds: string[]) => {
+  const runningSet = new Set(currentRunningJobIds);
+  
+  for (const [jobId, instance] of activeJobInstances.value.entries()) {
+    if (!runningSet.has(jobId)) {
+      // Job is no longer running, clean it up
+      instance.stopWatching();
+      if (instance.cleanup) instance.cleanup();
+      activeJobInstances.value.delete(jobId);
+      jobEndpointsMap.value.delete(jobId);
+    }
+  }
+  
+  // Trigger reactivity
+  activeJobInstances.value = new Map(activeJobInstances.value);
+  jobEndpointsMap.value = new Map(jobEndpointsMap.value);
+};
+
+// Watch deployment jobs and set up SSE connections via useJob
+// Only watch running jobs (state 1) that have endpoints
+watch(
+  () => {
+    const jobs = (deployment.value?.jobs as DeploymentJob[]) || [];
+    // Only include running jobs that have state = 1
+    return jobs.filter(j => jobStates.value[j.job] === 1);
+  },
+  (runningJobs: DeploymentJob[]) => {
+    const currentRunningJobIds = runningJobs.map(j => j.job).filter(Boolean);
+    
+    // Clean up instances for jobs that are no longer running
+    cleanupJobInstances(currentRunningJobIds);
+    
+    if (!runningJobs || runningJobs.length === 0) return;
+    
+    for (const jobItem of runningJobs) {
+      const jobId = jobItem.job;
+      if (!jobId) continue;
+      
+      // Skip if already watching this job
+      if (activeJobInstances.value.has(jobId)) continue;
+      
+      try {
+        // Use the useJob composable to get live endpoint statuses via SSE
+        const { endpoints, pausePolling } = useJob(jobId);
+        
+        // Watch this job's endpoints and update our aggregated map
+        const stopWatching = watch(
+          endpoints,
+          (endpointsData) => {
+            if (endpointsData) {
+              jobEndpointsMap.value.set(jobId, endpointsData);
+              // Trigger reactivity
+              jobEndpointsMap.value = new Map(jobEndpointsMap.value);
+            }
+          },
+          { immediate: true, deep: true }
+        );
+        
+        // Track this instance for cleanup
+        activeJobInstances.value.set(jobId, { 
+          stopWatching,
+          cleanup: pausePolling
+        });
+      } catch (error) {
+        console.warn(`Failed to set up SSE for job ${jobId}:`, error);
+      }
+    }
+  },
+  { immediate: true, deep: true }
+);
+
+// Aggregate all endpoint statuses by URL across all jobs
+const liveEndpointStatusByUrl = computed<Map<string, 'ONLINE' | 'OFFLINE' | 'UNKNOWN'>>(() => {
+  const statusMap = new Map<string, 'ONLINE' | 'OFFLINE' | 'UNKNOWN'>();
+  
+  for (const endpointsForJob of jobEndpointsMap.value.values()) {
+    for (const [url, endpointData] of endpointsForJob.entries()) {
+      if (endpointData?.status) {
+        statusMap.set(url, endpointData.status);
+      }
+    }
+  }
+  
+  return statusMap;
+});
+
 const activeJobs = computed((): DeploymentJob[] => {
   const jobs = (deployment.value?.jobs as DeploymentJob[]) || [];
   // Enrich jobs with fetched states and reverse to show most recent first
@@ -840,17 +939,45 @@ const historicalJobs = computed((): DeploymentJob[] => {
   return enrichedJobs.filter(job => job.state >= 2);
 });
 
-// Deployment endpoints - use API-provided endpoints when available
+// Deployment endpoints - use live SSE status from nodes when available
 const deploymentEndpoints = computed(() => {
   if (!deployment.value?.endpoints) return [];
-  const isRunning = deployment.value.status === 'RUNNING';
-  return deployment.value.endpoints.map((endpoint: any) => ({
-    opId: endpoint.opId,
-    port: endpoint.port,
-    url: endpoint.url,
-    status: isRunning ? 'Online' : 'Offline',
-    statusClass: isRunning ? 'is-success' : 'is-light'
-  }));
+  const deploymentIsRunning = deployment.value.status === 'RUNNING';
+  const hasRunningJobs = activeJobs.value.length > 0;
+  
+  return deployment.value.endpoints.map((endpoint: any) => {
+    const liveStatus = liveEndpointStatusByUrl.value.get(endpoint.url);
+    
+    // Determine display status
+    let status: 'Online' | 'Offline' | 'Unknown' = 'Offline';
+    let statusClass = 'is-light';
+    
+    // If deployment or jobs aren't running, endpoints are offline
+    if (!deploymentIsRunning || !hasRunningJobs) {
+      status = 'Offline';
+      statusClass = 'is-light';
+    } else if (liveStatus === 'ONLINE') {
+      // SSE confirmed online
+      status = 'Online';
+      statusClass = 'is-success';
+    } else if (liveStatus === 'OFFLINE') {
+      // SSE confirmed offline
+      status = 'Offline';
+      statusClass = 'is-danger';
+    } else {
+      // Jobs are running but no SSE status yet - still checking
+      status = 'Unknown';
+      statusClass = 'is-info';
+    }
+    
+    return {
+      opId: endpoint.opId,
+      port: endpoint.port,
+      url: endpoint.url,
+      status,
+      statusClass
+    };
+  });
 });
 
 // All deployment events
@@ -881,7 +1008,21 @@ const executeDeploymentAction = async (
     if (shouldRedirect) {
       setTimeout(() => router.push("/deployment"), 2000);
     } else {
+      // Wait a moment for backend to process, then refresh
+      await new Promise(resolve => setTimeout(resolve, 500));
       await loadDeployment(true);
+      
+      // Clear SSE connections and cleanup job instances when stopping to force reconnect on restart
+      if (actionUrl.includes('/stop')) {
+        // Clean up all active job instances
+        for (const [jobId, instance] of activeJobInstances.value.entries()) {
+          instance.stopWatching();
+          if (instance.cleanup) instance.cleanup();
+        }
+        activeJobInstances.value.clear();
+        jobEndpointsMap.value.clear();
+        jobEndpointsMap.value = new Map(jobEndpointsMap.value);
+      }
     }
   } catch (err: any) {
     console.error("Deployment action error:", err);
@@ -894,15 +1035,26 @@ const executeDeploymentAction = async (
 };
 
 // Deployment action methods
-const startDeployment = () => executeDeploymentAction(
-  `/api/deployments/${deployment.value!.id}/start`,
-  "Deployment started successfully"
-);
+const startDeployment = async () => {
+  await executeDeploymentAction(
+    `/api/deployments/${deployment.value!.id}/start`,
+    "Deployment started successfully"
+  );
+  
+  // Start polling for job updates after starting
+  startJobPolling();
+};
 
-const stopDeployment = () => executeDeploymentAction(
-  `/api/deployments/${deployment.value!.id}/stop`,
-  "Deployment stopped successfully"
-);
+const stopDeployment = async () => {
+  await executeDeploymentAction(
+    `/api/deployments/${deployment.value!.id}/stop`,
+    "Deployment stopped successfully"
+  );
+  
+  // Stop job polling and start status polling after stopping
+  stopJobPolling();
+  startStatusPolling();
+};
 
 const archiveDeployment = async () => {
   if (!confirm("Are you sure you want to archive this deployment? This action cannot be undone.")) {
@@ -1036,6 +1188,66 @@ const loadTasks = async () => {
   }
 };
 
+// Status polling functionality
+const startStatusPolling = () => {
+  // Clear any existing interval
+  if (statusPollingInterval.value) {
+    clearInterval(statusPollingInterval.value);
+  }
+  
+  // Poll every 2 seconds for status updates
+  statusPollingInterval.value = setInterval(async () => {
+    if (!deployment.value) return;
+    
+    const currentStatus = deployment.value.status;
+    await loadDeployment(true); // Silent reload
+    
+    // Stop polling when status reaches final state
+    if (deployment.value?.status === 'STOPPED' && currentStatus === 'STOPPING') {
+      clearInterval(statusPollingInterval.value!);
+      statusPollingInterval.value = null;
+    }
+  }, 2000);
+};
+
+const stopStatusPolling = () => {
+  if (statusPollingInterval.value) {
+    clearInterval(statusPollingInterval.value);
+    statusPollingInterval.value = null;
+  }
+};
+
+// Job activity polling functionality  
+const startJobPolling = () => {
+  // Clear any existing interval
+  if (jobPollingInterval.value) {
+    clearInterval(jobPollingInterval.value);
+  }
+  
+  // Poll every 5 seconds for job updates
+  jobPollingInterval.value = setInterval(async () => {
+    if (!deployment.value) return;
+    
+    const oldJobCount = deployment.value.jobs?.length || 0;
+    await loadDeployment(true); // Silent reload
+    const newJobCount = deployment.value?.jobs?.length || 0;
+    
+    // Stop polling if deployment is no longer running/starting
+    const status = deployment.value?.status?.toUpperCase();
+    if (status !== 'RUNNING' && status !== 'STARTING') {
+      clearInterval(jobPollingInterval.value!);
+      jobPollingInterval.value = null;
+    }
+  }, 5000);
+};
+
+const stopJobPolling = () => {
+  if (jobPollingInterval.value) {
+    clearInterval(jobPollingInterval.value);
+    jobPollingInterval.value = null;
+  }
+};
+
 // Click outside handler to close dropdown
 const handleClickOutside = (event: MouseEvent) => {
   if (actionsDropdown.value && !actionsDropdown.value.contains(event.target as Node)) {
@@ -1049,6 +1261,16 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside);
+  stopStatusPolling(); // Clean up polling intervals
+  stopJobPolling();
+  
+  // Clean up all active job instances and their polling
+  for (const [jobId, instance] of activeJobInstances.value.entries()) {
+    instance.stopWatching();
+    if (instance.cleanup) instance.cleanup();
+  }
+  activeJobInstances.value.clear();
+  jobEndpointsMap.value.clear();
 });
 
 // Watchers
@@ -1060,6 +1282,27 @@ watch(
     } else {
       error.value = "Please log in to view deployments";
       deployment.value = null;
+    }
+  },
+  { immediate: true }
+);
+
+// Watch deployment status to automatically start job polling for running deployments
+watch(
+  () => deployment.value?.status,
+  (newStatus, oldStatus) => {
+    if (!newStatus) return;
+    
+    const status = newStatus.toUpperCase();
+    
+    // Start job polling when deployment becomes running
+    if (status === 'RUNNING' && !jobPollingInterval.value) {
+      startJobPolling();
+    }
+    
+    // Stop job polling when deployment stops running
+    if (status !== 'RUNNING' && status !== 'STARTING' && jobPollingInterval.value) {
+      stopJobPolling();
     }
   },
   { immediate: true }

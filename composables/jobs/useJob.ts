@@ -506,5 +506,7 @@ export function useJob(jobId: string) {
     endpoints,
     loading,
     jobInfo,
+    pausePolling: pauseJobPolling,
+    resumePolling: resumeJobPolling,
   };
 }
