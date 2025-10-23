@@ -424,7 +424,7 @@
               <ul>
                 <li v-for="job in activeJobs" :key="job.job" :class="{ 'is-active': activeLogsJobId === job.job }">
                   <a @click="activeLogsJobId = job.job">
-                    Job {{ job.job.slice(0, 8) }}...
+                    Job {{ job.job.slice(0, 16) }}...
                   </a>
                 </li>
               </ul>

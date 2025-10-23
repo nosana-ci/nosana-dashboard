@@ -1,27 +1,39 @@
 <template>
   <div class="job-logs-container">
-    <div v-if="job" class="logs-wrapper">
-      <JobLogsView
-        :job="job"
-        :endpoints="endpoints"
-        :jobDefinition="job.jobDefinition"
-        :signMessageError="false"
-        :isJobPoster="isJobPoster"
-        :loading="loading"
-        :isConnecting="isConnecting"
-        :logConnectionEstablished="logConnectionEstablished"
-        :systemLogs="systemLogs"
-        :containerLogs="containerLogs"
-        :progressBars="progressBars"
-        :resourceProgressBars="resourceProgressBars"
-        :activeLogs="activeLogs"
-        :opIds="opIds"
-        :filters="filters"
-        :selectOp="selectOp"
-        :toggleType="toggleType"
-        :logsTextForCopy="logsTextForCopy"
-        :copyToClipboard="copyToClipboard"
-      />
+    <div v-if="job" class="logs-wrapper">      
+      <!-- Logs Content with Floating Operation Tabs -->
+      <div class="logs-content-wrapper">
+        <!-- Floating Operation Tabs (Top Right) -->
+        <div v-if="job.isRunning && isJobPoster && logConnectionEstablished" class="floating-operation-tabs">
+          <div class="tabs is-toggle is-small is-rounded log-type-switcher">
+            <ul>
+              <li :class="{ 'is-active': flogActiveTab === 'system' }">
+                <a @click="selectOp(null)"><span>System</span></a>
+              </li>
+              <li v-for="op in opIds" :key="op" :class="{ 'is-active': flogActiveTab === op }">
+                <a @click="selectOp(op)"><span>{{ op }}</span></a>
+              </li>
+            </ul>
+          </div>
+        </div>
+        
+        <JobLogsView
+          :job="job"
+          :isJobPoster="isJobPoster"
+          :loading="loading"
+          :isConnecting="isConnecting"
+          :logConnectionEstablished="logConnectionEstablished"
+          :systemLogs="systemLogs"
+          :containerLogs="containerLogs"
+          :progressBars="progressBars"
+          :resourceProgressBars="resourceProgressBars"
+          :activeLogs="activeLogs"
+          :opIds="opIds"
+          :filters="filters"
+          :selectOp="selectOp"
+          :toggleType="toggleType"
+        />
+      </div>
     </div>
     <div v-else-if="loading" class="has-text-centered p-4">
       Loading job logs...
@@ -104,7 +116,9 @@ const filters = computed(() => ({
     types: new Set(['container','info','error']) 
   } 
 }));
-const selectOp = (opId: string | null) => setFlogActiveTab(opId ?? 'system');
+const selectOp = (opId: string | null) => {
+  setFlogActiveTab(opId ?? 'system');
+};
 const toggleType = () => {};
 
 // Legacy logs (empty for flog-only mode)
@@ -124,6 +138,7 @@ const copyToClipboard = async (text: string | undefined, type: string) => {
     console.error('Failed to copy:', err);
   }
 };
+
 </script>
 
 <style lang="scss" scoped>
@@ -139,6 +154,26 @@ const copyToClipboard = async (text: string | undefined, type: string) => {
   flex-direction: column;
 }
 
+.logs-content-wrapper {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.floating-operation-tabs {
+  position: absolute;
+  top: 0.2rem;
+  right: 2.6rem;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.log-type-switcher {
+  pointer-events: auto;
+  margin-bottom: 0 !important;
+}
+
 :deep(.logs-tab-container) {
   flex: 1;
   display: flex;
@@ -148,5 +183,43 @@ const copyToClipboard = async (text: string | undefined, type: string) => {
 :deep(.logs-container) {
   flex: 1;
   min-height: 400px;
+}
+
+/* Operation tabs styling (matching main branch with transparency) */
+.log-type-switcher.tabs.is-toggle a {
+  background-color: rgba(240, 240, 240, 0.9);
+  border-color: transparent;
+  color: #7a7a7a;
+  transition: all 0.2s ease-in-out;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.85rem;
+  backdrop-filter: blur(4px);
+}
+
+.log-type-switcher.tabs.is-toggle a:hover {
+  background-color: rgba(219, 219, 219, 0.95);
+  color: #363636;
+}
+
+.log-type-switcher.tabs.is-toggle li.is-active a {
+  background-color: rgba(219, 219, 219, 0.95);
+  color: #363636;
+}
+
+/* Dark mode support for operation tabs */
+html.dark-mode .log-type-switcher.tabs.is-toggle a {
+  background-color: rgba(74, 74, 74, 0.9);
+  color: #b5b5b5;
+  backdrop-filter: blur(4px);
+}
+
+html.dark-mode .log-type-switcher.tabs.is-toggle a:hover {
+  background-color: rgba(54, 54, 54, 0.95);
+  color: #ffffff;
+}
+
+html.dark-mode .log-type-switcher.tabs.is-toggle li.is-active a {
+  background-color: rgba(54, 54, 54, 0.95);
+  color: #ffffff;
 }
 </style>
