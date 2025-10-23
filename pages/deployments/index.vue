@@ -57,7 +57,10 @@
               <div class="is-size-7 is-family-monospace has-text-grey">{{ deployment.id }}</div>
             </td>
             <td>
-              <span class="tag" :class="statusClass(deployment.status)">{{ deployment.status }}</span>
+              <div class="tag is-outlined is-light" :class="statusClass(deployment.status)">
+                <img class="mr-2" :src="`/img/icons/status/${getStatusIcon(deployment.status)}.svg`" />
+                <span>{{ deployment.status }}</span>
+              </div>
             </td>
             <td>{{ deployment.jobs?.length || 0 }} Jobs</td>
             <td>
@@ -125,7 +128,8 @@ const filteredDeployments = computed(() => {
 
 const statusClass = (status: string) => {
   switch (status?.toUpperCase()) {
-    case 'RUNNING': return 'is-success'
+    case 'RUNNING': return 'is-info'  // Blue like job status
+    case 'COMPLETED': return 'is-success'  // Green for completed
     case 'ERROR': return 'is-danger'
     case 'STOPPED': return 'is-dark'
     case 'DRAFT': return 'is-light'
@@ -134,6 +138,26 @@ const statusClass = (status: string) => {
     case 'INSUFFICIENT_FUNDS': return 'is-danger'
     case 'ARCHIVED': return 'is-grey'
     default: return 'is-light'
+  }
+}
+
+const getStatusIcon = (status: string) => {
+  switch (status?.toUpperCase()) {
+    case "RUNNING":
+    case "STARTING":
+      return "running";
+    case "STOPPED":
+    case "STOPPING":
+      return "stopped";
+    case "ERROR":
+    case "INSUFFICIENT_FUNDS":
+      return "failed";
+    case "DRAFT":
+      return "queued";
+    case "COMPLETED":
+      return "done";
+    default:
+      return "stopped";
   }
 }
 

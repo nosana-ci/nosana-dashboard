@@ -168,8 +168,8 @@
                   </tr>
                   
                   <tr>
-                    <td>Container creation timeout</td>
-                    <td>{{ Math.floor(deployment.timeout / 3600) }} hours</td>
+                    <td>Container timeout</td>
+                    <td>{{ Math.floor(deployment.timeout / 60) }} hours</td>
                   </tr>
                   <tr>
                     <td>Created on</td>
@@ -266,7 +266,7 @@
                       <td>
                         <JobStatus :status="job.state || 0" />
                       </td>
-                      <td>0</td>
+                      <td>{{ deployment?.revisions?.length || 0 }}</td>
                       <td>{{ formatDate(job.created_at) }}</td>
                       <td>
                         <a
@@ -311,7 +311,7 @@
                       <td>
                         <JobStatus :status="job.state || 0" />
                       </td>
-                      <td>0</td>
+                      <td>{{ deployment?.revisions?.length || 0 }}</td>
                       <td>{{ formatDate(job.created_at) }}</td>
                       <td>
                         <a
@@ -543,10 +543,10 @@
                 v-model.number="newTimeoutHours"
                 min="0.0167"
                 step="0.1"
-                :placeholder="(deployment.timeout / 3600).toFixed(2)"
+                :placeholder="(deployment.timeout / 60).toFixed(2)"
               />
             </div>
-            <p class="help">Current: {{ (deployment.timeout / 3600).toFixed(2) }}h</p>
+            <p class="help">Current: {{ (deployment.timeout / 60).toFixed(2) }}h</p>
           </div>
         </section>
         <footer class="modal-card-foot" style="justify-content: flex-end;">
@@ -654,11 +654,13 @@ const statusDotClass = computed(() => {
 const statusClass = (status: string) => {
   switch (status?.toUpperCase()) {
     case "RUNNING":
-      return "is-info";
+      return "is-info";  // Blue like job status
+    case "COMPLETED":
+      return "is-success";  // Green for completed
     case "ERROR":
       return "is-danger";
     case "STOPPED":
-      return "is-stopped";
+      return "is-dark";
     case "DRAFT":
       return "is-light";
     case "STARTING":

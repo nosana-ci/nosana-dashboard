@@ -57,8 +57,14 @@ interface Props {
 
 const props = defineProps<Props>();
 
-// Use the existing useJob composable
-const { job, loading, endpoints } = useJob(props.jobId);
+// Use the existing useJob composable 
+const { job, loading, endpoints, pausePolling } = useJob(props.jobId);
+
+// Pause job polling since we only need the initial job data for logs
+// The flog system handles live updates via WebSocket
+onMounted(() => {
+  pausePolling();
+});
 
 // Authentication setup (matching main branch pattern)
 const { hasAuth, ensureAuth } = useAuthHeader();
