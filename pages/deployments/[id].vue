@@ -140,6 +140,24 @@
                       </span>
                       <span>Update Timeout</span>
                     </a>
+
+                    <!-- Update Schedule Action (only for scheduled deployments) -->
+                    <a 
+                      v-if="deployment.status !== 'ARCHIVED' && deployment.strategy?.toUpperCase() === 'SCHEDULED'"
+                      class="dropdown-item"
+                      @click="showScheduleModal = true; isActionsDropdownOpen = false"
+                      :disabled="actionLoading"
+                    >
+                      <span class="icon is-small mr-2">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke-width="2"/>
+                          <line x1="16" y1="2" x2="16" y2="6" stroke-width="2"/>
+                          <line x1="8" y1="2" x2="8" y2="6" stroke-width="2"/>
+                          <line x1="3" y1="10" x2="21" y2="10" stroke-width="2"/>
+                        </svg>
+                      </span>
+                      <span>Update Schedule</span>
+                    </a>
                   </div>
                 </div>
               </div>
@@ -170,6 +188,17 @@
                   <tr>
                     <td>Container timeout</td>
                     <td>{{ Math.floor(deployment.timeout / 60) }} hours</td>
+                  </tr>
+                  
+                  <!-- Scheduled deployment cron schedule -->
+                  <tr v-if="deployment.strategy?.toUpperCase() === 'SCHEDULED' && deployment.schedule">
+                    <td>Schedule</td>
+                    <td>
+                      <div class="is-flex is-flex-direction-column">
+                        <span class="is-family-monospace has-text-weight-semibold">{{ deployment.schedule }}</span>
+                        <span class="is-size-7 has-text-grey mt-1">{{ parseCronExpression(deployment.schedule) }}</span>
+                      </div>
+                    </td>
                   </tr>
                   <tr>
                     <td>Created on</td>
@@ -440,13 +469,6 @@
         <!-- Job Definition Tab -->
         <div v-if="activeTab === 'job-definition'">
 
-          <div v-if="deployment.schedule" class="field">
-            <label class="label">Schedule</label>
-            <p class="content is-family-monospace is-size-7">
-              {{ deployment.schedule }}
-            </p>
-          </div>
-
           <div v-if="loadingJobDefinition" class="has-text-grey has-text-centered py-4">
             Loading job definition...
           </div>
@@ -562,6 +584,78 @@
         </footer>
       </div>
     </div>
+
+    <!-- Update Schedule Modal -->
+    <div v-if="deployment" class="modal" :class="{ 'is-active': showScheduleModal }">
+      <div class="modal-background" @click="showScheduleModal = false"></div>
+      <div class="modal-card" style="max-width: 500px;">
+        <header class="modal-card-head">
+          <p class="modal-card-title">Update Schedule</p>
+          <button class="delete" @click="showScheduleModal = false"></button>
+        </header>
+        <section class="modal-card-body">
+          <div class="field">
+            <label class="label">
+              Cron Expression
+              <span class="icon is-small has-tooltip-arrow" data-tooltip="Cron expression defining when jobs should run. Format: minute hour day month day-of-week">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                  <path d="M12 16v-4m0-4h.01" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </span>
+            </label>
+            <div class="control">
+              <input
+                type="text"
+                class="input is-family-monospace"
+                v-model="newSchedule"
+                :placeholder="deployment.schedule || '0 * * * *'"
+                style="font-size: 14px;"
+              />
+            </div>
+            <p class="help">
+              <span>Current: <span class="is-family-monospace has-text-dark">{{ deployment.schedule }}</span></span><br>
+              <span class="has-text-grey">{{ deployment.schedule ? parseCronExpression(deployment.schedule) : '' }}</span>
+            </p>
+            <div v-if="newSchedule" class="mt-3">
+              <p class="help">
+                <span>Preview: <span class="is-family-monospace has-text-dark">{{ newSchedule }}</span></span><br>
+                <span class="has-text-grey">{{ parseCronExpression(newSchedule) }}</span>
+              </p>
+            </div>
+          </div>
+          
+          <div class="content">
+            <p class="has-text-grey is-size-7 mb-2"><strong>Common examples:</strong></p>
+            <div class="tags">
+              <span class="tag is-light is-clickable" @click="newSchedule = '0 * * * *'">
+                <span class="is-family-monospace mr-1 has-text-dark">0 * * * *</span> Every hour
+              </span>
+              <span class="tag is-light is-clickable" @click="newSchedule = '*/30 * * * *'">
+                <span class="is-family-monospace mr-1 has-text-dark">*/30 * * * *</span> Every 30 min
+              </span>
+              <span class="tag is-light is-clickable" @click="newSchedule = '0 0 * * *'">
+                <span class="is-family-monospace mr-1 has-text-dark">0 0 * * *</span> Daily
+              </span>
+              <span class="tag is-light is-clickable" @click="newSchedule = '0 0 * * 0'">
+                <span class="is-family-monospace mr-1 has-text-dark">0 0 * * 0</span> Weekly
+              </span>
+            </div>
+          </div>
+        </section>
+        <footer class="modal-card-foot" style="justify-content: flex-end;">
+          <button class="button" @click="showScheduleModal = false">Cancel</button>
+          <button 
+            class="button is-success"
+            @click="updateSchedule(); showScheduleModal = false"
+            :class="{ 'is-loading': actionLoading }"
+            :disabled="actionLoading || !newSchedule || !isValidCronExpression(newSchedule)"
+          >
+            Update
+          </button>
+        </footer>
+      </div>
+    </div>
   </div>
 
   
@@ -585,6 +679,10 @@ interface DeploymentJob {
   market?: string;
 }
 
+interface ExtendedDeployment extends Deployment {
+  schedule?: string;
+}
+
 interface DeploymentEvent {
   type: string;
   category: string;
@@ -603,7 +701,7 @@ const isAuthenticated = computed(() => status.value === 'authenticated' && token
 const { getIpfs } = useIpfs();
 
 // State
-const deployment = ref<Deployment | null>(null);
+const deployment = ref<ExtendedDeployment | null>(null);
 const marketData = ref<any>(null);
 const loadingMarket = ref(false);
 const loading = ref(true);
@@ -614,6 +712,7 @@ const jobActivityTab = ref("running");
 const actionLoading = ref(false);
 const newReplicaCount = ref<number | null>(null);
 const newTimeoutHours = ref<number | null>(null);
+const newSchedule = ref<string>('');
 const authHeader = ref<string>('');
 const showTopupModal = ref(false);
 const userNosBalance = ref<number>(0);
@@ -623,6 +722,7 @@ const tasksLoading = ref(false);
 const isActionsDropdownOpen = ref(false);
 const showReplicasModal = ref(false);
 const showTimeoutModal = ref(false);
+const showScheduleModal = ref(false);
 const actionsDropdown = ref<HTMLElement | null>(null);
 const statusPollingInterval = ref<NodeJS.Timeout | null>(null);
 const jobPollingInterval = ref<NodeJS.Timeout | null>(null);
@@ -691,6 +791,95 @@ const getStatusIcon = (status: string) => {
       return "queued";
     default:
       return "stopped";
+  }
+};
+
+const parseCronExpression = (cronExpression: string): string => {
+  if (!cronExpression) return 'Invalid cron expression';
+  
+  const parts = cronExpression.trim().split(/\s+/);
+  if (parts.length !== 5) return 'Invalid cron expression format';
+  
+  const [minute, hour, dayOfMonth, month, dayOfWeek] = parts;
+  
+  try {
+    // Handle some common patterns
+    if (cronExpression === '0 * * * *') {
+      return 'Every hour at minute 0';
+    }
+    if (cronExpression === '1 * * * *') {
+      return 'Every hour at minute 1';
+    }
+    if (cronExpression === '30 * * * *') {
+      return 'Every hour at minute 30';
+    }
+    if (cronExpression === '*/5 * * * *') {
+      return 'Every 5 minutes';
+    }
+    if (cronExpression === '0 0 * * *') {
+      return 'Daily at midnight';
+    }
+    if (cronExpression === '0 12 * * *') {
+      return 'Daily at noon';
+    }
+    if (cronExpression === '0 0 * * 0') {
+      return 'Weekly on Sunday at midnight';
+    }
+    if (cronExpression === '0 0 1 * *') {
+      return 'Monthly on the 1st at midnight';
+    }
+    
+    // Build description from parts
+    let description = '';
+    
+    // Handle minute
+    if (minute === '*') {
+      description += 'Every minute';
+    } else if (minute.startsWith('*/')) {
+      description += `Every ${minute.slice(2)} minutes`;
+    } else {
+      description += `At minute ${minute}`;
+    }
+    
+    // Handle hour
+    if (hour !== '*') {
+      if (hour.startsWith('*/')) {
+        description += ` of every ${hour.slice(2)} hours`;
+      } else {
+        description += ` of hour ${hour}`;
+      }
+    }
+    
+    // Handle day of month
+    if (dayOfMonth !== '*') {
+      description += ` on day ${dayOfMonth} of the month`;
+    }
+    
+    // Handle month
+    if (month !== '*') {
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      if (month.includes(',')) {
+        const monthNumbers = month.split(',').map(m => months[parseInt(m) - 1]).join(', ');
+        description += ` in ${monthNumbers}`;
+      } else {
+        description += ` in ${months[parseInt(month) - 1]}`;
+      }
+    }
+    
+    // Handle day of week
+    if (dayOfWeek !== '*') {
+      const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      if (dayOfWeek.includes(',')) {
+        const dayNumbers = dayOfWeek.split(',').map(d => days[parseInt(d)]).join(', ');
+        description += ` on ${dayNumbers}`;
+      } else {
+        description += ` on ${days[parseInt(dayOfWeek)]}`;
+      }
+    }
+    
+    return description;
+  } catch (error) {
+    return 'Unable to parse cron expression';
   }
 };
 
@@ -1127,6 +1316,91 @@ const updateJobTimeout = async () => {
   );
   
   newTimeoutHours.value = null;
+};
+
+const updateSchedule = async () => {
+  if (!newSchedule.value || !isValidCronExpression(newSchedule.value)) {
+    toast.error("Please enter a valid cron expression");
+    return;
+  }
+
+  if (!deployment.value || !isAuthenticated.value) {
+    toast.error("Please log in to perform this action");
+    return;
+  }
+
+  try {
+    actionLoading.value = true;
+    await useApiFetch(`/api/deployments/${deployment.value!.id}/update-schedule`, { 
+      method: 'PATCH', 
+      auth: true,
+      body: { schedule: newSchedule.value }
+    });
+    
+    toast.success(`Schedule updated to: ${newSchedule.value} (${parseCronExpression(newSchedule.value)})`);
+    
+    // Wait a moment for backend to process, then refresh
+    await new Promise(resolve => setTimeout(resolve, 500));
+    await loadDeployment(true);
+    
+    newSchedule.value = '';
+  } catch (error: any) {
+    console.error('Update schedule error:', error);
+    const errorMessage = error.data?.message || error.message || 'Failed to update schedule';
+    toast.error(`Error updating schedule: ${errorMessage}`);
+  } finally {
+    actionLoading.value = false;
+  }
+};
+
+const isValidCronExpression = (cron: string): boolean => {
+  if (!cron) return false;
+  
+  const parts = cron.trim().split(/\s+/);
+  if (parts.length !== 5) return false;
+  
+  // Basic validation for each part
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
+    
+    // Allow wildcard
+    if (part === '*') continue;
+    
+    // Allow step values (*/n)
+    if (part.startsWith('*/')) {
+      const stepValue = parseInt(part.slice(2));
+      if (isNaN(stepValue) || stepValue <= 0) return false;
+      continue;
+    }
+    
+    // Allow ranges (n-m) and lists (n,m,...)
+    if (part.includes('-') || part.includes(',')) continue;
+    
+    // Check if it's a valid number
+    const num = parseInt(part);
+    if (isNaN(num)) return false;
+    
+    // Validate ranges for each position
+    switch (i) {
+      case 0: // minute (0-59)
+        if (num < 0 || num > 59) return false;
+        break;
+      case 1: // hour (0-23)
+        if (num < 0 || num > 23) return false;
+        break;
+      case 2: // day of month (1-31)
+        if (num < 1 || num > 31) return false;
+        break;
+      case 3: // month (1-12)
+        if (num < 1 || num > 12) return false;
+        break;
+      case 4: // day of week (0-7, where 0 and 7 are Sunday)
+        if (num < 0 || num > 7) return false;
+        break;
+    }
+  }
+  
+  return true;
 };
 
 // Vault functionality removed in API mode

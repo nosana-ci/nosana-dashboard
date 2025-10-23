@@ -46,7 +46,7 @@
 
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue';
-import JobLogsView from './Tabs/Logs.vue';
+import JobLogsView from './Tabs/SystemLogs.vue';
 import { useJob } from '~/composables/jobs/useJob';
 import { useFLogs } from '~/composables/jobs/useFLogs';
 import { useWallet } from 'solana-wallets-vue';
