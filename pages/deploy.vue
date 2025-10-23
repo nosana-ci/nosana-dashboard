@@ -1,8 +1,8 @@
 <template>
   <div>
     <TopBar
-      :title="'Create your Deployment'"
-      :subtitle="'Choose the best fit for your needs'"
+      :title="'Deploy a Job'"
+      :subtitle="'Run a single job on the Nosana network'"
       ref="topBar"
       :hide-buttons="false"
       v-model="showSettingsModal"
@@ -13,49 +13,39 @@
     
     <div v-else class="columns is-multiline">
       <div class="column is-9-fullhd is-12">
-        <!-- Step 1: Name your deployment -->
-        <h2 class="title is-5 mb-3">1. Name your deployment</h2>
-        <div class="box has-background-white" style="border: none;">
-          <div class="field">
-            <label class="label">Deployment name</label>
-            <div class="control">
-              <input 
-                class="input" 
-                type="text" 
-                placeholder="Enter deployment name"
-                maxlength="50"
-              />
-            </div>
-          </div>
-        </div>
-
-        <!-- Step 2: Choose model -->
+        <!-- Job Definition and GPU Selection -->
         <DeployJobDefinition
+          title="Configure job"
           :selectedTemplate="selectedTemplate"
           v-model:jobDefinition="jobDefinition"
           v-model:isEditorCollapsed="isEditorCollapsed"
           :validator="validator"
+          :markets="markets || null"
+          :testgridMarkets="testgridMarkets"
+          :loadingMarkets="loadingMarkets"
+          :gpuTypeCheckbox="gpuTypeCheckbox"
+          :activeFilter="activeFilter"
+          :skipAutoSelection="skipAutoSelection"
+          :selectedMarket="selectedMarket"
+          :gpuFilters="gpuFilters"
+          :selectedGpuGroup="selectedGpuGroup"
+          :filterValues="filterValues"
+          :availableHosts="availableHosts"
+          :loadingHosts="loadingHosts"
+          :selectedHostAddress="selectedHostAddress"
+          :forceUpdateCounter="forceUpdateCounter"
+          :activeFilterKey="activeFilterKey"
           @showTemplateModal="showTemplateModal = true"
           @openReadme="openReadmeModal"
+          @selectedMarket="selectedMarket = $event"
+          @update:activeFilter="activeFilter = $event"
+          @update:gpuTypeCheckbox="gpuTypeCheckbox = $event"
+          @update:selectedGpuGroup="selectedGpuGroup = $event"
+          @update:filterValues="filterValues = $event"
+          @update:selectedHostAddress="selectedHostAddress = $event"
+          @update:forceUpdateCounter="forceUpdateCounter = $event"
+          @searchGpus="searchGpus"
         />
-        <!-- Step 3: Select GPU -->
-        <h2 class="title is-5 mb-3 mt-5">3. Select your GPU</h2>
-        <div class="box has-background-white" style="border: none;">
-          <DeploySimpleGpuSelection
-            :markets="markets || null"
-            :testgridMarkets="testgridMarkets"
-            :loadingMarkets="loadingMarkets"
-            :gpuTypeCheckbox="gpuTypeCheckbox"
-            :activeFilter="activeFilter"
-            :jobDefinition="jobDefinition"
-            :skipAutoSelection="skipAutoSelection"
-            :selectedMarket="selectedMarket"
-            :activeFilterKey="activeFilterKey"
-            @selectedMarket="selectedMarket = $event"
-            @update:activeFilter="activeFilter = $event"
-            @update:gpuTypeCheckbox="gpuTypeCheckbox = $event"
-          />
-        </div>
       </div>
       <div class="column is-3-fullhd is-12">
         <div class="summary">
@@ -82,34 +72,8 @@
             </div>
             <hr />
             
-            <!-- Deployment Settings -->
-            <h3 class="title is-6 mt-4 mb-3">Deployment Settings</h3>
-            
-            <div class="field">
-              <label class="label is-small">Deployment strategy</label>
-              <div class="control">
-                <div class="select is-fullwidth is-small">
-                  <select v-model="deploymentStrategy">
-                    <option value="SIMPLE">Simple</option>
-                    <option value="ROLLING">Rolling</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-            
-            <div class="field">
-              <label class="label is-small">Replica count</label>
-              <div class="control">
-                <input
-                  class="input is-small"
-                  type="number"
-                  v-model.number="replicaCount"
-                  min="1"
-                  max="10"
-                />
-              </div>
-              <p class="help is-size-7">Number of instances to run</p>
-            </div>
+            <!-- Job Settings -->
+            <h3 class="title is-6 mt-4 mb-3">Job Settings</h3>
             
             <div class="field">
               <label class="label is-small">Container timeout (hours)</label>
@@ -162,14 +126,14 @@
                   Claim credit codes on your account page
                 </p>
               </div>
-              <!-- Show deploy button if any authentication method allows deployment -->
+              <!-- Show deploy button if any authentication method allows job creation -->
               <button
-                v-else-if="canCreateDeployment && (connected || status === 'authenticated')"
+                v-else-if="canCreateJob && (connected || status === 'authenticated')"
                 class="button is-secondary is-fullwidth"
-                @click="createDeployment"
+                @click="createJob"
               >
-                <span v-if="isCreatingDeployment">Creating...</span>
-                <span v-else>Deploy</span>
+                <span v-if="isCreatingJob">Creating...</span>
+                <span v-else>Run Job</span>
               </button>
             </ClientOnly>
           </div>
@@ -333,11 +297,8 @@ const gpuTypeCheckbox = ref<string[]>(config.public.network === 'devnet' ? ["PRE
 const activeFilter = ref(config.public.network === 'devnet' ? "ALL" : "PREMIUM");
 const selectedMarket = ref<Market | null>(null);
 const selectedTemplate = ref<Template | null>(null);
-const deploymentName = ref<string>('');
-const deploymentStrategy = ref<string>('SIMPLE');
-const replicaCount = ref<number>(1);
 const hours = ref(1);
-const isCreatingDeployment = ref(false);
+const isCreatingJob = ref(false);
 const showSettingsModal = ref(false);
 const showSwapModal = ref(false);
 const skipAutoSelection = ref(false);
@@ -589,10 +550,10 @@ const isAuthenticated = computed(() => {
   return connected.value || status.value === 'authenticated';
 });
 
-const canCreateDeployment = computed(() => 
+const canCreateJob = computed(() => 
   selectedMarket.value !== null &&
   jobDefinition.value !== null &&
-  !isCreatingDeployment.value &&
+  !isCreatingJob.value &&
   hours.value > 0 &&
   isAuthenticated.value &&
   canPostJob.value
@@ -644,8 +605,8 @@ const ensureWalletReady = async (): Promise<boolean> => {
   return false;
 };
 
-const createDeployment = async () => {
-  if (!canCreateDeployment.value) return;
+const createJob = async () => {
+  if (!canCreateJob.value) return;
   
   // Double-check hours value is valid
   if (hours.value <= 0) {
@@ -654,7 +615,7 @@ const createDeployment = async () => {
   }
   
   loading.value = true;
-  isCreatingDeployment.value = true;
+  isCreatingJob.value = true;
   try {
     const ipfsHash = await nosana.value.ipfs.pin(jobDefinition.value);
     
@@ -678,10 +639,10 @@ const createDeployment = async () => {
 
       if (response.ok) {
         const data = await response.json();
-        toast.success(`Successfully created deployment ${data.jobAddress}`);
-        // Clear saved deploy state after successful deployment
+        toast.success(`Successfully created job ${data.jobAddress}`);
+        // Clear saved deploy state after successful job creation
         clearDeployState();
-        // Refresh credit balance after successful deployment
+        // Refresh credit balance after successful job creation
         await refreshCreditBalance();
         try {
           trackEvent('credit_used', {
@@ -710,7 +671,7 @@ const createDeployment = async () => {
         }, 3000);
       } else {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create deployment with credits');
+        throw new Error(errorData.message || 'Failed to create job with credits');
       }
     } else if (connected.value) {
       // Wallet-based posting for wallet users
@@ -727,7 +688,7 @@ const createDeployment = async () => {
         selectedHostAddress.value || undefined
       ) as { tx: string; job: string; run: string };
       
-      toast.success(`Successfully created deployment ${response.job}`);
+      toast.success(`Successfully created job ${response.job}`);
 
       try {
         trackEvent('gpu_job_created', {
@@ -742,7 +703,7 @@ const createDeployment = async () => {
         console.warn("Error tracking GPU job created:", error);
       }
 
-      // Clear saved deploy state after successful deployment
+      // Clear saved deploy state after successful job creation
       clearDeployState();
       setTimeout(() => {
         router.push('/jobs/' + response.job);
@@ -758,10 +719,10 @@ const createDeployment = async () => {
     } else if (error.toString().toLowerCase().includes('not connected')) {
       toast.error('Wallet is not connected. Please connect your wallet and try again.');
     } else {
-      toast.error(`Error creating deployment: ${error.toString()}`);
+      toast.error(`Error creating job: ${error.toString()}`);
     }
   } finally {
-    isCreatingDeployment.value = false;
+    isCreatingJob.value = false;
     loading.value = false;
   }
 };
@@ -1105,6 +1066,11 @@ watch(selectedGpuGroup, async (newValue) => {
   }
 });
 
+
+// Search GPUs function for advanced GPU selection
+const searchGpus = () => {
+  debouncedSearch();
+};
 // Restore state if needed (following handleRepost pattern)
 const restoreStateIfNeeded = async () => {
   if (!shouldRestoreState()) {
@@ -1158,7 +1124,7 @@ const restoreStateIfNeeded = async () => {
     // Show notification for redeploy operations
     if (savedState.source === 'redeploy') {
       setTimeout(() => {
-        toast.info('Job configuration restored for redeployment. Please select a GPU to continue.');
+        toast.info('Job configuration restored. Please select a GPU to continue.');
       }, 500);
     }
     

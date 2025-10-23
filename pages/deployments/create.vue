@@ -31,6 +31,7 @@
 
         <!-- Choose model -->
         <DeployJobDefinition
+          title="Configure deployment"
           :selectedTemplate="selectedTemplate"
           v-model:jobDefinition="jobDefinition"
           v-model:isEditorCollapsed="isEditorCollapsed"

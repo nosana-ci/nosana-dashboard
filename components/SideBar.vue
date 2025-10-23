@@ -37,19 +37,19 @@
         </li>
         <li>
           <nuxt-link
-            to="/deploy"
+            to="/deployments/create"
             active-class="is-active"
             @click="showMenu = false"
           >
             <span class="icon is-small mr-4">
               <JobBuilderIcon  />
             </span>
-            <span>Deploy Model</span>
+            <span>Deploy</span>
           </nuxt-link>
         </li>
         <li class="has-dropdown">
           <a class="menu-list-link sidebar-link" @click="toggleExplorer"
-            :class="{ 'is-active': $route.path === '/explorer' || $route.path.includes('/markets') || $route.path === '/leaderboards' || ($route.path === '/account/host' && status !== 'authenticated') || $route.path === '/stake'}"
+            :class="{ 'is-active': $route.path === '/explorer' || $route.path.includes('/markets') || ($route.path === '/account/host' && status !== 'authenticated') || $route.path === '/stake'}"
           >
             <div
               class="is-flex is-align-items-center"
@@ -93,16 +93,6 @@
                 @click="showMenu = false"
               >
                 GPUs
-              </nuxt-link>
-            </li>
-            <li>
-              <nuxt-link
-                to="/leaderboards"
-                active-class="is-active"
-                class="submenu-link"
-                @click="showMenu = false"
-              >
-                Host Leaderboard
               </nuxt-link>
             </li>
             <li v-if="status !== 'authenticated'">
@@ -244,7 +234,7 @@ const { openBothModal, openWalletModal } = useLoginModal();
 
 // Check if the current route is an explorer page
 const isExplorerPage = computed(() => {
-  return route.path === '/explorer' || route.path.includes('/markets') || route.path === '/leaderboards' || (route.path === '/account/host' && status.value !== 'authenticated') || route.path === '/stake';
+  return route.path === '/explorer' || route.path.includes('/markets') || (route.path === '/account/host' && status.value !== 'authenticated') || route.path === '/stake';
 });
 
 // Update dropdown states based on the current route

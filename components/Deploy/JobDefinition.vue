@@ -5,7 +5,7 @@
       :style="{ overflowY: 'scroll', border: 'none', height: 'auto', marginTop: '1.5rem' }"
     >
       <div>
-        <h2 class="title is-5 mb-4 px-3" style="color: #202124;">Configure deployment</h2>
+          <h2 class="title is-5 mb-4 px-3" style="color: #202124;">{{ title || 'Configure job definition' }}</h2>
         <!-- START: New Template Info Box (above editor) -->
         <div class="px-3 pt-0 pb-2" style="width: 100%; display: flex;">
           <div class="is-flex is-align-items-start is-justify-content-space-between" style="width: 100%;">
@@ -13,8 +13,8 @@
             <div class="is-flex is-align-items-start" style="gap: 0.5rem;">
               <div v-if="selectedTemplate && selectedTemplate.id !== 'custom'" class="is-flex is-align-items-start">
                 <img 
-                  v-if="selectedTemplate.icon || selectedTemplate.avatar_url"
-                  :src="selectedTemplate.icon || selectedTemplate.avatar_url"
+                  v-if="selectedTemplate.icon || (selectedTemplate as any).avatar_url"
+                  :src="selectedTemplate.icon || (selectedTemplate as any).avatar_url"
                   alt="Template Icon"
                   class="mr-2" 
                   style="height: 24px; width: 24px; border-radius: 4px; object-fit: contain; flex-shrink: 0; margin-top: 7px;"
@@ -93,6 +93,61 @@
         <!-- END: New Template Info Box -->
       </div>
     </div>
+
+      <!-- GPU Selection Section (only shown when markets prop is provided) -->
+      <div v-if="markets !== undefined" class="box has-background-white" style="border: none; margin-top: 1.5rem;">
+        <h2 class="title is-5 mb-3" style="color: #202124;">Select your GPU</h2>
+      <div class="nav-tabs is-flex">
+        <div
+          class="nav-tabs-item p-3 px-5 mr-3"
+          :class="{ 'is-active has-background-white': gpuTab === 'simple' }"
+          @click="gpuTab = 'simple'"
+        >
+          Device
+        </div>
+        <div
+          class="nav-tabs-item p-3 px-5 mr-3"
+          :class="{ 'is-active has-background-white': gpuTab === 'advanced' }"
+          @click="gpuTab = 'advanced'"
+        >
+          Advanced Search
+        </div>
+      </div>
+      <div class="box has-background-white" style="border: none; margin-top: 0;">
+        <DeploySimpleGpuSelection
+            v-if="gpuTab === 'simple'"
+            :markets="markets ?? null"
+            :testgridMarkets="testgridMarkets ?? []"
+            :loadingMarkets="loadingMarkets ?? false"
+            :gpuTypeCheckbox="gpuTypeCheckbox ?? []"
+            :activeFilter="activeFilter ?? 'ALL'"
+            :jobDefinition="(typeof jobDefinition === 'string' || !jobDefinition ? null : jobDefinition) as JobDefinition | null"
+            :skipAutoSelection="skipAutoSelection ?? false"
+            :selectedMarket="selectedMarket ?? null"
+            :activeFilterKey="activeFilterKey ?? ''"
+            @selectedMarket="$emit('selectedMarket', $event)"
+            @update:activeFilter="$emit('update:activeFilter', $event)"
+            @update:gpuTypeCheckbox="$emit('update:gpuTypeCheckbox', $event)"
+          />
+          <DeployAdvancedGpuSelection
+            v-else
+            :gpuFilters="gpuFilters ?? null"
+            :selectedGpuGroup="selectedGpuGroup ?? 'all'"
+            :filterValues="filterValues ?? {}"
+            :availableHosts="availableHosts ?? []"
+            :loadingHosts="loadingHosts ?? false"
+            :selectedHostAddress="selectedHostAddress ?? null"
+            :forceUpdateCounter="forceUpdateCounter ?? 0"
+            :marketsData="markets ?? null"
+            @update:selectedGpuGroup="$emit('update:selectedGpuGroup', $event)"
+            @update:filterValues="$emit('update:filterValues', $event)"
+            @update:selectedHostAddress="$emit('update:selectedHostAddress', $event)"
+            @update:forceUpdateCounter="$emit('update:forceUpdateCounter', $event)"
+            @selectedMarket="$emit('selectedMarket', $event)"
+            @searchGpus="$emit('searchGpus')"
+          />
+      </div>
+    </div>
     
     <!-- Job Definition Editor Modal -->
     <div class="modal" :class="{ 'is-active': showEditorModal }">
@@ -128,9 +183,11 @@
 
 <script setup lang="ts">
 import { Mode } from 'vanilla-jsoneditor';
-import JsonEditorVue from 'json-editor-vue';
-import type { JobDefinition } from '@nosana/sdk';
-import type { Template } from '~/composables/useTemplates';
+  import JsonEditorVue from 'json-editor-vue';
+  import type { JobDefinition, Market } from '@nosana/sdk';
+  import type { Template } from '~/composables/useTemplates';
+  import DeploySimpleGpuSelection from './SimpleGpuSelection.vue';
+  import DeployAdvancedGpuSelection from './AdvancedGpuSelection.vue';
 
 // Define props
 interface Props {
@@ -138,6 +195,24 @@ interface Props {
   jobDefinition: JobDefinition | null | string;
   isEditorCollapsed: boolean;
   validator: any;
+  title?: string; // Optional title for the section
+    // GPU Selection props (optional - only for /deploy page)
+    markets?: Market[] | null;
+    testgridMarkets?: any;
+    loadingMarkets?: boolean;
+    gpuTypeCheckbox?: string[];
+    activeFilter?: string;
+    skipAutoSelection?: boolean;
+    selectedMarket?: Market | null;
+    activeFilterKey?: string;
+    // Advanced GPU Selection props (optional - only for /deploy page)
+    gpuFilters?: any;
+    selectedGpuGroup?: string;
+    filterValues?: any;
+    availableHosts?: any[];
+    loadingHosts?: boolean;
+    selectedHostAddress?: string | null;
+    forceUpdateCounter?: number;
 }
 
 // Define emits
@@ -146,6 +221,16 @@ const emit = defineEmits<{
   'update:isEditorCollapsed': [value: boolean];
   'update:jobDefinition': [value: JobDefinition | null];
   openReadme: [readme: string];
+    // GPU Selection emits
+    selectedMarket: [market: Market | null];
+    'update:activeFilter': [filter: string];
+    'update:gpuTypeCheckbox': [types: string[]];
+    // Advanced GPU Selection emits
+    'update:selectedGpuGroup': [value: string];
+    'update:filterValues': [value: any];
+    'update:selectedHostAddress': [value: string | null];
+    'update:forceUpdateCounter': [value: number];
+    searchGpus: [];
 }>();
 
 // Get props
@@ -153,6 +238,9 @@ const props = defineProps<Props>();
 
 // Modal state
 const showEditorModal = ref(false);
+
+// GPU Tab state
+const gpuTab = ref<"simple" | "advanced">("simple");
 
 // Create reactive refs for two-way binding
 const isEditorCollapsed = computed({
@@ -176,7 +264,7 @@ const computedJobTitle = computed(() => {
   if (props.selectedTemplate?.name) {
     return props.selectedTemplate.name;
   }
-  if (props.jobDefinition?.ops?.[0]?.args) {
+  if (typeof props.jobDefinition !== 'string' && props.jobDefinition?.ops?.[0]?.args) {
     const args = props.jobDefinition.ops[0].args as any;
     if (args.image) {
       const image = args.image;
@@ -214,6 +302,26 @@ const openReadmeModal = (readme: string) => {
 .readme-button.button.is-light:hover {
   background-color: #eeeeee;
   border-color: #b5b5b5;
+}
+
+.nav-tabs-item {
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+  color: #7a7a7a;
+  cursor: pointer;
+  border: none;
+  border-bottom: 0px;
+  
+  &.is-active {
+    color: #363636;
+    border: none;
+    border-bottom: 1px solid white;
+    margin-bottom: -1px;
+  }
+  
+  &:hover {
+    background-color: #fafafa;
+  }
 }
 
 .action-button {
