@@ -5,14 +5,19 @@
     'is-warning': statusString === 'QUEUED',
     'is-danger': statusString === 'FAILED' || statusString === 'YAML_ERROR',
   }">
-    <img class="mr-2" :src="`/img/icons/status/${getIcon(statusString as string)}.svg`" />
+    <component class="mr-2" :is="getIconComponent(statusString as string)" />
 
     <span v-if="!imageOnly">{{ statusString }}</span>
   </div>
-  <img v-else :src="`/img/icons/status/${getIcon(statusString as string)}.svg`" />
+  <component v-else :is="getIconComponent(statusString as string)" />
 </template>
 
 <script setup lang="ts">
+import RunningIcon from '@/assets/img/icons/status/running.svg?component';
+import StoppedIcon from '@/assets/img/icons/status/stopped.svg?component';
+import FailedIcon from '@/assets/img/icons/status/failed.svg?component';
+import QueuedIcon from '@/assets/img/icons/status/queued.svg?component';
+import DoneIcon from '@/assets/img/icons/status/done.svg?component';
 const props = defineProps({
   status: {
     type: [String, Number],
@@ -93,18 +98,12 @@ const statusString = computed(() => {
   return resolved as string;
 });
 
-const getIcon = (status: string) => {
-  let icon = 'stopped';
-  if (status === 'QUEUED') {
-    icon = 'queued';
-  } else if (status === 'RUNNING') {
-    icon = 'running';
-  } else if (status === 'COMPLETED' || status === 'SUCCESS') {
-    icon = 'done';
-  } else if (status === 'FAILED' || status === 'YAML_ERROR') {
-    icon = 'failed';
-  }
-  return icon;
+const getIconComponent = (status: string) => {
+  if (status === 'QUEUED') return QueuedIcon;
+  if (status === 'RUNNING') return RunningIcon;
+  if (status === 'COMPLETED' || status === 'SUCCESS') return DoneIcon;
+  if (status === 'FAILED' || status === 'YAML_ERROR') return FailedIcon;
+  return StoppedIcon;
 };
 </script>
 

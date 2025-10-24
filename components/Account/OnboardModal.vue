@@ -20,7 +20,7 @@
           </button>
 
           <p style="cursor: pointer;" class="mt-2 has-text-centered has-text-grey" @click="completeOnboarding">
-            Skip this step <img src="@/assets/img/icons/arrow-right.svg" style="height: 8px; opacity: 0.7;" class="ml-1">
+            Skip this step <ArrowRightIcon style="height: 8px; opacity: 0.7;" class="ml-1" />
           </p>
         </div>
       </div>
@@ -33,6 +33,7 @@ import { ref } from "vue";
 import { useWallet } from "solana-wallets-vue";
 import { useToast } from "vue-toastification";
 import type { MessageSignerWalletAdapter } from "@solana/wallet-adapter-base";
+import ArrowRightIcon from '@/assets/img/icons/arrow-right.svg?component';
 
 const config = useRuntimeConfig().public;
 const { connected, publicKey, wallet } = useWallet();

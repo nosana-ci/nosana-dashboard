@@ -58,7 +58,7 @@
             </td>
             <td>
               <div class="tag is-outlined is-light" :class="statusClass(deployment.status)">
-                <img class="mr-2" :src="`/img/icons/status/${getStatusIcon(deployment.status)}.svg`" />
+                <component class="mr-2" :is="getStatusIcon(deployment.status)" />
                 <span>{{ deployment.status }}</span>
               </div>
             </td>
@@ -74,6 +74,11 @@
 </template>
 
 <script setup lang="ts">
+import RunningIcon from '@/assets/img/icons/status/running.svg?component';
+import StoppedIcon from '@/assets/img/icons/status/stopped.svg?component';
+import FailedIcon from '@/assets/img/icons/status/failed.svg?component';
+import QueuedIcon from '@/assets/img/icons/status/queued.svg?component';
+import DoneIcon from '@/assets/img/icons/status/done.svg?component';
 
 // Types
 interface DeploymentJob {
@@ -143,21 +148,21 @@ const statusClass = (status: string) => {
 
 const getStatusIcon = (status: string) => {
   switch (status?.toUpperCase()) {
-    case "RUNNING":
-    case "STARTING":
-      return "running";
-    case "STOPPED":
-    case "STOPPING":
-      return "stopped";
-    case "ERROR":
-    case "INSUFFICIENT_FUNDS":
-      return "failed";
-    case "DRAFT":
-      return "queued";
-    case "COMPLETED":
-      return "done";
+    case 'RUNNING':
+    case 'STARTING':
+      return RunningIcon;
+    case 'STOPPED':
+    case 'STOPPING':
+      return StoppedIcon;
+    case 'ERROR':
+    case 'INSUFFICIENT_FUNDS':
+      return FailedIcon;
+    case 'DRAFT':
+      return QueuedIcon;
+    case 'COMPLETED':
+      return DoneIcon;
     default:
-      return "stopped";
+      return StoppedIcon;
   }
 }
 

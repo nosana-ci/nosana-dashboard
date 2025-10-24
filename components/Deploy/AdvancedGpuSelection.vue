@@ -160,7 +160,7 @@
             <div class="gpu-box__content">
               <div class="gpu-box__main">
                 <div class="gpu-box__title">
-                  <img src="~/assets/img/icons/nvidia.svg" alt="NVIDIA" class="gpu-logo" />
+                  <NvidiaIcon alt="NVIDIA" class="gpu-logo" />
                   {{ host.label }}
                 </div>
                 <div class="gpu-box__price">
@@ -200,6 +200,7 @@
 import type { Market } from "@nosana/sdk";
 import countries from 'i18n-iso-countries';
 import en from 'i18n-iso-countries/langs/en.json';
+import NvidiaIcon from '@/assets/img/icons/nvidia.svg?component';
 import CurrentMarketPrice from "~/components/Market/CurrentPrice.vue";
 
 // Initialize the countries library with English locale

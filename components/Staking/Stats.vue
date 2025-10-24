@@ -70,7 +70,7 @@
                     <span>%</span>
                   </template>
                 </CustomCountUp>
-                <img class="ml-2" width="15" src="@/assets/img/icons/red-arrow.svg">
+                <RedArrowIcon class="ml-2" width="15" />
               </div>
             </div>
             <div class="column is-4">
@@ -81,7 +81,7 @@
                     <span>%</span>
                   </template>
                 </CustomCountUp>
-                <img class="ml-2" width="15" src="@/assets/img/icons/green-arrow.svg">
+                <GreenArrowIcon class="ml-2" width="15" />
               </div>
             </div>
             <div class="column is-4">
@@ -92,7 +92,7 @@
                     <span>%</span>
                   </template>
                 </CustomCountUp>
-                <img class="ml-2" width="15" src="@/assets/img/icons/green-arrow.svg">
+                <GreenArrowIcon class="ml-2" width="15" />
               </div>
             </div>
           </div>
@@ -128,7 +128,7 @@
                       <span>%</span>
                     </template>
                   </CustomCountUp>
-                  <img class="ml-1" src="@/assets/img/icons/green-arrow.svg">
+                  <GreenArrowIcon class="ml-1" />
                 </span>
               </div>
             </div>
@@ -149,7 +149,7 @@
                       <span>%</span>
                     </template>
                   </CustomCountUp>
-                  <img class="ml-1" src="@/assets/img/icons/green-arrow.svg">
+                  <GreenArrowIcon class="ml-1" />
                 </span>
               </div>
             </div>
@@ -167,7 +167,7 @@
                       <span>%</span>
                     </template>
                   </CustomCountUp>
-                  <img class="ml-1" src="@/assets/img/icons/red-arrow.svg">
+                  <RedArrowIcon class="ml-1" />
                 </span>
               </div>
             </div>
@@ -204,7 +204,7 @@
                       <span>%</span>
                     </template>
                   </CustomCountUp>
-                  <img class="ml-1" src="@/assets/img/icons/green-arrow.svg">
+                  <GreenArrowIcon class="ml-1" />
                 </span>
               </div>
             </div>
@@ -225,7 +225,7 @@
                       <span>%</span>
                     </template>
                   </CustomCountUp>
-                  <img class="ml-1" src="@/assets/img/icons/green-arrow.svg">
+                  <GreenArrowIcon class="ml-1" />
                 </span>
               </div>
             </div>
@@ -246,7 +246,7 @@
                       <span>%</span>
                     </template>
                   </CustomCountUp>
-                  <img class="ml-1" src="@/assets/img/icons/green-arrow.svg">
+                  <GreenArrowIcon class="ml-1" />
                 </span>
               </div>
             </div>
@@ -257,6 +257,9 @@
   </div>
 </template>
 <script setup lang="ts">
+import RedArrowIcon from '@/assets/img/icons/red-arrow.svg?component';
+import GreenArrowIcon from '@/assets/img/icons/green-arrow.svg?component';
+
 const { data: stats, pending: loading } = await useAPI('/api/stats');
 </script>
 <style scoped lang="scss">

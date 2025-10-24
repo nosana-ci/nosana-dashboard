@@ -44,7 +44,7 @@
                   <td>
                     <NuxtLink :to="`/jobs/${job.address}`" class="clickable-row-link">
                       <div class="clickable-row-cell-content is-flex is-align-items-center">
-                        <img src="@/assets/img/icons/nvidia.svg" alt="Nvidia" class="mr-2" style="width: 20px; height: 20px;">
+                        <NvidiaIcon alt="Nvidia" class="mr-2" style="width: 20px; height: 20px;" />
                         <span v-if="testgridMarkets && testgridMarkets.find((tgm: any) => tgm.address === job.market.toString())">
                           {{ testgridMarkets.find((tgm: any) => tgm.address === job.market.toString()).name }}
                         </span>
@@ -63,7 +63,7 @@
                       <template v-else>
                         <template v-if="isGHCR(getJobImage(job))">
                           <div class="container-icon mr-2">
-                            <img src="@/assets/img/icons/github.svg" alt="GitHub" class="github-icon" style="width: 16px; height: 16px;">
+                            <GithubIcon alt="GitHub" class="github-icon" style="width: 16px; height: 16px;" />
                           </div>
                         </template>
                         <template v-else>
@@ -109,7 +109,7 @@
                         'has-background-white has-text-black': job.state === 3,
                         'is-light': job.state !== 3
                       }" :style="job.state === 3 ? 'border: 1px solid black;' : ''">
-                        <img class="mr-2 status-icon" :src="`/img/icons/status/${getStatusIcon(job.state)}.svg`" :style="job.state === 3 ? 'filter: brightness(0);' : ''" />
+                        <component class="mr-2 status-icon" :is="getStatusIconComponent(job.state)" :style="job.state === 3 ? 'filter: brightness(0);' : ''" />
                         <span>{{ getStatusText(job.state) }}</span>
                       </div>
                     </div>
@@ -135,7 +135,14 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
 import { useWallet } from 'solana-wallets-vue';
+import NvidiaIcon from '@/assets/img/icons/nvidia.svg?component';
+import GithubIcon from '@/assets/img/icons/github.svg?component';
 import PlusSymbolIcon from '@/assets/img/icons/plus_symbol.svg?component';
+import RunningIcon from '@/assets/img/icons/status/running.svg?component';
+import StoppedIcon from '@/assets/img/icons/status/stopped.svg?component';
+import FailedIcon from '@/assets/img/icons/status/failed.svg?component';
+import QueuedIcon from '@/assets/img/icons/status/queued.svg?component';
+import DoneIcon from '@/assets/img/icons/status/done.svg?component';
 import { useTemplates } from '~/composables/useTemplates';
 import { useMarkets } from '~/composables/useMarkets';
 import JobPrice from "~/components/Job/Price.vue";
@@ -315,13 +322,13 @@ const getStatusText = (state: number) => {
   }
 };
 
-const getStatusIcon = (state: number) => {
+const getStatusIconComponent = (state: number) => {
   switch (state) {
-    case 2: return 'done';
-    case 1: return 'running';
-    case 0: return 'queued';
-    case 3: return 'stopped';
-    default: return 'stopped';
+    case 2: return DoneIcon;
+    case 1: return RunningIcon;
+    case 0: return QueuedIcon;
+    case 3: return StoppedIcon;
+    default: return StoppedIcon;
   }
 };
 

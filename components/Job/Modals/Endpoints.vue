@@ -34,7 +34,7 @@
                     style="vertical-align: middle"
                     data-tooltip="No health check provided."
                   >
-                    <img src="~/assets/img/icons/info.svg" />
+                    <InfoIcon />
                   </span>
                 </td>
                 <td>
@@ -61,6 +61,7 @@
 <script setup lang="ts">
 import type { Endpoints } from "~/composables/jobs/useJob";
 import { useModal } from "~/composables/jobs/useModal";
+import InfoIcon from '@/assets/img/icons/info.svg?component';
 
 interface Props {
   endpoints: Endpoints;
