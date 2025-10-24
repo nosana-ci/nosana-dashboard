@@ -40,7 +40,7 @@ const { job, modal, endpoints, nosPrice, isJobPoster, loading, jobInfo } = useJo
 <style lang="scss" scoped>
 .loading-message,
 .not-found-message {
-  color: #363636;
+  color: $text;
   padding: 1rem;
   text-align: center;
 }
@@ -48,7 +48,7 @@ const { job, modal, endpoints, nosPrice, isJobPoster, loading, jobInfo } = useJo
 html.dark-mode {
   .loading-message,
   .not-found-message {
-    color: #ffffff;
+    color: $white;
   }
 }
 </style>

@@ -37,9 +37,10 @@
                 class="group-action-btn stop-btn"
                 title="Stop all operations in this group"
               >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect x="4" y="4" width="8" height="8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
+                <span class="icon is-small mr-2">
+                  <img src="/_nuxt/img/icons/square.svg" alt="Stop" />
+                </span>
+                <span>Stop</span>
               </button>
               <button
                 @click.stop="restartGroup(groupName)"
@@ -48,15 +49,15 @@
                 class="group-action-btn restart-btn"
                 title="Restart all operations in this group"
               >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M13 8C13 10.7614 10.7614 13 8 13C5.23858 13 3 10.7614 3 8C3 5.23858 5.23858 3 8 3C9.44649 3 10.752 3.59668 11.6829 4.5625" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M11 2V4.5H8.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
+                <span class="icon is-small mr-2">
+                  <img src="/_nuxt/img/icons/refresh.svg" alt="Restart" />
+                </span>
+                <span>Restart</span>
               </button>
             </div>
           </div>
           
-          <table class="operations-table">
+          <table class="table is-fullwidth">
             <thead>
               <tr>
                 <th>ID</th>
@@ -94,7 +95,12 @@
                       </a>
                     </span>
                   </td>
-                  <td class="op-status"><span class="status-badge" :class="`status-${op.status}`">{{ op.status }}</span></td>
+                  <td class="op-status">
+                    <div class="tag is-outlined is-light" :class="statusClass(op.status)">
+                      <img class="mr-2" :src="`/_nuxt/img/icons/status/${getStatusIconFile(op.status)}.svg`" />
+                      <span>{{ op.status.toUpperCase() }}</span>
+                    </div>
+                  </td>
                   <td class="op-actions">
                     <div class="action-buttons">
                       <button
@@ -104,9 +110,10 @@
                         class="action-btn stop-btn"
                         title="Stop operation"
                       >
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <rect x="4" y="4" width="8" height="8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
+                        <span class="icon is-small mr-2">
+                          <img src="/_nuxt/img/icons/square.svg" alt="Stop" />
+                        </span>
+                        <span>Stop</span>
                       </button>
                       <button
                         @click.stop="restartOperation(op)"
@@ -115,10 +122,10 @@
                         class="action-btn restart-btn"
                         title="Restart operation"
                       >
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M13 8C13 10.7614 10.7614 13 8 13C5.23858 13 3 10.7614 3 8C3 5.23858 5.23858 3 8 3C9.44649 3 10.752 3.59668 11.6829 4.5625" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                          <path d="M11 2V4.5H8.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
+                        <span class="icon is-small mr-2">
+                          <img src="/_nuxt/img/icons/refresh.svg" alt="Restart" />
+                        </span>
+                        <span>Restart</span>
                       </button>
                     </div>
                   </td>
@@ -768,26 +775,51 @@ const groupedOperations = computed(() => {
   return groups;
 });
 
-// Get status icon
-const getStatusIcon = (status: string) => {
+// Get status icon file name
+const getStatusIconFile = (status: string) => {
   switch (status?.toLowerCase()) {
     case 'running':
-      return 'fas fa-play-circle';
-    case 'stopped':
-      return 'fas fa-stop-circle';
-    case 'failed':
-      return 'fas fa-exclamation-circle';
-    case 'finished':
-      return 'fas fa-check-circle';
-    case 'restarting':
-    case 'stopping':
     case 'starting':
-      return 'fas fa-spinner fa-spin';
     case 'waiting':
     case 'pending':
-      return 'fas fa-clock';
+    case 'init':
+      return 'running';
+    case 'stopped':
+    case 'stopping':
+      return 'stopped';
+    case 'failed':
+      return 'failed';
+    case 'finished':
+    case 'success':
+      return 'done';
+    case 'restarting':
+      return 'running';
     default:
-      return 'fas fa-circle';
+      return 'stopped';
+  }
+};
+
+// Get status class for tag styling
+const statusClass = (status: string) => {
+  switch (status?.toLowerCase()) {
+    case 'running':
+    case 'starting':
+    case 'waiting':
+    case 'pending':
+    case 'init':
+      return 'is-info';
+    case 'stopped':
+    case 'stopping':
+      return 'is-dark';
+    case 'failed':
+      return 'is-danger';
+    case 'finished':
+    case 'success':
+      return 'is-success';
+    case 'restarting':
+      return 'is-warning';
+    default:
+      return 'is-light';
   }
 };
 
@@ -954,7 +986,7 @@ const restartGroup = async (groupName: string) => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.75rem 1rem;
+  padding: 12px 16px;
   background: #f5f5f5;
   border-radius: 6px;
   border-left: 4px solid #10e80c;
@@ -967,17 +999,12 @@ const restartGroup = async (groupName: string) => {
 }
 
 .group-name {
-  font-size: 1rem;
-  font-weight: 700;
-  color: #1a1a1a;
   margin: 0;
   text-transform: capitalize;
 }
 
 .group-count {
-  font-size: 0.875rem;
   color: #7a7a7a;
-  font-weight: 500;
 }
 
 .group-actions {
@@ -985,119 +1012,31 @@ const restartGroup = async (groupName: string) => {
   gap: 0.5rem;
 }
 
-.group-action-btn {
-  width: 36px;
-  height: 36px;
-  padding: 0;
-  border-radius: 6px;
-  border: 1px solid #e0e0e0;
-  background: #ffffff;
-  color: #1a1a1a;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-  
-  svg {
-    display: block;
-    flex-shrink: 0;
-  }
-
-  &:hover:not(:disabled) {
-    background: #f5f5f5;
-    border-color: #d0d0d0;
-  }
-
-  &:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
-  
-  &.is-loading {
-    position: relative;
-    
-    svg {
-      opacity: 0;
-    }
-    
-    &:after {
-      position: absolute;
-      content: "";
-      left: calc(50% - 8px);
-      top: calc(50% - 8px);
-      width: 16px;
-      height: 16px;
-      border: 2px solid #dbdbdb;
-      border-radius: 50%;
-      border-right-color: transparent;
-      border-top-color: transparent;
-      animation: spinAround 0.5s infinite linear;
-    }
-  }
-}
-
-.operations-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.9375rem;
-  table-layout: fixed;
-
-  thead {
-    tr {
-      border-bottom: 2px solid #e0e0e0;
-    }
-
-    th {
-      padding: 0.875rem 1.25rem;
-      text-align: left;
-      font-weight: 600;
-      font-size: 0.8125rem;
-      text-transform: uppercase;
-      color: #1a1a1a; // make headers black
-      letter-spacing: 0.05em;
-      
-      &:nth-child(1) { width: 25%; } // ID
-      &:nth-child(2) { width: 30%; } // Image
-      &:nth-child(3) { width: 15%; } // Port(s)
-      &:nth-child(4) { width: 15%; } // Status
-      &:nth-child(5) { width: 15%; } // Actions (smaller now with icons)
-    }
-  }
-
+.table {
   tbody {
     tr.op-row {
-      border-bottom: 1px solid #f0f0f0;
-      transition: background-color 0.2s ease;
       cursor: pointer;
-
-      &:hover {
-        background-color: transparent;
-      }
+      transition: background-color 0.2s ease;
 
       &.is-expanded {
         background-color: #fafafa;
       }
     }
-
-    tr.op-details-row {
-      border-bottom: 1px solid #f0f0f0;
-
-      &:hover {
-        background-color: transparent;
-      }
-    }
-
+    
     td {
-      padding: 1rem 1.25rem;
       vertical-align: middle;
-      text-align: left;
     }
+  }
+}
 
-    td:nth-child(3),
-    td:nth-child(4),
-    td:nth-child(5) {
-      padding-left: 0.5rem;
+html.dark-mode {
+  .table {
+    tbody {
+      tr.op-row {
+        &.is-expanded {
+          background-color: #252525;
+        }
+      }
     }
   }
 }
@@ -1132,11 +1071,8 @@ const restartGroup = async (groupName: string) => {
 
 .op-info-section {
   .section-title {
-    font-size: 0.875rem;
-    font-weight: 700;
-    color: #1a1a1a;
+    color: #5f6368;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
     margin: 0 0 1.45rem 0;
   }
   
@@ -1198,14 +1134,11 @@ const restartGroup = async (groupName: string) => {
   }
   
   .info-label {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: #666;
+    color: #5f6368;
   }
   
   .info-value {
-    font-size: 0.875rem;
-    color: #1a1a1a;
+    color: #363636;
     font-family: monospace;
   }
 }
@@ -1250,9 +1183,7 @@ const restartGroup = async (groupName: string) => {
 }
 
 .endpoint-port {
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: #1a1a1a;
+  color: #363636;
   font-family: monospace;
 }
 
@@ -1265,8 +1196,6 @@ const restartGroup = async (groupName: string) => {
   color: #ffffff;
   border-radius: 4px;
   text-decoration: none;
-  font-size: 0.75rem;
-  font-weight: 600;
   transition: all 0.2s ease;
   white-space: nowrap;
   
@@ -1306,22 +1235,14 @@ const restartGroup = async (groupName: string) => {
 }
 
 .logs-title {
-  font-size: 0.875rem;
-  font-weight: 700;
-  color: #1a1a1a;
+  color: #5f6368;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
   margin: 0;
-}
-
-.op-name {
-  font-weight: 500;
 }
 
 .op-id {
   color: #363636;
   font-family: monospace;
-  font-size: 0.9375rem;
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
@@ -1350,7 +1271,6 @@ const restartGroup = async (groupName: string) => {
 
 .op-logs-viewer {
   font-family: 'Courier New', Courier, monospace;
-  font-size: 0.875rem;
   line-height: 1.6;
   color: #c9d1d9;
   padding: 1rem;
@@ -1444,7 +1364,6 @@ const restartGroup = async (groupName: string) => {
   
   :deep(.timestamp) {
     color: #8b949e;
-    font-weight: 600;
     margin-right: 0.5rem;
   }
   
@@ -1469,7 +1388,6 @@ const restartGroup = async (groupName: string) => {
   padding: 2rem;
   text-align: center;
   color: #999;
-  font-size: 0.875rem;
   background: #1a1a1a;
   flex: 1;
   display: flex;
@@ -1482,13 +1400,11 @@ const restartGroup = async (groupName: string) => {
 .op-image {
   color: #363636;
   font-family: monospace;
-  font-size: 0.9375rem;
 }
 
 .op-ports {
   color: #7a7a7a;
   font-family: monospace;
-  font-size: 0.9375rem;
 }
 
 .port-badges {
@@ -1498,132 +1414,13 @@ const restartGroup = async (groupName: string) => {
   justify-content: flex-start;
 }
 
-.port-badge {
-  display: inline-block;
-  padding: 0.25rem 0.5rem;
-  background: #e8f9e7;
-  color: #10e80c;
-  border: 1px solid #10e80c;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-decoration: none;
-  transition: all 0.2s ease;
-  
-  &:hover {
-    background: #10e80c;
-    color: #ffffff;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(16, 232, 12, 0.2);
-  }
-}
+// Port badge styling now in global.scss
 
-.status-badge {
-  display: inline-block;
-  padding: 0.25rem 0.75rem;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.025em;
-
-  &.status-success,
-  &.status-finished {
-    background: #e8f5e9;
-    color: #2e7d32;
-  }
-
-  &.status-failed {
-    background: #ffebee;
-    color: #c62828;
-  }
-
-  &.status-stopped{
-    background: #f5f5f5;
-    color: #000000b3;
-  }
-
-  &.status-stopping,
-  &.status-restarting {
-    background: #fff3e0;
-    color: #e65100;
-  }
-
-
-  &.status-pending {
-    background: #fff8e1;
-    color: #f57c00;
-  }
-
-  &.status-running,
-  &.status-starting,
-  &.status-waiting,
-  &.status-init {
-    background: #e3f2fd;
-    color: #1565c0;
-  }
-
-  &.status-unknown {
-    background: #f5f5f5;
-    color: #616161;
-  }
-}
+// Status badges now use global .tag styling
 
 .action-buttons {
   display: inline-flex;
   gap: 0.5rem;
-}
-
-.action-btn {
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border-radius: 6px;
-  border: 1px solid #e0e0e0;
-  background: #ffffff;
-  color: #1a1a1a;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-  
-  svg {
-    display: block;
-    flex-shrink: 0;
-  }
-
-  &:hover:not(:disabled) {
-    background: #f5f5f5;
-    border-color: #d0d0d0;
-  }
-
-  &:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
-  
-  &.is-loading {
-    position: relative;
-    
-    svg {
-      opacity: 0;
-    }
-    
-    &:after {
-      position: absolute;
-      content: "";
-      left: calc(50% - 8px);
-      top: calc(50% - 8px);
-      width: 16px;
-      height: 16px;
-      border: 2px solid #dbdbdb;
-      border-radius: 50%;
-      border-right-color: transparent;
-      border-top-color: transparent;
-      animation: spinAround 0.5s infinite linear;
-    }
-  }
 }
 
 html.dark-mode {
@@ -1642,25 +1439,6 @@ html.dark-mode {
 
   .group-count {
     color: #b0b0b0;
-  }
-
-  .group-action-btn {
-    background: #2c2c2c;
-    border-color: #444;
-    color: #ffffff;
-
-    &:hover:not(:disabled) {
-      background: #3a3a3a;
-      border-color: #555;
-    }
-    
-    &.is-loading {
-      &:after {
-        border-color: #666;
-        border-right-color: transparent;
-        border-top-color: transparent;
-      }
-    }
   }
 
   .operations-table {
@@ -1831,64 +1609,24 @@ html.dark-mode {
     color: #b0b0b0;
   }
 
-  .port-badge {
-    background: rgba(16, 232, 12, 0.15);
-    color: #10e80c;
-    border-color: #10e80c;
-    
-    &:hover {
-      background: #10e80c;
-      color: #1a1a1a;
-      box-shadow: 0 2px 4px rgba(16, 232, 12, 0.3);
-    }
-  }
+  // Port badge dark mode styling now in global.scss
 
-  .status-badge {
-    &.status-success,
-    &.status-finished {
-      background: rgba(46, 125, 50, 0.2);
-      color: #66bb6a;
-    }
-
-    &.status-failed {
-      background: rgba(198, 40, 40, 0.2);
-      color: #ef5350;
-    }
-
-    &.status-stopped,
-    &.status-stopping,
-    &.status-restarting {
-      background: rgba(230, 81, 0, 0.2);
-      color: #ffa726;
-    }
-
-    &.status-pending {
-      background: rgba(245, 124, 0, 0.2);
-      color: #ffa726;
-    }
-
-    &.status-running,
-    &.status-starting,
-    &.status-waiting,
-    &.status-init {
-      background: rgba(21, 101, 192, 0.2);
-      color: #42a5f5;
-    }
-
-    &.status-unknown {
-      background: rgba(97, 97, 97, 0.2);
-      color: #bdbdbd;
-    }
-  }
+  // Status badges use global .tag styling in dark mode too
 
   .action-btn {
     background: #2c2c2c;
     border-color: #444;
-    color: #ffffff;
+    color: #b3b3b3;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    
+    .icon img {
+      filter: brightness(0) saturate(100%) invert(88%) sepia(0%) saturate(0%) hue-rotate(180deg) brightness(100%) contrast(88%);
+    }
 
     &:hover:not(:disabled) {
       background: #3a3a3a;
       border-color: #555;
+      color: #ffffff;
     }
     
     &.is-loading {

@@ -1758,6 +1758,10 @@ useHead({
   }
 }
 
+.box.is-borderless {
+  padding: 0.5rem !important;
+}
+
 .deployment-tabs {
   display: flex;
   gap: 8px;
