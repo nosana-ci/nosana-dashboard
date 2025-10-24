@@ -251,8 +251,10 @@ const isEditorCollapsed = computed({
 const jobDefinition = computed({
   get: () => (props.jobDefinition === null ? {} : props.jobDefinition),
   set: (value: any) => {
-    if (typeof value === 'string') {
-      emit('update:jobDefinition', null);
+    if (typeof value === 'string' || value === undefined) {
+      // Don't emit for string or undefined values - this causes loading state
+      // The JSON editor will handle invalid JSON display
+      return;
     } else {
       emit('update:jobDefinition', value as JobDefinition);
     }

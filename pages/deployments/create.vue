@@ -735,7 +735,6 @@ const createDeployment = async () => {
         ? { strategy: "SCHEDULED" as const, schedule: schedule.value }
         : { strategy: strategy.value as "SIMPLE" | "SIMPLE-EXTEND" | "INFINITE" }),
       job_definition: jobDefinition.value,
-      confidential: true,
     };
 
     const data = await useApiFetch('/api/deployments/create', {
