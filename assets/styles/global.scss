@@ -1257,9 +1257,11 @@ button[disabled][data-tooltip] {
   &.is-dark {
     color: var(--status-dark-color) !important;
     border-color: var(--status-dark-color) !important;
+    background-color: transparent !important;
     
-    svg {
+    svg, .status-icon-wrap, .status-icon {
       color: var(--status-dark-color) !important;
+      fill: var(--status-dark-color) !important;
     }
   }
 }
