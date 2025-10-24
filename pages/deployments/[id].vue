@@ -741,6 +741,7 @@ import StoppedIcon from '@/assets/img/icons/status/stopped.svg?component';
 import FailedIcon from '@/assets/img/icons/status/failed.svg?component';
 import QueuedIcon from '@/assets/img/icons/status/queued.svg?component';
 import DoneIcon from '@/assets/img/icons/status/done.svg?component';
+import { useStatus } from '~/composables/useStatus';
 
 // Types
 interface DeploymentJob {
@@ -848,30 +849,8 @@ const statusDotClass = computed(() => {
 });
 
 // Methods
-const statusClass = (status: string) => {
-  switch (status?.toUpperCase()) {
-    case "RUNNING":
-      return "is-info";  // Blue like job status
-    case "COMPLETED":
-      return "is-success";  // Green for completed
-    case "ERROR":
-      return "is-danger";
-    case "STOPPED":
-      return "is-dark";
-    case "DRAFT":
-      return "is-warning";
-    case "STARTING":
-      return "is-info";
-    case "STOPPING":
-      return "is-warning";
-    case "INSUFFICIENT_FUNDS":
-      return "is-danger";
-    case "ARCHIVED":
-      return "is-grey";
-    default:
-      return "is-light";
-  }
-};
+// Use global status system for deployment statuses
+const { getStatusClass: statusClass } = useStatus();
 
 const getStatusIcon = (status: string) => {
   switch (status?.toUpperCase()) {
@@ -1566,15 +1545,8 @@ const getJobStateText = (state: number): string => {
   }
 };
 
-const getJobStateClass = (state: number): string => {
-  switch (state) {
-    case 0: return 'is-info'; // QUEUED
-    case 1: return 'is-success'; // RUNNING
-    case 2: return 'is-dark'; // COMPLETED
-    case 3: return 'is-warning'; // STOPPED
-    default: return 'is-light'; // UNKNOWN
-  }
-};
+// Use global status system
+const { getStatusClass: getJobStateClass } = useStatus();
 
 const getTaskStatusClass = (status: string): string => {
   switch (status?.toUpperCase()) {

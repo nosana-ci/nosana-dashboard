@@ -1,11 +1,5 @@
 <template>
-  <div v-if="!imageOnly" class="tag is-outlined is-light status-tag" :class="{
-    'is-success': statusString === 'SUCCESS' || statusString === 'COMPLETED',
-    'is-info': statusString === 'RUNNING' || statusString === 'PENDING',
-    'is-warning': statusString === 'QUEUED',
-    'is-danger': statusString === 'FAILED' || statusString === 'YAML_ERROR',
-    'is-dark': statusString === 'STOPPED'
-  }">
+  <div v-if="!imageOnly" class="tag is-outlined is-light status-tag" :class="getStatusClass(statusString)">
     <span ref="iconRef" class="status-icon-wrap">
       <component
         class="mr-2"
@@ -16,7 +10,7 @@
 
     <span v-if="!imageOnly">{{ statusString }}</span>
   </div>
-  <span v-else ref="iconRef" class="status-icon-wrap">
+  <span v-else ref="iconRef" class="status-icon-wrap status-tag" :class="getStatusClass(statusString)">
     <component :is="getIconComponent(statusString as string)" :key="statusString" />
   </span>
 </template>
@@ -27,6 +21,9 @@ import StoppedIcon from '@/assets/img/icons/status/stopped.svg?component';
 import FailedIcon from '@/assets/img/icons/status/failed.svg?component';
 import QueuedIcon from '@/assets/img/icons/status/queued.svg?component';
 import DoneIcon from '@/assets/img/icons/status/done.svg?component';
+import { useStatus } from '~/composables/useStatus';
+
+const { getStatusClass } = useStatus();
 const props = defineProps({
   status: {
     type: [String, Number],
@@ -124,16 +121,29 @@ const attachSmilDebugListeners = (svgEl: SVGElement, contextLabel: string) => {
     animations.forEach((anim) => {
       const a = anim as SVGAnimateElement & { __dbg?: boolean };
       if (a.__dbg) return;
-      // Attach listeners to ensure the browser sets up SMIL timelines
-      a.addEventListener('beginEvent', () => {});
-      a.addEventListener('repeatEvent', () => {});
-      a.addEventListener('endEvent', () => {});
+      
+      // Mark as processed
       a.__dbg = true;
 
-      // Attempt to force-start the SMIL animation immediately
-      try {
-        a.beginElement();
-      } catch {}
+      // Force restart animation by manipulating the dur attribute
+      const originalDur = a.getAttribute('dur') || '5s';
+      a.setAttribute('dur', '0.001s');
+      
+      // Use multiple approaches to ensure animation starts
+      requestAnimationFrame(() => {
+        try {
+          a.setAttribute('dur', originalDur);
+          a.beginElement();
+        } catch {}
+        
+        // Backup approach: restart animation
+        setTimeout(() => {
+          try {
+            a.endElement();
+            a.beginElement();
+          } catch {}
+        }, 10);
+      });
     });
   } catch (e) {
     // no-op
@@ -144,13 +154,33 @@ const instrumentSvg = (label: string) => {
   const root = iconRef.value as HTMLElement | null;
   const svg = root?.querySelector('svg') as SVGElement | null;
   if (!svg) return;
-  attachSmilDebugListeners(svg, label);
+  
+  // Force immediate visibility calculation
+  try { 
+    svg.getBoundingClientRect(); 
+    // Force layout/paint
+    svg.style.transform = 'translateZ(0)';
+  } catch {}
 
-  // Log visibility and bounding box, observe viewport intersection
-  try { void svg.getBoundingClientRect(); } catch {}
+  // Try multiple times to ensure animation starts
+  let attempts = 0;
+  const tryStartAnimation = () => {
+    attempts++;
+    attachSmilDebugListeners(svg, `${label}-attempt-${attempts}`);
+    
+    if (attempts < 3) {
+      setTimeout(tryStartAnimation, 50 * attempts);
+    }
+  };
+  
+  // Start immediately and with delays
+  tryStartAnimation();
 
   try {
-    const observer = new IntersectionObserver(() => {}, { threshold: [0, 0.01, 0.25, 0.5, 0.75, 1] });
+    const observer = new IntersectionObserver(() => {
+      // When element becomes visible, try again
+      tryStartAnimation();
+    }, { threshold: [0, 0.01, 0.25, 0.5, 0.75, 1] });
     observer.observe(svg);
   } catch {}
 };
@@ -171,7 +201,7 @@ watch(statusString, (val) => {
 
 @include until-widescreen {
   .tag {
-    background: none !important;
+    background: transparent !important;
     border: none !important;
     padding: 0 !important;
 
@@ -179,8 +209,15 @@ watch(statusString, (val) => {
       margin: 0 !important;
     }
 
-    span {
+    span:not(.status-icon-wrap) {
       display: none;
+    }
+    
+    // Preserve color inheritance for status icons
+    &.status-tag {
+      svg {
+        color: inherit !important;
+      }
     }
   }
 }

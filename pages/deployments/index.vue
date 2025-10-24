@@ -81,6 +81,7 @@ import StoppedIcon from '@/assets/img/icons/status/stopped.svg?component';
 import FailedIcon from '@/assets/img/icons/status/failed.svg?component';
 import QueuedIcon from '@/assets/img/icons/status/queued.svg?component';
 import DoneIcon from '@/assets/img/icons/status/done.svg?component';
+import { useStatus } from '~/composables/useStatus';
 
 // Types
 interface DeploymentJob {
@@ -112,11 +113,27 @@ const attachSmilDebugListeners = (svgEl: SVGElement, label: string) => {
     const animations = svgEl.querySelectorAll('animateTransform')
     animations.forEach((anim: any) => {
       if (anim.__dbg) return
-      // attach to initialise timeline without logging
-      anim.addEventListener('beginEvent', () => {})
-      anim.addEventListener('repeatEvent', () => {})
-      anim.addEventListener('endEvent', () => {})
       anim.__dbg = true
+
+      // Force restart animation by manipulating the dur attribute
+      const originalDur = anim.getAttribute('dur') || '5s'
+      anim.setAttribute('dur', '0.001s')
+      
+      // Use multiple approaches to ensure animation starts
+      requestAnimationFrame(() => {
+        try {
+          anim.setAttribute('dur', originalDur)
+          anim.beginElement()
+        } catch {}
+        
+        // Backup approach: restart animation
+        setTimeout(() => {
+          try {
+            anim.endElement()
+            anim.beginElement()
+          } catch {}
+        }, 10)
+      })
     })
   } catch {}
 }
@@ -125,7 +142,27 @@ const instrumentRowIcon = (dep: Deployment) => {
   const host = iconRefs[dep.id]
   const svg = host?.querySelector('svg') as SVGElement | null
   if (!svg) return
-  attachSmilDebugListeners(svg, `dep=${dep.id} status=${dep.status}`)
+  
+  // Force immediate visibility calculation
+  try { 
+    svg.getBoundingClientRect()
+    // Force layout/paint
+    svg.style.transform = 'translateZ(0)'
+  } catch {}
+
+  // Try multiple times to ensure animation starts
+  let attempts = 0
+  const tryStartAnimation = () => {
+    attempts++
+    attachSmilDebugListeners(svg, `dep=${dep.id} status=${dep.status}-attempt-${attempts}`)
+    
+    if (attempts < 3) {
+      setTimeout(tryStartAnimation, 50 * attempts)
+    }
+  }
+  
+  // Start immediately and with delays
+  tryStartAnimation()
 }
 
 // watch is registered after filteredDeployments is declared below
@@ -162,20 +199,8 @@ watch(filteredDeployments, (list) => {
   nextTick(() => list.forEach(instrumentRowIcon))
 }, { immediate: true, deep: true })
 
-const statusClass = (status: string) => {
-  switch (status?.toUpperCase()) {
-    case 'RUNNING': return 'is-info'  // Blue like job status
-    case 'COMPLETED': return 'is-success'  // Green for completed
-    case 'ERROR': return 'is-danger'
-    case 'STOPPED': return 'is-dark'
-    case 'DRAFT': return 'is-warning'
-    case 'STARTING': return 'is-info'
-    case 'STOPPING': return 'is-warning'
-    case 'INSUFFICIENT_FUNDS': return 'is-danger'
-    case 'ARCHIVED': return 'is-grey'
-    default: return 'is-light'
-  }
-}
+// Use global status system
+const { getStatusClass: statusClass } = useStatus()
 
 const getStatusIcon = (status: string) => {
   switch (status?.toUpperCase()) {

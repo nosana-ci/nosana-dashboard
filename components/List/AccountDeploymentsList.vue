@@ -148,6 +148,7 @@ import { useMarkets } from '~/composables/useMarkets';
 import JobPrice from "~/components/Job/Price.vue";
 import SecondsFormatter from "~/components/SecondsFormatter.vue";
 import { computed } from 'vue';
+import { useStatus } from '~/composables/useStatus';
 
 const router = useRouter();
 const { publicKey: walletPublicKey } = useWallet();
@@ -302,15 +303,9 @@ const getStateButtonClass = (state: number | null) => {
   }
 };
 
-const getStatusClass = (state: number) => {
-  switch (state) {
-    case 2: return 'tag status-tag is-success';
-    case 1: return 'tag status-tag is-info';
-    case 0: return 'tag status-tag is-warning';
-    case 3: return 'tag status-tag is-dark';
-    default: return 'tag status-tag';
-  }
-};
+// Use global status system
+const { getStatusClass: globalStatusClass } = useStatus();
+const getStatusClass = (state: number) => `tag status-tag ${globalStatusClass(state)}`;
 
 const getStatusText = (state: number) => {
   switch (state) {

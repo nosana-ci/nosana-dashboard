@@ -96,8 +96,10 @@
                     </span>
                   </td>
                   <td class="op-status">
-                  <div class="tag is-outlined is-light" :class="statusClass(op.status)">
-                    <component :is="getStatusIconFile(op.status)" class="mr-2" />
+                  <div class="tag is-outlined is-light status-tag" :class="statusClass(op.status)">
+                    <span class="status-icon-wrap">
+                      <component :is="getStatusIconFile(op.status)" class="mr-2" />
+                    </span>
                     <span>{{ op.status.toUpperCase() }}</span>
                   </div>
                   </td>
@@ -318,6 +320,7 @@ import StoppedIcon from '@/assets/img/icons/status/stopped.svg?component';
 import FailedIcon from '@/assets/img/icons/status/failed.svg?component';
 import DoneIcon from '@/assets/img/icons/status/done.svg?component';
 import FullscreenIcon from '@/assets/img/icons/fullscreen.svg?component';
+import { useStatus } from '~/composables/useStatus';
 
 type EndpointStatus = 'ONLINE' | 'OFFLINE' | 'UNKNOWN';
 
@@ -808,27 +811,32 @@ const getStatusIconFile = (status: string) => {
   }
 };
 
-// Get status class for tag styling
+// Use global status system for consistent colors
+const { getStatusClass } = useStatus();
+
+// Get status class for tag styling with mapping to global status strings
 const statusClass = (status: string) => {
-  switch (status?.toLowerCase()) {
+  // Map operation statuses to standard status strings that the global system understands
+  const statusLower = status?.toLowerCase();
+  switch (statusLower) {
     case 'running':
     case 'starting':
     case 'waiting':
     case 'pending':
     case 'init':
-      return 'is-info';
+      return getStatusClass('RUNNING');
     case 'stopped':
     case 'stopping':
-      return 'is-dark';
+      return getStatusClass('STOPPED');
     case 'failed':
-      return 'is-danger';
+      return getStatusClass('FAILED');
     case 'finished':
     case 'success':
-      return 'is-success';
+      return getStatusClass('SUCCESS');
     case 'restarting':
-      return 'is-warning';
+      return getStatusClass('QUEUED'); // Restarting is like queued
     default:
-      return 'is-light';
+      return getStatusClass('STOPPED');
   }
 };
 
