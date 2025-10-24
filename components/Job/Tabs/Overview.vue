@@ -960,8 +960,8 @@ const restartGroup = async (groupName: string) => {
 <style lang="scss" scoped>
 .groups-container {
   padding: 1.5rem;
-  background: #ffffff;
-  border-radius: 8px;
+  background: $white;
+  border-radius: $radius-large;
 }
 
 .loading-state,
@@ -972,11 +972,11 @@ const restartGroup = async (groupName: string) => {
   justify-content: center;
   gap: 0.5rem;
   padding: 2rem;
-  color: #7a7a7a;
+  color: $text-dark;
 }
 
 .error-state {
-  color: #f14668;
+  color: $danger;
 }
 
 .groups-table-container {
@@ -995,10 +995,10 @@ const restartGroup = async (groupName: string) => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
-  background: #f5f5f5;
-  border-radius: 6px;
-  border-left: 4px solid #10e80c;
+  padding: 0.75rem 1rem;
+  background: $grey-lightest;
+  border-radius: $radius;
+  border-left: 4px solid $secondary;
 }
 
 .group-info {
@@ -1013,7 +1013,7 @@ const restartGroup = async (groupName: string) => {
 }
 
 .group-count {
-  color: #7a7a7a;
+  color: $text-dark;
 }
 
 .group-actions {
@@ -1028,7 +1028,7 @@ const restartGroup = async (groupName: string) => {
       transition: background-color 0.2s ease;
 
       &.is-expanded {
-        background-color: #fafafa;
+        background-color: $grey-lightest;
       }
     }
     
@@ -1043,7 +1043,7 @@ html.dark-mode {
     tbody {
       tr.op-row {
         &.is-expanded {
-          background-color: #252525;
+          background-color: lighten($grey-darker, 3%);
         }
       }
     }
@@ -1061,7 +1061,7 @@ html.dark-mode {
   display: grid;
   grid-template-columns: 30% 70%;
   gap: 0;
-  background: #ffffff;
+  background: $white;
   height: 400px;
   max-height: 500px;
   overflow: hidden;
@@ -1070,7 +1070,7 @@ html.dark-mode {
 // Left panel: Operation Info
 .op-info-panel {
   padding: 2rem;
-  background: #ffffff;
+  background: $white;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
@@ -1080,7 +1080,7 @@ html.dark-mode {
 
 .op-info-section {
   .section-title {
-    color: #5f6368;
+    color: $text-dark;
     text-transform: uppercase;
     margin: 0 0 1.45rem 0;
   }
@@ -1120,8 +1120,8 @@ html.dark-mode {
         justify-content: center;
         height: 100%;
         min-height: 80px;
-        color: #999;
-        font-size: 0.875rem;
+        color: $grey;
+        font-size: $size-7;
       }
     }
   }
@@ -1132,7 +1132,7 @@ html.dark-mode {
   justify-content: space-between;
   align-items: center;
   padding: 0.75rem 0;
-  border-bottom: 1px solid #e8e8e8;
+  border-bottom: 1px solid $grey-lighter;
   
   &:first-child {
     padding-top: 0;
@@ -1143,20 +1143,20 @@ html.dark-mode {
   }
   
   .info-label {
-    color: #5f6368;
+    color: $text-dark;
   }
   
   .info-value {
-    color: #363636;
+    color: $text;
     font-family: monospace;
   }
 }
 
 .endpoint-item {
   padding: 0.5rem 0.75rem;
-  background: #ffffff;
-  border: 1px solid #d0d0d0;
-  border-radius: 4px;
+  background: $white;
+  border: 1px solid $grey-light;
+  border-radius: $radius-small;
 }
 
 .endpoint-row {
@@ -1179,20 +1179,20 @@ html.dark-mode {
   flex-shrink: 0;
   
   &.dot-online {
-    background: #2e7d32;
+    background: $success;
   }
   
   &.dot-offline {
-    background: #c62828;
+    background: $danger;
   }
   
   &.dot-unknown {
-    background: #ff9800;
+    background: $warning;
   }
 }
 
 .endpoint-port {
-  color: #363636;
+  color: $text;
   font-family: monospace;
 }
 
@@ -1201,17 +1201,17 @@ html.dark-mode {
   align-items: center;
   gap: 0.25rem;
   padding: 0.25rem 0.5rem;
-  background: #10e80c;
-  color: #ffffff;
-  border-radius: 4px;
+  background: $secondary;
+  color: $white;
+  border-radius: $radius-small;
   text-decoration: none;
   transition: all 0.2s ease;
   white-space: nowrap;
   
   &:hover {
-    background: #0ec909;
+    background: darken($secondary, 5%);
     transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(16, 232, 12, 0.2);
+    box-shadow: 0 2px 4px rgba($secondary, 0.2);
   }
   
   .icon {
@@ -1221,7 +1221,7 @@ html.dark-mode {
   }
   
   .endpoint-url {
-    color: #ffffff;
+    color: $white;
   }
 }
 
@@ -1231,12 +1231,12 @@ html.dark-mode {
   overflow: hidden;
   height: 100%;
   padding: 2rem;
-  background: #ffffff;
+  background: $white;
 }
 
 .logs-header {
   margin-bottom: 0.75rem;
-  background: #ffffff;
+  background: $white;
   flex-shrink: 0;
   display: flex;
   justify-content: space-between;
@@ -1244,13 +1244,13 @@ html.dark-mode {
 }
 
 .logs-title {
-  color: #5f6368;
+  color: $text-dark;
   text-transform: uppercase;
   margin: 0;
 }
 
 .op-id {
-  color: #363636;
+  color: $text;
   font-family: monospace;
   display: inline-flex;
   align-items: center;
@@ -1259,7 +1259,7 @@ html.dark-mode {
 
 .expand-icon {
   transition: transform 0.2s ease;
-  color: #7a7a7a;
+  color: $text-dark;
   flex-shrink: 0;
 
   &.is-expanded {
@@ -1268,20 +1268,20 @@ html.dark-mode {
 }
 
 .op-logs-content {
-  background: #1a1a1a;
+  background: $black;
   padding: 0;
   overflow-y: auto;
   overflow-x: hidden;
   flex: 1;
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
+  border: 1px solid $grey-lighter;
+  border-radius: $radius;
   position: relative;
 }
 
 .op-logs-viewer {
   font-family: 'Courier New', Courier, monospace;
   line-height: 1.6;
-  color: #c9d1d9;
+  color: $grey-lighter;
   padding: 1rem;
 }
 
@@ -1328,7 +1328,7 @@ html.dark-mode {
   display: inline-block;
   padding: 0 0.5em;
   margin-right: 0.5em;
-  color: #9ca3af;
+  color: $grey;
   min-width: 50px;
   text-align: right;
   margin-left: -62px;
@@ -1372,47 +1372,47 @@ html.dark-mode {
   word-wrap: break-word;
   
   :deep(.timestamp) {
-    color: #8b949e;
+    color: $grey-dark;
     margin-right: 0.5rem;
   }
   
   :deep(.info) {
-    color: #58a6ff;
+    color: $info;
   }
   
   :deep(.error) {
-    color: #f85149;
+    color: $danger;
   }
   
   :deep(.warning) {
-    color: #d29922;
+    color: $warning;
   }
   
   :deep(.success) {
-    color: #56d364;
+    color: $success;
   }
 }
 
 .op-logs-empty {
   padding: 2rem;
   text-align: center;
-  color: #999;
-  background: #1a1a1a;
+  color: $grey;
+  background: $black;
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
+  border: 1px solid $grey-lighter;
+  border-radius: $radius;
 }
 
 .op-image {
-  color: #363636;
+  color: $text;
   font-family: monospace;
 }
 
 .op-ports {
-  color: #7a7a7a;
+  color: $text-dark;
   font-family: monospace;
 }
 
@@ -1434,188 +1434,188 @@ html.dark-mode {
 
 html.dark-mode {
   .groups-container {
-    background: #2c2c2c;
+    background: $grey-darker;
   }
 
   .group-header {
-    background: #1a1a1a;
-    border-left-color: #10e80c;
+    background: $black;
+    border-left-color: $secondary;
   }
 
   .group-name {
-    color: #ffffff;
+    color: $white;
   }
 
   .group-count {
-    color: #b0b0b0;
+    color: $grey-light;
   }
 
   .operations-table {
     thead tr {
-      border-bottom-color: #444;
+      border-bottom-color: $grey-dark;
     }
 
     thead th {
-      color: #b0b0b0;
+      color: $grey-light;
     }
 
     tbody tr.op-row {
-      border-bottom-color: #333;
+      border-bottom-color: $grey-darker;
 
       &:hover {
         background-color: transparent;
       }
 
       &.is-expanded {
-        background-color: #252525;
+        background-color: lighten($grey-darker, 3%);
       }
     }
 
     tbody tr.op-details-row {
-      border-bottom-color: #333;
+      border-bottom-color: $grey-darker;
     }
   }
 
   .op-details-container {
-    background: #2a2a2a;
+    background: $grey-darker;
   }
 
   .op-info-panel {
-    background: #2c2c2c;
-    border-right-color: #444;
+    background: $grey-darker;
+    border-right-color: $grey-dark;
   }
 
   .op-info-section {
     .section-title {
-      color: #ffffff;
+      color: $white;
     }
   }
   
   .op-logs-panel {
-    background: #2c2c2c;
+    background: $grey-darker;
   }
   
   .logs-header {
-    background: #2c2c2c;
-    border-bottom-color: #444;
+    background: $grey-darker;
+    border-bottom-color: $grey-dark;
   }
   
   .logs-title {
-    color: #ffffff;
+    color: $white;
   }
 
   .info-item {
-    border-bottom-color: #333;
+    border-bottom-color: $grey-darker;
     
     &:first-child {
       padding-top: 0;
     }
     
     .info-label {
-      color: #b0b0b0;
+      color: $grey-light;
     }
     
     .info-value {
-      color: #e0e0e0;
+      color: $grey-lighter;
     }
   }
 
   .endpoint-item {
-    background: #2a2a2a;
-    border-color: #555;
+    background: $grey-darker;
+    border-color: lighten($grey-dark, 10%);
   }
   
   .endpoints-empty {
-    color: #666;
+    color: $grey;
   }
 
   .endpoint-port {
-    color: #e0e0e0;
+    color: $grey-lighter;
   }
 
   .status-dot {
     &.dot-online {
-      background: #66bb6a;
+      background: lighten($success, 10%);
     }
     
     &.dot-offline {
-      background: #ef5350;
+      background: lighten($danger, 10%);
     }
     
     &.dot-unknown {
-      background: #ffa726;
+      background: lighten($warning, 10%);
     }
   }
 
   .endpoint-link {
-    background: #10e80c;
-    color: #1a1a1a;
+    background: $secondary;
+    color: $black;
     
     &:hover {
-      background: #0ec909;
-      box-shadow: 0 2px 4px rgba(16, 232, 12, 0.3);
+      background: darken($secondary, 5%);
+      box-shadow: 0 2px 4px rgba($secondary, 0.3);
     }
     
     .endpoint-url {
-      color: #1a1a1a;
+      color: $black;
     }
   }
 
   .op-id {
-    color: #e0e0e0;
+    color: $grey-lighter;
   }
 
   .expand-icon {
-    color: #b0b0b0;
+    color: $grey-light;
   }
 
   .op-logs-content {
-    background: #0d1117;
-    border-color: #444;
+    background: $black-bis;
+    border-color: $grey-dark;
   }
 
   .op-logs-viewer {
-    color: #c9d1d9;
+    color: $grey-lighter;
   }
 
   .log-entry {
     :deep(.timestamp) {
-      color: #8b949e;
+      color: $grey-dark;
     }
     
     :deep(.info) {
-      color: #58a6ff;
+      color: $info;
     }
     
     :deep(.error) {
-      color: #f85149;
+      color: $danger;
     }
     
     :deep(.warning) {
-      color: #d29922;
+      color: $warning;
     }
     
     :deep(.success) {
-      color: #56d364;
+      color: $success;
     }
   }
 
   .op-logs-empty {
-    color: #666;
-    background: #0d1117;
+    color: $grey;
+    background: $black-bis;
     flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-color: #444;
+    border-color: $grey-dark;
   }
 
   .op-image {
-    color: #e0e0e0;
+    color: $grey-lighter;
   }
 
   .op-ports {
-    color: #b0b0b0;
+    color: $grey-light;
   }
 
   // Port badge dark mode styling now in global.scss
@@ -1623,9 +1623,9 @@ html.dark-mode {
   // Status badges use global .tag styling in dark mode too
 
   .action-btn {
-    background: #2c2c2c;
-    border-color: #444;
-    color: #b3b3b3;
+    background: $grey-darker;
+    border-color: $grey-dark;
+    color: $grey-light;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
     
     .icon img {
@@ -1633,14 +1633,14 @@ html.dark-mode {
     }
 
     &:hover:not(:disabled) {
-      background: #3a3a3a;
-      border-color: #555;
-      color: #ffffff;
+      background: lighten($grey-darker, 5%);
+      border-color: lighten($grey-dark, 10%);
+      color: $white;
     }
     
     &.is-loading {
       &:after {
-        border-color: #666;
+        border-color: $grey;
         border-right-color: transparent;
         border-top-color: transparent;
       }
@@ -1649,7 +1649,7 @@ html.dark-mode {
 
   .loading-state,
   .empty-state {
-    color: #b0b0b0;
+    color: $grey-light;
   }
 }
 

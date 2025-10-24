@@ -12,24 +12,24 @@
 
 .table {
   thead tr {
-    background: #f8f9fa;
+    background: $grey-lightest;
     
     th {
-      color: #5f6368;
-      font-weight: 500;
-      padding: 12px 16px;
-      border-bottom: 1px solid #e8eaed;
+      color: $text-dark;
+      font-weight: $weight-medium;
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid $grey-lighter;
     }
   }
   
   tbody {
     tr td {
-      padding: 12px 16px;
-      border-bottom: 1px solid #e8eaed;
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid $grey-lighter;
       
       &:first-child {
-        color: #5f6368;
-        font-weight: 500;
+        color: $text-dark;
+        font-weight: $weight-medium;
       }
     }
     
@@ -41,8 +41,8 @@
 
 // Section titles
 .title.is-5 {
-  color: #202124;
-  font-weight: 400;
+  color: $text;
+  font-weight: $weight-normal;
 }
 
 .button {
@@ -131,16 +131,16 @@
 .action-btn,
 .group-action-btn {
   padding: 0.5rem 1rem;
-  border-radius: 4px;
-  border: 1px solid #e8e8e8;
-  background: #ffffff;
+  border-radius: $radius-small;
+  border: 1px solid $grey-lighter;
+  background: $white;
   color: $text-dark;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: $button-shadow;
   font-size: $size-6;
   font-weight: $weight-medium;
   
@@ -157,8 +157,8 @@
   }
 
   &:hover:not(:disabled) {
-    background: #f5f5f5;
-    border-color: #dadada;
+    background: $grey-lightest;
+    border-color: $grey-light;
   }
 
   &:disabled {
@@ -181,7 +181,7 @@
       top: calc(50% - 0.5em);
       width: 1em;
       height: 1em;
-      border: 2px solid #dbdbdb;
+      border: 2px solid $grey-light;
       border-radius: 50%;
       border-right-color: transparent;
       border-top-color: transparent;
@@ -194,20 +194,20 @@
 .port-badge {
   display: inline-block;
   padding: 0.15rem 0.35rem;
-  background: #e8f9e7;
-  color: #10e80c;
-  border: 1px solid #10e80c;
-  border-radius: 3px;
+  background: rgba($secondary, 0.1);
+  color: $secondary;
+  border: 1px solid $secondary;
+  border-radius: $radius-small;
   text-decoration: none;
   transition: all 0.2s ease;
-  font-size: 0.75rem;
+  font-size: $size-7;
   line-height: 1.2;
   
   &:hover {
-    background: #10e80c;
-    color: #ffffff;
+    background: $secondary;
+    color: $white;
     transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(16, 232, 12, 0.2);
+    box-shadow: 0 2px 4px rgba($secondary, 0.2);
   }
 }
 
@@ -247,8 +247,8 @@
 
   .action-btn,
   .group-action-btn {
-    background: #2c2c2c;
-    border-color: #444;
+    background: $grey-darker;
+    border-color: $grey-dark;
     color: $grey-light;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
     
@@ -257,14 +257,14 @@
     }
 
     &:hover:not(:disabled) {
-      background: #3a3a3a;
-      border-color: #555;
+      background: lighten($grey-darker, 5%);
+      border-color: lighten($grey-dark, 10%);
       color: $white;
     }
     
     &.is-loading {
       &:after {
-        border-color: #666;
+        border-color: $grey;
         border-right-color: transparent;
         border-top-color: transparent;
       }
@@ -272,54 +272,54 @@
   }
 
   .port-badge {
-    background: rgba(16, 232, 12, 0.15);
-    color: #10e80c;
-    border-color: #10e80c;
+    background: rgba($secondary, 0.15);
+    color: $secondary;
+    border-color: $secondary;
     
     &:hover {
-      background: #10e80c;
-      color: #1a1a1a;
-      box-shadow: 0 2px 4px rgba(16, 232, 12, 0.3);
+      background: $secondary;
+      color: $black;
+      box-shadow: 0 2px 4px rgba($secondary, 0.3);
     }
   }
 }
 
 // Tab button styling (used for navigation tabs and toggle buttons)
 .tab-button {
-  background: white;
-  border: 1px solid #e8eaed;
-  color: #5f6368;
-  padding: 8px 16px;
-  border-radius: 6px;
+  background: $white;
+  border: 1px solid $grey-lighter;
+  color: $text-dark;
+  padding: 0.5rem 1rem;
+  border-radius: $radius;
   cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
+  font-size: $size-6;
+  font-weight: $weight-medium;
   transition: all 0.2s;
 
   &:hover {
-    background: #f8f9fa;
+    background: $grey-lightest;
   }
 
   &.is-active {
-    background: #363636;
-    color: white;
-    border-color: #363636;
+    background: $primary;
+    color: $white;
+    border-color: $primary;
   }
 }
 
 .dark-mode .tab-button {
-  background: #2a2a2a;
-  border-color: #404040;
-  color: #e0e0e0;
+  background: $grey-darker;
+  border-color: $grey-dark;
+  color: $grey-light;
 
   &:hover {
-    background: #333333;
+    background: lighten($grey-darker, 5%);
   }
 
   &.is-active {
-    background: #f5f5f5;
-    color: #1a1a1a;
-    border-color: #f5f5f5;
+    background: $white;
+    color: $black;
+    border-color: $white;
   }
 }
 
@@ -1251,6 +1251,10 @@ button[disabled][data-tooltip] {
   min-width: 150px;
 }
 
+.has-min-width-140 {
+  min-width: 140px;
+}
+
 .icon-16 {
   width: 16px;
   height: 16px;
@@ -1287,4 +1291,21 @@ button[disabled][data-tooltip] {
     border: none !important;
     box-shadow: none !important;
   }
+}
+
+/* Utility classes for event/task display */
+.event-message {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.time-display {
+  min-width: 140px;
+  text-align: right;
+}
+
+/* Quick detail column styling */
+.quick-detail-column {
+  min-width: 220px;
+  margin-bottom: 0.75rem;
 }

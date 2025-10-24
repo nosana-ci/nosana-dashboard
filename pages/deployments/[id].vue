@@ -384,7 +384,7 @@
                     </div>
                     <p class="is-family-monospace is-size-7 has-text-grey">{{ task.id }}</p>
                   </div>
-                  <div style="min-width: 140px; text-align: right;">
+                  <div class="time-display">
                     <p class="is-size-7 has-text-grey">{{ formatDate(task.updated_at) }}</p>
                   </div>
                 </div>
@@ -412,9 +412,9 @@
                       <span class="tag" :class="eventTypeClass(event.type)">{{ event.type }}</span>
                       <span class="tag is-white is-small ml-2">{{ event.category }}</span>
                     </div>
-                    <p class="is-size-7" :class="{ 'is-family-monospace': event.message.length > 200 }" style="white-space: pre-wrap; word-break: break-word;">{{ event.message }}</p>
+                    <p class="is-size-7 event-message" :class="{ 'is-family-monospace': event.message.length > 200 }">{{ event.message }}</p>
                   </div>
-                  <div class="ml-3" style="min-width: 140px; text-align: right;">
+                  <div class="ml-3 time-display">
                     <p class="is-size-7 has-text-grey">{{ formatDate(event.created_at) }}</p>
                     <a
                       v-if="event.tx"
@@ -591,7 +591,6 @@
                 class="input is-family-monospace"
                 v-model="newSchedule"
                 :placeholder="deployment.schedule || '0 * * * *'"
-                style="font-size: 14px;"
               />
             </div>
             <p class="help">
@@ -1737,15 +1736,15 @@ useHead({
   margin-right: 0.4rem;
 }
 
-.status-running { background-color: #22c55e; }
-.status-starting { background-color: #3b82f6; }
-.status-draft { background-color: #9ca3af; }
-.status-stopped { background-color: #6b7280; }
-.status-stopping { background-color: #f59e0b; }
-.status-error { background-color: #ef4444; }
-.status-insufficient { background-color: #f59e0b; }
-.status-archived { background-color: #d1d5db; }
-.status-unknown { background-color: #cbd5e1; }
+.status-running { background-color: $success; }
+.status-starting { background-color: $info; }
+.status-draft { background-color: $grey; }
+.status-stopped { background-color: $grey-dark; }
+.status-stopping { background-color: $warning; }
+.status-error { background-color: $danger; }
+.status-insufficient { background-color: $warning; }
+.status-archived { background-color: $grey-light; }
+.status-unknown { background-color: $grey-lighter; }
 
 .sep {
   opacity: 0.6;
@@ -1786,9 +1785,9 @@ useHead({
 }
 
 .tag.is-stopped {
-  background-color: #f8f9fa !important;
-  border-color: #dee2e6 !important;
-  color: #6c757d !important;
+  background-color: $grey-lightest !important;
+  border-color: $grey-lighter !important;
+  color: $grey-dark !important;
   
   img {
     width: 12px !important;
@@ -1797,9 +1796,9 @@ useHead({
 }
 
 .dark-mode .tag.is-stopped {
-  background-color: #2c2c2c !important;
-  border-color: #3a3a3a !important;
-  color: #9e9e9e !important;
+  background-color: $grey-darker !important;
+  border-color: $grey-dark !important;
+  color: $grey !important;
   
   img {
     width: 12px !important;

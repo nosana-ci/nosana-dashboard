@@ -61,7 +61,7 @@
       <!-- Quick Details Grid - matching host page pattern -->
       <div class="columns is-multiline is-variable is-0 no-padding is-justify-content-flex-start mb-0">
         <!-- Job Address -->
-        <div class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+        <div class="column is-one-fifth is-full-mobile no-padding quick-detail-column">
           <div class="quick-detail-item">
             <span class="quick-detail-label">Job address</span>
             <span class="quick-detail-value">
@@ -73,7 +73,7 @@
         </div>
 
         <!-- Deployer Address -->
-        <div class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+        <div class="column is-one-fifth is-full-mobile no-padding quick-detail-column">
           <div class="quick-detail-item">
             <span class="quick-detail-label">Deployer address</span>
             <span class="quick-detail-value">
@@ -85,7 +85,7 @@
         </div>
 
         <!-- Node Address -->
-        <div class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+        <div class="column is-one-fifth is-full-mobile no-padding quick-detail-column">
           <div class="quick-detail-item">
             <span class="quick-detail-label">Node address</span>
             <span class="quick-detail-value">
@@ -100,7 +100,7 @@
         </div>
 
         <!-- Market Address -->
-        <div class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+        <div class="column is-one-fifth is-full-mobile no-padding quick-detail-column">
           <div class="quick-detail-item">
             <span class="quick-detail-label">Market address</span>
             <span class="quick-detail-value">
@@ -112,7 +112,7 @@
         </div>
 
         <!-- Start Time -->
-        <div class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+        <div class="column is-one-fifth is-full-mobile no-padding quick-detail-column">
           <div class="quick-detail-item">
             <span class="quick-detail-label">Start time</span>
             <span class="quick-detail-value">
@@ -122,7 +122,7 @@
         </div>
 
         <!-- End Time -->
-        <div class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+        <div class="column is-one-fifth is-full-mobile no-padding quick-detail-column">
           <div class="quick-detail-item">
             <span class="quick-detail-label">End time</span>
             <span class="quick-detail-value">
@@ -135,7 +135,7 @@
         </div>
 
         <!-- Docker Image -->
-        <div class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+        <div class="column is-one-fifth is-full-mobile no-padding quick-detail-column">
           <div class="quick-detail-item">
             <span class="quick-detail-label">Docker image</span>
             <span class="quick-detail-value">
@@ -146,7 +146,7 @@
         </div>
 
         <!-- Price -->
-        <div class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+        <div class="column is-one-fifth is-full-mobile no-padding quick-detail-column">
           <div class="quick-detail-item">
             <span class="quick-detail-label">Price</span>
             <span class="quick-detail-value">
@@ -156,7 +156,7 @@
         </div>
 
         <!-- GPU Count -->
-        <div v-if="combinedSpecs?.gpuCount" class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+        <div v-if="combinedSpecs?.gpuCount" class="column is-one-fifth is-full-mobile no-padding quick-detail-column">
           <div class="quick-detail-item">
             <span class="quick-detail-label">GPU Count</span>
             <span class="quick-detail-value">
@@ -166,7 +166,7 @@
         </div>
 
         <!-- GPU Model -->
-        <div v-if="combinedSpecs?.gpuModel" class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+        <div v-if="combinedSpecs?.gpuModel" class="column is-one-fifth is-full-mobile no-padding quick-detail-column">
           <div class="quick-detail-item">
             <span class="quick-detail-label">GPU Model</span>
             <span class="quick-detail-value">
@@ -176,7 +176,7 @@
         </div>
 
         <!-- VRAM -->
-        <div v-if="combinedSpecs?.vram" class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+        <div v-if="combinedSpecs?.vram" class="column is-one-fifth is-full-mobile no-padding quick-detail-column">
           <div class="quick-detail-item">
             <span class="quick-detail-label">VRAM</span>
             <span class="quick-detail-value">
@@ -186,7 +186,7 @@
         </div>
 
         <!-- CPU Model -->
-        <div v-if="combinedSpecs?.cpuModel" class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+        <div v-if="combinedSpecs?.cpuModel" class="column is-one-fifth is-full-mobile no-padding quick-detail-column">
           <div class="quick-detail-item">
             <span class="quick-detail-label">CPU Model</span>
             <span class="quick-detail-value">
@@ -196,7 +196,7 @@
         </div>
 
         <!-- CUDA Driver -->
-        <div v-if="combinedSpecs?.cudaVersion" class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+        <div v-if="combinedSpecs?.cudaVersion" class="column is-one-fifth is-full-mobile no-padding quick-detail-column">
           <div class="quick-detail-item">
             <span class="quick-detail-label">CUDA Driver</span>
             <span class="quick-detail-value">
@@ -206,7 +206,7 @@
         </div>
 
         <!-- Internet Speed -->
-        <div v-if="combinedSpecs?.download" class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+        <div v-if="combinedSpecs?.download" class="column is-one-fifth is-full-mobile no-padding quick-detail-column">
           <div class="quick-detail-item">
             <span class="quick-detail-label">Internet Speed</span>
             <span class="quick-detail-value">
