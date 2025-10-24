@@ -401,17 +401,20 @@
             </div>
             
             <div v-else-if="tasks.length > 0">
-              <div v-for="task in tasks" :key="task.id" class="notification is-light mb-2">
+              <div v-for="task in tasks" :key="task.deploymentId + task.created_at" class="notification is-light mb-2">
                 <div class="is-flex is-justify-content-space-between is-align-items-center">
                   <div class="is-flex-grow-1">
                     <div class="is-flex is-align-items-center mb-2">
-                      <span class="tag" :class="getTaskStatusClass(task.status)">{{ task.status || 'PENDING' }}</span>
-                      <span class="tag is-white is-small ml-2">{{ task.type || 'Job' }}</span>
+                      <span class="tag is-info">SCHEDULED</span>
+                      <span class="tag is-white is-small ml-2">{{ task.task }}</span>
                     </div>
-                    <p class="is-family-monospace is-size-7 has-text-grey">{{ task.id }}</p>
+                    <p class="is-size-7 has-text-grey">
+                      Due: {{ formatDate(task.due_at) }}
+                    </p>
+                    <p class="is-family-monospace is-size-7 has-text-grey">{{ task.deploymentId }}</p>
                   </div>
                   <div class="time-display">
-                    <p class="is-size-7 has-text-grey">{{ formatDate(task.updated_at) }}</p>
+                    <p class="is-size-7 has-text-grey">Created: {{ formatDate(task.created_at) }}</p>
                   </div>
                 </div>
               </div>
@@ -1064,6 +1067,9 @@ const loadDeployment = async (silent = false) => {
     }
 
     await loadJobDefinition();
+    
+    // Load tasks for scheduled deployments
+    await loadTasks();
 
     if (deployment.value.jobs && deployment.value.jobs.length > 0) {
       for (const job of deployment.value.jobs) {
@@ -1603,29 +1609,17 @@ const getTaskStatusClass = (status: string): string => {
 
 const loadTasks = async () => {
   if (!deployment.value) {
-    console.log('loadTasks: No deployment loaded');
     return;
   }
   
-  console.log('=== LOADING TASKS ===');
-  console.log('Deployment ID:', deployment.value.id);
-  
   tasksLoading.value = true;
   try {
-    const result = await deployment.value.getTasks();
-    console.log('Tasks API response:', result);
-    console.log('Number of tasks:', result.length);
-    if (result.length > 0) {
-      console.log('First task example:', result[0]);
-    }
-    tasks.value = result;
+    const { data } = await useAPI(`/api/deployments/${deployment.value.id}/tasks`, {
+      auth: true
+    });
+    tasks.value = data.value || [];
   } catch (err: any) {
     console.error("Load tasks error:", err);
-    console.error("Error details:", {
-      message: err.message,
-      stack: err.stack,
-      response: err.response,
-    });
     toast.error(`Failed to load tasks: ${err.message}`);
     tasks.value = [];
   } finally {
