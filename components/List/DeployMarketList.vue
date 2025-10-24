@@ -36,8 +36,11 @@
                 <span class="gpu-label">Available</span>
                 <span class="gpu-value">
                   <span v-if="loadingRunningJobs">...</span>
-                  <span v-else>
+                  <span v-else-if="market.queueType === 1">
                     {{ market.queue.length }}
+                  </span>
+                  <span v-else>
+                    0
                   </span>
                 </span>
               </div>

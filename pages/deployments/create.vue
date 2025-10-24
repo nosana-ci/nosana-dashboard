@@ -15,7 +15,7 @@
       <div class="column is-9-fullhd is-12">
         <!-- Name your deployment -->
         <div class="box has-background-white" style="border: none;">
-          <h2 class="title is-5 mb-4" style="color: #202124;">Define your deployment</h2>
+          <h2 class="title is-5 mb-4">Define your deployment</h2>
           <div class="field">
             <div class="control">
               <input 
@@ -42,7 +42,7 @@
 
         <!-- Select GPU -->
         <div class="box has-background-white" style="border: none; margin-top: 1.5rem;">
-          <h2 class="title is-5 mb-4" style="color: #202124;">Select instance</h2>
+          <h2 class="title is-5 mb-4">Select instance</h2>
           <DeploySimpleGpuSelection
             :markets="markets || null"
             :testgridMarkets="testgridMarkets"
