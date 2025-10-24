@@ -560,6 +560,23 @@ const computedJobTitle = computed(() => {
   return "Custom Job Definition";
 });
 
+const templateNames = computed(() => {
+  const names = new Set<string>();
+  (groupedTemplates.value || []).forEach((t: Template) => {
+    if (t?.name) names.add(t.name);
+  });
+  (templates.value || []).forEach((t: Template) => {
+    if (t?.name) names.add(t.name);
+  });
+  return names;
+});
+
+// Only auto update the name if it's empty or still equal to another template name
+const isNameTemplateManaged = computed(() => {
+  const name = deploymentName.value?.trim();
+  return !name || templateNames.value.has(name);
+});
+
 const computedDockerImage = computed(() => {
   if (
     selectedTemplate.value &&
@@ -759,6 +776,11 @@ watch(
       nextTick(() => {
         isUpdatingFromJobDef.value = false;
       });
+    }
+
+    // set deployment name to selected template name if user hasn't customized
+    if (newTemplate?.name && isNameTemplateManaged.value) {
+      deploymentName.value = newTemplate.name;
     }
   },
   { deep: true }
