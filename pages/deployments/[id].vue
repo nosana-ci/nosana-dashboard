@@ -1703,16 +1703,29 @@ watch(
   { immediate: true }
 );
 
-// Watchers
+// Debounced authentication watcher to prevent flickering
+let authTimeout: NodeJS.Timeout | null = null;
+
 watch(
   isAuthenticated,
   (authed) => {
-    if (authed) {
-      loadDeployment();
-    } else {
-      error.value = "Please log in to view deployments";
-      deployment.value = null;
+    // Clear any existing timeout
+    if (authTimeout) {
+      clearTimeout(authTimeout);
     }
+    
+    // Wait 200ms for auth to stabilize before reacting
+    authTimeout = setTimeout(() => {
+      if (authed) {
+        // Only load if deployment doesn't exist yet
+        if (!deployment.value) {
+          loadDeployment();
+        }
+      } else {
+        error.value = "Please log in to view deployments";
+        deployment.value = null;
+      }
+    }, 200);
   },
   { immediate: true }
 );
