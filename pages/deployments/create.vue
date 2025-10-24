@@ -233,7 +233,7 @@
           <div class="field">
             <label class="label">
               Deployment Strategy
-              <span class="icon is-small has-tooltip-arrow has-tooltip-multiline" data-tooltip="How your deployment manages job instances">
+              <span class="icon is-small has-tooltip-arrow has-tooltip-right" style="position: relative; z-index: 3000;" data-tooltip="How your deployment manages job instances">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                   <circle cx="12" cy="12" r="10" stroke-width="2"/>
                   <path d="M12 16v-4m0-4h.01" stroke-width="2" stroke-linecap="round"/>
@@ -256,7 +256,7 @@
           <div v-if="strategy === 'SCHEDULED'" class="field">
             <label class="label">
               Schedule (Cron Expression)
-              <span class="icon is-small has-tooltip-arrow has-tooltip-multiline" data-tooltip="Cron expression for scheduling jobs">
+              <span class="icon is-small has-tooltip-arrow has-tooltip-right" style="position: relative; z-index: 3000;" data-tooltip="Cron expression for scheduling jobs">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                   <circle cx="12" cy="12" r="10" stroke-width="2"/>
                   <path d="M12 16v-4m0-4h.01" stroke-width="2" stroke-linecap="round"/>
@@ -278,7 +278,7 @@
           <div class="field">
             <label class="label">
               Replica Count
-              <span class="icon is-small has-tooltip-arrow has-tooltip-multiline" data-tooltip="Number of parallel job instances (1-100)">
+              <span class="icon is-small has-tooltip-arrow has-tooltip-right" style="position: relative; z-index: 3000;" data-tooltip="Number of parallel job instances (1-100)">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                   <circle cx="12" cy="12" r="10" stroke-width="2"/>
                   <path d="M12 16v-4m0-4h.01" stroke-width="2" stroke-linecap="round"/>
@@ -300,7 +300,7 @@
           <div class="field">
             <label class="label">
               Container Timeout (hours)
-              <span class="icon is-small has-tooltip-arrow has-tooltip-multiline" data-tooltip="Maximum runtime before container auto-shutdown">
+              <span class="icon is-small has-tooltip-arrow has-tooltip-right" style="position: relative; z-index: 3000;" data-tooltip="Maximum runtime before container auto-shutdown">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                   <circle cx="12" cy="12" r="10" stroke-width="2"/>
                   <path d="M12 16v-4m0-4h.01" stroke-width="2" stroke-linecap="round"/>

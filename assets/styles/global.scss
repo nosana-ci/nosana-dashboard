@@ -856,14 +856,12 @@
 .modal-card-body {
   position: relative; /* create stacking context above header */
   z-index: auto !important;
-  overflow: visible !important; /* prevent clipping tooltip bubbles */
+  overflow-x: hidden !important;
 }
 
-/* Prevent modal header/body from clipping tooltips by rendering them at viewport level */
 .modal.is-active .modal-card [data-tooltip] {
   &::before,
   &::after {
-    position: fixed !important;
     z-index: 1000000 !important; /* ensure above modal UI */
   }
 }
@@ -966,7 +964,7 @@ button[disabled][data-tooltip] {
   overflow: visible !important; /* allow tooltips to escape card bounds */
 
   &-body {
-    overflow: visible !important;
+    overflow-y: visible !important;
     padding-bottom: 1rem;
   }
 }
