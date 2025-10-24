@@ -34,7 +34,7 @@
       @click="copyToClipboard(JSON.stringify(jobDefinitionModel, null, 2), 'Job Definition')"
     >
       <span class="icon is-small">
-        <img src="~/assets/img/icons/copy.svg" alt="Copy" />
+        <CopyIcon />
       </span>
     </button>
     <JsonEditorVue 
@@ -102,6 +102,7 @@ import type { JobDefinition } from "@nosana/sdk";
 import JsonEditorVue from 'json-editor-vue';
 import { Mode } from 'vanilla-jsoneditor';
 import 'vanilla-jsoneditor/themes/jse-theme-dark.css';
+import CopyIcon from '@/assets/img/icons/copy.svg?component';
 import { useToast } from 'vue-toastification';
 
 import JobLogsView from "./Tabs/SystemLogs.vue";

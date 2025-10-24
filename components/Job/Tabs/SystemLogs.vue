@@ -9,7 +9,7 @@
           title="Fullscreen System Logs"
         >
           <span class="icon is-small">
-            <img src="~/assets/img/icons/fullscreen.svg" alt="Fullscreen" />
+            <FullscreenIcon />
           </span>
         </button>
       </div>
@@ -83,6 +83,7 @@
 import { ref, watch, nextTick, computed } from 'vue';
 import JobResult from "../Result.vue";
 import FLogViewer from "~/components/Job/FLogViewer.vue";
+import FullscreenIcon from '@/assets/img/icons/fullscreen.svg?component';
 import FullscreenModal from '~/components/Common/FullscreenModal.vue';
 import { useModal } from '~/composables/jobs/useModal';
 import type { UseJob } from "~/composables/jobs/useJob";

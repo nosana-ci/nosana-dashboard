@@ -8,7 +8,7 @@
             <h1 class="title is-4 has-text-weight-normal mb-0">{{ jobDefinitionId || 'Job' }}</h1>
           </div>
           <div class="tag is-outlined is-light ml-6" :class="statusClass(props.job.state)">
-            <img class="mr-2" :src="getStatusIcon(props.job.state)" />
+            <component :is="getStatusIcon(props.job.state)" class="mr-2" />
             <span>{{ getStatusText(props.job.state) }}</span>
           </div>
         </div>
@@ -23,7 +23,7 @@
                   >
                     <span>Actions</span>
                     <span class="icon is-small dropdown-arrow ml-1" :class="{ 'is-rotated': showActionsDropdown }">
-                      <img :src="ChevronDownIcon" />
+                      <ChevronDownIcon />
                     </span>
                   </button>
             </div>
@@ -36,7 +36,7 @@
                   :disabled="loadingExtend"
                 >
                   <span class="icon is-small mr-2">
-                    <img :src="ClockIcon" />
+                    <ClockIcon />
                   </span>
                   <span>Extend</span>
                 </a>
@@ -48,7 +48,7 @@
                   :disabled="loading"
                 >
                   <span class="icon is-small mr-2">
-                    <img :src="SquareIcon" />
+                    <SquareIcon />
                   </span>
                   <span>{{ props.job.state === 0 ? 'Delist' : 'Stop' }}</span>
                 </a>
@@ -299,10 +299,15 @@ import { useNosanaWallet } from "~/composables/useNosanaWallet";
 import { useAuthHeader } from "~/composables/useAuthHeader";
 import { useAPI } from "~/composables/useAPI";
 
-// Icon paths from static folder
-const ChevronDownIcon = '/img/icons/chevron-down.svg';
-const ClockIcon = '/img/icons/clock.svg';
-const SquareIcon = '/img/icons/square.svg';
+// Import icons as components
+import ChevronDownIcon from '@/assets/img/icons/chevron-down.svg?component';
+import ClockIcon from '@/assets/img/icons/clock.svg?component';
+import SquareIcon from '@/assets/img/icons/square.svg?component';
+import RunningIcon from '@/assets/img/icons/status/running.svg?component';
+import StoppedIcon from '@/assets/img/icons/status/stopped.svg?component';
+import FailedIcon from '@/assets/img/icons/status/failed.svg?component';
+import QueuedIcon from '@/assets/img/icons/status/queued.svg?component';
+import DoneIcon from '@/assets/img/icons/status/done.svg?component';
 
 import type { UseModal } from "~/composables/jobs/useModal";
 import type { Endpoints, UseJob } from "~/composables/jobs/useJob";
@@ -974,32 +979,32 @@ const getStatusIcon = (status: string | number) => {
     // Job state mapping
     switch (status) {
       case 0: // QUEUED
-        return '/img/icons/status/queued.svg';
+        return QueuedIcon;
       case 1: // RUNNING
-        return '/img/icons/status/running.svg';
+        return RunningIcon;
       case 2: // COMPLETED
-        return '/img/icons/status/done.svg';
+        return DoneIcon;
       case 3: // STOPPED
-        return '/img/icons/status/stopped.svg';
+        return StoppedIcon;
       default:
-        return '/img/icons/status/stopped.svg';
+        return StoppedIcon;
     }
   }
   
   // Endpoint status mapping (legacy)
   if (!props.job.isRunning || props.job.isCompleted) {
-    return '/img/icons/status/stopped.svg';
+    return StoppedIcon;
   }
   
   if (status === "ONLINE") {
-    return '/img/icons/status/done.svg';
+    return DoneIcon;
   } else if (status === "UNKNOWN") {
-    return '/img/icons/status/running.svg';
+    return RunningIcon;
   } else if (status === "OFFLINE") {
-    return '/img/icons/status/failed.svg';
+    return FailedIcon;
   }
   
-  return '/img/icons/status/failed.svg';
+  return FailedIcon;
 };
 
 const getStatusText = (status: string | number) => {

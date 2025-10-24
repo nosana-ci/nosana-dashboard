@@ -38,7 +38,7 @@
                 title="Stop all operations in this group"
               >
                 <span class="icon is-small mr-2">
-                  <img :src="SquareIcon" alt="Stop" />
+                  <SquareIcon />
                 </span>
                 <span>Stop</span>
               </button>
@@ -50,7 +50,7 @@
                 title="Restart all operations in this group"
               >
                 <span class="icon is-small mr-2">
-                  <img :src="RefreshIcon" alt="Restart" />
+                  <RefreshIcon />
                 </span>
                 <span>Restart</span>
               </button>
@@ -97,7 +97,7 @@
                   </td>
                   <td class="op-status">
                   <div class="tag is-outlined is-light" :class="statusClass(op.status)">
-                    <img class="mr-2" :src="getStatusIconFile(op.status)" />
+                    <component :is="getStatusIconFile(op.status)" class="mr-2" />
                     <span>{{ op.status.toUpperCase() }}</span>
                   </div>
                   </td>
@@ -111,7 +111,7 @@
                         title="Stop operation"
                       >
                         <span class="icon is-small mr-2">
-                          <img :src="SquareIcon" alt="Stop" />
+                          <SquareIcon />
                         </span>
                         <span>Stop</span>
                       </button>
@@ -123,7 +123,7 @@
                         title="Restart operation"
                       >
                         <span class="icon is-small mr-2">
-                          <img :src="RefreshIcon" alt="Restart" />
+                          <RefreshIcon />
                         </span>
                         <span>Restart</span>
                       </button>
@@ -233,7 +233,7 @@
                             title="Fullscreen Logs"
                           >
                             <span class="icon is-small">
-                              <img src="~/assets/img/icons/fullscreen.svg" alt="Fullscreen" />
+                              <FullscreenIcon />
                             </span>
                           </button>
                           <div class="op-logs-viewer">
@@ -310,9 +310,14 @@ import FullscreenModal from '~/components/Common/FullscreenModal.vue';
 import VueJsonPretty from 'vue-json-pretty';
 import 'vue-json-pretty/lib/styles.css';
 
-// Icon paths from static folder
-const SquareIcon = '/img/icons/square.svg';
-const RefreshIcon = '/img/icons/refresh.svg';
+// Import icons as components
+import SquareIcon from '@/assets/img/icons/square.svg?component';
+import RefreshIcon from '@/assets/img/icons/refresh.svg?component';
+import RunningIcon from '@/assets/img/icons/status/running.svg?component';
+import StoppedIcon from '@/assets/img/icons/status/stopped.svg?component';
+import FailedIcon from '@/assets/img/icons/status/failed.svg?component';
+import DoneIcon from '@/assets/img/icons/status/done.svg?component';
+import FullscreenIcon from '@/assets/img/icons/fullscreen.svg?component';
 
 type EndpointStatus = 'ONLINE' | 'OFFLINE' | 'UNKNOWN';
 
@@ -787,19 +792,19 @@ const getStatusIconFile = (status: string) => {
     case 'waiting':
     case 'pending':
     case 'init':
-      return '/img/icons/status/running.svg';
+      return RunningIcon;
     case 'stopped':
     case 'stopping':
-      return '/img/icons/status/stopped.svg';
+      return StoppedIcon;
     case 'failed':
-      return '/img/icons/status/failed.svg';
+      return FailedIcon;
     case 'finished':
     case 'success':
-      return '/img/icons/status/done.svg';
+      return DoneIcon;
     case 'restarting':
-      return '/img/icons/status/running.svg';
+      return RunningIcon;
     default:
-      return '/img/icons/status/stopped.svg';
+      return StoppedIcon;
   }
 };
 
