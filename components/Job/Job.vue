@@ -8,7 +8,7 @@
             <h1 class="title is-4 has-text-weight-normal mb-0">{{ jobDefinitionId || 'Job' }}</h1>
           </div>
           <div class="tag is-outlined is-light ml-6" :class="statusClass(props.job.state)">
-            <img class="mr-2" :src="`/_nuxt/img/icons/status/${getStatusIcon(props.job.state)}.svg`" />
+            <img class="mr-2" :src="getStatusIcon(props.job.state)" />
             <span>{{ getStatusText(props.job.state) }}</span>
           </div>
         </div>
@@ -20,12 +20,12 @@
                 class="tab-button actions-button" 
                 @click="toggleActionsDropdown"
                 :class="{ 'is-loading': loading }"
-              >
-                <span>Actions</span>
-                <span class="icon is-small dropdown-arrow ml-1" :class="{ 'is-rotated': showActionsDropdown }">
-                  <img src="/_nuxt/img/icons/chevron-down.svg" />
-                </span>
-              </button>
+                  >
+                    <span>Actions</span>
+                    <span class="icon is-small dropdown-arrow ml-1" :class="{ 'is-rotated': showActionsDropdown }">
+                      <img :src="ChevronDownIcon" />
+                    </span>
+                  </button>
             </div>
             <div class="dropdown-menu">
               <div class="dropdown-content">
@@ -36,7 +36,7 @@
                   :disabled="loadingExtend"
                 >
                   <span class="icon is-small mr-2">
-                    <img src="/_nuxt/img/icons/clock.svg" />
+                    <img :src="ClockIcon" />
                   </span>
                   <span>Extend</span>
                 </a>
@@ -48,7 +48,7 @@
                   :disabled="loading"
                 >
                   <span class="icon is-small mr-2">
-                    <img src="/_nuxt/img/icons/square.svg" />
+                    <img :src="SquareIcon" />
                   </span>
                   <span>{{ props.job.state === 0 ? 'Delist' : 'Stop' }}</span>
                 </a>
@@ -298,6 +298,11 @@ import { useToast } from "vue-toastification";
 import { useNosanaWallet } from "~/composables/useNosanaWallet";
 import { useAuthHeader } from "~/composables/useAuthHeader";
 import { useAPI } from "~/composables/useAPI";
+
+// Icon paths from static folder
+const ChevronDownIcon = '/img/icons/chevron-down.svg';
+const ClockIcon = '/img/icons/clock.svg';
+const SquareIcon = '/img/icons/square.svg';
 
 import type { UseModal } from "~/composables/jobs/useModal";
 import type { Endpoints, UseJob } from "~/composables/jobs/useJob";
@@ -969,32 +974,32 @@ const getStatusIcon = (status: string | number) => {
     // Job state mapping
     switch (status) {
       case 0: // QUEUED
-        return "queued";
+        return '/img/icons/status/queued.svg';
       case 1: // RUNNING
-        return "running";
+        return '/img/icons/status/running.svg';
       case 2: // COMPLETED
-        return "done";
+        return '/img/icons/status/done.svg';
       case 3: // STOPPED
-        return "stopped";
+        return '/img/icons/status/stopped.svg';
       default:
-        return "stopped";
+        return '/img/icons/status/stopped.svg';
     }
   }
   
   // Endpoint status mapping (legacy)
   if (!props.job.isRunning || props.job.isCompleted) {
-    return "stopped";
+    return '/img/icons/status/stopped.svg';
   }
   
   if (status === "ONLINE") {
-    return "done";
+    return '/img/icons/status/done.svg';
   } else if (status === "UNKNOWN") {
-    return "running";
+    return '/img/icons/status/running.svg';
   } else if (status === "OFFLINE") {
-    return "failed";
+    return '/img/icons/status/failed.svg';
   }
   
-  return "failed"
+  return '/img/icons/status/failed.svg';
 };
 
 const getStatusText = (status: string | number) => {

@@ -38,7 +38,7 @@
                 title="Stop all operations in this group"
               >
                 <span class="icon is-small mr-2">
-                  <img src="/_nuxt/img/icons/square.svg" alt="Stop" />
+                  <img :src="SquareIcon" alt="Stop" />
                 </span>
                 <span>Stop</span>
               </button>
@@ -50,7 +50,7 @@
                 title="Restart all operations in this group"
               >
                 <span class="icon is-small mr-2">
-                  <img src="/_nuxt/img/icons/refresh.svg" alt="Restart" />
+                  <img :src="RefreshIcon" alt="Restart" />
                 </span>
                 <span>Restart</span>
               </button>
@@ -96,10 +96,10 @@
                     </span>
                   </td>
                   <td class="op-status">
-                    <div class="tag is-outlined is-light" :class="statusClass(op.status)">
-                      <img class="mr-2" :src="`/_nuxt/img/icons/status/${getStatusIconFile(op.status)}.svg`" />
-                      <span>{{ op.status.toUpperCase() }}</span>
-                    </div>
+                  <div class="tag is-outlined is-light" :class="statusClass(op.status)">
+                    <img class="mr-2" :src="getStatusIconFile(op.status)" />
+                    <span>{{ op.status.toUpperCase() }}</span>
+                  </div>
                   </td>
                   <td class="op-actions">
                     <div class="action-buttons">
@@ -111,7 +111,7 @@
                         title="Stop operation"
                       >
                         <span class="icon is-small mr-2">
-                          <img src="/_nuxt/img/icons/square.svg" alt="Stop" />
+                          <img :src="SquareIcon" alt="Stop" />
                         </span>
                         <span>Stop</span>
                       </button>
@@ -123,7 +123,7 @@
                         title="Restart operation"
                       >
                         <span class="icon is-small mr-2">
-                          <img src="/_nuxt/img/icons/refresh.svg" alt="Restart" />
+                          <img :src="RefreshIcon" alt="Restart" />
                         </span>
                         <span>Restart</span>
                       </button>
@@ -309,6 +309,10 @@ import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import FullscreenModal from '~/components/Common/FullscreenModal.vue';
 import VueJsonPretty from 'vue-json-pretty';
 import 'vue-json-pretty/lib/styles.css';
+
+// Icon paths from static folder
+const SquareIcon = '/img/icons/square.svg';
+const RefreshIcon = '/img/icons/refresh.svg';
 
 type EndpointStatus = 'ONLINE' | 'OFFLINE' | 'UNKNOWN';
 
@@ -783,19 +787,19 @@ const getStatusIconFile = (status: string) => {
     case 'waiting':
     case 'pending':
     case 'init':
-      return 'running';
+      return '/img/icons/status/running.svg';
     case 'stopped':
     case 'stopping':
-      return 'stopped';
+      return '/img/icons/status/stopped.svg';
     case 'failed':
-      return 'failed';
+      return '/img/icons/status/failed.svg';
     case 'finished':
     case 'success':
-      return 'done';
+      return '/img/icons/status/done.svg';
     case 'restarting':
-      return 'running';
+      return '/img/icons/status/running.svg';
     default:
-      return 'stopped';
+      return '/img/icons/status/stopped.svg';
   }
 };
 
