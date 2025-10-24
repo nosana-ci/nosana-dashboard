@@ -91,19 +91,19 @@
 // Dropdown styling
 .dropdown-menu {
   .dropdown-content {
-    background: white;
-    border: 1px solid #e8eaed;
-    border-radius: 6px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    padding: 4px;
+    background: $white;
+    border: 1px solid $grey-lighter;
+    border-radius: $radius;
+    box-shadow: $box-shadow;
+    padding: 0.25rem;
   }
 
   .dropdown-item {
-    color: #5f6368;
-    font-size: 14px;
-    font-weight: 500;
-    padding: 8px 12px;
-    border-radius: 4px;
+    color: $text-dark;
+    font-size: $size-6;
+    font-weight: $weight-medium;
+    padding: 0.5rem 1rem;
+    border-radius: $radius-small;
     display: flex;
     align-items: center;
     
@@ -112,47 +112,47 @@
     }
     
     img[src$=".svg"] {
-      filter: invert(47%) sepia(8%) saturate(665%) hue-rotate(180deg) brightness(93%) contrast(88%);
+      filter: brightness(0) saturate(100%) invert(48%) sepia(9%) saturate(665%) hue-rotate(180deg) brightness(93%) contrast(87%);
     }
     
     &:hover {
-      background: #f8f9fa;
-      color: #202124;
+      background: $grey-lightest;
+      color: $text;
     }
   }
 
   .dropdown-divider {
-    background-color: #e8eaed;
-    margin: 4px 0;
+    background-color: $grey-lighter;
+    margin: 0.25rem 0;
   }
 }
 
 .dark-mode {
   .dropdown-menu {
     .dropdown-content {
-      background: #2a2a2a;
-      border-color: #404040;
+      background: $black-ter;
+      border-color: $grey-dark;
     }
 
     .dropdown-item {
-      color: #e0e0e0;
+      color: $grey-light;
       
       svg {
         color: inherit;
       }
       
       img[src$=".svg"] {
-        filter: invert(88%) sepia(0%) saturate(0%) hue-rotate(180deg) brightness(100%) contrast(88%);
+        filter: brightness(0) saturate(100%) invert(88%) sepia(0%) saturate(0%) hue-rotate(180deg) brightness(100%) contrast(88%);
       }
       
       &:hover {
-        background: #333333;
-        color: #ffffff;
+        background: $grey-darker;
+        color: $white;
       }
     }
 
     .dropdown-divider {
-      background-color: #404040;
+      background-color: $grey-dark;
     }
   }
 }
@@ -1115,14 +1115,6 @@ button[disabled][data-tooltip] {
 }
 
 /* Utility classes for consistent spacing and sizing */
-.has-border-bottom {
-  border-bottom: 1px solid #dbdbdb;
-}
-
-.dark-mode .has-border-bottom {
-  border-bottom-color: #404040;
-}
-
 .has-min-width-250 {
   min-width: 250px;
   width: 250px;

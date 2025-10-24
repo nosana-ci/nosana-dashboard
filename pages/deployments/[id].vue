@@ -16,7 +16,7 @@
       <!-- Unified Card -->
       <div class="box is-borderless">
         <!-- Header Section -->
-        <div class="p-5 has-border-bottom">
+        <div class="p-5 deployment-header">
           <div class="is-flex is-justify-content-space-between is-align-items-center">
             <div class="is-flex is-align-items-center">
               <NuxtLink to="/deployments" class="button is-ghost back-button mr-4">
@@ -1786,11 +1786,20 @@ useHead({
 }
 
 
+// Deployment-specific styling
+.deployment-header {
+  border-bottom: 1px solid $grey-lighter;
+}
+
+html.dark-mode .deployment-header {
+  border-bottom-color: $grey-dark;
+}
+
 // Deployment logs styling
 .deployment-logs-container {
   .deployment-logs-content {
-    background-color: #ffffff;
-    border-radius: 4px;
+    background-color: $white;
+    border-radius: $radius-small;
     margin-top: 0.2rem;
   }
 
@@ -1802,40 +1811,40 @@ useHead({
       
       li a {
         padding: 0.4em 0.8em;
-        font-size: 0.9rem;
+        font-size: $size-6;
       }
     }
   }
 
   .selected-job-logs {
-    min-height: 400px;
+    min-height: 25rem;
   }
 }
 
 // Dark mode support
 html.dark-mode {
   .deployment-logs-container .deployment-logs-content {
-    background-color: #2c2c2c;
+    background-color: $black-ter;
   }
 
   .deployment-logs-container .job-tabs-condensed {
-    background-color: #2c2c2c;
+    background-color: $black-ter;
     
     ul {
-      border-bottom-color: #444;
+      border-bottom-color: $grey-dark;
       
       li a {
-        color: #ffffff;
+        color: $white;
         
         &:hover {
-          background-color: #363636;
+          background-color: $grey-darker;
         }
       }
       
       li.is-active a {
-        background-color: #2c2c2c;
-        border-bottom-color: #444;
-        color: #ffffff;
+        background-color: $black-ter;
+        border-bottom-color: $grey-dark;
+        color: $white;
       }
     }
   }
