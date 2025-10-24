@@ -182,7 +182,27 @@
                     <td>Replicas count</td>
                     <td>{{ deployment.replicas }}</td>
                   </tr>
-                  
+                  <tr>
+                    <td>GPU</td>
+                    <td v-if="deployment && deployment.market">
+                      <span
+                        v-if="testgridMarkets &&
+                          testgridMarkets.find(
+                            (tgm: any) =>
+                              tgm.address === deployment?.market
+                          )
+                        "
+                      >
+                        {{
+                          testgridMarkets.find(
+                            (tgm: any) =>
+                              tgm.address === deployment?.market
+                          ).name
+                        }}
+                      </span>
+                      <span v-else>{{ deployment.market }}</span>
+                    </td>
+                  </tr>
                   <tr>
                     <td>Container timeout</td>
                     <td>{{ Math.floor(deployment.timeout / 60) }} hours</td>
@@ -777,6 +797,7 @@ const revisionJobDefinition = ref<JobDefinition | null>(null);
 const actionsDropdown = ref<HTMLElement | null>(null);
 // Debug instrumentation for page header icon
 const headerIconRef = ref<HTMLElement | null>(null);
+const { data: testgridMarkets } = useAPI("/api/markets");
 
 const attachSmilDebugListeners = (svgEl: SVGElement, label: string) => {
   try {
