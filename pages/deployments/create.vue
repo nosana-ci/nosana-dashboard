@@ -150,7 +150,7 @@
               >
                 <p class="has-text-grey is-size-7 mb-2">
                   Insufficient credits. Need ${{
-                    (estimatedCost || 0).toFixed(2)
+                    (hourlyPrice * replicas * timeout).toFixed(3) 
                   }}, have ${{ creditBalance.toFixed(2) }}
                 </p>
                 <p class="has-text-grey is-size-7">
@@ -621,7 +621,7 @@ const requiredNos = computed(() => {
 // Check if user can post job based on authentication and credits
 const canPostJob = computed(() => {
   if (status.value === "authenticated") {
-    const costUSD = totalPrice.value || 0;
+    const costUSD = (hourlyPrice.value * replicas.value * timeout.value) || 0;
     return creditBalance.value >= costUSD;
   }
   return false;
