@@ -57,7 +57,7 @@
               <div class="is-size-7 is-family-monospace has-text-grey">{{ deployment.id }}</div>
             </td>
             <td>
-              <div class="tag is-outlined is-light" :class="statusClass(deployment.status)">
+              <div class="tag is-outlined is-light status-tag" :class="statusClass(deployment.status)">
                 <span :ref="el => iconRefs[deployment.id] = el as HTMLElement" class="status-icon-wrap">
                   <component class="mr-2" :is="getStatusIcon(deployment.status)" :key="deployment.status" />
                 </span>
@@ -168,7 +168,7 @@ const statusClass = (status: string) => {
     case 'COMPLETED': return 'is-success'  // Green for completed
     case 'ERROR': return 'is-danger'
     case 'STOPPED': return 'is-dark'
-    case 'DRAFT': return 'is-light'
+    case 'DRAFT': return 'is-warning'
     case 'STARTING': return 'is-info'
     case 'STOPPING': return 'is-warning'
     case 'INSUFFICIENT_FUNDS': return 'is-danger'

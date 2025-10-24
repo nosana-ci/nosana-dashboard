@@ -27,7 +27,7 @@
               <div>
                 <h1 class="title is-4 has-text-weight-normal mb-0">{{ deployment.name }}</h1>
               </div>
-              <div class="tag is-outlined is-light ml-6" :class="statusClass(deployment.status)">
+              <div class="tag is-outlined is-light status-tag ml-6" :class="statusClass(deployment.status)">
                 <span ref="headerIconRef" class="status-icon-wrap">
                   <component :is="getStatusIcon(deployment.status)" class="mr-2" :key="deployment.status" />
                 </span>
@@ -401,17 +401,20 @@
             </div>
             
             <div v-else-if="tasks.length > 0">
-              <div v-for="task in tasks" :key="task.id" class="notification is-light mb-2">
+              <div v-for="task in tasks" :key="task.deploymentId + task.created_at" class="notification is-light mb-2">
                 <div class="is-flex is-justify-content-space-between is-align-items-center">
                   <div class="is-flex-grow-1">
                     <div class="is-flex is-align-items-center mb-2">
-                      <span class="tag" :class="getTaskStatusClass(task.status)">{{ task.status || 'PENDING' }}</span>
-                      <span class="tag is-white is-small ml-2">{{ task.type || 'Job' }}</span>
+                      <span class="tag is-info">SCHEDULED</span>
+                      <span class="tag is-white is-small ml-2">{{ task.task }}</span>
                     </div>
-                    <p class="is-family-monospace is-size-7 has-text-grey">{{ task.id }}</p>
+                    <p class="is-size-7 has-text-grey">
+                      Due: {{ formatDate(task.due_at) }}
+                    </p>
+                    <p class="is-family-monospace is-size-7 has-text-grey">{{ task.deploymentId }}</p>
                   </div>
                   <div class="time-display">
-                    <p class="is-size-7 has-text-grey">{{ formatDate(task.updated_at) }}</p>
+                    <p class="is-size-7 has-text-grey">Created: {{ formatDate(task.created_at) }}</p>
                   </div>
                 </div>
               </div>
@@ -771,8 +774,6 @@ const { getIpfs } = useIpfs();
 
 // State
 const deployment = ref<ExtendedDeployment | null>(null);
-const marketData = ref<any>(null);
-const loadingMarket = ref(false);
 const loading = ref(true);
 const error = ref<string | null>(null);
 const activeTab = ref("overview");
@@ -858,7 +859,7 @@ const statusClass = (status: string) => {
     case "STOPPED":
       return "is-dark";
     case "DRAFT":
-      return "is-light";
+      return "is-warning";
     case "STARTING":
       return "is-info";
     case "STOPPING":
@@ -1025,20 +1026,6 @@ const loadJobDefinition = async () => {
   }
 };
 
-const loadMarket = async (marketId: string) => {
-  if (!marketId) return;
-
-  try {
-    loadingMarket.value = true;
-    const { data } = await useAPI(`/api/markets/${marketId}/`);
-    marketData.value = data.value;
-  } catch (err: any) {
-    console.error("Error loading market:", err);
-    // Keep marketData as null to show fallback
-  } finally {
-    loadingMarket.value = false;
-  }
-};
 
 const loadDeployment = async (silent = false) => {
   if (!isAuthenticated.value) {
@@ -1059,11 +1046,10 @@ const loadDeployment = async (silent = false) => {
 
     deployment.value = data as Deployment;
 
-    if (deployment.value.market) {
-      await loadMarket(deployment.value.market.toString());
-    }
-
     await loadJobDefinition();
+    
+    // Load tasks for scheduled deployments
+    await loadTasks();
 
     if (deployment.value.jobs && deployment.value.jobs.length > 0) {
       for (const job of deployment.value.jobs) {
@@ -1603,29 +1589,17 @@ const getTaskStatusClass = (status: string): string => {
 
 const loadTasks = async () => {
   if (!deployment.value) {
-    console.log('loadTasks: No deployment loaded');
     return;
   }
   
-  console.log('=== LOADING TASKS ===');
-  console.log('Deployment ID:', deployment.value.id);
-  
   tasksLoading.value = true;
   try {
-    const result = await deployment.value.getTasks();
-    console.log('Tasks API response:', result);
-    console.log('Number of tasks:', result.length);
-    if (result.length > 0) {
-      console.log('First task example:', result[0]);
-    }
-    tasks.value = result;
+    const { data } = await useAPI(`/api/deployments/${deployment.value.id}/tasks`, {
+      auth: true
+    });
+    tasks.value = data.value || [];
   } catch (err: any) {
     console.error("Load tasks error:", err);
-    console.error("Error details:", {
-      message: err.message,
-      stack: err.stack,
-      response: err.response,
-    });
     toast.error(`Failed to load tasks: ${err.message}`);
     tasks.value = [];
   } finally {
@@ -1729,16 +1703,29 @@ watch(
   { immediate: true }
 );
 
-// Watchers
+// Debounced authentication watcher to prevent flickering
+let authTimeout: NodeJS.Timeout | null = null;
+
 watch(
   isAuthenticated,
   (authed) => {
-    if (authed) {
-      loadDeployment();
-    } else {
-      error.value = "Please log in to view deployments";
-      deployment.value = null;
+    // Clear any existing timeout
+    if (authTimeout) {
+      clearTimeout(authTimeout);
     }
+    
+    // Wait 200ms for auth to stabilize before reacting
+    authTimeout = setTimeout(() => {
+      if (authed) {
+        // Only load if deployment doesn't exist yet
+        if (!deployment.value) {
+          loadDeployment();
+        }
+      } else {
+        error.value = "Please log in to view deployments";
+        deployment.value = null;
+      }
+    }, 200);
   },
   { immediate: true }
 );

@@ -1,8 +1,8 @@
 <template>
   <div>
     <TopBar
-      :title="'Deployment Page'"
-      :subtitle="'Find information about your deployment here'"
+      :title="'Job Page'"
+      :subtitle="'Find information about your job here'"
       ref="topBar"
       v-model="showSettingsModal"
     />
