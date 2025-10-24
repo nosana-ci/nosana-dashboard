@@ -21,14 +21,14 @@
             <div class="is-flex is-align-items-center">
               <NuxtLink to="/deployments" class="button is-ghost back-button mr-4">
                 <span class="icon is-small">
-                  <img src="/_nuxt/img/icons/arrow-up.svg" class="icon-16 transform-rotate-270" />
+                  <ArrowUpIcon class="icon-16 transform-rotate-270" />
                 </span>
               </NuxtLink>
               <div>
                 <h1 class="title is-4 has-text-weight-normal mb-0">{{ deployment.name }}</h1>
               </div>
               <div class="tag is-outlined is-light ml-6" :class="statusClass(deployment.status)">
-                <img class="mr-2" :src="`/_nuxt/img/icons/status/${getStatusIcon(deployment.status)}.svg`" />
+                <component :is="getStatusIcon(deployment.status)" class="mr-2" />
                 <span>{{ deployment.status }}</span>
               </div>
             </div>
@@ -52,7 +52,7 @@
                   >
                     <span>Actions</span>
                     <span class="icon is-small dropdown-arrow ml-1" :class="{ 'is-rotated': isActionsDropdownOpen }">
-                      <img src="/_nuxt/img/icons/chevron-down.svg" />
+                      <ChevronDownIcon />
                     </span>
                   </button>
                 </div>
@@ -66,7 +66,7 @@
                       :disabled="actionLoading"
                     >
                       <span class="icon is-small mr-2">
-                        <img src="/_nuxt/img/icons/play.svg" />
+                        <PlayIcon />
                       </span>
                       <span>Start</span>
                     </a>
@@ -79,7 +79,7 @@
                       :disabled="actionLoading"
                     >
                       <span class="icon is-small mr-2">
-                        <img src="/_nuxt/img/icons/square.svg" />
+                        <SquareIcon />
                       </span>
                       <span>Stop Deployment</span>
                     </a>
@@ -92,7 +92,7 @@
                       :disabled="actionLoading"
                     >
                       <span class="icon is-small mr-2">
-                        <img src="/_nuxt/img/icons/archive.svg" />
+                        <ArchiveIcon />
                       </span>
                       <span>Archive</span>
                     </a>
@@ -107,7 +107,7 @@
                       :disabled="actionLoading"
                     >
                       <span class="icon is-small mr-2">
-                        <img src="/_nuxt/img/icons/grid.svg" />
+                        <GridIcon />
                       </span>
                       <span>Update Replicas</span>
                     </a>
@@ -120,7 +120,7 @@
                       :disabled="actionLoading"
                     >
                       <span class="icon is-small mr-2">
-                        <img src="/_nuxt/img/icons/clock.svg" />
+                        <ClockIcon />
                       </span>
                       <span>Update Timeout</span>
                     </a>
@@ -133,7 +133,7 @@
                       :disabled="actionLoading"
                     >
                       <span class="icon is-small mr-2">
-                        <img src="/_nuxt/img/icons/calendar.svg" />
+                        <CalendarIcon />
                       </span>
                       <span>Update Schedule</span>
                     </a>
@@ -146,7 +146,7 @@
                       :disabled="actionLoading"
                     >
                       <span class="icon is-small mr-2">
-                        <img src="/_nuxt/img/icons/edit.svg" />
+                        <EditIcon />
                       </span>
                       <span>Create Revision</span>
                     </a>
@@ -365,7 +365,7 @@
                 data-tooltip="Refresh upcoming tasks"
               >
                 <span class="icon is-small">
-                  <img src="/_nuxt/img/icons/refresh.svg" />
+                  <RefreshIcon />
                 </span>
               </button>
             </div>
@@ -496,7 +496,7 @@
             <label class="label">
               Replica Count
               <span class="icon is-small has-tooltip-arrow" data-tooltip="Number of parallel job instances">
-                <img src="/_nuxt/img/icons/info-circle.svg" />
+                <InfoCircleIcon />
               </span>
             </label>
             <div class="control">
@@ -539,7 +539,7 @@
             <label class="label">
               Timeout (hours)
               <span class="icon is-small has-tooltip-arrow" data-tooltip="Maximum runtime before auto-shutdown">
-                <img src="/_nuxt/img/icons/info-circle.svg" />
+                <InfoCircleIcon />
               </span>
             </label>
             <div class="control">
@@ -582,7 +582,7 @@
             <label class="label">
               Cron Expression
               <span class="icon is-small has-tooltip-arrow" data-tooltip="Cron expression defining when jobs should run. Format: minute hour day month day-of-week">
-                <img src="/_nuxt/img/icons/info-circle.svg" />
+                <InfoCircleIcon />
               </span>
             </label>
             <div class="control">
@@ -696,6 +696,24 @@ import JobStatus from "~/components/Job/Status.vue";
 import JobLogsContainer from "~/components/Job/LogsContainer.vue";
 import { useJob } from "~/composables/jobs/useJob";
 
+// Import icons as components
+import ArrowUpIcon from '@/assets/img/icons/arrow-up.svg?component';
+import ChevronDownIcon from '@/assets/img/icons/chevron-down.svg?component';
+import PlayIcon from '@/assets/img/icons/play.svg?component';
+import SquareIcon from '@/assets/img/icons/square.svg?component';
+import ArchiveIcon from '@/assets/img/icons/archive.svg?component';
+import GridIcon from '@/assets/img/icons/grid.svg?component';
+import ClockIcon from '@/assets/img/icons/clock.svg?component';
+import CalendarIcon from '@/assets/img/icons/calendar.svg?component';
+import EditIcon from '@/assets/img/icons/edit.svg?component';
+import RefreshIcon from '@/assets/img/icons/refresh.svg?component';
+import InfoCircleIcon from '@/assets/img/icons/info-circle.svg?component';
+import RunningIcon from '@/assets/img/icons/status/running.svg?component';
+import StoppedIcon from '@/assets/img/icons/status/stopped.svg?component';
+import FailedIcon from '@/assets/img/icons/status/failed.svg?component';
+import QueuedIcon from '@/assets/img/icons/status/queued.svg?component';
+import DoneIcon from '@/assets/img/icons/status/done.svg?component';
+
 // Types
 interface DeploymentJob {
   job: string;
@@ -808,17 +826,17 @@ const getStatusIcon = (status: string) => {
   switch (status?.toUpperCase()) {
     case "RUNNING":
     case "STARTING":
-      return "running";
+      return RunningIcon;
     case "STOPPED":
     case "STOPPING":
-      return "stopped";
+      return StoppedIcon;
     case "ERROR":
     case "INSUFFICIENT_FUNDS":
-      return "failed";
+      return FailedIcon;
     case "DRAFT":
-      return "queued";
+      return QueuedIcon;
     default:
-      return "stopped";
+      return StoppedIcon;
   }
 };
 
