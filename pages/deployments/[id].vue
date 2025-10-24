@@ -774,8 +774,6 @@ const { getIpfs } = useIpfs();
 
 // State
 const deployment = ref<ExtendedDeployment | null>(null);
-const marketData = ref<any>(null);
-const loadingMarket = ref(false);
 const loading = ref(true);
 const error = ref<string | null>(null);
 const activeTab = ref("overview");
@@ -1028,20 +1026,6 @@ const loadJobDefinition = async () => {
   }
 };
 
-const loadMarket = async (marketId: string) => {
-  if (!marketId) return;
-
-  try {
-    loadingMarket.value = true;
-    const { data } = await useAPI(`/api/markets/${marketId}/`);
-    marketData.value = data.value;
-  } catch (err: any) {
-    console.error("Error loading market:", err);
-    // Keep marketData as null to show fallback
-  } finally {
-    loadingMarket.value = false;
-  }
-};
 
 const loadDeployment = async (silent = false) => {
   if (!isAuthenticated.value) {
@@ -1061,10 +1045,6 @@ const loadDeployment = async (silent = false) => {
     });
 
     deployment.value = data as Deployment;
-
-    if (deployment.value.market) {
-      await loadMarket(deployment.value.market.toString());
-    }
 
     await loadJobDefinition();
     
