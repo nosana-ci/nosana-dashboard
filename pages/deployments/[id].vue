@@ -14,21 +14,21 @@
 
     <div v-else-if="deployment">
       <!-- Unified Card -->
-      <div class="box" style="padding: 0; overflow: visible;">
+      <div class="box is-borderless">
         <!-- Header Section -->
-        <div style="padding: 1.5rem; border-bottom: 1px solid #dbdbdb;">
+        <div class="p-5 has-border-bottom">
           <div class="is-flex is-justify-content-space-between is-align-items-center">
             <div class="is-flex is-align-items-center">
-              <NuxtLink to="/deployments" class="button is-ghost back-button" style="padding: 0.5rem 1rem; margin-right: 1rem;">
+              <NuxtLink to="/deployments" class="button is-ghost back-button mr-4">
                 <span class="icon is-small">
-                  <img src="/assets/img/icons/arrow-up.svg" style="width: 16px; height: 16px; transform: rotate(-90deg);" />
+                  <img src="/_nuxt/img/icons/arrow-up.svg" class="icon-16 transform-rotate-270" />
                 </span>
               </NuxtLink>
               <div>
-                <h1 class="title is-4" style="font-weight: 400; margin: 0;">{{ deployment.name }}</h1>
+                <h1 class="title is-4 has-text-weight-normal mb-0">{{ deployment.name }}</h1>
               </div>
-              <div class="tag is-outlined is-light" style="margin-left: 2rem;" :class="statusClass(deployment.status)">
-                <img class="mr-2" :src="`/img/icons/status/${getStatusIcon(deployment.status)}.svg`" />
+              <div class="tag is-outlined is-light ml-6" :class="statusClass(deployment.status)">
+                <img class="mr-2" :src="`/_nuxt/img/icons/status/${getStatusIcon(deployment.status)}.svg`" />
                 <span>{{ deployment.status }}</span>
               </div>
             </div>
@@ -51,10 +51,8 @@
                     :class="{ 'is-loading': actionLoading }"
                   >
                     <span>Actions</span>
-                    <span class="icon is-small dropdown-arrow" :class="{ 'is-rotated': isActionsDropdownOpen }" style="margin-left: 0.25rem;">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                        <path d="M7 10l5 5 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                      </svg>
+                    <span class="icon is-small dropdown-arrow ml-1" :class="{ 'is-rotated': isActionsDropdownOpen }">
+                      <img src="/_nuxt/img/icons/chevron-down.svg" />
                     </span>
                   </button>
                 </div>
@@ -68,9 +66,7 @@
                       :disabled="actionLoading"
                     >
                       <span class="icon is-small mr-2">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                          <path d="M8 5v14l11-7z" fill="currentColor"/>
-                        </svg>
+                        <img src="/_nuxt/img/icons/play.svg" />
                       </span>
                       <span>Start</span>
                     </a>
@@ -83,9 +79,7 @@
                       :disabled="actionLoading"
                     >
                       <span class="icon is-small mr-2">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                          <path d="M6 6h12v12H6V6z" fill="currentColor"/>
-                        </svg>
+                        <img src="/_nuxt/img/icons/square.svg" />
                       </span>
                       <span>Stop Deployment</span>
                     </a>
@@ -98,9 +92,7 @@
                       :disabled="actionLoading"
                     >
                       <span class="icon is-small mr-2">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                          <path d="M3 3h18v4H3V3zm2 6h14v12H5V9z" fill="currentColor"/>
-                        </svg>
+                        <img src="/_nuxt/img/icons/archive.svg" />
                       </span>
                       <span>Archive</span>
                     </a>
@@ -115,12 +107,7 @@
                       :disabled="actionLoading"
                     >
                       <span class="icon is-small mr-2">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                          <rect x="3" y="3" width="7" height="7" stroke-width="2"/>
-                          <rect x="14" y="3" width="7" height="7" stroke-width="2"/>
-                          <rect x="3" y="14" width="7" height="7" stroke-width="2"/>
-                          <rect x="14" y="14" width="7" height="7" stroke-width="2"/>
-                        </svg>
+                        <img src="/_nuxt/img/icons/grid.svg" />
                       </span>
                       <span>Update Replicas</span>
                     </a>
@@ -133,10 +120,7 @@
                       :disabled="actionLoading"
                     >
                       <span class="icon is-small mr-2">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                          <circle cx="12" cy="12" r="10" stroke-width="2"/>
-                          <path d="M12 6v6l4 2" stroke-width="2" stroke-linecap="round"/>
-                        </svg>
+                        <img src="/_nuxt/img/icons/clock.svg" />
                       </span>
                       <span>Update Timeout</span>
                     </a>
@@ -149,12 +133,7 @@
                       :disabled="actionLoading"
                     >
                       <span class="icon is-small mr-2">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                          <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke-width="2"/>
-                          <line x1="16" y1="2" x2="16" y2="6" stroke-width="2"/>
-                          <line x1="8" y1="2" x2="8" y2="6" stroke-width="2"/>
-                          <line x1="3" y1="10" x2="21" y2="10" stroke-width="2"/>
-                        </svg>
+                        <img src="/_nuxt/img/icons/calendar.svg" />
                       </span>
                       <span>Update Schedule</span>
                     </a>
@@ -167,9 +146,7 @@
                       :disabled="actionLoading"
                     >
                       <span class="icon is-small mr-2">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                          <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" stroke-width="2"/>
-                        </svg>
+                        <img src="/_nuxt/img/icons/edit.svg" />
                       </span>
                       <span>Create Revision</span>
                     </a>
@@ -181,18 +158,18 @@
         </div>
         
         <!-- Tab Content -->
-        <div style="padding: 1.5rem;">
+        <div class="p-5">
         <!-- Overview Tab -->
         <div v-if="activeTab === 'overview'">
           
           <!-- Deployment Details Section -->
           <div class="mb-5">
             <h2 class="title is-5 mb-3">Deployment details</h2>
-            <div class="box" style="padding: 0;">
-              <table class="table is-fullwidth" style="margin: 0;">
+            <div class="box is-borderless">
+              <table class="table is-fullwidth mb-0">
                 <tbody>
                   <tr>
-                    <td style="width: 250px;">Deployment strategy</td>
+                    <td class="has-min-width-250">Deployment strategy</td>
                     <td>{{ deployment.strategy }}</td>
                   </tr>
                   <tr>
@@ -231,8 +208,8 @@
           <!-- Endpoints Section -->
           <div v-if="deploymentEndpoints.length > 0" class="mb-5">
             <h2 class="title is-5 mb-3">Endpoints</h2>
-            <div class="box" style="padding: 0;">
-              <table class="table is-fullwidth" style="margin: 0;">
+            <div class="box is-borderless">
+              <table class="table is-fullwidth mb-0">
                 <thead>
                   <tr>
                     <th>Operation</th>
@@ -262,7 +239,7 @@
             <h2 class="title is-5 mb-3">Job activity</h2>
             
             <!-- Job Activity Tabs -->
-            <div class="mb-3" style="display: flex; gap: 8px; margin-left: 1rem;">
+            <div class="deployment-tabs mb-3 ml-4">
               <button 
                 @click="jobActivityTab = 'running'"
                 class="tab-button"
@@ -281,15 +258,15 @@
             
             <!-- Running Jobs -->
             <div v-if="jobActivityTab === 'running'">
-              <div v-if="activeJobs.length === 0" class="box has-text-centered" style="padding: 2rem;">
+              <div v-if="activeJobs.length === 0" class="box has-text-centered p-6">
                 <p class="has-text-grey">
                   <span v-if="deployment.status === 'DRAFT'">Start deployment to create jobs</span>
                   <span v-else>No running jobs</span>
                 </p>
               </div>
               
-              <div v-else class="box" style="padding: 0;">
-                <table class="table is-fullwidth" style="margin: 0;">
+              <div v-else class="box is-borderless">
+                <table class="table is-fullwidth mb-0">
                   <thead>
                   <tr>
                     <th>Name</th>
@@ -316,7 +293,7 @@
                         <a
                           :href="`/jobs/${job.job}`"
                           target="_blank"
-                          style="color: #1967D2; text-decoration: none;"
+                          class="has-text-link"
                         >
                           View job ↗
                         </a>
@@ -329,12 +306,12 @@
             
             <!-- Historical Jobs -->
             <div v-if="jobActivityTab === 'history'">
-              <div v-if="historicalJobs.length === 0" class="box has-text-centered" style="padding: 2rem;">
+              <div v-if="historicalJobs.length === 0" class="box has-text-centered p-6">
                 <p class="has-text-grey">No completed jobs yet</p>
               </div>
               
-              <div v-else class="box" style="padding: 0;">
-                <table class="table is-fullwidth" style="margin: 0;">
+              <div v-else class="box is-borderless">
+                <table class="table is-fullwidth mb-0">
                   <thead>
                   <tr>
                     <th>Name</th>
@@ -361,7 +338,7 @@
                         <a
                           :href="`/jobs/${job.job}`"
                           target="_blank"
-                          style="color: #1967D2; text-decoration: none;"
+                          class="has-text-link"
                         >
                           View job ↗
                         </a>
@@ -388,9 +365,7 @@
                 data-tooltip="Refresh upcoming tasks"
               >
                 <span class="icon is-small">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                    <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
+                  <img src="/_nuxt/img/icons/refresh.svg" />
                 </span>
               </button>
             </div>
@@ -511,7 +486,7 @@
     <!-- Update Replicas Modal -->
     <div v-if="deployment" class="modal" :class="{ 'is-active': showReplicasModal }">
       <div class="modal-background" @click="showReplicasModal = false"></div>
-      <div class="modal-card" style="max-width: 400px;">
+      <div class="modal-card has-limited-width-smaller">
         <header class="modal-card-head">
           <p class="modal-card-title">Update Replicas</p>
           <button class="delete" @click="showReplicasModal = false"></button>
@@ -521,10 +496,7 @@
             <label class="label">
               Replica Count
               <span class="icon is-small has-tooltip-arrow" data-tooltip="Number of parallel job instances">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <circle cx="12" cy="12" r="10" stroke-width="2"/>
-                  <path d="M12 16v-4m0-4h.01" stroke-width="2" stroke-linecap="round"/>
-                </svg>
+                <img src="/_nuxt/img/icons/info-circle.svg" />
               </span>
             </label>
             <div class="control">
@@ -540,7 +512,7 @@
             <p class="help">Current: {{ deployment.replicas }}</p>
           </div>
         </section>
-        <footer class="modal-card-foot" style="justify-content: flex-end;">
+        <footer class="modal-card-foot is-justify-content-flex-end">
           <button class="button" @click="showReplicasModal = false">Cancel</button>
           <button 
             class="button is-success"
@@ -557,7 +529,7 @@
     <!-- Update Timeout Modal -->
     <div v-if="deployment" class="modal" :class="{ 'is-active': showTimeoutModal }">
       <div class="modal-background" @click="showTimeoutModal = false"></div>
-      <div class="modal-card" style="max-width: 400px;">
+      <div class="modal-card has-limited-width-smaller">
         <header class="modal-card-head">
           <p class="modal-card-title">Update Timeout</p>
           <button class="delete" @click="showTimeoutModal = false"></button>
@@ -567,10 +539,7 @@
             <label class="label">
               Timeout (hours)
               <span class="icon is-small has-tooltip-arrow" data-tooltip="Maximum runtime before auto-shutdown">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <circle cx="12" cy="12" r="10" stroke-width="2"/>
-                  <path d="M12 16v-4m0-4h.01" stroke-width="2" stroke-linecap="round"/>
-                </svg>
+                <img src="/_nuxt/img/icons/info-circle.svg" />
               </span>
             </label>
             <div class="control">
@@ -586,7 +555,7 @@
             <p class="help">Current: {{ (deployment.timeout / 60).toFixed(2) }}h</p>
           </div>
         </section>
-        <footer class="modal-card-foot" style="justify-content: flex-end;">
+        <footer class="modal-card-foot is-justify-content-flex-end">
           <button class="button" @click="showTimeoutModal = false">Cancel</button>
           <button 
             class="button is-success"
@@ -603,7 +572,7 @@
     <!-- Update Schedule Modal -->
     <div v-if="deployment" class="modal" :class="{ 'is-active': showScheduleModal }">
       <div class="modal-background" @click="showScheduleModal = false"></div>
-      <div class="modal-card" style="max-width: 500px;">
+      <div class="modal-card has-limited-width-small">
         <header class="modal-card-head">
           <p class="modal-card-title">Update Schedule</p>
           <button class="delete" @click="showScheduleModal = false"></button>
@@ -613,10 +582,7 @@
             <label class="label">
               Cron Expression
               <span class="icon is-small has-tooltip-arrow" data-tooltip="Cron expression defining when jobs should run. Format: minute hour day month day-of-week">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <circle cx="12" cy="12" r="10" stroke-width="2"/>
-                  <path d="M12 16v-4m0-4h.01" stroke-width="2" stroke-linecap="round"/>
-                </svg>
+                <img src="/_nuxt/img/icons/info-circle.svg" />
               </span>
             </label>
             <div class="control">
@@ -658,7 +624,7 @@
             </div>
           </div>
         </section>
-        <footer class="modal-card-foot" style="justify-content: flex-end;">
+        <footer class="modal-card-foot is-justify-content-flex-end">
           <button class="button" @click="showScheduleModal = false">Cancel</button>
           <button 
             class="button is-success"
@@ -675,12 +641,12 @@
     <!-- Create Revision Modal -->
     <div v-if="deployment" class="modal" :class="{ 'is-active': showRevisionModal }">
       <div class="modal-background" @click="showRevisionModal = false"></div>
-      <div class="modal-card" style="width: 90%; max-width: 1200px;">
+      <div class="modal-card modal-card-wide">
         <header class="modal-card-head">
           <p class="modal-card-title">Create New Revision</p>
           <button class="delete" @click="showRevisionModal = false"></button>
         </header>
-        <section class="modal-card-body" style="min-height: 500px;">
+        <section class="modal-card-body has-min-height-500">
           <div class="content mb-4">
             <p class="has-text-grey">
               Create a new revision of this deployment with updated job definition. 
@@ -698,12 +664,12 @@
                 :mainMenuBar="false" 
                 :statusBar="false" 
                 :stringified="false" 
-                style="height: 500px;" 
+class="has-height-500" 
               />
             </div>
           </div>
         </section>
-        <footer class="modal-card-foot" style="justify-content: flex-end;">
+        <footer class="modal-card-foot is-justify-content-flex-end">
           <button class="button" @click="showRevisionModal = false">Cancel</button>
           <button 
             class="button is-success"
@@ -1819,26 +1785,6 @@ useHead({
   }
 }
 
-.dropdown-arrow {
-  transition: transform 0.2s ease;
-  transform: rotate(90deg);
-  
-  &.is-rotated {
-    transform: rotate(0deg);
-  }
-}
-
-.back-button.is-ghost {
-  border: none !important;
-  
-  &:hover,
-  &:focus,
-  &:active {
-    background-color: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-  }
-}
 
 // Deployment logs styling
 .deployment-logs-container {

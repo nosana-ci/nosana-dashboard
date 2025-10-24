@@ -107,6 +107,14 @@
     display: flex;
     align-items: center;
     
+    svg {
+      color: inherit;
+    }
+    
+    img[src$=".svg"] {
+      filter: invert(47%) sepia(8%) saturate(665%) hue-rotate(180deg) brightness(93%) contrast(88%);
+    }
+    
     &:hover {
       background: #f8f9fa;
       color: #202124;
@@ -128,6 +136,14 @@
 
     .dropdown-item {
       color: #e0e0e0;
+      
+      svg {
+        color: inherit;
+      }
+      
+      img[src$=".svg"] {
+        filter: invert(88%) sepia(0%) saturate(0%) hue-rotate(180deg) brightness(100%) contrast(88%);
+      }
       
       &:hover {
         background: #333333;
@@ -1095,5 +1111,57 @@ button[disabled][data-tooltip] {
   
   &:hover {
     color: #f5f5f5;
+  }
+}
+
+/* Utility classes for consistent spacing and sizing */
+.has-border-bottom {
+  border-bottom: 1px solid #dbdbdb;
+}
+
+.dark-mode .has-border-bottom {
+  border-bottom-color: #404040;
+}
+
+.has-min-width-250 {
+  min-width: 250px;
+  width: 250px;
+}
+
+.icon-16 {
+  width: 16px;
+  height: 16px;
+}
+
+.transform-rotate-270 {
+  transform: rotate(-90deg);
+}
+
+.dropdown-arrow {
+  transition: transform 0.2s ease;
+  transform: rotate(90deg);
+  
+  &.is-rotated {
+    transform: rotate(0deg);
+  }
+}
+
+.has-min-height-500 {
+  min-height: 500px;
+}
+
+.has-height-500 {
+  height: 500px;
+}
+
+.back-button.is-ghost {
+  border: none !important;
+  
+  &:hover,
+  &:focus,
+  &:active {
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
   }
 }
