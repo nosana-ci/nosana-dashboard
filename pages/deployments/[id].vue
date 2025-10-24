@@ -1092,7 +1092,7 @@ const canStop = computed(() => {
   return status === 'RUNNING' || status === 'STARTING';
 });
 
-const canArchive = computed(() => deploymentStatus.value !== 'ARCHIVED' && deploymentStatus.value !== 'RUNNING');
+const canArchive = computed(() => deploymentStatus.value !== 'ARCHIVED' && deploymentStatus.value !== 'RUNNING' && deploymentStatus.value !== 'STOPPING' && deploymentStatus.value !== 'DRAFT');
 
 const hasAnyActions = computed(() => {
   const status = deploymentStatus.value;
@@ -1310,7 +1310,7 @@ const executeDeploymentAction = async (
     toast.success(successMessage);
 
     if (shouldRedirect) {
-      setTimeout(() => router.push("/deployment"), 2000);
+      setTimeout(() => router.push("/deployments"), 2000);
     } else {
       // Wait a moment for backend to process, then refresh
       await new Promise(resolve => setTimeout(resolve, 500));
