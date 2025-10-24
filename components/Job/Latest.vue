@@ -14,6 +14,7 @@
 </template>
 
 <script lang="ts" setup>
+import { onBeforeUnmount } from 'vue';
 import DeploymentList from "~/components/List/DeploymentList.vue";
 
 const page: Ref<number> = ref(1);
@@ -32,6 +33,11 @@ watch(jobsUrl, () => {
 })
 const { data: jobs, pending: loadingJobs, refresh: refreshJobs } = await useAPI(jobsUrl, { watch: [jobsUrl] });
 
-// Fetch jobs every 30 seconds
-useIntervalFn(refreshJobs, 30000);
+// Fetch jobs every 30 seconds with cleanup
+const { pause: pauseJobsPolling, resume: resumeJobsPolling } = useIntervalFn(refreshJobs, 30000);
+
+// Cleanup on unmount
+onBeforeUnmount(() => {
+  pauseJobsPolling();
+});
 </script>

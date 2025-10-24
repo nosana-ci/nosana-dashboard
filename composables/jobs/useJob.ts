@@ -5,6 +5,9 @@ import {
   type JobDefinition,
 } from "@nosana/sdk";
 import { useToast } from "vue-toastification";
+import { useWallet } from "solana-wallets-vue";
+import { EventSourcePolyfill } from "event-source-polyfill";
+import type { JobInfo } from "~/composables/jobs/types";
 
 /**
  * Helper to convert job state to a number, normalizing "RUNNING", "QUEUED", etc.
@@ -49,7 +52,6 @@ export type Endpoints = Map<
     opId: string;
     hasHealthCheck: boolean;
     status: "ONLINE" | "OFFLINE" | "UNKNOWN";
-    setStatus: (status: "ONLINE" | "OFFLINE") => void;
   }
 >;
 
@@ -57,11 +59,14 @@ export function useJob(jobId: string) {
   const job = ref<UseJob | null>(null);
   const loading = ref(true);
   const endpoints = ref<Endpoints>(new Map() as Endpoints);
+  const jobInfo = ref<JobInfo | null>(null);
 
   const toast = useToast();
   const { nosana } = useSDK();
   const { getIpfs } = useIpfs();
   const { status, data: userData, token } = useAuth();
+  const { connected, publicKey } = useWallet();
+  const { ensureAuth } = useAuthHeader();
   const { data, pending, refresh } = useAPI("/api/jobs/" + jobId, {
     watch: false,
   });
@@ -276,21 +281,74 @@ export function useJob(jobId: string) {
         pauseJobPolling();
       }
 
-      try {
-        if (
-          jobResult.ipfsResult &&
-          jobResult.ipfsResult !==
-            "QmNLei78zWmzUdbeRB3CiUfAizWUrbeeZh5K1rhAQKCh51"
-        ) {
-          const resultResponse = await getIpfs(jobResult.ipfsResult);
-          jobObject.hasResultsRegex = resultResponse.opStates.some(
-            (op: any) => op.results
-          );
-          jobObject.results = resultResponse;
+      // Determine if current user is the job poster
+      const activeAddress = computed(() => {
+        if (status.value === 'authenticated' && (userData.value as any)?.generatedAddress) {
+          return (userData.value as any).generatedAddress as string;
         }
-      } catch (error) {
-        toast.error(`Error fetching IPFS result: ${JSON.stringify(error)}`);
+        if (connected.value && publicKey.value) {
+          return publicKey.value.toString();
+        }
+        return null;
+      });
+
+      const isPoster = Boolean(
+        activeAddress.value &&
+        jobResult.project &&
+        activeAddress.value === jobResult.project.toString()
+      );
+
+      const isConfidentialJob = Boolean((jobResult as any)?.jobDefinition?.logistics);
+
+      if (isConfidentialJob && isPoster && state !== 1) {
+        // Confidential flow: fetch results from node
+        try {
+          const nodeDomain = useRuntimeConfig().public.nodeDomain;
+          const nodeAddress = (jobResult.node as any)?.toString?.() || (jobResult.node as any);
+          const url = `https://${nodeAddress}.${nodeDomain}/job/${jobId}/results`;
+          const authHeader = await ensureAuth();
+          const flowState: any = await $fetch(url, {
+            method: 'GET',
+            headers: {
+              authorization: authHeader,
+            },
+          });
+          const parsed = typeof flowState === 'string' ? JSON.parse(flowState) : flowState;
+          if (parsed && parsed.opStates) {
+            jobObject.results = parsed;
+            jobObject.hasResultsRegex = parsed.opStates.some((op: any) => op.results);
+          }
+        } catch (error) {
+        }
+      } else {
+        // Non-confidential flow: fetch IPFS results if available
+        try {
+          if (
+            jobResult.ipfsResult &&
+            jobResult.ipfsResult !==
+              "QmNLei78zWmzUdbeRB3CiUfAizWUrbeeZh5K1rhAQKCh51"
+          ) {
+            const resultResponse = await getIpfs(jobResult.ipfsResult);
+            jobObject.hasResultsRegex = resultResponse.opStates?.some(
+              (op: any) => op.results
+            ) || false;
+            jobObject.results = resultResponse;
+          }
+        } catch (error) {
+          toast.error(`Error fetching IPFS result: ${JSON.stringify(error)}`);
+        }
       }
+
+      // Preserve any live results previously received via SSE when REST polling doesn't include them yet
+      try {
+        if (!jobObject.results && job.value?.results) {
+          jobObject.results = job.value.results;
+        }
+        if (!jobObject.hasResultsRegex && job.value?.hasResultsRegex) {
+          jobObject.hasResultsRegex = job.value.hasResultsRegex;
+        }
+        
+      } catch {}
 
       job.value = jobObject;
     },
@@ -300,47 +358,273 @@ export function useJob(jobId: string) {
     }
   );
 
-  watch(job, (job) => {
-    if (job === null) return;
-    if (job.jobDefinition) {
-      const setEndpointStatus = (
-        service: string,
-        status: "ONLINE" | "OFFLINE"
-      ) => {
-        const serviceObj = endpoints.value.get(service);
-        if (!serviceObj) return;
-        endpoints.value.set(service, {
-          ...serviceObj,
-          status,
-        });
-        endpoints.value = new Map(endpoints.value);
-      };
+  let eventSource: EventSourcePolyfill | null = null;
+  let currentNodeAddress: string | null = null;
+  let completedSseAttempted = false;
+  let fetchingJobDefinition = false;
+  let fetchedConfidentialJobDefinition = false;
+  let retriedConfidentialJobDefinition = false;
 
-      const services = getJobExposedServices(job.jobDefinition, jobId);
-      for (const { hash, port, opId, opIndex, hasHealthCheck } of services) {
-        const url = `https://${hash}.${useRuntimeConfig().public.nodeDomain}`;
+  async function fetchConfidentialJobDefinitionOnce() {
+    try {
+      if (!job.value) return;
+      const isConfidentialJob = Boolean((job.value as any)?.jobDefinition?.logistics);
+      if (!isConfidentialJob) return;
 
-        if (endpoints.value.has(url) || hash === "private") continue;
+      const activeAddress = (() => {
+        if (status.value === 'authenticated' && (userData.value as any)?.generatedAddress) {
+          return (userData.value as any).generatedAddress as string;
+        }
+        if (connected.value && publicKey.value) {
+          return publicKey.value.toString();
+        }
+        return null;
+      })();
+      const isPoster = Boolean(
+        activeAddress && job.value.project && activeAddress === job.value.project.toString()
+      );
+      if (!isPoster) return;
 
-        endpoints.value.set(url, {
-          status: "UNKNOWN",
-          url,
-          opId,
-          opIndex,
-          port: Number(port),
-          hasHealthCheck,
-          setStatus: (status: "ONLINE" | "OFFLINE") => {
-            setEndpointStatus(url, status);
-          },
-        });
+      if (fetchingJobDefinition || fetchedConfidentialJobDefinition) return;
+
+      fetchingJobDefinition = true;
+      const nodeDomain = useRuntimeConfig().public.nodeDomain;
+      const nodeAddr = (job.value.node as any)?.toString?.() || (job.value as any)?.node;
+      const url = `https://${nodeAddr}.${nodeDomain}/job/${jobId}/job-definition`;
+      const authHeader = await ensureAuth();
+      const response = await $fetch<any>(url, {
+        method: 'GET',
+        headers: { authorization: authHeader },
+      });
+      const parsed = typeof response === 'string' ? JSON.parse(response) : response;
+      if (parsed) {
+        jobInfo.value = { ...(jobInfo.value as any), jobDefinition: parsed } as any;
+        fetchedConfidentialJobDefinition = true;
+      } else {
+        fetchedConfidentialJobDefinition = true;
       }
+    } catch (err: any) {
+      const message: string | undefined = typeof err?.data === 'string' ? err.data : undefined;
+      if (!retriedConfidentialJobDefinition && message && message.toLowerCase().includes('job definition has not yet been set')) {
+        retriedConfidentialJobDefinition = true;
+        setTimeout(() => {
+          fetchingJobDefinition = false;
+          fetchConfidentialJobDefinitionOnce();
+        }, 5000);
+        return;
+      }
+      // Mark as fetched to prevent repeated calls causing flicker
+      fetchedConfidentialJobDefinition = true;
+    } finally {
+      fetchingJobDefinition = false;
     }
-    loading.value = false;
+  }
+
+  watch(job, (currentJob: UseJob | null) => {
+    if (currentJob === null) return;
+
+    const isCompleted = Boolean(
+      (currentJob as any)?.isCompleted === true ||
+      getStateNumber((currentJob as any)?.state ?? -1) === 2
+    );
+
+    // If job is completed and we've already attempted a one-shot SSE, ensure any existing SSE is closed and never reconnect
+    if (isCompleted && completedSseAttempted) {
+      if (eventSource) {
+        try { eventSource.close(); } catch {}
+        eventSource = null;
+      }
+      loading.value = false;
+      return;
+    }
+
+    // Proactively fetch confidential job-definition once for poster
+    fetchConfidentialJobDefinitionOnce();
+
+    const sdkServices = currentJob.jobDefinition
+      ? getJobExposedServices(currentJob.jobDefinition, jobId)
+      : [];
+    const metaByPort = new Map<number, { opId: string; opIndex: number; hasHealthCheck: boolean }>();
+    for (const { port, opId, opIndex, hasHealthCheck } of sdkServices) {
+      metaByPort.set(Number(port), { opId, opIndex, hasHealthCheck });
+    }
+
+    const config = useRuntimeConfig();
+    const nodeAddress = (currentJob.node as any)?.toString?.() || (currentJob.node as any);
+    
+    // For completed jobs: perform exactly one SSE attempt, then never reconnect
+    const oneShot = isCompleted;
+    if (oneShot) {
+      // Close any existing SSE to prevent auto-reconnects from a running-state connection
+      if (eventSource) {
+        try { eventSource.close(); } catch {}
+        eventSource = null;
+      }
+      completedSseAttempted = true;
+    }
+
+    // Only reuse the existing SSE connection if NOT in one-shot mode
+    if (!oneShot && eventSource && currentNodeAddress === nodeAddress && (eventSource as any).readyState !== 2) {
+      return;
+    }
+    
+    if (eventSource) {
+      eventSource.close();
+      eventSource = null;
+    }
+    
+    currentNodeAddress = nodeAddress;
+
+    (async () => {
+      try {
+        const nodeAddress = (currentJob.node as any)?.toString?.() || (currentJob.node as any);
+        const authHeader = await ensureAuth();
+        const sseUrl = `https://${nodeAddress}.${config.public.nodeDomain}/job/${jobId}/info`;
+        
+        eventSource = new EventSourcePolyfill(sseUrl, {
+          headers: {
+            'Authorization': authHeader
+          }
+        });
+        
+        const handleInfo = (event: MessageEvent) => {
+          try {
+            const info = JSON.parse(event.data) as JobInfo;
+            
+            // Preserve existing jobDefinition to avoid flicker if SSE message lacks it
+            try {
+              const previousJobDefinition = (jobInfo.value as any)?.jobDefinition;
+              jobInfo.value = { ...(info as any), jobDefinition: previousJobDefinition ?? (info as any)?.jobDefinition } as any;
+            } catch {
+              jobInfo.value = info;
+            }
+
+            // Do not repeatedly fetch job-definition on every SSE update
+            
+            // Update live endpoints from SSE
+            let endpointsData = null;
+            
+            // Check new format first (info.secrets[jobId])
+            if (info?.secrets?.[jobId]) {
+              endpointsData = info.secrets[jobId];
+            }
+            // Fallback to legacy format (info.endpoints.urls)
+            else if (info?.endpoints?.urls) {
+              endpointsData = info.endpoints.urls;
+            }
+            
+            if (endpointsData) {
+              const newEndpoints = new Map(endpoints.value);
+              
+              for (const [key, item] of Object.entries(endpointsData)) {
+                const endpoint = item as any;
+                if (!endpoint?.url) continue;
+                
+                const portNum = Number(endpoint.port);
+                const meta = metaByPort.get(portNum);
+                const endpointUrl = endpoint.url as string;
+                
+                newEndpoints.set(endpointUrl, {
+                  status: endpoint.status,
+                  url: endpointUrl,
+                  opId: endpoint.opID || endpoint.opId || meta?.opId || '',
+                  opIndex: meta?.opIndex ?? 0,
+                  port: portNum,
+                  hasHealthCheck: Boolean(meta?.hasHealthCheck)
+                });
+              }
+              
+              endpoints.value = newEndpoints;
+            }
+            
+            // Update live results from SSE when available
+            try {
+              const sseResults: any = (info as any).results;
+              if (sseResults && job.value) {
+                const isConfidentialJob = Boolean((job.value as any)?.jobDefinition?.logistics);
+                const activeAddress = (() => {
+                  if (status.value === 'authenticated' && (userData.value as any)?.generatedAddress) {
+                    return (userData.value as any).generatedAddress as string;
+                  }
+                  if (connected.value && publicKey.value) {
+                    return publicKey.value.toString();
+                  }
+                  return null;
+                })();
+                const isPoster = Boolean(
+                  activeAddress && job.value.project && activeAddress === job.value.project.toString()
+                );
+
+                if (!isConfidentialJob || isPoster) {
+                  // Accept results in non-confidential jobs for everyone, or confidential only for poster
+                  job.value.results = sseResults;
+                  job.value.hasResultsRegex = Array.isArray(sseResults.opStates)
+                    ? sseResults.opStates.some((op: any) => op?.results)
+                    : false;
+                  
+                }
+              }
+            } catch {}
+            
+            loading.value = false;
+
+            // For completed jobs, close immediately after first message and do not reconnect
+            if (oneShot) {
+              try { (eventSource as any)?.removeEventListener?.('message', handleInfo as any); } catch {}
+              try { (eventSource as any)?.removeEventListener?.('flow:updated', handleInfo as any); } catch {}
+              try { eventSource?.close(); } catch {}
+              eventSource = null;
+            }
+          } catch (parseError) {
+            console.error('Failed to parse SSE message:', parseError);
+          }
+        };
+
+        try {
+          (eventSource as any).addEventListener?.('message', handleInfo as any);
+        } catch {}
+        try {
+          (eventSource as any).addEventListener?.('flow:updated', handleInfo as any);
+        } catch {}
+        
+        eventSource.onerror = (error) => {
+          console.error('SSE connection error:', error);
+
+          loading.value = false;
+
+          // For completed jobs, never retry after an error; rely on existing results as fallback
+          if (oneShot) {
+            try { (eventSource as any)?.removeEventListener?.('message', handleInfo as any); } catch {}
+            try { (eventSource as any)?.removeEventListener?.('flow:updated', handleInfo as any); } catch {}
+            try { eventSource?.close(); } catch {}
+            eventSource = null;
+          }
+        };
+        
+        eventSource.onopen = () => {
+          // SSE connection opened
+        };
+      } catch (error) {
+        console.error('Failed to create EventSource:', error);
+        loading.value = false;
+      }
+    })();
+  });
+
+  // Cleanup on unmount
+  onBeforeUnmount(() => {
+    if (eventSource) {
+      eventSource.close();
+      eventSource = null;
+    }
   });
 
   return {
     job,
     endpoints,
     loading,
+    jobInfo,
+    pausePolling: pauseJobPolling,
+    resumePolling: resumeJobPolling,
   };
 }

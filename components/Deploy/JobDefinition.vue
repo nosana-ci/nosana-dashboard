@@ -1,55 +1,64 @@
 <template>
   <div>
-    <h2 class="title pt-0 pb-0 mb-3">1. Define your model</h2>
     <div
       class="box has-background-white"
-      :style="{ overflowY: 'scroll', border: 'none', height: 'auto' }"
+      :style="{ overflowY: 'scroll', border: 'none', height: 'auto', marginTop: '1.5rem' }"
     >
       <div>
+          <h2 class="title is-5 mb-4 px-3" style="color: #202124;">{{ title || 'Configure job definition' }}</h2>
         <!-- START: New Template Info Box (above editor) -->
         <div class="px-3 pt-0 pb-2" style="width: 100%; display: flex;">
           <div class="is-flex is-align-items-start is-justify-content-space-between" style="width: 100%;">
-            <div v-if="selectedTemplate && selectedTemplate.id !== 'custom'" class="is-flex is-align-items-start">
-              <img 
-                v-if="selectedTemplate.icon || selectedTemplate.avatar_url"
-                :src="selectedTemplate.icon || selectedTemplate.avatar_url"
-                alt="Template Icon"
-                class="mr-2" 
-                style="height: 24px; width: 24px; border-radius: 4px; object-fit: contain; flex-shrink: 0; margin-top: 7px;"
-              />
-              <div>
+            <!-- Left side: Icon + Title + README button grouped together -->
+            <div class="is-flex is-align-items-start" style="gap: 0.5rem;">
+              <div v-if="selectedTemplate && selectedTemplate.id !== 'custom'" class="is-flex is-align-items-start">
+                <img 
+                  v-if="selectedTemplate.icon || (selectedTemplate as any).avatar_url"
+                  :src="selectedTemplate.icon || (selectedTemplate as any).avatar_url"
+                  alt="Template Icon"
+                  class="mr-2" 
+                  style="height: 24px; width: 24px; border-radius: 4px; object-fit: contain; flex-shrink: 0; margin-top: 7px;"
+                />
+                <div>
+                  <div class="is-flex is-align-items-center">
+                    <h3 class="is-size-5 has-text-weight-semibold has-text-black mb-0">
+                      {{ computedJobTitle }}
+                    </h3>
+                  </div>
+                  <p v-if="computedDockerImage" class="is-size-7 has-text-grey" style="line-height: 1; margin-top: 0; margin-bottom: 4px;">
+                    {{ computedDockerImage }}
+                  </p>
+                </div>
+              </div>
+              <div v-else>
                 <h3 class="is-size-5 has-text-weight-semibold has-text-black mb-0">
                   {{ computedJobTitle }}
                 </h3>
                 <p v-if="computedDockerImage" class="is-size-7 has-text-grey" style="line-height: 1; margin-top: 0; margin-bottom: 4px;">
                   {{ computedDockerImage }}
                 </p>
+                 <p v-else class="is-size-7 has-text-grey" style="line-height: 1; margin-top: 0;">
+                  Configure job in editor
+                </p>
+              </div>
+              <!-- README button placed next to title, vertically centered -->
+              <div
+                v-if="selectedTemplate && selectedTemplate.readme"
+                style="align-self: center;"
+              >
                 <button
-                    v-if="selectedTemplate && selectedTemplate.readme"
-                    class="button is-light is-small readme-button"
-                    @click="openReadmeModal(selectedTemplate.readme!)"
-                    title="View template documentation"
-                    style="margin-top: 2px;"
+                  class="button is-light is-small readme-button"
+                  @click="openReadmeModal(selectedTemplate.readme!)"
+                  title="View template documentation"
                 >
-                    <span class="icon is-small">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" fill="currentColor"/>
-                      </svg>
-                    </span>
-                    <span>README</span>
+                  <span class="icon is-small">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" fill="currentColor"/>
+                    </svg>
+                  </span>
+                  <span>README</span>
                 </button>
               </div>
-            </div>
-            <div v-else>
-              <h3 class="is-size-5 has-text-weight-semibold has-text-black mb-0">
-                {{ computedJobTitle }}
-              </h3>
-              <p v-if="computedDockerImage" class="is-size-7 has-text-grey" style="line-height: 1; margin-top: 0; margin-bottom: 4px;">
-                {{ computedDockerImage }}
-              </p>
-               <p v-else class="is-size-7 has-text-grey" style="line-height: 1; margin-top: 0;">
-                Configure job in editor
-              </p>
             </div>
             <div class="is-flex is-align-items-start" style="margin-top: 6px;">
               <!-- Select Template Button -->
@@ -60,57 +69,113 @@
               >
                   <span class="icon is-small">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="currentColor"/>
+                      <path d="M16 1H4C2.9 1 2 1.9 2 3V17H4V3H16V1ZM19 5H8C6.9 5 6 5.9 6 7V21C6 22.1 6.9 23 8 23H19C20.1 23 21 22.1 21 21V7C21 5.9 20.1 5 19 5ZM19 21H8V7H19V21Z" fill="currentColor"/>
                     </svg>
                   </span>
                   <span>Select Template</span>
               </button>
-              <!-- New Collapse Button: Only shown when editor is EXPANDED -->
+              <!-- Edit Job Definition Button -->
               <button
-                  v-if="!isEditorCollapsed"
                   class="button is-outlined is-small action-button"
-                  @click="isEditorCollapsed = true"
-                  title="Collapse job definition" 
+                  @click="showEditorModal = true"
+                  title="Edit job definition" 
               >
                   <span class="icon is-small">
-                    <img src="~/assets/img/icons/arrow-collapse.svg" alt="Collapse" style="height: 16px; width: 16px;" />
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="currentColor"/>
+                    </svg>
                   </span>
-                  <span>Collapse</span>
+                  <span>Edit</span>
               </button>
             </div>
           </div>
         </div>
         <!-- END: New Template Info Box -->
+      </div>
+    </div>
 
-        <div class="columns builder-columns" style="margin-top: 0;">
-          <div class="column is-12">
-            <div
-              class="field full-height editor-wrapper"
-              @click="isEditorCollapsed ? (isEditorCollapsed = false) : undefined"
-              :class="{ 'is-clickable-to-expand': isEditorCollapsed }"
-            >
-              <div class="control full-height">
-                <JsonEditorVue 
-                    :validator="validator" 
-                    :class="{ 
-                      'jse-theme-dark': $colorMode.value === 'dark',
-                      'editor-collapsed': isEditorCollapsed
-                    }" 
-                    v-model="jobDefinition" 
-                    :mode="Mode.text" 
-                    :mainMenuBar="false" 
-                    :statusBar="false" 
-                    :stringified="false" 
-                    class="full-height-editor" 
-                    :style="{ height: isEditorCollapsed ? '150px' : 'auto' }" />
-              </div>
-              <div v-if="isEditorCollapsed" class="expand-indicator">
-                <span>Expand</span>
-                <img src="~/assets/img/icons/arrow-expand.svg" alt="Expand" style="height: 16px; width: 16px;" />
-              </div>
+      <!-- GPU Selection Section (only shown when markets prop is provided) -->
+      <div v-if="markets !== undefined" class="box has-background-white" style="border: none; margin-top: 1.5rem;">
+        <h2 class="title is-5 mb-3" style="color: #202124;">Select your GPU</h2>
+      <div class="nav-tabs is-flex">
+        <div
+          class="nav-tabs-item p-3 px-5 mr-3"
+          :class="{ 'is-active has-background-white': gpuTab === 'simple' }"
+          @click="gpuTab = 'simple'"
+        >
+          Device
+        </div>
+        <div
+          class="nav-tabs-item p-3 px-5 mr-3"
+          :class="{ 'is-active has-background-white': gpuTab === 'advanced' }"
+          @click="gpuTab = 'advanced'"
+        >
+          Advanced Search
+        </div>
+      </div>
+      <div class="box has-background-white" style="border: none; margin-top: 0;">
+        <DeploySimpleGpuSelection
+            v-if="gpuTab === 'simple'"
+            :markets="markets ?? null"
+            :testgridMarkets="testgridMarkets ?? []"
+            :loadingMarkets="loadingMarkets ?? false"
+            :gpuTypeCheckbox="gpuTypeCheckbox ?? []"
+            :activeFilter="activeFilter ?? 'ALL'"
+            :jobDefinition="(typeof jobDefinition === 'string' || !jobDefinition ? null : jobDefinition) as JobDefinition | null"
+            :skipAutoSelection="skipAutoSelection ?? false"
+            :selectedMarket="selectedMarket ?? null"
+            :activeFilterKey="activeFilterKey ?? ''"
+            @selectedMarket="$emit('selectedMarket', $event)"
+            @update:activeFilter="$emit('update:activeFilter', $event)"
+            @update:gpuTypeCheckbox="$emit('update:gpuTypeCheckbox', $event)"
+          />
+          <DeployAdvancedGpuSelection
+            v-else
+            :gpuFilters="gpuFilters ?? null"
+            :selectedGpuGroup="selectedGpuGroup ?? 'all'"
+            :filterValues="filterValues ?? {}"
+            :availableHosts="availableHosts ?? []"
+            :loadingHosts="loadingHosts ?? false"
+            :selectedHostAddress="selectedHostAddress ?? null"
+            :forceUpdateCounter="forceUpdateCounter ?? 0"
+            :marketsData="markets ?? null"
+            @update:selectedGpuGroup="$emit('update:selectedGpuGroup', $event)"
+            @update:filterValues="$emit('update:filterValues', $event)"
+            @update:selectedHostAddress="$emit('update:selectedHostAddress', $event)"
+            @update:forceUpdateCounter="$emit('update:forceUpdateCounter', $event)"
+            @selectedMarket="$emit('selectedMarket', $event)"
+            @searchGpus="$emit('searchGpus')"
+          />
+      </div>
+    </div>
+    
+    <!-- Job Definition Editor Modal -->
+    <div class="modal" :class="{ 'is-active': showEditorModal }">
+      <div class="modal-background" @click="showEditorModal = false"></div>
+      <div class="modal-card" style="width: 90%; max-width: 1200px;">
+        <header class="modal-card-head">
+          <p class="modal-card-title">Edit Job Definition</p>
+          <button class="delete" aria-label="close" @click="showEditorModal = false"></button>
+        </header>
+        <section class="modal-card-body" style="min-height: 500px;">
+          <div class="field full-height">
+            <div class="control full-height">
+              <JsonEditorVue 
+                  :validator="validator" 
+                  :class="{ 'jse-theme-dark': $colorMode.value === 'dark' }" 
+                  v-model="jobDefinition" 
+                  :mode="Mode.text" 
+                  :mainMenuBar="false" 
+                  :statusBar="false" 
+                  :stringified="false" 
+                  style="height: 500px;" />
             </div>
           </div>
-        </div>
+        </section>
+        <footer class="modal-card-foot">
+          <button class="button is-success" @click="showEditorModal = false">Save changes</button>
+          <button class="button" @click="showEditorModal = false">Cancel</button>
+        </footer>
       </div>
     </div>
   </div>
@@ -118,9 +183,11 @@
 
 <script setup lang="ts">
 import { Mode } from 'vanilla-jsoneditor';
-import JsonEditorVue from 'json-editor-vue';
-import type { JobDefinition } from '@nosana/sdk';
-import type { Template } from '~/composables/useTemplates';
+  import JsonEditorVue from 'json-editor-vue';
+  import type { JobDefinition, Market } from '@nosana/sdk';
+  import type { Template } from '~/composables/useTemplates';
+  import DeploySimpleGpuSelection from './SimpleGpuSelection.vue';
+  import DeployAdvancedGpuSelection from './AdvancedGpuSelection.vue';
 
 // Define props
 interface Props {
@@ -128,6 +195,24 @@ interface Props {
   jobDefinition: JobDefinition | null | string;
   isEditorCollapsed: boolean;
   validator: any;
+  title?: string; // Optional title for the section
+    // GPU Selection props (optional - only for /deploy page)
+    markets?: Market[] | null;
+    testgridMarkets?: any;
+    loadingMarkets?: boolean;
+    gpuTypeCheckbox?: string[];
+    activeFilter?: string;
+    skipAutoSelection?: boolean;
+    selectedMarket?: Market | null;
+    activeFilterKey?: string;
+    // Advanced GPU Selection props (optional - only for /deploy page)
+    gpuFilters?: any;
+    selectedGpuGroup?: string;
+    filterValues?: any;
+    availableHosts?: any[];
+    loadingHosts?: boolean;
+    selectedHostAddress?: string | null;
+    forceUpdateCounter?: number;
 }
 
 // Define emits
@@ -136,10 +221,26 @@ const emit = defineEmits<{
   'update:isEditorCollapsed': [value: boolean];
   'update:jobDefinition': [value: JobDefinition | null];
   openReadme: [readme: string];
+    // GPU Selection emits
+    selectedMarket: [market: Market | null];
+    'update:activeFilter': [filter: string];
+    'update:gpuTypeCheckbox': [types: string[]];
+    // Advanced GPU Selection emits
+    'update:selectedGpuGroup': [value: string];
+    'update:filterValues': [value: any];
+    'update:selectedHostAddress': [value: string | null];
+    'update:forceUpdateCounter': [value: number];
+    searchGpus: [];
 }>();
 
 // Get props
 const props = defineProps<Props>();
+
+// Modal state
+const showEditorModal = ref(false);
+
+// GPU Tab state
+const gpuTab = ref<"simple" | "advanced">("simple");
 
 // Create reactive refs for two-way binding
 const isEditorCollapsed = computed({
@@ -163,7 +264,7 @@ const computedJobTitle = computed(() => {
   if (props.selectedTemplate?.name) {
     return props.selectedTemplate.name;
   }
-  if (props.jobDefinition?.ops?.[0]?.args) {
+  if (typeof props.jobDefinition !== 'string' && props.jobDefinition?.ops?.[0]?.args) {
     const args = props.jobDefinition.ops[0].args as any;
     if (args.image) {
       const image = args.image;
@@ -201,6 +302,26 @@ const openReadmeModal = (readme: string) => {
 .readme-button.button.is-light:hover {
   background-color: #eeeeee;
   border-color: #b5b5b5;
+}
+
+.nav-tabs-item {
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+  color: #7a7a7a;
+  cursor: pointer;
+  border: none;
+  border-bottom: 0px;
+  
+  &.is-active {
+    color: #363636;
+    border: none;
+    border-bottom: 1px solid white;
+    margin-bottom: -1px;
+  }
+  
+  &:hover {
+    background-color: #fafafa;
+  }
 }
 
 .action-button {

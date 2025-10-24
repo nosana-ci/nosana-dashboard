@@ -10,6 +10,41 @@
   white-space: nowrap;
 }
 
+.table {
+  thead tr {
+    background: #f8f9fa;
+    
+    th {
+      color: #5f6368;
+      font-weight: 500;
+      padding: 12px 16px;
+      border-bottom: 1px solid #e8eaed;
+    }
+  }
+  
+  tbody {
+    tr td {
+      padding: 12px 16px;
+      border-bottom: 1px solid #e8eaed;
+      
+      &:first-child {
+        color: #5f6368;
+        font-weight: 500;
+      }
+    }
+    
+    tr:last-child td {
+      border-bottom: none;
+    }
+  }
+}
+
+// Section titles
+.title.is-5 {
+  color: #202124;
+  font-weight: 400;
+}
+
 .button {
   &.is-wide {
     min-width: 140px;
@@ -30,7 +65,264 @@
   &.is-text {
     text-decoration: none;
   }
+
+  &:focus,
+  &:focus-visible,
+  &:active,
+  &:focus:not(:active) {
+    outline: none !important;
+    box-shadow: none !important;
+  }
+
+  // Only apply border and background overrides to buttons without color classes
+  &:not(.is-primary):not(.is-secondary):not(.is-success):not(.is-danger):not(.is-warning):not(.is-info):not(.is-light):not(.is-dark):not(.is-link) {
+    &:hover,
+    &:focus,
+    &:focus-visible,
+    &:active,
+    &:focus:not(:active) {
+      border-color: #dbdbdb !important;
+      border-width: 1px !important;
+      background-color: inherit;
+    }
+  }
 }
+
+// Dropdown styling
+.dropdown-menu {
+  .dropdown-content {
+    background: $white;
+    border: 1px solid $grey-lighter;
+    border-radius: $radius;
+    box-shadow: $box-shadow;
+    padding: 0.25rem;
+  }
+
+  .dropdown-item {
+    color: $text-dark;
+    font-size: $size-6;
+    font-weight: $weight-medium;
+    padding: 0.5rem 1rem;
+    border-radius: $radius-small;
+    display: flex;
+    align-items: center;
+    
+    svg {
+      color: inherit;
+    }
+    
+    img[src$=".svg"] {
+      filter: brightness(0) saturate(100%) invert(48%) sepia(9%) saturate(665%) hue-rotate(180deg) brightness(93%) contrast(87%);
+    }
+    
+    &:hover {
+      background: $grey-lightest;
+      color: $text;
+    }
+  }
+
+  .dropdown-divider {
+    background-color: $grey-lighter;
+    margin: 0.25rem 0;
+  }
+}
+
+// Action button styling (matching dropdown-item style)
+.action-btn,
+.group-action-btn {
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  border: 1px solid #e8e8e8;
+  background: #ffffff;
+  color: $text-dark;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  font-size: $size-6;
+  font-weight: $weight-medium;
+  
+  .icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    
+    img {
+      display: block;
+      flex-shrink: 0;
+      filter: brightness(0) saturate(100%) invert(48%) sepia(9%) saturate(665%) hue-rotate(180deg) brightness(93%) contrast(87%);
+    }
+  }
+
+  &:hover:not(:disabled) {
+    background: #f5f5f5;
+    border-color: #dadada;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  
+  &.is-loading {
+    position: relative;
+    color: transparent;
+    
+    span {
+      opacity: 0;
+    }
+    
+    &:after {
+      position: absolute;
+      content: "";
+      left: calc(50% - 0.5em);
+      top: calc(50% - 0.5em);
+      width: 1em;
+      height: 1em;
+      border: 2px solid #dbdbdb;
+      border-radius: 50%;
+      border-right-color: transparent;
+      border-top-color: transparent;
+      animation: spinAround 0.5s infinite linear;
+    }
+  }
+}
+
+// Port badge styling - smaller size
+.port-badge {
+  display: inline-block;
+  padding: 0.15rem 0.35rem;
+  background: #e8f9e7;
+  color: #10e80c;
+  border: 1px solid #10e80c;
+  border-radius: 3px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  font-size: 0.75rem;
+  line-height: 1.2;
+  
+  &:hover {
+    background: #10e80c;
+    color: #ffffff;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(16, 232, 12, 0.2);
+  }
+}
+
+// Remove bottom margin from content.mb-5
+.content.mb-5 {
+  margin-bottom: 0 !important;
+}
+
+.dark-mode {
+  .dropdown-menu {
+    .dropdown-content {
+      background: $black-ter;
+      border-color: $grey-dark;
+    }
+
+    .dropdown-item {
+      color: $grey-light;
+      
+      svg {
+        color: inherit;
+      }
+      
+      img[src$=".svg"] {
+        filter: brightness(0) saturate(100%) invert(88%) sepia(0%) saturate(0%) hue-rotate(180deg) brightness(100%) contrast(88%);
+      }
+      
+      &:hover {
+        background: $grey-darker;
+        color: $white;
+      }
+    }
+
+    .dropdown-divider {
+      background-color: $grey-dark;
+    }
+  }
+
+  .action-btn,
+  .group-action-btn {
+    background: #2c2c2c;
+    border-color: #444;
+    color: $grey-light;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    
+    .icon img {
+      filter: brightness(0) saturate(100%) invert(88%) sepia(0%) saturate(0%) hue-rotate(180deg) brightness(100%) contrast(88%);
+    }
+
+    &:hover:not(:disabled) {
+      background: #3a3a3a;
+      border-color: #555;
+      color: $white;
+    }
+    
+    &.is-loading {
+      &:after {
+        border-color: #666;
+        border-right-color: transparent;
+        border-top-color: transparent;
+      }
+    }
+  }
+
+  .port-badge {
+    background: rgba(16, 232, 12, 0.15);
+    color: #10e80c;
+    border-color: #10e80c;
+    
+    &:hover {
+      background: #10e80c;
+      color: #1a1a1a;
+      box-shadow: 0 2px 4px rgba(16, 232, 12, 0.3);
+    }
+  }
+}
+
+// Tab button styling (used for navigation tabs and toggle buttons)
+.tab-button {
+  background: white;
+  border: 1px solid #e8eaed;
+  color: #5f6368;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #f8f9fa;
+  }
+
+  &.is-active {
+    background: #363636;
+    color: white;
+    border-color: #363636;
+  }
+}
+
+.dark-mode .tab-button {
+  background: #2a2a2a;
+  border-color: #404040;
+  color: #e0e0e0;
+
+  &:hover {
+    background: #333333;
+  }
+
+  &.is-active {
+    background: #f5f5f5;
+    color: #1a1a1a;
+    border-color: #f5f5f5;
+  }
+}
+
 .table.is-narrow td,
 .table.is-narrow th {
   line-height: 1;
@@ -555,6 +847,33 @@
   width: 100%;
 }
 
+/* Ensure modal tooltips are not covered by header */
+.modal-card-head {
+  overflow: visible; /* let bubbles extend over the header edge */
+  position: relative;
+  z-index: auto !important; /* avoid creating stacking context above tooltips */
+}
+.modal-card-body {
+  position: relative; /* create stacking context above header */
+  z-index: auto !important;
+  overflow: visible !important; /* prevent clipping tooltip bubbles */
+}
+
+/* Prevent modal header/body from clipping tooltips by rendering them at viewport level */
+.modal.is-active .modal-card [data-tooltip] {
+  &::before,
+  &::after {
+    position: fixed !important;
+    z-index: 1000000 !important; /* ensure above modal UI */
+  }
+}
+
+/* Ensure the trigger itself participates in the higher stacking context */
+.modal.is-active .modal-card .has-tooltip-arrow {
+  position: relative !important;
+  z-index: 2003 !important;
+}
+
 button[disabled][data-tooltip] {
   pointer-events: auto;
   &:hover {
@@ -644,6 +963,7 @@ button[disabled][data-tooltip] {
 .modal-card {
   width: 360px;
   max-width: 90%;
+  overflow: visible !important; /* allow tooltips to escape card bounds */
 
   &-body {
     overflow: visible !important;
@@ -829,6 +1149,7 @@ button[disabled][data-tooltip] {
 // Ensure all modals appear above profile dropdowns and other UI elements
 .modal {
   z-index: 1001 !important;
+  overflow: visible !important; /* prevent clipping inside modal container */
 }
 
 /* ==========================================================================
@@ -872,4 +1193,98 @@ button[disabled][data-tooltip] {
 /* This is intentionally left empty. */
 /* The class is used as a semantic hook in the HTML. */
 .clickable-row-cell-content {
+}
+
+/* Global tooltip fixes - ensure tooltips render above and are not clipped */
+[data-tooltip] {
+  position: relative;
+  &::before,
+  &::after {
+    z-index: 1002 !important; /* above .modal (1001) */
+  }
+  &::before {
+    white-space: normal !important;
+    max-width: 360px !important;
+    min-width: 180px !important;
+    padding: 10px 12px !important;
+    line-height: 1.35 !important;
+    text-align: left !important;
+    border-radius: 8px !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18) !important;
+    word-break: keep-all !important;
+    overflow-wrap: anywhere !important;
+    hyphens: manual !important;
+  }
+}
+
+/* Global info icon styling for tooltips */
+.icon.has-tooltip-arrow {
+  color: #7a7a7a;
+  cursor: default;
+  vertical-align: middle;
+  margin-left: 0.25rem;
+  text-decoration: none !important;
+  border-bottom: none !important;
+  
+  &:hover {
+    color: #363636;
+    text-decoration: none !important;
+    border-bottom: none !important;
+  }
+}
+
+.dark-mode .icon.has-tooltip-arrow {
+  color: #b5b5b5;
+  
+  &:hover {
+    color: #f5f5f5;
+  }
+}
+
+/* Utility classes for consistent spacing and sizing */
+.has-min-width-250 {
+  min-width: 250px;
+  width: 250px;
+}
+
+.has-min-width-150 {
+  min-width: 150px;
+}
+
+.icon-16 {
+  width: 16px;
+  height: 16px;
+}
+
+.transform-rotate-270 {
+  transform: rotate(-90deg);
+}
+
+.dropdown-arrow {
+  transition: transform 0.2s ease;
+  transform: rotate(90deg);
+  
+  &.is-rotated {
+    transform: rotate(0deg);
+  }
+}
+
+.has-min-height-500 {
+  min-height: 500px;
+}
+
+.has-height-500 {
+  height: 500px;
+}
+
+.back-button.is-ghost {
+  border: none !important;
+  
+  &:hover,
+  &:focus,
+  &:active {
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
 }

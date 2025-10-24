@@ -8,7 +8,7 @@ export function useJobPage(id: string) {
   const { connected, publicKey } = useWallet();
   const { status, data: userData } = useAuth();
 
-  const { job, endpoints, loading } = useJob(id);
+  const { job, endpoints, loading, jobInfo } = useJob(id);
   const modal = useModal();
   const nosPrice = useNosPrice();
 
@@ -39,5 +39,6 @@ export function useJobPage(id: string) {
     nosPrice,
     isJobPoster,
     loading,
+    jobInfo,
   };
 }
