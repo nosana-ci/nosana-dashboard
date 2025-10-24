@@ -1195,6 +1195,75 @@ button[disabled][data-tooltip] {
 .clickable-row-cell-content {
 }
 
+/* ==========================================================================
+   Global Status Colors and Icons
+   ========================================================================== */
+
+/* Status color mapping to ensure consistency across all components */
+:root {
+  --status-success-color: #{$success}; // Green for completed/success
+  --status-info-color: #{$info}; // Blue for running/pending  
+  --status-warning-color: #{$warning}; // Orange for queued
+  --status-danger-color: #{$danger}; // Red for failed/error
+  --status-dark-color: #{$dark}; // Gray for stopped/default
+}
+
+.dark-mode {
+  --status-success-color: #{$success};
+  --status-info-color: #{$info};
+  --status-warning-color: #{$warning};
+  --status-danger-color: #{$danger};
+  --status-dark-color: #{$grey-light};
+}
+
+/* Global status tag styling with consistent colors */
+.tag.status-tag {
+  &.is-success {
+    color: var(--status-success-color) !important;
+    border-color: var(--status-success-color) !important;
+    
+    svg {
+      color: var(--status-success-color) !important;
+    }
+  }
+  
+  &.is-info {
+    color: var(--status-info-color) !important;
+    border-color: var(--status-info-color) !important;
+    
+    svg {
+      color: var(--status-info-color) !important;
+    }
+  }
+  
+  &.is-warning {
+    color: var(--status-warning-color) !important;
+    border-color: var(--status-warning-color) !important;
+    
+    svg {
+      color: var(--status-warning-color) !important;
+    }
+  }
+  
+  &.is-danger {
+    color: var(--status-danger-color) !important;
+    border-color: var(--status-danger-color) !important;
+    
+    svg {
+      color: var(--status-danger-color) !important;
+    }
+  }
+  
+  &.is-dark {
+    color: var(--status-dark-color) !important;
+    border-color: var(--status-dark-color) !important;
+    
+    svg {
+      color: var(--status-dark-color) !important;
+    }
+  }
+}
+
 /* Center status icons inside tags */
 .status-icon-wrap {
   display: inline-flex;
@@ -1202,6 +1271,10 @@ button[disabled][data-tooltip] {
   justify-content: center;
   vertical-align: middle;
   line-height: 0;
+  
+  svg {
+    color: inherit;
+  }
 }
 
 /* Global tooltip fixes - ensure tooltips render above and are not clipped */

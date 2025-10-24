@@ -102,14 +102,14 @@
                   </td>
                   <td>
                     <div class="clickable-row-cell-content">
-                      <div class="tag is-outlined" :class="{
+                      <div class="tag is-outlined status-tag" :class="{
                         'is-success': job.state === 2,
                         'is-info': job.state === 1,
                         'is-warning': job.state === 0,
-                        'has-background-white has-text-black': job.state === 3,
-                        'is-light': job.state !== 3
-                      }" :style="job.state === 3 ? 'border: 1px solid black;' : ''">
-                        <component class="mr-2 status-icon" :is="getStatusIconComponent(job.state)" :style="job.state === 3 ? 'filter: brightness(0);' : ''" />
+                        'is-dark': job.state === 3,
+                        'is-light': ![0,1,2,3].includes(job.state)
+                      }">
+                        <component class="mr-2 status-icon" :is="getStatusIconComponent(job.state)" />
                         <span>{{ getStatusText(job.state) }}</span>
                       </div>
                     </div>
@@ -304,11 +304,11 @@ const getStateButtonClass = (state: number | null) => {
 
 const getStatusClass = (state: number) => {
   switch (state) {
-    case 2: return 'tag is-success';
-    case 1: return 'tag is-info';
-    case 0: return 'tag is-warning';
-    case 3: return 'tag is-dark';
-    default: return 'tag';
+    case 2: return 'tag status-tag is-success';
+    case 1: return 'tag status-tag is-info';
+    case 0: return 'tag status-tag is-warning';
+    case 3: return 'tag status-tag is-dark';
+    default: return 'tag status-tag';
   }
 };
 

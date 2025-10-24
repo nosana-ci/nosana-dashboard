@@ -27,7 +27,7 @@
               <div>
                 <h1 class="title is-4 has-text-weight-normal mb-0">{{ deployment.name }}</h1>
               </div>
-              <div class="tag is-outlined is-light ml-6" :class="statusClass(deployment.status)">
+              <div class="tag is-outlined is-light status-tag ml-6" :class="statusClass(deployment.status)">
                 <span ref="headerIconRef" class="status-icon-wrap">
                   <component :is="getStatusIcon(deployment.status)" class="mr-2" :key="deployment.status" />
                 </span>
@@ -859,7 +859,7 @@ const statusClass = (status: string) => {
     case "STOPPED":
       return "is-dark";
     case "DRAFT":
-      return "is-light";
+      return "is-warning";
     case "STARTING":
       return "is-info";
     case "STOPPING":
