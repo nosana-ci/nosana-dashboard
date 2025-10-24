@@ -129,14 +129,24 @@
               >
                 Login
               </button>
-              <!-- Show swap button for wallet users with insufficient balance -->
               
+              <!-- Show deploy button when authenticated, disabled if can't create deployment -->
+              <button
+                v-if="status === 'authenticated'"
+                class="button is-secondary is-fullwidth"
+                :disabled="!canCreateDeployment"
+                @click="createDeployment"
+              >
+                <span v-if="isCreatingDeployment">Creating...</span>
+                <span v-else>Create Deployment</span>
+              </button>
+
               <!-- Show insufficient credits message for Google users -->
               <div
-                v-else-if="
+                v-if="
                   status === 'authenticated' && !canPostJob && selectedMarket
                 "
-                class="has-text-centered"
+                class="has-text-centered mb-3 mt-3"
               >
                 <p class="has-text-grey is-size-7 mb-2">
                   Insufficient credits. Need ${{
@@ -147,15 +157,6 @@
                   Claim credit codes on your account page
                 </p>
               </div>
-              <!-- Show deploy button if any authentication method allows deployment -->
-              <button
-                v-else-if="canCreateDeployment && status === 'authenticated'"
-                class="button is-secondary is-fullwidth"
-                @click="createDeployment"
-              >
-                <span v-if="isCreatingDeployment">Creating...</span>
-                <span v-else>Create Deployment</span>
-              </button>
             </ClientOnly>
           </div>
         </div>
