@@ -58,7 +58,9 @@
             </td>
             <td>
               <div class="tag is-outlined is-light" :class="statusClass(deployment.status)">
-                <component class="mr-2" :is="getStatusIcon(deployment.status)" />
+                <span :ref="el => iconRefs[deployment.id] = el as HTMLElement" class="status-icon-wrap">
+                  <component class="mr-2" :is="getStatusIcon(deployment.status)" :key="deployment.status" />
+                </span>
                 <span>{{ deployment.status }}</span>
               </div>
             </td>
@@ -102,6 +104,31 @@ interface Deployment {
 
 const searchQuery = ref('')
 const deployments = ref<Deployment[]>([])
+// Debug instrumentation for deployment list icons
+const iconRefs: Record<string, HTMLElement | null> = reactive({}) as any
+
+const attachSmilDebugListeners = (svgEl: SVGElement, label: string) => {
+  try {
+    const animations = svgEl.querySelectorAll('animateTransform')
+    animations.forEach((anim: any) => {
+      if (anim.__dbg) return
+      // attach to initialise timeline without logging
+      anim.addEventListener('beginEvent', () => {})
+      anim.addEventListener('repeatEvent', () => {})
+      anim.addEventListener('endEvent', () => {})
+      anim.__dbg = true
+    })
+  } catch {}
+}
+
+const instrumentRowIcon = (dep: Deployment) => {
+  const host = iconRefs[dep.id]
+  const svg = host?.querySelector('svg') as SVGElement | null
+  if (!svg) return
+  attachSmilDebugListeners(svg, `dep=${dep.id} status=${dep.status}`)
+}
+
+// watch is registered after filteredDeployments is declared below
 
 const { status, token } = useAuth()
 const router = useRouter()
@@ -130,6 +157,10 @@ const filteredDeployments = computed(() => {
     d.id.toLowerCase().includes(query)
   )
 })
+
+watch(filteredDeployments, (list) => {
+  nextTick(() => list.forEach(instrumentRowIcon))
+}, { immediate: true, deep: true })
 
 const statusClass = (status: string) => {
   switch (status?.toUpperCase()) {

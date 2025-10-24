@@ -1195,6 +1195,15 @@ button[disabled][data-tooltip] {
 .clickable-row-cell-content {
 }
 
+/* Center status icons inside tags */
+.status-icon-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  line-height: 0;
+}
+
 /* Global tooltip fixes - ensure tooltips render above and are not clipped */
 [data-tooltip] {
   position: relative;

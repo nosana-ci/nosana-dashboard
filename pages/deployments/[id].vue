@@ -28,7 +28,9 @@
                 <h1 class="title is-4 has-text-weight-normal mb-0">{{ deployment.name }}</h1>
               </div>
               <div class="tag is-outlined is-light ml-6" :class="statusClass(deployment.status)">
-                <component :is="getStatusIcon(deployment.status)" class="mr-2" />
+                <span ref="headerIconRef" class="status-icon-wrap">
+                  <component :is="getStatusIcon(deployment.status)" class="mr-2" :key="deployment.status" />
+                </span>
                 <span>{{ deployment.status }}</span>
               </div>
             </div>
@@ -769,6 +771,30 @@ const showScheduleModal = ref(false);
 const showRevisionModal = ref(false);
 const revisionJobDefinition = ref<JobDefinition | null>(null);
 const actionsDropdown = ref<HTMLElement | null>(null);
+// Debug instrumentation for page header icon
+const headerIconRef = ref<HTMLElement | null>(null);
+
+const attachSmilDebugListeners = (svgEl: SVGElement, label: string) => {
+  try {
+    const animations = svgEl.querySelectorAll('animateTransform');
+    animations.forEach((anim: any) => {
+      if (anim.__dbg) return;
+      // attach to initialise timeline without logging
+      anim.addEventListener('beginEvent', () => {});
+      anim.addEventListener('repeatEvent', () => {});
+      anim.addEventListener('endEvent', () => {});
+      anim.__dbg = true;
+    });
+  } catch {}
+};
+
+const instrumentHeaderIcon = () => {
+  const svg = headerIconRef.value?.querySelector('svg') as SVGElement | null;
+  if (!svg || !deployment.value) return;
+  attachSmilDebugListeners(svg, `dep=${deployment.value.id} status=${deployment.value.status}`);
+};
+
+watch(() => deployment.value?.status, () => nextTick(instrumentHeaderIcon), { immediate: true });
 const statusPollingInterval = ref<NodeJS.Timeout | null>(null);
 const jobPollingInterval = ref<NodeJS.Timeout | null>(null);
 // Status dot helper

@@ -5,11 +5,19 @@
     'is-warning': statusString === 'QUEUED',
     'is-danger': statusString === 'FAILED' || statusString === 'YAML_ERROR',
   }">
-    <component class="mr-2" :is="getIconComponent(statusString as string)" />
+    <span ref="iconRef" class="status-icon-wrap">
+      <component
+        class="mr-2"
+        :is="getIconComponent(statusString as string)"
+        :key="statusString"
+      />
+    </span>
 
     <span v-if="!imageOnly">{{ statusString }}</span>
   </div>
-  <component v-else :is="getIconComponent(statusString as string)" />
+  <span v-else ref="iconRef" class="status-icon-wrap">
+    <component :is="getIconComponent(statusString as string)" :key="statusString" />
+  </span>
 </template>
 
 <script setup lang="ts">
@@ -105,6 +113,54 @@ const getIconComponent = (status: string) => {
   if (status === 'FAILED' || status === 'YAML_ERROR') return FailedIcon;
   return StoppedIcon;
 };
+
+// Debug: instrument SVG mount and SMIL lifecycle
+const iconRef = ref<HTMLElement | null>(null);
+
+const attachSmilDebugListeners = (svgEl: SVGElement, contextLabel: string) => {
+  try {
+    const animations = svgEl.querySelectorAll('animateTransform');
+    animations.forEach((anim) => {
+      const a = anim as SVGAnimateElement & { __dbg?: boolean };
+      if (a.__dbg) return;
+      // Attach listeners to ensure the browser sets up SMIL timelines
+      a.addEventListener('beginEvent', () => {});
+      a.addEventListener('repeatEvent', () => {});
+      a.addEventListener('endEvent', () => {});
+      a.__dbg = true;
+
+      // Attempt to force-start the SMIL animation immediately
+      try {
+        a.beginElement();
+      } catch {}
+    });
+  } catch (e) {
+    // no-op
+  }
+};
+
+const instrumentSvg = (label: string) => {
+  const root = iconRef.value as HTMLElement | null;
+  const svg = root?.querySelector('svg') as SVGElement | null;
+  if (!svg) return;
+  attachSmilDebugListeners(svg, label);
+
+  // Log visibility and bounding box, observe viewport intersection
+  try { void svg.getBoundingClientRect(); } catch {}
+
+  try {
+    const observer = new IntersectionObserver(() => {}, { threshold: [0, 0.01, 0.25, 0.5, 0.75, 1] });
+    observer.observe(svg);
+  } catch {}
+};
+
+onMounted(() => {
+  nextTick(() => instrumentSvg(`mounted status=${statusString.value}`));
+});
+
+watch(statusString, (val) => {
+  nextTick(() => instrumentSvg(`statusChanged status=${val}`));
+});
 </script>
 
 <style lang="scss" scoped>

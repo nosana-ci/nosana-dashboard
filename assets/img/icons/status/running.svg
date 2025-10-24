@@ -9,6 +9,7 @@
       from="0 8.95 8.85"
       to="360 8.95 8.85"
       dur="5s"
+      begin="0s"
       repeatCount="indefinite" />
     </path>
   <path d="M10.7355 1C12.5151 1.40645 14.1041 2.40508 15.2422 3.83239C16.3802 5.25969 17 7.03109 17 8.85658C17 10.6821 16.3802 12.4535 15.2422 13.8808C14.1041 15.3081 12.5151 16.3067 10.7355 16.7132" stroke="#0066FF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
