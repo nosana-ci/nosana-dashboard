@@ -152,6 +152,10 @@
                       </span>
                       <span>Create Revision</span>
                     </a>
+
+                    <div v-if="!hasAnyActions" class="dropdown-item has-text-grey">
+                      <span>No actions available</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1088,7 +1092,14 @@ const canStop = computed(() => {
   return status === 'RUNNING' || status === 'STARTING';
 });
 
-const canArchive = computed(() => deploymentStatus.value !== 'ARCHIVED');
+const canArchive = computed(() => deploymentStatus.value !== 'ARCHIVED' && deploymentStatus.value !== 'RUNNING');
+
+const hasAnyActions = computed(() => {
+  const status = deploymentStatus.value;
+  const hasMainActions = canStart.value || canStop.value || canArchive.value;
+  const hasConfigActions = status !== 'ARCHIVED';
+  return hasMainActions || hasConfigActions;
+});
 
 const statusHelpText = computed(() => {
   switch (deploymentStatus.value) {
