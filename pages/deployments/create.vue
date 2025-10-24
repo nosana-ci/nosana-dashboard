@@ -150,7 +150,7 @@
               >
                 <p class="has-text-grey is-size-7 mb-2">
                   Insufficient credits. Need ${{
-                    (estimatedCost || 0).toFixed(2)
+                    (hourlyPrice * replicas * timeout).toFixed(3) 
                   }}, have ${{ creditBalance.toFixed(2) }}
                 </p>
                 <p class="has-text-grey is-size-7">
@@ -560,6 +560,23 @@ const computedJobTitle = computed(() => {
   return "Custom Job Definition";
 });
 
+const templateNames = computed(() => {
+  const names = new Set<string>();
+  (groupedTemplates.value || []).forEach((t: Template) => {
+    if (t?.name) names.add(t.name);
+  });
+  (templates.value || []).forEach((t: Template) => {
+    if (t?.name) names.add(t.name);
+  });
+  return names;
+});
+
+// Only auto update the name if it's empty or still equal to another template name
+const isNameTemplateManaged = computed(() => {
+  const name = deploymentName.value?.trim();
+  return !name || templateNames.value.has(name);
+});
+
 const computedDockerImage = computed(() => {
   if (
     selectedTemplate.value &&
@@ -621,7 +638,7 @@ const requiredNos = computed(() => {
 // Check if user can post job based on authentication and credits
 const canPostJob = computed(() => {
   if (status.value === "authenticated") {
-    const costUSD = totalPrice.value || 0;
+    const costUSD = (hourlyPrice.value * replicas.value * timeout.value) || 0;
     return creditBalance.value >= costUSD;
   }
   return false;
@@ -758,6 +775,11 @@ watch(
       nextTick(() => {
         isUpdatingFromJobDef.value = false;
       });
+    }
+
+    // set deployment name to selected template name if user hasn't customized
+    if (newTemplate?.name && isNameTemplateManaged.value) {
+      deploymentName.value = newTemplate.name;
     }
   },
   { deep: true }
