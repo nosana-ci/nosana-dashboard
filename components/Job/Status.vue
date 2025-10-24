@@ -112,92 +112,19 @@ const getIconComponent = (status: string) => {
   return StoppedIcon;
 };
 
-// Debug: instrument SVG mount and SMIL lifecycle
+const isSpinning = computed(() => {
+  return statusString.value === 'RUNNING' || statusString.value === 'QUEUED';
+});
+
 const iconRef = ref<HTMLElement | null>(null);
-
-const attachSmilDebugListeners = (svgEl: SVGElement, contextLabel: string) => {
-  try {
-    const animations = svgEl.querySelectorAll('animateTransform');
-    animations.forEach((anim) => {
-      const a = anim as SVGAnimateElement & { __dbg?: boolean };
-      if (a.__dbg) return;
-      
-      // Mark as processed
-      a.__dbg = true;
-
-      // Force restart animation by manipulating the dur attribute
-      const originalDur = a.getAttribute('dur') || '5s';
-      a.setAttribute('dur', '0.001s');
-      
-      // Use multiple approaches to ensure animation starts
-      requestAnimationFrame(() => {
-        try {
-          a.setAttribute('dur', originalDur);
-          a.beginElement();
-        } catch {}
-        
-        // Backup approach: restart animation
-        setTimeout(() => {
-          try {
-            a.endElement();
-            a.beginElement();
-          } catch {}
-        }, 10);
-      });
-    });
-  } catch (e) {
-    // no-op
-  }
-};
-
-const instrumentSvg = (label: string) => {
-  const root = iconRef.value as HTMLElement | null;
-  const svg = root?.querySelector('svg') as SVGElement | null;
-  if (!svg) return;
-  
-  // Force immediate visibility calculation
-  try { 
-    svg.getBoundingClientRect(); 
-    // Force layout/paint
-    svg.style.transform = 'translateZ(0)';
-  } catch {}
-
-  // Try multiple times to ensure animation starts
-  let attempts = 0;
-  const tryStartAnimation = () => {
-    attempts++;
-    attachSmilDebugListeners(svg, `${label}-attempt-${attempts}`);
-    
-    if (attempts < 3) {
-      setTimeout(tryStartAnimation, 50 * attempts);
-    }
-  };
-  
-  // Start immediately and with delays
-  tryStartAnimation();
-
-  try {
-    const observer = new IntersectionObserver(() => {
-      // When element becomes visible, try again
-      tryStartAnimation();
-    }, { threshold: [0, 0.01, 0.25, 0.5, 0.75, 1] });
-    observer.observe(svg);
-  } catch {}
-};
-
-onMounted(() => {
-  nextTick(() => instrumentSvg(`mounted status=${statusString.value}`));
-});
-
-watch(statusString, (val) => {
-  nextTick(() => instrumentSvg(`statusChanged status=${val}`));
-});
 </script>
 
 <style lang="scss" scoped>
 .tag {
   min-width: max-content;
 }
+
+// Animation styles are defined globally in assets/styles/global.scss
 
 @include until-widescreen {
   .tag {

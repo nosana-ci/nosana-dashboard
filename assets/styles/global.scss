@@ -1391,3 +1391,29 @@ button[disabled][data-tooltip] {
   min-width: 220px;
   margin-bottom: 0.75rem;
 }
+
+/* Ensure SMIL animations start immediately + CSS fallback for instant start */
+.tag.status-tag.is-warning .status-icon-wrap svg path:nth-child(2),
+.tag.status-tag.is-info .status-icon-wrap svg path:nth-child(2) {
+  /* CSS animation as fallback - will be overridden by SMIL if working */
+  animation: statusSpinFallback 4s linear infinite;
+  transform-origin: 8.95px 8.85px;
+}
+
+@keyframes statusSpinFallback {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Force SMIL animations to restart immediately when component mounts */
+.tag.status-tag.is-warning .status-icon-wrap svg,
+.tag.status-tag.is-info .status-icon-wrap svg {
+  /* Force browser to recalculate animations */
+  animation: none;
+}
+
+.tag.status-tag.is-warning .status-icon-wrap svg *,
+.tag.status-tag.is-info .status-icon-wrap svg * {
+  /* Ensure SMIL animations are not paused */
+  animation-play-state: running !important;
+}
