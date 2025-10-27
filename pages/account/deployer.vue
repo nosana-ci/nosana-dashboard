@@ -195,10 +195,13 @@
         <div class="is-flex is-justify-content-space-between is-align-items-center mb-4">
           <h3 class="title is-4 mb-0">Deployments</h3>
           <nuxt-link to="/deploy" class="button is-dark">
-            <span>Deploy Model</span>
+            <span class="icon">
+              <FontAwesomeIcon :icon="faPlus" />
+            </span>
+            <span>Create Deployment</span>
           </nuxt-link>
         </div>
-        <JobList job-type="posted" :items-per-page="10" class="mb-4" @update:total-deployments="totalDeployments = $event" />
+        <DeploymentsList :items-per-page="10" class="mb-4" @update:total-deployments="totalDeployments = $event" />
         
         <div class="columns mt-6">
           <div class="column is-4">
@@ -346,7 +349,7 @@
 </template>
 
 <script setup lang="ts">
-import JobList from '~/components/List/JobList.vue';
+import DeploymentsList from '~/components/List/DeploymentsList.vue';
 import { useWallet } from 'solana-wallets-vue';
 import { useStake } from '~/composables/useStake';
 import { useAPI } from '~/composables/useAPI';
