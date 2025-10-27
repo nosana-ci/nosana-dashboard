@@ -1,11 +1,5 @@
 <template>
-  <div v-if="!imageOnly" class="tag is-outlined is-light status-tag" :class="{
-    'is-success': statusString === 'SUCCESS' || statusString === 'COMPLETED',
-    'is-info': statusString === 'RUNNING' || statusString === 'PENDING',
-    'is-warning': statusString === 'QUEUED',
-    'is-danger': statusString === 'FAILED' || statusString === 'YAML_ERROR',
-    'is-dark': statusString === 'STOPPED'
-  }">
+  <div v-if="!imageOnly" class="tag is-outlined is-light status-tag" :class="getStatusClass(statusString)">
     <span ref="iconRef" class="status-icon-wrap">
       <component
         class="mr-2"
@@ -16,7 +10,7 @@
 
     <span v-if="!imageOnly">{{ statusString }}</span>
   </div>
-  <span v-else ref="iconRef" class="status-icon-wrap">
+  <span v-else ref="iconRef" class="status-icon-wrap status-tag" :class="getStatusClass(statusString)">
     <component :is="getIconComponent(statusString as string)" :key="statusString" />
   </span>
 </template>
@@ -27,6 +21,9 @@ import StoppedIcon from '@/assets/img/icons/status/stopped.svg?component';
 import FailedIcon from '@/assets/img/icons/status/failed.svg?component';
 import QueuedIcon from '@/assets/img/icons/status/queued.svg?component';
 import DoneIcon from '@/assets/img/icons/status/done.svg?component';
+import { useStatus } from '~/composables/useStatus';
+
+const { getStatusClass } = useStatus();
 const props = defineProps({
   status: {
     type: [String, Number],
@@ -115,53 +112,11 @@ const getIconComponent = (status: string) => {
   return StoppedIcon;
 };
 
-// Debug: instrument SVG mount and SMIL lifecycle
+const isSpinning = computed(() => {
+  return statusString.value === 'RUNNING' || statusString.value === 'QUEUED';
+});
+
 const iconRef = ref<HTMLElement | null>(null);
-
-const attachSmilDebugListeners = (svgEl: SVGElement, contextLabel: string) => {
-  try {
-    const animations = svgEl.querySelectorAll('animateTransform');
-    animations.forEach((anim) => {
-      const a = anim as SVGAnimateElement & { __dbg?: boolean };
-      if (a.__dbg) return;
-      // Attach listeners to ensure the browser sets up SMIL timelines
-      a.addEventListener('beginEvent', () => {});
-      a.addEventListener('repeatEvent', () => {});
-      a.addEventListener('endEvent', () => {});
-      a.__dbg = true;
-
-      // Attempt to force-start the SMIL animation immediately
-      try {
-        a.beginElement();
-      } catch {}
-    });
-  } catch (e) {
-    // no-op
-  }
-};
-
-const instrumentSvg = (label: string) => {
-  const root = iconRef.value as HTMLElement | null;
-  const svg = root?.querySelector('svg') as SVGElement | null;
-  if (!svg) return;
-  attachSmilDebugListeners(svg, label);
-
-  // Log visibility and bounding box, observe viewport intersection
-  try { void svg.getBoundingClientRect(); } catch {}
-
-  try {
-    const observer = new IntersectionObserver(() => {}, { threshold: [0, 0.01, 0.25, 0.5, 0.75, 1] });
-    observer.observe(svg);
-  } catch {}
-};
-
-onMounted(() => {
-  nextTick(() => instrumentSvg(`mounted status=${statusString.value}`));
-});
-
-watch(statusString, (val) => {
-  nextTick(() => instrumentSvg(`statusChanged status=${val}`));
-});
 </script>
 
 <style lang="scss" scoped>
@@ -169,9 +124,11 @@ watch(statusString, (val) => {
   min-width: max-content;
 }
 
+// Animation styles are defined globally in assets/styles/global.scss
+
 @include until-widescreen {
   .tag {
-    background: none !important;
+    background: transparent !important;
     border: none !important;
     padding: 0 !important;
 
@@ -179,8 +136,15 @@ watch(statusString, (val) => {
       margin: 0 !important;
     }
 
-    span {
+    span:not(.status-icon-wrap) {
       display: none;
+    }
+    
+    // Preserve color inheritance for status icons
+    &.status-tag {
+      svg {
+        color: inherit !important;
+      }
     }
   }
 }

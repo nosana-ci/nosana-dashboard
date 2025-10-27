@@ -10,11 +10,11 @@
     </p>
     <div class="buttons is-centered mt-3">
       <button
-        class="button is-primary is-small"
+        class="button is-dark"
         @click="showClaimModal = true"
         :disabled="loading"
       >
-        Claim Credit Code
+        <span>Claim Credit Code</span>
       </button>
     </div>
   </div>
@@ -40,12 +40,12 @@
         <div class="field is-grouped">
           <div class="control">
             <button
-              class="button is-primary"
+              class="button is-dark"
               @click="claimCreditCode"
               :disabled="!claimCode.trim() || claiming"
               :class="{ 'is-loading': claiming }"
             >
-              Claim Credits
+              <span>Claim Credits</span>
             </button>
           </div>
           <div class="control">
@@ -67,6 +67,8 @@
 import { ref, onMounted } from "vue";
 import { useToast } from "vue-toastification";
 import { trackEvent } from "~/utils/analytics";
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+import { faPlus } from '@fortawesome/free-solid-svg-icons';
 
 const config = useRuntimeConfig().public;
 const { token, data: userData } = useAuth();
@@ -180,7 +182,6 @@ defineExpose({
   font-size: 0.8rem;
   font-weight: 600;
   color: #7a7a7a;
-  margin-bottom: 0.5rem;
 }
 
 .equal-height-box {

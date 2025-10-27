@@ -1,8 +1,8 @@
 <template>
-  <div class="box" style="margin-top: 1rem; height: auto; max-height: none;">
+  <div class="box mt-4 has-text-left">
     <div class="columns is-multiline">
       <div class="column is-12">
-        <div class="is-flex is-justify-content-space-between is-align-items-center mb-4">
+        <div class="is-flex is-justify-content-flex-start is-align-items-center mb-4">
           <div class="select status-select">
             <select v-model="currentState">
               <option v-for="filterState in filterStates" 
@@ -13,10 +13,6 @@
               </option>
             </select>
           </div>
-          <nuxt-link to="/deployments/create" class="button has-background-white has-text-black" style="border: 1px solid black; transition: all 0.2s ease;">
-            <PlusSymbolIcon class="plus-icon" style="width: 14px; height: 14px; margin-right: 0.5rem; transition: fill 0.2s ease;" />
-            <span>Deploy Model</span>
-          </nuxt-link>
         </div>
 
         <div :class="{'min-height-container': loadingJobs || loadingNodeJobs}">
@@ -34,7 +30,7 @@
             </thead>
             <tbody>
               <tr v-if="loadingJobs || loadingNodeJobs">
-                <td colspan="7" class="has-text-centered loading-cell">Loading deployments...</td>
+                <td colspan="7" class="has-text-centered py-6">Loading deployments...</td>
               </tr>
               <tr v-else-if="displayedJobs.length === 0">
                 <td colspan="7" class="has-text-centered">No deployments found</td>
@@ -148,6 +144,7 @@ import { useMarkets } from '~/composables/useMarkets';
 import JobPrice from "~/components/Job/Price.vue";
 import SecondsFormatter from "~/components/SecondsFormatter.vue";
 import { computed } from 'vue';
+import { useStatus } from '~/composables/useStatus';
 
 const router = useRouter();
 const { publicKey: walletPublicKey } = useWallet();
@@ -302,15 +299,9 @@ const getStateButtonClass = (state: number | null) => {
   }
 };
 
-const getStatusClass = (state: number) => {
-  switch (state) {
-    case 2: return 'tag status-tag is-success';
-    case 1: return 'tag status-tag is-info';
-    case 0: return 'tag status-tag is-warning';
-    case 3: return 'tag status-tag is-dark';
-    default: return 'tag status-tag';
-  }
-};
+// Use global status system
+const { getStatusClass: globalStatusClass } = useStatus();
+const getStatusClass = (state: number) => `tag status-tag ${globalStatusClass(state)}`;
 
 const getStatusText = (state: number) => {
   switch (state) {
@@ -535,18 +526,11 @@ const isGHCR = (image: string) => {
   fill: #10E80C;
 }
 
-.status-icon {
-  width: 14px;
-  height: 14px;
-}
 
 .dark-mode .tag img[src*="status/stopped.svg"] {
   filter: brightness(100) !important;
 }
 
-.loading-cell {
-  padding: 2rem 0;
-}
 
 .min-height-container {
   min-height: 430px;

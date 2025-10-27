@@ -7,7 +7,7 @@
           <div>
             <h1 class="title is-4 has-text-weight-normal mb-0">{{ jobDefinitionId || 'Job' }}</h1>
           </div>
-          <div class="tag is-outlined is-light ml-6" :class="statusClass(props.job.state)">
+          <div class="tag is-outlined is-light status-tag ml-6" :class="statusClass(props.job.state)">
             <component :is="getStatusIcon(props.job.state)" class="mr-2" />
             <span>{{ getStatusText(props.job.state) }}</span>
           </div>
@@ -308,6 +308,7 @@ import StoppedIcon from '@/assets/img/icons/status/stopped.svg?component';
 import FailedIcon from '@/assets/img/icons/status/failed.svg?component';
 import QueuedIcon from '@/assets/img/icons/status/queued.svg?component';
 import DoneIcon from '@/assets/img/icons/status/done.svg?component';
+import { useStatus } from '~/composables/useStatus';
 
 import type { UseModal } from "~/composables/jobs/useModal";
 import type { Endpoints, UseJob } from "~/composables/jobs/useJob";
@@ -1081,21 +1082,8 @@ const handleActionClick = (actionFn: () => void) => {
   actionFn();
 };
 
-// Status helper functions matching deployment page
-const statusClass = (state: number) => {
-  switch (state) {
-    case 0: // QUEUED
-      return "is-warning";
-    case 1: // RUNNING
-      return "is-info"; 
-    case 2: // COMPLETED
-      return "is-success";
-    case 3: // STOPPED
-      return "is-dark";
-    default:
-      return "is-light";
-  }
-};
+// Use global status system
+const { getStatusClass: statusClass } = useStatus();
 
 // getStatusText function already exists above, removed duplicate
 
