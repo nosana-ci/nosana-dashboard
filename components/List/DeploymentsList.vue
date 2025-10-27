@@ -230,13 +230,23 @@ const filteredDeployments = computed(() => {
     )
   }
   
+  // Sort by updated_at (most recent first)
+  filtered = filtered.sort((a, b) => {
+    if (!a.updated_at && !b.updated_at) return 0
+    if (!a.updated_at) return 1
+    if (!b.updated_at) return -1
+    return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+  })
+  
   return filtered
 })
 
 // Create a computed property for the deployments actually displayed in the table
 const displayedDeployments = computed(() => {
-  // Take the filtered deployments and apply the itemsPerPage limit
-  return filteredDeployments.value.slice(0, props.itemsPerPage)
+  // Take the filtered deployments and apply pagination
+  const start = (currentPage.value - 1) * props.itemsPerPage
+  const end = start + props.itemsPerPage
+  return filteredDeployments.value.slice(start, end)
 })
 
 const totalDeployments = computed(() => filteredDeployments.value.length)
@@ -373,7 +383,8 @@ watch(() => currentPage.value, () => {
 }
 
 .deployment-name {
-  color: #202124 !important;
+  color: inherit;
+  font-weight: 500;
 }
 
 .min-height-container {

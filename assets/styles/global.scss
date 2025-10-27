@@ -10,34 +10,6 @@
   white-space: nowrap;
 }
 
-.table {
-  thead tr {
-    background: $grey-lightest;
-    
-    th {
-      color: $text-dark;
-      font-weight: $weight-medium;
-      padding: 0.75rem 1rem;
-      border-bottom: 1px solid $grey-lighter;
-    }
-  }
-  
-  tbody {
-    tr td {
-      padding: 0.75rem 1rem;
-      border-bottom: 1px solid $grey-lighter;
-      
-      &:first-child {
-        color: $text-dark;
-        font-weight: $weight-medium;
-      }
-    }
-    
-    tr:last-child td {
-      border-bottom: none;
-    }
-  }
-}
 
 // Section titles
 .title.is-5 {
