@@ -1215,7 +1215,9 @@ button[disabled][data-tooltip] {
 }
 
 /* Global status tag styling with consistent colors */
-.tag.status-tag {
+.tag.status-tag.is-outlined {
+  background-color: transparent !important;
+  
   &.is-success {
     color: var(--status-success-color) !important;
     border-color: var(--status-success-color) !important;
@@ -1255,7 +1257,6 @@ button[disabled][data-tooltip] {
   &.is-dark {
     color: var(--status-dark-color) !important;
     border-color: var(--status-dark-color) !important;
-    background-color: transparent !important;
     
     svg, .status-icon-wrap, .status-icon {
       color: var(--status-dark-color) !important;

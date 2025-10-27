@@ -530,10 +530,6 @@ const isGHCR = (image: string) => {
   fill: #10E80C;
 }
 
-.status-icon {
-  width: 14px;
-  height: 14px;
-}
 
 .dark-mode .tag img[src*="status/stopped.svg"] {
   filter: brightness(100) !important;
