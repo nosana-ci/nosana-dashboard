@@ -96,10 +96,31 @@
                 </span>
               </div>
               
-              <div style="display: flex; justify-content: space-between; align-items: start;">
+              <div class="mb-2" style="display: flex; justify-content: space-between; align-items: start;">
                 <span class="has-text-grey is-size-7">GPU</span>
                 <span class="has-text-dark is-size-7" style="text-align: right; max-width: 60%; overflow: hidden; text-overflow: ellipsis;">
                   {{ selectedMarket ? marketName : '-' }}
+                </span>
+              </div>
+
+              <div class="mb-2" style="display: flex; justify-content: space-between; align-items: start;" v-if="strategy && strategy !== 'SIMPLE'">
+                <span class="has-text-grey is-size-7">Strategy</span>
+                <span class="has-text-dark is-size-7" style="text-align: right; max-width: 60%; overflow: hidden; text-overflow: ellipsis;">
+                  {{ strategy }}
+                </span>
+              </div>
+
+              <div class="mb-2" style="display: flex; justify-content: space-between; align-items: start;" v-if="replicas && replicas > 1">
+                <span class="has-text-grey is-size-7">Replicas</span>
+                <span class="has-text-dark is-size-7" style="text-align: right; max-width: 60%; overflow: hidden; text-overflow: ellipsis;">
+                  {{ replicas }}
+                </span>
+              </div>
+
+              <div style="display: flex; justify-content: space-between; align-items: start;" v-if="timeout && timeout > 1">
+                <span class="has-text-grey is-size-7">Timeout (hours)</span>
+                <span class="has-text-dark is-size-7" style="text-align: right; max-width: 60%; overflow: hidden; text-overflow: ellipsis;">
+                  {{ timeout }}
                 </span>
               </div>
             </div>
@@ -292,6 +313,7 @@
                 v-model.number="replicas"
                 min="1"
                 max="100"
+                @blur="enforceReplicasMax"
               />
             </div>
             <p class="help">Number of parallel instances to run (1-100)</p>
@@ -706,6 +728,10 @@ const createDeployment = async () => {
     toast.error("Number of replicas must be greater than 0");
     return;
   }
+  if (replicas.value > 100) {
+    toast.error("Number of replicas cannot exceed 100");
+    return;
+  }
   if (timeout.value <= 0) {
     toast.error("Timeout must be greater than 0");
     return;
@@ -752,6 +778,15 @@ const createDeployment = async () => {
   } finally {
     isCreatingDeployment.value = false;
     loading.value = false;
+  }
+};
+
+const enforceReplicasMax = () => {
+  if (replicas.value > 100) {
+    replicas.value = 100;
+  }
+  if (replicas.value < 1) {
+    replicas.value = 1;
   }
 };
 
