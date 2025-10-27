@@ -131,7 +131,8 @@
       </div>
 
       <div v-if="canShowAccountData">
-        <h3 class="title is-4 mb-4">Status</h3>
+        <h3 class="title is-4 mb-0">Status</h3>
+        <div class="mb-4"></div>
         <div class="columns is-multiline mb-4">
           <div class="column is-3">
             <div class="box has-text-centered equal-height-box">
@@ -187,6 +188,10 @@
             </div>
           </template>
         </div>
+        
+        <!-- API Tokens Section -->
+        <ApiKeys class="pb-5" v-if="status === 'authenticated'" />
+        
         <div class="is-flex is-justify-content-space-between is-align-items-center mb-4">
           <h3 class="title is-4 mb-0">Deployments</h3>
           <nuxt-link to="/deploy" class="button is-dark">
@@ -195,12 +200,10 @@
         </div>
         <ListDeploymentsList job-type="posted" :items-per-page="10" class="mb-6 deployments-list" @update:total-deployments="totalDeployments = $event" />
         
-        <!-- API Tokens Section -->
-        <ApiKeys class="pb-5" v-if="status === 'authenticated'" />
-        
         <div class="columns mt-6">
           <div class="column is-4">
-            <h3 class="title is-4 mb-4">Welcome to Nosana</h3>
+            <h3 class="title is-4 mb-0">Welcome to Nosana</h3>
+            <div class="mb-4"></div>
             <div class="equal-height-boxes">
               <nuxt-link to="/deploy" class="box has-text-black p-2 mb-2 is-block">
                 <div class="is-flex is-align-items-start" style="margin: 8px 8px 0 8px;">
@@ -235,7 +238,8 @@
           </div>
           
           <div class="column is-4">
-            <h3 class="title is-4 mb-4">Cost and Usage</h3>
+            <h3 class="title is-4 mb-0">Cost and Usage</h3>
+            <div class="mb-4"></div>
             <div class="box" style="height: 100%;">
               <div class="content is-flex is-flex-direction-column is-justify-content-center" style="height: 100%;">
                 <div class="is-flex is-flex-direction-column" style="flex: 1; display: flex; justify-content: center;">
@@ -290,7 +294,8 @@
           </div>
           
           <div class="column is-4">
-            <h3 class="title is-4 mb-4">Monthly History</h3>
+            <h3 class="title is-4 mb-0">Monthly History</h3>
+            <div class="mb-4"></div>
             <div class="box" style="height: 100%; position: relative;">
               <div class="content" style="height: 100%;">
                 <div class="field is-grouped is-justify-content-end" style="position: absolute; top: 12px; right: 12px; z-index: 1;">
@@ -1177,10 +1182,6 @@ watch([invitationToken, status], ([token, authStatus]) => {
   margin-bottom: 0.5rem;
 }
 
-.title {
-  font-size: 1.5rem;
-  margin-bottom: 1rem !important;
-}
 
 .box {
   height: 100%;
