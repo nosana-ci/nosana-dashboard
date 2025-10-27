@@ -19,16 +19,18 @@
         <div class="p-5 deployment-header">
           <div class="is-flex is-justify-content-space-between is-align-items-center">
             <div class="is-flex is-align-items-center">
-              <NuxtLink to="/deployments" class="button is-ghost back-button mr-4">
+              <NuxtLink to="/account/deployer" class="button is-ghost back-button mr-4">
                 <span class="icon is-small">
-                  <ArrowUpIcon class="icon-16 transform-rotate-270" />
+                  <ArrowUpIcon class="icon-16 transform-rotate-270" style="color: black;" />
                 </span>
               </NuxtLink>
               <div>
                 <h1 class="title is-4 has-text-weight-normal mb-0">{{ deployment.name }}</h1>
               </div>
-              <div class="tag is-outlined is-light ml-6" :class="statusClass(deployment.status)">
-                <component :is="getStatusIcon(deployment.status)" class="mr-2" />
+              <div class="tag is-outlined is-light status-tag ml-6" :class="statusClass(deployment.status)">
+                <span ref="headerIconRef" class="status-icon-wrap">
+                  <component :is="getStatusIcon(deployment.status)" class="mr-2" :key="deployment.status" />
+                </span>
                 <span>{{ deployment.status }}</span>
               </div>
             </div>
@@ -150,6 +152,10 @@
                       </span>
                       <span>Create Revision</span>
                     </a>
+
+                    <div v-if="!hasAnyActions" class="dropdown-item has-text-grey">
+                      <span>No actions available</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -176,7 +182,27 @@
                     <td>Replicas count</td>
                     <td>{{ deployment.replicas }}</td>
                   </tr>
-                  
+                  <tr>
+                    <td>GPU</td>
+                    <td v-if="deployment && deployment.market">
+                      <span
+                        v-if="testgridMarkets &&
+                          testgridMarkets.find(
+                            (tgm: any) =>
+                              tgm.address === deployment?.market
+                          )
+                        "
+                      >
+                        {{
+                          testgridMarkets.find(
+                            (tgm: any) =>
+                              tgm.address === deployment?.market
+                          ).name
+                        }}
+                      </span>
+                      <span v-else>{{ deployment.market }}</span>
+                    </td>
+                  </tr>
                   <tr>
                     <td>Container timeout</td>
                     <td>{{ Math.floor(deployment.timeout / 60) }} hours</td>
@@ -375,17 +401,20 @@
             </div>
             
             <div v-else-if="tasks.length > 0">
-              <div v-for="task in tasks" :key="task.id" class="notification is-light mb-2">
+              <div v-for="task in tasks" :key="task.deploymentId + task.created_at" class="notification is-light mb-2">
                 <div class="is-flex is-justify-content-space-between is-align-items-center">
                   <div class="is-flex-grow-1">
                     <div class="is-flex is-align-items-center mb-2">
-                      <span class="tag" :class="getTaskStatusClass(task.status)">{{ task.status || 'PENDING' }}</span>
-                      <span class="tag is-white is-small ml-2">{{ task.type || 'Job' }}</span>
+                      <span class="tag is-info">SCHEDULED</span>
+                      <span class="tag is-white is-small ml-2">{{ task.task }}</span>
                     </div>
-                    <p class="is-family-monospace is-size-7 has-text-grey">{{ task.id }}</p>
+                    <p class="is-size-7 has-text-grey">
+                      Due: {{ formatDate(task.due_at) }}
+                    </p>
+                    <p class="is-family-monospace is-size-7 has-text-grey">{{ task.deploymentId }}</p>
                   </div>
-                  <div style="min-width: 140px; text-align: right;">
-                    <p class="is-size-7 has-text-grey">{{ formatDate(task.updated_at) }}</p>
+                  <div class="time-display">
+                    <p class="is-size-7 has-text-grey">Created: {{ formatDate(task.created_at) }}</p>
                   </div>
                 </div>
               </div>
@@ -412,9 +441,9 @@
                       <span class="tag" :class="eventTypeClass(event.type)">{{ event.type }}</span>
                       <span class="tag is-white is-small ml-2">{{ event.category }}</span>
                     </div>
-                    <p class="is-size-7" :class="{ 'is-family-monospace': event.message.length > 200 }" style="white-space: pre-wrap; word-break: break-word;">{{ event.message }}</p>
+                    <p class="is-size-7 event-message" :class="{ 'is-family-monospace': event.message.length > 200 }">{{ event.message }}</p>
                   </div>
-                  <div class="ml-3" style="min-width: 140px; text-align: right;">
+                  <div class="ml-3 time-display">
                     <p class="is-size-7 has-text-grey">{{ formatDate(event.created_at) }}</p>
                     <a
                       v-if="event.tx"
@@ -591,7 +620,6 @@
                 class="input is-family-monospace"
                 v-model="newSchedule"
                 :placeholder="deployment.schedule || '0 * * * *'"
-                style="font-size: 14px;"
               />
             </div>
             <p class="help">
@@ -713,6 +741,7 @@ import StoppedIcon from '@/assets/img/icons/status/stopped.svg?component';
 import FailedIcon from '@/assets/img/icons/status/failed.svg?component';
 import QueuedIcon from '@/assets/img/icons/status/queued.svg?component';
 import DoneIcon from '@/assets/img/icons/status/done.svg?component';
+import { useStatus } from '~/composables/useStatus';
 
 // Types
 interface DeploymentJob {
@@ -746,8 +775,6 @@ const { getIpfs } = useIpfs();
 
 // State
 const deployment = ref<ExtendedDeployment | null>(null);
-const marketData = ref<any>(null);
-const loadingMarket = ref(false);
 const loading = ref(true);
 const error = ref<string | null>(null);
 const activeTab = ref("overview");
@@ -770,6 +797,31 @@ const showScheduleModal = ref(false);
 const showRevisionModal = ref(false);
 const revisionJobDefinition = ref<JobDefinition | null>(null);
 const actionsDropdown = ref<HTMLElement | null>(null);
+// Debug instrumentation for page header icon
+const headerIconRef = ref<HTMLElement | null>(null);
+const { data: testgridMarkets } = useAPI("/api/markets");
+
+const attachSmilDebugListeners = (svgEl: SVGElement, label: string) => {
+  try {
+    const animations = svgEl.querySelectorAll('animateTransform');
+    animations.forEach((anim: any) => {
+      if (anim.__dbg) return;
+      // attach to initialise timeline without logging
+      anim.addEventListener('beginEvent', () => {});
+      anim.addEventListener('repeatEvent', () => {});
+      anim.addEventListener('endEvent', () => {});
+      anim.__dbg = true;
+    });
+  } catch {}
+};
+
+const instrumentHeaderIcon = () => {
+  const svg = headerIconRef.value?.querySelector('svg') as SVGElement | null;
+  if (!svg || !deployment.value) return;
+  attachSmilDebugListeners(svg, `dep=${deployment.value.id} status=${deployment.value.status}`);
+};
+
+watch(() => deployment.value?.status, () => nextTick(instrumentHeaderIcon), { immediate: true });
 const statusPollingInterval = ref<NodeJS.Timeout | null>(null);
 const jobPollingInterval = ref<NodeJS.Timeout | null>(null);
 // Status dot helper
@@ -797,30 +849,8 @@ const statusDotClass = computed(() => {
 });
 
 // Methods
-const statusClass = (status: string) => {
-  switch (status?.toUpperCase()) {
-    case "RUNNING":
-      return "is-info";  // Blue like job status
-    case "COMPLETED":
-      return "is-success";  // Green for completed
-    case "ERROR":
-      return "is-danger";
-    case "STOPPED":
-      return "is-dark";
-    case "DRAFT":
-      return "is-light";
-    case "STARTING":
-      return "is-info";
-    case "STOPPING":
-      return "is-warning";
-    case "INSUFFICIENT_FUNDS":
-      return "is-danger";
-    case "ARCHIVED":
-      return "is-grey";
-    default:
-      return "is-light";
-  }
-};
+// Use global status system for deployment statuses
+const { getStatusClass: statusClass } = useStatus();
 
 const getStatusIcon = (status: string) => {
   switch (status?.toUpperCase()) {
@@ -975,20 +1005,6 @@ const loadJobDefinition = async () => {
   }
 };
 
-const loadMarket = async (marketId: string) => {
-  if (!marketId) return;
-
-  try {
-    loadingMarket.value = true;
-    const { data } = await useAPI(`/api/markets/${marketId}/`);
-    marketData.value = data.value;
-  } catch (err: any) {
-    console.error("Error loading market:", err);
-    // Keep marketData as null to show fallback
-  } finally {
-    loadingMarket.value = false;
-  }
-};
 
 const loadDeployment = async (silent = false) => {
   if (!isAuthenticated.value) {
@@ -1009,11 +1025,10 @@ const loadDeployment = async (silent = false) => {
 
     deployment.value = data as Deployment;
 
-    if (deployment.value.market) {
-      await loadMarket(deployment.value.market.toString());
-    }
-
     await loadJobDefinition();
+    
+    // Load tasks for scheduled deployments
+    await loadTasks();
 
     if (deployment.value.jobs && deployment.value.jobs.length > 0) {
       for (const job of deployment.value.jobs) {
@@ -1063,7 +1078,14 @@ const canStop = computed(() => {
   return status === 'RUNNING' || status === 'STARTING';
 });
 
-const canArchive = computed(() => deploymentStatus.value !== 'ARCHIVED');
+const canArchive = computed(() => deploymentStatus.value !== 'ARCHIVED' && deploymentStatus.value !== 'RUNNING' && deploymentStatus.value !== 'STOPPING' && deploymentStatus.value !== 'DRAFT');
+
+const hasAnyActions = computed(() => {
+  const status = deploymentStatus.value;
+  const hasMainActions = canStart.value || canStop.value || canArchive.value;
+  const hasConfigActions = status !== 'ARCHIVED';
+  return hasMainActions || hasConfigActions;
+});
 
 const statusHelpText = computed(() => {
   switch (deploymentStatus.value) {
@@ -1274,7 +1296,7 @@ const executeDeploymentAction = async (
     toast.success(successMessage);
 
     if (shouldRedirect) {
-      setTimeout(() => router.push("/deployment"), 2000);
+      setTimeout(() => router.push("/deployments"), 2000);
     } else {
       // Wait a moment for backend to process, then refresh
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -1523,15 +1545,8 @@ const getJobStateText = (state: number): string => {
   }
 };
 
-const getJobStateClass = (state: number): string => {
-  switch (state) {
-    case 0: return 'is-info'; // QUEUED
-    case 1: return 'is-success'; // RUNNING
-    case 2: return 'is-dark'; // COMPLETED
-    case 3: return 'is-warning'; // STOPPED
-    default: return 'is-light'; // UNKNOWN
-  }
-};
+// Use global status system
+const { getStatusClass: getJobStateClass } = useStatus();
 
 const getTaskStatusClass = (status: string): string => {
   switch (status?.toUpperCase()) {
@@ -1546,29 +1561,17 @@ const getTaskStatusClass = (status: string): string => {
 
 const loadTasks = async () => {
   if (!deployment.value) {
-    console.log('loadTasks: No deployment loaded');
     return;
   }
   
-  console.log('=== LOADING TASKS ===');
-  console.log('Deployment ID:', deployment.value.id);
-  
   tasksLoading.value = true;
   try {
-    const result = await deployment.value.getTasks();
-    console.log('Tasks API response:', result);
-    console.log('Number of tasks:', result.length);
-    if (result.length > 0) {
-      console.log('First task example:', result[0]);
-    }
-    tasks.value = result;
+    const { data } = await useAPI(`/api/deployments/${deployment.value.id}/tasks`, {
+      auth: true
+    });
+    tasks.value = data.value || [];
   } catch (err: any) {
     console.error("Load tasks error:", err);
-    console.error("Error details:", {
-      message: err.message,
-      stack: err.stack,
-      response: err.response,
-    });
     toast.error(`Failed to load tasks: ${err.message}`);
     tasks.value = [];
   } finally {
@@ -1672,16 +1675,42 @@ watch(
   { immediate: true }
 );
 
-// Watchers
+// Debounced authentication watcher to prevent flickering
+let authTimeout: NodeJS.Timeout | null = null;
+let hasInitiallyLoaded = false;
+
 watch(
   isAuthenticated,
-  (authed) => {
-    if (authed) {
-      loadDeployment();
-    } else {
+  (authed, oldAuthed) => {
+    // Clear any existing timeout
+    if (authTimeout) {
+      clearTimeout(authTimeout);
+    }
+    
+    // If user is switching from authenticated to unauthenticated, react immediately
+    // to prevent seeing deployment data they shouldn't see
+    if (oldAuthed === true && authed === false) {
       error.value = "Please log in to view deployments";
       deployment.value = null;
+      return;
     }
+    
+    // For all other state changes, wait longer for auth to stabilize
+    // This prevents the "please login" error from showing during initial page load
+    const debounceTime = hasInitiallyLoaded ? 500 : 1500;
+    
+    authTimeout = setTimeout(() => {
+      if (authed) {
+        // Only load if deployment doesn't exist yet
+        if (!deployment.value) {
+          loadDeployment();
+          hasInitiallyLoaded = true;
+        }
+      } else {
+        error.value = "Please log in to view deployments";
+        deployment.value = null;
+      }
+    }, debounceTime);
   },
   { immediate: true }
 );
@@ -1737,15 +1766,15 @@ useHead({
   margin-right: 0.4rem;
 }
 
-.status-running { background-color: #22c55e; }
-.status-starting { background-color: #3b82f6; }
-.status-draft { background-color: #9ca3af; }
-.status-stopped { background-color: #6b7280; }
-.status-stopping { background-color: #f59e0b; }
-.status-error { background-color: #ef4444; }
-.status-insufficient { background-color: #f59e0b; }
-.status-archived { background-color: #d1d5db; }
-.status-unknown { background-color: #cbd5e1; }
+.status-running { background-color: $success; }
+.status-starting { background-color: $info; }
+.status-draft { background-color: $grey; }
+.status-stopped { background-color: $grey-dark; }
+.status-stopping { background-color: $warning; }
+.status-error { background-color: $danger; }
+.status-insufficient { background-color: $warning; }
+.status-archived { background-color: $grey-light; }
+.status-unknown { background-color: $grey-lighter; }
 
 .sep {
   opacity: 0.6;
@@ -1777,18 +1806,14 @@ useHead({
 }
 
 .box.is-borderless {
-  padding: 0.5rem !important;
+  padding: 0 !important;
 }
 
-.deployment-tabs {
-  display: flex;
-  gap: 8px;
-}
 
 .tag.is-stopped {
-  background-color: #f8f9fa !important;
-  border-color: #dee2e6 !important;
-  color: #6c757d !important;
+  background-color: $grey-lightest !important;
+  border-color: $grey-lighter !important;
+  color: $grey-dark !important;
   
   img {
     width: 12px !important;
@@ -1797,9 +1822,9 @@ useHead({
 }
 
 .dark-mode .tag.is-stopped {
-  background-color: #2c2c2c !important;
-  border-color: #3a3a3a !important;
-  color: #9e9e9e !important;
+  background-color: $grey-darker !important;
+  border-color: $grey-dark !important;
+  color: $grey !important;
   
   img {
     width: 12px !important;

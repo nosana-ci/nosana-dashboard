@@ -73,7 +73,7 @@
                 style="vertical-align: middle"
                 data-tooltip="The percentage of time this host has been available to process deployments while in queue"
               >
-                <img src="~/assets/img/icons/info.svg" />
+                <InfoIcon />
               </span>
             </span>
           </span>
@@ -240,6 +240,7 @@
 <script lang="ts" setup>
 import { type Market } from "@nosana/sdk";
 import JobStatus from "~/components/Job/Status.vue";
+import InfoIcon from '@/assets/img/icons/info.svg?component';
 import HostSpecifications from "~/components/Info/HostSpecifications.vue";
 const { nosana } = useSDK();
 const { data: testgridMarkets, pending: loadingTestgridMarkets } =

@@ -5,7 +5,7 @@
       :style="{ overflowY: 'scroll', border: 'none', height: 'auto', marginTop: '1.5rem' }"
     >
       <div>
-          <h2 class="title is-5 mb-4 px-3" style="color: #202124;">{{ title || 'Configure job definition' }}</h2>
+          <h2 class="title is-5 mb-4" style="color: #202124;">{{ title || 'Configure job definition' }}</h2>
         <!-- START: New Template Info Box (above editor) -->
         <div class="px-3 pt-0 pb-2" style="width: 100%; display: flex;">
           <div class="is-flex is-align-items-start is-justify-content-space-between" style="width: 100%;">
@@ -251,8 +251,10 @@ const isEditorCollapsed = computed({
 const jobDefinition = computed({
   get: () => (props.jobDefinition === null ? {} : props.jobDefinition),
   set: (value: any) => {
-    if (typeof value === 'string') {
-      emit('update:jobDefinition', null);
+    if (typeof value === 'string' || value === undefined) {
+      // Don't emit for string or undefined values - this causes loading state
+      // The JSON editor will handle invalid JSON display
+      return;
     } else {
       emit('update:jobDefinition', value as JobDefinition);
     }

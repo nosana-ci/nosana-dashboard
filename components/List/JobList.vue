@@ -1,8 +1,8 @@
 <template>
-  <div class="box" style="margin-top: 1rem; height: auto; max-height: none;">
+  <div class="box mt-4 has-text-left">
     <div class="columns is-multiline">
       <div class="column is-12">
-        <div class="is-flex is-justify-content-space-between is-align-items-center mb-4">
+        <div class="is-flex is-justify-content-flex-start is-align-items-center mb-4">
           <div class="select status-select">
             <select v-model="currentState">
               <option v-for="filterState in filterStates" 
@@ -13,10 +13,6 @@
               </option>
             </select>
           </div>
-          <nuxt-link to="/deploy" class="button has-background-white has-text-black" style="border: 1px solid black; transition: all 0.2s ease;">
-            <PlusSymbolIcon class="plus-icon" style="width: 14px; height: 14px; margin-right: 0.5rem; transition: fill 0.2s ease;" />
-            <span>Deploy Model</span>
-          </nuxt-link>
         </div>
 
         <div :class="{'min-height-container': loadingJobs || loadingNodeJobs}">
@@ -34,7 +30,7 @@
             </thead>
             <tbody>
               <tr v-if="loadingJobs || loadingNodeJobs">
-                <td colspan="7" class="has-text-centered loading-cell">Loading deployments...</td>
+                <td colspan="7" class="has-text-centered py-6">Loading deployments...</td>
               </tr>
               <tr v-else-if="displayedJobs.length === 0">
                 <td colspan="7" class="has-text-centered">No deployments found</td>
@@ -44,7 +40,7 @@
                   <td>
                     <NuxtLink :to="`/jobs/${job.address}`" class="clickable-row-link">
                       <div class="clickable-row-cell-content is-flex is-align-items-center">
-                        <img src="@/assets/img/icons/nvidia.svg" alt="Nvidia" class="mr-2" style="width: 20px; height: 20px;">
+                        <NvidiaIcon alt="Nvidia" class="mr-2" style="width: 20px; height: 20px;" />
                         <span v-if="testgridMarkets && testgridMarkets.find((tgm: any) => tgm.address === job.market.toString())">
                           {{ testgridMarkets.find((tgm: any) => tgm.address === job.market.toString()).name }}
                         </span>
@@ -63,7 +59,7 @@
                       <template v-else>
                         <template v-if="isGHCR(getJobImage(job))">
                           <div class="container-icon mr-2">
-                            <img src="@/assets/img/icons/github.svg" alt="GitHub" class="github-icon" style="width: 16px; height: 16px;">
+                            <GithubIcon alt="GitHub" class="github-icon" style="width: 16px; height: 16px;" />
                           </div>
                         </template>
                         <template v-else>
@@ -102,14 +98,14 @@
                   </td>
                   <td>
                     <div class="clickable-row-cell-content">
-                      <div class="tag is-outlined" :class="{
+                      <div class="tag is-outlined status-tag" :class="{
                         'is-success': job.state === 2,
                         'is-info': job.state === 1,
                         'is-warning': job.state === 0,
-                        'has-background-white has-text-black': job.state === 3,
-                        'is-light': job.state !== 3
-                      }" :style="job.state === 3 ? 'border: 1px solid black;' : ''">
-                        <img class="mr-2 status-icon" :src="`/img/icons/status/${getStatusIcon(job.state)}.svg`" :style="job.state === 3 ? 'filter: brightness(0);' : ''" />
+                        'is-dark': job.state === 3,
+                        'is-light': ![0,1,2,3].includes(job.state)
+                      }">
+                        <component class="mr-2 status-icon" :is="getStatusIconComponent(job.state)" />
                         <span>{{ getStatusText(job.state) }}</span>
                       </div>
                     </div>
@@ -135,12 +131,20 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
 import { useWallet } from 'solana-wallets-vue';
+import NvidiaIcon from '@/assets/img/icons/nvidia.svg?component';
+import GithubIcon from '@/assets/img/icons/github.svg?component';
 import PlusSymbolIcon from '@/assets/img/icons/plus_symbol.svg?component';
+import RunningIcon from '@/assets/img/icons/status/running.svg?component';
+import StoppedIcon from '@/assets/img/icons/status/stopped.svg?component';
+import FailedIcon from '@/assets/img/icons/status/failed.svg?component';
+import QueuedIcon from '@/assets/img/icons/status/queued.svg?component';
+import DoneIcon from '@/assets/img/icons/status/done.svg?component';
 import { useTemplates } from '~/composables/useTemplates';
 import { useMarkets } from '~/composables/useMarkets';
 import JobPrice from "~/components/Job/Price.vue";
 import SecondsFormatter from "~/components/SecondsFormatter.vue";
 import { computed } from 'vue';
+import { useStatus } from '~/composables/useStatus';
 
 const router = useRouter();
 const { publicKey: walletPublicKey } = useWallet();
@@ -295,15 +299,9 @@ const getStateButtonClass = (state: number | null) => {
   }
 };
 
-const getStatusClass = (state: number) => {
-  switch (state) {
-    case 2: return 'tag is-success';
-    case 1: return 'tag is-info';
-    case 0: return 'tag is-warning';
-    case 3: return 'tag is-dark';
-    default: return 'tag';
-  }
-};
+// Use global status system
+const { getStatusClass: globalStatusClass } = useStatus();
+const getStatusClass = (state: number) => `tag status-tag ${globalStatusClass(state)}`;
 
 const getStatusText = (state: number) => {
   switch (state) {
@@ -315,13 +313,13 @@ const getStatusText = (state: number) => {
   }
 };
 
-const getStatusIcon = (state: number) => {
+const getStatusIconComponent = (state: number) => {
   switch (state) {
-    case 2: return 'done';
-    case 1: return 'running';
-    case 0: return 'queued';
-    case 3: return 'stopped';
-    default: return 'stopped';
+    case 2: return DoneIcon;
+    case 1: return RunningIcon;
+    case 0: return QueuedIcon;
+    case 3: return StoppedIcon;
+    default: return StoppedIcon;
   }
 };
 
@@ -528,18 +526,11 @@ const isGHCR = (image: string) => {
   fill: #10E80C;
 }
 
-.status-icon {
-  width: 14px;
-  height: 14px;
-}
 
 .dark-mode .tag img[src*="status/stopped.svg"] {
   filter: brightness(100) !important;
 }
 
-.loading-cell {
-  padding: 2rem 0;
-}
 
 .min-height-container {
   min-height: 430px;

@@ -1,18 +1,29 @@
 <template>
-  <div v-if="!imageOnly" class="tag is-outlined is-light" :class="{
-    'is-success': statusString === 'SUCCESS' || statusString === 'COMPLETED',
-    'is-info': statusString === 'RUNNING' || statusString === 'PENDING',
-    'is-warning': statusString === 'QUEUED',
-    'is-danger': statusString === 'FAILED' || statusString === 'YAML_ERROR',
-  }">
-    <img class="mr-2" :src="`/img/icons/status/${getIcon(statusString as string)}.svg`" />
+  <div v-if="!imageOnly" class="tag is-outlined is-light status-tag" :class="getStatusClass(statusString)">
+    <span ref="iconRef" class="status-icon-wrap">
+      <component
+        class="mr-2"
+        :is="getIconComponent(statusString as string)"
+        :key="statusString"
+      />
+    </span>
 
     <span v-if="!imageOnly">{{ statusString }}</span>
   </div>
-  <img v-else :src="`/img/icons/status/${getIcon(statusString as string)}.svg`" />
+  <span v-else ref="iconRef" class="status-icon-wrap status-tag" :class="getStatusClass(statusString)">
+    <component :is="getIconComponent(statusString as string)" :key="statusString" />
+  </span>
 </template>
 
 <script setup lang="ts">
+import RunningIcon from '@/assets/img/icons/status/running.svg?component';
+import StoppedIcon from '@/assets/img/icons/status/stopped.svg?component';
+import FailedIcon from '@/assets/img/icons/status/failed.svg?component';
+import QueuedIcon from '@/assets/img/icons/status/queued.svg?component';
+import DoneIcon from '@/assets/img/icons/status/done.svg?component';
+import { useStatus } from '~/composables/useStatus';
+
+const { getStatusClass } = useStatus();
 const props = defineProps({
   status: {
     type: [String, Number],
@@ -93,19 +104,19 @@ const statusString = computed(() => {
   return resolved as string;
 });
 
-const getIcon = (status: string) => {
-  let icon = 'stopped';
-  if (status === 'QUEUED') {
-    icon = 'queued';
-  } else if (status === 'RUNNING') {
-    icon = 'running';
-  } else if (status === 'COMPLETED' || status === 'SUCCESS') {
-    icon = 'done';
-  } else if (status === 'FAILED' || status === 'YAML_ERROR') {
-    icon = 'failed';
-  }
-  return icon;
+const getIconComponent = (status: string) => {
+  if (status === 'QUEUED') return QueuedIcon;
+  if (status === 'RUNNING') return RunningIcon;
+  if (status === 'COMPLETED' || status === 'SUCCESS') return DoneIcon;
+  if (status === 'FAILED' || status === 'YAML_ERROR') return FailedIcon;
+  return StoppedIcon;
 };
+
+const isSpinning = computed(() => {
+  return statusString.value === 'RUNNING' || statusString.value === 'QUEUED';
+});
+
+const iconRef = ref<HTMLElement | null>(null);
 </script>
 
 <style lang="scss" scoped>
@@ -113,9 +124,11 @@ const getIcon = (status: string) => {
   min-width: max-content;
 }
 
+// Animation styles are defined globally in assets/styles/global.scss
+
 @include until-widescreen {
   .tag {
-    background: none !important;
+    background: transparent !important;
     border: none !important;
     padding: 0 !important;
 
@@ -123,8 +136,15 @@ const getIcon = (status: string) => {
       margin: 0 !important;
     }
 
-    span {
+    span:not(.status-icon-wrap) {
       display: none;
+    }
+    
+    // Preserve color inheritance for status icons
+    &.status-tag {
+      svg {
+        color: inherit !important;
+      }
     }
   }
 }

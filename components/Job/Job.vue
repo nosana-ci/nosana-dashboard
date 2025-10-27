@@ -1,18 +1,35 @@
 <template>
   <!-- Header Section -->
-  <div class="box">
-    <div class="content mb-5">
-      <div class="is-flex is-justify-content-space-between is-align-items-center mb-4">
-        <div class="is-flex is-align-items-center">
-          <div>
-            <h1 class="title is-4 has-text-weight-normal mb-0">{{ jobDefinitionId || 'Job' }}</h1>
+  <div class="box is-borderless">
+    <!-- Header Section -->
+    <div class="p-5 deployment-header">
+        <div class="is-flex is-justify-content-space-between is-align-items-center">
+          <div class="is-flex is-align-items-center">
+            <NuxtLink :to="props.deploymentId ? `/deployments/${props.deploymentId}` : '/account/deployer'" class="button is-ghost back-button mr-4">
+              <span class="icon is-small">
+                <ArrowUpIcon class="icon-16 transform-rotate-270" style="color: black;" />
+              </span>
+            </NuxtLink>
+            <div>
+              <h1 class="title is-4 has-text-weight-normal mb-0">{{ jobImages || props.job.address || jobDefinitionId || 'Job' }}</h1>
+            </div>
+            <div class="tag is-outlined is-light status-tag ml-6" :class="statusClass(props.job.state)">
+              <span ref="headerIconRef" class="status-icon-wrap">
+                <component :is="getStatusIcon(props.job.state)" class="mr-2" :key="props.job.state" />
+              </span>
+              <span>{{ getStatusText(props.job.state) }}</span>
+            </div>
           </div>
-          <div class="tag is-outlined is-light ml-6" :class="statusClass(props.job.state)">
-            <component :is="getStatusIcon(props.job.state)" class="mr-2" />
-            <span>{{ getStatusText(props.job.state) }}</span>
-          </div>
-        </div>
-        <div class="job-tabs">
+          <div class="deployment-tabs">
+          <button 
+            v-for="tab in ['overview', 'system-logs']"
+            :key="tab"
+            @click="activeTab = tab"
+            :class="{ 'is-active': activeTab === tab }"
+            class="tab-button"
+          >
+            {{ tab === 'system-logs' ? 'System Logs' : tab.charAt(0).toUpperCase() + tab.slice(1) }}
+          </button>
           <!-- Actions Dropdown -->
           <div class="dropdown is-right" :class="{ 'is-active': showActionsDropdown }" ref="actionsDropdown">
             <div class="dropdown-trigger">
@@ -20,12 +37,12 @@
                 class="tab-button actions-button" 
                 @click="toggleActionsDropdown"
                 :class="{ 'is-loading': loading }"
-                  >
-                    <span>Actions</span>
-                    <span class="icon is-small dropdown-arrow ml-1" :class="{ 'is-rotated': showActionsDropdown }">
-                      <ChevronDownIcon />
-                    </span>
-                  </button>
+              >
+                <span>Actions</span>
+                <span class="icon is-small dropdown-arrow ml-1" :class="{ 'is-rotated': showActionsDropdown }">
+                  <ChevronDownIcon />
+                </span>
+              </button>
             </div>
             <div class="dropdown-menu">
               <div class="dropdown-content">
@@ -57,200 +74,181 @@
           </div>
         </div>
       </div>
+    </div>
 
-      <!-- Quick Details Grid - matching host page pattern -->
-      <div class="columns is-multiline is-variable is-0 no-padding is-justify-content-flex-start mb-0">
-        <!-- Job Address -->
-        <div class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
-          <div class="quick-detail-item">
-            <span class="quick-detail-label">Job address</span>
-            <span class="quick-detail-value">
-              <a :href="`https://solscan.io/account/${props.job.address}`" target="_blank" class="has-text-link address is-family-monospace">
-                {{ props.job.address }}
-              </a>
-            </span>
+    <!-- Tab Content -->
+    <div class="p-5">
+      <!-- Overview Tab -->
+      <div v-if="activeTab === 'overview'">
+        <!-- Job Details Section -->
+        <div class="mb-5">
+          <h2 class="title is-5 mb-3">Job details</h2>
+          <div class="box is-borderless">
+            <table class="table is-fullwidth mb-0">
+              <tbody>
+                <tr>
+                  <td class="has-min-width-250">Job address</td>
+                  <td>
+                    <a :href="`https://solscan.io/account/${props.job.address}`" target="_blank" class="has-text-link is-family-monospace">
+                      {{ props.job.address }}
+                    </a>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Deployer address</td>
+                  <td>
+                    <a :href="`https://solscan.io/account/${props.job.project}`" target="_blank" class="has-text-link is-family-monospace">
+                      {{ props.job.project?.toString() }}
+                    </a>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Node address</td>
+                  <td>
+                    <span v-if="props.job.node && props.job.node !== '11111111111111111111111111111111'">
+                      <nuxt-link :to="`/host/${props.job.node}`" class="has-text-link is-family-monospace">
+                        {{ props.job.node }}
+                      </nuxt-link>
+                    </span>
+                    <span v-else class="has-text-grey">--</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Market address</td>
+                  <td>
+                    <nuxt-link :to="`/markets/${props.job.market}`" class="has-text-link is-family-monospace">
+                      {{ props.job.market?.toString() }}
+                    </nuxt-link>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Start time</td>
+                  <td>{{ formatDateRelative(props.job.timeStart) }}</td>
+                </tr>
+                <tr>
+                  <td>End time</td>
+                  <td>
+                    <span v-if="props.job.timeEnd && props.job.timeEnd > 0">
+                      {{ formatDateRelative(props.job.timeEnd) }}
+                    </span>
+                    <span v-else class="has-text-grey">--</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Docker image</td>
+                  <td>
+                    <span v-if="dockerImage">{{ dockerImage }}</span>
+                    <span v-else class="has-text-grey">Loading...</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Price</td>
+                  <td>{{ formatPrice(props.job.price, props.nosPrice) }}</td>
+                </tr>
+                <tr v-if="combinedSpecs?.gpuCount">
+                  <td>GPU Count</td>
+                  <td>{{ combinedSpecs.gpuCount }}</td>
+                </tr>
+                <tr v-if="combinedSpecs?.gpuModel">
+                  <td>GPU Model</td>
+                  <td>{{ combinedSpecs.gpuModel }}</td>
+                </tr>
+                <tr v-if="combinedSpecs?.vram">
+                  <td>VRAM</td>
+                  <td>{{ combinedSpecs.vram }} GB</td>
+                </tr>
+                <tr v-if="combinedSpecs?.cpuModel">
+                  <td>CPU Model</td>
+                  <td>{{ combinedSpecs.cpuModel }}</td>
+                </tr>
+                <tr v-if="combinedSpecs?.cudaVersion">
+                  <td>CUDA Driver</td>
+                  <td>{{ combinedSpecs.cudaVersion }}</td>
+                </tr>
+                <tr v-if="combinedSpecs?.download">
+                  <td>Internet Speed</td>
+                  <td>{{ combinedSpecs.download }} Mbps</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
-        <!-- Deployer Address -->
-        <div class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
-          <div class="quick-detail-item">
-            <span class="quick-detail-label">Deployer address</span>
-            <span class="quick-detail-value">
-              <a :href="`https://solscan.io/account/${props.job.project}`" target="_blank" class="has-text-link address is-family-monospace">
-                {{ props.job.project?.toString() }}
-              </a>
-            </span>
-          </div>
+        <!-- Operation Controls Section -->
+        <div v-if="props.job.jobDefinition">
+          <h2 class="title is-5 mb-3">Container controls</h2>
+          <JobTabs
+            :job="props.job"
+            :endpoints="props.endpoints"
+            :isJobPoster="props.isJobPoster"
+            :jobInfo="props.jobInfo"
+            :isConfidential="isConfidential"
+            :jobDefinition="props.job.jobDefinition"
+            :hasArtifacts="false"
+            :isConnecting="isConnecting"
+            :logConnectionEstablished="connectionEstablished"
+            :systemLogs="[]"
+            :containerLogs="[]"
+            :progressBars="getFlogProgressBars()"
+            :resourceProgressBars="flogResourceBarsRef"
+            :showChatTab="isChatServiceReady"
+            :chatServiceUrl="chatServiceUrl"
+            :chatApiConfig="chatApiConfig"
+            :jobCombinedSpecs="combinedSpecs"
+            :jobNodeReport="jobNodeReport"
+            :loadingJobNodeSpecs="loadingNodeSpecs"
+            :isQueuedJob="isQueuedJob"
+            :activeLogs="(flogActiveLogs as unknown as any[])"
+            :opIds="flogTabs.filter(t => t !== 'system')"
+            :filters="{ value: { opId: flogActiveTab === 'system' ? null : flogActiveTab, types: new Set(['container','info','error']) } }"
+            :selectOp="(opId: string | null) => setFlogActiveTab(opId ?? 'system')"
+            :toggleType="() => {}"
+            :logsByOp="flogLogsByOp"
+            :systemLogsMap="flogSystemLogs"
+            :activeTab="'groups'"
+            ref="jobTabsRef"
+          />
         </div>
+      </div>
 
-        <!-- Node Address -->
-        <div class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
-          <div class="quick-detail-item">
-            <span class="quick-detail-label">Node address</span>
-            <span class="quick-detail-value">
-              <span v-if="props.job.node && props.job.node !== '11111111111111111111111111111111'">
-                <nuxt-link :to="`/host/${props.job.node}`" class="address is-family-monospace">
-                  {{ props.job.node }}
-                </nuxt-link>
-              </span>
-              <span v-else class="has-text-grey">--</span>
-            </span>
-          </div>
-        </div>
-
-        <!-- Market Address -->
-        <div class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
-          <div class="quick-detail-item">
-            <span class="quick-detail-label">Market address</span>
-            <span class="quick-detail-value">
-              <nuxt-link :to="`/markets/${props.job.market}`" class="address is-family-monospace">
-                {{ props.job.market?.toString() }}
-              </nuxt-link>
-            </span>
-          </div>
-        </div>
-
-        <!-- Start Time -->
-        <div class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
-          <div class="quick-detail-item">
-            <span class="quick-detail-label">Start time</span>
-            <span class="quick-detail-value">
-              {{ formatDateRelative(props.job.timeStart) }}
-            </span>
-          </div>
-        </div>
-
-        <!-- End Time -->
-        <div class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
-          <div class="quick-detail-item">
-            <span class="quick-detail-label">End time</span>
-            <span class="quick-detail-value">
-              <span v-if="props.job.timeEnd && props.job.timeEnd > 0">
-                {{ formatDateRelative(props.job.timeEnd) }}
-              </span>
-              <span v-else class="has-text-grey">--</span>
-            </span>
-          </div>
-        </div>
-
-        <!-- Docker Image -->
-        <div class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
-          <div class="quick-detail-item">
-            <span class="quick-detail-label">Docker image</span>
-            <span class="quick-detail-value">
-              <span v-if="dockerImage">{{ dockerImage }}</span>
-              <span v-else class="has-text-grey">Loading...</span>
-            </span>
-          </div>
-        </div>
-
-        <!-- Price -->
-        <div class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
-          <div class="quick-detail-item">
-            <span class="quick-detail-label">Price</span>
-            <span class="quick-detail-value">
-              {{ formatPrice(props.job.price, props.nosPrice) }}
-            </span>
-          </div>
-        </div>
-
-        <!-- GPU Count -->
-        <div v-if="combinedSpecs?.gpuCount" class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
-          <div class="quick-detail-item">
-            <span class="quick-detail-label">GPU Count</span>
-            <span class="quick-detail-value">
-              {{ combinedSpecs.gpuCount }}
-            </span>
-          </div>
-        </div>
-
-        <!-- GPU Model -->
-        <div v-if="combinedSpecs?.gpuModel" class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
-          <div class="quick-detail-item">
-            <span class="quick-detail-label">GPU Model</span>
-            <span class="quick-detail-value">
-              {{ combinedSpecs.gpuModel }}
-            </span>
-          </div>
-        </div>
-
-        <!-- VRAM -->
-        <div v-if="combinedSpecs?.vram" class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
-          <div class="quick-detail-item">
-            <span class="quick-detail-label">VRAM</span>
-            <span class="quick-detail-value">
-              {{ combinedSpecs.vram }} GB
-            </span>
-          </div>
-        </div>
-
-        <!-- CPU Model -->
-        <div v-if="combinedSpecs?.cpuModel" class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
-          <div class="quick-detail-item">
-            <span class="quick-detail-label">CPU Model</span>
-            <span class="quick-detail-value">
-              {{ combinedSpecs.cpuModel }}
-            </span>
-          </div>
-        </div>
-
-        <!-- CUDA Driver -->
-        <div v-if="combinedSpecs?.cudaVersion" class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
-          <div class="quick-detail-item">
-            <span class="quick-detail-label">CUDA Driver</span>
-            <span class="quick-detail-value">
-              {{ combinedSpecs.cudaVersion }}
-            </span>
-          </div>
-        </div>
-
-        <!-- Internet Speed -->
-        <div v-if="combinedSpecs?.download" class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
-          <div class="quick-detail-item">
-            <span class="quick-detail-label">Internet Speed</span>
-            <span class="quick-detail-value">
-              {{ combinedSpecs.download }} Mbps
-            </span>
-          </div>
+      <!-- System Logs Tab -->
+      <div v-if="activeTab === 'system-logs'">
+        <div v-if="props.job.jobDefinition">
+          <h2 class="title is-5 mb-3">System logs</h2>
+          <JobTabs
+            :job="props.job"
+            :endpoints="props.endpoints"
+            :isJobPoster="props.isJobPoster"
+            :jobInfo="props.jobInfo"
+            :isConfidential="isConfidential"
+            :jobDefinition="props.job.jobDefinition"
+            :hasArtifacts="false"
+            :isConnecting="isConnecting"
+            :logConnectionEstablished="connectionEstablished"
+            :systemLogs="[]"
+            :containerLogs="[]"
+            :progressBars="getFlogProgressBars()"
+            :resourceProgressBars="flogResourceBarsRef"
+            :showChatTab="isChatServiceReady"
+            :chatServiceUrl="chatServiceUrl"
+            :chatApiConfig="chatApiConfig"
+            :jobCombinedSpecs="combinedSpecs"
+            :jobNodeReport="jobNodeReport"
+            :loadingJobNodeSpecs="loadingNodeSpecs"
+            :isQueuedJob="isQueuedJob"
+            :activeLogs="(flogActiveLogs as unknown as any[])"
+            :opIds="flogTabs.filter(t => t !== 'system')"
+            :filters="{ value: { opId: flogActiveTab === 'system' ? null : flogActiveTab, types: new Set(['container','info','error']) } }"
+            :selectOp="(opId: string | null) => setFlogActiveTab(opId ?? 'system')"
+            :toggleType="() => {}"
+            :logsByOp="flogLogsByOp"
+            :systemLogsMap="flogSystemLogs"
+            :activeTab="'logs'"
+            ref="jobTabsRef"
+          />
         </div>
       </div>
     </div>
-  </div>
-
-  <!-- Job Tabs Section -->
-  <div v-if="props.job.jobDefinition">
-    <JobTabs
-      :job="props.job"
-      :endpoints="props.endpoints"
-      :isJobPoster="props.isJobPoster"
-      :jobInfo="props.jobInfo"
-      :isConfidential="isConfidential"
-      :jobDefinition="props.job.jobDefinition"
-      :hasArtifacts="false"
-      :isConnecting="isConnecting"
-      :logConnectionEstablished="connectionEstablished"
-      :systemLogs="[]"
-      :containerLogs="[]"
-      :progressBars="getFlogProgressBars()"
-      :resourceProgressBars="flogResourceBarsRef"
-      :showChatTab="isChatServiceReady"
-      :chatServiceUrl="chatServiceUrl"
-      :chatApiConfig="chatApiConfig"
-      :jobCombinedSpecs="combinedSpecs"
-      :jobNodeReport="jobNodeReport"
-      :loadingJobNodeSpecs="loadingNodeSpecs"
-      :isQueuedJob="isQueuedJob"
-      :activeLogs="(flogActiveLogs as unknown as any[])"
-      :opIds="flogTabs.filter(t => t !== 'system')"
-      :filters="{ value: { opId: flogActiveTab === 'system' ? null : flogActiveTab, types: new Set(['container','info','error']) } }"
-      :selectOp="(opId: string | null) => setFlogActiveTab(opId ?? 'system')"
-      :toggleType="() => {}"
-      :logsByOp="flogLogsByOp"
-      :systemLogsMap="flogSystemLogs"
-      v-model:activeTab="activeTab"
-      ref="jobTabsRef"
-    />
   </div>
 
   <!-- Modals -->
@@ -303,11 +301,13 @@ import { useAPI } from "~/composables/useAPI";
 import ChevronDownIcon from '@/assets/img/icons/chevron-down.svg?component';
 import ClockIcon from '@/assets/img/icons/clock.svg?component';
 import SquareIcon from '@/assets/img/icons/square.svg?component';
+import ArrowUpIcon from '@/assets/img/icons/arrow-up.svg?component';
 import RunningIcon from '@/assets/img/icons/status/running.svg?component';
 import StoppedIcon from '@/assets/img/icons/status/stopped.svg?component';
 import FailedIcon from '@/assets/img/icons/status/failed.svg?component';
 import QueuedIcon from '@/assets/img/icons/status/queued.svg?component';
 import DoneIcon from '@/assets/img/icons/status/done.svg?component';
+import { useStatus } from '~/composables/useStatus';
 
 import type { UseModal } from "~/composables/jobs/useModal";
 import type { Endpoints, UseJob } from "~/composables/jobs/useJob";
@@ -336,6 +336,7 @@ interface Props {
   nosPrice: number;
   isJobPoster: boolean;
   jobInfo?: JobInfo | null;
+  deploymentId?: string | null;
 }
 
 const props = defineProps<Props>();
@@ -407,6 +408,25 @@ const dockerImage = computed(() => {
     }
   }
   return null; // Will show loading state
+});
+
+// Extract all Docker images from all operations for job title
+const jobImages = computed(() => {
+  if (!props.job.jobDefinition?.ops?.length) {
+    return null;
+  }
+  
+  const images: string[] = [];
+  props.job.jobDefinition.ops.forEach(op => {
+    if (op.type === "container/run") {
+      const args = op.args as OperationArgsMap["container/run"];
+      if (args.image && !images.includes(args.image)) {
+        images.push(args.image);
+      }
+    }
+  });
+  
+  return images.length > 0 ? images.join(', ') : null;
 });
 
 const formattedDockerImage = computed(() => {
@@ -954,7 +974,7 @@ function activateChatAndClosePopup() {
   });
 }
 
-const activeTab = ref("groups");
+const activeTab = ref("overview");
 const jobTabsRef = ref<any>(null); // Ref for the JobTabs component
 
 // Watch for changes in table content (for real-time updates) - REMOVING THIS SECTION
@@ -1071,6 +1091,7 @@ const formatTimeAgo = (timeStart: number) => {
 };
 
 const showActionsDropdown = ref(false);
+const headerIconRef = ref<HTMLElement | null>(null);
 
 const toggleActionsDropdown = () => {
   showActionsDropdown.value = !showActionsDropdown.value;
@@ -1081,21 +1102,8 @@ const handleActionClick = (actionFn: () => void) => {
   actionFn();
 };
 
-// Status helper functions matching deployment page
-const statusClass = (state: number) => {
-  switch (state) {
-    case 0: // QUEUED
-      return "is-warning";
-    case 1: // RUNNING
-      return "is-info"; 
-    case 2: // COMPLETED
-      return "is-success";
-    case 3: // STOPPED
-      return "is-dark";
-    default:
-      return "is-light";
-  }
-};
+// Use global status system
+const { getStatusClass: statusClass } = useStatus();
 
 // getStatusText function already exists above, removed duplicate
 
@@ -1126,15 +1134,9 @@ html.dark-mode .job-header {
   border-bottom-color: $grey-dark;
 }
 
-// Job tabs styling to match deployment page
-.job-tabs {
-  display: flex;
-  gap: 8px;
-  
-  .dropdown-menu {
-    min-width: min-content;
-    width: auto;
-  }
+
+.box.is-borderless {
+  padding: 0 !important;
 }
 
 // Remove old grid styling - now using tables

@@ -52,8 +52,8 @@
         <!-- Google Auth User -->
         <template v-if="isGoogleAuthenticated">
           <div class="profile-avatar auth-avatar">
-            <img v-if="getAuthProvider() === 'google'" src="@/assets/img/icons/google.svg" alt="Google icon" class="auth-icon" />
-            <img v-else-if="getAuthProvider() === 'twitter'" src="@/assets/img/icons/twitter.svg" alt="Twitter icon" class="auth-icon" />
+            <GoogleIcon v-if="getAuthProvider() === 'google'" alt="Google icon" class="auth-icon" />
+            <TwitterIcon v-else-if="getAuthProvider() === 'twitter'" alt="Twitter icon" class="auth-icon" />
             <span v-else>{{ getUserInitials() }}</span>
           </div>
           <div class="profile-info">
@@ -107,6 +107,8 @@
 <script lang="ts" setup>
 import { WalletMultiButton } from "solana-wallets-vue";
 import { computed, ref, onMounted, onUnmounted, watch } from 'vue';
+import GoogleIcon from '@/assets/img/icons/google.svg?component';
+import TwitterIcon from '@/assets/img/icons/twitter.svg?component';
 import { useRouter } from 'vue-router';
 import { useWallet } from 'solana-wallets-vue';
 

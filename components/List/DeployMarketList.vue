@@ -17,7 +17,7 @@
             @click="isMarketCompatible(market) && (select ? (selectedMarket = market) : navigate())"
           >
             <div class="gpu-card-header">
-              <img v-if="showLogo" src="~/assets/img/icons/nvidia.svg" alt="NVIDIA" class="gpu-logo" />
+              <NvidiaIcon v-if="showLogo" alt="NVIDIA" class="gpu-logo" />
               <h3 class="gpu-name">{{ getMarketName(market) }}</h3>
             </div>
             <div class="gpu-card-body">
@@ -36,8 +36,11 @@
                 <span class="gpu-label">Available</span>
                 <span class="gpu-value">
                   <span v-if="loadingRunningJobs">...</span>
-                  <span v-else>
+                  <span v-else-if="market.queueType === 1">
                     {{ market.queue.length }}
+                  </span>
+                  <span v-else>
+                    0
                   </span>
                 </span>
               </div>
@@ -52,6 +55,7 @@
 <script setup lang="ts">
 import { type Market } from '@nosana/sdk';
 import { useAPI } from "~/composables/useAPI";
+import NvidiaIcon from '@/assets/img/icons/nvidia.svg?component';
 import CurrentMarketPrice from "~/components/Market/CurrentPrice.vue";
 
 const { data: runningJobs, pending: loadingRunningJobs } = await useAPI('/api/jobs/running');

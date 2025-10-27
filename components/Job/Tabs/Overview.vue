@@ -1,35 +1,35 @@
 <template>
   <div class="groups-container">
-    <div v-if="loading" class="loading-state">
+    <div v-if="loading" class="has-text-centered p-6">
       <span class="icon is-small">
         <i class="fas fa-spinner fa-spin"></i>
       </span>
       <span>Loading groups...</span>
     </div>
 
-    <div v-else-if="error" class="error-state">
-      <span class="icon is-small has-text-danger">
+    <div v-else-if="error" class="has-text-centered p-6 has-text-danger">
+      <span class="icon is-small">
         <i class="fas fa-exclamation-triangle"></i>
       </span>
       <span>{{ error }}</span>
     </div>
 
-    <div v-else-if="operations.length === 0" class="empty-state">
-      <span class="icon is-small has-text-grey-light">
+    <div v-else-if="operations.length === 0" class="has-text-centered p-6 has-text-grey-light">
+      <span class="icon is-small">
         <i class="fas fa-box-open"></i>
       </span>
       <span>No groups available.</span>
     </div>
 
-    <div v-else class="groups-table-container">
+    <div v-else class="is-flex is-flex-direction-column">
       <template v-for="(groupOps, groupName) in groupedOperations" :key="groupName">
-        <div class="group-section">
-          <div class="group-header">
-            <div class="group-info">
-              <h3 class="group-name">{{ groupName }}</h3>
-              <span class="group-count">{{ groupOps.length }} operation{{ groupOps.length !== 1 ? 's' : '' }}</span>
+        <div class="mb-5">
+          <div class="level px-4 py-3 has-background-light group-header">
+            <div class="level-left">
+              <h3 class="title is-5 mb-0 is-capitalized">{{ groupName }}</h3>
+              <span class="has-text-grey ml-4">{{ groupOps.length }} operation{{ groupOps.length !== 1 ? 's' : '' }}</span>
             </div>
-            <div class="group-actions">
+            <div class="level-right">
               <button
                 @click.stop="stopGroup(groupName)"
                 :disabled="isJobCompleted || loadingGroups.has(groupName) || !hasStoppableOpsInGroup(groupOps)"
@@ -96,8 +96,10 @@
                     </span>
                   </td>
                   <td class="op-status">
-                  <div class="tag is-outlined is-light" :class="statusClass(op.status)">
-                    <component :is="getStatusIconFile(op.status)" class="mr-2" />
+                  <div class="tag is-outlined is-light status-tag" :class="statusClass(op.status)">
+                    <span class="status-icon-wrap">
+                      <component :is="getStatusIconFile(op.status)" class="mr-2" />
+                    </span>
                     <span>{{ op.status.toUpperCase() }}</span>
                   </div>
                   </td>
@@ -133,123 +135,14 @@
                 <tr v-if="expandedOps.has(op.id)" class="op-details-row">
                   <td colspan="5" class="op-details-cell">
                     <div class="op-details-container">
-                      <!-- Operation Information -->
+                      <!-- Logs Only -->
                       <div class="op-info-panel">
-                        <div class="op-info-section">
-                          <h4 class="section-title">Operation Details</h4>
-                          <div class="section-content">
-                            <div class="info-item">
-                              <span class="info-label">Last Started:</span>
-                              <span class="info-value">{{ formatTimestamp(getOpState(op.id)?.startTime) }}</span>
-                            </div>
-                            
-                            <div class="info-item">
-                              <span class="info-label">Last Ended:</span>
-                              <span class="info-value">{{ formatTimestamp(getOpState(op.id)?.endTime) }}</span>
-                            </div>
-                            
-                            <div class="info-item">
-                              <span class="info-label">Job Results:</span>
-                              <span class="info-value">
-                              <a
-                                v-if="hasOpResults(op.id)"
-                                href="#"
-                                @click.stop.prevent="openResultsModal(op.id)"
-                              >
-                                View
-                              </a>
-                                <span v-else>-</span>
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                        
-                      
-                        
-                        <!-- Service Endpoints -->
-                        <div class="op-info-section endpoints-section">
-                          <h4 class="section-title">Service Endpoints</h4>
-                          <div class="section-content endpoints-content">
-                            <div v-if="op.ports && op.ports.length > 0" class="endpoints-list">
-                              <div 
-                                v-for="(portInfo, idx) in op.ports" 
-                                :key="idx"
-                                class="endpoint-item"
-                              >
-                                <div class="endpoint-row">
-                                  <div class="endpoint-info">
-                                    <span
-                                      class="status-dot"
-                                      :class="{
-                                        'dot-online': portInfo.status === 'ONLINE',
-                                        'dot-offline': portInfo.status === 'OFFLINE',
-                                        'dot-unknown': portInfo.status === 'UNKNOWN',
-                                      }"
-                                      :title="portInfo.status === 'UNKNOWN' ? 'LOADING' : portInfo.status"
-                                    ></span>
-                                    <span class="endpoint-port">Port {{ portInfo.port }}</span>
-                                  </div>
-                                  <a
-                                    :href="portInfo.url"
-                                    target="_blank"
-                                    class="endpoint-link"
-                                    @click.stop
-                                  >
-                                    <span class="icon is-small">
-                                      <svg
-                                        width="12"
-                                        height="12"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        xmlns="http://www.w3.org/2000/svg"
-                                      >
-                                        <path
-                                          d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"
-                                          fill="currentColor"
-                                        />
-                                      </svg>
-                                    </span>
-                                    <span class="endpoint-url">Open</span>
-                                  </a>
-                                </div>
-                              </div>
-                            </div>
-                            <div v-else class="endpoints-empty">
-                              <span class="has-text-grey-light">No endpoints available</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <!-- Logs -->
-                      <div class="op-logs-panel">
-                        <div class="logs-header">
-                          <h4 class="logs-title">LOGS</h4>
-                        </div>
-                        <div v-if="getOpLogs(op.id)?.length" class="op-logs-content">
-                          <button
-                            class="button is-small is-text fullscreen-logs-button"
-                            @click.stop="openLogModal(op.id)"
-                            title="Fullscreen Logs"
-                          >
-                            <span class="icon is-small">
-                              <FullscreenIcon />
-                            </span>
-                          </button>
-                          <div class="op-logs-viewer">
-                            <div
-                              v-for="(log, index) in getOpLogs(op.id)"
-                              :key="index"
-                              class="row-count"
-                            >
-                              <span v-if="log.html" class="pre" v-html="log.content || log.log || log"></span>
-                              <span v-else class="pre">{{ log.content || log.log || log }}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div v-else class="op-logs-empty">
-                          <span class="has-text-grey-light">No logs available</span>
-                        </div>
+                        <FLogViewer
+                          :logs="getOpLogs(op.id) || []"
+                          :isConnecting="false"
+                          :progressBars="new Map()"
+                          :resourceProgressBars="new Map()"
+                        />
                       </div>
                     </div>
                   </td>
@@ -261,29 +154,6 @@
       </template>
     </div>
 
-  <!-- Fullscreen Logs Modal -->
-  <FullscreenModal :isOpen="logModalOpen" :title="`Operation Logs - ${fullscreenOpId || ''}`" @close="closeLogModal">
-    <div class="fullscreen-logs-wrapper">
-      <div class="op-logs-content">
-        <div class="op-logs-viewer" ref="modalLogsContainerRef">
-          <template v-if="fullscreenOpId && getOpLogs(fullscreenOpId)?.length">
-            <div
-              v-for="(log, index) in getOpLogs(fullscreenOpId)"
-              :key="index"
-              class="row-count"
-            >
-              <span v-if="log.html" class="pre" v-html="log.content || log.log || log"></span>
-              <span v-else class="pre">{{ log.content || log.log || log }}</span>
-            </div>
-          </template>
-          <div v-else class="op-logs-empty">
-            <span class="has-text-grey-light">No logs available</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </FullscreenModal>
-  
   <!-- Job Results Modal -->
   <FullscreenModal :isOpen="resultsModalOpen" :title="`Job Results - ${resultsOpId || ''}`" @close="closeResultsModal">
     <div class="fullscreen-logs-wrapper">
@@ -308,6 +178,7 @@
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import FullscreenModal from '~/components/Common/FullscreenModal.vue';
 import VueJsonPretty from 'vue-json-pretty';
+import FLogViewer from '../FLogViewer.vue';
 import 'vue-json-pretty/lib/styles.css';
 
 // Import icons as components
@@ -318,6 +189,7 @@ import StoppedIcon from '@/assets/img/icons/status/stopped.svg?component';
 import FailedIcon from '@/assets/img/icons/status/failed.svg?component';
 import DoneIcon from '@/assets/img/icons/status/done.svg?component';
 import FullscreenIcon from '@/assets/img/icons/fullscreen.svg?component';
+import { useStatus } from '~/composables/useStatus';
 
 type EndpointStatus = 'ONLINE' | 'OFFLINE' | 'UNKNOWN';
 
@@ -430,24 +302,6 @@ const { ensureAuth } = useAuthHeader();
 
 const jobInfo = computed<LocalJobInfo | null>(() => props.jobInfo ?? null);
 
-// Fullscreen logs modal state
-const logModalOpen = ref(false);
-const fullscreenOpId = ref<string | null>(null);
-const modalLogsContainerRef = ref<HTMLElement | null>(null);
-
-const openLogModal = (opId: string) => {
-  fullscreenOpId.value = opId;
-  logModalOpen.value = true;
-  nextTick(() => {
-    if (modalLogsContainerRef.value) {
-      modalLogsContainerRef.value.scrollTop = modalLogsContainerRef.value.scrollHeight;
-    }
-  });
-};
-
-const closeLogModal = () => {
-  logModalOpen.value = false;
-};
 
 // Results modal per operation
 const resultsModalOpen = ref(false);
@@ -808,27 +662,32 @@ const getStatusIconFile = (status: string) => {
   }
 };
 
-// Get status class for tag styling
+// Use global status system for consistent colors
+const { getStatusClass } = useStatus();
+
+// Get status class for tag styling with mapping to global status strings
 const statusClass = (status: string) => {
-  switch (status?.toLowerCase()) {
+  // Map operation statuses to standard status strings that the global system understands
+  const statusLower = status?.toLowerCase();
+  switch (statusLower) {
     case 'running':
     case 'starting':
     case 'waiting':
     case 'pending':
     case 'init':
-      return 'is-info';
+      return getStatusClass('RUNNING');
     case 'stopped':
     case 'stopping':
-      return 'is-dark';
+      return getStatusClass('STOPPED');
     case 'failed':
-      return 'is-danger';
+      return getStatusClass('FAILED');
     case 'finished':
     case 'success':
-      return 'is-success';
+      return getStatusClass('SUCCESS');
     case 'restarting':
-      return 'is-warning';
+      return getStatusClass('QUEUED'); // Restarting is like queued
     default:
-      return 'is-light';
+      return getStatusClass('STOPPED');
   }
 };
 
@@ -958,331 +817,117 @@ const restartGroup = async (groupName: string) => {
 </script>
 
 <style lang="scss" scoped>
+// Use Bulma utility classes instead of custom containers
 .groups-container {
-  padding: 1.5rem;
-  background: #ffffff;
-  border-radius: 8px;
+  // Remove hardcoded background and radius - use Bulma classes in template
 }
 
+// Replace custom flex layouts with Bulma has-text-centered
 .loading-state,
 .error-state,
 .empty-state {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 2rem;
-  color: #7a7a7a;
+  // Use Bulma classes: has-text-centered p-6 
 }
 
 .error-state {
-  color: #f14668;
+  // Use Bulma class: has-text-danger
 }
 
+// Use Bulma spacing utilities instead
 .groups-table-container {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
+  // Use Bulma class: is-flex is-flex-direction-column 
 }
 
 .group-section {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+  // Use Bulma class: is-flex is-flex-direction-column mb-5
 }
 
+// Simplify group header using Bulma level classes
 .group-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  background: #f5f5f5;
-  border-radius: 6px;
-  border-left: 4px solid #10e80c;
+  // Use Bulma classes: level px-4 py-3 has-background-light
+  border-left: 4px solid $secondary;
 }
 
 .group-info {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
+  // Use Bulma class: level-left
 }
 
 .group-name {
-  margin: 0;
-  text-transform: capitalize;
+  // Use Bulma classes: title is-5 mb-0 is-capitalized
 }
 
 .group-count {
-  color: #7a7a7a;
+  // Use Bulma class: has-text-grey
 }
 
+// Use Bulma class: level-right with buttons field
 .group-actions {
-  display: flex;
-  gap: 0.5rem;
+  // Remove - using level-right instead
 }
 
+// Minimal table customization - use Bulma table classes
 .table {
   tbody {
     tr.op-row {
       cursor: pointer;
-      transition: background-color 0.2s ease;
-
+      
       &.is-expanded {
-        background-color: #fafafa;
+        background-color: $grey-lightest;
       }
-    }
-    
-    td {
-      vertical-align: middle;
     }
   }
 }
 
 html.dark-mode {
-  .table {
-    tbody {
-      tr.op-row {
-        &.is-expanded {
-          background-color: #252525;
-        }
-      }
-    }
+  .table tbody tr.op-row.is-expanded {
+    background-color: $grey-darker;
   }
 }
 
-// Operation Details Container (two-column layout)
+// Operation Details - use Bulma columns
 .op-details-cell {
   padding: 0 !important;
   background: transparent;
-  text-align: left !important;
 }
 
 .op-details-container {
-  display: grid;
-  grid-template-columns: 30% 70%;
-  gap: 0;
-  background: #ffffff;
-  height: 400px;
-  max-height: 500px;
-  overflow: hidden;
+  background: $white;
 }
 
-// Left panel: Operation Info
 .op-info-panel {
-  padding: 2rem;
-  background: #ffffff;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  height: 100%;
-  overflow: hidden; // Prevent panel from expanding
+  // Single column layout now
 }
 
-.op-info-section {
-  .section-title {
-    color: #5f6368;
-    text-transform: uppercase;
-    margin: 0 0 1.45rem 0;
-  }
-  
-  .section-content {
-    padding: 0;
-  }
-  
+// Use Bulma typography classes - minimal custom styling needed
+.op-info-section {  
   &.endpoints-section {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
     min-height: 0;
     overflow: hidden;
     
-    .section-title {
-      flex-shrink: 0;
-    }
-    
     .endpoints-content {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
       overflow-y: auto;
-      overflow-x: hidden;
       min-height: 0;
-      
-      .endpoints-list {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-      }
-      
-      .endpoints-empty {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        height: 100%;
-        min-height: 80px;
-        color: #999;
-        font-size: 0.875rem;
-      }
     }
   }
 }
 
+// Minimal custom styling - use Bulma classes in template
 .info-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.75rem 0;
-  border-bottom: 1px solid #e8e8e8;
-  
-  &:first-child {
-    padding-top: 0;
-  }
+  border-bottom: 1px solid $grey-lighter;
   
   &:last-child {
     border-bottom: none;
   }
-  
-  .info-label {
-    color: #5f6368;
-  }
-  
-  .info-value {
-    color: #363636;
-    font-family: monospace;
-  }
 }
 
-.endpoint-item {
-  padding: 0.5rem 0.75rem;
-  background: #ffffff;
-  border: 1px solid #d0d0d0;
-  border-radius: 4px;
-}
-
-.endpoint-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.endpoint-info {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  
-  &.dot-online {
-    background: #2e7d32;
-  }
-  
-  &.dot-offline {
-    background: #c62828;
-  }
-  
-  &.dot-unknown {
-    background: #ff9800;
-  }
-}
-
-.endpoint-port {
-  color: #363636;
-  font-family: monospace;
-}
-
-.endpoint-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.25rem 0.5rem;
-  background: #10e80c;
-  color: #ffffff;
-  border-radius: 4px;
-  text-decoration: none;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-  
-  &:hover {
-    background: #0ec909;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(16, 232, 12, 0.2);
-  }
-  
-  .icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  
-  .endpoint-url {
-    color: #ffffff;
-  }
-}
-
-.op-logs-panel {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  height: 100%;
-  padding: 2rem;
-  background: #ffffff;
-}
-
-.logs-header {
-  margin-bottom: 0.75rem;
-  background: #ffffff;
-  flex-shrink: 0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.logs-title {
-  color: #5f6368;
-  text-transform: uppercase;
-  margin: 0;
-}
-
-.op-id {
-  color: #363636;
-  font-family: monospace;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
+// Minimal styling for expand icon
 .expand-icon {
   transition: transform 0.2s ease;
-  color: #7a7a7a;
-  flex-shrink: 0;
+  color: $text-dark;
 
   &.is-expanded {
     transform: rotate(180deg);
   }
-}
-
-.op-logs-content {
-  background: #1a1a1a;
-  padding: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  flex: 1;
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
-  position: relative;
-}
-
-.op-logs-viewer {
-  font-family: 'Courier New', Courier, monospace;
-  line-height: 1.6;
-  color: #c9d1d9;
-  padding: 1rem;
 }
 
 /* Keep JSON results background stable (disable VueJsonPretty line highlight) */
@@ -1300,119 +945,53 @@ html.dark-mode {
   transition: none !important;
 }
 
-/* Line numbering similar to Result.vue */
-.op-logs-content {
-  position: relative;
-  counter-reset: line;
-}
-.logs-floating-controls {
-  position: sticky;
-  top: 0;
-  display: flex;
-  justify-content: flex-end;
-  padding: 0;
-  height: 0;
-  z-index: 3;
-  pointer-events: none;
-}
-.row-count {
-  word-break: break-word;
-  max-width: 100%;
-  padding-left: 40px;
-}
-.row-count:before {
-  counter-increment: line;
-  font-family: monospace;
-  font-weight: normal;
-  content: counter(line);
-  display: inline-block;
-  padding: 0 0.5em;
-  margin-right: 0.5em;
-  color: #9ca3af;
-  min-width: 50px;
-  text-align: right;
-  margin-left: -62px;
-}
-.pre { white-space: pre-wrap; }
-
-.fullscreen-logs-button {
-  position: absolute;
-  top: 0.25rem;
-  right: 0.25rem;
-  margin: 0;
-  background-color: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-  pointer-events: auto;
-  z-index: 4;
-}
-.fullscreen-logs-button .icon img { width: 16px; height: 16px; filter: invert(1); opacity: 0.9; }
-.fullscreen-logs-button:hover .icon img { opacity: 1; }
-
-.fullscreen-logs-wrapper {
-  position: relative;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-.fullscreen-logs-wrapper .op-logs-content {
-  flex: 1;
-  height: 100%;
-  overflow: hidden;
-}
-.fullscreen-logs-wrapper .op-logs-viewer {
-  height: 100%;
-  min-height: 100%;
-  overflow-y: auto;
-}
-
 .log-entry {
   margin: 0;
   padding: 0.25rem 0;
   word-wrap: break-word;
   
   :deep(.timestamp) {
-    color: #8b949e;
+    color: $grey-dark;
     margin-right: 0.5rem;
   }
   
   :deep(.info) {
-    color: #58a6ff;
+    color: $info;
   }
   
   :deep(.error) {
-    color: #f85149;
+    color: $danger;
   }
   
   :deep(.warning) {
-    color: #d29922;
+    color: $warning;
   }
   
   :deep(.success) {
-    color: #56d364;
+    color: $success;
   }
 }
 
 .op-logs-empty {
   padding: 2rem;
   text-align: center;
-  color: #999;
-  background: #1a1a1a;
+  color: $grey;
+  background: $black;
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
+  border: 1px solid $grey-lighter;
+  border-radius: $radius;
 }
 
 .op-image {
-  color: #363636;
+  color: $text;
   font-family: monospace;
 }
 
 .op-ports {
-  color: #7a7a7a;
+  color: $text-dark;
   font-family: monospace;
 }
 
@@ -1434,188 +1013,188 @@ html.dark-mode {
 
 html.dark-mode {
   .groups-container {
-    background: #2c2c2c;
+    background: $grey-darker;
   }
 
   .group-header {
-    background: #1a1a1a;
-    border-left-color: #10e80c;
+    background: $black;
+    border-left-color: $secondary;
   }
 
   .group-name {
-    color: #ffffff;
+    color: $white;
   }
 
   .group-count {
-    color: #b0b0b0;
+    color: $grey-light;
   }
 
   .operations-table {
     thead tr {
-      border-bottom-color: #444;
+      border-bottom-color: $grey-dark;
     }
 
     thead th {
-      color: #b0b0b0;
+      color: $grey-light;
     }
 
     tbody tr.op-row {
-      border-bottom-color: #333;
+      border-bottom-color: $grey-darker;
 
       &:hover {
         background-color: transparent;
       }
 
       &.is-expanded {
-        background-color: #252525;
+        background-color: lighten($grey-darker, 3%);
       }
     }
 
     tbody tr.op-details-row {
-      border-bottom-color: #333;
+      border-bottom-color: $grey-darker;
     }
   }
 
   .op-details-container {
-    background: #2a2a2a;
+    background: $grey-darker;
   }
 
   .op-info-panel {
-    background: #2c2c2c;
-    border-right-color: #444;
+    background: $grey-darker;
+    border-right-color: $grey-dark;
   }
 
   .op-info-section {
     .section-title {
-      color: #ffffff;
+      color: $white;
     }
   }
   
   .op-logs-panel {
-    background: #2c2c2c;
+    background: $grey-darker;
   }
   
   .logs-header {
-    background: #2c2c2c;
-    border-bottom-color: #444;
+    background: $grey-darker;
+    border-bottom-color: $grey-dark;
   }
   
   .logs-title {
-    color: #ffffff;
+    color: $white;
   }
 
   .info-item {
-    border-bottom-color: #333;
+    border-bottom-color: $grey-darker;
     
     &:first-child {
       padding-top: 0;
     }
     
     .info-label {
-      color: #b0b0b0;
+      color: $grey-light;
     }
     
     .info-value {
-      color: #e0e0e0;
+      color: $grey-lighter;
     }
   }
 
   .endpoint-item {
-    background: #2a2a2a;
-    border-color: #555;
+    background: $grey-darker;
+    border-color: lighten($grey-dark, 10%);
   }
   
   .endpoints-empty {
-    color: #666;
+    color: $grey;
   }
 
   .endpoint-port {
-    color: #e0e0e0;
+    color: $grey-lighter;
   }
 
   .status-dot {
     &.dot-online {
-      background: #66bb6a;
+      background: lighten($success, 10%);
     }
     
     &.dot-offline {
-      background: #ef5350;
+      background: lighten($danger, 10%);
     }
     
     &.dot-unknown {
-      background: #ffa726;
+      background: lighten($warning, 10%);
     }
   }
 
   .endpoint-link {
-    background: #10e80c;
-    color: #1a1a1a;
+    background: $secondary;
+    color: $black;
     
     &:hover {
-      background: #0ec909;
-      box-shadow: 0 2px 4px rgba(16, 232, 12, 0.3);
+      background: darken($secondary, 5%);
+      box-shadow: 0 2px 4px rgba($secondary, 0.3);
     }
     
     .endpoint-url {
-      color: #1a1a1a;
+      color: $black;
     }
   }
 
   .op-id {
-    color: #e0e0e0;
+    color: $grey-lighter;
   }
 
   .expand-icon {
-    color: #b0b0b0;
+    color: $grey-light;
   }
 
   .op-logs-content {
-    background: #0d1117;
-    border-color: #444;
+    background: $black-bis;
+    border-color: $grey-dark;
   }
 
   .op-logs-viewer {
-    color: #c9d1d9;
+    color: $grey-lighter;
   }
 
   .log-entry {
     :deep(.timestamp) {
-      color: #8b949e;
+      color: $grey-dark;
     }
     
     :deep(.info) {
-      color: #58a6ff;
+      color: $info;
     }
     
     :deep(.error) {
-      color: #f85149;
+      color: $danger;
     }
     
     :deep(.warning) {
-      color: #d29922;
+      color: $warning;
     }
     
     :deep(.success) {
-      color: #56d364;
+      color: $success;
     }
   }
 
   .op-logs-empty {
-    color: #666;
-    background: #0d1117;
+    color: $grey;
+    background: $black-bis;
     flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-color: #444;
+    border-color: $grey-dark;
   }
 
   .op-image {
-    color: #e0e0e0;
+    color: $grey-lighter;
   }
 
   .op-ports {
-    color: #b0b0b0;
+    color: $grey-light;
   }
 
   // Port badge dark mode styling now in global.scss
@@ -1623,9 +1202,9 @@ html.dark-mode {
   // Status badges use global .tag styling in dark mode too
 
   .action-btn {
-    background: #2c2c2c;
-    border-color: #444;
-    color: #b3b3b3;
+    background: $grey-darker;
+    border-color: $grey-dark;
+    color: $grey-light;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
     
     .icon img {
@@ -1633,14 +1212,14 @@ html.dark-mode {
     }
 
     &:hover:not(:disabled) {
-      background: #3a3a3a;
-      border-color: #555;
-      color: #ffffff;
+      background: lighten($grey-darker, 5%);
+      border-color: lighten($grey-dark, 10%);
+      color: $white;
     }
     
     &.is-loading {
       &:after {
-        border-color: #666;
+        border-color: $grey;
         border-right-color: transparent;
         border-top-color: transparent;
       }
@@ -1649,7 +1228,7 @@ html.dark-mode {
 
   .loading-state,
   .empty-state {
-    color: #b0b0b0;
+    color: $grey-light;
   }
 }
 

@@ -15,7 +15,7 @@
       <div class="column is-9-fullhd is-12">
         <!-- Name your deployment -->
         <div class="box has-background-white" style="border: none;">
-          <h2 class="title is-5 mb-4" style="color: #202124;">Define your deployment</h2>
+          <h2 class="title is-5 mb-4">Define your deployment</h2>
           <div class="field">
             <div class="control">
               <input 
@@ -42,7 +42,7 @@
 
         <!-- Select GPU -->
         <div class="box has-background-white" style="border: none; margin-top: 1.5rem;">
-          <h2 class="title is-5 mb-4" style="color: #202124;">Select instance</h2>
+          <h2 class="title is-5 mb-4">Select instance</h2>
           <DeploySimpleGpuSelection
             :markets="markets || null"
             :testgridMarkets="testgridMarkets"
@@ -96,10 +96,31 @@
                 </span>
               </div>
               
-              <div style="display: flex; justify-content: space-between; align-items: start;">
+              <div class="mb-2" style="display: flex; justify-content: space-between; align-items: start;">
                 <span class="has-text-grey is-size-7">GPU</span>
                 <span class="has-text-dark is-size-7" style="text-align: right; max-width: 60%; overflow: hidden; text-overflow: ellipsis;">
                   {{ selectedMarket ? marketName : '-' }}
+                </span>
+              </div>
+
+              <div class="mb-2" style="display: flex; justify-content: space-between; align-items: start;" v-if="strategy && strategy !== 'SIMPLE'">
+                <span class="has-text-grey is-size-7">Strategy</span>
+                <span class="has-text-dark is-size-7" style="text-align: right; max-width: 60%; overflow: hidden; text-overflow: ellipsis;">
+                  {{ strategy }}
+                </span>
+              </div>
+
+              <div class="mb-2" style="display: flex; justify-content: space-between; align-items: start;" v-if="replicas && replicas > 1">
+                <span class="has-text-grey is-size-7">Replicas</span>
+                <span class="has-text-dark is-size-7" style="text-align: right; max-width: 60%; overflow: hidden; text-overflow: ellipsis;">
+                  {{ replicas }}
+                </span>
+              </div>
+
+              <div style="display: flex; justify-content: space-between; align-items: start;" v-if="timeout && timeout > 1">
+                <span class="has-text-grey is-size-7">Timeout (hours)</span>
+                <span class="has-text-dark is-size-7" style="text-align: right; max-width: 60%; overflow: hidden; text-overflow: ellipsis;">
+                  {{ timeout }}
                 </span>
               </div>
             </div>
@@ -129,33 +150,34 @@
               >
                 Login
               </button>
-              <!-- Show swap button for wallet users with insufficient balance -->
               
+              <!-- Show deploy button when authenticated, disabled if can't create deployment -->
+              <button
+                v-if="status === 'authenticated'"
+                class="button is-secondary is-fullwidth"
+                :disabled="!canCreateDeployment"
+                @click="createDeployment"
+              >
+                <span v-if="isCreatingDeployment">Creating...</span>
+                <span v-else>Create Deployment</span>
+              </button>
+
               <!-- Show insufficient credits message for Google users -->
               <div
-                v-else-if="
+                v-if="
                   status === 'authenticated' && !canPostJob && selectedMarket
                 "
-                class="has-text-centered"
+                class="has-text-centered mb-3 mt-3"
               >
                 <p class="has-text-grey is-size-7 mb-2">
                   Insufficient credits. Need ${{
-                    (estimatedCost || 0).toFixed(2)
+                    (hourlyPrice * replicas * timeout).toFixed(3) 
                   }}, have ${{ creditBalance.toFixed(2) }}
                 </p>
                 <p class="has-text-grey is-size-7">
                   Claim credit codes on your account page
                 </p>
               </div>
-              <!-- Show deploy button if any authentication method allows deployment -->
-              <button
-                v-else-if="canCreateDeployment && status === 'authenticated'"
-                class="button is-secondary is-fullwidth"
-                @click="createDeployment"
-              >
-                <span v-if="isCreatingDeployment">Creating...</span>
-                <span v-else>Create Deployment</span>
-              </button>
             </ClientOnly>
           </div>
         </div>
@@ -232,7 +254,7 @@
           <div class="field">
             <label class="label">
               Deployment Strategy
-              <span class="icon is-small has-tooltip-arrow has-tooltip-multiline" data-tooltip="How your deployment manages job instances">
+              <span class="icon is-small has-tooltip-arrow has-tooltip-right" style="position: relative; z-index: 3000;" data-tooltip="How your deployment manages job instances">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                   <circle cx="12" cy="12" r="10" stroke-width="2"/>
                   <path d="M12 16v-4m0-4h.01" stroke-width="2" stroke-linecap="round"/>
@@ -255,7 +277,7 @@
           <div v-if="strategy === 'SCHEDULED'" class="field">
             <label class="label">
               Schedule (Cron Expression)
-              <span class="icon is-small has-tooltip-arrow has-tooltip-multiline" data-tooltip="Cron expression for scheduling jobs">
+              <span class="icon is-small has-tooltip-arrow has-tooltip-right" style="position: relative; z-index: 3000;" data-tooltip="Cron expression for scheduling jobs">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                   <circle cx="12" cy="12" r="10" stroke-width="2"/>
                   <path d="M12 16v-4m0-4h.01" stroke-width="2" stroke-linecap="round"/>
@@ -277,7 +299,7 @@
           <div class="field">
             <label class="label">
               Replica Count
-              <span class="icon is-small has-tooltip-arrow has-tooltip-multiline" data-tooltip="Number of parallel job instances (1-100)">
+              <span class="icon is-small has-tooltip-arrow has-tooltip-right" style="position: relative; z-index: 3000;" data-tooltip="Number of parallel job instances (1-100)">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                   <circle cx="12" cy="12" r="10" stroke-width="2"/>
                   <path d="M12 16v-4m0-4h.01" stroke-width="2" stroke-linecap="round"/>
@@ -291,6 +313,7 @@
                 v-model.number="replicas"
                 min="1"
                 max="100"
+                @blur="enforceReplicasMax"
               />
             </div>
             <p class="help">Number of parallel instances to run (1-100)</p>
@@ -299,7 +322,7 @@
           <div class="field">
             <label class="label">
               Container Timeout (hours)
-              <span class="icon is-small has-tooltip-arrow has-tooltip-multiline" data-tooltip="Maximum runtime before container auto-shutdown">
+              <span class="icon is-small has-tooltip-arrow has-tooltip-right" style="position: relative; z-index: 3000;" data-tooltip="Maximum runtime before container auto-shutdown">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                   <circle cx="12" cy="12" r="10" stroke-width="2"/>
                   <path d="M12 16v-4m0-4h.01" stroke-width="2" stroke-linecap="round"/>
@@ -559,6 +582,23 @@ const computedJobTitle = computed(() => {
   return "Custom Job Definition";
 });
 
+const templateNames = computed(() => {
+  const names = new Set<string>();
+  (groupedTemplates.value || []).forEach((t: Template) => {
+    if (t?.name) names.add(t.name);
+  });
+  (templates.value || []).forEach((t: Template) => {
+    if (t?.name) names.add(t.name);
+  });
+  return names;
+});
+
+// Only auto update the name if it's empty or still equal to another template name
+const isNameTemplateManaged = computed(() => {
+  const name = deploymentName.value?.trim();
+  return !name || templateNames.value.has(name);
+});
+
 const computedDockerImage = computed(() => {
   if (
     selectedTemplate.value &&
@@ -620,7 +660,7 @@ const requiredNos = computed(() => {
 // Check if user can post job based on authentication and credits
 const canPostJob = computed(() => {
   if (status.value === "authenticated") {
-    const costUSD = totalPrice.value || 0;
+    const costUSD = (hourlyPrice.value * replicas.value * timeout.value) || 0;
     return creditBalance.value >= costUSD;
   }
   return false;
@@ -688,6 +728,10 @@ const createDeployment = async () => {
     toast.error("Number of replicas must be greater than 0");
     return;
   }
+  if (replicas.value > 100) {
+    toast.error("Number of replicas cannot exceed 100");
+    return;
+  }
   if (timeout.value <= 0) {
     toast.error("Timeout must be greater than 0");
     return;
@@ -717,7 +761,6 @@ const createDeployment = async () => {
         ? { strategy: "SCHEDULED" as const, schedule: schedule.value }
         : { strategy: strategy.value as "SIMPLE" | "SIMPLE-EXTEND" | "INFINITE" }),
       job_definition: jobDefinition.value,
-      confidential: true,
     };
 
     const data = await useApiFetch('/api/deployments/create', {
@@ -735,6 +778,15 @@ const createDeployment = async () => {
   } finally {
     isCreatingDeployment.value = false;
     loading.value = false;
+  }
+};
+
+const enforceReplicasMax = () => {
+  if (replicas.value > 100) {
+    replicas.value = 100;
+  }
+  if (replicas.value < 1) {
+    replicas.value = 1;
   }
 };
 
@@ -758,6 +810,11 @@ watch(
       nextTick(() => {
         isUpdatingFromJobDef.value = false;
       });
+    }
+
+    // set deployment name to selected template name if user hasn't customized
+    if (newTemplate?.name && isNameTemplateManaged.value) {
+      deploymentName.value = newTemplate.name;
     }
   },
   { deep: true }
