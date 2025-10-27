@@ -383,7 +383,8 @@ watch(() => currentPage.value, () => {
 }
 
 .deployment-name {
-  color: #202124 !important;
+  color: inherit;
+  font-weight: 500;
 }
 
 .min-height-container {
