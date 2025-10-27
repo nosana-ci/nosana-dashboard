@@ -118,11 +118,8 @@
                 <button
                   @click="claimInvitation"
                   :disabled="claiming"
-                  :class="['button', 'is-success', 'is-large', { 'is-loading': claiming }]"
+                  :class="['button', 'is-dark', { 'is-loading': claiming }]"
                 >
-                  <span v-if="!claiming" class="icon">
-                    <i class="fas fa-check"></i>
-                  </span>
                   <span>
                     {{ claiming ? 'Claiming...' : `Claim ${formatCredits(invitation.creditsAmount)} Credits` }}
                   </span>
@@ -190,7 +187,12 @@
             </div>
           </template>
         </div>
-        <h3 class="title is-4 mb-7">Deployments</h3>
+        <div class="is-flex is-justify-content-space-between is-align-items-center mb-4">
+          <h3 class="title is-4 mb-0">Deployments</h3>
+          <nuxt-link to="/deploy" class="button is-dark">
+            <span>Deploy Model</span>
+          </nuxt-link>
+        </div>
         <ListDeploymentsList job-type="posted" :items-per-page="10" class="mb-6 deployments-list" @update:total-deployments="totalDeployments = $event" />
         
         <!-- API Tokens Section -->
@@ -350,8 +352,9 @@ import ExplorerIcon from '@/assets/img/icons/sidebar/explorer.svg?component';
 import SupportIcon from '@/assets/img/icons/sidebar/support.svg?component';
 import ArrowUpIcon from '@/assets/img/icons/arrow-up.svg?component';
 import ArrowDownIcon from '@/assets/img/icons/arrow-down.svg?component';
-import PlusSymbolIcon from '@/assets/img/icons/plus_symbol.svg?component';
 import { useToast } from "vue-toastification";
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+import { faPlus } from '@fortawesome/free-solid-svg-icons';
 import { Bar } from 'vue-chartjs';
 import {
   Chart as ChartJS,

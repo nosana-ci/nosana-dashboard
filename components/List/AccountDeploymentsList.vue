@@ -2,7 +2,7 @@
   <div class="box" style="margin-top: 1rem; height: auto; max-height: none;">
     <div class="columns is-multiline">
       <div class="column is-12">
-        <div class="is-flex is-justify-content-space-between is-align-items-center mb-4">
+        <div class="is-flex is-justify-content-flex-start is-align-items-center mb-4">
           <div class="select status-select">
             <select v-model="currentState">
               <option v-for="filterState in filterStates" 
@@ -13,10 +13,6 @@
               </option>
             </select>
           </div>
-          <nuxt-link to="/deploy" class="button has-background-white has-text-black" style="border: 1px solid black; transition: all 0.2s ease;">
-            <PlusSymbolIcon class="plus-icon" style="width: 14px; height: 14px; margin-right: 0.5rem; transition: fill 0.2s ease;" />
-            <span>Deploy Model</span>
-          </nuxt-link>
         </div>
 
         <div :class="{'min-height-container': loadingJobs || loadingNodeJobs}">
