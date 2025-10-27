@@ -1677,27 +1677,40 @@ watch(
 
 // Debounced authentication watcher to prevent flickering
 let authTimeout: NodeJS.Timeout | null = null;
+let hasInitiallyLoaded = false;
 
 watch(
   isAuthenticated,
-  (authed) => {
+  (authed, oldAuthed) => {
     // Clear any existing timeout
     if (authTimeout) {
       clearTimeout(authTimeout);
     }
     
-    // Wait 200ms for auth to stabilize before reacting
+    // If user is switching from authenticated to unauthenticated, react immediately
+    // to prevent seeing deployment data they shouldn't see
+    if (oldAuthed === true && authed === false) {
+      error.value = "Please log in to view deployments";
+      deployment.value = null;
+      return;
+    }
+    
+    // For all other state changes, wait longer for auth to stabilize
+    // This prevents the "please login" error from showing during initial page load
+    const debounceTime = hasInitiallyLoaded ? 500 : 1500;
+    
     authTimeout = setTimeout(() => {
       if (authed) {
         // Only load if deployment doesn't exist yet
         if (!deployment.value) {
           loadDeployment();
+          hasInitiallyLoaded = true;
         }
       } else {
         error.value = "Please log in to view deployments";
         deployment.value = null;
       }
-    }, 200);
+    }, debounceTime);
   },
   { immediate: true }
 );
