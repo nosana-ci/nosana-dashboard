@@ -505,9 +505,6 @@ const maskKey = (key: string) => {
 </script>
 
 <style scoped>
-.api-keys-section {
-  margin-bottom: 2rem;
-}
 
 .table-container {
   max-height: 400px;

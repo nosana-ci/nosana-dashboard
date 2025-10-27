@@ -182,7 +182,6 @@ defineExpose({
   font-size: 0.8rem;
   font-weight: 600;
   color: #7a7a7a;
-  margin-bottom: 0.5rem;
 }
 
 .equal-height-box {

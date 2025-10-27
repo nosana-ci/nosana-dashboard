@@ -198,7 +198,7 @@
             <span>Deploy Model</span>
           </nuxt-link>
         </div>
-        <ListDeploymentsList job-type="posted" :items-per-page="10" class="mb-6 deployments-list" @update:total-deployments="totalDeployments = $event" />
+        <JobList job-type="posted" :items-per-page="10" class="mb-4" @update:total-deployments="totalDeployments = $event" />
         
         <div class="columns mt-6">
           <div class="column is-4">
@@ -346,7 +346,7 @@
 </template>
 
 <script setup lang="ts">
-import ListDeploymentsList from '~/components/List/AccountDeploymentsList.vue';
+import JobList from '~/components/List/JobList.vue';
 import { useWallet } from 'solana-wallets-vue';
 import { useStake } from '~/composables/useStake';
 import { useAPI } from '~/composables/useAPI';
@@ -1163,11 +1163,6 @@ watch([invitationToken, status], ([token, authStatus]) => {
 </script>
 
 <style scoped>
-/* Deployments section */
-.deployments-list {
-  margin-bottom: 3rem !important;
-}
-
 .container {
   max-width: 1200px;
   margin: 0 auto 0 0;
@@ -1197,19 +1192,6 @@ watch([invitationToken, status], ([token, authStatus]) => {
   justify-content: center;
 }
 
-/* Exclude ListDeploymentsList from the height restriction */
-.deployments-list > .box {
-  max-height: none;
-  height: auto;
-  overflow: visible;
-}
-
-.deployments-list > .box .columns,
-.deployments-list > .box .column,
-.deployments-list > .box .table-container {
-  height: auto;
-  max-height: none;
-}
 
 /* Special handling for Cost and Usage and Monthly History boxes */
 .column.is-4 .box:not(.equal-height-boxes .box) {

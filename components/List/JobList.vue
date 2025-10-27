@@ -1,5 +1,5 @@
 <template>
-  <div class="box" style="margin-top: 1rem; height: auto; max-height: none;">
+  <div class="box mt-4 has-text-left">
     <div class="columns is-multiline">
       <div class="column is-12">
         <div class="is-flex is-justify-content-flex-start is-align-items-center mb-4">
@@ -30,7 +30,7 @@
             </thead>
             <tbody>
               <tr v-if="loadingJobs || loadingNodeJobs">
-                <td colspan="7" class="has-text-centered loading-cell">Loading deployments...</td>
+                <td colspan="7" class="has-text-centered py-6">Loading deployments...</td>
               </tr>
               <tr v-else-if="displayedJobs.length === 0">
                 <td colspan="7" class="has-text-centered">No deployments found</td>
@@ -531,9 +531,6 @@ const isGHCR = (image: string) => {
   filter: brightness(100) !important;
 }
 
-.loading-cell {
-  padding: 2rem 0;
-}
 
 .min-height-container {
   min-height: 430px;

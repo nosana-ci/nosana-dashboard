@@ -495,18 +495,6 @@ html.dark-mode {
   }
 }
 
-// Add styles to remove extra spacing
-.tabs {
-  margin-bottom: 0.2rem !important;
-}
-
-.tabs + div {
-  margin-top: 0.2rem !important;
-}
-
-div[class*="has-background-white"] {
-  padding-top: 0.2rem !important;
-  padding-bottom: 0.2rem !important;
-}
+// Use proper Bulma spacing classes instead of overrides
 
 </style>
