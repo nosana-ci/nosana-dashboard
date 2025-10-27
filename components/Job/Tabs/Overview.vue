@@ -1,35 +1,35 @@
 <template>
   <div class="groups-container">
-    <div v-if="loading" class="loading-state">
+    <div v-if="loading" class="has-text-centered p-6">
       <span class="icon is-small">
         <i class="fas fa-spinner fa-spin"></i>
       </span>
       <span>Loading groups...</span>
     </div>
 
-    <div v-else-if="error" class="error-state">
-      <span class="icon is-small has-text-danger">
+    <div v-else-if="error" class="has-text-centered p-6 has-text-danger">
+      <span class="icon is-small">
         <i class="fas fa-exclamation-triangle"></i>
       </span>
       <span>{{ error }}</span>
     </div>
 
-    <div v-else-if="operations.length === 0" class="empty-state">
-      <span class="icon is-small has-text-grey-light">
+    <div v-else-if="operations.length === 0" class="has-text-centered p-6 has-text-grey-light">
+      <span class="icon is-small">
         <i class="fas fa-box-open"></i>
       </span>
       <span>No groups available.</span>
     </div>
 
-    <div v-else class="groups-table-container">
+    <div v-else class="is-flex is-flex-direction-column">
       <template v-for="(groupOps, groupName) in groupedOperations" :key="groupName">
-        <div class="group-section">
-          <div class="group-header">
-            <div class="group-info">
-              <h3 class="group-name">{{ groupName }}</h3>
-              <span class="group-count">{{ groupOps.length }} operation{{ groupOps.length !== 1 ? 's' : '' }}</span>
+        <div class="mb-5">
+          <div class="level px-4 py-3 has-background-light group-header">
+            <div class="level-left">
+              <h3 class="title is-5 mb-0 is-capitalized">{{ groupName }}</h3>
+              <span class="has-text-grey ml-4">{{ groupOps.length }} operation{{ groupOps.length !== 1 ? 's' : '' }}</span>
             </div>
-            <div class="group-actions">
+            <div class="level-right">
               <button
                 @click.stop="stopGroup(groupName)"
                 :disabled="isJobCompleted || loadingGroups.has(groupName) || !hasStoppableOpsInGroup(groupOps)"
@@ -134,20 +134,20 @@
                 </tr>
                 <tr v-if="expandedOps.has(op.id)" class="op-details-row">
                   <td colspan="5" class="op-details-cell">
-                    <div class="op-details-container">
+                    <div class="columns is-mobile is-gapless op-details-container">
                       <!-- Operation Information -->
-                      <div class="op-info-panel">
+                      <div class="column is-one-third p-5 op-info-panel">
                         <div class="op-info-section">
-                          <h4 class="section-title">Operation Details</h4>
+                          <h4 class="title is-6 has-text-grey-dark mb-4">Operation Details</h4>
                           <div class="section-content">
-                            <div class="info-item">
-                              <span class="info-label">Last Started:</span>
-                              <span class="info-value">{{ formatTimestamp(getOpState(op.id)?.startTime) }}</span>
+                            <div class="level py-3 info-item">
+                              <span class="level-left has-text-grey">Last Started:</span>
+                              <span class="level-right is-family-monospace">{{ formatTimestamp(getOpState(op.id)?.startTime) }}</span>
                             </div>
                             
-                            <div class="info-item">
-                              <span class="info-label">Last Ended:</span>
-                              <span class="info-value">{{ formatTimestamp(getOpState(op.id)?.endTime) }}</span>
+                            <div class="level py-3 info-item">
+                              <span class="level-left has-text-grey">Last Ended:</span>
+                              <span class="level-right is-family-monospace">{{ formatTimestamp(getOpState(op.id)?.endTime) }}</span>
                             </div>
                             
                             <div class="info-item">
@@ -170,63 +170,32 @@
                         
                         <!-- Service Endpoints -->
                         <div class="op-info-section endpoints-section">
-                          <h4 class="section-title">Service Endpoints</h4>
+                          <h4 class="title is-6 has-text-grey-dark mb-4">Service Endpoints</h4>
                           <div class="section-content endpoints-content">
                             <div v-if="op.ports && op.ports.length > 0" class="endpoints-list">
-                              <div 
+                              <a 
                                 v-for="(portInfo, idx) in op.ports" 
                                 :key="idx"
-                                class="endpoint-item"
+                                :href="portInfo.url"
+                                target="_blank"
+                                class="port-badge mr-2 mb-2"
+                                :title="`Open ${portInfo.url} - ${portInfo.status}`"
+                                @click.stop
                               >
-                                <div class="endpoint-row">
-                                  <div class="endpoint-info">
-                                    <span
-                                      class="status-dot"
-                                      :class="{
-                                        'dot-online': portInfo.status === 'ONLINE',
-                                        'dot-offline': portInfo.status === 'OFFLINE',
-                                        'dot-unknown': portInfo.status === 'UNKNOWN',
-                                      }"
-                                      :title="portInfo.status === 'UNKNOWN' ? 'LOADING' : portInfo.status"
-                                    ></span>
-                                    <span class="endpoint-port">Port {{ portInfo.port }}</span>
-                                  </div>
-                                  <a
-                                    :href="portInfo.url"
-                                    target="_blank"
-                                    class="endpoint-link"
-                                    @click.stop
-                                  >
-                                    <span class="icon is-small">
-                                      <svg
-                                        width="12"
-                                        height="12"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        xmlns="http://www.w3.org/2000/svg"
-                                      >
-                                        <path
-                                          d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"
-                                          fill="currentColor"
-                                        />
-                                      </svg>
-                                    </span>
-                                    <span class="endpoint-url">Open</span>
-                                  </a>
-                                </div>
-                              </div>
+                                {{ portInfo.port }}
+                              </a>
                             </div>
-                            <div v-else class="endpoints-empty">
-                              <span class="has-text-grey-light">No endpoints available</span>
+                            <div v-else class="has-text-centered has-text-grey is-size-7 p-4">
+                              No endpoints available
                             </div>
                           </div>
                         </div>
                       </div>
                       
                       <!-- Logs -->
-                      <div class="op-logs-panel">
-                        <div class="logs-header">
-                          <h4 class="logs-title">LOGS</h4>
+                      <div class="column is-two-thirds p-5 is-flex is-flex-direction-column op-logs-panel">
+                        <div class="level mb-3 logs-header">
+                          <h4 class="title is-6 has-text-grey-dark">Logs</h4>
                         </div>
                         <div v-if="getOpLogs(op.id)?.length" class="op-logs-content">
                           <button
@@ -966,309 +935,136 @@ const restartGroup = async (groupName: string) => {
 </script>
 
 <style lang="scss" scoped>
+// Use Bulma utility classes instead of custom containers
 .groups-container {
-  padding: 1.5rem;
-  background: $white;
-  border-radius: $radius-large;
+  // Remove hardcoded background and radius - use Bulma classes in template
 }
 
+// Replace custom flex layouts with Bulma has-text-centered
 .loading-state,
 .error-state,
 .empty-state {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 2rem;
-  color: $text-dark;
+  // Use Bulma classes: has-text-centered p-6 
 }
 
 .error-state {
-  color: $danger;
+  // Use Bulma class: has-text-danger
 }
 
+// Use Bulma spacing utilities instead
 .groups-table-container {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
+  // Use Bulma class: is-flex is-flex-direction-column 
 }
 
 .group-section {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+  // Use Bulma class: is-flex is-flex-direction-column mb-5
 }
 
+// Simplify group header using Bulma level classes
 .group-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.75rem 1rem;
-  background: $grey-lightest;
-  border-radius: $radius;
+  // Use Bulma classes: level px-4 py-3 has-background-light
   border-left: 4px solid $secondary;
 }
 
 .group-info {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
+  // Use Bulma class: level-left
 }
 
 .group-name {
-  margin: 0;
-  text-transform: capitalize;
+  // Use Bulma classes: title is-5 mb-0 is-capitalized
 }
 
 .group-count {
-  color: $text-dark;
+  // Use Bulma class: has-text-grey
 }
 
+// Use Bulma class: level-right with buttons field
 .group-actions {
-  display: flex;
-  gap: 0.5rem;
+  // Remove - using level-right instead
 }
 
+// Minimal table customization - use Bulma table classes
 .table {
   tbody {
     tr.op-row {
       cursor: pointer;
-      transition: background-color 0.2s ease;
-
+      
       &.is-expanded {
         background-color: $grey-lightest;
       }
-    }
-    
-    td {
-      vertical-align: middle;
     }
   }
 }
 
 html.dark-mode {
-  .table {
-    tbody {
-      tr.op-row {
-        &.is-expanded {
-          background-color: lighten($grey-darker, 3%);
-        }
-      }
-    }
+  .table tbody tr.op-row.is-expanded {
+    background-color: $grey-darker;
   }
 }
 
-// Operation Details Container (two-column layout)
+// Operation Details - use Bulma columns instead of custom grid
 .op-details-cell {
   padding: 0 !important;
   background: transparent;
-  text-align: left !important;
 }
 
 .op-details-container {
-  display: grid;
-  grid-template-columns: 30% 70%;
-  gap: 0;
+  // Use Bulma: columns is-mobile is-gapless
   background: $white;
   height: 400px;
-  max-height: 500px;
   overflow: hidden;
 }
 
-// Left panel: Operation Info
+// Left panel: Operation Info - use Bulma column classes
 .op-info-panel {
-  padding: 2rem;
-  background: $white;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
+  // Use Bulma: column is-one-third p-5 
   height: 100%;
-  overflow: hidden; // Prevent panel from expanding
+  overflow: hidden;
 }
 
-.op-info-section {
-  .section-title {
-    color: $text-dark;
-    text-transform: uppercase;
-    margin: 0 0 1.45rem 0;
-  }
-  
-  .section-content {
-    padding: 0;
-  }
-  
+// Use Bulma typography classes - minimal custom styling needed
+.op-info-section {  
   &.endpoints-section {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
     min-height: 0;
     overflow: hidden;
     
-    .section-title {
-      flex-shrink: 0;
-    }
-    
     .endpoints-content {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
       overflow-y: auto;
-      overflow-x: hidden;
       min-height: 0;
-      
-      .endpoints-list {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-      }
-      
-      .endpoints-empty {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        height: 100%;
-        min-height: 80px;
-        color: $grey;
-        font-size: $size-7;
-      }
     }
   }
 }
 
+// Minimal custom styling - use Bulma classes in template
 .info-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.75rem 0;
   border-bottom: 1px solid $grey-lighter;
-  
-  &:first-child {
-    padding-top: 0;
-  }
   
   &:last-child {
     border-bottom: none;
   }
-  
-  .info-label {
-    color: $text-dark;
-  }
-  
-  .info-value {
-    color: $text;
-    font-family: monospace;
-  }
-}
-
-.endpoint-item {
-  padding: 0.5rem 0.75rem;
-  background: $white;
-  border: 1px solid $grey-light;
-  border-radius: $radius-small;
-}
-
-.endpoint-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.endpoint-info {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  
-  &.dot-online {
-    background: $success;
-  }
-  
-  &.dot-offline {
-    background: $danger;
-  }
-  
-  &.dot-unknown {
-    background: $warning;
-  }
-}
-
-.endpoint-port {
-  color: $text;
-  font-family: monospace;
-}
-
-.endpoint-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.25rem 0.5rem;
-  background: $secondary;
-  color: $white;
-  border-radius: $radius-small;
-  text-decoration: none;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-  
-  &:hover {
-    background: darken($secondary, 5%);
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba($secondary, 0.2);
-  }
-  
-  .icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  
-  .endpoint-url {
-    color: $white;
-  }
 }
 
 .op-logs-panel {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  // Use Bulma: column is-two-thirds p-5 is-flex is-flex-direction-column
   height: 100%;
-  padding: 2rem;
-  background: $white;
+  overflow: hidden;
 }
 
 .logs-header {
-  margin-bottom: 0.75rem;
-  background: $white;
-  flex-shrink: 0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  // Use Bulma: level mb-3
 }
 
 .logs-title {
-  color: $text-dark;
-  text-transform: uppercase;
-  margin: 0;
+  // Use Bulma: has-text-grey has-text-weight-semibold is-uppercase
 }
 
 .op-id {
-  color: $text;
-  font-family: monospace;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
+  // Use Bulma: is-family-monospace
 }
 
 .expand-icon {
   transition: transform 0.2s ease;
   color: $text-dark;
-  flex-shrink: 0;
 
   &.is-expanded {
     transform: rotate(180deg);

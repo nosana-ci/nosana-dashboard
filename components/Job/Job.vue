@@ -174,8 +174,9 @@
           </div>
         </div>
 
-        <!-- JobTabs Overview Content -->
+        <!-- Operation Controls Section -->
         <div v-if="props.job.jobDefinition">
+          <h2 class="title is-5 mb-3">Container controls</h2>
           <JobTabs
             :job="props.job"
             :endpoints="props.endpoints"
@@ -213,6 +214,7 @@
       <!-- System Logs Tab -->
       <div v-if="activeTab === 'system-logs'">
         <div v-if="props.job.jobDefinition">
+          <h2 class="title is-5 mb-3">Container controls</h2>
           <JobTabs
             :job="props.job"
             :endpoints="props.endpoints"
