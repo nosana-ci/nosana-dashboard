@@ -134,93 +134,15 @@
                 </tr>
                 <tr v-if="expandedOps.has(op.id)" class="op-details-row">
                   <td colspan="5" class="op-details-cell">
-                    <div class="columns is-mobile is-gapless op-details-container">
-                      <!-- Operation Information -->
-                      <div class="column is-one-third p-5 op-info-panel">
-                        <div class="op-info-section">
-                          <h4 class="title is-6 has-text-grey-dark mb-4">Operation Details</h4>
-                          <div class="section-content">
-                            <div class="level py-3 info-item">
-                              <span class="level-left has-text-grey">Last Started:</span>
-                              <span class="level-right is-family-monospace">{{ formatTimestamp(getOpState(op.id)?.startTime) }}</span>
-                            </div>
-                            
-                            <div class="level py-3 info-item">
-                              <span class="level-left has-text-grey">Last Ended:</span>
-                              <span class="level-right is-family-monospace">{{ formatTimestamp(getOpState(op.id)?.endTime) }}</span>
-                            </div>
-                            
-                            <div class="info-item">
-                              <span class="info-label">Job Results:</span>
-                              <span class="info-value">
-                              <a
-                                v-if="hasOpResults(op.id)"
-                                href="#"
-                                @click.stop.prevent="openResultsModal(op.id)"
-                              >
-                                View
-                              </a>
-                                <span v-else>-</span>
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                        
-                      
-                        
-                        <!-- Service Endpoints -->
-                        <div class="op-info-section endpoints-section">
-                          <h4 class="title is-6 has-text-grey-dark mb-4">Service Endpoints</h4>
-                          <div class="section-content endpoints-content">
-                            <div v-if="op.ports && op.ports.length > 0" class="endpoints-list">
-                              <a 
-                                v-for="(portInfo, idx) in op.ports" 
-                                :key="idx"
-                                :href="portInfo.url"
-                                target="_blank"
-                                class="port-badge mr-2 mb-2"
-                                :title="`Open ${portInfo.url} - ${portInfo.status}`"
-                                @click.stop
-                              >
-                                {{ portInfo.port }}
-                              </a>
-                            </div>
-                            <div v-else class="has-text-centered has-text-grey is-size-7 p-4">
-                              No endpoints available
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <!-- Logs -->
-                      <div class="column is-two-thirds p-5 is-flex is-flex-direction-column op-logs-panel">
-                        <div class="level mb-3 logs-header">
-                          <h4 class="title is-6 has-text-grey-dark">Logs</h4>
-                        </div>
-                        <div v-if="getOpLogs(op.id)?.length" class="op-logs-content">
-                          <button
-                            class="button is-small is-text fullscreen-logs-button"
-                            @click.stop="openLogModal(op.id)"
-                            title="Fullscreen Logs"
-                          >
-                            <span class="icon is-small">
-                              <FullscreenIcon />
-                            </span>
-                          </button>
-                          <div class="op-logs-viewer">
-                            <div
-                              v-for="(log, index) in getOpLogs(op.id)"
-                              :key="index"
-                              class="row-count"
-                            >
-                              <span v-if="log.html" class="pre" v-html="log.content || log.log || log"></span>
-                              <span v-else class="pre">{{ log.content || log.log || log }}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div v-else class="op-logs-empty">
-                          <span class="has-text-grey-light">No logs available</span>
-                        </div>
+                    <div class="op-details-container">
+                      <!-- Logs Only -->
+                      <div class="op-info-panel">
+                        <FLogViewer
+                          :logs="getOpLogs(op.id) || []"
+                          :isConnecting="false"
+                          :progressBars="new Map()"
+                          :resourceProgressBars="new Map()"
+                        />
                       </div>
                     </div>
                   </td>
@@ -232,29 +154,6 @@
       </template>
     </div>
 
-  <!-- Fullscreen Logs Modal -->
-  <FullscreenModal :isOpen="logModalOpen" :title="`Operation Logs - ${fullscreenOpId || ''}`" @close="closeLogModal">
-    <div class="fullscreen-logs-wrapper">
-      <div class="op-logs-content">
-        <div class="op-logs-viewer" ref="modalLogsContainerRef">
-          <template v-if="fullscreenOpId && getOpLogs(fullscreenOpId)?.length">
-            <div
-              v-for="(log, index) in getOpLogs(fullscreenOpId)"
-              :key="index"
-              class="row-count"
-            >
-              <span v-if="log.html" class="pre" v-html="log.content || log.log || log"></span>
-              <span v-else class="pre">{{ log.content || log.log || log }}</span>
-            </div>
-          </template>
-          <div v-else class="op-logs-empty">
-            <span class="has-text-grey-light">No logs available</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </FullscreenModal>
-  
   <!-- Job Results Modal -->
   <FullscreenModal :isOpen="resultsModalOpen" :title="`Job Results - ${resultsOpId || ''}`" @close="closeResultsModal">
     <div class="fullscreen-logs-wrapper">
@@ -279,6 +178,7 @@
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import FullscreenModal from '~/components/Common/FullscreenModal.vue';
 import VueJsonPretty from 'vue-json-pretty';
+import FLogViewer from '../FLogViewer.vue';
 import 'vue-json-pretty/lib/styles.css';
 
 // Import icons as components
@@ -402,24 +302,6 @@ const { ensureAuth } = useAuthHeader();
 
 const jobInfo = computed<LocalJobInfo | null>(() => props.jobInfo ?? null);
 
-// Fullscreen logs modal state
-const logModalOpen = ref(false);
-const fullscreenOpId = ref<string | null>(null);
-const modalLogsContainerRef = ref<HTMLElement | null>(null);
-
-const openLogModal = (opId: string) => {
-  fullscreenOpId.value = opId;
-  logModalOpen.value = true;
-  nextTick(() => {
-    if (modalLogsContainerRef.value) {
-      modalLogsContainerRef.value.scrollTop = modalLogsContainerRef.value.scrollHeight;
-    }
-  });
-};
-
-const closeLogModal = () => {
-  logModalOpen.value = false;
-};
 
 // Results modal per operation
 const resultsModalOpen = ref(false);
@@ -1002,24 +884,18 @@ html.dark-mode {
   }
 }
 
-// Operation Details - use Bulma columns instead of custom grid
+// Operation Details - use Bulma columns
 .op-details-cell {
   padding: 0 !important;
   background: transparent;
 }
 
 .op-details-container {
-  // Use Bulma: columns is-mobile is-gapless
   background: $white;
-  height: 400px;
-  overflow: hidden;
 }
 
-// Left panel: Operation Info - use Bulma column classes
 .op-info-panel {
-  // Use Bulma: column is-one-third p-5 
-  height: 100%;
-  overflow: hidden;
+  // Single column layout now
 }
 
 // Use Bulma typography classes - minimal custom styling needed
@@ -1044,24 +920,7 @@ html.dark-mode {
   }
 }
 
-.op-logs-panel {
-  // Use Bulma: column is-two-thirds p-5 is-flex is-flex-direction-column
-  height: 100%;
-  overflow: hidden;
-}
-
-.logs-header {
-  // Use Bulma: level mb-3
-}
-
-.logs-title {
-  // Use Bulma: has-text-grey has-text-weight-semibold is-uppercase
-}
-
-.op-id {
-  // Use Bulma: is-family-monospace
-}
-
+// Minimal styling for expand icon
 .expand-icon {
   transition: transform 0.2s ease;
   color: $text-dark;
@@ -1069,24 +928,6 @@ html.dark-mode {
   &.is-expanded {
     transform: rotate(180deg);
   }
-}
-
-.op-logs-content {
-  background: $black;
-  padding: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  flex: 1;
-  border: 1px solid $grey-lighter;
-  border-radius: $radius;
-  position: relative;
-}
-
-.op-logs-viewer {
-  font-family: 'Courier New', Courier, monospace;
-  line-height: 1.6;
-  color: $grey-lighter;
-  padding: 1rem;
 }
 
 /* Keep JSON results background stable (disable VueJsonPretty line highlight) */
@@ -1102,72 +943,6 @@ html.dark-mode {
 :deep(.vjs-tree .vjs-tree__node) {
   background-color: transparent !important;
   transition: none !important;
-}
-
-/* Line numbering similar to Result.vue */
-.op-logs-content {
-  position: relative;
-  counter-reset: line;
-}
-.logs-floating-controls {
-  position: sticky;
-  top: 0;
-  display: flex;
-  justify-content: flex-end;
-  padding: 0;
-  height: 0;
-  z-index: 3;
-  pointer-events: none;
-}
-.row-count {
-  word-break: break-word;
-  max-width: 100%;
-  padding-left: 40px;
-}
-.row-count:before {
-  counter-increment: line;
-  font-family: monospace;
-  font-weight: normal;
-  content: counter(line);
-  display: inline-block;
-  padding: 0 0.5em;
-  margin-right: 0.5em;
-  color: $grey;
-  min-width: 50px;
-  text-align: right;
-  margin-left: -62px;
-}
-.pre { white-space: pre-wrap; }
-
-.fullscreen-logs-button {
-  position: absolute;
-  top: 0.25rem;
-  right: 0.25rem;
-  margin: 0;
-  background-color: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-  pointer-events: auto;
-  z-index: 4;
-}
-.fullscreen-logs-button .icon img { width: 16px; height: 16px; filter: invert(1); opacity: 0.9; }
-.fullscreen-logs-button:hover .icon img { opacity: 1; }
-
-.fullscreen-logs-wrapper {
-  position: relative;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-.fullscreen-logs-wrapper .op-logs-content {
-  flex: 1;
-  height: 100%;
-  overflow: hidden;
-}
-.fullscreen-logs-wrapper .op-logs-viewer {
-  height: 100%;
-  min-height: 100%;
-  overflow-y: auto;
 }
 
 .log-entry {
