@@ -13,7 +13,7 @@
               </option>
             </select>
           </div>
-          <nuxt-link to="/deploy" class="button has-background-white has-text-black" style="border: 1px solid black; transition: all 0.2s ease;">
+          <nuxt-link to="/deployments/create" class="button has-background-white has-text-black" style="border: 1px solid black; transition: all 0.2s ease;">
             <PlusSymbolIcon class="plus-icon" style="width: 14px; height: 14px; margin-right: 0.5rem; transition: fill 0.2s ease;" />
             <span>Deploy Model</span>
           </nuxt-link>
