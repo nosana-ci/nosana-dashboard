@@ -1,33 +1,4 @@
 <template>
-  <div class="tabs is-boxed job-tabs-condensed">
-    <ul>
-      <li
-        v-if="canShowGroupsTab"
-        :class="{ 'is-active': activeTab === 'groups' }"
-      >
-        <a @click.prevent="handleTabClick('groups')">Overview</a>
-      </li>
-      <li v-if="canShowLogsTab" :class="{ 'is-active': activeTab === 'logs' }">
-        <a @click.prevent="handleTabClick('logs')">System Logs</a>
-      </li>
-      
-      <li v-if="!props.isConfidential" :class="{ 'is-active': activeTab === 'info' }">
-        <a @click.prevent="handleTabClick('info')">Job Definition</a>
-      </li>
-      <li
-        v-if="hasArtifacts"
-        :class="{ 'is-active': activeTab === 'artifacts' }"
-      >
-        <a @click.prevent="handleTabClick('artifacts')">Artifacts</a>
-      </li>
-      <li
-        v-if="showChatTab" 
-        :class="{ 'is-active': activeTab === 'chat' }"
-      >
-        <a @click.prevent="handleTabClick('chat')">Test Chat</a>
-      </li>
-    </ul>
-  </div>
   <div v-if="activeTab === 'info' && !props.isConfidential" class="job-definition-container">
     <button 
       class="button is-small is-light copy-button"

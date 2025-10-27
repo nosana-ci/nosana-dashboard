@@ -19,9 +19,9 @@
         <div class="p-5 deployment-header">
           <div class="is-flex is-justify-content-space-between is-align-items-center">
             <div class="is-flex is-align-items-center">
-              <NuxtLink to="/deployments" class="button is-ghost back-button mr-4">
+              <NuxtLink to="/account/deployer" class="button is-ghost back-button mr-4">
                 <span class="icon is-small">
-                  <ArrowUpIcon class="icon-16 transform-rotate-270" />
+                  <ArrowUpIcon class="icon-16 transform-rotate-270" style="color: black;" />
                 </span>
               </NuxtLink>
               <div>
@@ -1793,13 +1793,9 @@ useHead({
 }
 
 .box.is-borderless {
-  padding: 0.5rem !important;
+  padding: 0 !important;
 }
 
-.deployment-tabs {
-  display: flex;
-  gap: 8px;
-}
 
 .tag.is-stopped {
   background-color: $grey-lightest !important;

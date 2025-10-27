@@ -194,7 +194,7 @@
         
         <div class="is-flex is-justify-content-space-between is-align-items-center mb-4">
           <h3 class="title is-4 mb-0">Deployments</h3>
-          <nuxt-link to="/deploy" class="button is-dark">
+          <nuxt-link to="/deployments/create" class="button is-dark">
             <span class="icon">
               <FontAwesomeIcon :icon="faPlus" />
             </span>

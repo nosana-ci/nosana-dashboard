@@ -5,7 +5,7 @@
       :style="{ overflowY: 'scroll', border: 'none', height: 'auto', marginTop: '1.5rem' }"
     >
       <div>
-          <h2 class="title is-5 mb-4 px-3" style="color: #202124;">{{ title || 'Configure job definition' }}</h2>
+          <h2 class="title is-5 mb-4" style="color: #202124;">{{ title || 'Configure job definition' }}</h2>
         <!-- START: New Template Info Box (above editor) -->
         <div class="px-3 pt-0 pb-2" style="width: 100%; display: flex;">
           <div class="is-flex is-align-items-start is-justify-content-space-between" style="width: 100%;">

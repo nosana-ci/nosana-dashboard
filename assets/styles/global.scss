@@ -295,6 +295,21 @@
   }
 }
 
+// Deployment tabs container styling (used for tab navigation containers)
+.deployment-tabs {
+  display: flex;
+  gap: 8px;
+  
+  .tab-button {
+    min-width: 83px; // Ensure consistent minimum width for longer text like "System Logs"
+    white-space: nowrap; // Prevent text wrapping
+    text-align: center; // Center text inside buttons
+    display: flex; // Use flexbox for better centering
+    align-items: center; // Vertical centering
+    justify-content: center; // Horizontal centering
+  }
+}
+
 .table.is-narrow td,
 .table.is-narrow th {
   line-height: 1;
