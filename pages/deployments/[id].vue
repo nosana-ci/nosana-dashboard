@@ -1677,40 +1677,39 @@ watch(
 
 // Debounced authentication watcher to prevent flickering
 let authTimeout: NodeJS.Timeout | null = null;
-let hasInitiallyLoaded = false;
 
 watch(
   isAuthenticated,
-  (authed, oldAuthed) => {
+  (authed) => {
     // Clear any existing timeout
     if (authTimeout) {
       clearTimeout(authTimeout);
     }
     
-    // If user is switching from authenticated to unauthenticated, react immediately
-    // to prevent seeing deployment data they shouldn't see
-    if (oldAuthed === true && authed === false) {
-      error.value = "Please log in to view deployments";
-      deployment.value = null;
+    // If authenticated, load deployment if we don't have one
+    if (authed) {
+      // Clear any error state
+      if (error.value === "Please log in to view deployments") {
+        error.value = null;
+      }
+      // Only load if deployment doesn't exist yet
+      if (!deployment.value) {
+        loadDeployment();
+      }
       return;
     }
     
-    // For all other state changes, wait longer for auth to stabilize
-    // This prevents the "please login" error from showing during initial page load
-    const debounceTime = hasInitiallyLoaded ? 500 : 1500;
-    
+    // If not authenticated, only show error after a delay and only if we don't have a deployment
+    // This prevents the error from showing during temporary auth lapses (tab switching, session refresh)
     authTimeout = setTimeout(() => {
-      if (authed) {
-        // Only load if deployment doesn't exist yet
+      if (!isAuthenticated.value) {
+        // Only show login error if we don't already have deployment data
+        // This preserves the deployment during temporary auth interruptions
         if (!deployment.value) {
-          loadDeployment();
-          hasInitiallyLoaded = true;
+          error.value = "Please log in to view deployments";
         }
-      } else {
-        error.value = "Please log in to view deployments";
-        deployment.value = null;
       }
-    }, debounceTime);
+    }, 2000); // 2 second delay to allow auth to re-establish
   },
   { immediate: true }
 );
