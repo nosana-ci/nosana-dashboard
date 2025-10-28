@@ -267,7 +267,7 @@
                   <option value="SIMPLE">Simple</option>
                   <option value="SIMPLE-EXTEND">Simple Extend</option>
                   <option value="SCHEDULED">Scheduled</option>
-                  <option value="INFINITE">Infinite</option>
+                  <!-- <option value="INFINITE">Infinite</option> -->
                 </select>
               </div>
             </div>

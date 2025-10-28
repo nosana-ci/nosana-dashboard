@@ -519,7 +519,7 @@
           <div class="field">
             <label class="label">
               Replica Count
-              <span class="icon is-small has-tooltip-arrow" data-tooltip="Number of parallel job instances">
+              <span class="icon is-small has-tooltip-arrow has-tooltip-right" data-tooltip="Number of parallel job instances">
                 <InfoCircleIcon />
               </span>
             </label>
@@ -562,7 +562,7 @@
           <div class="field">
             <label class="label">
               Timeout (hours)
-              <span class="icon is-small has-tooltip-arrow" data-tooltip="Maximum runtime before auto-shutdown">
+              <span class="icon is-small has-tooltip-arrow has-tooltip-right" data-tooltip="Maximum runtime before auto-shutdown">
                 <InfoCircleIcon />
               </span>
             </label>
