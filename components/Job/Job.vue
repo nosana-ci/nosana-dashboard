@@ -69,6 +69,10 @@
                   </span>
                   <span>{{ props.job.state === 0 ? 'Delist' : 'Stop' }}</span>
                 </a>
+                
+                <div v-if="!hasAnyActions" class="dropdown-item has-text-grey">
+                  <span>No actions available</span>
+                </div>
               </div>
             </div>
           </div>
@@ -97,9 +101,9 @@
                 <tr>
                   <td>Deployer address</td>
                   <td>
-                    <a :href="`https://solscan.io/account/${props.job.project}`" target="_blank" class="has-text-link is-family-monospace">
+                    <nuxt-link :to="`/deployer/${props.job.project}`" class="has-text-link is-family-monospace">
                       {{ props.job.project?.toString() }}
-                    </a>
+                    </nuxt-link>
                   </td>
                 </tr>
                 <tr>
@@ -119,26 +123,6 @@
                     <nuxt-link :to="`/markets/${props.job.market}`" class="has-text-link is-family-monospace">
                       {{ props.job.market?.toString() }}
                     </nuxt-link>
-                  </td>
-                </tr>
-                <tr>
-                  <td>Start time</td>
-                  <td>{{ formatDateRelative(props.job.timeStart) }}</td>
-                </tr>
-                <tr>
-                  <td>End time</td>
-                  <td>
-                    <span v-if="props.job.timeEnd && props.job.timeEnd > 0">
-                      {{ formatDateRelative(props.job.timeEnd) }}
-                    </span>
-                    <span v-else class="has-text-grey">--</span>
-                  </td>
-                </tr>
-                <tr>
-                  <td>Docker image</td>
-                  <td>
-                    <span v-if="dockerImage">{{ dockerImage }}</span>
-                    <span v-else class="has-text-grey">Loading...</span>
                   </td>
                 </tr>
                 <tr>
@@ -168,6 +152,59 @@
                 <tr v-if="combinedSpecs?.download">
                   <td>Internet Speed</td>
                   <td>{{ combinedSpecs.download }} Mbps</td>
+                </tr>
+                
+                <!-- Additional details from Quick Details and More Details -->
+                <tr v-if="jobDurationData">
+                  <td>Duration</td>
+                  <td>
+                    <span v-if="jobDurationData.actualSeconds > 0">
+                      <SecondsFormatter :seconds="jobDurationData.actualSeconds" :showSeconds="true" />
+                      <span v-if="jobDurationData.maxDurationHours" class="has-text-grey"> (max {{ jobDurationData.maxDurationHours }})</span>
+                    </span>
+                    <span v-else-if="jobDurationData.maxDurationHours" class="has-text-grey">
+                      (max {{ jobDurationData.maxDurationHours }})
+                    </span>
+                  </td>
+                </tr>
+                <tr v-if="countryInfo || isQueuedJob">
+                  <td>Country</td>
+                  <td>
+                    <span v-if="countryInfo">{{ countryInfo }}</span>
+                    <span v-else-if="isQueuedJob" class="has-text-grey">Not assigned yet</span>
+                    <span v-else class="has-text-grey">--</span>
+                  </td>
+                </tr>
+                <tr v-if="combinedSpecs?.ram">
+                  <td>RAM</td>
+                  <td>{{ combinedSpecs.ram }} MB</td>
+                </tr>
+                <tr v-if="combinedSpecs?.diskSpace">
+                  <td>Disk Space</td>
+                  <td>{{ combinedSpecs.diskSpace }} GB</td>
+                </tr>
+                <tr v-if="combinedSpecs?.upload">
+                  <td>Upload Speed</td>
+                  <td>{{ combinedSpecs.upload }} Mbps</td>
+                </tr>
+                <tr v-if="combinedSpecs?.nvmlVersion">
+                  <td>NVIDIA Driver</td>
+                  <td>{{ combinedSpecs.nvmlVersion }}</td>
+                </tr>
+                <tr v-if="combinedSpecs?.systemEnvironment">
+                  <td>System Environment</td>
+                  <td>{{ combinedSpecs.systemEnvironment }}</td>
+                </tr>
+                <tr v-if="props.job.timeStart && formatStartTime">
+                  <td>Started</td>
+                  <td>
+                    {{ formatStartTime(props.job.timeStart) }}
+                    <span class="has-text-grey is-size-7"> ({{ formatTimeAgo(props.job.timeStart) }})</span>
+                  </td>
+                </tr>
+                <tr v-if="marketName">
+                  <td>GPU Pool Name</td>
+                  <td>{{ marketName }}</td>
                 </tr>
               </tbody>
             </table>
@@ -713,6 +750,17 @@ const isQueuedJob = computed(() => {
     props.job.state === 0 && 
     props.job.timeStart === 0
   ) || props.job.node === '11111111111111111111111111111111';
+});
+
+// Check if any actions are available for the job
+const hasAnyActions = computed(() => {
+  // Extend action: available for running jobs if user is job poster
+  const canExtend = props.job.isRunning && props.isJobPoster;
+  
+  // Stop/Delist action: available for running or queued jobs if user is job poster
+  const canStop = (props.job.isRunning || props.job.state === 0) && props.isJobPoster;
+  
+  return canExtend || canStop;
 });
 
 const toggleDetails = () => {
