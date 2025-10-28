@@ -1011,6 +1011,14 @@ html.dark-mode {
   gap: 0.5rem;
 }
 
+.op-status {
+  vertical-align: middle;
+}
+
+.op-actions {
+  vertical-align: middle;
+}
+
 html.dark-mode {
   .groups-container {
     background: $grey-darker;
