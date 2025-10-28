@@ -13,22 +13,21 @@
             <div>
               <h1 class="title is-4 has-text-weight-normal mb-0">{{ jobImages || props.job.address || jobDefinitionId || 'Job' }}</h1>
             </div>
-            <div class="tag is-outlined is-light status-tag ml-6" :class="statusClass(props.job.state)">
-              <span ref="headerIconRef" class="status-icon-wrap">
-                <component :is="getStatusIcon(props.job.state)" class="mr-2" :key="props.job.state" />
-              </span>
-              <span>{{ getStatusText(props.job.state) }}</span>
-            </div>
+            <StatusTag class="ml-6" :status="props.job.state" />
           </div>
           <div class="deployment-tabs">
           <button 
-            v-for="tab in ['overview', 'system-logs']"
+            v-for="tab in ['overview', 'container-controls', 'system-logs']"
             :key="tab"
             @click="activeTab = tab"
             :class="{ 'is-active': activeTab === tab }"
             class="tab-button"
           >
-            {{ tab === 'system-logs' ? 'System Logs' : tab.charAt(0).toUpperCase() + tab.slice(1) }}
+            {{ 
+              tab === 'system-logs' ? 'System Logs' : 
+              tab === 'container-controls' ? 'Container Controls' :
+              tab.charAt(0).toUpperCase() + tab.slice(1) 
+            }}
           </button>
           <!-- Actions Dropdown -->
           <div class="dropdown is-right" :class="{ 'is-active': showActionsDropdown }" ref="actionsDropdown">
@@ -211,39 +210,21 @@
           </div>
         </div>
 
-        <!-- Operation Controls Section -->
+      </div>
+
+      <!-- Container Controls Tab -->
+      <div v-if="activeTab === 'container-controls'">
         <div v-if="props.job.jobDefinition">
           <h2 class="title is-5 mb-3">Container controls</h2>
-          <JobTabs
+          <JobOverview
             :job="props.job"
-            :endpoints="props.endpoints"
             :isJobPoster="props.isJobPoster"
-            :jobInfo="props.jobInfo"
-            :isConfidential="isConfidential"
-            :jobDefinition="props.job.jobDefinition"
-            :hasArtifacts="false"
-            :isConnecting="isConnecting"
-            :logConnectionEstablished="connectionEstablished"
-            :systemLogs="[]"
-            :containerLogs="[]"
-            :progressBars="getFlogProgressBars()"
-            :resourceProgressBars="flogResourceBarsRef"
-            :showChatTab="isChatServiceReady"
-            :chatServiceUrl="chatServiceUrl"
-            :chatApiConfig="chatApiConfig"
-            :jobCombinedSpecs="combinedSpecs"
-            :jobNodeReport="jobNodeReport"
-            :loadingJobNodeSpecs="loadingNodeSpecs"
-            :isQueuedJob="isQueuedJob"
-            :activeLogs="(flogActiveLogs as unknown as any[])"
             :opIds="flogTabs.filter(t => t !== 'system')"
-            :filters="{ value: { opId: flogActiveTab === 'system' ? null : flogActiveTab, types: new Set(['container','info','error']) } }"
+            :activeLogs="(flogActiveLogs as unknown as any[])"
             :selectOp="(opId: string | null) => setFlogActiveTab(opId ?? 'system')"
-            :toggleType="() => {}"
             :logsByOp="flogLogsByOp"
             :systemLogsMap="flogSystemLogs"
-            :activeTab="'groups'"
-            ref="jobTabsRef"
+            :jobInfo="props.jobInfo"
           />
         </div>
       </div>
@@ -324,7 +305,9 @@ import JobStatus from "~/components/Job/Status.vue";
 import JobPrice from "~/components/Job/Price.vue";
 import ExtendModal from "~/components/Job/Modals/Extend.vue";
 import JobTabs from "~/components/Job/Tabs.vue";
+import JobOverview from "~/components/Job/Tabs/Overview.vue";
 import SecondsFormatter from "~/components/SecondsFormatter.vue";
+import StatusTag from "~/components/Common/StatusTag.vue";
 
 import LogSubscription from "./LogSubscription.vue";
 import { useFLogs } from "~/composables/jobs/useFLogs";

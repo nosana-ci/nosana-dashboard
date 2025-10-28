@@ -21,150 +21,261 @@
       <span>No groups available.</span>
     </div>
 
-    <div v-else class="is-flex is-flex-direction-column">
+    <!-- Expandable Tree Table Structure -->
+    <div v-else class="container-controls-tree">
       <template v-for="(groupOps, groupName) in groupedOperations" :key="groupName">
-        <div class="mb-5">
-          <div class="level px-4 py-3 has-background-light group-header">
-            <div class="level-left">
-              <h3 class="title is-5 mb-0 is-capitalized">{{ groupName }}</h3>
-              <span class="has-text-grey ml-4">{{ groupOps.length }} operation{{ groupOps.length !== 1 ? 's' : '' }}</span>
+        <!-- Group Row -->
+        <div class="tree-row tree-row--group" :class="{ 'is-expanded': expandedGroups.has(groupName) }">
+          <div class="tree-row__content" @click="toggleGroupExpansion(groupName)">
+            <div class="tree-row__main">
+              <span class="tree-row__expand-icon">
+                <i class="fas fa-chevron-right"></i>
+              </span>
+              <div class="tree-row__info">
+                <h3 class="title is-5 mb-0 is-capitalized">{{ groupName }}</h3>
+                <span class="subtitle is-7 has-text-grey-dark">{{ groupOps.length }} operation{{ groupOps.length !== 1 ? 's' : '' }}</span>
+              </div>
             </div>
-            <div class="level-right">
-              <button
-                @click.stop="stopGroup(groupName)"
-                :disabled="isJobCompleted || loadingGroups.has(groupName) || !hasStoppableOpsInGroup(groupOps)"
-                :class="{ 'is-loading': loadingGroups.has(groupName) }"
-                class="group-action-btn stop-btn"
-                title="Stop all operations in this group"
-              >
-                <span class="icon is-small mr-2">
-                  <SquareIcon />
-                </span>
-                <span>Stop</span>
-              </button>
-              <button
-                @click.stop="restartGroup(groupName)"
-                :disabled="isJobCompleted || loadingGroups.has(groupName) || !hasRestartableOpsInGroup(groupOps)"
-                :class="{ 'is-loading': loadingGroups.has(groupName) }"
-                class="group-action-btn restart-btn"
-                title="Restart all operations in this group"
-              >
-                <span class="icon is-small mr-2">
-                  <RefreshIcon />
-                </span>
-                <span>Restart</span>
-              </button>
+            <div class="tree-row__actions" @click.stop>
+              <div class="buttons has-addons">
+                <button
+                  @click="stopGroup(groupName)"
+                  :disabled="isJobCompleted || loadingGroups.has(groupName) || !hasStoppableOpsInGroup(groupOps)"
+                  :class="{ 'is-loading': loadingGroups.has(groupName) }"
+                  class="tab-button"
+                  title="Stop all operations in this group"
+                >
+                  <span class="icon is-small">
+                    <SquareIcon />
+                  </span>
+                  <span>Stop</span>
+                </button>
+                <button
+                  @click="restartGroup(groupName)"
+                  :disabled="isJobCompleted || loadingGroups.has(groupName) || !hasRestartableOpsInGroup(groupOps)"
+                  :class="{ 'is-loading': loadingGroups.has(groupName) }"
+                  class="tab-button"
+                  title="Restart all operations in this group"
+                >
+                  <span class="icon is-small">
+                    <RefreshIcon />
+                  </span>
+                  <span>Restart</span>
+                </button>
+              </div>
             </div>
           </div>
           
-          <table class="table is-fullwidth">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Image</th>
-                <th>Port(s)</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <template v-for="op in groupOps" :key="op.id">
-                <tr 
-                  :class="['op-row', `status-${op.status}`, { 'is-expanded': expandedOps.has(op.id) }]"
-                  @click="toggleOpExpansion(op.id)"
-                >
-                  <td class="op-name">
-                    <span class="op-id">
-                      {{ op.id }}
+          <!-- Operations List (Indented Level 1) -->
+          <div v-if="expandedGroups.has(groupName)" class="tree-row__children">
+            <template v-for="op in groupOps" :key="op.id">
+              <!-- Operation Row -->
+              <div class="tree-row tree-row--operation" :class="{ 'is-expanded': expandedOps.has(op.id) }">
+                <div class="tree-row__content" @click="toggleOpExpansion(op.id)">
+                  <div class="tree-row__main">
+                    <span class="tree-row__expand-icon">
+                      <i class="fas fa-chevron-right"></i>
                     </span>
-                  </td>
-                  <td class="op-image">{{ op.image || '--' }}</td>
-                  <td class="op-ports">
-                    <span v-if="!op.ports || op.ports.length === 0">--</span>
-                    <span v-else class="port-badges">
-                      <a 
-                        v-for="(portInfo, idx) in op.ports" 
-                        :key="idx"
-                        :href="portInfo.url"
-                        target="_blank"
-                        class="port-badge"
-                        :title="`Open ${portInfo.url}`"
-                        @click.stop
-                      >
-                        {{ portInfo.port }}
-                      </a>
-                    </span>
-                  </td>
-                  <td class="op-status">
-                  <div class="tag is-outlined is-light status-tag" :class="statusClass(op.status)">
-                    <span class="status-icon-wrap">
-                      <component :is="getStatusIconFile(op.status)" class="mr-2" />
-                    </span>
-                    <span>{{ op.status.toUpperCase() }}</span>
-                  </div>
-                  </td>
-                  <td class="op-actions">
-                    <div class="action-buttons">
-                      <button
-                        @click.stop="stopOperation(op)"
-                        :disabled="isJobCompleted || !canStop(op.status) || loadingOps.has(op.id)"
-                        :class="{ 'is-loading': loadingOps.has(op.id) }"
-                        class="action-btn stop-btn"
-                        title="Stop operation"
-                      >
-                        <span class="icon is-small mr-2">
-                          <SquareIcon />
-                        </span>
-                        <span>Stop</span>
-                      </button>
-                      <button
-                        @click.stop="restartOperation(op)"
-                        :disabled="isJobCompleted || !canRestart(op.status) || loadingOps.has(op.id)"
-                        :class="{ 'is-loading': loadingOps.has(op.id) }"
-                        class="action-btn restart-btn"
-                        title="Restart operation"
-                      >
-                        <span class="icon is-small mr-2">
-                          <RefreshIcon />
-                        </span>
-                        <span>Restart</span>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-                <tr v-if="expandedOps.has(op.id)" class="op-details-row">
-                  <td colspan="5" class="op-details-cell">
-                    <div class="op-details-container">
-                      <!-- Logs Only -->
-                      <div class="op-info-panel">
-                        <FLogViewer
-                          :logs="getOpLogs(op.id) || []"
-                          :isConnecting="false"
-                          :progressBars="new Map()"
-                          :resourceProgressBars="new Map()"
-                        />
+                    <div class="tree-row__info">
+                      <div class="is-flex is-align-items-center">
+                        <div class="mr-3">
+                          <h5 class="title is-6 mb-0">{{ op.id }}</h5>
+                          <span class="subtitle is-7 has-text-grey-dark is-family-monospace">{{ op.image || '--' }}</span>
+                        </div>
+                        <!-- Status next to title -->
+                        <div class="tree-row__status">
+                          <StatusTag :status="op.status" />
+                        </div>
                       </div>
                     </div>
-                  </td>
-                </tr>
-              </template>
-            </tbody>
-          </table>
+                  </div>
+                  
+                  <!-- Right side: Ports and Actions -->
+                  <div class="tree-row__right" @click.stop>
+                    <!-- Ports next to buttons -->
+                    <div class="tree-row__ports mr-4">
+                      <div v-if="op.ports && op.ports.length > 0" class="tags">
+                        <a 
+                          v-for="(portInfo, idx) in op.ports" 
+                          :key="idx"
+                          :href="portInfo.url"
+                          target="_blank"
+                          class="tag is-link is-small"
+                          :title="`Open ${portInfo.url}`"
+                        >
+                          {{ portInfo.port }}
+                        </a>
+                      </div>
+                      <span v-else class="has-text-grey-light is-size-7">No ports</span>
+                    </div>
+                    
+                    <!-- Actions -->
+                    <div class="tree-row__actions">
+                      <div class="buttons has-addons">
+                        <button
+                          @click="stopOperation(op)"
+                          :disabled="isJobCompleted || !canStop(op.status) || loadingOps.has(op.id)"
+                          :class="{ 'is-loading': loadingOps.has(op.id) }"
+                          class="tab-button"
+                          title="Stop operation"
+                        >
+                          <span class="icon is-small">
+                            <SquareIcon />
+                          </span>
+                          <span>Stop</span>
+                        </button>
+                        <button
+                          @click="restartOperation(op)"
+                          :disabled="isJobCompleted || !canRestart(op.status) || loadingOps.has(op.id)"
+                          :class="{ 'is-loading': loadingOps.has(op.id) }"
+                          class="tab-button"
+                          title="Restart operation"
+                        >
+                          <span class="icon is-small">
+                            <RefreshIcon />
+                          </span>
+                          <span>Restart</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Operation Details (Indented Level 2) -->
+                <div v-if="expandedOps.has(op.id)" class="operation-details-panel">
+                  <!-- Operation Details -->
+                  <div class="detail-section">
+                    <h6 class="title is-6 mb-3">Operation Details</h6>
+                    <div class="content">
+                      <p class="mb-2"><strong>Started:</strong> <span class="has-text-grey-dark">{{ formatTimestamp(getOpState(op.id)?.startTime) }}</span></p>
+                      <p class="mb-2"><strong>Ended:</strong> <span class="has-text-grey-dark">{{ formatTimestamp(getOpState(op.id)?.endTime) }}</span></p>
+                      <p class="mb-4">
+                        <strong>Results:</strong>
+                        <button
+                          v-if="hasOpResults(op.id)"
+                          class="button is-small is-link is-light ml-2"
+                          @click.stop="openResultsModal(op.id)"
+                        >
+                          <span class="icon is-small">
+                            <i class="fas fa-eye"></i>
+                          </span>
+                          <span>View</span>
+                        </button>
+                        <span v-else class="has-text-grey ml-2">None available</span>
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <!-- Service Endpoints -->
+                  <div class="detail-section">
+                    <h6 class="title is-6 mb-3">Service Endpoints</h6>
+                    <div v-if="op.ports && op.ports.length > 0" class="content">
+                      <div 
+                        v-for="(portInfo, idx) in op.ports" 
+                        :key="idx"
+                        class="notification is-light mb-2"
+                      >
+                        <div class="level is-mobile mb-0">
+                          <div class="level-left">
+                            <div class="level-item">
+                              <div class="tags has-addons">
+                                <span class="tag is-dark is-small">Port {{ portInfo.port }}</span>
+                                <span 
+                                  class="tag is-small"
+                                  :class="{
+                                    'is-success': portInfo.status === 'ONLINE',
+                                    'is-danger': portInfo.status === 'OFFLINE',
+                                    'is-warning': portInfo.status === 'UNKNOWN',
+                                  }"
+                                >
+                                  {{ portInfo.status === 'UNKNOWN' ? 'LOADING' : portInfo.status }}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="level-right">
+                            <div class="level-item">
+                              <a
+                                :href="portInfo.url"
+                                target="_blank"
+                                class="button is-small is-primary"
+                              >
+                                <span class="icon is-small">
+                                  <i class="fas fa-external-link-alt"></i>
+                                </span>
+                                <span>Open</span>
+                              </a>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div v-else class="content mb-4">
+                      <p class="has-text-grey">No endpoints available</p>
+                    </div>
+                  </div>
+                  
+                  <!-- Logs -->
+                  <div class="detail-section">
+                    <div class="is-flex is-justify-content-space-between is-align-items-center mb-3">
+                      <h6 class="title is-6 mb-0">Logs</h6>
+                      <button
+                        v-if="getOpLogs(op.id)?.length"
+                        class="button is-small is-outlined"
+                        @click.stop="openLogModal(op.id)"
+                        title="Fullscreen Logs"
+                      >
+                        <span class="icon is-small">
+                          <FullscreenIcon />
+                        </span>
+                        <span>Fullscreen</span>
+                      </button>
+                    </div>
+                    <div v-if="getOpLogs(op.id)?.length">
+                      <FLogViewer
+                        :logs="getOpLogs(op.id)"
+                        :isConnecting="false"
+                        :progressBars="new Map()"
+                        :resourceProgressBars="new Map()"
+                      />
+                    </div>
+                    <div v-else class="content">
+                      <p class="has-text-grey">No logs available</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
         </div>
       </template>
     </div>
 
+  <!-- Fullscreen Logs Modal -->
+  <FullscreenModal :isOpen="logModalOpen" :title="`Operation Logs - ${fullscreenOpId || ''}`" @close="closeLogModal">
+    <div v-if="fullscreenOpId && getOpLogs(fullscreenOpId)?.length">
+      <FLogViewer
+        :logs="getOpLogs(fullscreenOpId)"
+        :isConnecting="false"
+        :fullscreen="true"
+        :progressBars="new Map()"
+        :resourceProgressBars="new Map()"
+      />
+    </div>
+    <div v-else class="notification is-light has-text-centered">
+      <span class="has-text-grey">No logs available</span>
+    </div>
+  </FullscreenModal>
+  
   <!-- Job Results Modal -->
   <FullscreenModal :isOpen="resultsModalOpen" :title="`Job Results - ${resultsOpId || ''}`" @close="closeResultsModal">
-    <div class="fullscreen-logs-wrapper">
-      <div class="op-logs-content">
-        <div class="op-logs-viewer">
-          <template v-if="resultsOpId && hasOpResults(resultsOpId)">
-            <VueJsonPretty :data="getOpResults(resultsOpId)" show-icon show-line-number />
-          </template>
-          <div v-else class="op-logs-empty">
-            <span class="has-text-grey-light">No results available</span>
-          </div>
+    <div class="box">
+      <div class="content">
+        <template v-if="resultsOpId && hasOpResults(resultsOpId)">
+          <VueJsonPretty :data="getOpResults(resultsOpId)" show-icon show-line-number />
+        </template>
+        <div v-else class="has-text-centered py-6">
+          <span class="has-text-grey">No results available</span>
         </div>
       </div>
     </div>
@@ -180,6 +291,7 @@ import FullscreenModal from '~/components/Common/FullscreenModal.vue';
 import VueJsonPretty from 'vue-json-pretty';
 import FLogViewer from '../FLogViewer.vue';
 import 'vue-json-pretty/lib/styles.css';
+import StatusTag from "~/components/Common/StatusTag.vue";
 
 // Import icons as components
 import SquareIcon from '@/assets/img/icons/square.svg?component';
@@ -188,6 +300,7 @@ import RunningIcon from '@/assets/img/icons/status/running.svg?component';
 import StoppedIcon from '@/assets/img/icons/status/stopped.svg?component';
 import FailedIcon from '@/assets/img/icons/status/failed.svg?component';
 import DoneIcon from '@/assets/img/icons/status/done.svg?component';
+import QueuedIcon from '@/assets/img/icons/status/queued.svg?component';
 import FullscreenIcon from '@/assets/img/icons/fullscreen.svg?component';
 import { useStatus } from '~/composables/useStatus';
 
@@ -295,6 +408,7 @@ const error = ref<string | null>(null);
 const loadingOps = ref(new Set<string>());
 const loadingGroups = ref(new Set<string>());
 const expandedOps = ref(new Set<string>());
+const expandedGroups = ref(new Set<string>());
 const clearedAtByOp = ref<Map<string, number>>(new Map());
 let pollInterval: NodeJS.Timeout | null = null;
 
@@ -302,6 +416,18 @@ const { ensureAuth } = useAuthHeader();
 
 const jobInfo = computed<LocalJobInfo | null>(() => props.jobInfo ?? null);
 
+
+// Logs modal per operation
+const logModalOpen = ref(false);
+const fullscreenOpId = ref<string | null>(null);
+const openLogModal = (opId: string) => {
+  fullscreenOpId.value = opId;
+  logModalOpen.value = true;
+};
+const closeLogModal = () => {
+  logModalOpen.value = false;
+  fullscreenOpId.value = null;
+};
 
 // Results modal per operation
 const resultsModalOpen = ref(false);
@@ -313,6 +439,16 @@ const openResultsModal = (opId: string) => {
 const closeResultsModal = () => {
   resultsModalOpen.value = false;
   resultsOpId.value = null;
+};
+
+// Toggle group expansion
+const toggleGroupExpansion = (groupName: string) => {
+  if (expandedGroups.value.has(groupName)) {
+    expandedGroups.value.delete(groupName);
+  } else {
+    expandedGroups.value.add(groupName);
+  }
+  expandedGroups.value = new Set(expandedGroups.value);
 };
 
 // Toggle operation expansion
@@ -638,8 +774,8 @@ const groupedOperations = computed(() => {
   return groups;
 });
 
-// Get status icon file name
-const getStatusIconFile = (status: string) => {
+// Get status icon using the same logic as Job.vue for consistency
+const getStatusIcon = (status: string) => {
   switch (status?.toLowerCase()) {
     case 'running':
     case 'starting':
@@ -656,7 +792,8 @@ const getStatusIconFile = (status: string) => {
     case 'success':
       return DoneIcon;
     case 'restarting':
-      return RunningIcon;
+    case 'queued':
+      return QueuedIcon;
     default:
       return StoppedIcon;
   }
@@ -666,6 +803,7 @@ const getStatusIconFile = (status: string) => {
 const { getStatusClass } = useStatus();
 
 // Get status class for tag styling with mapping to global status strings
+// For outlined light tags, we want colored borders but white backgrounds
 const statusClass = (status: string) => {
   // Map operation statuses to standard status strings that the global system understands
   const statusLower = status?.toLowerCase();
@@ -1017,6 +1155,142 @@ html.dark-mode {
 
 .op-actions {
   vertical-align: middle;
+}
+
+// Tree Table Structure using Bulma variables
+.container-controls-tree {
+  .tree-row {
+    margin-bottom: $block-spacing;
+    border: 1px solid $border;
+    border-radius: $radius;
+    background: $white;
+    transition: all 0.2s ease;
+
+    &.is-expanded {
+      .tree-row__expand-icon i {
+        transform: rotate(90deg);
+      }
+    }
+
+    &--group {
+      border-left: 4px solid $primary;
+    }
+
+    &--operation {
+      margin-left: $size-5;
+      border-left: 4px solid $info;
+    }
+
+  }
+
+  .tree-row__content {
+    padding: $size-4;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    &:hover {
+      background-color: $grey-lightest;
+    }
+  }
+
+  .tree-row__main {
+    display: flex;
+    align-items: center;
+    flex: 1;
+  }
+
+  .tree-row__expand-icon {
+    margin-right: $size-6;
+    color: $grey;
+    transition: transform 0.2s ease;
+
+    i {
+      transition: transform 0.2s ease;
+    }
+  }
+
+  .tree-row__info {
+    flex: 1;
+  }
+
+  .tree-row__right {
+    display: flex;
+    align-items: center;
+  }
+
+  .tree-row__actions {
+    .buttons {
+      margin-bottom: 0;
+    }
+  }
+
+  .tree-row__children {
+    border-top: 1px solid $border-light;
+    background: $grey-lightest;
+  }
+
+  // Operation details panel styling
+  .operation-details-panel {
+    margin-left: $size-4;
+    padding: $size-5;
+    background: $grey-lightest;
+    border-left: 2px solid $grey-lighter;
+    border-radius: $radius-small;
+  }
+
+  .detail-section {
+    &:not(:last-child) {
+      margin-bottom: $size-4;
+      padding-bottom: $size-4;
+      border-bottom: 1px solid $border-light;
+    }
+  }
+
+}
+
+
+// Dark mode using Bulma variables
+html.dark-mode {
+  .container-controls-tree {
+    .tree-row {
+      background: $grey-darker;
+      border-color: $grey-dark;
+
+      &--group {
+        border-left-color: $primary;
+      }
+
+      &--operation {
+        border-left-color: $info;
+      }
+
+    }
+
+    .tree-row__content:hover {
+      background-color: lighten($grey-darker, 3%);
+    }
+
+    .operation-details-panel {
+      background: darken($grey-darker, 2%);
+      border-left-color: $grey;
+    }
+
+    .detail-section:not(:last-child) {
+      border-bottom-color: $grey-dark;
+    }
+
+    .tree-row__children {
+      background: darken($grey-darker, 2%);
+      border-top-color: $grey-dark;
+    }
+
+    .tree-row__expand-icon {
+      color: $grey-light;
+    }
+  }
 }
 
 html.dark-mode {
