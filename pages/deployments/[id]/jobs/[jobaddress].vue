@@ -36,8 +36,8 @@ import { useJobPage } from "~/composables/jobs/useJobPage";
 const showSettingsModal = ref(false);
 const { params } = useRoute();
 
-const jobId = ref<string>(params.jobid as string);
-const deploymentId = ref<string | null>(params.deploymentid as string || null);
+const jobId = ref<string>(params.jobaddress as string);
+const deploymentId = ref<string | null>(params.id as string || null);
 
 const { job, modal, endpoints, nosPrice, isJobPoster, loading, jobInfo } = useJobPage(
   jobId.value

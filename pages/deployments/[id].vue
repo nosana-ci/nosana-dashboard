@@ -1,6 +1,6 @@
 <template>
   <div>
-    <NuxtPage v-if="$route.params.jobAddress" />
+    <NuxtPage v-if="$route.params.jobaddress" />
     <template v-else>
     <TopBar
       title="Deployment Overview"
