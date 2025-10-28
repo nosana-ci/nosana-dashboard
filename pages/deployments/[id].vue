@@ -27,12 +27,7 @@
               <div>
                 <h1 class="title is-4 has-text-weight-normal mb-0">{{ deployment.name }}</h1>
               </div>
-              <div class="tag is-outlined is-light status-tag ml-6" :class="statusClass(deployment.status)">
-                <span ref="headerIconRef" class="status-icon-wrap">
-                  <component :is="getStatusIcon(deployment.status)" class="mr-2" :key="deployment.status" />
-                </span>
-                <span>{{ deployment.status }}</span>
-              </div>
+              <StatusTag class="ml-6" :status="deployment.status" />
             </div>
             <div class="deployment-tabs">
               <button 
@@ -723,6 +718,7 @@ import { useToast } from "vue-toastification";
 import JobStatus from "~/components/Job/Status.vue";
 import JobLogsContainer from "~/components/Job/LogsContainer.vue";
 import { useJob } from "~/composables/jobs/useJob";
+import StatusTag from "~/components/Common/StatusTag.vue";
 
 // Import icons as components
 import ArrowUpIcon from '@/assets/img/icons/arrow-up.svg?component';
@@ -1700,7 +1696,7 @@ watch(
     }
     
     // If not authenticated, only show error after a delay and only if we don't have a deployment
-    // This prevents the error from showing during temporary auth lapses (tab switching, session refresh)
+    // This prevents the error from showing during temporary auth interruptions (tab switching, session refresh)
     authTimeout = setTimeout(() => {
       if (!isAuthenticated.value) {
         // Only show login error if we don't already have deployment data
