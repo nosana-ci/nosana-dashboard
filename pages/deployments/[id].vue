@@ -1,5 +1,7 @@
 <template>
   <div>
+    <NuxtPage v-if="$route.params.jobAddress" />
+    <template v-else>
     <TopBar
       title="Deployment Overview"
       subtitle="Find information about and manage your deployment here."
@@ -312,7 +314,7 @@
                       <td>{{ formatDate(job.created_at) }}</td>
                       <td>
                         <a
-                          :href="`/jobs/${job.job}`"
+                          :href="`/deployments/${deployment.id}/${job.job}`"
                           target="_blank"
                           class="has-text-link"
                         >
@@ -357,7 +359,7 @@
                       <td>{{ formatDate(job.created_at) }}</td>
                       <td>
                         <a
-                          :href="`/jobs/${job.job}`"
+                          :href="`/deployments/${deployment.id}/${job.job}`"
                           target="_blank"
                           class="has-text-link"
                         >
@@ -742,6 +744,7 @@ class="has-height-500"
         </footer>
       </div>
     </div>
+    </template>
   </div>
 
   
@@ -1546,7 +1549,7 @@ const copyToClipboard = async (text: string) => {
 };
 
 const navigateToJob = (jobId: string) => {
-  router.push(`/jobs/${jobId}`);
+  router.push(`/deployments/${deployment.value!.id}/${jobId}`);
 };
 
 const getJobStateText = (state: number): string => {
