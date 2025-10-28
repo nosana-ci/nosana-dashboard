@@ -391,28 +391,50 @@
               </button>
             </div>
             
-            <div v-if="tasks.length === 0 && !tasksLoading" class="notification is-light has-text-centered">
-              <p class="has-text-grey">No tasks yet</p>
-            </div>
-            
-            <div v-else-if="tasks.length > 0">
-              <div v-for="task in tasks" :key="task.deploymentId + task.created_at" class="notification is-light mb-2">
-                <div class="is-flex is-justify-content-space-between is-align-items-center">
-                  <div class="is-flex-grow-1">
-                    <div class="is-flex is-align-items-center mb-2">
-                      <span class="tag is-info">SCHEDULED</span>
-                      <span class="tag is-white is-small ml-2">{{ task.task }}</span>
-                    </div>
-                    <p class="is-size-7 has-text-grey">
-                      Due: {{ formatDate(task.due_at) }}
-                    </p>
-                    <p class="is-family-monospace is-size-7 has-text-grey">{{ task.deploymentId }}</p>
-                  </div>
-                  <div class="time-display">
-                    <p class="is-size-7 has-text-grey">Created: {{ formatDate(task.created_at) }}</p>
-                  </div>
-                </div>
-              </div>
+            <div class="box is-borderless">
+              <table class="table is-fullwidth mb-0">
+                <thead>
+                  <tr>
+                    <th>Status</th>
+                    <th>Task</th>
+                    <th>Due Date</th>
+                    <th>Deployment ID</th>
+                    <th>Created</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-if="tasks.length === 0 && !tasksLoading">
+                    <td colspan="5" class="has-text-centered has-text-grey py-6">
+                      No tasks yet
+                    </td>
+                  </tr>
+                  <tr v-else-if="tasksLoading">
+                    <td colspan="5" class="has-text-centered has-text-grey py-6">
+                      <span class="icon is-small mr-2">
+                        <i class="fas fa-spinner fa-spin"></i>
+                      </span>
+                      Loading tasks...
+                    </td>
+                  </tr>
+                  <tr v-else v-for="task in tasks" :key="task.deploymentId + task.created_at">
+                    <td>
+                      <StatusTag status="QUEUED" />
+                    </td>
+                    <td>
+                      <span class="tag is-light is-small">{{ task.task }}</span>
+                    </td>
+                    <td class="has-text-grey">
+                      {{ formatDate(task.due_at) }}
+                    </td>
+                    <td class="is-family-monospace has-text-grey">
+                      {{ task.deploymentId }}
+                    </td>
+                    <td class="has-text-grey">
+                      {{ formatDate(task.created_at) }}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
 
@@ -420,38 +442,52 @@
           <div>
             <h2 class="title is-5 mb-3">History <span class="tag is-light">{{ deploymentEvents.length }}</span></h2>
             
-            <div v-if="deploymentEvents.length === 0" class="notification is-light has-text-centered">
-              <p class="has-text-grey">No events yet</p>
-            </div>
-            
-            <div v-else>
-              <div
-                v-for="(event, index) in deploymentEvents"
-                :key="index"
-                class="notification is-light mb-2"
-              >
-                <div class="is-flex is-justify-content-space-between is-align-items-start">
-                  <div class="is-flex-grow-1">
-                    <div class="is-flex is-align-items-center mb-2">
-                      <span class="tag" :class="eventTypeClass(event.type)">{{ event.type }}</span>
-                      <span class="tag is-white is-small ml-2">{{ event.category }}</span>
-                    </div>
-                    <p class="is-size-7 event-message" :class="{ 'is-family-monospace': event.message.length > 200 }">{{ event.message }}</p>
-                  </div>
-                  <div class="ml-3 time-display">
-                    <p class="is-size-7 has-text-grey">{{ formatDate(event.created_at) }}</p>
-                    <a
-                      v-if="event.tx"
-                      :href="`https://solscan.io/tx/${event.tx}`"
-                      target="_blank"
-                      class="button is-small is-white mt-2"
-                      title="View transaction"
-                    >
-                      TX ↗
-                    </a>
-                  </div>
-                </div>
-              </div>
+            <div class="box is-borderless">
+              <table class="table is-fullwidth mb-0">
+                <thead>
+                  <tr>
+                    <th>Type</th>
+                    <th>Category</th>
+                    <th>Message</th>
+                    <th>Date</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-if="deploymentEvents.length === 0">
+                    <td colspan="5" class="has-text-centered has-text-grey py-6">
+                      No events yet
+                    </td>
+                  </tr>
+                  <tr v-else v-for="(event, index) in deploymentEvents" :key="index">
+                    <td>
+                      <span class="tag is-light is-small">{{ event.type }}</span>
+                    </td>
+                    <td>
+                      <span class="tag is-light is-small">{{ event.category }}</span>
+                    </td>
+                    <td>
+                      <span :class="{ 'is-family-monospace': event.message.length > 200 }">
+                        {{ event.message }}
+                      </span>
+                    </td>
+                    <td class="has-text-grey">
+                      {{ formatDate(event.created_at) }}
+                    </td>
+                    <td>
+                      <a
+                        v-if="event.tx"
+                        :href="`https://solscan.io/tx/${event.tx}`"
+                        target="_blank"
+                        class="button is-small is-light"
+                        title="View transaction"
+                      >
+                        TX ↗
+                      </a>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -463,14 +499,16 @@
           </div>
           <div v-else class="deployment-logs-content">
             <!-- Job Tabs -->
-            <div class="tabs is-boxed job-tabs-condensed">
-              <ul>
-                <li v-for="job in activeJobs" :key="job.job" :class="{ 'is-active': activeLogsJobId === job.job }">
-                  <a @click="activeLogsJobId = job.job">
-                    Job {{ job.job.slice(0, 16) }}...
-                  </a>
-                </li>
-              </ul>
+            <div class="deployment-tabs mb-3">
+              <button 
+                v-for="job in activeJobs" 
+                :key="job.job"
+                @click="activeLogsJobId = job.job"
+                :class="{ 'is-active': activeLogsJobId === job.job }"
+                class="tab-button"
+              >
+                {{ job.job.slice(0, 16) }}...
+              </button>
             </div>
             
             <!-- Selected Job Logs -->
@@ -482,7 +520,6 @@
 
         <!-- Job Definition Tab -->
         <div v-if="activeTab === 'job-definition'">
-
           <div v-if="loadingJobDefinition" class="has-text-grey has-text-centered py-4">
             Loading job definition...
           </div>
@@ -1047,19 +1084,6 @@ const loadDeployment = async (silent = false) => {
 };
 
 
-const eventTypeClass = (type: string) => {
-  if (type.includes("ERROR")) {
-    return "is-danger";
-  } else if (type.includes("SUCCESS") || type.includes("COMPLETED")) {
-    return "is-success";
-  } else if (type.includes("WARNING") || type.includes("WARN")) {
-    return "is-warning";
-  } else if (type.includes("INFO") || type.includes("START")) {
-    return "is-info";
-  } else {
-    return "is-light";
-  }
-};
 
 // Action button visibility
 const deploymentStatus = computed(() => deployment.value?.status?.toUpperCase());
@@ -1784,15 +1808,6 @@ useHead({
   background: #1a1a1a;
 }
 
-.events-container {
-  .event-error {
-    border-left: 4px solid $danger;
-  }
-
-  .box {
-    border-left: 4px solid transparent;
-  }
-}
 
 .box.is-borderless {
   padding: 0 !important;
@@ -1839,18 +1854,6 @@ html.dark-mode .deployment-header {
     margin-top: 0.2rem;
   }
 
-  .job-tabs-condensed {
-    margin-bottom: 0 !important;
-    
-    ul {
-      border-bottom-width: 1px !important;
-      
-      li a {
-        padding: 0.4em 0.8em;
-        font-size: $size-6;
-      }
-    }
-  }
 
   .selected-job-logs {
     min-height: 25rem;
@@ -1863,27 +1866,6 @@ html.dark-mode {
     background-color: $black-ter;
   }
 
-  .deployment-logs-container .job-tabs-condensed {
-    background-color: $black-ter;
-    
-    ul {
-      border-bottom-color: $grey-dark;
-      
-      li a {
-        color: $white;
-        
-        &:hover {
-          background-color: $grey-darker;
-        }
-      }
-      
-      li.is-active a {
-        background-color: $black-ter;
-        border-bottom-color: $grey-dark;
-        color: $white;
-      }
-    }
-  }
 }
 
 </style>

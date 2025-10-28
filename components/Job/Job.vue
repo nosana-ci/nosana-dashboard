@@ -17,20 +17,16 @@
           </div>
           <div class="deployment-tabs">
           <button 
-            v-for="tab in ['overview', 'container-controls', 'system-logs']"
+            v-for="tab in availableTabs"
             :key="tab"
             @click="activeTab = tab"
             :class="{ 'is-active': activeTab === tab }"
             class="tab-button"
           >
-            {{ 
-              tab === 'system-logs' ? 'Logs' : 
-              tab === 'container-controls' ? 'Container Controls' :
-              tab.charAt(0).toUpperCase() + tab.slice(1) 
-            }}
+            {{ getTabLabel(tab) }}
           </button>
           <!-- Actions Dropdown -->
-          <div class="dropdown is-right" :class="{ 'is-active': showActionsDropdown }" ref="actionsDropdown">
+          <div v-if="hasAnyActions" class="dropdown is-right" :class="{ 'is-active': showActionsDropdown }" ref="actionsDropdown">
             <div class="dropdown-trigger">
               <button 
                 class="tab-button actions-button" 
@@ -84,7 +80,7 @@
       <!-- Overview Tab -->
       <div v-if="activeTab === 'overview'">
         <!-- Job Details Section -->
-        <div class="mb-5">
+        <div>
           <h2 class="title is-5 mb-3">Job details</h2>
           <div class="box is-borderless">
             <table class="table is-fullwidth mb-0">
@@ -215,7 +211,6 @@
       <!-- Container Controls Tab -->
       <div v-if="activeTab === 'container-controls'">
         <div v-if="props.job.jobDefinition">
-          <h2 class="title is-5 mb-3">Container controls</h2>
           <JobOverview
             :job="props.job"
             :isJobPoster="props.isJobPoster"
@@ -232,7 +227,6 @@
       <!-- System Logs Tab -->
       <div v-if="activeTab === 'system-logs'">
         <div v-if="props.job.jobDefinition">
-          <h2 class="title is-5 mb-3">Logs</h2>
           <JobTabs
             :job="props.job"
             :endpoints="props.endpoints"
@@ -264,6 +258,19 @@
             :activeTab="'logs'"
             ref="jobTabsRef"
           />
+        </div>
+      </div>
+      
+      <!-- Results Tab -->
+      <div v-if="activeTab === 'results'">
+        <div v-if="props.job.results">
+          <JobResult 
+            :ipfs-result="props.job.results"
+            :ipfs-job="props.job"
+          />
+        </div>
+        <div v-else class="notification is-light has-text-centered">
+          <p class="has-text-grey">No results available</p>
         </div>
       </div>
     </div>
@@ -306,6 +313,7 @@ import JobPrice from "~/components/Job/Price.vue";
 import ExtendModal from "~/components/Job/Modals/Extend.vue";
 import JobTabs from "~/components/Job/Tabs.vue";
 import JobOverview from "~/components/Job/Tabs/Overview.vue";
+import JobResult from "~/components/Job/Result.vue";
 import SecondsFormatter from "~/components/SecondsFormatter.vue";
 import StatusTag from "~/components/Common/StatusTag.vue";
 
@@ -745,6 +753,33 @@ const hasAnyActions = computed(() => {
   
   return canExtend || canStop;
 });
+
+// Check if job has results to show
+const hasResults = computed(() => {
+  return props.job.results && (props.job.hasResultsRegex || props.job.isCompleted);
+});
+
+// Available tabs based on job state and data
+const availableTabs = computed(() => {
+  const tabs = ['overview', 'container-controls', 'system-logs'];
+  
+  if (hasResults.value) {
+    tabs.push('results');
+  }
+  
+  return tabs;
+});
+
+// Get display label for tab
+const getTabLabel = (tab: string) => {
+  switch (tab) {
+    case 'system-logs': return 'Logs';
+    case 'container-controls': return 'Container Controls';
+    case 'results': return 'Results';
+    default: return tab.charAt(0).toUpperCase() + tab.slice(1);
+  }
+};
+
 
 const toggleDetails = () => {
   isDetailsOpen.value = !isDetailsOpen.value;

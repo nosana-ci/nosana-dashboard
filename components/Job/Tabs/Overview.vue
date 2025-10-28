@@ -1140,11 +1140,14 @@ html.dark-mode {
 // Tree Table Structure using Bulma variables
 .container-controls-tree {
   .tree-row {
-    margin-bottom: $block-spacing;
     border: 1px solid $border;
     border-radius: $radius;
     background: $white;
     transition: all 0.2s ease;
+
+    &:not(:last-child) {
+      margin-bottom: $block-spacing;
+    }
 
     &.is-expanded {
       .tree-row__expand-icon i {
