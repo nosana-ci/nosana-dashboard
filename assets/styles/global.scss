@@ -1,3 +1,10 @@
+.tag.is-success {
+  background-color: $white !important;
+}
+
+.dark-mode .tag.is-success {
+  background-color: $black-ter !important;
+}
 // /* Import the rest of Bulma */
 @import "bulma/bulma";
 @import "bulma-o-steps/bulma-steps.css";
@@ -268,6 +275,27 @@
   font-weight: $weight-medium;
   transition: all 0.2s;
 
+  // Ensure leading icons are perfectly centered relative to the label
+  .icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    vertical-align: middle;
+    line-height: 0;
+    margin: 0; // reset default margins
+
+    svg,
+    img,
+    span {
+      display: block;
+    }
+  }
+
+  // spacing when icon is on the left of text
+  .icon:first-child { margin-right: 0.5rem; }
+  // spacing when icon is on the right of text (e.g., dropdown arrow)
+  .icon:last-child { margin-left: 0.5rem; }
+
   &:hover {
     background: $grey-lightest;
   }
@@ -299,14 +327,19 @@
 .deployment-tabs {
   display: flex;
   gap: 8px;
+  flex-wrap: nowrap;
+  align-items: center;
+  overflow: visible;
   
   .tab-button {
-    min-width: 83px; // Ensure consistent minimum width for longer text like "System Logs"
-    white-space: nowrap; // Prevent text wrapping
-    text-align: center; // Center text inside buttons
-    display: flex; // Use flexbox for better centering
-    align-items: center; // Vertical centering
-    justify-content: center; // Horizontal centering
+    min-width: auto; // allow natural width
+    white-space: nowrap; // prevent wrap but allow full label
+    text-align: center;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding-left: 0.9rem; // ensure text not cut off
+    padding-right: 0.9rem;
   }
 }
 
@@ -1252,6 +1285,17 @@ button[disabled][data-tooltip] {
   }
 }
 
+/* Status tag base: outlined with transparent bg; color via class mapping */
+.tag.status-tag {
+  background-color: $white;
+}
+
+.dark-mode .tag.status-tag {
+  background-color: $black-ter;
+}
+
+// Removed specific light/success overrides; enforce via .status-tag base instead
+
 /* Center status icons inside tags */
 .status-icon-wrap {
   display: inline-flex;
@@ -1341,6 +1385,15 @@ button[disabled][data-tooltip] {
   &.is-rotated {
     transform: rotate(0deg);
   }
+}
+
+/* Shared header separator for top sections (deployments, jobs, etc.) */
+.deployment-header {
+  border-bottom: 1px solid $grey-lighter;
+}
+
+html.dark-mode .deployment-header {
+  border-bottom-color: $grey-dark;
 }
 
 .has-min-height-500 {

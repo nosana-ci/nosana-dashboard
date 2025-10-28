@@ -5,7 +5,7 @@
     <div class="p-5 deployment-header">
         <div class="is-flex is-justify-content-space-between is-align-items-center">
           <div class="is-flex is-align-items-center">
-            <NuxtLink :to="props.deploymentId ? `/deployments/${props.deploymentId}` : '/account/deployer'" class="button is-ghost back-button mr-4">
+            <NuxtLink :to="props.deploymentId ? `/deployments/${props.deploymentId}` : '/explorer'" class="button is-ghost back-button mr-4">
               <span class="icon is-small">
                 <ArrowUpIcon class="icon-16 transform-rotate-270" style="color: black;" />
               </span>
@@ -13,25 +13,20 @@
             <div>
               <h1 class="title is-4 has-text-weight-normal mb-0">{{ jobImages || props.job.address || jobDefinitionId || 'Job' }}</h1>
             </div>
-            <div class="tag is-outlined is-light status-tag ml-6" :class="statusClass(props.job.state)">
-              <span ref="headerIconRef" class="status-icon-wrap">
-                <component :is="getStatusIcon(props.job.state)" class="mr-2" :key="props.job.state" />
-              </span>
-              <span>{{ getStatusText(props.job.state) }}</span>
-            </div>
+            <StatusTag class="ml-6 mr-4" :status="props.job.state" />
           </div>
           <div class="deployment-tabs">
           <button 
-            v-for="tab in ['overview', 'system-logs']"
+            v-for="tab in availableTabs"
             :key="tab"
             @click="activeTab = tab"
             :class="{ 'is-active': activeTab === tab }"
             class="tab-button"
           >
-            {{ tab === 'system-logs' ? 'System Logs' : tab.charAt(0).toUpperCase() + tab.slice(1) }}
+            {{ getTabLabel(tab) }}
           </button>
           <!-- Actions Dropdown -->
-          <div class="dropdown is-right" :class="{ 'is-active': showActionsDropdown }" ref="actionsDropdown">
+          <div v-if="hasAnyActions" class="dropdown is-right" :class="{ 'is-active': showActionsDropdown }" ref="actionsDropdown">
             <div class="dropdown-trigger">
               <button 
                 class="tab-button actions-button" 
@@ -69,6 +64,10 @@
                   </span>
                   <span>{{ props.job.state === 0 ? 'Delist' : 'Stop' }}</span>
                 </a>
+                
+                <div v-if="!hasAnyActions" class="dropdown-item has-text-grey">
+                  <span>No actions available</span>
+                </div>
               </div>
             </div>
           </div>
@@ -81,7 +80,7 @@
       <!-- Overview Tab -->
       <div v-if="activeTab === 'overview'">
         <!-- Job Details Section -->
-        <div class="mb-5">
+        <div>
           <h2 class="title is-5 mb-3">Job details</h2>
           <div class="box is-borderless">
             <table class="table is-fullwidth mb-0">
@@ -97,9 +96,9 @@
                 <tr>
                   <td>Deployer address</td>
                   <td>
-                    <a :href="`https://solscan.io/account/${props.job.project}`" target="_blank" class="has-text-link is-family-monospace">
+                    <nuxt-link :to="`/deployer/${props.job.project}`" class="has-text-link is-family-monospace">
                       {{ props.job.project?.toString() }}
-                    </a>
+                    </nuxt-link>
                   </td>
                 </tr>
                 <tr>
@@ -119,26 +118,6 @@
                     <nuxt-link :to="`/markets/${props.job.market}`" class="has-text-link is-family-monospace">
                       {{ props.job.market?.toString() }}
                     </nuxt-link>
-                  </td>
-                </tr>
-                <tr>
-                  <td>Start time</td>
-                  <td>{{ formatDateRelative(props.job.timeStart) }}</td>
-                </tr>
-                <tr>
-                  <td>End time</td>
-                  <td>
-                    <span v-if="props.job.timeEnd && props.job.timeEnd > 0">
-                      {{ formatDateRelative(props.job.timeEnd) }}
-                    </span>
-                    <span v-else class="has-text-grey">--</span>
-                  </td>
-                </tr>
-                <tr>
-                  <td>Docker image</td>
-                  <td>
-                    <span v-if="dockerImage">{{ dockerImage }}</span>
-                    <span v-else class="has-text-grey">Loading...</span>
                   </td>
                 </tr>
                 <tr>
@@ -169,44 +148,78 @@
                   <td>Internet Speed</td>
                   <td>{{ combinedSpecs.download }} Mbps</td>
                 </tr>
+                
+                <!-- Additional details from Quick Details and More Details -->
+                <tr v-if="jobDurationData">
+                  <td>Duration</td>
+                  <td>
+                    <span v-if="jobDurationData.actualSeconds > 0">
+                      <SecondsFormatter :seconds="jobDurationData.actualSeconds" :showSeconds="true" />
+                      <span v-if="jobDurationData.maxDurationHours" class="has-text-grey"> (max {{ jobDurationData.maxDurationHours }})</span>
+                    </span>
+                    <span v-else-if="jobDurationData.maxDurationHours" class="has-text-grey">
+                      (max {{ jobDurationData.maxDurationHours }})
+                    </span>
+                  </td>
+                </tr>
+                <tr v-if="countryInfo || isQueuedJob">
+                  <td>Country</td>
+                  <td>
+                    <span v-if="countryInfo">{{ countryInfo }}</span>
+                    <span v-else-if="isQueuedJob" class="has-text-grey">Not assigned yet</span>
+                    <span v-else class="has-text-grey">--</span>
+                  </td>
+                </tr>
+                <tr v-if="combinedSpecs?.ram">
+                  <td>RAM</td>
+                  <td>{{ combinedSpecs.ram }} MB</td>
+                </tr>
+                <tr v-if="combinedSpecs?.diskSpace">
+                  <td>Disk Space</td>
+                  <td>{{ combinedSpecs.diskSpace }} GB</td>
+                </tr>
+                <tr v-if="combinedSpecs?.upload">
+                  <td>Upload Speed</td>
+                  <td>{{ combinedSpecs.upload }} Mbps</td>
+                </tr>
+                <tr v-if="combinedSpecs?.nvmlVersion">
+                  <td>NVIDIA Driver</td>
+                  <td>{{ combinedSpecs.nvmlVersion }}</td>
+                </tr>
+                <tr v-if="combinedSpecs?.systemEnvironment">
+                  <td>System Environment</td>
+                  <td>{{ combinedSpecs.systemEnvironment }}</td>
+                </tr>
+                <tr v-if="props.job.timeStart && formatStartTime">
+                  <td>Started</td>
+                  <td>
+                    {{ formatStartTime(props.job.timeStart) }}
+                    <span class="has-text-grey is-size-7"> ({{ formatTimeAgo(props.job.timeStart) }})</span>
+                  </td>
+                </tr>
+                <tr v-if="marketName">
+                  <td>GPU Pool Name</td>
+                  <td>{{ marketName }}</td>
+                </tr>
               </tbody>
             </table>
           </div>
         </div>
 
-        <!-- Operation Controls Section -->
+      </div>
+
+      <!-- Container Controls Tab -->
+      <div v-if="activeTab === 'container-controls'">
         <div v-if="props.job.jobDefinition">
-          <h2 class="title is-5 mb-3">Container controls</h2>
-          <JobTabs
+          <JobOverview
             :job="props.job"
-            :endpoints="props.endpoints"
             :isJobPoster="props.isJobPoster"
-            :jobInfo="props.jobInfo"
-            :isConfidential="isConfidential"
-            :jobDefinition="props.job.jobDefinition"
-            :hasArtifacts="false"
-            :isConnecting="isConnecting"
-            :logConnectionEstablished="connectionEstablished"
-            :systemLogs="[]"
-            :containerLogs="[]"
-            :progressBars="getFlogProgressBars()"
-            :resourceProgressBars="flogResourceBarsRef"
-            :showChatTab="isChatServiceReady"
-            :chatServiceUrl="chatServiceUrl"
-            :chatApiConfig="chatApiConfig"
-            :jobCombinedSpecs="combinedSpecs"
-            :jobNodeReport="jobNodeReport"
-            :loadingJobNodeSpecs="loadingNodeSpecs"
-            :isQueuedJob="isQueuedJob"
-            :activeLogs="(flogActiveLogs as unknown as any[])"
             :opIds="flogTabs.filter(t => t !== 'system')"
-            :filters="{ value: { opId: flogActiveTab === 'system' ? null : flogActiveTab, types: new Set(['container','info','error']) } }"
+            :activeLogs="(flogActiveLogs as unknown as any[])"
             :selectOp="(opId: string | null) => setFlogActiveTab(opId ?? 'system')"
-            :toggleType="() => {}"
             :logsByOp="flogLogsByOp"
             :systemLogsMap="flogSystemLogs"
-            :activeTab="'groups'"
-            ref="jobTabsRef"
+            :jobInfo="props.jobInfo"
           />
         </div>
       </div>
@@ -214,7 +227,6 @@
       <!-- System Logs Tab -->
       <div v-if="activeTab === 'system-logs'">
         <div v-if="props.job.jobDefinition">
-          <h2 class="title is-5 mb-3">System logs</h2>
           <JobTabs
             :job="props.job"
             :endpoints="props.endpoints"
@@ -246,6 +258,19 @@
             :activeTab="'logs'"
             ref="jobTabsRef"
           />
+        </div>
+      </div>
+      
+      <!-- Results Tab -->
+      <div v-if="activeTab === 'results'">
+        <div v-if="props.job.results">
+          <JobResult 
+            :ipfs-result="props.job.results"
+            :ipfs-job="props.job"
+          />
+        </div>
+        <div v-else class="notification is-light has-text-centered">
+          <p class="has-text-grey">No results available</p>
         </div>
       </div>
     </div>
@@ -287,7 +312,10 @@ import JobStatus from "~/components/Job/Status.vue";
 import JobPrice from "~/components/Job/Price.vue";
 import ExtendModal from "~/components/Job/Modals/Extend.vue";
 import JobTabs from "~/components/Job/Tabs.vue";
+import JobOverview from "~/components/Job/Tabs/Overview.vue";
+import JobResult from "~/components/Job/Result.vue";
 import SecondsFormatter from "~/components/SecondsFormatter.vue";
+import StatusTag from "~/components/Common/StatusTag.vue";
 
 import LogSubscription from "./LogSubscription.vue";
 import { useFLogs } from "~/composables/jobs/useFLogs";
@@ -715,6 +743,44 @@ const isQueuedJob = computed(() => {
   ) || props.job.node === '11111111111111111111111111111111';
 });
 
+// Check if any actions are available for the job
+const hasAnyActions = computed(() => {
+  // Extend action: available for running jobs if user is job poster
+  const canExtend = props.job.isRunning && props.isJobPoster;
+  
+  // Stop/Delist action: available for running or queued jobs if user is job poster
+  const canStop = (props.job.isRunning || props.job.state === 0) && props.isJobPoster;
+  
+  return canExtend || canStop;
+});
+
+// Check if job has results to show
+const hasResults = computed(() => {
+  return props.job.results && (props.job.hasResultsRegex || props.job.isCompleted);
+});
+
+// Available tabs based on job state and data
+const availableTabs = computed(() => {
+  const tabs = ['overview', 'container-controls', 'system-logs'];
+  
+  if (hasResults.value) {
+    tabs.push('results');
+  }
+  
+  return tabs;
+});
+
+// Get display label for tab
+const getTabLabel = (tab: string) => {
+  switch (tab) {
+    case 'system-logs': return 'Logs';
+    case 'container-controls': return 'Container Controls';
+    case 'results': return 'Results';
+    default: return tab.charAt(0).toUpperCase() + tab.slice(1);
+  }
+};
+
+
 const toggleDetails = () => {
   isDetailsOpen.value = !isDetailsOpen.value;
 };
@@ -1125,6 +1191,14 @@ onUnmounted(() => {
 </script>
 
 <style lang="scss" scoped>
+// Revert wrapping; keep items on one row
+.deployment-header > .is-flex {
+  flex-wrap: nowrap;
+  gap: 0.5rem;
+}
+
+.deployment-header .status-tag { white-space: nowrap; }
+
 // Job header styling - matches deployment page
 .job-header {
   border-bottom: 1px solid $grey-lighter;

@@ -19,7 +19,12 @@ export const StatusStrings = {
   STARTING: 'STARTING',
   STOPPING: 'STOPPING',
   INSUFFICIENT_FUNDS: 'INSUFFICIENT_FUNDS',
-  ARCHIVED: 'ARCHIVED'
+  ARCHIVED: 'ARCHIVED',
+  // Endpoint specific
+  ONLINE: 'ONLINE',
+  OFFLINE: 'OFFLINE',
+  UNKNOWN: 'UNKNOWN',
+  LOADING: 'LOADING'
 } as const
 
 // Numeric states (0-3)
@@ -76,6 +81,15 @@ export function getStatusClass(status: string | number): string {
     case 'STOPPED':
     case 'ARCHIVED':
       return 'is-dark'
+    
+    // Endpoint states
+    case 'ONLINE':
+      return 'is-success'  // Green for online
+    case 'OFFLINE':
+      return 'is-danger'   // Red for offline
+    case 'UNKNOWN':
+    case 'LOADING':
+      return 'is-warning'  // Orange for unknown/loading
     
     default:
       return 'is-light'
