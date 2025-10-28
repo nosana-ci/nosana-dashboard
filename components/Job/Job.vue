@@ -5,7 +5,7 @@
     <div class="p-5 deployment-header">
         <div class="is-flex is-justify-content-space-between is-align-items-center">
           <div class="is-flex is-align-items-center">
-            <NuxtLink :to="props.deploymentId ? `/deployments/${props.deploymentId}` : '/account/deployer'" class="button is-ghost back-button mr-4">
+            <NuxtLink :to="props.deploymentId ? `/deployments/${props.deploymentId}` : '/explorer'" class="button is-ghost back-button mr-4">
               <span class="icon is-small">
                 <ArrowUpIcon class="icon-16 transform-rotate-270" style="color: black;" />
               </span>

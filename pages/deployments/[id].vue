@@ -311,13 +311,12 @@
                       <td>{{ deployment?.revisions?.length || 0 }}</td>
                       <td>{{ formatDate(job.created_at) }}</td>
                       <td>
-                        <a
-                          :href="`/jobs/${job.job}`"
-                          target="_blank"
+                        <NuxtLink
+                          :to="`/deployments/${deployment.id}/jobs/${job.job}`"
                           class="has-text-link"
                         >
-                          View job ↗
-                        </a>
+                          View job
+                        </NuxtLink>
                       </td>
                     </tr>
                   </tbody>
@@ -356,13 +355,12 @@
                       <td>{{ deployment?.revisions?.length || 0 }}</td>
                       <td>{{ formatDate(job.created_at) }}</td>
                       <td>
-                        <a
-                          :href="`/jobs/${job.job}`"
-                          target="_blank"
+                        <NuxtLink
+                          :to="`/deployments/${deployment.id}/jobs/${job.job}`"
                           class="has-text-link"
                         >
-                          View job ↗
-                        </a>
+                          View job
+                        </NuxtLink>
                       </td>
                     </tr>
                   </tbody>
@@ -1528,7 +1526,11 @@ const copyToClipboard = async (text: string) => {
 };
 
 const navigateToJob = (jobId: string) => {
-  router.push(`/jobs/${jobId}`);
+  if (!deployment.value?.id) {
+    router.push(`/jobs/${jobId}`);
+    return;
+  }
+  router.push(`/deployments/${deployment.value.id}/jobs/${jobId}`);
 };
 
 const getJobStateText = (state: number): string => {
