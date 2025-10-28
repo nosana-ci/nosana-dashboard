@@ -90,25 +90,8 @@
                     </div>
                   </div>
                   
-                  <!-- Right side: Ports and Actions -->
+                  <!-- Right side: Actions -->
                   <div class="tree-row__right" @click.stop>
-                    <!-- Ports next to buttons -->
-                    <div class="tree-row__ports mr-4">
-                      <div v-if="op.ports && op.ports.length > 0" class="tags">
-                        <a 
-                          v-for="(portInfo, idx) in op.ports" 
-                          :key="idx"
-                          :href="portInfo.url"
-                          target="_blank"
-                          class="tag is-link is-small"
-                          :title="`Open ${portInfo.url}`"
-                        >
-                          {{ portInfo.port }}
-                        </a>
-                      </div>
-                      <span v-else class="has-text-grey-light is-size-7">No ports</span>
-                    </div>
-                    
                     <!-- Actions -->
                     <div class="tree-row__actions">
                       <div class="buttons has-addons">
@@ -194,16 +177,7 @@
                             <a :href="portInfo.url" target="_blank" class="has-text-link">{{ portInfo.url }} ↗</a>
                           </td>
                           <td>
-                            <span 
-                              class="tag is-small"
-                              :class="{
-                                'is-success': portInfo.status === 'ONLINE',
-                                'is-danger': portInfo.status === 'OFFLINE',
-                                'is-warning': portInfo.status === 'UNKNOWN',
-                              }"
-                            >
-                              {{ portInfo.status === 'UNKNOWN' ? 'LOADING' : portInfo.status }}
-                            </span>
+                            <StatusTag :status="portInfo.status" />
                           </td>
                         </tr>
                       </tbody>

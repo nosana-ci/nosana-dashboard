@@ -247,7 +247,7 @@
                       <a :href="endpoint.url" target="_blank" class="has-text-link">{{ endpoint.url }} ↗</a>
                     </td>
                     <td>
-                      <span class="tag is-small" :class="endpoint.statusClass">{{ endpoint.status }}</span>
+                      <StatusTag :status="endpoint.status" />
                     </td>
                   </tr>
                 </tbody>
@@ -1234,34 +1234,28 @@ const deploymentEndpoints = computed(() => {
   return deployment.value.endpoints.map((endpoint: any) => {
     const liveStatus = liveEndpointStatusByUrl.value.get(endpoint.url);
     
-    // Determine display status
-    let status: 'Online' | 'Offline' | 'Unknown' = 'Offline';
-    let statusClass = 'is-light';
+    // Determine status using global status system
+    let status: 'OFFLINE' | 'ONLINE' | 'UNKNOWN' | 'LOADING' = 'OFFLINE';
     
     // If deployment or jobs aren't running, endpoints are offline
     if (!deploymentIsRunning || !hasRunningJobs) {
-      status = 'Offline';
-      statusClass = 'is-light';
+      status = 'OFFLINE';
     } else if (liveStatus === 'ONLINE') {
       // SSE confirmed online
-      status = 'Online';
-      statusClass = 'is-success';
+      status = 'ONLINE';
     } else if (liveStatus === 'OFFLINE') {
       // SSE confirmed offline
-      status = 'Offline';
-      statusClass = 'is-danger';
+      status = 'OFFLINE';
     } else {
       // Jobs are running but no SSE status yet - still checking
-      status = 'Unknown';
-      statusClass = 'is-info';
+      status = 'LOADING';
     }
     
     return {
       opId: endpoint.opId,
       port: endpoint.port,
       url: endpoint.url,
-      status,
-      statusClass
+      status
     };
   });
 });

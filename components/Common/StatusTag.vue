@@ -52,6 +52,11 @@ const normalizeStringStatus = (val: string): string | null => {
   if (v === 'queued') return 'QUEUED';
   if (v === 'running') return 'RUNNING';
   if (v === 'completed') return 'COMPLETED';
+  // Endpoint statuses
+  if (v === 'online') return 'ONLINE';
+  if (v === 'offline') return 'OFFLINE';
+  if (v === 'unknown') return 'UNKNOWN';
+  if (v === 'loading') return 'LOADING';
   return null;
 };
 
@@ -103,6 +108,10 @@ const getIconComponent = (status: string) => {
   if (status === 'RUNNING') return RunningIcon;
   if (status === 'COMPLETED' || status === 'SUCCESS') return DoneIcon;
   if (status === 'FAILED' || status === 'YAML_ERROR') return FailedIcon;
+  // Endpoint statuses - reuse appropriate existing icons
+  if (status === 'ONLINE') return DoneIcon; // Green checkmark for online
+  if (status === 'OFFLINE') return FailedIcon; // Red X for offline  
+  if (status === 'UNKNOWN' || status === 'LOADING') return QueuedIcon; // Orange ? for unknown/loading
   return StoppedIcon;
 };
 
