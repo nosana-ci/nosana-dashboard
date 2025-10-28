@@ -41,8 +41,10 @@
     :filters="props.filters"
     :selectOp="props.selectOp"
     :toggleType="props.toggleType"
-      :logsTextForCopy="logsTextForCopy"
-      :copyToClipboard="copyToClipboard"
+    :systemLogsMap="props.systemLogsMap"
+    :logsByOp="props.logsByOp"
+    :logsTextForCopy="logsTextForCopy"
+    :copyToClipboard="copyToClipboard"
     ref="logsView"
   />
   </div>

@@ -24,7 +24,7 @@
             class="tab-button"
           >
             {{ 
-              tab === 'system-logs' ? 'System Logs' : 
+              tab === 'system-logs' ? 'Logs' : 
               tab === 'container-controls' ? 'Container Controls' :
               tab.charAt(0).toUpperCase() + tab.slice(1) 
             }}
@@ -232,7 +232,7 @@
       <!-- System Logs Tab -->
       <div v-if="activeTab === 'system-logs'">
         <div v-if="props.job.jobDefinition">
-          <h2 class="title is-5 mb-3">System logs</h2>
+          <h2 class="title is-5 mb-3">Logs</h2>
           <JobTabs
             :job="props.job"
             :endpoints="props.endpoints"

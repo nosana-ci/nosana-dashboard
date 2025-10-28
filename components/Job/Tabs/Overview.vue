@@ -32,8 +32,8 @@
                 <i class="fas fa-chevron-right"></i>
               </span>
               <div class="tree-row__info">
-                <h3 class="title is-5 mb-0 is-capitalized">{{ groupName }}</h3>
-                <span class="subtitle is-7 has-text-grey-dark">{{ groupOps.length }} operation{{ groupOps.length !== 1 ? 's' : '' }}</span>
+                <h2 class="title is-5 mb-0 is-capitalized">{{ groupName }}</h2>
+                <span class="subtitle is-6 has-text-grey-dark">{{ groupOps.length }} operation{{ groupOps.length !== 1 ? 's' : '' }}</span>
               </div>
             </div>
             <div class="tree-row__actions" @click.stop>
@@ -79,8 +79,8 @@
                     <div class="tree-row__info">
                       <div class="is-flex is-align-items-center">
                         <div class="mr-3">
-                          <h5 class="title is-6 mb-0">{{ op.id }}</h5>
-                          <span class="subtitle is-7 has-text-grey-dark is-family-monospace">{{ op.image || '--' }}</span>
+                          <h2 class="title is-5 mb-0">{{ op.id }}</h2>
+                          <span class="subtitle is-6 has-text-grey-dark is-family-monospace">{{ op.image || '--' }}</span>
                         </div>
                         <!-- Status next to title -->
                         <div class="tree-row__status">
@@ -145,93 +145,95 @@
                 <div v-if="expandedOps.has(op.id)" class="operation-details-panel">
                   <!-- Operation Details -->
                   <div class="detail-section">
-                    <h6 class="title is-6 mb-3">Operation Details</h6>
-                    <div class="content">
-                      <p class="mb-2"><strong>Started:</strong> <span class="has-text-grey-dark">{{ formatTimestamp(getOpState(op.id)?.startTime) }}</span></p>
-                      <p class="mb-2"><strong>Ended:</strong> <span class="has-text-grey-dark">{{ formatTimestamp(getOpState(op.id)?.endTime) }}</span></p>
-                      <p class="mb-4">
-                        <strong>Results:</strong>
-                        <button
-                          v-if="hasOpResults(op.id)"
-                          class="button is-small is-link is-light ml-2"
-                          @click.stop="openResultsModal(op.id)"
-                        >
-                          <span class="icon is-small">
-                            <i class="fas fa-eye"></i>
-                          </span>
-                          <span>View</span>
-                        </button>
-                        <span v-else class="has-text-grey ml-2">None available</span>
-                      </p>
-                    </div>
+                    <h2 class="title is-5 mb-3">Operation Details</h2>
+                    <table class="table is-fullwidth mb-0">
+                      <tbody>
+                        <tr>
+                          <td class="has-min-width-250">Started</td>
+                          <td>{{ formatTimestamp(getOpState(op.id)?.startTime) || '--' }}</td>
+                        </tr>
+                        <tr>
+                          <td>Ended</td>
+                          <td>{{ formatTimestamp(getOpState(op.id)?.endTime) || '--' }}</td>
+                        </tr>
+                        <tr>
+                          <td>Results</td>
+                          <td>
+                            <button
+                              v-if="hasOpResults(op.id)"
+                              class="button is-small is-link is-light"
+                              @click.stop="openResultsModal(op.id)"
+                            >
+                              <span class="icon is-small">
+                                <i class="fas fa-eye"></i>
+                              </span>
+                              <span>View</span>
+                            </button>
+                            <span v-else class="has-text-grey">None available</span>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
                   </div>
                   
                   <!-- Service Endpoints -->
                   <div class="detail-section">
-                    <h6 class="title is-6 mb-3">Service Endpoints</h6>
-                    <div v-if="op.ports && op.ports.length > 0" class="content">
-                      <div 
-                        v-for="(portInfo, idx) in op.ports" 
-                        :key="idx"
-                        class="notification is-light mb-2"
-                      >
-                        <div class="level is-mobile mb-0">
-                          <div class="level-left">
-                            <div class="level-item">
-                              <div class="tags has-addons">
-                                <span class="tag is-dark is-small">Port {{ portInfo.port }}</span>
-                                <span 
-                                  class="tag is-small"
-                                  :class="{
-                                    'is-success': portInfo.status === 'ONLINE',
-                                    'is-danger': portInfo.status === 'OFFLINE',
-                                    'is-warning': portInfo.status === 'UNKNOWN',
-                                  }"
-                                >
-                                  {{ portInfo.status === 'UNKNOWN' ? 'LOADING' : portInfo.status }}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                          <div class="level-right">
-                            <div class="level-item">
-                              <a
-                                :href="portInfo.url"
-                                target="_blank"
-                                class="button is-small is-primary"
-                              >
-                                <span class="icon is-small">
-                                  <i class="fas fa-external-link-alt"></i>
-                                </span>
-                                <span>Open</span>
-                              </a>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div v-else class="content mb-4">
-                      <p class="has-text-grey">No endpoints available</p>
-                    </div>
+                    <h2 class="title is-5 mb-3">Service Endpoints</h2>
+                    <table v-if="op.ports && op.ports.length > 0" class="table is-fullwidth mb-0">
+                      <thead>
+                        <tr>
+                          <th>Port</th>
+                          <th>URL</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr v-for="(portInfo, idx) in op.ports" :key="idx">
+                          <td>{{ portInfo.port }}</td>
+                          <td>
+                            <a :href="portInfo.url" target="_blank" class="has-text-link">{{ portInfo.url }} ↗</a>
+                          </td>
+                          <td>
+                            <span 
+                              class="tag is-small"
+                              :class="{
+                                'is-success': portInfo.status === 'ONLINE',
+                                'is-danger': portInfo.status === 'OFFLINE',
+                                'is-warning': portInfo.status === 'UNKNOWN',
+                              }"
+                            >
+                              {{ portInfo.status === 'UNKNOWN' ? 'LOADING' : portInfo.status }}
+                            </span>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                    <table v-else class="table is-fullwidth mb-0">
+                      <tbody>
+                        <tr>
+                          <td class="has-text-grey">No endpoints available</td>
+                        </tr>
+                      </tbody>
+                    </table>
                   </div>
                   
                   <!-- Logs -->
                   <div class="detail-section">
                     <div class="is-flex is-justify-content-space-between is-align-items-center mb-3">
-                      <h6 class="title is-6 mb-0">Logs</h6>
-                      <button
-                        v-if="getOpLogs(op.id)?.length"
-                        class="button is-small is-outlined"
-                        @click.stop="openLogModal(op.id)"
-                        title="Fullscreen Logs"
-                      >
-                        <span class="icon is-small">
-                          <FullscreenIcon />
-                        </span>
-                        <span>Fullscreen</span>
-                      </button>
+                      <h2 class="title is-5 mb-0">Logs</h2>
                     </div>
-                    <div v-if="getOpLogs(op.id)?.length">
+                    <div v-if="getOpLogs(op.id)?.length" class="logs-container-with-button">
+                      <div class="logs-header">
+                        <button
+                          class="button is-small is-text fullscreen-logs-button"
+                          @click.stop="openLogModal(op.id)"
+                          title="Fullscreen Logs"
+                        >
+                          <span class="icon is-small">
+                            <FullscreenIcon />
+                          </span>
+                        </button>
+                      </div>
                       <FLogViewer
                         :logs="getOpLogs(op.id)"
                         :isConnecting="false"
@@ -239,9 +241,13 @@
                         :resourceProgressBars="new Map()"
                       />
                     </div>
-                    <div v-else class="content">
-                      <p class="has-text-grey">No logs available</p>
-                    </div>
+                    <table v-else class="table is-fullwidth mb-0">
+                      <tbody>
+                        <tr>
+                          <td class="has-text-grey">No logs available</td>
+                        </tr>
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               </div>
@@ -253,16 +259,16 @@
 
   <!-- Fullscreen Logs Modal -->
   <FullscreenModal :isOpen="logModalOpen" :title="`Operation Logs - ${fullscreenOpId || ''}`" @close="closeLogModal">
-    <div v-if="fullscreenOpId && getOpLogs(fullscreenOpId)?.length">
-      <FLogViewer
-        :logs="getOpLogs(fullscreenOpId)"
-        :isConnecting="false"
-        :fullscreen="true"
-        :progressBars="new Map()"
-        :resourceProgressBars="new Map()"
-      />
-    </div>
-    <div v-else class="notification is-light has-text-centered">
+    <FLogViewer
+      v-if="fullscreenOpId && getOpLogs(fullscreenOpId)?.length"
+      :logs="getOpLogs(fullscreenOpId)"
+      :isConnecting="false"
+      :fullscreen="true"
+      :progressBars="new Map()"
+      :resourceProgressBars="new Map()"
+      class="fullscreen-viewer"
+    />
+    <div v-else class="has-text-centered p-4">
       <span class="has-text-grey">No logs available</span>
     </div>
   </FullscreenModal>
@@ -1533,6 +1539,48 @@ html.dark-mode {
   .empty-state {
     color: $grey-light;
   }
+}
+
+// Operation logs container styling to match main logs
+.logs-container-with-button {
+  position: relative;
+  
+  .logs-header {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    position: absolute;
+    top: 0.2rem;
+    right: 0.5rem;
+    z-index: 10;
+    pointer-events: none;
+  }
+  
+  .fullscreen-logs-button {
+    pointer-events: auto;
+    background-color: rgba(255, 255, 255, 0.8) !important;
+    backdrop-filter: blur(4px);
+    
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.95) !important;
+    }
+  }
+}
+
+html.dark-mode {
+  .logs-container-with-button .fullscreen-logs-button {
+    background-color: rgba(54, 54, 54, 0.8) !important;
+    
+    &:hover {
+      background-color: rgba(54, 54, 54, 0.95) !important;
+    }
+  }
+}
+
+:deep(.fullscreen-modal-body .fullscreen-viewer) {
+  height: 100%;
+  min-height: 100%;
+  overflow-y: auto;
 }
 
 @keyframes spinAround {
