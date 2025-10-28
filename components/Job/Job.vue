@@ -13,7 +13,7 @@
             <div>
               <h1 class="title is-4 has-text-weight-normal mb-0">{{ jobImages || props.job.address || jobDefinitionId || 'Job' }}</h1>
             </div>
-            <StatusTag class="ml-6" :status="props.job.state" />
+            <StatusTag class="ml-6 mr-4" :status="props.job.state" />
           </div>
           <div class="deployment-tabs">
           <button 
@@ -1156,6 +1156,14 @@ onUnmounted(() => {
 </script>
 
 <style lang="scss" scoped>
+// Revert wrapping; keep items on one row
+.deployment-header > .is-flex {
+  flex-wrap: nowrap;
+  gap: 0.5rem;
+}
+
+.deployment-header .status-tag { white-space: nowrap; }
+
 // Job header styling - matches deployment page
 .job-header {
   border-bottom: 1px solid $grey-lighter;

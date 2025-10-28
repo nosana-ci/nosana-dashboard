@@ -1114,7 +1114,7 @@ html.dark-mode {
   padding: 2rem;
   text-align: center;
   color: $grey;
-  background: $black;
+  background: $white;
   flex: 1;
   display: flex;
   align-items: center;
@@ -1173,18 +1173,18 @@ html.dark-mode {
     }
 
     &--group {
-      border-left: 4px solid $primary;
+      border-left: 4px solid $border;
     }
 
     &--operation {
-      margin-left: $size-5;
-      border-left: 4px solid $info;
+      margin-left: $size-5; // keep first-level indent for operations
+      border-left: 1px solid $border; // subtle left guide line
     }
 
   }
 
   .tree-row__content {
-    padding: $size-4;
+    padding: $size-4; // uniform padding on all sides
     cursor: pointer;
     transition: background-color 0.2s ease;
     display: flex;
@@ -1196,25 +1196,43 @@ html.dark-mode {
     }
   }
 
+  // When expanded, add a clear divider between header and body
+  .tree-row.is-expanded > .tree-row__content {
+    border-bottom: 1px solid $border;
+  }
+
   .tree-row__main {
     display: flex;
     align-items: center;
     flex: 1;
+    gap: 0; // remove implicit spacing between expand icon and info
   }
 
   .tree-row__expand-icon {
-    margin-right: $size-6;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 0.25rem; // minimal spacer
+    width: auto; // no reserved width
     color: $grey;
     transition: transform 0.2s ease;
 
     i {
+      display: block;
+      line-height: 1;
       transition: transform 0.2s ease;
     }
   }
 
   .tree-row__info {
     flex: 1;
+    margin-left: 0; // ensure no extra left offset inside info block
+    > .is-flex.is-align-items-center {
+      gap: 0.25rem; // tighten inner flex spacing
+    }
   }
+
+  .tree-row__status { margin-left: 0.5rem; }
 
   .tree-row__right {
     display: flex;
@@ -1229,15 +1247,14 @@ html.dark-mode {
 
   .tree-row__children {
     border-top: 1px solid $border-light;
-    background: $grey-lightest;
+    background: $white; // unify with dashboard background
   }
 
   // Operation details panel styling
   .operation-details-panel {
-    margin-left: $size-4;
-    padding: $size-5;
-    background: $grey-lightest;
-    border-left: 2px solid $grey-lighter;
+    margin-left: 0;
+    padding: $size-4; // match header padding
+    background: $white; // unify with dashboard background
     border-radius: $radius-small;
   }
 
@@ -1260,17 +1277,21 @@ html.dark-mode {
       border-color: $grey-dark;
 
       &--group {
-        border-left-color: $primary;
+        border-left-color: $grey-dark;
       }
 
       &--operation {
-        border-left-color: $info;
+        border-left-color: $grey-dark; // subtle left guide line in dark mode
       }
 
     }
 
     .tree-row__content:hover {
       background-color: lighten($grey-darker, 3%);
+    }
+
+    .tree-row.is-expanded > .tree-row__content {
+      border-bottom: 1px solid $grey-dark;
     }
 
     .operation-details-panel {
