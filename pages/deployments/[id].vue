@@ -21,7 +21,7 @@
         <div class="p-5 deployment-header">
           <div class="is-flex is-justify-content-space-between is-align-items-start">
             <div class="header-left-section">
-              <div class="is-flex is-align-items-center mb-2">
+              <div class="is-flex is-align-items-center mb-0">
                 <NuxtLink :to="backLink" class="button is-ghost back-button mr-4">
                   <span class="icon is-small">
                     <ArrowUpIcon class="icon-16 transform-rotate-270" style="color: black;" />
@@ -244,7 +244,6 @@
                     <th>Operation</th>
                     <th>Port</th>
                     <th>URL</th>
-                    <th>Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -254,12 +253,9 @@
                     <td>
                       <a :href="endpoint.url" target="_blank" class="has-text-link endpoint-url">{{ endpoint.url }} ↗</a>
                     </td>
-                    <td>
-                      <StatusTag :status="endpoint.status" />
-                    </td>
                   </tr>
                 </tbody>
-              </table>
+                </table>
               </div>
             </div>
           </div>
@@ -945,6 +941,22 @@ const backLink = computed(() => {
 });
 
 // Use API-provided deployment.status as-is for display
+// Auto-start deployments when status is DRAFT
+const autostartTriggered = ref(false)
+watch(
+  () => deployment.value?.status,
+  async (status) => {
+    if (status === 'DRAFT' && !autostartTriggered.value && isAuthenticated.value && !actionLoading.value) {
+      autostartTriggered.value = true
+      try {
+        await startDeployment()
+      } catch (e) {
+        // ignore; actions already handle toasts
+      }
+    }
+  },
+  { immediate: true }
+)
 
 const attachSmilDebugListeners = (svgEl: SVGElement, label: string) => {
   try {
