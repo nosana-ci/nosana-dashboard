@@ -169,7 +169,7 @@
                   <span v-else>-</span>
                   <nuxt-link to="/stake" class="ml-2">
                     <span class="container-icon">
-                      <PlusSymbolIcon style="width: 12px; height: 12px;" />
+                      <FontAwesomeIcon :icon="faPlus" style="width: 12px; height: 12px;" />
                     </span>
                   </nuxt-link>
                 </p>

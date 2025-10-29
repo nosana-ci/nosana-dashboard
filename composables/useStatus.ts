@@ -89,7 +89,7 @@ export function getStatusClass(status: string | number): string {
     case 'ONLINE':
       return 'is-success'  // Green for online
     case 'OFFLINE':
-      return 'is-danger'   // Red for offline
+      return 'is-dark'     // Gray for offline
     case 'UNKNOWN':
     case 'LOADING':
       return 'is-warning'  // Orange for unknown/loading

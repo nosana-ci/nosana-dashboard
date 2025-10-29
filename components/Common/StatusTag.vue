@@ -119,7 +119,7 @@ const getIconComponent = (status: string) => {
   if (status === 'ARCHIVED') return ArchiveIcon; // Use archive icon for archived status
   // Endpoint statuses - reuse appropriate existing icons
   if (status === 'ONLINE') return DoneIcon; // Green checkmark for online
-  if (status === 'OFFLINE') return FailedIcon; // Red X for offline  
+  if (status === 'OFFLINE') return StoppedIcon; // Gray square for offline  
   if (status === 'UNKNOWN' || status === 'LOADING') return QueuedIcon; // Orange ? for unknown/loading
   return StoppedIcon; // For STOPPED and any other states
 };

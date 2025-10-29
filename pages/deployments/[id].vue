@@ -1066,6 +1066,14 @@ const loadDeployment = async (silent = false) => {
 
     if (deployment.value.jobs && deployment.value.jobs.length > 0) {
       for (const job of deployment.value.jobs) {
+        // Only fetch state for jobs that aren't already in a completed state
+        // Completed states: DONE=2, STOPPED=3, TIMEOUT=4, ERROR=5
+        const currentState = jobStates.value[job.job];
+        if (currentState !== undefined && currentState >= 2) {
+          // Job is already completed, skip fetching
+          continue;
+        }
+        
         try {
           const { data } = await useAPI(`/api/jobs/${job.job}`);
           if (data.value?.state !== undefined) {
