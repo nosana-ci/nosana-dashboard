@@ -1689,3 +1689,12 @@ html.dark-mode .deployment-header {
 .dark-mode .spinner-bg {
   background-color: rgba(0, 0, 0, 0.7) !important;
 }
+
+/* ==========================================================================
+   Deployment Logs - Empty State Dark Mode
+   ========================================================================== */
+.dark-mode .deployment-logs-container .notification.is-light {
+  background-color: $box-background-color-dark !important;
+  color: $white !important;
+  border-color: $grey-darker !important;
+}
