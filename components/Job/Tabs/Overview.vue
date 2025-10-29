@@ -129,7 +129,8 @@
                   <!-- Operation Details -->
                   <div class="detail-section">
                     <h2 class="title is-5 mb-3">Operation Details</h2>
-                    <table class="table is-fullwidth mb-0">
+                    <div class="table-container">
+                      <table class="table is-fullwidth mb-0">
                       <tbody>
                         <tr>
                           <td class="has-min-width-250">Started</td>
@@ -157,12 +158,14 @@
                         </tr>
                       </tbody>
                     </table>
+                    </div>
                   </div>
                   
                   <!-- Service Endpoints -->
                   <div class="detail-section">
                     <h2 class="title is-5 mb-3">Service Endpoints</h2>
-                    <table v-if="op.ports && op.ports.length > 0" class="table is-fullwidth mb-0">
+                    <div class="table-container">
+                      <table v-if="op.ports && op.ports.length > 0" class="table is-fullwidth mb-0">
                       <thead>
                         <tr>
                           <th>Port</th>
@@ -174,7 +177,7 @@
                         <tr v-for="(portInfo, idx) in op.ports" :key="idx">
                           <td>{{ portInfo.port }}</td>
                           <td>
-                            <a :href="portInfo.url" target="_blank" class="has-text-link">{{ portInfo.url }} ↗</a>
+                            <a :href="portInfo.url" target="_blank" class="has-text-link endpoint-url">{{ portInfo.url }} ↗</a>
                           </td>
                           <td>
                             <StatusTag :status="portInfo.status" />
@@ -189,6 +192,7 @@
                         </tr>
                       </tbody>
                     </table>
+                    </div>
                   </div>
                   
                   <!-- Logs -->
@@ -1424,7 +1428,31 @@ html.dark-mode {
     .endpoint-url {
       color: $black;
     }
+}
+
+// Responsive endpoint URLs
+.endpoint-url {
+  word-break: break-all;
+  display: inline-block;
+  max-width: 100%;
+  overflow-wrap: break-word;
+}
+
+@media screen and (max-width: 768px) {
+  .endpoint-url {
+    font-size: 0.75rem;
+    max-width: 300px;
+    min-width: 200px;
   }
+}
+
+@media screen and (max-width: 480px) {
+  .endpoint-url {
+    font-size: 0.7rem;
+    max-width: 250px;
+    min-width: 180px;
+  }
+}
 
   .op-id {
     color: $grey-lighter;

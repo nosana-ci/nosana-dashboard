@@ -3,7 +3,8 @@
     <div style="height: 400px">
       <Bar :options="barOptions" :data="queueData" style="width: 100%" />
     </div>
-    <table class="table is-fullwidth is-striped">
+    <div class="table-container">
+      <table class="table is-fullwidth is-striped">
       <tbody>
         <tr>
           <td><b>Deployment Queue</b></td>
@@ -62,6 +63,7 @@
         </tr>
       </tbody>
     </table>
+    </div>
     <div v-if="!loadingMarkets && !markets">Could not load GPUs from blockchain</div>
     <div v-if="!loadingTestgridMarkets && (!testgridMarkets || !testgridMarkets.length)">Could not load GPUs from
       grid</div>

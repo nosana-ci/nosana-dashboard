@@ -106,7 +106,7 @@
     ></progress>
 
     <!-- Leaderboard Table -->
-    <div v-else class="table-responsive">
+    <div v-else class="table-container">
       <table class="table is-fullwidth is-striped">
         <thead>
           <tr>

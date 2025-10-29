@@ -19,17 +19,20 @@
       <div class="box is-borderless">
         <!-- Header Section -->
         <div class="p-5 deployment-header">
-          <div class="is-flex is-justify-content-space-between is-align-items-center">
-            <div class="is-flex is-align-items-center">
-              <NuxtLink to="/account/deployer" class="button is-ghost back-button mr-4">
-                <span class="icon is-small">
-                  <ArrowUpIcon class="icon-16 transform-rotate-270" style="color: black;" />
-                </span>
-              </NuxtLink>
-              <div>
-                <h1 class="title is-4 has-text-weight-normal mb-0">{{ deployment.name }}</h1>
+          <div class="is-flex is-justify-content-space-between is-align-items-start">
+            <div class="header-left-section">
+              <div class="is-flex is-align-items-center mb-2">
+                <NuxtLink to="/account/deployer" class="button is-ghost back-button mr-4">
+                  <span class="icon is-small">
+                    <ArrowUpIcon class="icon-16 transform-rotate-270" style="color: black;" />
+                  </span>
+                </NuxtLink>
+                <div class="header-title-section">
+                  <h1 class="title is-5 has-text-weight-normal mb-1">{{ deployment.name || 'Deployment' }}</h1>
+                  <p v-if="deployment.name" class="subtitle is-7 has-text-grey is-family-monospace mb-0">{{ deployment.id }}</p>
+                </div>
+                <StatusTag class="ml-4" :status="deployment.status" />
               </div>
-              <StatusTag class="ml-6" :status="deployment.status" />
             </div>
             <div class="deployment-tabs">
               <button 
@@ -169,7 +172,8 @@
           <div class="mb-5">
             <h2 class="title is-5 mb-3">Deployment details</h2>
             <div class="box is-borderless">
-              <table class="table is-fullwidth mb-0">
+              <div class="table-container">
+                <table class="table is-fullwidth mb-0">
                 <tbody>
                   <tr>
                     <td class="has-min-width-250">Deployment strategy</td>
@@ -225,6 +229,7 @@
                   </tr>
                 </tbody>
               </table>
+              </div>
             </div>
           </div>
 
@@ -232,7 +237,8 @@
           <div v-if="deploymentEndpoints.length > 0" class="mb-5">
             <h2 class="title is-5 mb-3">Endpoints</h2>
             <div class="box is-borderless">
-              <table class="table is-fullwidth mb-0">
+              <div class="table-container">
+                <table class="table is-fullwidth mb-0">
                 <thead>
                   <tr>
                     <th>Operation</th>
@@ -246,7 +252,7 @@
                     <td>{{ endpoint.opId }}</td>
                     <td>{{ endpoint.port }}</td>
                     <td>
-                      <a :href="endpoint.url" target="_blank" class="has-text-link">{{ endpoint.url }} ↗</a>
+                      <a :href="endpoint.url" target="_blank" class="has-text-link endpoint-url">{{ endpoint.url }} ↗</a>
                     </td>
                     <td>
                       <StatusTag :status="endpoint.status" />
@@ -254,6 +260,7 @@
                   </tr>
                 </tbody>
               </table>
+              </div>
             </div>
           </div>
 
@@ -289,7 +296,8 @@
               </div>
               
               <div v-else class="box is-borderless">
-                <table class="table is-fullwidth mb-0">
+                <div class="table-container">
+                  <table class="table is-fullwidth mb-0">
                   <thead>
                   <tr>
                     <th>Name</th>
@@ -323,6 +331,7 @@
                     </tr>
                   </tbody>
                 </table>
+                </div>
               </div>
             </div>
             
@@ -333,7 +342,8 @@
               </div>
               
               <div v-else class="box is-borderless">
-                <table class="table is-fullwidth mb-0">
+                <div class="table-container">
+                  <table class="table is-fullwidth mb-0">
                   <thead>
                   <tr>
                     <th>Name</th>
@@ -367,6 +377,7 @@
                     </tr>
                   </tbody>
                 </table>
+                </div>
               </div>
             </div>
           </div>
@@ -392,7 +403,8 @@
             </div>
             
             <div class="box is-borderless">
-              <table class="table is-fullwidth mb-0">
+              <div class="table-container">
+                <table class="table is-fullwidth mb-0">
                 <thead>
                   <tr>
                     <th>Status</th>
@@ -435,6 +447,7 @@
                   </tr>
                 </tbody>
               </table>
+              </div>
             </div>
           </div>
 
@@ -443,7 +456,8 @@
             <h2 class="title is-5 mb-3">History <span class="tag is-light">{{ deploymentEvents.length }}</span></h2>
             
             <div class="box is-borderless">
-              <table class="table is-fullwidth mb-0">
+              <div class="table-container">
+                <table class="table is-fullwidth mb-0">
                 <thead>
                   <tr>
                     <th>Type</th>
@@ -488,6 +502,7 @@
                   </tr>
                 </tbody>
               </table>
+              </div>
             </div>
           </div>
         </div>
@@ -549,7 +564,8 @@
           <div class="mb-4">
             <h2 class="title is-5 mb-3">Deployment Revisions</h2>
             <div v-if="deployment?.revisions && deployment.revisions.length > 0" class="box is-borderless">
-              <table class="table is-fullwidth">
+              <div class="table-container">
+                <table class="table is-fullwidth">
                 <thead>
                   <tr>
                     <th>Revision</th>
@@ -595,6 +611,7 @@
                   </tr>
                 </tbody>
               </table>
+              </div>
             </div>
             <div v-else class="notification is-light has-text-centered">
               <p>No revisions found for this deployment.</p>
@@ -1915,6 +1932,113 @@ useHead({
 </script>
 
 <style lang="scss" scoped>
+// Improved header layout
+.deployment-header > .is-flex {
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.header-left-section {
+  min-width: 0; // Allow text to truncate
+  flex: 1;
+}
+
+.header-title-section {
+  min-width: 0; // Allow text to truncate
+  max-width: 400px; // Prevent extremely long names from stretching too much
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.header-title-section .title {
+  display: block !important;
+  margin-bottom: 0.25rem !important;
+}
+
+.header-title-section .subtitle {
+  display: block !important;
+  word-break: break-all; // Allow long IDs to wrap
+  line-height: 1.2;
+  margin-top: 0 !important;
+}
+
+.deployment-header .status-tag { 
+  white-space: nowrap; 
+  flex-shrink: 0;
+}
+
+// Mobile responsive
+@media screen and (max-width: 768px) {
+  .deployment-header > .is-flex {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    flex-wrap: nowrap !important;
+  }
+  
+  .header-left-section {
+    width: 100%;
+    margin-bottom: 1rem;
+  }
+  
+  .deployment-tabs {
+    width: 100% !important;
+    justify-content: flex-start;
+    margin-top: 0.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  
+  .header-title-section {
+    max-width: none;
+  }
+  
+  .header-title-section .subtitle {
+    font-size: 0.75rem;
+  }
+  
+  .tab-button {
+    font-size: 0.875rem;
+    padding: 0.5rem 0.75rem;
+  }
+}
+
+// Extra small screens
+@media screen and (max-width: 480px) {
+  .deployment-tabs {
+    gap: 0.25rem;
+  }
+  
+  .tab-button {
+    font-size: 0.75rem;
+    padding: 0.375rem 0.5rem;
+  }
+}
+
+// Responsive endpoint URLs
+.endpoint-url {
+  word-break: break-all;
+  display: inline-block;
+  max-width: 100%;
+  overflow-wrap: break-word;
+}
+
+@media screen and (max-width: 768px) {
+  .endpoint-url {
+    font-size: 0.75rem;
+    max-width: 300px;
+    min-width: 200px;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .endpoint-url {
+    font-size: 0.7rem;
+    max-width: 250px;
+    min-width: 180px;
+  }
+}
+
 .status-dot {
   display: inline-block;
   width: 10px;

@@ -16,7 +16,8 @@
         </div>
 
         <div :class="{'min-height-container': loadingJobs || loadingNodeJobs}">
-          <table class="table is-fullwidth is-striped is-hoverable">
+          <div class="table-container">
+            <table class="table is-fullwidth is-striped is-hoverable">
             <thead>
               <tr>
                 <th>GPU</th>
@@ -114,6 +115,7 @@
               </template>
             </tbody>
           </table>
+          </div>
         </div>
 
         <Pagination

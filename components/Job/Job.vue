@@ -3,17 +3,35 @@
   <div class="box is-borderless">
     <!-- Header Section -->
     <div class="p-5 deployment-header">
-        <div class="is-flex is-justify-content-space-between is-align-items-center">
-          <div class="is-flex is-align-items-center">
-            <NuxtLink :to="props.deploymentId ? `/deployments/${props.deploymentId}` : '/explorer'" class="button is-ghost back-button mr-4">
-              <span class="icon is-small">
-                <ArrowUpIcon class="icon-16 transform-rotate-270" style="color: black;" />
-              </span>
-            </NuxtLink>
-            <div>
-              <h1 class="title is-4 has-text-weight-normal mb-0">{{ jobImages || props.job.address || jobDefinitionId || 'Job' }}</h1>
+        <div class="is-flex is-justify-content-space-between is-align-items-start">
+          <div class="header-left-section">
+            <div class="is-flex is-align-items-center mb-2">
+              <NuxtLink :to="props.deploymentId ? `/deployments/${props.deploymentId}` : '/explorer'" class="button is-ghost back-button mr-4">
+                <span class="icon is-small">
+                  <ArrowUpIcon class="icon-16 transform-rotate-270" style="color: black;" />
+                </span>
+              </NuxtLink>
+              <div class="header-title-section">
+                <div v-if="jobImages && jobImages.length > 0" class="job-images-list">
+                  <div v-for="(image, index) in jobImages" :key="index" class="title is-5 has-text-weight-normal mb-1">
+                    {{ image }}
+                  </div>
+                </div>
+                <div v-else-if="dockerImage" class="job-images-list">
+                  <div class="title is-5 has-text-weight-normal mb-1">
+                    {{ dockerImage }}
+                  </div>
+                </div>
+                <div v-else-if="formattedDockerImage" class="job-images-list">
+                  <div class="title is-5 has-text-weight-normal mb-1">
+                    {{ formattedDockerImage }}
+                  </div>
+                </div>
+                <h1 v-else class="title is-5 has-text-weight-normal mb-1">Job</h1>
+                <p class="subtitle is-7 has-text-grey is-family-monospace mb-0">{{ props.job.address }}</p>
+              </div>
+              <StatusTag class="ml-4" :status="props.job.state" />
             </div>
-            <StatusTag class="ml-6 mr-4" :status="props.job.state" />
           </div>
           <div class="deployment-tabs">
           <button 
@@ -83,7 +101,8 @@
         <div>
           <h2 class="title is-5 mb-3">Job details</h2>
           <div class="box is-borderless">
-            <table class="table is-fullwidth mb-0">
+            <div class="table-container">
+              <table class="table is-fullwidth mb-0">
               <tbody>
                 <tr>
                   <td class="has-min-width-250">Job address</td>
@@ -203,6 +222,7 @@
                 </tr>
               </tbody>
             </table>
+            </div>
           </div>
         </div>
 
@@ -423,38 +443,53 @@ const isMainContentOpen = ref(true);
 const loading = ref<boolean>(false);
 const loadingExtend = ref<boolean>(false);
 
+// Choose job-definition for title: prefer live node info (confidential jobs), fallback to REST jobDefinition
+const titleJobDefinition = computed(() => {
+  return (props.jobInfo as any)?.jobDefinition || props.job.jobDefinition || null;
+});
+
 // Computed properties for job info
 const dockerImage = computed(() => {
-  if (!props.job.jobDefinition?.ops?.length) {
-    return null; // Will show loading state
-  }
-  const firstOp = props.job.jobDefinition.ops[0];
+  const jd = titleJobDefinition.value as any;
+  if (!jd?.ops?.length) return null;
+  const firstOp = jd.ops[0];
   if (firstOp.type === "container/run") {
     const args = firstOp.args as OperationArgsMap["container/run"];
-    if (args.image) {
-      return args.image;
-    }
+    if (args.image) return args.image;
   }
   return null; // Will show loading state
 });
 
+// Helper function to get job image (same as JobList)
+const getJobImage = (job: any) => {
+  const jd = (props.jobInfo as any)?.jobDefinition || job.jobDefinition;
+  if (!jd?.ops?.length) return null;
+  const firstOp = jd.ops[0];
+  if (firstOp.type === 'container/run' && firstOp.args?.image) {
+    return firstOp.args.image;
+  }
+  return null;
+};
+
 // Extract all Docker images from all operations for job title
 const jobImages = computed(() => {
-  if (!props.job.jobDefinition?.ops?.length) {
-    return null;
-  }
-  
+  const jd = titleJobDefinition.value as any;
+  if (!jd?.ops?.length) return null;
+
   const images: string[] = [];
-  props.job.jobDefinition.ops.forEach(op => {
-    if (op.type === "container/run") {
-      const args = op.args as OperationArgsMap["container/run"];
-      if (args.image && !images.includes(args.image)) {
-        images.push(args.image);
-      }
+  jd.ops.forEach((op: any) => {
+    if (op.type === 'container/run') {
+      const args = op.args as OperationArgsMap['container/run'];
+      if (args?.image && !images.includes(args.image)) images.push(args.image);
     }
   });
-  
-  return images.length > 0 ? images.join(', ') : null;
+
+  return images.length > 0 ? images : null;
+});
+
+// Fallback to single image if multiple images logic fails
+const singleJobImage = computed(() => {
+  return getJobImage(props.job);
 });
 
 const formattedDockerImage = computed(() => {
@@ -1233,13 +1268,93 @@ onUnmounted(() => {
 </script>
 
 <style lang="scss" scoped>
-// Revert wrapping; keep items on one row
+// Improved header layout
 .deployment-header > .is-flex {
-  flex-wrap: nowrap;
-  gap: 0.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
 }
 
-.deployment-header .status-tag { white-space: nowrap; }
+.header-left-section {
+  min-width: 0; // Allow text to truncate
+  flex: 1;
+}
+
+.header-title-section {
+  min-width: 0; // Allow text to truncate
+  max-width: 400px; // Prevent extremely long addresses from stretching too much
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.header-title-section .title {
+  display: block !important;
+  margin-bottom: 0.25rem !important;
+}
+
+.job-images-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.header-title-section .subtitle {
+  display: block !important;
+  word-break: break-all; // Allow long addresses to wrap
+  line-height: 1.2;
+  margin-top: 0 !important;
+}
+
+.deployment-header .status-tag { 
+  white-space: nowrap; 
+  flex-shrink: 0;
+}
+
+// Mobile responsive
+@media screen and (max-width: 768px) {
+  .deployment-header > .is-flex {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    flex-wrap: nowrap !important;
+  }
+  
+  .header-left-section {
+    width: 100%;
+    margin-bottom: 1rem;
+  }
+  
+  .deployment-tabs {
+    width: 100% !important;
+    justify-content: flex-start;
+    margin-top: 0.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  
+  .header-title-section {
+    max-width: none;
+  }
+  
+  .header-title-section .subtitle {
+    font-size: 0.75rem;
+  }
+  
+  .tab-button {
+    font-size: 0.875rem;
+    padding: 0.5rem 0.75rem;
+  }
+}
+
+// Extra small screens
+@media screen and (max-width: 480px) {
+  .deployment-tabs {
+    gap: 0.25rem;
+  }
+  
+  .tab-button {
+    font-size: 0.75rem;
+    padding: 0.375rem 0.5rem;
+  }
+}
 
 // Job header styling - matches deployment page
 .job-header {

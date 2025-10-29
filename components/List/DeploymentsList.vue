@@ -16,7 +16,8 @@
         </div>
 
         <div :class="{'min-height-container': loading}">
-          <table class="table is-fullwidth is-striped is-hoverable">
+          <div class="table-container">
+            <table class="table is-fullwidth is-striped is-hoverable">
             <thead>
               <tr>
                 <th>Deployment</th>
@@ -66,6 +67,7 @@
               </template>
             </tbody>
           </table>
+          </div>
         </div>
 
         <Pagination
