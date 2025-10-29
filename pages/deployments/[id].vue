@@ -31,7 +31,7 @@
                   <h1 class="title is-5 has-text-weight-normal mb-1">{{ deployment.name || 'Deployment' }}</h1>
                   <p v-if="deployment.name" class="subtitle is-7 has-text-grey is-family-monospace mb-0">{{ deployment.id }}</p>
                 </div>
-                <StatusTag class="ml-4" :status="normalizedDeploymentStatus" />
+                <StatusTag class="ml-4" :status="deployment.status" />
               </div>
             </div>
             <div class="deployment-tabs">
@@ -948,14 +948,7 @@ const backLink = computed(() => {
   return from === 'account' ? '/account/deployer' : '/deployments';
 });
 
-// Normalize deployment status for tag (handle loose error strings)
-const normalizedDeploymentStatus = computed(() => {
-  const raw = (deployment.value?.status || '').toString();
-  const s = raw.toLowerCase();
-  if (s.includes('error')) return 'ERROR';
-  if (s.includes('insufficient')) return 'INSUFFICIENT_FUNDS';
-  return raw;
-});
+// Use API-provided deployment.status as-is for display
 
 const attachSmilDebugListeners = (svgEl: SVGElement, label: string) => {
   try {
