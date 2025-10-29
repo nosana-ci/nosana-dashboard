@@ -71,12 +71,18 @@
         </div>
 
         <Pagination
-            v-if="totalPages > 1"
+            v-if="showPagination && totalPages > 1"
             v-model="currentPage"
             class="pagination is-centered mt-4"
             :total-page="totalPages"
             :max-page="6"
         />
+        <div v-if="!showPagination && hasMore" class="has-text-right mt-2">
+          <nuxt-link to="/deployments" class="button is-text">
+            <span>See all</span>
+            <span class="icon"> &#8250; </span>
+          </nuxt-link>
+        </div>
       </div>
     </div>
   </div>
@@ -95,9 +101,13 @@ import { useStatus } from '~/composables/useStatus';
 const props = withDefaults(defineProps<{
   itemsPerPage?: number
   searchQuery?: string
+  limit?: number
+  showPagination?: boolean
 }>(), {
   itemsPerPage: 10,
-  searchQuery: ''
+  searchQuery: '',
+  limit: undefined,
+  showPagination: true
 })
 
 // Emits
@@ -246,7 +256,13 @@ const filteredDeployments = computed(() => {
 
 // Create a computed property for the deployments actually displayed in the table
 const displayedDeployments = computed(() => {
-  // Take the filtered deployments and apply pagination
+  // Compact mode: show only first N and hide pagination
+  if (!props.showPagination) {
+    const max = props.limit ?? props.itemsPerPage
+    return filteredDeployments.value.slice(0, max)
+  }
+
+  // Paginated mode
   const start = (currentPage.value - 1) * props.itemsPerPage
   const end = start + props.itemsPerPage
   return filteredDeployments.value.slice(start, end)
@@ -255,6 +271,13 @@ const displayedDeployments = computed(() => {
 const totalDeployments = computed(() => filteredDeployments.value.length)
 
 const totalPages = computed(() => Math.ceil(totalDeployments.value / props.itemsPerPage))
+
+// More indicator for compact mode
+const hasMore = computed(() => {
+  if (props.showPagination) return false
+  const max = props.limit ?? props.itemsPerPage
+  return filteredDeployments.value.length > max
+})
 
 
 // Watch for changes

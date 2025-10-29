@@ -201,7 +201,13 @@
             <span>Create Deployment</span>
           </nuxt-link>
         </div>
-        <DeploymentsList :items-per-page="10" class="mb-4" @update:total-deployments="totalDeployments = $event" />
+        <DeploymentsList 
+          :items-per-page="10" 
+          :limit="10" 
+          :show-pagination="false" 
+          class="mb-2" 
+          @update:total-deployments="totalDeployments = $event" 
+        />
         
         <div class="columns mt-6">
           <div class="column is-4">
