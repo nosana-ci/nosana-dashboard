@@ -409,6 +409,7 @@ import ApiKeys from '~/components/Account/ApiKeys.vue';
 const config = useRuntimeConfig().public;
 ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale);
 const { status, data: userData, signOut, token } = useAuth();
+const { $colorMode } = useNuxtApp();
 const route = useRoute();
 const showSettingsModal = ref(false);
 const toast = useToast();
@@ -923,7 +924,13 @@ function makeColorBrighter(color: string): string {
   return color;
 }
 
-const chartOptions = {
+const chartOptions = computed(() => {
+  const isDark = $colorMode?.value === 'dark';
+  const textColor = isDark ? '#ffffff' : '#000000';
+  const gridColor = isDark ? '#444444' : '#e5e5e5';
+  const tooltipBg = isDark ? 'rgba(55, 65, 81, 0.95)' : 'rgba(0, 0, 0, 0.8)';
+
+  return {
   responsive: true,
   maintainAspectRatio: false,
   devicePixelRatio: 2,
@@ -952,7 +959,7 @@ const chartOptions = {
           weight: 'normal' as const,
           lineHeight: 1.2
         },
-        color: '#000000',
+        color: textColor,
         filter: (legendItem: any) => {
           return legendItem.datasetIndex !== undefined && 
                  chartData.value.datasets[legendItem.datasetIndex]?.showInLegend;
@@ -960,7 +967,7 @@ const chartOptions = {
       }
     },
     tooltip: {
-      backgroundColor: 'rgba(0, 0, 0, 0.8)',
+      backgroundColor: tooltipBg,
       titleFont: {
         family: "'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif",
         size: 14,
@@ -1018,7 +1025,7 @@ const chartOptions = {
           weight: 'normal' as const,
           lineHeight: 1.2
         },
-        color: '#000000',
+        color: textColor,
         padding: 8
       },
       border: {
@@ -1029,7 +1036,7 @@ const chartOptions = {
     y: {
       stacked: true,
       grid: {
-        color: '#e5e5e5',
+        color: gridColor,
         drawBorder: false,
         lineWidth: 0.5,
         tickLength: 4,
@@ -1052,7 +1059,7 @@ const chartOptions = {
           weight: 'normal' as const,
           lineHeight: 1.2
         },
-        color: '#000000',
+        color: textColor,
         maxTicksLimit: 5,
         padding: 10
       }
@@ -1073,7 +1080,8 @@ const chartOptions = {
   font: {
     family: "'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif"
   }
-};
+  };
+});
 
 // Removed duplicate onMounted - merged into the main one above
 

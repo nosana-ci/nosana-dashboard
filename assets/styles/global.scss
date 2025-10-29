@@ -1587,3 +1587,97 @@ html.dark-mode .deployment-header {
 .dark-mode .box {
   background-color: $box-background-color-dark;
 }
+
+/* ==========================================================================
+   Login Modal Dark Mode Support (Using Bulma Variables)
+   ========================================================================== */
+
+.dark-mode .login-modal {
+  background: $black-ter !important;
+  color: $white !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
+}
+
+.dark-mode .login-modal .login-title {
+  color: $white !important;
+}
+
+.dark-mode .login-modal .login-subtitle {
+  color: $grey-light !important;
+}
+
+.dark-mode .login-modal .login-button {
+  background: $grey-darker !important;
+  color: $white !important;
+  border-color: $grey-dark !important;
+}
+
+.dark-mode .login-modal .login-button:hover:not(:disabled) {
+  background: $grey-dark !important;
+  border-color: $grey !important;
+}
+
+.dark-mode .login-modal .google-button {
+  background: $grey-darker !important;
+  border-color: $grey-dark !important;
+}
+
+.dark-mode .login-modal .google-button:hover:not(:disabled) {
+  background: $grey-dark !important;
+  border-color: $grey !important;
+}
+
+.dark-mode .login-modal .twitter-button {
+  background: $black !important;
+  border-color: $grey-darker !important;
+}
+
+.dark-mode .login-modal .twitter-button:hover:not(:disabled) {
+  background: $grey-darker !important;
+  border-color: $grey-dark !important;
+}
+
+.dark-mode .login-modal .divider span {
+  color: $grey-light !important;
+}
+
+/* ==========================================================================
+   Wallet Selection Modal Dark Mode Support (Using Bulma Variables)
+   ========================================================================== */
+
+.dark-mode .wallet-modal-content {
+  background: $black-ter !important;
+  color: $white !important;
+}
+
+.dark-mode .wallet-modal-title {
+  color: $white !important;
+}
+
+.dark-mode .wallet-item {
+  background: $grey-darker !important;
+  border-color: $grey-dark !important;
+  color: $white !important;
+}
+
+.dark-mode .wallet-item:hover {
+  background: $grey-dark !important;
+  border-color: $secondary !important;
+}
+
+.dark-mode .wallet-name {
+  color: $white !important;
+}
+
+.dark-mode .modal-close-button {
+  color: $grey-light !important;
+}
+
+.dark-mode .modal-close-button:hover {
+  background-color: $grey-darker !important;
+  color: $white !important;
+}
+
+.dark-mode .login-button.is-loading::after {
+  border-color: $white transparent $white transparent !important;
+}
