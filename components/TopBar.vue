@@ -80,24 +80,17 @@
       <div v-if="showUserProfileDropdown" class="dropdown-menu-simple">
         <!-- Account button for credit users -->
         <button v-if="isGoogleAuthenticated" class="dropdown-item-simple" @click.stop="goToAccount">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" class="dropdown-icon">
-            <path d="M8 8C10.2091 8 12 6.20914 12 4C12 1.79086 10.2091 0 8 0C5.79086 0 4 1.79086 4 4C4 6.20914 5.79086 8 8 8Z" fill="currentColor"/>
-            <path d="M2 16C2 12.6863 4.68629 10 8 10C11.3137 10 14 12.6863 14 16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-          </svg>
+          <UserIcon class="dropdown-icon" />
           Account
         </button>
         <!-- Priority Fee Settings for wallet users -->
         <button v-else class="dropdown-item-simple" @click.stop="openPriorityFeeSettings">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" class="dropdown-icon">
-            <path d="M6.71971 1.2926L6.41471 2.9726C6.11846 3.06573 5.83097 3.18635 5.55971 3.32761L4.14971 2.35761L2.33979 4.16753L3.31479 5.57252C3.17292 5.84439 3.05355 6.13003 2.95979 6.42753L1.27979 6.73252V9.29252L2.95979 9.59751C3.05354 9.89564 3.17729 10.18 3.31979 10.4525L2.33979 11.8575L4.14971 13.6674L5.5547 12.6974C5.82719 12.8399 6.11657 12.9587 6.4147 13.0524L6.71969 14.7324H9.27969L9.58468 13.0524C9.88218 12.9587 10.1678 12.8393 10.4397 12.6974L11.8447 13.6674L13.6546 11.8575L12.6796 10.4525C12.8208 10.1813 12.9415 9.89878 13.0346 9.60252L14.7196 9.29252V6.73252L13.0346 6.42753C12.9415 6.1319 12.8252 5.84815 12.6846 5.57753L13.6546 4.16753L11.8447 2.35761L10.4397 3.32761C10.1678 3.18574 9.88218 3.06636 9.58468 2.9726L9.27969 1.2926H6.71971ZM7.9997 4.9726C9.67842 4.9726 11.0397 6.33385 11.0397 8.0126C11.0397 9.69135 9.67846 11.0526 7.9997 11.0526C6.32095 11.0526 4.95971 9.69135 4.95971 8.0126C4.95971 6.33385 6.32095 4.9726 7.9997 4.9726Z" fill="currentColor"/>
-          </svg>
+          <SettingsIcon class="dropdown-icon" />
           Priority Fee Settings
         </button>
         <hr class="dropdown-divider">
         <button class="dropdown-item-simple logout-item" @click.stop="logout">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" class="dropdown-icon">
-            <path d="M6 2H3C2.44772 2 2 2.44772 2 3V13C2 13.5523 2.44772 14 3 14H6M10 6L14 10M14 10L10 14M14 10H6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
+          <LogoutIcon class="dropdown-icon" />
           Log out
         </button>
       </div>
@@ -109,6 +102,9 @@ import { WalletMultiButton } from "solana-wallets-vue";
 import { computed, ref, onMounted, onUnmounted, watch } from 'vue';
 import GoogleIcon from '@/assets/img/icons/google.svg?component';
 import TwitterIcon from '@/assets/img/icons/twitter.svg?component';
+import UserIcon from '@/assets/img/icons/sidebar/user.svg?component';
+import SettingsIcon from '@/assets/img/icons/settings.svg?component';
+import LogoutIcon from '@/assets/img/icons/logout.svg?component';
 import { useRouter } from 'vue-router';
 import { useWallet } from 'solana-wallets-vue';
 
@@ -452,7 +448,7 @@ defineExpose({
 });
 </script>
 
-<style scoped>
+<style scoped lang="scss">
 .profile-dropdown {
   position: relative;
   cursor: pointer;
@@ -468,7 +464,7 @@ defineExpose({
   padding: 0.5rem 0.75rem;
   border-radius: 8px;
   transition: background-color 0.2s ease;
-  background: white;
+  background: $box-background-color;
 }
 
 
@@ -476,13 +472,13 @@ defineExpose({
   width: 40px;
   height: 32px;
   border-radius: 8px;
-  background: #6b7280;
+  background: $grey;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 0.875rem;
   font-weight: 600;
-  color: white;
+  color: $white;
 }
 
 .wallet-avatar {
@@ -508,7 +504,7 @@ defineExpose({
 .profile-name {
   font-size: 0.875rem;
   font-weight: 500;
-  color: #374151;
+  color: $text;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -518,7 +514,7 @@ defineExpose({
 .profile-balance {
   font-size: 0.75rem;
   font-weight: 600;
-  color: #374151;
+  color: $text;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -527,7 +523,7 @@ defineExpose({
 
 .dropdown-arrow {
   transition: transform 0.2s ease;
-  color: #6b7280;
+  color: $grey;
 }
 
 .dropdown-arrow.is-flipped {
@@ -539,11 +535,11 @@ defineExpose({
   top: 100%;
   right: 0;
   z-index: 99999;
-  background: white;
+  background: $box-background-color;
   border-radius: 8px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e5e7eb;
-  padding: 0.25rem 0;
+  box-shadow: 0 10px 25px rgba($black, 0.1);
+  border: 1px solid $border;
+  padding: 0;
   width: 100%;
 }
 
@@ -560,87 +556,89 @@ defineExpose({
   align-items: center;
   gap: 0.75rem;
   font-size: 0.875rem;
-  color: #374151;
+  color: $text;
 }
 
 .dropdown-item-simple:hover {
-  background-color: #f9fafb;
+  background-color: $grey-lightest;
 }
 
 .dropdown-item-simple.logout-item {
-  color: #dc2626;
+  color: $danger;
 }
 
 .dropdown-item-simple.logout-item:hover {
-  background-color: #fef2f2;
+  background-color: rgba($danger, 0.08);
 }
 
 
 .dropdown-icon {
   flex-shrink: 0;
-  color: #6b7280;
+  color: $grey;
+  width: 16px;
+  height: 16px;
 }
 
 .logout-item .dropdown-icon {
-  color: #dc2626;
+  color: $danger;
 }
 
 .dropdown-divider {
-  height: 1px;
-  background: #e5e7eb;
+
+
   border: none;
-  margin: 0.5rem 0;
+  margin: 0;
 }
 
 /* Dark mode styles */
 .dark-mode .profile-button {
-  background: #000000;
+  background: $box-background-color-dark;
 }
 
 .dark-mode .profile-name {
-  color: #d1d5db;
+  color: $white;
 }
 
 .dark-mode .profile-balance {
-  color: #d1d5db;
+  color: $white;
 }
 
 .dark-mode .dropdown-menu-simple {
-  background: #000000;
+  background: $box-background-color-dark;
   border: none;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 10px 25px rgba($black, 0.3);
 }
 
 .dark-mode .dropdown-item-simple {
-  color: #d1d5db;
+  color: $white;
 }
 
 .dark-mode .dropdown-item-simple:hover {
-  background-color: #1a1a1a;
+  background-color: darken($box-background-color-dark, 5%);
 }
 
 .dark-mode .dropdown-item-simple.logout-item {
-  color: #f87171;
+  color: $danger;
 }
 
 .dark-mode .dropdown-item-simple.logout-item:hover {
-  background-color: #450a0a;
+  background-color: rgba($danger, 0.12);
 }
 
 .dark-mode .dropdown-divider {
-  background: #374151;
+  background: $grey-darker;
 }
 
 .dark-mode .dropdown-icon {
-  color: #9ca3af;
+  color: $grey-light;
 }
 
 .dark-mode .logout-item .dropdown-icon {
-  color: #f87171;
+  color: $danger;
 }
 
 .dark-mode .profile-avatar {
-  background: #4b5563;
+  background: $grey-darker;
 }
 
 /* Sticky profile on deploy page */
@@ -649,14 +647,14 @@ defineExpose({
   top: 20px;
   right: 20px;
   z-index: 1000;
-  background: white;
+  background: $box-background-color;
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba($black, 0.1);
 }
 
 .dark-mode .sticky-profile {
-  background: #1a1a1a;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  background: $box-background-color-dark;
+  box-shadow: 0 4px 12px rgba($black, 0.3);
 }
 
 /* Hide TopBar profile section on mobile to prevent overlap with sidebar */
@@ -681,12 +679,12 @@ defineExpose({
 
 /* X (Twitter) icon specific styling */
 img[alt="Twitter icon"] {
-  background-color: #000;
+  background-color: $black;
   border-radius: 6px;
   padding: 4px;
 }
 
 .dark-mode img[alt="Twitter icon"] {
-  background-color: #000;
+  background-color: $black;
 }
 </style>
