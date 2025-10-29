@@ -1681,3 +1681,11 @@ html.dark-mode .deployment-header {
 .dark-mode .login-button.is-loading::after {
   border-color: $white transparent $white transparent !important;
 }
+
+/* ==========================================================================
+   Loader Component Dark Mode Support
+   ========================================================================== */
+
+.dark-mode .spinner-bg {
+  background-color: rgba(0, 0, 0, 0.7) !important;
+}
