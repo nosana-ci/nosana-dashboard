@@ -136,10 +136,10 @@
         <div class="columns is-multiline mb-4">
           <div class="column is-3">
             <div class="box has-text-centered equal-height-box">
-              <p class="heading">Deployments</p>
+              <p class="heading">{{ status === 'authenticated' ? 'Deployments' : 'Jobs' }}</p>
               <p class="title is-flex is-align-items-center is-justify-content-center">
                 <RocketIcon style="width: 16px; height: 16px; fill: #10E80C; margin-right: 0.5rem;" />
-                {{ totalDeployments }}
+                {{ status === 'authenticated' ? totalDeployments : totalJobs }}
               </p>
             </div>
           </div>
@@ -192,22 +192,44 @@
         <!-- API Tokens Section -->
         <ApiKeys class="pb-5" v-if="status === 'authenticated'" />
         
-        <div class="is-flex is-justify-content-space-between is-align-items-center mb-4">
-          <h3 class="title is-4 mb-0">Deployments</h3>
-          <nuxt-link to="/deployments/create" class="button is-dark">
-            <span class="icon">
-              <FontAwesomeIcon :icon="faPlus" />
-            </span>
-            <span>Create Deployment</span>
-          </nuxt-link>
+        <!-- For Credit Users: Show Deployments -->
+        <div v-if="status === 'authenticated'">
+          <div class="is-flex is-justify-content-space-between is-align-items-center mb-4">
+            <h3 class="title is-4 mb-0">Deployments</h3>
+            <nuxt-link to="/deployments/create" class="button is-dark">
+              <span class="icon">
+                <FontAwesomeIcon :icon="faPlus" />
+              </span>
+              <span>Create Deployment</span>
+            </nuxt-link>
+          </div>
+          <DeploymentsList 
+            :items-per-page="10" 
+            :limit="10" 
+            :show-pagination="false" 
+            class="mb-2" 
+            @update:total-deployments="totalDeployments = $event" 
+          />
         </div>
-        <DeploymentsList 
-          :items-per-page="10" 
-          :limit="10" 
-          :show-pagination="false" 
-          class="mb-2" 
-          @update:total-deployments="totalDeployments = $event" 
-        />
+
+        <!-- For Wallet Users: Show Jobs -->
+        <div v-else-if="connected">
+          <div class="is-flex is-justify-content-space-between is-align-items-center mb-4">
+            <h3 class="title is-4 mb-0">Job History</h3>
+            <nuxt-link to="/deploy" class="button is-dark">
+              <span class="icon">
+                <FontAwesomeIcon :icon="faPlus" />
+              </span>
+              <span>Deploy New Job</span>
+            </nuxt-link>
+          </div>
+          <JobList 
+            :items-per-page="10" 
+            job-type="combined"
+            class="mb-2" 
+            @update:total-deployments="totalJobs = $event" 
+          />
+        </div>
         
         <div class="columns mt-6">
           <div class="column is-4">
@@ -356,6 +378,7 @@
 
 <script setup lang="ts">
 import DeploymentsList from '~/components/List/DeploymentsList.vue';
+import JobList from '~/components/List/JobList.vue';
 import { useWallet } from 'solana-wallets-vue';
 import { useStake } from '~/composables/useStake';
 import { useAPI } from '~/composables/useAPI';
@@ -410,6 +433,7 @@ const showOnboardModal = computed(() =>
   onboardingInProgress.value
 );
 const totalDeployments = ref(0);
+const totalJobs = ref(0);
 
 const activeAddress = computed(() => {
   if (status.value === 'authenticated' && userData.value?.generatedAddress) {
