@@ -14,7 +14,7 @@
     <div v-else class="columns is-multiline">
       <div class="column is-9-fullhd is-12">
         <!-- Name your deployment -->
-        <div class="box has-background-white" style="border: none;">
+        <div class="box" style="border: none;">
           <h2 class="title is-5 mb-4">Define your deployment</h2>
           <div class="field">
             <div class="control">
@@ -41,7 +41,7 @@
         />
 
         <!-- Select GPU -->
-        <div class="box has-background-white" style="border: none; margin-top: 1.5rem;">
+        <div class="box" style="border: none; margin-top: 1.5rem;">
           <h2 class="title is-5 mb-4">Select instance</h2>
           <DeploySimpleGpuSelection
             :markets="markets || null"
@@ -62,12 +62,12 @@
 
       <div class="column is-3-fullhd is-12">
         <div class="summary">
-          <div class="box has-background-white" style="border: none; padding: 1.5rem;">
-            <h2 class="title is-5 mb-4" style="color: #202124;">Summary</h2>
+          <div class="box" style="border: none; padding: 1.5rem;">
+            <h2 class="title is-5 mb-4">Summary</h2>
             <!-- Cost Summary -->
             <div class="mb-4">
               <p class="has-text-grey is-size-7 mb-2" style="text-transform: uppercase; letter-spacing: 0.5px; font-weight: 500;">Cost</p>
-              <h3 class="title is-3 mb-1" style="color: #202124;" v-if="selectedMarket">
+              <h3 class="title is-3 mb-1" v-if="selectedMarket">
                 ${{ (hourlyPrice * replicas * timeout).toFixed(3) }}
               </h3>
               <p class="has-text-grey" v-else>Select a GPU to see pricing</p>
@@ -76,7 +76,7 @@
               </p>
             </div>
 
-            <hr style="background-color: #e8eaed; margin: 1.5rem 0;" />
+            <hr style="margin: 1.5rem 0;" />
 
             <!-- Configuration Summary -->
             <div class="mb-4">
@@ -84,48 +84,48 @@
               
               <div class="mb-2" style="display: flex; justify-content: space-between; align-items: start;">
                 <span class="has-text-grey is-size-7">Deployment</span>
-                <span class="has-text-dark is-size-7" style="text-align: right; max-width: 60%; overflow: hidden; text-overflow: ellipsis;">
+                <span class="has-text-weight-medium is-size-7" style="text-align: right; max-width: 60%; overflow: hidden; text-overflow: ellipsis;">
                   {{ deploymentName || '-' }}
                 </span>
               </div>
               
               <div class="mb-2" style="display: flex; justify-content: space-between; align-items: start;">
                 <span class="has-text-grey is-size-7">Model</span>
-                <span class="has-text-dark is-size-7" style="text-align: right; max-width: 60%; overflow: hidden; text-overflow: ellipsis;">
+                <span class="has-text-weight-medium is-size-7" style="text-align: right; max-width: 60%; overflow: hidden; text-overflow: ellipsis;">
                   {{ computedJobTitle || '-' }}
                 </span>
               </div>
               
               <div class="mb-2" style="display: flex; justify-content: space-between; align-items: start;">
                 <span class="has-text-grey is-size-7">GPU</span>
-                <span class="has-text-dark is-size-7" style="text-align: right; max-width: 60%; overflow: hidden; text-overflow: ellipsis;">
+                <span class="has-text-weight-medium is-size-7" style="text-align: right; max-width: 60%; overflow: hidden; text-overflow: ellipsis;">
                   {{ selectedMarket ? marketName : '-' }}
                 </span>
               </div>
 
               <div class="mb-2" style="display: flex; justify-content: space-between; align-items: start;">
                 <span class="has-text-grey is-size-7">Strategy</span>
-                <span class="has-text-dark is-size-7" style="text-align: right; max-width: 60%; overflow: hidden; text-overflow: ellipsis;">
+                <span class="has-text-weight-medium is-size-7" style="text-align: right; max-width: 60%; overflow: hidden; text-overflow: ellipsis;">
                   {{ strategy }}
                 </span>
               </div>
 
               <div class="mb-2" style="display: flex; justify-content: space-between; align-items: start;" v-if="replicas && replicas > 1">
                 <span class="has-text-grey is-size-7">Replicas</span>
-                <span class="has-text-dark is-size-7" style="text-align: right; max-width: 60%; overflow: hidden; text-overflow: ellipsis;">
+                <span class="has-text-weight-medium is-size-7" style="text-align: right; max-width: 60%; overflow: hidden; text-overflow: ellipsis;">
                   {{ replicas }}
                 </span>
               </div>
 
               <div style="display: flex; justify-content: space-between; align-items: start;">
                 <span class="has-text-grey is-size-7">Timeout (hours)</span>
-                <span class="has-text-dark is-size-7" style="text-align: right; max-width: 60%; overflow: hidden; text-overflow: ellipsis;">
+                <span class="has-text-weight-medium is-size-7" style="text-align: right; max-width: 60%; overflow: hidden; text-overflow: ellipsis;">
                   {{ timeout }}
                 </span>
               </div>
             </div>
 
-            <hr style="background-color: #e8eaed; margin: 1.5rem 0;" />
+            <hr style="margin: 1.5rem 0;" />
 
             <!-- Advanced Settings Button -->
             <button 
@@ -971,7 +971,7 @@ watch(showTemplateModal, (isOpen) => {
   &.is-active {
     color: var(--text-color, $black);
     border: none;
-    border-bottom: 1px solid var(--tab-bottom-color, white);
+    border-bottom: 1px solid var(--tab-bottom-color, #{$white});
     margin-bottom: -1px;
   }
 
@@ -1008,11 +1008,6 @@ watch(showTemplateModal, (isOpen) => {
 
 .summary > .box {
   padding: 1.5rem;
-  background: white !important;
-}
-
-.dark-mode .summary > .box {
-  background: #121212 !important;
 }
 
 .dark-mode {

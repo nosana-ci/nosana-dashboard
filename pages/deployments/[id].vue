@@ -24,7 +24,7 @@
               <div class="is-flex is-align-items-center mb-0">
                 <NuxtLink :to="backLink" class="button is-ghost back-button mr-4">
                   <span class="icon is-small">
-                    <ArrowUpIcon class="icon-16 transform-rotate-270" style="color: black;" />
+                    <ArrowUpIcon class="icon-16 transform-rotate-270 back-arrow-icon" />
                   </span>
                 </NuxtLink>
                 <div class="header-title-section">
@@ -431,7 +431,7 @@
                       <StatusTag status="QUEUED" />
                     </td>
                     <td>
-                      <span class="tag is-light is-small">{{ task.task }}</span>
+                      <span class="tag is-small category-tag">{{ task.task }}</span>
                     </td>
                     <td class="has-text-grey">
                       {{ formatDate(task.due_at) }}
@@ -473,10 +473,10 @@
                   </tr>
                   <tr v-else v-for="(event, index) in deploymentEvents" :key="index">
                     <td>
-                      <span class="tag is-light is-small">{{ event.type }}</span>
+                      <span class="tag is-small category-tag">{{ event.type }}</span>
                     </td>
                     <td>
-                      <span class="tag is-light is-small">{{ event.category }}</span>
+                      <span class="tag is-small category-tag">{{ event.category }}</span>
                     </td>
                     <td>
                       <span :class="{ 'is-family-monospace': event.message.length > 200 }">
@@ -540,16 +540,17 @@
               <div v-if="loadingJobDefinition" class="has-text-grey has-text-centered py-4">
                 Loading job definition...
               </div>
-              <div v-else-if="jobDefinitionModel">
+              <div v-else-if="jobDefinitionModel" class="json-editor-container">
                 <JsonEditorVue
                   :validator="validator"
+                  :class="{ 'jse-theme-dark': colorMode.value === 'dark' }"
                   v-model="jobDefinitionModel"
                   :mode="Mode.text"
                   :mainMenuBar="false"
                   :statusBar="false"
                   :stringified="false"
                   :readOnly="true"
-                  class="job-definition-editor"
+                  class="json-editor"
                 />
               </div>
               <div v-else class="has-text-grey has-text-centered py-4">
@@ -789,7 +790,7 @@
             <div class="control full-height">
               <JsonEditorVue 
                 :validator="validator" 
-                :class="{ 'jse-theme-dark': $colorMode.value === 'dark' }" 
+                :class="{ 'jse-theme-dark': colorMode.value === 'dark' }" 
                 v-model="revisionJobDefinition" 
                 :mode="Mode.text" 
                 :mainMenuBar="false" 
@@ -823,7 +824,7 @@ class="has-height-500"
           <button class="delete" @click="showRevisionDefinitionModal = false"></button>
         </header>
         <section class="modal-card-body has-min-height-500">
-          <div v-if="viewingRevision.job_definition">
+          <div v-if="viewingRevision.job_definition" class="json-editor-container">
             <JsonEditorVue
               :validator="validator"
               v-model="viewingRevision.job_definition"
@@ -832,7 +833,7 @@ class="has-height-500"
               :statusBar="false"
               :stringified="false"
               :readOnly="true"
-              class="job-definition-editor"
+              class="json-editor"
             />
           </div>
           <div v-else class="has-text-grey has-text-centered py-4">
@@ -854,6 +855,7 @@ class="has-height-500"
 import type { Deployment, JobDefinition } from "@nosana/sdk";
 import { Mode, ValidationSeverity } from "vanilla-jsoneditor";
 import JsonEditorVue from "json-editor-vue";
+import "vanilla-jsoneditor/themes/jse-theme-dark.css";
 import { useToast } from "vue-toastification";
 import JobStatus from "~/components/Job/Status.vue";
 import JobLogsContainer from "~/components/Job/LogsContainer.vue";
@@ -880,6 +882,8 @@ import QueuedIcon from '@/assets/img/icons/status/queued.svg?component';
 import DoneIcon from '@/assets/img/icons/status/done.svg?component';
 import { useStatus } from '~/composables/useStatus';
 import { useTimestamp } from '@vueuse/core';
+
+const colorMode = useColorMode();
 
 // Types
 interface DeploymentJob {
@@ -2134,7 +2138,7 @@ useHead({
   position: sticky;
   top: 0;
   z-index: 10;
-  background: white;
+  background: $white;
 }
 
 .dark-mode .sticky-subheader {

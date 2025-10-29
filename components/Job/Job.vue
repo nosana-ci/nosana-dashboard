@@ -8,7 +8,7 @@
             <div class="is-flex is-align-items-center mb-2">
               <NuxtLink :to="props.deploymentId ? `/deployments/${props.deploymentId}` : '/explorer'" class="button is-ghost back-button mr-4">
                 <span class="icon is-small">
-                  <ArrowUpIcon class="icon-16 transform-rotate-270" style="color: black;" />
+                  <ArrowUpIcon class="icon-16 transform-rotate-270 back-arrow-icon" />
                 </span>
               </NuxtLink>
               <div class="header-title-section">

@@ -1458,3 +1458,132 @@ html.dark-mode .deployment-header {
   /* Ensure SMIL animations are not paused */
   animation-play-state: running !important;
 }
+
+/* ==========================================================================
+   JSON Editor Container Styling (Consistent across all uses)
+   ========================================================================== */
+
+/* Global class for JSON editor containers to ensure consistent styling */
+.json-editor-container {
+  background-color: $grey-lightest !important;
+  border-radius: 4px;
+  padding: 0;
+  margin-top: 0.2rem;
+  position: relative; /* For copy button positioning */
+  
+  .json-editor {
+    min-height: 300px;
+    border: none;
+    border-radius: 4px;
+    background-color: $grey-lightest !important;
+    
+    :deep(.jse-main) {
+      border: none;
+      background-color: $grey-lightest !important;
+    }
+    
+    :deep(.jse-contents) {
+      border-radius: 4px;
+      background-color: $grey-lightest !important;
+    }
+    
+    :deep(.jse-text-mode) {
+      background-color: $grey-lightest !important;
+    }
+    
+    :deep(.cm-editor) {
+      background-color: $grey-lightest !important;
+    }
+    
+    :deep(.cm-focused) {
+      background-color: $grey-lightest !important;
+    }
+  }
+}
+
+/* Override any box backgrounds when containing JSON editor */
+.box .json-editor-container {
+  background-color: $grey-lightest !important;
+}
+
+.dark-mode .json-editor-container {
+  background-color: $grey-darker !important;
+  border-color: $grey-dark;
+  
+  .json-editor {
+    background-color: $grey-darker !important;
+    
+    :deep(.jse-main) {
+      background-color: $grey-darker !important;
+    }
+    
+    :deep(.jse-contents) {
+      background-color: $grey-darker !important;
+    }
+    
+    :deep(.jse-text-mode) {
+      background-color: $grey-darker !important;
+    }
+    
+    :deep(.cm-editor) {
+      background-color: $grey-darker !important;
+    }
+    
+    :deep(.cm-focused) {
+      background-color: $grey-darker !important;
+    }
+  }
+}
+
+/* Override any box backgrounds when containing JSON editor in dark mode */
+.dark-mode .box .json-editor-container {
+  background-color: $grey-darker !important;
+}
+
+/* ==========================================================================
+   Category Tag Styling (Events Tab and Other Lists)
+   ========================================================================== */
+
+/* Ensure category tags are visible in both light and dark modes */
+.category-tag {
+  background-color: $grey-lightest !important;
+  color: $text !important;
+  border: 1px solid $grey-lighter !important;
+}
+
+.dark-mode .category-tag {
+  background-color: $grey-dark !important;
+  color: $white !important;
+  border: 1px solid $grey !important;
+}
+
+/* ==========================================================================
+   Back Arrow Icon Styling (Global for all pages)
+   ========================================================================== */
+
+/* Ensure back arrows are visible in both light and dark modes */
+.back-arrow-icon {
+  color: $text !important;
+}
+
+.dark-mode .back-arrow-icon {
+  color: $white !important;
+}
+
+/* Ensure back buttons don't inherit link colors */
+.back-button .back-arrow-icon {
+  color: $text !important;
+}
+
+.dark-mode .back-button .back-arrow-icon {
+  color: $white !important;
+}
+
+/* ==========================================================================
+   Global Dark Mode Box Styling (Using Bulma Variables)
+   ========================================================================== */
+
+/* Apply consistent box backgrounds across all components using Bulma variables */
+.dark-mode .box {
+  background-color: $box-background-color-dark;
+}

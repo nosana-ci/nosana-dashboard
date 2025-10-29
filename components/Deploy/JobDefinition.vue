@@ -1,11 +1,11 @@
 <template>
   <div>
     <div
-      class="box has-background-white"
+      class="box"
       :style="{ overflowY: 'scroll', border: 'none', height: 'auto', marginTop: '1.5rem' }"
     >
       <div>
-          <h2 class="title is-5 mb-4" style="color: #202124;">{{ title || 'Configure job definition' }}</h2>
+          <h2 class="title is-5 mb-4">{{ title || 'Configure job definition' }}</h2>
         <!-- START: New Template Info Box (above editor) -->
         <div class="px-3 pt-0 pb-2" style="width: 100%; display: flex;">
           <div class="is-flex is-align-items-start is-justify-content-space-between" style="width: 100%;">
@@ -21,7 +21,7 @@
                 />
                 <div>
                   <div class="is-flex is-align-items-center">
-                    <h3 class="is-size-5 has-text-weight-semibold has-text-black mb-0">
+                    <h3 class="is-size-5 has-text-weight-semibold mb-0">
                       {{ computedJobTitle }}
                     </h3>
                   </div>
@@ -31,7 +31,7 @@
                 </div>
               </div>
               <div v-else>
-                <h3 class="is-size-5 has-text-weight-semibold has-text-black mb-0">
+                <h3 class="is-size-5 has-text-weight-semibold mb-0">
                   {{ computedJobTitle }}
                 </h3>
                 <p v-if="computedDockerImage" class="is-size-7 has-text-grey" style="line-height: 1; margin-top: 0; margin-bottom: 4px;">
@@ -95,25 +95,25 @@
     </div>
 
       <!-- GPU Selection Section (only shown when markets prop is provided) -->
-      <div v-if="markets !== undefined" class="box has-background-white" style="border: none; margin-top: 1.5rem;">
-        <h2 class="title is-5 mb-3" style="color: #202124;">Select your GPU</h2>
+      <div v-if="markets !== undefined" class="box" style="border: none; margin-top: 1.5rem;">
+        <h2 class="title is-5 mb-3">Select your GPU</h2>
       <div class="nav-tabs is-flex">
         <div
           class="nav-tabs-item p-3 px-5 mr-3"
-          :class="{ 'is-active has-background-white': gpuTab === 'simple' }"
+          :class="{ 'is-active': gpuTab === 'simple' }"
           @click="gpuTab = 'simple'"
         >
           Device
         </div>
         <div
           class="nav-tabs-item p-3 px-5 mr-3"
-          :class="{ 'is-active has-background-white': gpuTab === 'advanced' }"
+          :class="{ 'is-active': gpuTab === 'advanced' }"
           @click="gpuTab = 'advanced'"
         >
           Advanced Search
         </div>
       </div>
-      <div class="box has-background-white" style="border: none; margin-top: 0;">
+      <div class="box" style="border: none; margin-top: 0;">
         <DeploySimpleGpuSelection
             v-if="gpuTab === 'simple'"
             :markets="markets ?? null"
@@ -159,7 +159,7 @@
         </header>
         <section class="modal-card-body" style="min-height: 500px;">
           <div class="field full-height">
-            <div class="control full-height">
+            <div class="control full-height json-editor-container">
               <JsonEditorVue 
                   :validator="validator" 
                   :class="{ 'jse-theme-dark': $colorMode.value === 'dark' }" 
@@ -168,6 +168,7 @@
                   :mainMenuBar="false" 
                   :statusBar="false" 
                   :stringified="false" 
+                  class="json-editor"
                   style="height: 500px;" />
             </div>
           </div>
@@ -315,14 +316,32 @@ const openReadmeModal = (readme: string) => {
   border-bottom: 0px;
   
   &.is-active {
-    color: #363636;
+    color: $text;
+    background-color: $white;
     border: none;
-    border-bottom: 1px solid white;
+    border-bottom: 1px solid $white;
     margin-bottom: -1px;
   }
   
   &:hover {
-    background-color: #fafafa;
+    background-color: $grey-lightest;
+  }
+}
+
+// Dark mode for nav tabs
+html.dark-mode {
+  .nav-tabs-item {
+    color: $grey-light;
+    
+    &.is-active {
+      color: $white;
+      background-color: $black-ter;
+      border-bottom: 1px solid $black-ter;
+    }
+    
+    &:hover {
+      background-color: $grey-dark;
+    }
   }
 }
 

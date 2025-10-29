@@ -1,5 +1,5 @@
 <template>
-  <div v-if="activeTab === 'info' && !props.isConfidential" class="job-definition-container">
+  <div v-if="activeTab === 'info' && !props.isConfidential" class="json-editor-container">
     <button 
       class="button is-small is-light copy-button"
       @click="copyToClipboard(JSON.stringify(jobDefinitionModel, null, 2), 'Job Definition')"
@@ -19,7 +19,7 @@
       :statusBar="false" 
       :stringified="false" 
       :readOnly="true"
-      class="job-definition-editor" 
+      class="json-editor" 
   />
   </div>
   <div v-if="activeTab === 'logs' && canShowLogsTab" class="logs-wrapper">
@@ -339,7 +339,7 @@ const handleTabClick = (tabName: string) => {
 
 <style lang="scss" scoped>
 .job-tabs-condensed {
-  background-color: #ffffff;
+  background-color: $white;
   border-radius: 4px 4px 0 0;
   margin-bottom: 0 !important;
   
@@ -357,13 +357,6 @@ const handleTabClick = (tabName: string) => {
   }
 }
 
-.job-definition-container {
-  background-color: #ffffff;
-  border-radius: 4px;
-  padding: 0;
-  margin-top: 0.2rem;
-  position: relative; /* For copy button positioning */
-}
 
 .logs-wrapper {
   position: relative; /* For copy button positioning */
@@ -377,19 +370,6 @@ const handleTabClick = (tabName: string) => {
   z-index: 10;
 }
 
-.job-definition-editor {
-  min-height: 300px;
-  border: none;
-  border-radius: 4px;
-  
-  :deep(.jse-main) {
-    border: none;
-  }
-  
-  :deep(.jse-contents) {
-    border-radius: 4px;
-  }
-}
 
 /* Empty state styling (match Groups) */
 .empty-state {
@@ -404,7 +384,7 @@ const handleTabClick = (tabName: string) => {
 /* Container to match Groups' white card sizing */
 .results-groups-like-container {
   padding: 1.5rem;
-  background: #ffffff;
+  background: $white;
   border-radius: 8px;
 }
 
@@ -435,11 +415,6 @@ html.dark-mode {
     }
   }
   
-  .job-definition-container {
-  background-color: #2c2c2c;
-  border-color: #444;
-    position: relative; /* For copy button positioning */
-  }
 
   /* Match Groups dark-mode empty state color */
   .empty-state {
