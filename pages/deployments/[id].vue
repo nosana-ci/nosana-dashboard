@@ -386,7 +386,7 @@
           <!-- Upcoming Tasks -->
           <div class="mb-5">
             <div class="is-flex is-justify-content-space-between is-align-items-center mb-3">
-              <h2 class="title is-5 mb-0">Upcoming Tasks <span class="tag is-light">{{ tasks.length }}</span></h2>
+              <h2 class="title is-5 mb-0">Upcoming Tasks</h2>
               <button 
                 class="button is-small" 
                 @click="loadTasks"
@@ -451,7 +451,7 @@
 
           <!-- History -->
           <div>
-            <h2 class="title is-5 mb-3">History <span class="tag is-light">{{ deploymentEvents.length }}</span></h2>
+            <h2 class="title is-5 mb-3">History</h2>
             
             <div class="box is-borderless">
               <div class="table-container">

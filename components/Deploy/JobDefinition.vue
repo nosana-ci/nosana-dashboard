@@ -47,7 +47,7 @@
                 style="align-self: center;"
               >
                 <button
-                  class="button is-light is-small readme-button"
+                  class="button is-light is-small"
                   @click="openReadmeModal(selectedTemplate.readme!)"
                   title="View template documentation"
                 >
@@ -63,7 +63,7 @@
             <div class="is-flex is-align-items-start" style="margin-top: 6px;">
               <!-- Select Template Button -->
               <button
-                  class="button is-light is-small action-button mr-2" 
+                  class="button is-light is-small mr-2" 
                   @click="$emit('showTemplateModal')"
                   title="Select a template"
               >
@@ -76,7 +76,7 @@
               </button>
               <!-- Edit Job Definition Button -->
               <button
-                  class="button is-outlined is-small action-button"
+                  class="button is-light is-small"
                   @click="showEditorModal = true"
                   title="Edit job definition" 
               >
@@ -296,16 +296,6 @@ const openReadmeModal = (readme: string) => {
 </script>
 
 <style lang="scss" scoped>
-.readme-button.button.is-light {
-  background-color: #f5f5f5;
-  border: 1px solid #dbdbdb;
-  color: #363636;
-}
-
-.readme-button.button.is-light:hover {
-  background-color: #eeeeee;
-  border-color: #b5b5b5;
-}
 
 .nav-tabs-item {
   border-top-left-radius: 6px;
@@ -345,16 +335,6 @@ html.dark-mode {
   }
 }
 
-.action-button {
-  background-color: #f5f5f5;
-  border: 1px solid #dbdbdb;
-  color: #363636;
-}
-
-.action-button:hover {
-  background-color: #eeeeee;
-  border-color: #b5b5b5;
-}
 
 .editor-wrapper {
   position: relative;
@@ -438,29 +418,6 @@ html.dark-mode {
     background: linear-gradient(transparent, rgba(18, 18, 18, 0.95) 70%);
   }
 
-  .readme-button.button.is-light {
-    background-color: rgba(255, 255, 255, 0.1) !important;
-    border-color: rgba(255, 255, 255, 0.2) !important;
-    color: rgba(255, 255, 255, 0.9) !important;
-    
-    &:hover {
-      background-color: rgba(255, 255, 255, 0.15) !important;
-      border-color: rgba(255, 255, 255, 0.3) !important;
-      color: white !important;
-    }
-  }
-  
-  .action-button.button.is-outlined {
-    border-color: rgba(255, 255, 255, 0.3) !important;
-    color: rgba(255, 255, 255, 0.9) !important;
-    background-color: transparent !important;
-    
-    &:hover {
-      background-color: rgba(255, 255, 255, 0.1) !important;
-      border-color: rgba(255, 255, 255, 0.5) !important;
-      color: white !important;
-    }
-  }
 
   .expand-indicator {
     color: #ccc;
