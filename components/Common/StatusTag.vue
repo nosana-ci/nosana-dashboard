@@ -59,6 +59,9 @@ const normalizeStringStatus = (val: string): string | null => {
   if (v === 'error') return 'ERROR';
   if (v === 'insufficient_funds') return 'INSUFFICIENT_FUNDS';
   if (v === 'archived') return 'ARCHIVED';
+  // Revision statuses
+  if (v === 'active') return 'ACTIVE';
+  if (v === 'inactive') return 'INACTIVE';
   // Endpoint statuses
   if (v === 'online') return 'ONLINE';
   if (v === 'offline') return 'OFFLINE';
@@ -117,6 +120,9 @@ const getIconComponent = (status: string) => {
   if (status === 'COMPLETED' || status === 'SUCCESS') return DoneIcon;
   if (status === 'FAILED' || status === 'YAML_ERROR' || status === 'ERROR' || status === 'INSUFFICIENT_FUNDS') return FailedIcon;
   if (status === 'ARCHIVED') return ArchiveIcon; // Use archive icon for archived status
+  // Revision statuses
+  if (status === 'ACTIVE') return RunningIcon; // Running icon for active
+  if (status === 'INACTIVE') return StoppedIcon; // Square icon for inactive
   // Endpoint statuses - reuse appropriate existing icons
   if (status === 'ONLINE') return DoneIcon; // Green checkmark for online
   if (status === 'OFFLINE') return StoppedIcon; // Gray square for offline  

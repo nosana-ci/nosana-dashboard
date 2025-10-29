@@ -520,23 +520,86 @@
 
         <!-- Job Definition Tab -->
         <div v-if="activeTab === 'job-definition'">
-          <div v-if="loadingJobDefinition" class="has-text-grey has-text-centered py-4">
-            Loading job definition...
+          <!-- Current Job Definition Section -->
+          <div class="mb-5">
+            <h2 class="title is-5 mb-3">Current Job Definition</h2>
+            <div class="box is-borderless">
+              <div v-if="loadingJobDefinition" class="has-text-grey has-text-centered py-4">
+                Loading job definition...
+              </div>
+              <div v-else-if="jobDefinitionModel">
+                <JsonEditorVue
+                  :validator="validator"
+                  v-model="jobDefinitionModel"
+                  :mode="Mode.text"
+                  :mainMenuBar="false"
+                  :statusBar="false"
+                  :stringified="false"
+                  :readOnly="true"
+                  class="job-definition-editor"
+                />
+              </div>
+              <div v-else class="has-text-grey has-text-centered py-4">
+                No job definition found
+              </div>
+            </div>
           </div>
-          <div v-else-if="jobDefinitionModel">
-            <JsonEditorVue
-              :validator="validator"
-              v-model="jobDefinitionModel"
-              :mode="Mode.text"
-              :mainMenuBar="false"
-              :statusBar="false"
-              :stringified="false"
-              :readOnly="true"
-              class="job-definition-editor"
-            />
-          </div>
-          <div v-else class="has-text-grey has-text-centered py-4">
-            No job definition found
+
+          <!-- Revisions Section -->
+          <div class="mb-4">
+            <h2 class="title is-5 mb-3">Deployment Revisions</h2>
+            <div v-if="deployment?.revisions && deployment.revisions.length > 0" class="box is-borderless">
+              <table class="table is-fullwidth">
+                <thead>
+                  <tr>
+                    <th>Revision</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="revision in sortedRevisions" :key="revision.revision">
+                    <td>
+                      <span class="has-text-weight-semibold">{{ revision.revision }}</span>
+                    </td>
+                    <td>
+                      <StatusTag 
+                        :status="revision.revision === deployment.active_revision ? 'ACTIVE' : 'INACTIVE'"
+                        :showLabel="true"
+                        :imageOnly="false"
+                      />
+                    </td>
+                    <td class="has-text-grey">
+                      {{ formatDate(revision.created_at) }}
+                    </td>
+                    <td>
+                      <div class="buttons are-small">
+                        <button 
+                          v-if="revision.revision !== deployment.active_revision"
+                          @click="switchToRevision(revision.revision)"
+                          class="button is-primary is-small"
+                          :class="{ 'is-loading': switchingRevision === revision.revision }"
+                          :disabled="actionLoading || switchingRevision !== null"
+                        >
+                          Make Active
+                        </button>
+                        <button 
+                          @click="viewRevisionDefinition(revision)"
+                          class="button is-light is-small"
+                        >
+                          View Definition
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div v-else class="notification is-light has-text-centered">
+              <p>No revisions found for this deployment.</p>
+              <p class="has-text-grey is-size-7 mt-2">Create a new revision using the Actions menu.</p>
+            </div>
           </div>
         </div>
 
@@ -707,14 +770,7 @@
           <button class="delete" @click="showRevisionModal = false"></button>
         </header>
         <section class="modal-card-body has-min-height-500">
-          <div class="content mb-4">
-            <p class="has-text-grey">
-              Create a new revision of this deployment with updated job definition. 
-              This will become the active revision and will be used for new job instances.
-            </p>
-          </div>
           <div class="field full-height">
-            <label class="label">Job Definition</label>
             <div class="control full-height">
               <JsonEditorVue 
                 :validator="validator" 
@@ -739,6 +795,37 @@ class="has-height-500"
           >
             Create Revision
           </button>
+        </footer>
+      </div>
+    </div>
+
+    <!-- View Revision Definition Modal -->
+    <div v-if="viewingRevision" class="modal" :class="{ 'is-active': showRevisionDefinitionModal }">
+      <div class="modal-background" @click="showRevisionDefinitionModal = false"></div>
+      <div class="modal-card modal-card-wide">
+        <header class="modal-card-head">
+          <p class="modal-card-title">Revision {{ viewingRevision.revision }} - Job Definition</p>
+          <button class="delete" @click="showRevisionDefinitionModal = false"></button>
+        </header>
+        <section class="modal-card-body has-min-height-500">
+          <div v-if="viewingRevision.job_definition">
+            <JsonEditorVue
+              :validator="validator"
+              v-model="viewingRevision.job_definition"
+              :mode="Mode.text"
+              :mainMenuBar="false"
+              :statusBar="false"
+              :stringified="false"
+              :readOnly="true"
+              class="job-definition-editor"
+            />
+          </div>
+          <div v-else class="has-text-grey has-text-centered py-4">
+            No job definition found for this revision
+          </div>
+        </section>
+        <footer class="modal-card-foot is-justify-content-flex-end">
+          <button class="button" @click="showRevisionDefinitionModal = false">Close</button>
         </footer>
       </div>
     </div>
@@ -830,6 +917,9 @@ const showTimeoutModal = ref(false);
 const showScheduleModal = ref(false);
 const showRevisionModal = ref(false);
 const revisionJobDefinition = ref<JobDefinition | null>(null);
+const switchingRevision = ref<number | null>(null);
+const showRevisionDefinitionModal = ref(false);
+const viewingRevision = ref<any>(null);
 const actionsDropdown = ref<HTMLElement | null>(null);
 // Debug instrumentation for page header icon
 const headerIconRef = ref<HTMLElement | null>(null);
@@ -880,6 +970,12 @@ const statusDotClass = computed(() => {
     default:
       return 'status-unknown';
   }
+});
+
+// Computed properties for revisions
+const sortedRevisions = computed(() => {
+  if (!deployment.value?.revisions) return [];
+  return [...deployment.value.revisions].sort((a, b) => b.revision - a.revision);
 });
 
 // Methods
@@ -1477,6 +1573,41 @@ const createRevision = async () => {
   } finally {
     actionLoading.value = false;
   }
+};
+
+// Switch to a different revision
+const switchToRevision = async (revisionNumber: number) => {
+  if (!deployment.value || !isAuthenticated.value) {
+    toast.error("Please log in to perform this action");
+    return;
+  }
+
+  try {
+    switchingRevision.value = revisionNumber;
+    const result = await useApiFetch(`/api/deployments/${deployment.value.id}/update-active-revision`, {
+      method: 'PATCH',
+      auth: true,
+      body: { active_revision: revisionNumber }
+    });
+
+    toast.success(`Switched to revision ${revisionNumber} successfully!`);
+    
+    // Refresh deployment data
+    await loadDeployment(true);
+    
+  } catch (error: any) {
+    console.error('Switch revision error:', error);
+    const errorMessage = error.data?.message || error.message || 'Failed to switch revision';
+    toast.error(`Error switching revision: ${errorMessage}`);
+  } finally {
+    switchingRevision.value = null;
+  }
+};
+
+// View a revision's job definition
+const viewRevisionDefinition = (revision: any) => {
+  viewingRevision.value = revision;
+  showRevisionDefinitionModal.value = true;
 };
 
 const isValidCronExpression = (cron: string): boolean => {

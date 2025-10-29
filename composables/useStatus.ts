@@ -85,6 +85,12 @@ export function getStatusClass(status: string | number): string {
     case 'ARCHIVED':
       return 'is-dark'
     
+    // Revision states
+    case 'ACTIVE':
+      return 'is-info'     // Blue for active (like running)
+    case 'INACTIVE':
+      return 'is-dark'     // Black for inactive
+    
     // Endpoint states
     case 'ONLINE':
       return 'is-success'  // Green for online
