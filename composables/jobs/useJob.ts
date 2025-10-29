@@ -358,6 +358,13 @@ export function useJob(jobId: string) {
     }
   );
 
+  // Ensure loading stops if API finishes but no job is found
+  watch(pending, (isPending) => {
+    if (!isPending && !data.value && !job.value) {
+      loading.value = false;
+    }
+  }, { immediate: true });
+
   let eventSource: EventSourcePolyfill | null = null;
   let currentNodeAddress: string | null = null;
   let completedSseAttempted = false;

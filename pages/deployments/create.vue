@@ -8,8 +8,8 @@
       v-model="showSettingsModal"
     ></TopBar>
 
-    <!-- Show loader until all critical data is loaded -->
-    <Loader v-if="!jobDefinition || loadingTemplates || loadingMarkets" />
+    <!-- Show loader for external data only; editor always visible -->
+    <Loader v-if="loadingTemplates || loadingMarkets" />
 
     <div v-else class="columns is-multiline">
       <div class="column is-9-fullhd is-12">
@@ -103,7 +103,7 @@
                 </span>
               </div>
 
-              <div class="mb-2" style="display: flex; justify-content: space-between; align-items: start;" v-if="strategy && strategy !== 'SIMPLE'">
+              <div class="mb-2" style="display: flex; justify-content: space-between; align-items: start;">
                 <span class="has-text-grey is-size-7">Strategy</span>
                 <span class="has-text-dark is-size-7" style="text-align: right; max-width: 60%; overflow: hidden; text-overflow: ellipsis;">
                   {{ strategy }}
@@ -117,7 +117,7 @@
                 </span>
               </div>
 
-              <div style="display: flex; justify-content: space-between; align-items: start;" v-if="timeout && timeout > 1">
+              <div style="display: flex; justify-content: space-between; align-items: start;">
                 <span class="has-text-grey is-size-7">Timeout (hours)</span>
                 <span class="has-text-dark is-size-7" style="text-align: right; max-width: 60%; overflow: hidden; text-overflow: ellipsis;">
                   {{ timeout }}
@@ -433,7 +433,7 @@ const showSwapModal = ref(false);
 const skipAutoSelection = ref(false);
 const isUpdatingFromJobDef = ref(false);
 const isRestoringState = ref(false);
-const isEditorCollapsed = ref(true);
+const isEditorCollapsed = ref(false);
 
 // Deployment-specific state
 const deploymentName = ref("");
@@ -943,7 +943,6 @@ const showTemplateModal = ref(false);
 const selectTemplateFromModal = (template: Template) => {
   selectedTemplate.value = template;
   showTemplateModal.value = false;
-  isEditorCollapsed.value = true;
 };
 
 // Watch for README modal state to control body scroll

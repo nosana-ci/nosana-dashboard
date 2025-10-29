@@ -206,7 +206,13 @@
                   </tr>
                   <tr>
                     <td>Container timeout</td>
-                    <td>{{ Math.floor(deployment.timeout / 60) }} hours</td>
+                    <td>
+                      {{ Math.floor(deployment.timeout / 60) }} hours
+                      <span v-if="runningJobDurationSeconds !== null" class="has-text-grey is-size-7">
+                        – running 
+                        <SecondsFormatter :seconds="runningJobDurationSeconds" :showSeconds="true" />
+                      </span>
+                    </td>
                   </tr>
                   
                   <!-- Scheduled deployment cron schedule -->
@@ -851,6 +857,7 @@ import JsonEditorVue from "json-editor-vue";
 import { useToast } from "vue-toastification";
 import JobStatus from "~/components/Job/Status.vue";
 import JobLogsContainer from "~/components/Job/LogsContainer.vue";
+import SecondsFormatter from "~/components/SecondsFormatter.vue";
 import { useJob } from "~/composables/jobs/useJob";
 import StatusTag from "~/components/Common/StatusTag.vue";
 
@@ -872,6 +879,7 @@ import FailedIcon from '@/assets/img/icons/status/failed.svg?component';
 import QueuedIcon from '@/assets/img/icons/status/queued.svg?component';
 import DoneIcon from '@/assets/img/icons/status/done.svg?component';
 import { useStatus } from '~/composables/useStatus';
+import { useTimestamp } from '@vueuse/core';
 
 // Types
 interface DeploymentJob {
@@ -1363,6 +1371,26 @@ const liveEndpointStatusByUrl = computed<Map<string, 'ONLINE' | 'OFFLINE' | 'UNK
   return statusMap;
 });
 
+// Running job duration (for concise timeout row suffix)
+const firstRunningJobId = computed<string | null>(() => {
+  const entries = Object.entries(jobStates.value || {});
+  const running = entries.find(([id, st]) => st === 1);
+  return running ? running[0] : null;
+});
+
+const runningJobApiUrl = computed(() => firstRunningJobId.value ? `/api/jobs/${firstRunningJobId.value}` : '');
+const { data: runningJobData } = useAPI(runningJobApiUrl, { default: () => null, watch: [runningJobApiUrl] });
+const nowTs = useTimestamp({ interval: 1000 });
+const runningJobDurationSeconds = computed<number | null>(() => {
+  const js = (runningJobData.value as any)?.timeStart;
+  const state = (runningJobData.value as any)?.state;
+  if (!js || js === 0) return null;
+  // state 1 = running
+  const isRunning = state === 1 || (typeof state === 'string' && String(state).toUpperCase() === 'RUNNING');
+  if (!isRunning) return null;
+  return Math.max(0, Math.floor(nowTs.value / 1000) - js);
+});
+
 const activeJobs = computed((): DeploymentJob[] => {
   const jobs = (deployment.value?.jobs as DeploymentJob[]) || [];
   // Enrich jobs with fetched states and reverse to show most recent first
@@ -1483,8 +1511,8 @@ const startDeployment = async () => {
     "Deployment started successfully"
   );
   
-  // Start polling for job updates after starting
-  startJobPolling();
+  // Start fast polling for first job after starting
+  startFastJobPolling();
 };
 
 const stopDeployment = async () => {
@@ -1800,13 +1828,13 @@ const stopStatusPolling = () => {
 };
 
 // Job activity polling functionality  
-const startJobPolling = () => {
+const startJobPolling = (intervalMs: number = 5000) => {
   // Clear any existing interval
   if (jobPollingInterval.value) {
     clearInterval(jobPollingInterval.value);
   }
   
-  // Poll every 5 seconds for job updates
+  // Poll for job updates
   jobPollingInterval.value = setInterval(async () => {
     if (!deployment.value) return;
     
@@ -1820,7 +1848,7 @@ const startJobPolling = () => {
       clearInterval(jobPollingInterval.value!);
       jobPollingInterval.value = null;
     }
-  }, 5000);
+  }, intervalMs);
 };
 
 const stopJobPolling = () => {
@@ -1828,6 +1856,23 @@ const stopJobPolling = () => {
     clearInterval(jobPollingInterval.value);
     jobPollingInterval.value = null;
   }
+};
+
+// Fast polling after start until first job appears
+const fastJobPollingInterval = ref<NodeJS.Timeout | null>(null);
+const startFastJobPolling = () => {
+  if (fastJobPollingInterval.value) return;
+  fastJobPollingInterval.value = setInterval(async () => {
+    if (!deployment.value) return;
+    await loadDeployment(true);
+    const count = deployment.value?.jobs?.length || 0;
+    const status = deployment.value?.status?.toUpperCase();
+    if (count > 0 || (status !== 'RUNNING' && status !== 'STARTING')) {
+      clearInterval(fastJobPollingInterval.value!);
+      fastJobPollingInterval.value = null;
+      if (count > 0) startJobPolling();
+    }
+  }, 1000);
 };
 
 // Click outside handler to close dropdown
@@ -1913,10 +1958,14 @@ watch(
     
     const status = newStatus.toUpperCase();
     
-    // Start job polling when deployment becomes running
-    if (status === 'RUNNING' && !jobPollingInterval.value) {
-      startJobPolling();
-    }
+  // When deployment starts, poll fast until first job appears
+  if ((status === 'STARTING' || status === 'RUNNING') && (deployment.value?.jobs?.length || 0) === 0) {
+    startFastJobPolling();
+  }
+  // Once running, ensure normal polling is active
+  if (status === 'RUNNING' && !jobPollingInterval.value && (deployment.value?.jobs?.length || 0) > 0) {
+    startJobPolling();
+  }
     
     // Stop job polling when deployment stops running
     if (status !== 'RUNNING' && status !== 'STARTING' && jobPollingInterval.value) {
