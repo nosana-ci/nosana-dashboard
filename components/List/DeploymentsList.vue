@@ -86,6 +86,7 @@ import StoppedIcon from '@/assets/img/icons/status/stopped.svg?component';
 import FailedIcon from '@/assets/img/icons/status/failed.svg?component';
 import QueuedIcon from '@/assets/img/icons/status/queued.svg?component';
 import DoneIcon from '@/assets/img/icons/status/done.svg?component';
+import ArchiveIcon from '@/assets/img/icons/archive.svg?component';
 import { useStatus } from '~/composables/useStatus';
 
 // Props
@@ -275,14 +276,13 @@ const getStatusClass = (status: string) => {
       return 'is-info';
     case 'STOPPED':
     case 'STOPPING':
+    case 'ARCHIVED':
       return 'is-dark';
     case 'ERROR':
     case 'INSUFFICIENT_FUNDS':
       return 'is-danger';
     case 'DRAFT':
       return 'is-warning';
-    case 'ARCHIVED':
-      return 'is-light';
     default:
       return 'is-light';
   }
@@ -303,6 +303,8 @@ const getStatusIcon = (status: string) => {
       return QueuedIcon;
     case 'COMPLETED':
       return DoneIcon;
+    case 'ARCHIVED':
+      return ArchiveIcon;
     default:
       return StoppedIcon;
   }

@@ -759,9 +759,44 @@ const hasResults = computed(() => {
   return props.job.results && (props.job.hasResultsRegex || props.job.isCompleted);
 });
 
+// Check if container controls tab has content
+const hasContainerControls = computed(() => {
+  if (!props.job.jobDefinition) return false;
+  
+  // Check if there are any operation tabs with actual logs
+  const operationTabs = flogTabs.value.filter(t => t !== 'system');
+  const hasOperationLogs = operationTabs.some(tab => {
+    const logs = flogLogsByOp.value.get(tab);
+    return logs && logs.length > 0;
+  });
+  
+  return operationTabs.length > 0 && hasOperationLogs;
+});
+
+// Check if system logs tab has content
+const hasSystemLogs = computed(() => {
+  if (!props.job.jobDefinition) return false;
+  
+  // Check if there are actual system log entries
+  const hasSystemLogEntries = flogSystemLogs.value.length > 0;
+  
+  // Check if there are any operation logs
+  const hasAnyOperationLogs = Array.from(flogLogsByOp.value.values()).some(logs => logs.length > 0);
+  
+  return hasSystemLogEntries || hasAnyOperationLogs;
+});
+
 // Available tabs based on job state and data
 const availableTabs = computed(() => {
-  const tabs = ['overview', 'container-controls', 'system-logs'];
+  const tabs = ['overview'];
+  
+  if (hasContainerControls.value) {
+    tabs.push('container-controls');
+  }
+  
+  if (hasSystemLogs.value) {
+    tabs.push('system-logs');
+  }
   
   if (hasResults.value) {
     tabs.push('results');
@@ -1041,6 +1076,13 @@ function activateChatAndClosePopup() {
 }
 
 const activeTab = ref("overview");
+
+// Watch for changes in available tabs and ensure active tab is valid
+watch(availableTabs, (newTabs) => {
+  if (!newTabs.includes(activeTab.value)) {
+    activeTab.value = newTabs[0] || 'overview';
+  }
+}, { immediate: true });
 const jobTabsRef = ref<any>(null); // Ref for the JobTabs component
 
 // Watch for changes in table content (for real-time updates) - REMOVING THIS SECTION

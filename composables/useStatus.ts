@@ -64,11 +64,14 @@ export function getStatusClass(status: string | number): string {
     case 'STARTING':
       return 'is-info'
     
-    // Queued/Draft/Stopping states - Orange  
+    // Queued/Draft states - Orange  
     case 'QUEUED':
     case 'DRAFT':
-    case 'STOPPING':
       return 'is-warning'
+    
+    // Stopping states - Black
+    case 'STOPPING':
+      return 'is-dark'
     
     // Error/Failed states - Red
     case 'FAILED':
@@ -77,7 +80,7 @@ export function getStatusClass(status: string | number): string {
     case 'INSUFFICIENT_FUNDS':
       return 'is-danger'
     
-    // Stopped states - Gray
+    // Stopped/Archived states - Gray/Black
     case 'STOPPED':
     case 'ARCHIVED':
       return 'is-dark'
