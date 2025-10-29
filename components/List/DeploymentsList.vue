@@ -39,7 +39,7 @@
               <template v-else>
                 <tr v-for="deployment in displayedDeployments" :key="deployment.id" class="clickable-row">
                   <td>
-                    <NuxtLink :to="`/deployments/${deployment.id}`" class="clickable-row-link">
+                    <NuxtLink :to="deploymentLink(deployment.id)" class="clickable-row-link">
                       <div class="clickable-row-cell-content">
                         <div class="deployment-name">{{ deployment.name }}</div>
                         <div class="is-size-7 is-family-monospace has-text-grey">{{ deployment.id }}</div>
@@ -214,6 +214,7 @@ const instrumentRowIcon = (dep: Deployment) => {
 
 const { status, token } = useAuth()
 const router = useRouter()
+const route = useRoute()
 
 const isAuthenticated = computed(() => {
   return status.value === 'authenticated' && token.value
@@ -278,6 +279,12 @@ const hasMore = computed(() => {
   const max = props.limit ?? props.itemsPerPage
   return filteredDeployments.value.length > max
 })
+
+// Build nuxt-link target with origin marker
+const deploymentLink = (id: string) => {
+  const from = route.path.startsWith('/account') ? 'account' : 'deployments'
+  return { path: `/deployments/${id}`, query: { from } }
+}
 
 
 // Watch for changes

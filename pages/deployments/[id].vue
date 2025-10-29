@@ -22,7 +22,7 @@
           <div class="is-flex is-justify-content-space-between is-align-items-start">
             <div class="header-left-section">
               <div class="is-flex is-align-items-center mb-2">
-                <NuxtLink to="/account/deployer" class="button is-ghost back-button mr-4">
+                <NuxtLink :to="backLink" class="button is-ghost back-button mr-4">
                   <span class="icon is-small">
                     <ArrowUpIcon class="icon-16 transform-rotate-270" style="color: black;" />
                   </span>
@@ -31,7 +31,7 @@
                   <h1 class="title is-5 has-text-weight-normal mb-1">{{ deployment.name || 'Deployment' }}</h1>
                   <p v-if="deployment.name" class="subtitle is-7 has-text-grey is-family-monospace mb-0">{{ deployment.id }}</p>
                 </div>
-                <StatusTag class="ml-4" :status="deployment.status" />
+                <StatusTag class="ml-4" :status="normalizedDeploymentStatus" />
               </div>
             </div>
             <div class="deployment-tabs">
@@ -941,6 +941,21 @@ const actionsDropdown = ref<HTMLElement | null>(null);
 // Debug instrumentation for page header icon
 const headerIconRef = ref<HTMLElement | null>(null);
 const { data: testgridMarkets } = useAPI("/api/markets");
+
+// Back link logic - return to origin (account or deployments)
+const backLink = computed(() => {
+  const from = (useRoute().query.from as string) || '';
+  return from === 'account' ? '/account/deployer' : '/deployments';
+});
+
+// Normalize deployment status for tag (handle loose error strings)
+const normalizedDeploymentStatus = computed(() => {
+  const raw = (deployment.value?.status || '').toString();
+  const s = raw.toLowerCase();
+  if (s.includes('error')) return 'ERROR';
+  if (s.includes('insufficient')) return 'INSUFFICIENT_FUNDS';
+  return raw;
+});
 
 const attachSmilDebugListeners = (svgEl: SVGElement, label: string) => {
   try {
