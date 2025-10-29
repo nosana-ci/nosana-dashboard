@@ -9,7 +9,7 @@
         autofocus
         type="text"
         class="input is-large"
-        placeholder="Search for deployements, hosts and GPUs"
+        placeholder="Search for jobs, hosts and GPUs"
         :disabled="checkingIfJob"
       />
       <span class="icon pt-1 is-left" v-if="!checkingIfJob">
