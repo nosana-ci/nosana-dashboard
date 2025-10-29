@@ -302,10 +302,9 @@
                   <tr>
                     <th>Name</th>
                     <th>Status</th>
-                    <th>Revisions</th>
                     <th>Created on</th>
                     <th></th>
-                    </tr>
+                  </tr>
                   </thead>
                   <tbody>
                     <tr
@@ -318,7 +317,6 @@
                       <td>
                         <JobStatus :status="job.state || 0" />
                       </td>
-                      <td>{{ deployment?.revisions?.length || 0 }}</td>
                       <td>{{ formatDate(job.created_at) }}</td>
                       <td>
                         <NuxtLink
@@ -348,10 +346,9 @@
                   <tr>
                     <th>Name</th>
                     <th>Status</th>
-                    <th>Revisions</th>
                     <th>Created on</th>
                     <th></th>
-                    </tr>
+                  </tr>
                   </thead>
                   <tbody>
                     <tr
@@ -364,7 +361,6 @@
                       <td>
                         <JobStatus :status="job.state || 0" />
                       </td>
-                      <td>{{ deployment?.revisions?.length || 0 }}</td>
                       <td>{{ formatDate(job.created_at) }}</td>
                       <td>
                         <NuxtLink
