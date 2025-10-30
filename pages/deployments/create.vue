@@ -696,15 +696,14 @@ const validator = (json: any) => {
   }[] = [];
   return errors;
 };
-// Credit balance fetch (API)
+// Credit balance fetch (SDK API)
 const refreshCreditBalance = async () => {
   if (status.value !== 'authenticated' || !token.value) return;
   loadingCreditBalance.value = true;
   try {
-    const data = await useApiFetch<any>("/api/credits/balance", { method: "GET", auth: true });
+    const data = await nosana.value.api.credits.balance();
     if (data) {
-      creditBalance.value =
-        (data.assignedCredits || 0) - (data.settledCredits || 0) - (data.reservedCredits || 0);
+      creditBalance.value = (data.assignedCredits || 0) - (data.settledCredits || 0) - (data.reservedCredits || 0);
     }
   } catch (error) {
     console.error("Error fetching credit balance:", error);

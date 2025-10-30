@@ -108,7 +108,7 @@ import LogoutIcon from '@/assets/img/icons/logout.svg?component';
 import { useRouter } from 'vue-router';
 import { useWallet } from 'solana-wallets-vue';
 
-const { prioFee } = useSDK();
+const { nosana, prioFee } = useSDK();
 const { status, signOut, data: session, token } = useAuth();
 const router = useRouter();
 const { connected, publicKey, wallet, disconnect } = useWallet();
@@ -195,27 +195,11 @@ const fetchCreditBalance = async (signal?: AbortSignal) => {
   
   loadingCreditBalance.value = true;
   try {
-    const config = useRuntimeConfig().public;
-    
-    const response = await fetch(`${config.apiBase}/api/credits/balance`, {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        Authorization: token.value as string,
-      },
-      signal, // Pass the abort signal
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      creditBalance.value = data.assignedCredits
-        ? data.assignedCredits - data.settledCredits - data.reservedCredits
-        : 0;
-      hasLoadedCreditBalance.value = true;
-    } else {
-      console.error("Failed to fetch credit balance");
-    }
+    const data = await nosana.value.api.credits.balance();
+    creditBalance.value = data.assignedCredits
+      ? data.assignedCredits - data.settledCredits - data.reservedCredits
+      : 0;
+    hasLoadedCreditBalance.value = true;
   } catch (error) {
     // Don't log errors for aborted requests
     if (error instanceof Error && error.name !== 'AbortError') {
@@ -232,7 +216,6 @@ const fetchNosBalance = async (signal?: AbortSignal) => {
   
   loadingNosBalance.value = true;
   try {
-    const { nosana } = useSDK();
     // Note: SDK calls don't support AbortSignal directly, but we can check if aborted
     if (signal?.aborted) return;
     

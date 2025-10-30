@@ -1223,21 +1223,8 @@ const refreshCreditBalance = async () => {
   loadingCreditBalance.value = true;
   
   try {
-    const response = await fetch(`${config.public.apiBase}/api/credits/balance`, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': token.value as string,
-      },
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      creditBalance.value = data.assignedCredits - data.settledCredits - data.reservedCredits || 0;
-    } else {
-      console.error('Failed to fetch credit balance');
-    }
+    const data = await nosana.value.api.credits.balance();
+    creditBalance.value = (data.assignedCredits || 0) - (data.settledCredits || 0) - (data.reservedCredits || 0);
   } catch (error) {
     console.error('Error fetching credit balance:', error);
   } finally {
