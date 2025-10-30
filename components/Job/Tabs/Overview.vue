@@ -170,7 +170,6 @@
                         <tr>
                           <th>Port</th>
                           <th>URL</th>
-                          <th>Status</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -178,9 +177,6 @@
                           <td>{{ portInfo.port }}</td>
                           <td>
                             <a :href="portInfo.url" target="_blank" class="has-text-link endpoint-url">{{ portInfo.url }} ↗</a>
-                          </td>
-                          <td>
-                            <StatusTag :status="portInfo.status" />
                           </td>
                         </tr>
                       </tbody>
