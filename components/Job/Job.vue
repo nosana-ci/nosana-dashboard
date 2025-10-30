@@ -1110,12 +1110,13 @@ function activateChatAndClosePopup() {
   });
 }
 
-const activeTab = ref("overview");
+const activeTab = ref("system-logs");
 
 // Watch for changes in available tabs and ensure active tab is valid
 watch(availableTabs, (newTabs) => {
   if (!newTabs.includes(activeTab.value)) {
-    activeTab.value = newTabs[0] || 'overview';
+    // Prefer system-logs (Logs tab) as default, fallback to overview
+    activeTab.value = newTabs.includes('system-logs') ? 'system-logs' : (newTabs[0] || 'overview');
   }
 }, { immediate: true });
 const jobTabsRef = ref<any>(null); // Ref for the JobTabs component
