@@ -303,6 +303,7 @@
                   <thead>
                   <tr>
                     <th>Name</th>
+                    <th>Revision</th>
                     <th>Status</th>
                     <th>Created on</th>
                     <th></th>
@@ -315,6 +316,9 @@
                     >
                       <td>
                         <span class="is-family-monospace is-size-7">{{ job.job }}</span>
+                      </td>
+                      <td>
+                        {{ job.revision || '-' }}
                       </td>
                       <td>
                         <JobStatus :status="job.state || 0" />
@@ -347,6 +351,7 @@
                   <thead>
                   <tr>
                     <th>Name</th>
+                    <th>Revision</th>
                     <th>Status</th>
                     <th>Created on</th>
                     <th></th>
@@ -359,6 +364,9 @@
                     >
                       <td>
                         <span class="is-family-monospace is-size-7">{{ job.job }}</span>
+                      </td>
+                      <td>
+                        {{ job.revision || '-' }}
                       </td>
                       <td>
                         <JobStatus :status="job.state || 0" />
