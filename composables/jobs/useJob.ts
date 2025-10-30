@@ -382,6 +382,10 @@ export function useJob(jobId: string) {
       // If it's a queued job with placeholder node, ensure loading is false
       if (!nodeAddress || nodeAddress === '11111111111111111111111111111111') {
         loading.value = false;
+      } else {
+        // For active jobs with real nodes, show page immediately after job data loads
+        // Don't wait for SSE connection or job-definition fetch
+        loading.value = false;
       }
     }
   }, { immediate: true });
@@ -474,7 +478,7 @@ export function useJob(jobId: string) {
       return;
     }
 
-    // Proactively fetch confidential job-definition once for poster
+    // Proactively fetch confidential job-definition once for poster (async, doesn't block loading)
     fetchConfidentialJobDefinitionOnce();
 
     const sdkServices = currentJob.jobDefinition
