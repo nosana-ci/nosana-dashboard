@@ -275,6 +275,7 @@ export function useJob(jobId: string) {
         },
       };
 
+
       if (state < 2) {
         resumeJobPolling();
       } else {
@@ -305,6 +306,12 @@ export function useJob(jobId: string) {
         try {
           const nodeDomain = useRuntimeConfig().public.nodeDomain;
           const nodeAddress = (jobResult.node as any)?.toString?.() || (jobResult.node as any);
+          
+          // Skip fetch for placeholder nodes (queued jobs)
+          if (!nodeAddress || nodeAddress === '11111111111111111111111111111111') {
+            // Don't return here - just skip the fetch but continue processing
+          } else {
+          
           const url = `https://${nodeAddress}.${nodeDomain}/job/${jobId}/results`;
           const authHeader = await ensureAuth();
           const flowState: any = await $fetch(url, {
@@ -317,6 +324,7 @@ export function useJob(jobId: string) {
           if (parsed && parsed.opStates) {
             jobObject.results = parsed;
             jobObject.hasResultsRegex = parsed.opStates.some((op: any) => op.results);
+          }
           }
         } catch (error) {
         }
@@ -348,7 +356,9 @@ export function useJob(jobId: string) {
           jobObject.hasResultsRegex = job.value.hasResultsRegex;
         }
         
-      } catch {}
+      } catch (error) {
+        console.error(`[useJob] Error in data processing:`, error);
+      }
 
       job.value = jobObject;
     },
@@ -362,6 +372,17 @@ export function useJob(jobId: string) {
   watch(pending, (isPending) => {
     if (!isPending && !data.value && !job.value) {
       loading.value = false;
+    }
+  }, { immediate: true });
+
+  // Ensure loading stops for queued jobs with placeholder nodes
+  watch([job, pending], ([currentJob, isPending]) => {
+    if (!isPending && currentJob) {
+      const nodeAddress = (currentJob.node as any)?.toString?.() || (currentJob.node as any);
+      // If it's a queued job with placeholder node, ensure loading is false
+      if (!nodeAddress || nodeAddress === '11111111111111111111111111111111') {
+        loading.value = false;
+      }
     }
   }, { immediate: true });
 
@@ -397,6 +418,14 @@ export function useJob(jobId: string) {
       fetchingJobDefinition = true;
       const nodeDomain = useRuntimeConfig().public.nodeDomain;
       const nodeAddr = (job.value.node as any)?.toString?.() || (job.value as any)?.node;
+      
+      // Skip fetch for placeholder nodes (queued jobs)
+      if (!nodeAddr || nodeAddr === '11111111111111111111111111111111') {
+        fetchingJobDefinition = false;
+        fetchedConfidentialJobDefinition = true;
+        return;
+      }
+      
       const url = `https://${nodeAddr}.${nodeDomain}/job/${jobId}/job-definition`;
       const authHeader = await ensureAuth();
       const response = await $fetch<any>(url, {
@@ -616,7 +645,8 @@ export function useJob(jobId: string) {
         };
         
         eventSource.onopen = () => {
-          // SSE connection opened
+          // SSE connection opened - set loading to false
+          loading.value = false;
         };
       } catch (error) {
         console.error('Failed to create EventSource:', error);
