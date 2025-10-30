@@ -1165,12 +1165,17 @@ html.dark-mode {
     }
 
     &--group {
-      border-left: 4px solid $border;
+      // border-left removed from group header
+      
+      // No need for children margin adjustment anymore
+      .tree-row__children {
+        // margin-left: -5px;
+        border-left: none;
+      }
     }
 
     &--operation {
       margin-left: $size-5; // keep first-level indent for operations
-      border-left: 1px solid $border; // subtle left guide line
     }
 
   }
@@ -1190,7 +1195,7 @@ html.dark-mode {
 
   // When expanded, add a clear divider between header and body
   .tree-row.is-expanded > .tree-row__content {
-    border-bottom: 1px solid $border;
+    // border-bottom removed
   }
 
   .tree-row__main {
@@ -1238,7 +1243,6 @@ html.dark-mode {
   }
 
   .tree-row__children {
-    border-top: 1px solid $border-light;
     background: $white; // unify with dashboard background
   }
 
@@ -1266,14 +1270,20 @@ html.dark-mode {
   .container-controls-tree {
     .tree-row {
       background: $grey-darker;
-      border-color: $grey-dark;
+      border: 1px solid $grey-dark;
 
       &--group {
-        border-left-color: $grey-dark;
+        // border-left-color removed from group header in dark mode
+        
+        // No need for children margin adjustment anymore
+        .tree-row__children {
+          // margin-left: -5px;
+          border-left: none;
+        }
       }
 
       &--operation {
-        border-left-color: $grey-dark; // subtle left guide line in dark mode
+        // no border for operations
       }
 
     }
@@ -1283,7 +1293,7 @@ html.dark-mode {
     }
 
     .tree-row.is-expanded > .tree-row__content {
-      border-bottom: 1px solid $grey-dark;
+      // border-bottom removed for dark mode too
     }
 
     .operation-details-panel {
@@ -1297,7 +1307,6 @@ html.dark-mode {
 
     .tree-row__children {
       background: darken($grey-darker, 2%);
-      border-top-color: $grey-dark;
     }
 
     .tree-row__expand-icon {
