@@ -638,7 +638,7 @@ const communityTemplates = computed(() => {
   }
   
   .templates-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(auto-fill, minmax(100%, 1fr));
     gap: 0.75rem;
   }
   

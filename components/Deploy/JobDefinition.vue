@@ -8,7 +8,7 @@
           <h2 class="title is-5 mb-4">{{ title || 'Configure job definition' }}</h2>
         <!-- START: New Template Info Box (above editor) -->
         <div class="px-3 pt-0 pb-2" style="width: 100%; display: flex;">
-          <div class="is-flex is-align-items-start is-justify-content-space-between" style="width: 100%;">
+          <div class="is-flex is-align-items-start is-justify-content-space-between is-flex-direction-column-mobile" style="width: 100%;">
             <!-- Left side: Icon + Title + README button grouped together -->
             <div class="is-flex is-align-items-start" style="gap: 0.5rem;">
               <div v-if="selectedTemplate && selectedTemplate.id !== 'custom'" class="is-flex is-align-items-start">
