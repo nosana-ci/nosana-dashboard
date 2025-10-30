@@ -758,6 +758,15 @@ const groupedOperations = computed(() => {
   return groups;
 });
 
+// Auto-expand all groups when operations are loaded
+watch(groupedOperations, (newGroups) => {
+  if (newGroups && Object.keys(newGroups).length > 0) {
+    // Auto-expand all groups
+    const allGroupNames = Object.keys(newGroups);
+    expandedGroups.value = new Set(allGroupNames);
+  }
+}, { immediate: true });
+
 // Get status icon using the same logic as Job.vue for consistency
 const getStatusIcon = (status: string) => {
   switch (status?.toLowerCase()) {
