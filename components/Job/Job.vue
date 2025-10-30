@@ -808,14 +808,16 @@ const hasContainerControls = computed(() => {
   return operationTabs.length > 0 && hasOperationLogs;
 });
 
-// Check if system logs tab has content
+// Check if system logs tab should be available
 const hasSystemLogs = computed(() => {
+  // Show logs tab for any job with a job definition, regardless of whether logs are present yet
   if (!props.job.jobDefinition) return false;
   
-  // Check if there are actual system log entries
-  const hasSystemLogEntries = flogSystemLogs.value.length > 0;
+  // Always show for running or completed jobs
+  if (props.job.isRunning || props.job.isCompleted) return true;
   
-  // Check if there are any operation logs
+  // For other states, check if there are actual log entries
+  const hasSystemLogEntries = flogSystemLogs.value.length > 0;
   const hasAnyOperationLogs = Array.from(flogLogsByOp.value.values()).some(logs => logs.length > 0);
   
   return hasSystemLogEntries || hasAnyOperationLogs;

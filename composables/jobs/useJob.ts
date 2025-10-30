@@ -485,6 +485,13 @@ export function useJob(jobId: string) {
     (async () => {
       try {
         const nodeAddress = (currentJob.node as any)?.toString?.() || (currentJob.node as any);
+        
+        // Skip SSE connection for placeholder nodes (queued jobs)
+        if (!nodeAddress || nodeAddress === '11111111111111111111111111111111') {
+          loading.value = false;
+          return;
+        }
+        
         const authHeader = await ensureAuth();
         const sseUrl = `https://${nodeAddress}.${config.public.nodeDomain}/job/${jobId}/info`;
         
