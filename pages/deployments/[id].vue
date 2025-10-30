@@ -176,7 +176,7 @@
                 <table class="table is-fullwidth mb-0">
                 <tbody>
                   <tr>
-                    <td class="has-min-width-250">Deployment strategy</td>
+                    <td>Deployment strategy</td>
                     <td>{{ deployment.strategy }}</td>
                   </tr>
                   <tr>

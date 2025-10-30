@@ -1698,3 +1698,9 @@ html.dark-mode .deployment-header {
   color: $white !important;
   border-color: $grey-darker !important;
 }
+
+@media screen and (max-width: 768px) {
+  .is-flex-direction-column-mobile {
+    flex-direction: column !important;
+  }
+}
