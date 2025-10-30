@@ -17,7 +17,7 @@
       <div class="quick-detail-item">
         <span class="quick-detail-label">Host Address</span>
         <span class="quick-detail-value">
-          <span v-if="props.job.node === '11111111111111111111111111111111'" class="has-text-grey-light">Not assigned yet</span>
+          <span v-if="props.job.node === '11111111111111111111111111111111'" class="has-text-grey-light">--</span>
           <nuxt-link v-else class="address is-family-monospace" :to="`/host/${props.job.node}`">
             {{ props.job.node }}
           </nuxt-link>

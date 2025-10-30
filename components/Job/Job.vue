@@ -185,7 +185,6 @@
                   <td>Country</td>
                   <td>
                     <span v-if="countryInfo">{{ countryInfo }}</span>
-                    <span v-else-if="isQueuedJob" class="has-text-grey">Not assigned yet</span>
                     <span v-else class="has-text-grey">--</span>
                   </td>
                 </tr>
