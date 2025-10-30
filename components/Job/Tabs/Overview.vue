@@ -129,7 +129,8 @@
                   <!-- Operation Details -->
                   <div class="detail-section">
                     <h2 class="title is-5 mb-3">Operation Details</h2>
-                    <table class="table is-fullwidth mb-0">
+                    <div class="table-container">
+                      <table class="table is-fullwidth mb-0">
                       <tbody>
                         <tr>
                           <td class="has-min-width-250">Started</td>
@@ -157,27 +158,25 @@
                         </tr>
                       </tbody>
                     </table>
+                    </div>
                   </div>
                   
                   <!-- Service Endpoints -->
                   <div class="detail-section">
                     <h2 class="title is-5 mb-3">Service Endpoints</h2>
-                    <table v-if="op.ports && op.ports.length > 0" class="table is-fullwidth mb-0">
+                    <div class="table-container">
+                      <table v-if="op.ports && op.ports.length > 0" class="table is-fullwidth mb-0">
                       <thead>
                         <tr>
                           <th>Port</th>
                           <th>URL</th>
-                          <th>Status</th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr v-for="(portInfo, idx) in op.ports" :key="idx">
                           <td>{{ portInfo.port }}</td>
                           <td>
-                            <a :href="portInfo.url" target="_blank" class="has-text-link">{{ portInfo.url }} ↗</a>
-                          </td>
-                          <td>
-                            <StatusTag :status="portInfo.status" />
+                            <a :href="portInfo.url" target="_blank" class="has-text-link endpoint-url">{{ portInfo.url }} ↗</a>
                           </td>
                         </tr>
                       </tbody>
@@ -189,6 +188,7 @@
                         </tr>
                       </tbody>
                     </table>
+                    </div>
                   </div>
                   
                   <!-- Logs -->
@@ -754,6 +754,15 @@ const groupedOperations = computed(() => {
   return groups;
 });
 
+// Auto-expand all groups when operations are loaded
+watch(groupedOperations, (newGroups) => {
+  if (newGroups && Object.keys(newGroups).length > 0) {
+    // Auto-expand all groups
+    const allGroupNames = Object.keys(newGroups);
+    expandedGroups.value = new Set(allGroupNames);
+  }
+}, { immediate: true });
+
 // Get status icon using the same logic as Job.vue for consistency
 const getStatusIcon = (status: string) => {
   switch (status?.toLowerCase()) {
@@ -1156,12 +1165,17 @@ html.dark-mode {
     }
 
     &--group {
-      border-left: 4px solid $border;
+      // border-left removed from group header
+      
+      // No need for children margin adjustment anymore
+      .tree-row__children {
+        // margin-left: -5px;
+        border-left: none;
+      }
     }
 
     &--operation {
       margin-left: $size-5; // keep first-level indent for operations
-      border-left: 1px solid $border; // subtle left guide line
     }
 
   }
@@ -1181,7 +1195,7 @@ html.dark-mode {
 
   // When expanded, add a clear divider between header and body
   .tree-row.is-expanded > .tree-row__content {
-    border-bottom: 1px solid $border;
+    // border-bottom removed
   }
 
   .tree-row__main {
@@ -1229,7 +1243,6 @@ html.dark-mode {
   }
 
   .tree-row__children {
-    border-top: 1px solid $border-light;
     background: $white; // unify with dashboard background
   }
 
@@ -1257,14 +1270,20 @@ html.dark-mode {
   .container-controls-tree {
     .tree-row {
       background: $grey-darker;
-      border-color: $grey-dark;
+      border: 1px solid $grey-dark;
 
       &--group {
-        border-left-color: $grey-dark;
+        // border-left-color removed from group header in dark mode
+        
+        // No need for children margin adjustment anymore
+        .tree-row__children {
+          // margin-left: -5px;
+          border-left: none;
+        }
       }
 
       &--operation {
-        border-left-color: $grey-dark; // subtle left guide line in dark mode
+        // no border for operations
       }
 
     }
@@ -1274,7 +1293,7 @@ html.dark-mode {
     }
 
     .tree-row.is-expanded > .tree-row__content {
-      border-bottom: 1px solid $grey-dark;
+      // border-bottom removed for dark mode too
     }
 
     .operation-details-panel {
@@ -1288,7 +1307,6 @@ html.dark-mode {
 
     .tree-row__children {
       background: darken($grey-darker, 2%);
-      border-top-color: $grey-dark;
     }
 
     .tree-row__expand-icon {
@@ -1424,7 +1442,31 @@ html.dark-mode {
     .endpoint-url {
       color: $black;
     }
+}
+
+// Responsive endpoint URLs
+.endpoint-url {
+  word-break: break-all;
+  display: inline-block;
+  max-width: 100%;
+  overflow-wrap: break-word;
+}
+
+@media screen and (max-width: 768px) {
+  .endpoint-url {
+    font-size: 0.75rem;
+    max-width: 300px;
+    min-width: 200px;
   }
+}
+
+@media screen and (max-width: 480px) {
+  .endpoint-url {
+    font-size: 0.7rem;
+    max-width: 250px;
+    min-width: 180px;
+  }
+}
 
   .op-id {
     color: $grey-lighter;

@@ -136,10 +136,10 @@
         <div class="columns is-multiline mb-4">
           <div class="column is-3">
             <div class="box has-text-centered equal-height-box">
-              <p class="heading">Deployments</p>
+              <p class="heading">{{ status === 'authenticated' ? 'Deployments' : 'Jobs' }}</p>
               <p class="title is-flex is-align-items-center is-justify-content-center">
                 <RocketIcon style="width: 16px; height: 16px; fill: #10E80C; margin-right: 0.5rem;" />
-                {{ totalDeployments }}
+                {{ status === 'authenticated' ? totalDeployments : totalJobs }}
               </p>
             </div>
           </div>
@@ -169,7 +169,7 @@
                   <span v-else>-</span>
                   <nuxt-link to="/stake" class="ml-2">
                     <span class="container-icon">
-                      <PlusSymbolIcon style="width: 12px; height: 12px;" />
+                      <FontAwesomeIcon :icon="faPlus" style="width: 12px; height: 12px;" />
                     </span>
                   </nuxt-link>
                 </p>
@@ -192,16 +192,44 @@
         <!-- API Tokens Section -->
         <ApiKeys class="pb-5" v-if="status === 'authenticated'" />
         
-        <div class="is-flex is-justify-content-space-between is-align-items-center mb-4">
-          <h3 class="title is-4 mb-0">Deployments</h3>
-          <nuxt-link to="/deployments/create" class="button is-dark">
-            <span class="icon">
-              <FontAwesomeIcon :icon="faPlus" />
-            </span>
-            <span>Create Deployment</span>
-          </nuxt-link>
+        <!-- For Credit Users: Show Deployments -->
+        <div v-if="status === 'authenticated'">
+          <div class="is-flex is-justify-content-space-between is-align-items-center mb-4">
+            <h3 class="title is-4 mb-0">Deployments</h3>
+            <nuxt-link to="/deployments/create" class="button is-dark">
+              <span class="icon">
+                <FontAwesomeIcon :icon="faPlus" />
+              </span>
+              <span>Create Deployment</span>
+            </nuxt-link>
+          </div>
+          <DeploymentsList 
+            :items-per-page="10" 
+            :limit="10" 
+            :show-pagination="false" 
+            class="mb-2" 
+            @update:total-deployments="totalDeployments = $event" 
+          />
         </div>
-        <DeploymentsList :items-per-page="10" class="mb-4" @update:total-deployments="totalDeployments = $event" />
+
+        <!-- For Wallet Users: Show Jobs -->
+        <div v-else-if="connected">
+          <div class="is-flex is-justify-content-space-between is-align-items-center mb-4">
+            <h3 class="title is-4 mb-0">Job History</h3>
+            <nuxt-link to="/deploy" class="button is-dark">
+              <span class="icon">
+                <FontAwesomeIcon :icon="faPlus" />
+              </span>
+              <span>Deploy New Job</span>
+            </nuxt-link>
+          </div>
+          <JobList 
+            :items-per-page="10" 
+            job-type="combined"
+            class="mb-2" 
+            @update:total-deployments="totalJobs = $event" 
+          />
+        </div>
         
         <div class="columns mt-6">
           <div class="column is-4">
@@ -350,6 +378,7 @@
 
 <script setup lang="ts">
 import DeploymentsList from '~/components/List/DeploymentsList.vue';
+import JobList from '~/components/List/JobList.vue';
 import { useWallet } from 'solana-wallets-vue';
 import { useStake } from '~/composables/useStake';
 import { useAPI } from '~/composables/useAPI';
@@ -380,6 +409,7 @@ import ApiKeys from '~/components/Account/ApiKeys.vue';
 const config = useRuntimeConfig().public;
 ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale);
 const { status, data: userData, signOut, token } = useAuth();
+const { $colorMode } = useNuxtApp();
 const route = useRoute();
 const showSettingsModal = ref(false);
 const toast = useToast();
@@ -404,6 +434,7 @@ const showOnboardModal = computed(() =>
   onboardingInProgress.value
 );
 const totalDeployments = ref(0);
+const totalJobs = ref(0);
 
 const activeAddress = computed(() => {
   if (status.value === 'authenticated' && userData.value?.generatedAddress) {
@@ -893,7 +924,13 @@ function makeColorBrighter(color: string): string {
   return color;
 }
 
-const chartOptions = {
+const chartOptions = computed(() => {
+  const isDark = $colorMode?.value === 'dark';
+  const textColor = isDark ? '#ffffff' : '#000000';
+  const gridColor = isDark ? '#444444' : '#e5e5e5';
+  const tooltipBg = isDark ? 'rgba(55, 65, 81, 0.95)' : 'rgba(0, 0, 0, 0.8)';
+
+  return {
   responsive: true,
   maintainAspectRatio: false,
   devicePixelRatio: 2,
@@ -922,7 +959,7 @@ const chartOptions = {
           weight: 'normal' as const,
           lineHeight: 1.2
         },
-        color: '#000000',
+        color: textColor,
         filter: (legendItem: any) => {
           return legendItem.datasetIndex !== undefined && 
                  chartData.value.datasets[legendItem.datasetIndex]?.showInLegend;
@@ -930,7 +967,7 @@ const chartOptions = {
       }
     },
     tooltip: {
-      backgroundColor: 'rgba(0, 0, 0, 0.8)',
+      backgroundColor: tooltipBg,
       titleFont: {
         family: "'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif",
         size: 14,
@@ -988,7 +1025,7 @@ const chartOptions = {
           weight: 'normal' as const,
           lineHeight: 1.2
         },
-        color: '#000000',
+        color: textColor,
         padding: 8
       },
       border: {
@@ -999,7 +1036,7 @@ const chartOptions = {
     y: {
       stacked: true,
       grid: {
-        color: '#e5e5e5',
+        color: gridColor,
         drawBorder: false,
         lineWidth: 0.5,
         tickLength: 4,
@@ -1022,7 +1059,7 @@ const chartOptions = {
           weight: 'normal' as const,
           lineHeight: 1.2
         },
-        color: '#000000',
+        color: textColor,
         maxTicksLimit: 5,
         padding: 10
       }
@@ -1043,7 +1080,8 @@ const chartOptions = {
   font: {
     family: "'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif"
   }
-};
+  };
+});
 
 // Removed duplicate onMounted - merged into the main one above
 

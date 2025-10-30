@@ -19,17 +19,20 @@
       <div class="box is-borderless">
         <!-- Header Section -->
         <div class="p-5 deployment-header">
-          <div class="is-flex is-justify-content-space-between is-align-items-center">
-            <div class="is-flex is-align-items-center">
-              <NuxtLink to="/account/deployer" class="button is-ghost back-button mr-4">
-                <span class="icon is-small">
-                  <ArrowUpIcon class="icon-16 transform-rotate-270" style="color: black;" />
-                </span>
-              </NuxtLink>
-              <div>
-                <h1 class="title is-4 has-text-weight-normal mb-0">{{ deployment.name }}</h1>
+          <div class="is-flex is-justify-content-space-between is-align-items-start">
+            <div class="header-left-section">
+              <div class="is-flex is-align-items-center mb-0">
+                <NuxtLink :to="backLink" class="button is-ghost back-button mr-4">
+                  <span class="icon is-small">
+                    <ArrowUpIcon class="icon-16 transform-rotate-270 back-arrow-icon" />
+                  </span>
+                </NuxtLink>
+                <div class="header-title-section">
+                  <h1 class="title is-5 has-text-weight-normal mb-1">{{ deployment.name || 'Deployment' }}</h1>
+                  <p v-if="deployment.name" class="subtitle is-7 has-text-grey is-family-monospace mb-0">{{ deployment.id }}</p>
+                </div>
+                <StatusTag class="ml-4" :status="deployment.status" />
               </div>
-              <StatusTag class="ml-6" :status="deployment.status" />
             </div>
             <div class="deployment-tabs">
               <button 
@@ -169,10 +172,11 @@
           <div class="mb-5">
             <h2 class="title is-5 mb-3">Deployment details</h2>
             <div class="box is-borderless">
-              <table class="table is-fullwidth mb-0">
+              <div class="table-container">
+                <table class="table is-fullwidth mb-0">
                 <tbody>
                   <tr>
-                    <td class="has-min-width-250">Deployment strategy</td>
+                    <td>Deployment strategy</td>
                     <td>{{ deployment.strategy }}</td>
                   </tr>
                   <tr>
@@ -202,7 +206,13 @@
                   </tr>
                   <tr>
                     <td>Container timeout</td>
-                    <td>{{ Math.floor(deployment.timeout / 60) }} hours</td>
+                    <td>
+                      {{ Math.floor(deployment.timeout / 60) }} hours
+                      <span v-if="runningJobDurationSeconds !== null" class="has-text-grey is-size-7">
+                        – running 
+                        <SecondsFormatter :seconds="runningJobDurationSeconds" :showSeconds="true" />
+                      </span>
+                    </td>
                   </tr>
                   
                   <!-- Scheduled deployment cron schedule -->
@@ -225,6 +235,7 @@
                   </tr>
                 </tbody>
               </table>
+              </div>
             </div>
           </div>
 
@@ -232,13 +243,13 @@
           <div v-if="deploymentEndpoints.length > 0" class="mb-5">
             <h2 class="title is-5 mb-3">Endpoints</h2>
             <div class="box is-borderless">
-              <table class="table is-fullwidth mb-0">
+              <div class="table-container">
+                <table class="table is-fullwidth mb-0">
                 <thead>
                   <tr>
                     <th>Operation</th>
                     <th>Port</th>
                     <th>URL</th>
-                    <th>Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -246,14 +257,12 @@
                     <td>{{ endpoint.opId }}</td>
                     <td>{{ endpoint.port }}</td>
                     <td>
-                      <a :href="endpoint.url" target="_blank" class="has-text-link">{{ endpoint.url }} ↗</a>
-                    </td>
-                    <td>
-                      <StatusTag :status="endpoint.status" />
+                      <a :href="endpoint.url" target="_blank" class="has-text-link endpoint-url">{{ endpoint.url }} ↗</a>
                     </td>
                   </tr>
                 </tbody>
-              </table>
+                </table>
+              </div>
             </div>
           </div>
 
@@ -289,15 +298,16 @@
               </div>
               
               <div v-else class="box is-borderless">
-                <table class="table is-fullwidth mb-0">
+                <div class="table-container">
+                  <table class="table is-fullwidth mb-0">
                   <thead>
                   <tr>
                     <th>Name</th>
+                    <th>Revision</th>
                     <th>Status</th>
-                    <th>Revisions</th>
                     <th>Created on</th>
                     <th></th>
-                    </tr>
+                  </tr>
                   </thead>
                   <tbody>
                     <tr
@@ -308,9 +318,11 @@
                         <span class="is-family-monospace is-size-7">{{ job.job }}</span>
                       </td>
                       <td>
+                        {{ job.revision || '-' }}
+                      </td>
+                      <td>
                         <JobStatus :status="job.state || 0" />
                       </td>
-                      <td>{{ deployment?.revisions?.length || 0 }}</td>
                       <td>{{ formatDate(job.created_at) }}</td>
                       <td>
                         <NuxtLink
@@ -323,6 +335,7 @@
                     </tr>
                   </tbody>
                 </table>
+                </div>
               </div>
             </div>
             
@@ -333,15 +346,16 @@
               </div>
               
               <div v-else class="box is-borderless">
-                <table class="table is-fullwidth mb-0">
+                <div class="table-container">
+                  <table class="table is-fullwidth mb-0">
                   <thead>
                   <tr>
                     <th>Name</th>
+                    <th>Revision</th>
                     <th>Status</th>
-                    <th>Revisions</th>
                     <th>Created on</th>
                     <th></th>
-                    </tr>
+                  </tr>
                   </thead>
                   <tbody>
                     <tr
@@ -352,9 +366,11 @@
                         <span class="is-family-monospace is-size-7">{{ job.job }}</span>
                       </td>
                       <td>
+                        {{ job.revision || '-' }}
+                      </td>
+                      <td>
                         <JobStatus :status="job.state || 0" />
                       </td>
-                      <td>{{ deployment?.revisions?.length || 0 }}</td>
                       <td>{{ formatDate(job.created_at) }}</td>
                       <td>
                         <NuxtLink
@@ -367,6 +383,7 @@
                     </tr>
                   </tbody>
                 </table>
+                </div>
               </div>
             </div>
           </div>
@@ -377,7 +394,7 @@
           <!-- Upcoming Tasks -->
           <div class="mb-5">
             <div class="is-flex is-justify-content-space-between is-align-items-center mb-3">
-              <h2 class="title is-5 mb-0">Upcoming Tasks <span class="tag is-light">{{ tasks.length }}</span></h2>
+              <h2 class="title is-5 mb-0">Upcoming Tasks</h2>
               <button 
                 class="button is-small" 
                 @click="loadTasks"
@@ -392,7 +409,8 @@
             </div>
             
             <div class="box is-borderless">
-              <table class="table is-fullwidth mb-0">
+              <div class="table-container">
+                <table class="table is-fullwidth mb-0">
                 <thead>
                   <tr>
                     <th>Status</th>
@@ -421,7 +439,7 @@
                       <StatusTag status="QUEUED" />
                     </td>
                     <td>
-                      <span class="tag is-light is-small">{{ task.task }}</span>
+                      <span class="tag is-small category-tag">{{ task.task }}</span>
                     </td>
                     <td class="has-text-grey">
                       {{ formatDate(task.due_at) }}
@@ -435,15 +453,17 @@
                   </tr>
                 </tbody>
               </table>
+              </div>
             </div>
           </div>
 
           <!-- History -->
           <div>
-            <h2 class="title is-5 mb-3">History <span class="tag is-light">{{ deploymentEvents.length }}</span></h2>
+            <h2 class="title is-5 mb-3">History</h2>
             
             <div class="box is-borderless">
-              <table class="table is-fullwidth mb-0">
+              <div class="table-container">
+                <table class="table is-fullwidth mb-0">
                 <thead>
                   <tr>
                     <th>Type</th>
@@ -461,10 +481,10 @@
                   </tr>
                   <tr v-else v-for="(event, index) in deploymentEvents" :key="index">
                     <td>
-                      <span class="tag is-light is-small">{{ event.type }}</span>
+                      <span class="tag is-small category-tag">{{ event.type }}</span>
                     </td>
                     <td>
-                      <span class="tag is-light is-small">{{ event.category }}</span>
+                      <span class="tag is-small category-tag">{{ event.category }}</span>
                     </td>
                     <td>
                       <span :class="{ 'is-family-monospace': event.message.length > 200 }">
@@ -488,6 +508,7 @@
                   </tr>
                 </tbody>
               </table>
+              </div>
             </div>
           </div>
         </div>
@@ -520,23 +541,89 @@
 
         <!-- Job Definition Tab -->
         <div v-if="activeTab === 'job-definition'">
-          <div v-if="loadingJobDefinition" class="has-text-grey has-text-centered py-4">
-            Loading job definition...
+          <!-- Current Job Definition Section -->
+          <div class="mb-5">
+            <h2 class="title is-5 mb-3">Current Job Definition</h2>
+            <div class="box is-borderless">
+              <div v-if="loadingJobDefinition" class="has-text-grey has-text-centered py-4">
+                Loading job definition...
+              </div>
+              <div v-else-if="jobDefinitionModel" class="json-editor-container">
+                <JsonEditorVue
+                  :validator="validator"
+                  :class="{ 'jse-theme-dark': colorMode.value === 'dark' }"
+                  v-model="jobDefinitionModel"
+                  :mode="Mode.text"
+                  :mainMenuBar="false"
+                  :statusBar="false"
+                  :stringified="false"
+                  :readOnly="true"
+                  class="json-editor"
+                />
+              </div>
+              <div v-else class="has-text-grey has-text-centered py-4">
+                No job definition found
+              </div>
+            </div>
           </div>
-          <div v-else-if="jobDefinitionModel">
-            <JsonEditorVue
-              :validator="validator"
-              v-model="jobDefinitionModel"
-              :mode="Mode.text"
-              :mainMenuBar="false"
-              :statusBar="false"
-              :stringified="false"
-              :readOnly="true"
-              class="job-definition-editor"
-            />
-          </div>
-          <div v-else class="has-text-grey has-text-centered py-4">
-            No job definition found
+
+          <!-- Revisions Section -->
+          <div class="mb-4">
+            <h2 class="title is-5 mb-3">Deployment Revisions</h2>
+            <div v-if="deployment?.revisions && deployment.revisions.length > 0" class="box is-borderless">
+              <div class="table-container">
+                <table class="table is-fullwidth">
+                <thead>
+                  <tr>
+                    <th>Revision</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="revision in sortedRevisions" :key="revision.revision">
+                    <td>
+                      <span class="has-text-weight-semibold">{{ revision.revision }}</span>
+                    </td>
+                    <td>
+                      <StatusTag 
+                        :status="revision.revision === deployment.active_revision ? 'ACTIVE' : 'INACTIVE'"
+                        :showLabel="true"
+                        :imageOnly="false"
+                      />
+                    </td>
+                    <td class="has-text-grey">
+                      {{ formatDate(revision.created_at) }}
+                    </td>
+                    <td>
+                      <div class="buttons are-small">
+                        <button 
+                          v-if="revision.revision !== deployment.active_revision"
+                          @click="switchToRevision(revision.revision)"
+                          class="button is-primary is-small"
+                          :class="{ 'is-loading': switchingRevision === revision.revision }"
+                          :disabled="actionLoading || switchingRevision !== null"
+                        >
+                          Make Active
+                        </button>
+                        <button 
+                          @click="viewRevisionDefinition(revision)"
+                          class="button is-light is-small"
+                        >
+                          View Definition
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              </div>
+            </div>
+            <div v-else class="notification is-light has-text-centered">
+              <p>No revisions found for this deployment.</p>
+              <p class="has-text-grey is-size-7 mt-2">Create a new revision using the Actions menu.</p>
+            </div>
           </div>
         </div>
 
@@ -707,18 +794,11 @@
           <button class="delete" @click="showRevisionModal = false"></button>
         </header>
         <section class="modal-card-body has-min-height-500">
-          <div class="content mb-4">
-            <p class="has-text-grey">
-              Create a new revision of this deployment with updated job definition. 
-              This will become the active revision and will be used for new job instances.
-            </p>
-          </div>
           <div class="field full-height">
-            <label class="label">Job Definition</label>
             <div class="control full-height">
               <JsonEditorVue 
                 :validator="validator" 
-                :class="{ 'jse-theme-dark': $colorMode.value === 'dark' }" 
+                :class="{ 'jse-theme-dark': colorMode.value === 'dark' }" 
                 v-model="revisionJobDefinition" 
                 :mode="Mode.text" 
                 :mainMenuBar="false" 
@@ -742,6 +822,37 @@ class="has-height-500"
         </footer>
       </div>
     </div>
+
+    <!-- View Revision Definition Modal -->
+    <div v-if="viewingRevision" class="modal" :class="{ 'is-active': showRevisionDefinitionModal }">
+      <div class="modal-background" @click="showRevisionDefinitionModal = false"></div>
+      <div class="modal-card modal-card-wide">
+        <header class="modal-card-head">
+          <p class="modal-card-title">Revision {{ viewingRevision.revision }} - Job Definition</p>
+          <button class="delete" @click="showRevisionDefinitionModal = false"></button>
+        </header>
+        <section class="modal-card-body has-min-height-500">
+          <div v-if="viewingRevision.job_definition" class="json-editor-container">
+            <JsonEditorVue
+              :validator="validator"
+              v-model="viewingRevision.job_definition"
+              :mode="Mode.text"
+              :mainMenuBar="false"
+              :statusBar="false"
+              :stringified="false"
+              :readOnly="true"
+              class="json-editor"
+            />
+          </div>
+          <div v-else class="has-text-grey has-text-centered py-4">
+            No job definition found for this revision
+          </div>
+        </section>
+        <footer class="modal-card-foot is-justify-content-flex-end">
+          <button class="button" @click="showRevisionDefinitionModal = false">Close</button>
+        </footer>
+      </div>
+    </div>
     </template>
   </div>
 
@@ -752,9 +863,11 @@ class="has-height-500"
 import type { Deployment, JobDefinition } from "@nosana/sdk";
 import { Mode, ValidationSeverity } from "vanilla-jsoneditor";
 import JsonEditorVue from "json-editor-vue";
+import "vanilla-jsoneditor/themes/jse-theme-dark.css";
 import { useToast } from "vue-toastification";
 import JobStatus from "~/components/Job/Status.vue";
 import JobLogsContainer from "~/components/Job/LogsContainer.vue";
+import SecondsFormatter from "~/components/SecondsFormatter.vue";
 import { useJob } from "~/composables/jobs/useJob";
 import StatusTag from "~/components/Common/StatusTag.vue";
 
@@ -776,6 +889,9 @@ import FailedIcon from '@/assets/img/icons/status/failed.svg?component';
 import QueuedIcon from '@/assets/img/icons/status/queued.svg?component';
 import DoneIcon from '@/assets/img/icons/status/done.svg?component';
 import { useStatus } from '~/composables/useStatus';
+import { useTimestamp } from '@vueuse/core';
+
+const colorMode = useColorMode();
 
 // Types
 interface DeploymentJob {
@@ -830,10 +946,37 @@ const showTimeoutModal = ref(false);
 const showScheduleModal = ref(false);
 const showRevisionModal = ref(false);
 const revisionJobDefinition = ref<JobDefinition | null>(null);
+const switchingRevision = ref<number | null>(null);
+const showRevisionDefinitionModal = ref(false);
+const viewingRevision = ref<any>(null);
 const actionsDropdown = ref<HTMLElement | null>(null);
 // Debug instrumentation for page header icon
 const headerIconRef = ref<HTMLElement | null>(null);
 const { data: testgridMarkets } = useAPI("/api/markets");
+
+// Back link logic - return to origin (account or deployments)
+const backLink = computed(() => {
+  const from = (useRoute().query.from as string) || '';
+  return from === 'account' ? '/account/deployer' : '/deployments';
+});
+
+// Use API-provided deployment.status as-is for display
+// Auto-start deployments when status is DRAFT
+const autostartTriggered = ref(false)
+watch(
+  () => deployment.value?.status,
+  async (status) => {
+    if (status === 'DRAFT' && !autostartTriggered.value && isAuthenticated.value && !actionLoading.value) {
+      autostartTriggered.value = true
+      try {
+        await startDeployment()
+      } catch (e) {
+        // ignore; actions already handle toasts
+      }
+    }
+  },
+  { immediate: true }
+)
 
 const attachSmilDebugListeners = (svgEl: SVGElement, label: string) => {
   try {
@@ -880,6 +1023,12 @@ const statusDotClass = computed(() => {
     default:
       return 'status-unknown';
   }
+});
+
+// Computed properties for revisions
+const sortedRevisions = computed(() => {
+  if (!deployment.value?.revisions) return [];
+  return [...deployment.value.revisions].sort((a, b) => b.revision - a.revision);
 });
 
 // Methods
@@ -1066,6 +1215,14 @@ const loadDeployment = async (silent = false) => {
 
     if (deployment.value.jobs && deployment.value.jobs.length > 0) {
       for (const job of deployment.value.jobs) {
+        // Only fetch state for jobs that aren't already in a completed state
+        // Completed states: DONE=2, STOPPED=3, TIMEOUT=4, ERROR=5
+        const currentState = jobStates.value[job.job];
+        if (currentState !== undefined && currentState >= 2) {
+          // Job is already completed, skip fetching
+          continue;
+        }
+        
         try {
           const { data } = await useAPI(`/api/jobs/${job.job}`);
           if (data.value?.state !== undefined) {
@@ -1226,6 +1383,26 @@ const liveEndpointStatusByUrl = computed<Map<string, 'ONLINE' | 'OFFLINE' | 'UNK
   return statusMap;
 });
 
+// Running job duration (for concise timeout row suffix)
+const firstRunningJobId = computed<string | null>(() => {
+  const entries = Object.entries(jobStates.value || {});
+  const running = entries.find(([id, st]) => st === 1);
+  return running ? running[0] : null;
+});
+
+const runningJobApiUrl = computed(() => firstRunningJobId.value ? `/api/jobs/${firstRunningJobId.value}` : '');
+const { data: runningJobData } = useAPI(runningJobApiUrl, { default: () => null, watch: [runningJobApiUrl] });
+const nowTs = useTimestamp({ interval: 1000 });
+const runningJobDurationSeconds = computed<number | null>(() => {
+  const js = (runningJobData.value as any)?.timeStart;
+  const state = (runningJobData.value as any)?.state;
+  if (!js || js === 0) return null;
+  // state 1 = running
+  const isRunning = state === 1 || (typeof state === 'string' && String(state).toUpperCase() === 'RUNNING');
+  if (!isRunning) return null;
+  return Math.max(0, Math.floor(nowTs.value / 1000) - js);
+});
+
 const activeJobs = computed((): DeploymentJob[] => {
   const jobs = (deployment.value?.jobs as DeploymentJob[]) || [];
   // Enrich jobs with fetched states and reverse to show most recent first
@@ -1346,8 +1523,8 @@ const startDeployment = async () => {
     "Deployment started successfully"
   );
   
-  // Start polling for job updates after starting
-  startJobPolling();
+  // Start fast polling for first job after starting
+  startFastJobPolling();
 };
 
 const stopDeployment = async () => {
@@ -1469,6 +1646,41 @@ const createRevision = async () => {
   } finally {
     actionLoading.value = false;
   }
+};
+
+// Switch to a different revision
+const switchToRevision = async (revisionNumber: number) => {
+  if (!deployment.value || !isAuthenticated.value) {
+    toast.error("Please log in to perform this action");
+    return;
+  }
+
+  try {
+    switchingRevision.value = revisionNumber;
+    const result = await useApiFetch(`/api/deployments/${deployment.value.id}/update-active-revision`, {
+      method: 'PATCH',
+      auth: true,
+      body: { active_revision: revisionNumber }
+    });
+
+    toast.success(`Switched to revision ${revisionNumber} successfully!`);
+    
+    // Refresh deployment data
+    await loadDeployment(true);
+    
+  } catch (error: any) {
+    console.error('Switch revision error:', error);
+    const errorMessage = error.data?.message || error.message || 'Failed to switch revision';
+    toast.error(`Error switching revision: ${errorMessage}`);
+  } finally {
+    switchingRevision.value = null;
+  }
+};
+
+// View a revision's job definition
+const viewRevisionDefinition = (revision: any) => {
+  viewingRevision.value = revision;
+  showRevisionDefinitionModal.value = true;
 };
 
 const isValidCronExpression = (cron: string): boolean => {
@@ -1628,13 +1840,13 @@ const stopStatusPolling = () => {
 };
 
 // Job activity polling functionality  
-const startJobPolling = () => {
+const startJobPolling = (intervalMs: number = 5000) => {
   // Clear any existing interval
   if (jobPollingInterval.value) {
     clearInterval(jobPollingInterval.value);
   }
   
-  // Poll every 5 seconds for job updates
+  // Poll for job updates
   jobPollingInterval.value = setInterval(async () => {
     if (!deployment.value) return;
     
@@ -1648,7 +1860,7 @@ const startJobPolling = () => {
       clearInterval(jobPollingInterval.value!);
       jobPollingInterval.value = null;
     }
-  }, 5000);
+  }, intervalMs);
 };
 
 const stopJobPolling = () => {
@@ -1656,6 +1868,23 @@ const stopJobPolling = () => {
     clearInterval(jobPollingInterval.value);
     jobPollingInterval.value = null;
   }
+};
+
+// Fast polling after start until first job appears
+const fastJobPollingInterval = ref<NodeJS.Timeout | null>(null);
+const startFastJobPolling = () => {
+  if (fastJobPollingInterval.value) return;
+  fastJobPollingInterval.value = setInterval(async () => {
+    if (!deployment.value) return;
+    await loadDeployment(true);
+    const count = deployment.value?.jobs?.length || 0;
+    const status = deployment.value?.status?.toUpperCase();
+    if (count > 0 || (status !== 'RUNNING' && status !== 'STARTING')) {
+      clearInterval(fastJobPollingInterval.value!);
+      fastJobPollingInterval.value = null;
+      if (count > 0) startJobPolling();
+    }
+  }, 1000);
 };
 
 // Click outside handler to close dropdown
@@ -1741,10 +1970,14 @@ watch(
     
     const status = newStatus.toUpperCase();
     
-    // Start job polling when deployment becomes running
-    if (status === 'RUNNING' && !jobPollingInterval.value) {
-      startJobPolling();
-    }
+  // When deployment starts, poll fast until first job appears
+  if ((status === 'STARTING' || status === 'RUNNING') && (deployment.value?.jobs?.length || 0) === 0) {
+    startFastJobPolling();
+  }
+  // Once running, ensure normal polling is active
+  if (status === 'RUNNING' && !jobPollingInterval.value && (deployment.value?.jobs?.length || 0) > 0) {
+    startJobPolling();
+  }
     
     // Stop job polling when deployment stops running
     if (status !== 'RUNNING' && status !== 'STARTING' && jobPollingInterval.value) {
@@ -1776,6 +2009,113 @@ useHead({
 </script>
 
 <style lang="scss" scoped>
+// Improved header layout
+.deployment-header > .is-flex {
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.header-left-section {
+  min-width: 0; // Allow text to truncate
+  flex: 1;
+}
+
+.header-title-section {
+  min-width: 0; // Allow text to truncate
+  max-width: 400px; // Prevent extremely long names from stretching too much
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.header-title-section .title {
+  display: block !important;
+  margin-bottom: 0.25rem !important;
+}
+
+.header-title-section .subtitle {
+  display: block !important;
+  word-break: break-all; // Allow long IDs to wrap
+  line-height: 1.2;
+  margin-top: 0 !important;
+}
+
+.deployment-header .status-tag { 
+  white-space: nowrap; 
+  flex-shrink: 0;
+}
+
+// Mobile responsive
+@media screen and (max-width: 768px) {
+  .deployment-header > .is-flex {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    flex-wrap: nowrap !important;
+  }
+  
+  .header-left-section {
+    width: 100%;
+    margin-bottom: 1rem;
+  }
+  
+  .deployment-tabs {
+    width: 100% !important;
+    justify-content: flex-start;
+    margin-top: 0.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  
+  .header-title-section {
+    max-width: none;
+  }
+  
+  .header-title-section .subtitle {
+    font-size: 0.75rem;
+  }
+  
+  .tab-button {
+    font-size: 0.875rem;
+    padding: 0.5rem 0.75rem;
+  }
+}
+
+// Extra small screens
+@media screen and (max-width: 480px) {
+  .deployment-tabs {
+    gap: 0.25rem;
+  }
+  
+  .tab-button {
+    font-size: 0.75rem;
+    padding: 0.375rem 0.5rem;
+  }
+}
+
+// Responsive endpoint URLs
+.endpoint-url {
+  word-break: break-all;
+  display: inline-block;
+  max-width: 100%;
+  overflow-wrap: break-word;
+}
+
+@media screen and (max-width: 768px) {
+  .endpoint-url {
+    font-size: 0.75rem;
+    max-width: 300px;
+    min-width: 200px;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .endpoint-url {
+    font-size: 0.7rem;
+    max-width: 250px;
+    min-width: 180px;
+  }
+}
+
 .status-dot {
   display: inline-block;
   width: 10px;
@@ -1806,7 +2146,7 @@ useHead({
   position: sticky;
   top: 0;
   z-index: 10;
-  background: white;
+  background: $white;
 }
 
 .dark-mode .sticky-subheader {

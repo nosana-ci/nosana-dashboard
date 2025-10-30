@@ -82,7 +82,7 @@
                 class="submenu-link"
                 @click="showMenu = false"
               >
-                Deployments
+                Jobs
               </nuxt-link>
             </li>
             <li>

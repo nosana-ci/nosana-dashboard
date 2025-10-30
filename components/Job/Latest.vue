@@ -1,15 +1,15 @@
 <template>
   <div>
     <DeploymentList :per-page="limit" :total-jobs="limit" v-model:page="page" v-model:state="state"
-      :loading-jobs="loadingJobs" title="Latest Deployments" :jobs="jobs ? jobs.jobs : null" :small="true">
+      :loading-jobs="loadingJobs" title="Latest Jobs" :jobs="jobs ? jobs.jobs : null" :small="true">
     </DeploymentList>
     <div class="has-text-right mt-auto pt-2">
       <nuxt-link to="/jobs" class="button is-text">
-        <span>All deployments</span>
+        <span>All Jobs</span>
         <span class="icon"> &#8250; </span>
       </nuxt-link>
     </div>
-    <div v-if="!loadingJobs && !jobs">Could not load deployments</div>
+    <div v-if="!loadingJobs && !jobs">Could not load jobs</div>
   </div>
 </template>
 

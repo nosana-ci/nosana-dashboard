@@ -20,6 +20,7 @@ import StoppedIcon from '@/assets/img/icons/status/stopped.svg?component';
 import FailedIcon from '@/assets/img/icons/status/failed.svg?component';
 import QueuedIcon from '@/assets/img/icons/status/queued.svg?component';
 import DoneIcon from '@/assets/img/icons/status/done.svg?component';
+import ArchiveIcon from '@/assets/img/icons/archive.svg?component';
 import { useStatus } from '~/composables/useStatus';
 
 const { getStatusClass } = useStatus();
@@ -49,9 +50,18 @@ const normalizeStringStatus = (val: string): string | null => {
   if (v === 'success') return 'SUCCESS';
   if (v === 'failed') return 'FAILED';
   if (v === 'stopped') return 'STOPPED';
+  if (v === 'stopping') return 'STOPPING';
   if (v === 'queued') return 'QUEUED';
   if (v === 'running') return 'RUNNING';
+  if (v === 'starting') return 'STARTING';
   if (v === 'completed') return 'COMPLETED';
+  if (v === 'draft') return 'DRAFT';
+  if (v === 'error') return 'ERROR';
+  if (v === 'insufficient_funds') return 'INSUFFICIENT_FUNDS';
+  if (v === 'archived') return 'ARCHIVED';
+  // Revision statuses
+  if (v === 'active') return 'ACTIVE';
+  if (v === 'inactive') return 'INACTIVE';
   // Endpoint statuses
   if (v === 'online') return 'ONLINE';
   if (v === 'offline') return 'OFFLINE';
@@ -104,15 +114,20 @@ const statusString = computed(() => {
 });
 
 const getIconComponent = (status: string) => {
-  if (status === 'QUEUED') return QueuedIcon;
-  if (status === 'RUNNING') return RunningIcon;
+  if (status === 'QUEUED' || status === 'DRAFT') return QueuedIcon;
+  if (status === 'RUNNING' || status === 'STARTING') return RunningIcon;
+  if (status === 'STOPPING') return StoppedIcon; // Use stop square icon for stopping state
   if (status === 'COMPLETED' || status === 'SUCCESS') return DoneIcon;
-  if (status === 'FAILED' || status === 'YAML_ERROR') return FailedIcon;
+  if (status === 'FAILED' || status === 'YAML_ERROR' || status === 'ERROR' || status === 'INSUFFICIENT_FUNDS') return FailedIcon;
+  if (status === 'ARCHIVED') return ArchiveIcon; // Use archive icon for archived status
+  // Revision statuses
+  if (status === 'ACTIVE') return RunningIcon; // Running icon for active
+  if (status === 'INACTIVE') return StoppedIcon; // Square icon for inactive
   // Endpoint statuses - reuse appropriate existing icons
   if (status === 'ONLINE') return DoneIcon; // Green checkmark for online
-  if (status === 'OFFLINE') return FailedIcon; // Red X for offline  
+  if (status === 'OFFLINE') return StoppedIcon; // Gray square for offline  
   if (status === 'UNKNOWN' || status === 'LOADING') return QueuedIcon; // Orange ? for unknown/loading
-  return StoppedIcon;
+  return StoppedIcon; // For STOPPED and any other states
 };
 
 const iconRef = ref<HTMLElement | null>(null);

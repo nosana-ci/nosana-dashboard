@@ -845,7 +845,7 @@ watch(() => selectedMarket.value, (newMarket) => {
 const fetchGpuFilters = async (resetValues = true) => {
   try {
     loadingHosts.value = true;
-    const response = await fetch(`${config.public.apiBase}/api/deployments/filters?market_type=${selectedMarketType.value}`);
+    const response = await fetch(`${config.public.apiBase}/api/markets/filters?market_type=${selectedMarketType.value}`);
     const data = await response.json();
     
     // Fix the duplicate "All GPUs" issue
@@ -971,7 +971,7 @@ const debouncedSearch = useDebounceFn(async () => {
     });
     
     // Fetch available hosts
-    const response = await fetch(`${config.public.apiBase}/api/deployments/hosts?${queryParams}`);
+    const response = await fetch(`${config.public.apiBase}/api/markets/hosts?${queryParams}`);
     const data = await response.json();
     
     // Process host data
@@ -1223,21 +1223,8 @@ const refreshCreditBalance = async () => {
   loadingCreditBalance.value = true;
   
   try {
-    const response = await fetch(`${config.public.apiBase}/api/credits/balance`, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': token.value as string,
-      },
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      creditBalance.value = data.assignedCredits - data.settledCredits - data.reservedCredits || 0;
-    } else {
-      console.error('Failed to fetch credit balance');
-    }
+    const data = await nosana.value.api.credits.balance();
+    creditBalance.value = (data.assignedCredits || 0) - (data.settledCredits || 0) - (data.reservedCredits || 0);
   } catch (error) {
     console.error('Error fetching credit balance:', error);
   } finally {

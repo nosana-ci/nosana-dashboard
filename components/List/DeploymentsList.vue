@@ -16,7 +16,8 @@
         </div>
 
         <div :class="{'min-height-container': loading}">
-          <table class="table is-fullwidth is-striped is-hoverable">
+          <div class="table-container">
+            <table class="table is-fullwidth is-striped is-hoverable">
             <thead>
               <tr>
                 <th>Deployment</th>
@@ -38,7 +39,7 @@
               <template v-else>
                 <tr v-for="deployment in displayedDeployments" :key="deployment.id" class="clickable-row">
                   <td>
-                    <NuxtLink :to="`/deployments/${deployment.id}`" class="clickable-row-link">
+                    <NuxtLink :to="deploymentLink(deployment.id)" class="clickable-row-link">
                       <div class="clickable-row-cell-content">
                         <div class="deployment-name">{{ deployment.name }}</div>
                         <div class="is-size-7 is-family-monospace has-text-grey">{{ deployment.id }}</div>
@@ -66,15 +67,22 @@
               </template>
             </tbody>
           </table>
+          </div>
         </div>
 
         <Pagination
-            v-if="totalPages > 1"
+            v-if="showPagination && totalPages > 1"
             v-model="currentPage"
             class="pagination is-centered mt-4"
             :total-page="totalPages"
             :max-page="6"
         />
+        <div v-if="!showPagination && hasMore" class="has-text-right mt-2">
+          <nuxt-link to="/deployments" class="button is-text">
+            <span>See all</span>
+            <span class="icon"> &#8250; </span>
+          </nuxt-link>
+        </div>
       </div>
     </div>
   </div>
@@ -86,15 +94,20 @@ import StoppedIcon from '@/assets/img/icons/status/stopped.svg?component';
 import FailedIcon from '@/assets/img/icons/status/failed.svg?component';
 import QueuedIcon from '@/assets/img/icons/status/queued.svg?component';
 import DoneIcon from '@/assets/img/icons/status/done.svg?component';
+import ArchiveIcon from '@/assets/img/icons/archive.svg?component';
 import { useStatus } from '~/composables/useStatus';
 
 // Props
 const props = withDefaults(defineProps<{
   itemsPerPage?: number
   searchQuery?: string
+  limit?: number
+  showPagination?: boolean
 }>(), {
   itemsPerPage: 10,
-  searchQuery: ''
+  searchQuery: '',
+  limit: undefined,
+  showPagination: true
 })
 
 // Emits
@@ -201,6 +214,7 @@ const instrumentRowIcon = (dep: Deployment) => {
 
 const { status, token } = useAuth()
 const router = useRouter()
+const route = useRoute()
 
 const isAuthenticated = computed(() => {
   return status.value === 'authenticated' && token.value
@@ -243,7 +257,13 @@ const filteredDeployments = computed(() => {
 
 // Create a computed property for the deployments actually displayed in the table
 const displayedDeployments = computed(() => {
-  // Take the filtered deployments and apply pagination
+  // Compact mode: show only first N and hide pagination
+  if (!props.showPagination) {
+    const max = props.limit ?? props.itemsPerPage
+    return filteredDeployments.value.slice(0, max)
+  }
+
+  // Paginated mode
   const start = (currentPage.value - 1) * props.itemsPerPage
   const end = start + props.itemsPerPage
   return filteredDeployments.value.slice(start, end)
@@ -252,6 +272,19 @@ const displayedDeployments = computed(() => {
 const totalDeployments = computed(() => filteredDeployments.value.length)
 
 const totalPages = computed(() => Math.ceil(totalDeployments.value / props.itemsPerPage))
+
+// More indicator for compact mode
+const hasMore = computed(() => {
+  if (props.showPagination) return false
+  const max = props.limit ?? props.itemsPerPage
+  return filteredDeployments.value.length > max
+})
+
+// Build nuxt-link target with origin marker
+const deploymentLink = (id: string) => {
+  const from = route.path.startsWith('/account') ? 'account' : 'deployments'
+  return { path: `/deployments/${id}`, query: { from } }
+}
 
 
 // Watch for changes
@@ -275,14 +308,13 @@ const getStatusClass = (status: string) => {
       return 'is-info';
     case 'STOPPED':
     case 'STOPPING':
+    case 'ARCHIVED':
       return 'is-dark';
     case 'ERROR':
     case 'INSUFFICIENT_FUNDS':
       return 'is-danger';
     case 'DRAFT':
       return 'is-warning';
-    case 'ARCHIVED':
-      return 'is-light';
     default:
       return 'is-light';
   }
@@ -303,6 +335,8 @@ const getStatusIcon = (status: string) => {
       return QueuedIcon;
     case 'COMPLETED':
       return DoneIcon;
+    case 'ARCHIVED':
+      return ArchiveIcon;
     default:
       return StoppedIcon;
   }
