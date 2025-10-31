@@ -42,7 +42,7 @@
                   @click="stopGroup(groupName)"
                   :disabled="isJobCompleted || loadingGroups.has(groupName) || !hasStoppableOpsInGroup(groupOps)"
                   :class="{ 'is-loading': loadingGroups.has(groupName) }"
-                  class="tab-button"
+                  class="button tab-button"
                   title="Stop all operations in this group"
                 >
                   <span class="icon is-small">
@@ -54,7 +54,7 @@
                   @click="restartGroup(groupName)"
                   :disabled="isJobCompleted || loadingGroups.has(groupName) || !hasRestartableOpsInGroup(groupOps)"
                   :class="{ 'is-loading': loadingGroups.has(groupName) }"
-                  class="tab-button"
+                  class="button tab-button"
                   title="Restart all operations in this group"
                 >
                   <span class="icon is-small">
@@ -99,7 +99,7 @@
                           @click="stopOperation(op)"
                           :disabled="isJobCompleted || !canStop(op.status) || loadingOps.has(op.id)"
                           :class="{ 'is-loading': loadingOps.has(op.id) }"
-                          class="tab-button"
+                          class="button tab-button"
                           title="Stop operation"
                         >
                           <span class="icon is-small">
@@ -111,7 +111,7 @@
                           @click="restartOperation(op)"
                           :disabled="isJobCompleted || !canRestart(op.status) || loadingOps.has(op.id)"
                           :class="{ 'is-loading': loadingOps.has(op.id) }"
-                          class="tab-button"
+                          class="button tab-button"
                           title="Restart operation"
                         >
                           <span class="icon is-small">
@@ -389,6 +389,7 @@ const loadingOps = ref(new Set<string>());
 const loadingGroups = ref(new Set<string>());
 const expandedOps = ref(new Set<string>());
 const expandedGroups = ref(new Set<string>());
+const hasInitializedGroupExpansion = ref(false);
 const clearedAtByOp = ref<Map<string, number>>(new Map());
 let pollInterval: NodeJS.Timeout | null = null;
 
@@ -754,13 +755,22 @@ const groupedOperations = computed(() => {
   return groups;
 });
 
-// Auto-expand all groups when operations are loaded
+
 watch(groupedOperations, (newGroups) => {
-  if (newGroups && Object.keys(newGroups).length > 0) {
-    // Auto-expand all groups
-    const allGroupNames = Object.keys(newGroups);
+  if (!newGroups) return;
+  const allGroupNames = Object.keys(newGroups);
+
+  if (!hasInitializedGroupExpansion.value) {
     expandedGroups.value = new Set(allGroupNames);
+    hasInitializedGroupExpansion.value = true;
+    return;
   }
+
+  const next = new Set<string>();
+  for (const name of expandedGroups.value) {
+    if (allGroupNames.includes(name)) next.add(name);
+  }
+  expandedGroups.value = next;
 }, { immediate: true });
 
 // Get status icon using the same logic as Job.vue for consistency
@@ -836,6 +846,7 @@ const canRestart = (status: string) => {
 // Stop operation
 const stopOperation = async (op: Operation) => {
   loadingOps.value.add(op.id);
+  loadingOps.value = new Set(loadingOps.value);
   try {
     const jobId = props.job.address;
     const baseUrl = getNodeUrl();
@@ -853,12 +864,14 @@ const stopOperation = async (op: Operation) => {
     console.error('Error stopping operation:', err);
   } finally {
     loadingOps.value.delete(op.id);
+    loadingOps.value = new Set(loadingOps.value);
   }
 };
 
 // Restart operation
 const restartOperation = async (op: Operation) => {
   loadingOps.value.add(op.id);
+  loadingOps.value = new Set(loadingOps.value);
   try {
     // Mark the timestamp when we cleared logs for this operation
     // This allows getOpLogs to filter out old logs from before the restart
@@ -880,6 +893,7 @@ const restartOperation = async (op: Operation) => {
     console.error('Error restarting operation:', err);
   } finally {
     loadingOps.value.delete(op.id);
+    loadingOps.value = new Set(loadingOps.value);
   }
 };
 
@@ -894,6 +908,7 @@ const hasRestartableOpsInGroup = (groupOps: Operation[]) => {
 // Stop entire group
 const stopGroup = async (groupName: string) => {
   loadingGroups.value.add(groupName);
+  loadingGroups.value = new Set(loadingGroups.value);
   try {
     const jobId = props.job.address;
     const baseUrl = getNodeUrl();
@@ -910,12 +925,14 @@ const stopGroup = async (groupName: string) => {
     console.error('Error stopping group:', err);
   } finally {
     loadingGroups.value.delete(groupName);
+    loadingGroups.value = new Set(loadingGroups.value);
   }
 };
 
 // Restart entire group
 const restartGroup = async (groupName: string) => {
   loadingGroups.value.add(groupName);
+  loadingGroups.value = new Set(loadingGroups.value);
   try {
     // Mark timestamp for all operations in this group to clear their logs
     const groupOps = groupedOperations.value[groupName];
@@ -939,6 +956,7 @@ const restartGroup = async (groupName: string) => {
     console.error('Error restarting group:', err);
   } finally {
     loadingGroups.value.delete(groupName);
+    loadingGroups.value = new Set(loadingGroups.value);
   }
 };
 </script>

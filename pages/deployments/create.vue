@@ -350,7 +350,7 @@
 </template>
 
 <script lang="ts" setup>
-import type { Market, JobDefinition } from "@nosana/sdk";
+import type { Market, JobDefinition, CreateDeployment } from "@nosana/sdk";
 import JsonEditorVue from "json-editor-vue";
 import { Mode, ValidationSeverity } from "vanilla-jsoneditor";
 import "vanilla-jsoneditor/themes/jse-theme-dark.css";
@@ -751,7 +751,7 @@ const createDeployment = async () => {
       throw new Error("Please sign in to create a deployment");
     }
 
-    const requestBody = {
+    const requestBody: CreateDeployment = {
       name: deploymentName.value.trim(),
       market: selectedMarket.value!.address.toString(),
       replicas: replicas.value,
@@ -762,11 +762,7 @@ const createDeployment = async () => {
       job_definition: jobDefinition.value,
     };
 
-    const data = await useApiFetch('/api/deployments/create', {
-      method: 'POST',
-      body: requestBody,
-      auth: true,
-    });
+    const data = await nosana.value.deployments.create(requestBody);
 
     toast.success(`Successfully created deployment ${data.id}`)
     setTimeout(() => {
