@@ -238,7 +238,13 @@ const filteredDeployments = computed(() => {
     )
   }
 
-  return filtered
+  const toTime = (d: any) => {
+    const updated = (d as any)?.updated_at ?? (d as any)?.updatedAt
+    const created = (d as any)?.created_at ?? (d as any)?.createdAt
+    return updated ? new Date(updated).getTime() : created ? new Date(created).getTime() : 0
+  }
+
+  return [...filtered].sort((a, b) => toTime(b) - toTime(a))
 })
 
 // Create a computed property for the deployments actually displayed in the table

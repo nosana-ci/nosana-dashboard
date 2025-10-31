@@ -3,8 +3,8 @@ import { useToast } from "vue-toastification";
 import { useWallet } from "solana-wallets-vue";
 import type { Job, JobDefinition } from "@nosana/sdk";
 import { getJobExposedServices } from "@nosana/sdk";
-import type { JobInfo, JobViewModel, LiveEndpoints, ResultsSection, EndpointStatus } from "~/composables/jobs/types";
-import { normalizeEndpoints } from "~/composables/jobs/types";
+import type { JobInfo, JobViewModel, LiveEndpoints, ResultsSection} from "~/composables/jobs/types";
+import { normalizeEndpoints } from "~/composables/jobs/normalizeEndpoints";
 
 function getStateNumber(stateVal: string | number | undefined): number {
   if (stateVal === "QUEUED" || stateVal === 0) return 0;

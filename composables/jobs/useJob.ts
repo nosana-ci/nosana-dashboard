@@ -6,8 +6,8 @@ import {
 import { useToast } from "vue-toastification";
 import { useWallet } from "solana-wallets-vue";
 import { EventSourcePolyfill } from "event-source-polyfill";
-import type { JobInfo, JobViewModel, LiveEndpoints, ResultsSection, EndpointStatus } from "~/composables/jobs/types";
-import { normalizeEndpoints } from "~/composables/jobs/types";
+import type { JobInfo, JobViewModel, LiveEndpoints, ResultsSection} from "~/composables/jobs/types";
+import { normalizeEndpoints } from "~/composables/jobs/normalizeEndpoints";
 
 /**
  * Helper to convert job state to a number, normalizing "RUNNING", "QUEUED", etc.

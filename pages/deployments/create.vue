@@ -765,9 +765,9 @@ const createDeployment = async () => {
 
     const data = await nosana.value.deployments.create(requestBody);
 
-    toast.success(`Successfully created deployment ${created.id}`)
+    toast.success(`Successfully created deployment ${data.id}`)
     setTimeout(() => {
-      router.push(`/deployments/${created.id}`);
+      router.push(`/deployments/${data.id}`);
     }, 2000);
   } catch (error: any) {
     toast.error(`Error creating deployment: ${error.message || error.toString()}`);
