@@ -216,12 +216,12 @@
                   </tr>
                   
                   <!-- Scheduled deployment cron schedule -->
-                  <tr v-if="deployment.strategy?.toUpperCase() === 'SCHEDULED' && deployment.schedule">
+                  <tr v-if="deployment.strategy?.toUpperCase() === 'SCHEDULED' && deploymentSchedule">
                     <td>Schedule</td>
                     <td>
                       <div class="is-flex is-flex-direction-column">
-                        <span class="is-family-monospace">{{ deployment.schedule }}</span>
-                        <span class="is-size-7 has-text-grey mt-1">{{ parseCronExpression(deployment.schedule) }}</span>
+                        <span class="is-family-monospace">{{ deploymentSchedule }}</span>
+                        <span class="is-size-7 has-text-grey mt-1">{{ parseCronExpression(deploymentSchedule || '') }}</span>
                       </div>
                     </td>
                   </tr>
@@ -575,9 +575,9 @@
                   :stringified="false"
                   :readOnly="false"
                   class="json-editor"
-                  @update:modelValue="(value) => { 
-                    if (value !== undefined && value !== null) {
-                      jobDefinitionModel.value = value; 
+                  @update:modelValue="(value: unknown) => { 
+                    if (value && typeof value === 'object') {
+                      jobDefinitionModel = value as JobDefinition; 
                     }
                   }"
                 />
@@ -759,12 +759,12 @@
                 type="text"
                 class="input is-family-monospace"
                 v-model="newSchedule"
-                :placeholder="deployment.schedule || '0 * * * *'"
+                :placeholder="deploymentSchedule || '0 * * * *'"
               />
             </div>
             <p class="help">
-              <span>Current: <span class="is-family-monospace has-text-dark">{{ deployment.schedule }}</span></span><br>
-              <span class="has-text-grey">{{ deployment.schedule ? parseCronExpression(deployment.schedule) : '' }}</span>
+              <span>Current: <span class="is-family-monospace has-text-dark">{{ deploymentSchedule }}</span></span><br>
+              <span class="has-text-grey">{{ deploymentSchedule ? parseCronExpression(deploymentSchedule) : '' }}</span>
             </p>
             <div v-if="newSchedule" class="mt-3">
               <p class="help">
@@ -886,6 +886,7 @@ import { Mode, ValidationSeverity } from "vanilla-jsoneditor";
 import JsonEditorVue from "json-editor-vue";
 import "vanilla-jsoneditor/themes/jse-theme-dark.css";
 import { useToast } from "vue-toastification";
+import { useAuth } from '#imports';
 import JobStatus from "~/components/Job/Status.vue";
 import JobLogsContainer from "~/components/Job/LogsContainer.vue";
 import SecondsFormatter from "~/components/SecondsFormatter.vue";
@@ -921,11 +922,22 @@ interface DeploymentJob {
   created_at: string;
   state?: number;
   market?: string;
+  revision?: number;
 }
 
-interface ExtendedDeployment extends Deployment {
-  schedule?: string;
+interface DeploymentRevision {
+  revision: number;
+  created_at: string;
+  job_definition?: JobDefinition;
 }
+
+interface DeploymentEndpoint {
+  opId: string;
+  port: number | string;
+  url: string;
+}
+
+// Use SDK Deployment as-is; access extra fields via guarded indexing
 
 interface DeploymentEvent {
   type: string;
@@ -945,7 +957,7 @@ const isAuthenticated = computed(() => status.value === 'authenticated' && token
 const { getIpfs } = useIpfs();
 
 // State
-const deployment = ref<ExtendedDeployment | null>(null);
+const deployment = ref<Deployment | null>(null);
 const loading = ref(true);
 const error = ref<string | null>(null);
 const activeTab = ref("overview");
@@ -976,6 +988,11 @@ const actionsDropdown = ref<HTMLElement | null>(null);
 // Debug instrumentation for page header icon
 const headerIconRef = ref<HTMLElement | null>(null);
 const { data: testgridMarkets } = useAPI("/api/markets");
+// Safe accessors for optional DM fields
+const deploymentSchedule = computed<string | null>(() => {
+  const d = deployment.value as unknown as { schedule?: string } | null;
+  return d?.schedule ?? null;
+});
 
 // Back link logic - return to origin (account or deployments)
 const backLink = computed(() => {
@@ -1057,9 +1074,9 @@ const statusDotClass = computed(() => {
 });
 
 // Computed properties for revisions
-const sortedRevisions = computed(() => {
-  if (!deployment.value?.revisions) return [];
-  return [...deployment.value.revisions].sort((a, b) => b.revision - a.revision);
+const sortedRevisions = computed<DeploymentRevision[]>(() => {
+  const dep = deployment.value as unknown as { revisions?: DeploymentRevision[] } | null;
+  return Array.isArray(dep?.revisions) ? dep!.revisions! : [];
 });
 
 // Methods
@@ -1186,16 +1203,17 @@ const validator = (json: any) => {
   return errors;
 };
 
-const jobDefinitionModel = ref<any>(null);
+const jobDefinitionModel = ref<JobDefinition | null>(null);
 const loadingJobDefinition = ref(false);
-const originalDefinition = ref<any>(null);
+const originalDefinition = ref<JobDefinition | null>(null);
 
 
 const loadJobDefinition = async () => {
   // Try to get job definition from deployment revisions first
-  if (deployment.value?.revisions && deployment.value.revisions.length > 0) {
-    const activeRevision = deployment.value.revisions.find(r => r.revision === deployment.value.active_revision) 
-      || deployment.value.revisions[deployment.value.revisions.length - 1];
+  const d = deployment.value as unknown as { revisions?: DeploymentRevision[]; active_revision?: number } | null;
+  if (Array.isArray(d?.revisions) && d!.revisions!.length > 0) {
+    const activeRevision = d!.revisions!.find((r: DeploymentRevision) => r.revision === d!.active_revision) 
+      || d!.revisions![d!.revisions!.length - 1];
     
     if (activeRevision?.job_definition) {
       jobDefinitionModel.value = activeRevision.job_definition;
@@ -1205,16 +1223,17 @@ const loadJobDefinition = async () => {
   }
 
   // Fallback to IPFS if no job definition in revisions
-  if (!deployment.value?.ipfs_definition_hash) {
+  const ipfsHash = (deployment.value as unknown as { ipfs_definition_hash?: string } | null)?.ipfs_definition_hash;
+  if (!ipfsHash) {
     jobDefinitionModel.value = null;
     return;
   }
 
   try {
     loadingJobDefinition.value = true;
-    const definition = await getIpfs(deployment.value.ipfs_definition_hash);
-    jobDefinitionModel.value = definition;
-    originalDefinition.value = JSON.parse(JSON.stringify(definition));
+    const definition = await getIpfs(ipfsHash);
+    jobDefinitionModel.value = definition as JobDefinition;
+    originalDefinition.value = JSON.parse(JSON.stringify(definition)) as JobDefinition;
   } catch (err: any) {
     console.error("Error loading job definition:", err);
     jobDefinitionModel.value = null;
@@ -1491,11 +1510,12 @@ const runningJobApiUrl = computed(() => firstRunningJobId.value ? `/api/jobs/${f
 const { data: runningJobData } = useAPI(runningJobApiUrl, { default: () => null, watch: [runningJobApiUrl] });
 const nowTs = useTimestamp({ interval: 1000 });
 const runningJobDurationSeconds = computed<number | null>(() => {
-  const js = (runningJobData.value as any)?.timeStart;
-  const state = (runningJobData.value as any)?.state;
+  const data = (runningJobData.value ?? null) as Record<string, unknown> | null;
+  const jsUnknown = data?.['timeStart'];
+  const stateUnknown = data?.['state'];
+  const js = typeof jsUnknown === 'number' ? jsUnknown : 0;
   if (!js || js === 0) return null;
-  // state 1 = running
-  const isRunning = state === 1 || (typeof state === 'string' && String(state).toUpperCase() === 'RUNNING');
+  const isRunning = stateUnknown === 1 || (typeof stateUnknown === 'string' && String(stateUnknown).toUpperCase() === 'RUNNING');
   if (!isRunning) return null;
   return Math.max(0, Math.floor(nowTs.value / 1000) - js);
 });
@@ -1530,7 +1550,7 @@ const deploymentEndpoints = computed(() => {
   const deploymentIsRunning = deployment.value.status === 'RUNNING';
   const hasRunningJobs = activeJobs.value.length > 0;
   
-  return deployment.value.endpoints.map((endpoint: any) => {
+  return (deployment.value.endpoints as DeploymentEndpoint[]).map((endpoint: DeploymentEndpoint) => {
     const liveStatus = liveEndpointStatusByUrl.value.get(endpoint.url);
     
     // Determine status using global status system
@@ -1561,14 +1581,12 @@ const deploymentEndpoints = computed(() => {
 
 // All deployment events
 const deploymentEvents = computed((): DeploymentEvent[] => {
-  const events = (deployment.value?.events as DeploymentEvent[]) || [];
-  // Reverse to show most recent first
-  return [...events].reverse();
+  return (deployment.value?.events as DeploymentEvent[]) || [];
 });
 
 // No vault actions in API mode
 
-// Generic deployment action handler
+// Generic deployment action handler (credit system via API)
 const executeDeploymentAction = async (
   actionUrl: string,
   successMessage: string,
@@ -1656,7 +1674,6 @@ const archiveDeployment = async () => {
   if (!confirm("Are you sure you want to archive this deployment? This action cannot be undone.")) {
     return;
   }
-  
   await executeDeploymentAction(
     `/api/deployments/${deployment.value!.id}/archive`,
     "Deployment archived successfully",
@@ -1670,11 +1687,14 @@ const updateReplicas = async () => {
     return;
   }
 
-  await executeDeploymentAction(
-    `/api/deployments/${deployment.value!.id}/update-replica-count`,
-    `Replica count updated to ${newReplicaCount.value}`
-  );
-  
+  await useApiFetch(`/api/deployments/${deployment.value!.id}/update-replica-count`, {
+    method: 'PATCH',
+    auth: true,
+    body: { replicas: newReplicaCount.value }
+  });
+  toast.success(`Replica count updated to ${newReplicaCount.value}`);
+  await new Promise(r => setTimeout(r, 500));
+  await loadDeployment(true);
   newReplicaCount.value = null;
 };
 
@@ -1684,11 +1704,14 @@ const updateJobTimeout = async () => {
     return;
   }
 
-  await executeDeploymentAction(
-    `/api/deployments/${deployment.value!.id}/update-timeout`,
-    `Job timeout updated to ${newTimeoutHours.value} hours`
-  );
-  
+  await useApiFetch(`/api/deployments/${deployment.value!.id}/update-timeout`, {
+    method: 'PATCH',
+    auth: true,
+    body: { timeout: Math.floor(newTimeoutHours.value * 3600) }
+  });
+  toast.success(`Job timeout updated to ${newTimeoutHours.value} hours`);
+  await new Promise(r => setTimeout(r, 500));
+  await loadDeployment(true);
   newTimeoutHours.value = null;
 };
 
@@ -1710,7 +1733,6 @@ const updateSchedule = async () => {
       auth: true,
       body: { schedule: newSchedule.value }
     });
-    
     toast.success(`Schedule updated to: ${newSchedule.value} (${parseCronExpression(newSchedule.value)})`);
     
     // Wait a moment for backend to process, then refresh
@@ -1740,12 +1762,11 @@ const createRevision = async () => {
 
   try {
     actionLoading.value = true;
-    const result = await useApiFetch(`/api/deployments/${deployment.value!.id}/create-revision`, { 
+    await useApiFetch(`/api/deployments/${deployment.value!.id}/create-revision`, { 
       method: 'POST', 
       auth: true,
       body: revisionJobDefinition.value
     });
-    
     toast.success("New revision created successfully!");
     showRevisionModal.value = false;
     
@@ -1771,12 +1792,11 @@ const switchToRevision = async (revisionNumber: number) => {
 
   try {
     switchingRevision.value = revisionNumber;
-    const result = await useApiFetch(`/api/deployments/${deployment.value.id}/update-active-revision`, {
+    await useApiFetch(`/api/deployments/${deployment.value.id}/update-active-revision`, {
       method: 'PATCH',
       auth: true,
       body: { active_revision: revisionNumber }
     });
-
     toast.success(`Switched to revision ${revisionNumber} successfully!`);
     
     // Refresh deployment data
@@ -2068,7 +2088,8 @@ watch(
   () => [activeTab.value, activeJobs.value],
   ([newTab, jobs]) => {
     if (newTab === 'logs' && jobs.length > 0 && !activeLogsJobId.value) {
-      activeLogsJobId.value = jobs[0].job;
+      const first: any = (jobs as any)[0];
+      activeLogsJobId.value = (first?.job || first) as string;
     }
   },
   { immediate: true }

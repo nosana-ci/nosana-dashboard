@@ -243,16 +243,10 @@ const filteredDeployments = computed(() => {
       d.id.toLowerCase().includes(query)
     )
   }
-  
-  // Sort by updated_at (most recent first)
-  filtered = filtered.sort((a, b) => {
-    if (!a.updated_at && !b.updated_at) return 0
-    if (!a.updated_at) return 1
-    if (!b.updated_at) return -1
-    return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
-  })
-  
-  return filtered
+  // Reverse incoming order (newest first if API returns oldest first)
+  const reversed = [...filtered].reverse()
+
+  return reversed
 })
 
 // Create a computed property for the deployments actually displayed in the table
