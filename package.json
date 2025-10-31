@@ -54,7 +54,7 @@
     "event-source-polyfill": "^1.0.31",
     "i18n-iso-countries": "^7.13.0",
     "idb-keyval": "^6.2.1",
-    "json-editor-vue": "^0.17.0",
+    "json-editor-vue": "^0.18.1",
     "marked": "^14.1.2",
     "nuxt-gtag": "^4.0.0",
     "openai": "^4.100.0",
