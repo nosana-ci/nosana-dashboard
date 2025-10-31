@@ -47,6 +47,18 @@
             <span>Deploy</span>
           </nuxt-link>
         </li>
+        <li>
+          <nuxt-link
+            to="/deployments"
+            active-class="is-active"
+            @click="showMenu = false"
+          >
+            <span class="icon is-small mr-4">
+              <ListIcon />
+            </span>
+            <span>Deployments</span>
+          </nuxt-link>
+        </li>
         <li class="has-dropdown">
           <a class="menu-list-link sidebar-link" @click="toggleExplorer"
             :class="{ 'is-active': $route.path === '/explorer' || $route.path.includes('/markets') || ($route.path === '/account/host' && status !== 'authenticated') || $route.path === '/stake'}"
@@ -218,6 +230,7 @@ const showExplorerDropdown = ref(false);
 const connectingFromSidebar = ref(false);
 const showMobileDropdown = ref(false);
 import JobBuilderIcon from "@/assets/img/icons/sidebar/job-builder.svg?component";
+import ListIcon from "@/assets/img/icons/sidebar/list.svg?component";
 import ExplorerIcon from "@/assets/img/icons/sidebar/explorer.svg?component";
 import UserIcon from "@/assets/img/icons/sidebar/user.svg?component";
 import SupportIcon from "@/assets/img/icons/sidebar/support.svg?component";
