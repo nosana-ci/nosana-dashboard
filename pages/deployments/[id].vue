@@ -940,6 +940,8 @@ const userNosBalance = ref<number>(0);
 const userSolBalance = ref<number>(0);
 const tasks = ref<any[]>([]);
 const tasksLoading = ref(false);
+const tasksPollingInterval = ref<NodeJS.Timeout | null>(null);
+const lastTasksPoll = ref<Date | null>(null);
 const isActionsDropdownOpen = ref(false);
 const showReplicasModal = ref(false);
 const showTimeoutModal = ref(false);
@@ -1001,6 +1003,14 @@ const instrumentHeaderIcon = () => {
 watch(() => deployment.value?.status, () => nextTick(instrumentHeaderIcon), { immediate: true });
 const statusPollingInterval = ref<NodeJS.Timeout | null>(null);
 const jobPollingInterval = ref<NodeJS.Timeout | null>(null);
+
+// Add debugging for polling state
+const pollingDebug = ref({
+  statusPollingActive: false,
+  jobPollingActive: false,
+  lastStatusPoll: null as Date | null,
+  lastJobPoll: null as Date | null,
+});
 // Status dot helper
 const statusDotClass = computed(() => {
   switch (deployment.value?.status?.toUpperCase()) {
@@ -1197,8 +1207,11 @@ const loadDeployment = async (silent = false) => {
   }
 
   try {
-    if (!silent) loading.value = true;
-    error.value = null;
+    // Only show loading for non-silent operations (initial load, user actions)
+    if (!silent) {
+      loading.value = true;
+      error.value = null;
+    }
 
     const deploymentId = route.params.id as string;
     const data = await useApiFetch<Deployment>(`/api/deployments/${deploymentId}`, {
@@ -1208,11 +1221,14 @@ const loadDeployment = async (silent = false) => {
 
     deployment.value = data as Deployment;
 
-    await loadJobDefinition();
-    
-    // Load tasks for scheduled deployments
-    await loadTasks();
+    // Only load job definition and tasks on initial load, not during polling
+    // This prevents tasks loading state from being reset during background polling
+    if (!silent) {
+      await loadJobDefinition();
+      await loadTasks();
+    }
 
+    // Update job states for active jobs during polling
     if (deployment.value.jobs && deployment.value.jobs.length > 0) {
       for (const job of deployment.value.jobs) {
         // Only fetch state for jobs that aren't already in a completed state
@@ -1229,13 +1245,19 @@ const loadDeployment = async (silent = false) => {
             jobStates.value[job.job] = data.value.state;
           }
         } catch (err) {
-          console.warn(`Failed to fetch state for job ${job.job}`);
+          // Silent polling shouldn't spam console warnings
+          if (!silent) {
+            console.warn(`Failed to fetch state for job ${job.job}`);
+          }
         }
       }
     }
   } catch (err: any) {
     console.error("Error loading deployment:", err);
-    error.value = `Failed to load deployment: ${err.message}`;
+    // Only set error for non-silent operations
+    if (!silent) {
+      error.value = `Failed to load deployment: ${err.message}`;
+    }
   } finally {
     if (!silent) loading.value = false;
   }
@@ -1496,6 +1518,12 @@ const executeDeploymentAction = async (
       
       // Clear SSE connections and cleanup job instances when stopping to force reconnect on restart
       if (actionUrl.includes('/stop')) {
+        
+        // Stop all polling immediately
+        stopJobPolling();
+        stopDeploymentPolling();
+        stopTasksPolling();
+        
         // Clean up all active job instances
         for (const [jobId, instance] of activeJobInstances.value.entries()) {
           instance.stopWatching();
@@ -1523,8 +1551,15 @@ const startDeployment = async () => {
     "Deployment started successfully"
   );
   
-  // Start fast polling for first job after starting
-  startFastJobPolling();
+  // Do an initial quick poll after 3 seconds to get faster feedback
+  setTimeout(async () => {
+    if (deployment.value?.status?.toUpperCase() === 'RUNNING' || deployment.value?.status?.toUpperCase() === 'STARTING') {
+      await loadDeployment(true);
+    }
+  }, 3000);
+  
+  // Start regular job polling after starting
+  startJobPolling();
 };
 
 const stopDeployment = async () => {
@@ -1533,9 +1568,13 @@ const stopDeployment = async () => {
     "Deployment stopped successfully"
   );
   
-  // Stop job polling and start status polling after stopping
+  // Stop job polling after stopping - status polling will continue to monitor stop progress
   stopJobPolling();
-  startStatusPolling();
+  
+  // Status polling will automatically stop when deployment reaches STOPPED state
+  if (!statusPollingInterval.value) {
+    startDeploymentPolling();
+  }
 };
 
 const archiveDeployment = async () => {
@@ -1796,70 +1835,112 @@ const loadTasks = async () => {
   }
   
   tasksLoading.value = true;
+  
   try {
     const { data } = await useAPI(`/api/deployments/${deployment.value.id}/tasks`, {
       auth: true
     });
-    tasks.value = data.value || [];
+    
+    if (data.value !== null && data.value !== undefined) {
+      tasks.value = data.value;
+    }
+    
+    lastTasksPoll.value = new Date();
   } catch (err: any) {
     console.error("Load tasks error:", err);
     toast.error(`Failed to load tasks: ${err.message}`);
-    tasks.value = [];
   } finally {
     tasksLoading.value = false;
   }
 };
 
-// Status polling functionality
-const startStatusPolling = () => {
-  // Clear any existing interval
+const loadTasksSilent = async () => {
+  if (!deployment.value) {
+    return;
+  }
+  
+  try {
+    const { data } = await useAPI(`/api/deployments/${deployment.value.id}/tasks`, {
+      auth: true
+    });
+    
+    if (data.value !== null && data.value !== undefined) {
+      tasks.value = data.value;
+    }
+    
+    lastTasksPoll.value = new Date();
+  } catch (err: any) {
+    // Don't show error toast during background polling
+  }
+};
+
+const startTasksPolling = () => {
+  if (tasksPollingInterval.value) {
+    clearInterval(tasksPollingInterval.value);
+  }
+  
+  tasksPollingInterval.value = setInterval(async () => {
+    if (!deployment.value) return;
+    await loadTasksSilent();
+  }, 30000);
+};
+
+const stopTasksPolling = () => {
+  if (tasksPollingInterval.value) {
+    clearInterval(tasksPollingInterval.value);
+    tasksPollingInterval.value = null;
+  }
+};
+
+const startDeploymentPolling = () => {
   if (statusPollingInterval.value) {
     clearInterval(statusPollingInterval.value);
   }
   
-  // Poll every 2 seconds for status updates
+  pollingDebug.value.statusPollingActive = true;
+  
   statusPollingInterval.value = setInterval(async () => {
     if (!deployment.value) return;
     
-    const currentStatus = deployment.value.status;
-    await loadDeployment(true); // Silent reload
+    pollingDebug.value.lastStatusPoll = new Date();
+    await loadDeployment(true);
     
-    // Stop polling when status reaches final state
-    if (deployment.value?.status === 'STOPPED' && currentStatus === 'STOPPING') {
-      clearInterval(statusPollingInterval.value!);
-      statusPollingInterval.value = null;
+    const finalStates = ['STOPPED', 'ARCHIVED', 'ERROR'];
+    if (finalStates.includes(deployment.value?.status?.toUpperCase() || '')) {
+      stopDeploymentPolling();
+      stopJobPolling();
+      stopTasksPolling();
     }
-  }, 2000);
+  }, 10000);
 };
 
-const stopStatusPolling = () => {
+const stopDeploymentPolling = () => {
   if (statusPollingInterval.value) {
     clearInterval(statusPollingInterval.value);
     statusPollingInterval.value = null;
+    pollingDebug.value.statusPollingActive = false;
   }
 };
 
-// Job activity polling functionality  
-const startJobPolling = (intervalMs: number = 5000) => {
-  // Clear any existing interval
+const startJobPolling = (intervalMs: number = 10000) => {
   if (jobPollingInterval.value) {
     clearInterval(jobPollingInterval.value);
   }
   
-  // Poll for job updates
+  pollingDebug.value.jobPollingActive = true;
+  
   jobPollingInterval.value = setInterval(async () => {
     if (!deployment.value) return;
     
-    const oldJobCount = deployment.value.jobs?.length || 0;
-    await loadDeployment(true); // Silent reload
-    const newJobCount = deployment.value?.jobs?.length || 0;
+    pollingDebug.value.lastJobPoll = new Date();
     
-    // Stop polling if deployment is no longer running/starting
     const status = deployment.value?.status?.toUpperCase();
     if (status !== 'RUNNING' && status !== 'STARTING') {
-      clearInterval(jobPollingInterval.value!);
-      jobPollingInterval.value = null;
+      stopJobPolling();
+      return;
     }
+    
+    await loadDeployment(true);
   }, intervalMs);
 };
 
@@ -1867,25 +1948,11 @@ const stopJobPolling = () => {
   if (jobPollingInterval.value) {
     clearInterval(jobPollingInterval.value);
     jobPollingInterval.value = null;
+    pollingDebug.value.jobPollingActive = false;
   }
 };
 
-// Fast polling after start until first job appears
-const fastJobPollingInterval = ref<NodeJS.Timeout | null>(null);
-const startFastJobPolling = () => {
-  if (fastJobPollingInterval.value) return;
-  fastJobPollingInterval.value = setInterval(async () => {
-    if (!deployment.value) return;
-    await loadDeployment(true);
-    const count = deployment.value?.jobs?.length || 0;
-    const status = deployment.value?.status?.toUpperCase();
-    if (count > 0 || (status !== 'RUNNING' && status !== 'STARTING')) {
-      clearInterval(fastJobPollingInterval.value!);
-      fastJobPollingInterval.value = null;
-      if (count > 0) startJobPolling();
-    }
-  }, 1000);
-};
+// Removed fast job polling - was too aggressive at 1 second intervals
 
 // Click outside handler to close dropdown
 const handleClickOutside = (event: MouseEvent) => {
@@ -1900,16 +1967,25 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside);
-  stopStatusPolling(); // Clean up polling intervals
-  stopJobPolling();
   
-  // Clean up all active job instances and their polling
+  // Clean up all polling intervals
+  stopDeploymentPolling();
+  stopJobPolling();
+  stopTasksPolling();
+  
+  // Clean up all active job instances and their polling/SSE connections
   for (const [jobId, instance] of activeJobInstances.value.entries()) {
     instance.stopWatching();
     if (instance.cleanup) instance.cleanup();
   }
   activeJobInstances.value.clear();
   jobEndpointsMap.value.clear();
+  
+  // Clear any timeout from auth debouncing
+  if (authTimeout) {
+    clearTimeout(authTimeout);
+    authTimeout = null;
+  }
 });
 
 // Auto-select first job when switching to logs tab
@@ -1962,7 +2038,7 @@ watch(
   { immediate: true }
 );
 
-// Watch deployment status to automatically start job polling for running deployments
+// Watch deployment status to automatically manage polling for running deployments
 watch(
   () => deployment.value?.status,
   (newStatus, oldStatus) => {
@@ -1970,18 +2046,21 @@ watch(
     
     const status = newStatus.toUpperCase();
     
-  // When deployment starts, poll fast until first job appears
-  if ((status === 'STARTING' || status === 'RUNNING') && (deployment.value?.jobs?.length || 0) === 0) {
-    startFastJobPolling();
-  }
-  // Once running, ensure normal polling is active
-  if (status === 'RUNNING' && !jobPollingInterval.value && (deployment.value?.jobs?.length || 0) > 0) {
-    startJobPolling();
-  }
+    // Start job polling when deployment is running or starting
+    if ((status === 'STARTING' || status === 'RUNNING') && !jobPollingInterval.value) {
+      startJobPolling();
+    }
     
-    // Stop job polling when deployment stops running
-    if (status !== 'RUNNING' && status !== 'STARTING' && jobPollingInterval.value) {
+    // Start tasks polling for all non-archived deployments (less frequent)
+    if (status !== 'ARCHIVED' && !tasksPollingInterval.value) {
+      startTasksPolling();
+    }
+    
+    // Stop all polling when deployment stops running
+    if (status !== 'RUNNING' && status !== 'STARTING') {
       stopJobPolling();
+      stopDeploymentPolling();
+      stopTasksPolling();
     }
   },
   { immediate: true }

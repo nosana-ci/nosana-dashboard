@@ -809,10 +809,7 @@ const hasContainerControls = computed(() => {
 
 // Check if system logs tab should be available
 const hasSystemLogs = computed(() => {
-  // Show logs tab for any job with a job definition, regardless of whether logs are present yet
-  if (!props.job.jobDefinition) return false;
-  
-  // Always show for running or completed jobs
+  // Always show for running or completed jobs (logs should be available independently of job definition)
   if (props.job.isRunning || props.job.isCompleted) return true;
   
   // For other states, check if there are actual log entries
