@@ -1059,7 +1059,7 @@ const statusDotClass = computed(() => {
 // Computed properties for revisions
 const sortedRevisions = computed(() => {
   if (!deployment.value?.revisions) return [];
-  return [...deployment.value.revisions].sort((a, b) => b.revision - a.revision);
+  return deployment.value.revisions;
 });
 
 // Methods

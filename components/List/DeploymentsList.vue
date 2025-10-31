@@ -244,13 +244,6 @@ const filteredDeployments = computed(() => {
     )
   }
   
-  // Sort by updated_at (most recent first)
-  filtered = filtered.sort((a, b) => {
-    if (!a.updated_at && !b.updated_at) return 0
-    if (!a.updated_at) return 1
-    if (!b.updated_at) return -1
-    return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
-  })
   
   return filtered
 })
