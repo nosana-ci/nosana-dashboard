@@ -740,11 +740,10 @@ const createDeployment = async () => {
   isCreatingDeployment.value = true;
 
   try {
-    // First, pin the job definition to IPFS
+    // Validate job definition presence
     if (!jobDefinition.value) {
       throw new Error("Job definition is required");
     }
-    const ipfsHash = await nosana.value.ipfs.pin(jobDefinition.value);
 
     // Create deployment via API (authenticated only)
     if (status.value !== 'authenticated' || !token.value) {
@@ -755,18 +754,20 @@ const createDeployment = async () => {
       name: deploymentName.value.trim(),
       market: selectedMarket.value!.address.toString(),
       replicas: replicas.value,
-      timeout: Math.min(timeout.value * 60, 1440), // Convert hours to minutes, max 24 hours
+      // DM expects minutes for create; cap at 24h
+      timeout: Math.min(timeout.value * 60, 24 * 60),
       ...(strategy.value === "SCHEDULED"
         ? { strategy: "SCHEDULED" as const, schedule: schedule.value }
         : { strategy: strategy.value as "SIMPLE" | "SIMPLE-EXTEND" | "INFINITE" }),
+      // Send raw job definition instead of IPFS hash
       job_definition: jobDefinition.value,
     };
 
     const data = await nosana.value.deployments.create(requestBody);
 
-    toast.success(`Successfully created deployment ${data.id}`)
+    toast.success(`Successfully created deployment ${created.id}`)
     setTimeout(() => {
-      router.push(`/deployments/${data.id}`);
+      router.push(`/deployments/${created.id}`);
     }, 2000);
   } catch (error: any) {
     toast.error(`Error creating deployment: ${error.message || error.toString()}`);

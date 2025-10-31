@@ -237,17 +237,7 @@ const filteredDeployments = computed(() => {
       d.id.toLowerCase().includes(query)
     )
   }
-  
-  // Sort by updated_at (most recent first)
-  filtered = filtered.sort((a, b) => {
-    const aDate = a.updated_at instanceof Date ? a.updated_at : (a.updated_at ? new Date(a.updated_at) : null)
-    const bDate = b.updated_at instanceof Date ? b.updated_at : (b.updated_at ? new Date(b.updated_at) : null)
-    if (!aDate && !bDate) return 0
-    if (!aDate) return 1
-    if (!bDate) return -1
-    return bDate.getTime() - aDate.getTime()
-  })
-  
+
   return filtered
 })
 

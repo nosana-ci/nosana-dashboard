@@ -216,12 +216,12 @@
                   </tr>
                   
                   <!-- Scheduled deployment cron schedule -->
-                  <tr v-if="deployment.strategy?.toUpperCase() === 'SCHEDULED' && deployment.schedule">
+                  <tr v-if="deployment.strategy?.toUpperCase() === 'SCHEDULED' && deploymentSchedule">
                     <td>Schedule</td>
                     <td>
                       <div class="is-flex is-flex-direction-column">
-                        <span class="is-family-monospace">{{ deployment.schedule }}</span>
-                        <span class="is-size-7 has-text-grey mt-1">{{ parseCronExpression(deployment.schedule) }}</span>
+                        <span class="is-family-monospace">{{ deploymentSchedule }}</span>
+                        <span class="is-size-7 has-text-grey mt-1">{{ parseCronExpression(deploymentSchedule || '') }}</span>
                       </div>
                     </td>
                   </tr>
@@ -543,7 +543,23 @@
         <div v-if="activeTab === 'job-definition'">
           <!-- Current Job Definition Section -->
           <div class="mb-5">
-            <h2 class="title is-5 mb-3">Current Job Definition</h2>
+            <div class="is-flex is-justify-content-space-between is-align-items-center mb-3">
+              <h2 class="title is-5 mb-0">Current Job Definition</h2>
+              <div class="buttons" v-if="hasDefinitionChanged">
+                <button 
+                  @click="resetDefinition"
+                  class="button is-small is-light"
+                >
+                  Reset
+                </button>
+                <button 
+                  @click="makeRevision"
+                  class="button is-small is-primary"
+                >
+                  Make Revision
+                </button>
+              </div>
+            </div>
             <div class="box is-borderless">
               <div v-if="loadingJobDefinition" class="has-text-grey has-text-centered py-4">
                 Loading job definition...
@@ -552,13 +568,18 @@
                 <JsonEditorVue
                   :validator="validator"
                   :class="{ 'jse-theme-dark': colorMode.value === 'dark' }"
-                  v-model="jobDefinitionModel"
+                  :modelValue="jobDefinitionModel"
                   :mode="Mode.text"
                   :mainMenuBar="false"
                   :statusBar="false"
                   :stringified="false"
-                  :readOnly="true"
+                  :readOnly="false"
                   class="json-editor"
+                  @update:modelValue="(value: unknown) => { 
+                    if (value && typeof value === 'object') {
+                      jobDefinitionModel = value as JobDefinition; 
+                    }
+                  }"
                 />
               </div>
               <div v-else class="has-text-grey has-text-centered py-4">
@@ -738,12 +759,12 @@
                 type="text"
                 class="input is-family-monospace"
                 v-model="newSchedule"
-                :placeholder="deployment.schedule || '0 * * * *'"
+                :placeholder="deploymentSchedule || '0 * * * *'"
               />
             </div>
             <p class="help">
-              <span>Current: <span class="is-family-monospace has-text-dark">{{ deployment.schedule }}</span></span><br>
-              <span class="has-text-grey">{{ deployment.schedule ? parseCronExpression(deployment.schedule) : '' }}</span>
+              <span>Current: <span class="is-family-monospace has-text-dark">{{ deploymentSchedule }}</span></span><br>
+              <span class="has-text-grey">{{ deploymentSchedule ? parseCronExpression(deploymentSchedule) : '' }}</span>
             </p>
             <div v-if="newSchedule" class="mt-3">
               <p class="help">
@@ -865,6 +886,7 @@ import { Mode, ValidationSeverity } from "vanilla-jsoneditor";
 import JsonEditorVue from "json-editor-vue";
 import "vanilla-jsoneditor/themes/jse-theme-dark.css";
 import { useToast } from "vue-toastification";
+import { useAuth } from '#imports';
 import JobStatus from "~/components/Job/Status.vue";
 import JobLogsContainer from "~/components/Job/LogsContainer.vue";
 import SecondsFormatter from "~/components/SecondsFormatter.vue";
@@ -901,11 +923,22 @@ interface DeploymentJob {
   created_at: string;
   state?: number;
   market?: string;
+  revision?: number;
 }
 
-interface ExtendedDeployment extends Deployment {
-  schedule?: string;
+interface DeploymentRevision {
+  revision: number;
+  created_at: string;
+  job_definition?: JobDefinition;
 }
+
+interface DeploymentEndpoint {
+  opId: string;
+  port: number | string;
+  url: string;
+}
+
+// Use SDK Deployment as-is; access extra fields via guarded indexing
 
 interface DeploymentEvent {
   type: string;
@@ -926,7 +959,7 @@ const { getIpfs } = useIpfs();
 const { nosana } = useSDK();
 
 // State
-const deployment = ref<ExtendedDeployment | null>(null);
+const deployment = ref<Deployment | null>(null);
 const loading = ref(true);
 const error = ref<string | null>(null);
 const activeTab = ref("overview");
@@ -942,6 +975,8 @@ const userNosBalance = ref<number>(0);
 const userSolBalance = ref<number>(0);
 const tasks = ref<any[]>([]);
 const tasksLoading = ref(false);
+const tasksPollingInterval = ref<NodeJS.Timeout | null>(null);
+const lastTasksPoll = ref<Date | null>(null);
 const isActionsDropdownOpen = ref(false);
 const showReplicasModal = ref(false);
 const showTimeoutModal = ref(false);
@@ -955,6 +990,11 @@ const actionsDropdown = ref<HTMLElement | null>(null);
 // Debug instrumentation for page header icon
 const headerIconRef = ref<HTMLElement | null>(null);
 const { data: testgridMarkets } = useAPI("/api/markets");
+// Safe accessors for optional DM fields
+const deploymentSchedule = computed<string | null>(() => {
+  const d = deployment.value as unknown as { schedule?: string } | null;
+  return d?.schedule ?? null;
+});
 
 // Back link logic - return to origin (account or deployments)
 const backLink = computed(() => {
@@ -1003,6 +1043,14 @@ const instrumentHeaderIcon = () => {
 watch(() => deployment.value?.status, () => nextTick(instrumentHeaderIcon), { immediate: true });
 const statusPollingInterval = ref<NodeJS.Timeout | null>(null);
 const jobPollingInterval = ref<NodeJS.Timeout | null>(null);
+
+// Add debugging for polling state
+const pollingDebug = ref({
+  statusPollingActive: false,
+  jobPollingActive: false,
+  lastStatusPoll: null as Date | null,
+  lastJobPoll: null as Date | null,
+});
 // Status dot helper
 const statusDotClass = computed(() => {
   switch (deployment.value?.status?.toUpperCase()) {
@@ -1028,9 +1076,9 @@ const statusDotClass = computed(() => {
 });
 
 // Computed properties for revisions
-const sortedRevisions = computed(() => {
-  if (!deployment.value?.revisions) return [];
-  return [...deployment.value.revisions].sort((a, b) => b.revision - a.revision);
+const sortedRevisions = computed<DeploymentRevision[]>(() => {
+  const dep = deployment.value as unknown as { revisions?: DeploymentRevision[] } | null;
+  return Array.isArray(dep?.revisions) ? dep!.revisions! : [];
 });
 
 // Methods
@@ -1157,36 +1205,92 @@ const validator = (json: any) => {
   return errors;
 };
 
-const jobDefinitionModel = ref<any>(null);
+const jobDefinitionModel = ref<JobDefinition | null>(null);
 const loadingJobDefinition = ref(false);
+const originalDefinition = ref<JobDefinition | null>(null);
+
 
 const loadJobDefinition = async () => {
   // Try to get job definition from deployment revisions first
-  if (deployment.value?.revisions && deployment.value.revisions.length > 0) {
-    const activeRevision = deployment.value.revisions.find(r => r.revision === deployment.value.active_revision) 
-      || deployment.value.revisions[deployment.value.revisions.length - 1];
+  const d = deployment.value as unknown as { revisions?: DeploymentRevision[]; active_revision?: number } | null;
+  if (Array.isArray(d?.revisions) && d!.revisions!.length > 0) {
+    const activeRevision = d!.revisions!.find((r: DeploymentRevision) => r.revision === d!.active_revision) 
+      || d!.revisions![d!.revisions!.length - 1];
     
     if (activeRevision?.job_definition) {
       jobDefinitionModel.value = activeRevision.job_definition;
+      originalDefinition.value = JSON.parse(JSON.stringify(activeRevision.job_definition));
       return;
     }
   }
 
   // Fallback to IPFS if no job definition in revisions
-  if (!deployment.value?.ipfs_definition_hash) {
+  const ipfsHash = (deployment.value as unknown as { ipfs_definition_hash?: string } | null)?.ipfs_definition_hash;
+  if (!ipfsHash) {
     jobDefinitionModel.value = null;
     return;
   }
 
   try {
     loadingJobDefinition.value = true;
-    const definition = await getIpfs(deployment.value.ipfs_definition_hash);
-    jobDefinitionModel.value = definition;
+    const definition = await getIpfs(ipfsHash);
+    jobDefinitionModel.value = definition as JobDefinition;
+    originalDefinition.value = JSON.parse(JSON.stringify(definition)) as JobDefinition;
   } catch (err: any) {
     console.error("Error loading job definition:", err);
     jobDefinitionModel.value = null;
   } finally {
     loadingJobDefinition.value = false;
+  }
+};
+
+const hasDefinitionChanged = computed(() => {
+  if (!originalDefinition.value) return false;
+  try {
+    // Ensure both are valid objects before comparing
+    const original = JSON.stringify(originalDefinition.value);
+    const current = JSON.stringify(jobDefinitionModel.value);
+    return original !== current;
+  } catch (err) {
+    // If JSON.stringify fails, there are changes (invalid JSON)
+    return true;
+  }
+});
+
+const resetDefinition = () => {
+  if (originalDefinition.value) {
+    jobDefinitionModel.value = JSON.parse(JSON.stringify(originalDefinition.value));
+  }
+};
+
+const makeRevision = async () => {
+  if (!deployment.value || !hasDefinitionChanged.value) return;
+  
+  // Validate JSON before making revision
+  try {
+    JSON.stringify(jobDefinitionModel.value);
+  } catch (err) {
+    toast.error('Invalid JSON: Please fix the job definition before creating a revision');
+    return;
+  }
+  
+  try {
+    const { data } = await useAPI(`/api/deployments/${deployment.value.id}/revisions`, {
+      method: 'POST',
+      body: {
+        job_definition: jobDefinitionModel.value
+      },
+      auth: true
+    });
+    
+    if (data.value) {
+      toast.success('Revision created successfully!');
+      await loadDeployment();
+      originalDefinition.value = JSON.parse(JSON.stringify(jobDefinitionModel.value));
+    }
+  } catch (err: any) {
+    console.error('Error creating revision:', err);
+    toast.error(`Failed to create revision: ${err.message}`);
   }
 };
 
@@ -1204,19 +1308,25 @@ const loadDeployment = async (silent = false) => {
   }
 
   try {
-    if (!silent) loading.value = true;
-    error.value = null;
+    // Only show loading for non-silent operations (initial load, user actions)
+    if (!silent) {
+      loading.value = true;
+      error.value = null;
+    }
 
     const deploymentId = route.params.id as string;
     const data = await nosana.value.deployments.get(deploymentId);
 
     deployment.value = data as Deployment;
 
-    await loadJobDefinition();
-    
-    // Load tasks for scheduled deployments
-    await loadTasks();
+    // Only load job definition and tasks on initial load, not during polling
+    // This prevents tasks loading state from being reset during background polling
+    if (!silent) {
+      await loadJobDefinition();
+      await loadTasks();
+    }
 
+    // Update job states for active jobs during polling
     if (deployment.value.jobs && deployment.value.jobs.length > 0) {
       for (const job of deployment.value.jobs) {
         // Only fetch state for jobs that aren't already in a completed state
@@ -1233,13 +1343,19 @@ const loadDeployment = async (silent = false) => {
             jobStates.value[job.job] = data.value.state;
           }
         } catch (err) {
-          console.warn(`Failed to fetch state for job ${job.job}`);
+          // Silent polling shouldn't spam console warnings
+          if (!silent) {
+            console.warn(`Failed to fetch state for job ${job.job}`);
+          }
         }
       }
     }
   } catch (err: any) {
     console.error("Error loading deployment:", err);
-    error.value = `Failed to load deployment: ${err.message}`;
+    // Only set error for non-silent operations
+    if (!silent) {
+      error.value = `Failed to load deployment: ${err.message}`;
+    }
   } finally {
     if (!silent) loading.value = false;
   }
@@ -1398,11 +1514,12 @@ const runningJobApiUrl = computed(() => firstRunningJobId.value ? `/api/jobs/${f
 const { data: runningJobData } = useAPI(runningJobApiUrl, { default: () => null, watch: [runningJobApiUrl] });
 const nowTs = useTimestamp({ interval: 1000 });
 const runningJobDurationSeconds = computed<number | null>(() => {
-  const js = (runningJobData.value as any)?.timeStart;
-  const state = (runningJobData.value as any)?.state;
+  const data = (runningJobData.value ?? null) as Record<string, unknown> | null;
+  const jsUnknown = data?.['timeStart'];
+  const stateUnknown = data?.['state'];
+  const js = typeof jsUnknown === 'number' ? jsUnknown : 0;
   if (!js || js === 0) return null;
-  // state 1 = running
-  const isRunning = state === 1 || (typeof state === 'string' && String(state).toUpperCase() === 'RUNNING');
+  const isRunning = stateUnknown === 1 || (typeof stateUnknown === 'string' && String(stateUnknown).toUpperCase() === 'RUNNING');
   if (!isRunning) return null;
   return Math.max(0, Math.floor(nowTs.value / 1000) - js);
 });
@@ -1437,7 +1554,7 @@ const deploymentEndpoints = computed(() => {
   const deploymentIsRunning = deployment.value.status === 'RUNNING';
   const hasRunningJobs = activeJobs.value.length > 0;
   
-  return deployment.value.endpoints.map((endpoint: any) => {
+  return (deployment.value.endpoints as DeploymentEndpoint[]).map((endpoint: DeploymentEndpoint) => {
     const liveStatus = liveEndpointStatusByUrl.value.get(endpoint.url);
     
     // Determine status using global status system
@@ -1468,14 +1585,12 @@ const deploymentEndpoints = computed(() => {
 
 // All deployment events
 const deploymentEvents = computed((): DeploymentEvent[] => {
-  const events = (deployment.value?.events as DeploymentEvent[]) || [];
-  // Reverse to show most recent first
-  return [...events].reverse();
+  return (deployment.value?.events as DeploymentEvent[]) || [];
 });
 
 // No vault actions in API mode
 
-// Generic deployment action handler
+// Generic deployment action handler (credit system via API)
 const executeDeploymentAction = async (
   action: () => Promise<void>,
   successMessage: string,
@@ -1527,8 +1642,15 @@ const startDeployment = async () => {
     "Deployment started successfully"
   );
   
-  // Start fast polling for first job after starting
-  startFastJobPolling();
+  // Do an initial quick poll after 3 seconds to get faster feedback
+  setTimeout(async () => {
+    if (deployment.value?.status?.toUpperCase() === 'RUNNING' || deployment.value?.status?.toUpperCase() === 'STARTING') {
+      await loadDeployment(true);
+    }
+  }, 3000);
+  
+  // Start regular job polling after starting
+  startJobPolling();
 };
 
 const stopDeployment = async () => {
@@ -1537,16 +1659,19 @@ const stopDeployment = async () => {
     "Deployment stopped successfully"
   );
   
-  // Stop job polling and start status polling after stopping
+  // Stop job polling after stopping - status polling will continue to monitor stop progress
   stopJobPolling();
-  startStatusPolling();
+  
+  // Status polling will automatically stop when deployment reaches STOPPED state
+  if (!statusPollingInterval.value) {
+    startDeploymentPolling();
+  }
 };
 
 const archiveDeployment = async () => {
   if (!confirm("Are you sure you want to archive this deployment? This action cannot be undone.")) {
     return;
   }
-  
   await executeDeploymentAction(
     () => deployment.value!.archive(),
     "Deployment archived successfully",
@@ -1788,68 +1913,105 @@ const loadTasks = async () => {
   }
   
   tasksLoading.value = true;
+  
   try {
     const result = await deployment.value.getTasks();
     tasks.value = result || [];
   } catch (err: any) {
     console.error("Load tasks error:", err);
     toast.error(`Failed to load tasks: ${err.message}`);
-    tasks.value = [];
   } finally {
     tasksLoading.value = false;
   }
 };
 
-// Status polling functionality
-const startStatusPolling = () => {
-  // Clear any existing interval
+const loadTasksSilent = async () => {
+  if (!deployment.value) {
+    return;
+  }
+  
+  try {
+    const { data } = await useAPI(`/api/deployments/${deployment.value.id}/tasks`, {
+      auth: true
+    });
+    
+    if (data.value !== null && data.value !== undefined) {
+      tasks.value = data.value;
+    }
+    
+    lastTasksPoll.value = new Date();
+  } catch (err: any) {
+    // Don't show error toast during background polling
+  }
+};
+
+const startTasksPolling = () => {
+  if (tasksPollingInterval.value) {
+    clearInterval(tasksPollingInterval.value);
+  }
+  
+  tasksPollingInterval.value = setInterval(async () => {
+    if (!deployment.value) return;
+    await loadTasksSilent();
+  }, 30000);
+};
+
+const stopTasksPolling = () => {
+  if (tasksPollingInterval.value) {
+    clearInterval(tasksPollingInterval.value);
+    tasksPollingInterval.value = null;
+  }
+};
+
+const startDeploymentPolling = () => {
   if (statusPollingInterval.value) {
     clearInterval(statusPollingInterval.value);
   }
   
-  // Poll every 2 seconds for status updates
+  pollingDebug.value.statusPollingActive = true;
+  
   statusPollingInterval.value = setInterval(async () => {
     if (!deployment.value) return;
     
-    const currentStatus = deployment.value.status;
-    await loadDeployment(true); // Silent reload
+    pollingDebug.value.lastStatusPoll = new Date();
+    await loadDeployment(true);
     
-    // Stop polling when status reaches final state
-    if (deployment.value?.status === 'STOPPED' && currentStatus === 'STOPPING') {
-      clearInterval(statusPollingInterval.value!);
-      statusPollingInterval.value = null;
+    const finalStates = ['STOPPED', 'ARCHIVED', 'ERROR'];
+    if (finalStates.includes(deployment.value?.status?.toUpperCase() || '')) {
+      stopDeploymentPolling();
+      stopJobPolling();
+      stopTasksPolling();
     }
-  }, 2000);
+  }, 10000);
 };
 
-const stopStatusPolling = () => {
+const stopDeploymentPolling = () => {
   if (statusPollingInterval.value) {
     clearInterval(statusPollingInterval.value);
     statusPollingInterval.value = null;
+    pollingDebug.value.statusPollingActive = false;
   }
 };
 
-// Job activity polling functionality  
-const startJobPolling = (intervalMs: number = 5000) => {
-  // Clear any existing interval
+const startJobPolling = (intervalMs: number = 10000) => {
   if (jobPollingInterval.value) {
     clearInterval(jobPollingInterval.value);
   }
   
-  // Poll for job updates
+  pollingDebug.value.jobPollingActive = true;
+  
   jobPollingInterval.value = setInterval(async () => {
     if (!deployment.value) return;
     
-    const oldJobCount = deployment.value.jobs?.length || 0;
-    await loadDeployment(true); // Silent reload
-    const newJobCount = deployment.value?.jobs?.length || 0;
+    pollingDebug.value.lastJobPoll = new Date();
     
-    // Stop polling if deployment is no longer running/starting
     const status = deployment.value?.status?.toUpperCase();
     if (status !== 'RUNNING' && status !== 'STARTING') {
-      clearInterval(jobPollingInterval.value!);
-      jobPollingInterval.value = null;
+      stopJobPolling();
+      return;
     }
+    
+    await loadDeployment(true);
   }, intervalMs);
 };
 
@@ -1857,25 +2019,11 @@ const stopJobPolling = () => {
   if (jobPollingInterval.value) {
     clearInterval(jobPollingInterval.value);
     jobPollingInterval.value = null;
+    pollingDebug.value.jobPollingActive = false;
   }
 };
 
-// Fast polling after start until first job appears
-const fastJobPollingInterval = ref<NodeJS.Timeout | null>(null);
-const startFastJobPolling = () => {
-  if (fastJobPollingInterval.value) return;
-  fastJobPollingInterval.value = setInterval(async () => {
-    if (!deployment.value) return;
-    await loadDeployment(true);
-    const count = deployment.value?.jobs?.length || 0;
-    const status = deployment.value?.status?.toUpperCase();
-    if (count > 0 || (status !== 'RUNNING' && status !== 'STARTING')) {
-      clearInterval(fastJobPollingInterval.value!);
-      fastJobPollingInterval.value = null;
-      if (count > 0) startJobPolling();
-    }
-  }, 1000);
-};
+// Removed fast job polling - was too aggressive at 1 second intervals
 
 // Click outside handler to close dropdown
 const handleClickOutside = (event: MouseEvent) => {
@@ -1890,16 +2038,25 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside);
-  stopStatusPolling(); // Clean up polling intervals
-  stopJobPolling();
   
-  // Clean up all active job instances and their polling
+  // Clean up all polling intervals
+  stopDeploymentPolling();
+  stopJobPolling();
+  stopTasksPolling();
+  
+  // Clean up all active job instances and their polling/SSE connections
   for (const [jobId, instance] of activeJobInstances.value.entries()) {
     instance.stopWatching();
     if (instance.cleanup) instance.cleanup();
   }
   activeJobInstances.value.clear();
   jobEndpointsMap.value.clear();
+  
+  // Clear any timeout from auth debouncing
+  if (authTimeout) {
+    clearTimeout(authTimeout);
+    authTimeout = null;
+  }
 });
 
 // Auto-select first job when switching to logs tab
@@ -1907,7 +2064,8 @@ watch(
   () => [activeTab.value, activeJobs.value],
   ([newTab, jobs]) => {
     if (newTab === 'logs' && jobs.length > 0 && !activeLogsJobId.value) {
-      activeLogsJobId.value = jobs[0].job;
+      const first: any = (jobs as any)[0];
+      activeLogsJobId.value = (first?.job || first) as string;
     }
   },
   { immediate: true }
@@ -1952,7 +2110,7 @@ watch(
   { immediate: true }
 );
 
-// Watch deployment status to automatically start job polling for running deployments
+// Watch deployment status to automatically manage polling for running deployments
 watch(
   () => deployment.value?.status,
   (newStatus, oldStatus) => {
@@ -1960,18 +2118,21 @@ watch(
     
     const status = newStatus.toUpperCase();
     
-  // When deployment starts, poll fast until first job appears
-  if ((status === 'STARTING' || status === 'RUNNING') && (deployment.value?.jobs?.length || 0) === 0) {
-    startFastJobPolling();
-  }
-  // Once running, ensure normal polling is active
-  if (status === 'RUNNING' && !jobPollingInterval.value && (deployment.value?.jobs?.length || 0) > 0) {
-    startJobPolling();
-  }
+    // Start job polling when deployment is running or starting
+    if ((status === 'STARTING' || status === 'RUNNING') && !jobPollingInterval.value) {
+      startJobPolling();
+    }
     
-    // Stop job polling when deployment stops running
-    if (status !== 'RUNNING' && status !== 'STARTING' && jobPollingInterval.value) {
+    // Start tasks polling for all non-archived deployments (less frequent)
+    if (status !== 'ARCHIVED' && !tasksPollingInterval.value) {
+      startTasksPolling();
+    }
+    
+    // Stop all polling when deployment stops running
+    if (status !== 'RUNNING' && status !== 'STARTING') {
       stopJobPolling();
+      stopDeploymentPolling();
+      stopTasksPolling();
     }
   },
   { immediate: true }
