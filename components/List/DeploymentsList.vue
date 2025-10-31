@@ -243,9 +243,10 @@ const filteredDeployments = computed(() => {
       d.id.toLowerCase().includes(query)
     )
   }
-  
-  
-  return filtered
+  // Reverse incoming order (newest first if API returns oldest first)
+  const reversed = [...filtered].reverse()
+
+  return reversed
 })
 
 // Create a computed property for the deployments actually displayed in the table
