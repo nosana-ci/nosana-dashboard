@@ -543,7 +543,23 @@
         <div v-if="activeTab === 'job-definition'">
           <!-- Current Job Definition Section -->
           <div class="mb-5">
-            <h2 class="title is-5 mb-3">Current Job Definition</h2>
+            <div class="is-flex is-justify-content-space-between is-align-items-center mb-3">
+              <h2 class="title is-5 mb-0">Current Job Definition</h2>
+              <div class="buttons" v-if="hasDefinitionChanged">
+                <button 
+                  @click="resetDefinition"
+                  class="button is-small is-light"
+                >
+                  Reset
+                </button>
+                <button 
+                  @click="makeRevision"
+                  class="button is-small is-primary"
+                >
+                  Make Revision
+                </button>
+              </div>
+            </div>
             <div class="box is-borderless">
               <div v-if="loadingJobDefinition" class="has-text-grey has-text-centered py-4">
                 Loading job definition...
@@ -552,13 +568,18 @@
                 <JsonEditorVue
                   :validator="validator"
                   :class="{ 'jse-theme-dark': colorMode.value === 'dark' }"
-                  v-model="jobDefinitionModel"
+                  :modelValue="jobDefinitionModel"
                   :mode="Mode.text"
                   :mainMenuBar="false"
                   :statusBar="false"
                   :stringified="false"
-                  :readOnly="true"
+                  :readOnly="false"
                   class="json-editor"
+                  @update:modelValue="(value) => { 
+                    if (value !== undefined && value !== null) {
+                      jobDefinitionModel.value = value; 
+                    }
+                  }"
                 />
               </div>
               <div v-else class="has-text-grey has-text-centered py-4">
@@ -1167,6 +1188,8 @@ const validator = (json: any) => {
 
 const jobDefinitionModel = ref<any>(null);
 const loadingJobDefinition = ref(false);
+const originalDefinition = ref<any>(null);
+
 
 const loadJobDefinition = async () => {
   // Try to get job definition from deployment revisions first
@@ -1176,6 +1199,7 @@ const loadJobDefinition = async () => {
     
     if (activeRevision?.job_definition) {
       jobDefinitionModel.value = activeRevision.job_definition;
+      originalDefinition.value = JSON.parse(JSON.stringify(activeRevision.job_definition));
       return;
     }
   }
@@ -1190,11 +1214,62 @@ const loadJobDefinition = async () => {
     loadingJobDefinition.value = true;
     const definition = await getIpfs(deployment.value.ipfs_definition_hash);
     jobDefinitionModel.value = definition;
+    originalDefinition.value = JSON.parse(JSON.stringify(definition));
   } catch (err: any) {
     console.error("Error loading job definition:", err);
     jobDefinitionModel.value = null;
   } finally {
     loadingJobDefinition.value = false;
+  }
+};
+
+const hasDefinitionChanged = computed(() => {
+  if (!originalDefinition.value) return false;
+  try {
+    // Ensure both are valid objects before comparing
+    const original = JSON.stringify(originalDefinition.value);
+    const current = JSON.stringify(jobDefinitionModel.value);
+    return original !== current;
+  } catch (err) {
+    // If JSON.stringify fails, there are changes (invalid JSON)
+    return true;
+  }
+});
+
+const resetDefinition = () => {
+  if (originalDefinition.value) {
+    jobDefinitionModel.value = JSON.parse(JSON.stringify(originalDefinition.value));
+  }
+};
+
+const makeRevision = async () => {
+  if (!deployment.value || !hasDefinitionChanged.value) return;
+  
+  // Validate JSON before making revision
+  try {
+    JSON.stringify(jobDefinitionModel.value);
+  } catch (err) {
+    toast.error('Invalid JSON: Please fix the job definition before creating a revision');
+    return;
+  }
+  
+  try {
+    const { data } = await useAPI(`/api/deployments/${deployment.value.id}/revisions`, {
+      method: 'POST',
+      body: {
+        job_definition: jobDefinitionModel.value
+      },
+      auth: true
+    });
+    
+    if (data.value) {
+      toast.success('Revision created successfully!');
+      await loadDeployment();
+      originalDefinition.value = JSON.parse(JSON.stringify(jobDefinitionModel.value));
+    }
+  } catch (err: any) {
+    console.error('Error creating revision:', err);
+    toast.error(`Failed to create revision: ${err.message}`);
   }
 };
 
