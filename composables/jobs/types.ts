@@ -1,4 +1,4 @@
-import type { JobDefinition } from "@nosana/sdk";
+import type { Job, JobDefinition } from "@nosana/sdk";
 
 export type EndpointStatus = "ONLINE" | "OFFLINE" | "UNKNOWN";
 
@@ -49,6 +49,49 @@ export interface JobInfo {
   operations: OperationsInfo;
   endpoints?: EndpointsSection;
   results?: ResultsSection;
+  secrets?: NodeSecrets;
 }
 
+export type LiveEndpoint = {
+  url: string;
+  port: number;
+  opIndex: number;
+  opId: string;
+  hasHealthCheck: boolean;
+  status: EndpointStatus;
+};
+
+export type LiveEndpoints = Map<string, LiveEndpoint>;
+
+export type NodeSecretEndpointRaw = {
+  opID: string;
+  port: number;
+  url: string;
+  status: EndpointStatus | string;
+  opId?: string;
+};
+
+export type NodeSecrets = Record<string, Record<string, NodeSecretEndpointRaw>>;
+
+export interface JobViewModel extends Job {
+  address: string;
+  usdRewardPerHour?: number;
+  jobDefinition?: JobDefinition & {
+    state?: {
+      "nosana/job-type"?: string;
+      "input/repo"?: string;
+      "input/commit-sha"?: string;
+    };
+  };
+  jobStatus?: "success" | "failed";
+  results?: ResultsSection | null;
+  isActive: boolean;
+  isRunning: boolean;
+  isCompleted: boolean;
+  hasResultsRegex: boolean;
+
+  stopJob: () => Promise<void>;
+  extendJob: (extensionHours: number) => Promise<void>;
+  refresh: () => Promise<void>;
+}
 

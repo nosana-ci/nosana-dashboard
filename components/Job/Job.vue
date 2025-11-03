@@ -12,22 +12,6 @@
                 </span>
               </NuxtLink>
               <div class="header-title-section">
-                <div v-if="jobImages && jobImages.length > 0" class="job-images-list">
-                  <div v-for="(image, index) in jobImages" :key="index" class="title is-5 has-text-weight-normal mb-1">
-                    {{ image }}
-                  </div>
-                </div>
-                <div v-else-if="dockerImage" class="job-images-list">
-                  <div class="title is-5 has-text-weight-normal mb-1">
-                    {{ dockerImage }}
-                  </div>
-                </div>
-                <div v-else-if="formattedDockerImage" class="job-images-list">
-                  <div class="title is-5 has-text-weight-normal mb-1">
-                    {{ formattedDockerImage }}
-                  </div>
-                </div>
-                <h1 v-else class="title is-5 has-text-weight-normal mb-1">Job</h1>
                 <p class="subtitle is-7 has-text-grey is-family-monospace mb-0">{{ props.job.address }}</p>
               </div>
               <StatusTag class="ml-4" :status="props.job.state" />
@@ -131,7 +115,7 @@
                     <span v-else class="has-text-grey">--</span>
                   </td>
                 </tr>
-                <tr>
+                <tr v-if="!(props.hideFields?.marketAddress)">
                   <td>Market address</td>
                   <td>
                     <nuxt-link :to="`/markets/${props.job.market}`" class="has-text-link is-family-monospace">
@@ -139,7 +123,7 @@
                     </nuxt-link>
                   </td>
                 </tr>
-                <tr>
+                <tr v-if="!(props.hideFields?.price)">
                   <td>Price</td>
                   <td>{{ formatPrice(props.job.price, props.nosPrice) }}</td>
                 </tr>
@@ -215,7 +199,7 @@
                     <span class="has-text-grey is-size-7"> ({{ formatTimeAgo(props.job.timeStart) }})</span>
                   </td>
                 </tr>
-                <tr v-if="marketName">
+                <tr v-if="marketName && !(props.hideFields?.gpuPoolName)">
                   <td>GPU Pool Name</td>
                   <td>{{ marketName }}</td>
                 </tr>
@@ -227,6 +211,16 @@
 
       </div>
 
+      <!-- Job Definition Tab -->
+      <div v-if="activeTab === 'job-definition'">
+        <div v-if="jobDefinitionForTab">
+          <JobDefinitionTab :job-definition="jobDefinitionForTab" />
+        </div>
+        <div v-else class="notification is-light has-text-centered">
+          <p class="has-text-grey">No job definition available</p>
+        </div>
+      </div>
+
       <!-- Container Controls Tab -->
       <div v-if="activeTab === 'container-controls'">
         <div v-if="props.job.jobDefinition">
@@ -234,7 +228,7 @@
             :job="props.job"
             :isJobPoster="props.isJobPoster"
             :opIds="flogTabs.filter(t => t !== 'system')"
-            :activeLogs="(flogActiveLogs as unknown as any[])"
+            :activeLogs="flogActiveLogs"
             :selectOp="(opId: string | null) => setFlogActiveTab(opId ?? 'system')"
             :logsByOp="flogLogsByOp"
             :systemLogsMap="flogSystemLogs"
@@ -267,7 +261,7 @@
             :jobNodeReport="jobNodeReport"
             :loadingJobNodeSpecs="loadingNodeSpecs"
             :isQueuedJob="isQueuedJob"
-            :activeLogs="(flogActiveLogs as unknown as any[])"
+            :activeLogs="flogActiveLogs"
             :opIds="flogTabs.filter(t => t !== 'system')"
             :filters="{ value: { opId: flogActiveTab === 'system' ? null : flogActiveTab, types: new Set(['container','info','error']) } }"
             :selectOp="(opId: string | null) => setFlogActiveTab(opId ?? 'system')"
@@ -333,6 +327,7 @@ import ExtendModal from "~/components/Job/Modals/Extend.vue";
 import JobTabs from "~/components/Job/Tabs.vue";
 import JobOverview from "~/components/Job/Tabs/Overview.vue";
 import JobResult from "~/components/Job/Result.vue";
+import JobDefinitionTab from "~/components/Job/Tabs/JobDefinition.vue";
 import SecondsFormatter from "~/components/SecondsFormatter.vue";
 import StatusTag from "~/components/Common/StatusTag.vue";
 
@@ -358,7 +353,7 @@ import { useStatus } from '~/composables/useStatus';
 
 import type { UseModal } from "~/composables/jobs/useModal";
 import type { Endpoints, UseJob } from "~/composables/jobs/useJob";
-import type { JobInfo } from "~/composables/jobs/types";
+import type { JobInfo, OpState } from "~/composables/jobs/types";
 import {
   computed,
   ref,
@@ -375,6 +370,103 @@ import type {
   OperationArgsMap,
   HttpHealthCheck,
 } from "@nosana/sdk";
+import type { FLogEntry } from "~/composables/jobs/useFLogs";
+import type { ProgressBar } from "~/composables/jobs/logTypes";
+
+// Type definitions
+interface TestgridMarket {
+  address: string;
+  name: string;
+  usd_reward_per_hour?: number;
+}
+
+interface GpuDevice {
+  name: string;
+  memory?: {
+    total_mb?: number;
+  };
+  network_architecture?: {
+    major: number;
+    minor: number;
+  };
+}
+
+interface NodeInfoGpus {
+  devices?: GpuDevice[];
+  cuda_driver_version?: string;
+  nvml_driver_version?: string;
+}
+
+interface NodeInfoData {
+  gpus?: NodeInfoGpus;
+  cpu?: {
+    model?: string;
+  };
+  ram_mb?: number;
+  disk_gb?: number;
+  country?: string;
+  version?: string;
+  system_environment?: string;
+}
+
+interface NodeInfoResponse {
+  info?: NodeInfoData;
+}
+
+interface NodeSpecs {
+  marketAddress?: string;
+  ram?: string | number;
+  diskSpace?: string | number;
+  cpu?: string;
+  country?: string;
+  avgDownload10?: number;
+  avgUpload10?: number;
+  avgPing10?: number;
+  gpus?: Array<{
+    gpu?: string;
+    memory?: number;
+    architecture?: string;
+  }>;
+  cudaVersion?: string;
+  nvmlVersion?: string;
+  nodeVersion?: string;
+  systemEnvironment?: string;
+}
+
+interface CombinedSpecs {
+  nodeAddress: string | unknown;
+  marketAddress?: string;
+  ram: number;
+  diskSpace: number;
+  cpu?: string;
+  country?: string;
+  download?: number;
+  upload?: number;
+  ping?: number;
+  gpus: Array<{
+    gpu: string;
+    memory?: number;
+    architecture?: string;
+  }>;
+  cudaVersion?: string;
+  nvmlVersion?: string;
+  nodeVersion?: string;
+  systemEnvironment?: string | null;
+}
+
+interface JobTabsComponent {
+  logsView?: {
+    scrollToBottomOnOpen?: () => void;
+  };
+}
+
+interface ResourceProgressBar extends ProgressBar {
+  metadata?: Record<string, unknown>;
+}
+
+const jobDefinitionForTab = computed<JobDefinition | null>(() => {
+  return (props.jobInfo?.jobDefinition as JobDefinition | undefined) ?? props.job.jobDefinition ?? null;
+});
 
 interface Props {
   job: UseJob;
@@ -384,6 +476,11 @@ interface Props {
   isJobPoster: boolean;
   jobInfo?: JobInfo | null;
   deploymentId?: string | null;
+  hideFields?: {
+    marketAddress?: boolean;
+    price?: boolean;
+    gpuPoolName?: boolean;
+  };
 }
 
 const props = defineProps<Props>();
@@ -395,7 +492,7 @@ const { markets } = useMarkets();
 const { saveState } = useDeployPageState();
 
 // Fetch markets data needed for centralized pricing
-const { data: testgridMarkets, pending: marketsPending, execute: executeMarkets } = useAPI('/api/markets', { default: () => [] });
+const { data: testgridMarkets, pending: marketsPending, execute: executeMarkets } = useAPI<TestgridMarket[]>('/api/markets', { default: () => [] });
 
 // Execute the markets API call on mount
 onMounted(() => {
@@ -444,12 +541,12 @@ const loadingExtend = ref<boolean>(false);
 
 // Choose job-definition for title: prefer live node info (confidential jobs), fallback to REST jobDefinition
 const titleJobDefinition = computed(() => {
-  return (props.jobInfo as any)?.jobDefinition || props.job.jobDefinition || null;
+  return props.jobInfo?.jobDefinition || props.job.jobDefinition || null;
 });
 
 // Computed properties for job info
 const dockerImage = computed(() => {
-  const jd = titleJobDefinition.value as any;
+  const jd = titleJobDefinition.value;
   if (!jd?.ops?.length) return null;
   const firstOp = jd.ops[0];
   if (firstOp.type === "container/run") {
@@ -460,8 +557,8 @@ const dockerImage = computed(() => {
 });
 
 // Helper function to get job image (same as JobList)
-const getJobImage = (job: any) => {
-  const jd = (props.jobInfo as any)?.jobDefinition || job.jobDefinition;
+const getJobImage = (job: UseJob) => {
+  const jd = props.jobInfo?.jobDefinition || job.jobDefinition;
   if (!jd?.ops?.length) return null;
   const firstOp = jd.ops[0];
   if (firstOp.type === 'container/run' && firstOp.args?.image) {
@@ -472,11 +569,11 @@ const getJobImage = (job: any) => {
 
 // Extract all Docker images from all operations for job title
 const jobImages = computed(() => {
-  const jd = titleJobDefinition.value as any;
+  const jd = titleJobDefinition.value;
   if (!jd?.ops?.length) return null;
 
   const images: string[] = [];
-  jd.ops.forEach((op: any) => {
+  jd.ops.forEach((op: Operation) => {
     if (op.type === 'container/run') {
       const args = op.args as OperationArgsMap['container/run'];
       if (args?.image && !images.includes(args.image)) images.push(args.image);
@@ -522,14 +619,14 @@ const isGHCR = (image: string) => {
 const nodeSpecsUrl = computed(() =>
   hasRealNode.value ? `/api/nodes/${props.job.node}/specs` : ''
 );
-const { data: nodeSpecs, pending: loadingNodeSpecs } = useAPI(nodeSpecsUrl);
+const { data: nodeSpecs, pending: loadingNodeSpecs } = useAPI<NodeSpecs | null>(nodeSpecsUrl);
 
 const nodeInfoUrl = computed(() =>
   hasRealNode.value
     ? `https://${props.job.node}.${useRuntimeConfig().public.nodeDomain}/node/info`
     : ''
 );
-const { data: nodeInfo } = useAPI(nodeInfoUrl);
+const { data: nodeInfo } = useAPI<NodeInfoResponse | null>(nodeInfoUrl);
 
 // Get node report
 const jobNodeReportUrl = computed(() => {
@@ -723,7 +820,7 @@ const timeAgo = computed(() => {
 });
 
 // Combined node specs
-const combinedSpecs = computed(() => {
+const combinedSpecs = computed<CombinedSpecs | null>(() => {
   if (!nodeSpecs.value) return null;
 
   const nodeInfoData = nodeInfo.value?.info;
@@ -743,7 +840,7 @@ const combinedSpecs = computed(() => {
     upload: nodeSpecs.value.avgUpload10,
     ping: nodeSpecs.value.avgPing10,
     gpus: nodeInfoData?.gpus?.devices
-      ? nodeInfoData.gpus.devices.map((gpu: any) => ({
+      ? nodeInfoData.gpus.devices.map((gpu: GpuDevice) => ({
           gpu: gpu.name,
           memory: gpu.memory?.total_mb,
           architecture: `${gpu.network_architecture?.major}.${gpu.network_architecture?.minor}`,
@@ -793,35 +890,68 @@ const hasResults = computed(() => {
   return props.job.results && (props.job.hasResultsRegex || props.job.isCompleted);
 });
 
-// Check if container controls tab has content
 const hasContainerControls = computed(() => {
   if (!props.job.jobDefinition) return false;
-  
-  // Check if there are any operation tabs with actual logs
-  const operationTabs = flogTabs.value.filter(t => t !== 'system');
-  const hasOperationLogs = operationTabs.some(tab => {
+
+
+  const isStopped = props.job.state === 3;
+  if (props.job.isCompleted || isStopped) {
+    try {
+      const haveJobInfo = Boolean(props.jobInfo);
+      const haveResults = Boolean(props.job.results);
+      const haveEndpoints = (() => {
+        try { return props.endpoints?.size > 0; } catch { return false; }
+      })();
+      if (haveJobInfo || haveResults || haveEndpoints) return true;
+
+      // Fallback: if any logs exist in final opStates, also show
+      const opStatesFromJob = props.job.results?.opStates;
+      const opStatesFromInfo = props.jobInfo?.results?.opStates;
+      const liveOpStates = props.jobInfo?.operations?.opStates;
+      const allStates: OpState[] = [
+        ...(Array.isArray(opStatesFromJob) ? opStatesFromJob : []),
+        ...(Array.isArray(opStatesFromInfo) ? opStatesFromInfo : []),
+        ...(Array.isArray(liveOpStates) ? liveOpStates : []),
+      ];
+      return allStates.some((s: OpState) => Array.isArray(s?.logs) && s.logs.length > 0);
+    } catch {
+      return false;
+    }
+  }
+
+  const operationTabs = flogTabs.value.filter((t) => t !== 'system');
+  const hasOperationLogs = operationTabs.some((tab) => {
     const logs = flogLogsByOp.value.get(tab);
     return logs && logs.length > 0;
   });
-  
   return operationTabs.length > 0 && hasOperationLogs;
 });
 
 // Check if system logs tab should be available
 const hasSystemLogs = computed(() => {
-  // Always show for running or completed jobs (logs should be available independently of job definition)
-  if (props.job.isRunning || props.job.isCompleted) return true;
-  
-  // For other states, check if there are actual log entries
-  const hasSystemLogEntries = flogSystemLogs.value.length > 0;
-  const hasAnyOperationLogs = Array.from(flogLogsByOp.value.values()).some(logs => logs.length > 0);
-  
-  return hasSystemLogEntries || hasAnyOperationLogs;
+  if (!props.job.jobDefinition) return false;
+
+  if (props.job.isCompleted) return false;
+
+  const hasLiveLogs = (() => {
+    const hasSystem = flogSystemLogs.value.length > 0;
+    const hasOps = Array.from(flogLogsByOp.value.values()).some((logs) => (logs && logs.length > 0));
+    return hasSystem || hasOps;
+  })();
+
+  if (props.job.isRunning) {
+    return Boolean(connectionEstablished.value && hasLiveLogs);
+  }
+
+  return hasLiveLogs;
 });
 
 // Available tabs based on job state and data
 const availableTabs = computed(() => {
   const tabs = ['overview'];
+  if (props.jobInfo?.jobDefinition || props.job.jobDefinition) {
+    tabs.push('job-definition');
+  }
   
   if (hasContainerControls.value) {
     tabs.push('container-controls');
@@ -842,7 +972,8 @@ const availableTabs = computed(() => {
 const getTabLabel = (tab: string) => {
   switch (tab) {
     case 'system-logs': return 'Logs';
-    case 'container-controls': return 'Container Controls';
+    case 'job-definition': return 'Definition';
+    case 'container-controls': return 'Containers';
     case 'results': return 'Results';
     default: return tab.charAt(0).toUpperCase() + tab.slice(1);
   }
@@ -954,28 +1085,10 @@ const hasOpenaiEndpoint = computed(() => {
   return false;
 });
 
-const jobType = computed(() => props.job.jobDefinition?.state?.["nosana/job-type"] || null);
-const isParallelByEndpoints = computed(() => {
-  try {
-    const ids = new Set<string>();
-    for (const [, endpoint] of props.endpoints.entries()) {
-      if (endpoint.opId) ids.add(endpoint.opId);
-      if (ids.size > 1) return true;
-    }
-    return false;
-  } catch {
-    return false;
-  }
-});
-const logsMode = computed<'legacy' | 'parallel'>(() => {
-  const explicit = jobType.value === 'parallel';
-  const opsCount = props.job.jobDefinition?.ops?.length || 0;
-  return explicit || opsCount > 1 || isParallelByEndpoints.value ? 'parallel' : 'legacy';
-});
-
 const isConfidential = computed<boolean>(() => {
   try {
-    return Boolean((props.job.jobDefinition as any)?.logistics);
+    const jd = props.job.jobDefinition;
+    return Boolean(jd && 'logistics' in jd && (jd as JobDefinition & { logistics?: unknown }).logistics);
   } catch {
     return false;
   }
@@ -1000,8 +1113,8 @@ const {
 );
 
 // Expose flog progress bars (directly from useFLogs)
-function getFlogProgressBars(): Map<string, any> {
-  return flogProgressBarsRef.value as unknown as Map<string, any>;
+function getFlogProgressBars(): Map<string, ProgressBar> {
+  return flogProgressBarsRef.value;
 }
 
 // Structure to hold API configuration extracted from health check
@@ -1110,6 +1223,20 @@ function activateChatAndClosePopup() {
 
 const activeTab = ref("system-logs");
 
+const hasAutoSwitchedToLogs = ref(false);
+watch(
+  () => hasSystemLogs.value,
+  (canShowLogsNow) => {
+    if (canShowLogsNow && !hasAutoSwitchedToLogs.value) {
+      if (activeTab.value !== 'system-logs' && activeTab.value === 'overview') {
+        activeTab.value = 'system-logs';
+      }
+      hasAutoSwitchedToLogs.value = true;
+    }
+  },
+  { immediate: false }
+);
+
 // Watch for changes in available tabs and ensure active tab is valid
 watch(availableTabs, (newTabs) => {
   if (!newTabs.includes(activeTab.value)) {
@@ -1117,7 +1244,7 @@ watch(availableTabs, (newTabs) => {
     activeTab.value = newTabs.includes('system-logs') ? 'system-logs' : (newTabs[0] || 'overview');
   }
 }, { immediate: true });
-const jobTabsRef = ref<any>(null); // Ref for the JobTabs component
+const jobTabsRef = ref<JobTabsComponent | null>(null); // Ref for the JobTabs component
 
 // Watch for changes in table content (for real-time updates) - REMOVING THIS SECTION
 
@@ -1209,7 +1336,7 @@ const marketAddress = computed(() => String(props.job.market ?? '').trim());
 const marketName = computed(() => {
   const address = marketAddress.value;
   if (!address || !testgridMarkets.value?.length) return null;
-  const market = testgridMarkets.value.find((m: any) => String(m.address).trim() === address);
+  const market = testgridMarkets.value.find((m: TestgridMarket) => String(m.address).trim() === address);
   return market?.name ?? null;
 });
 

@@ -23,6 +23,7 @@
         :isJobPoster="isJobPoster"
         :jobInfo="jobInfo"
         :deploymentId="deploymentId"
+        :hideFields="{ marketAddress: true, price: true, gpuPoolName: true }"
       />
     </div>
   </div>
@@ -32,14 +33,15 @@
 import Job from "~/components/Job/Job.vue";
 import ArrowUpIcon from '@/assets/img/icons/arrow-up.svg?component';
 // Composables
-import { useJobPage } from "~/composables/jobs/useJobPage";
+import { useDeploymentJobPage } from "~/composables/jobs/useDeploymentJobPage";
 const showSettingsModal = ref(false);
 const { params } = useRoute();
 
 const jobId = ref<string>(params.jobaddress as string);
 const deploymentId = ref<string | null>(params.id as string || null);
 
-const { job, modal, endpoints, nosPrice, isJobPoster, loading, jobInfo } = useJobPage(
+const { job, modal, endpoints, nosPrice, isJobPoster, loading, jobInfo } = useDeploymentJobPage(
+  deploymentId.value as string,
   jobId.value
 );
 </script>

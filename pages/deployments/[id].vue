@@ -912,6 +912,7 @@ import QueuedIcon from '@/assets/img/icons/status/queued.svg?component';
 import DoneIcon from '@/assets/img/icons/status/done.svg?component';
 import { useStatus } from '~/composables/useStatus';
 import { useTimestamp } from '@vueuse/core';
+import { useSDK } from '~/composables/useSDK';
 
 const colorMode = useColorMode();
 
@@ -955,6 +956,7 @@ const toast = useToast();
 const { status, token } = useAuth();
 const isAuthenticated = computed(() => status.value === 'authenticated' && token.value)
 const { getIpfs } = useIpfs();
+const { nosana } = useSDK();
 
 // State
 const deployment = ref<Deployment | null>(null);
@@ -1294,6 +1296,11 @@ const makeRevision = async () => {
 
 
 const loadDeployment = async (silent = false) => {
+  // Skip parent deployment fetch when on job subroute
+  if ((route.params as any)?.jobaddress) {
+    if (!silent) loading.value = false;
+    return;
+  }
   if (!isAuthenticated.value) {
     error.value = "Please log in to view deployments";
     if (!silent) loading.value = false;
@@ -1308,10 +1315,7 @@ const loadDeployment = async (silent = false) => {
     }
 
     const deploymentId = route.params.id as string;
-    const data = await useApiFetch<Deployment>(`/api/deployments/${deploymentId}`, {
-      method: 'GET',
-      auth: true,
-    });
+    const data = await nosana.value.deployments.get(deploymentId);
 
     deployment.value = data as Deployment;
 
@@ -1588,7 +1592,7 @@ const deploymentEvents = computed((): DeploymentEvent[] => {
 
 // Generic deployment action handler (credit system via API)
 const executeDeploymentAction = async (
-  actionUrl: string,
+  action: () => Promise<void>,
   successMessage: string,
   shouldRedirect = false
 ) => {
@@ -1599,7 +1603,7 @@ const executeDeploymentAction = async (
 
   try {
     actionLoading.value = true;
-    await useApiFetch(actionUrl, { method: 'POST', auth: true });
+    await action();
     toast.success(successMessage);
 
     if (shouldRedirect) {
@@ -1610,13 +1614,7 @@ const executeDeploymentAction = async (
       await loadDeployment(true);
       
       // Clear SSE connections and cleanup job instances when stopping to force reconnect on restart
-      if (actionUrl.includes('/stop')) {
-        
-        // Stop all polling immediately
-        stopJobPolling();
-        stopDeploymentPolling();
-        stopTasksPolling();
-        
+      if ((successMessage || '').toLowerCase().includes('stopped')) {
         // Clean up all active job instances
         for (const [jobId, instance] of activeJobInstances.value.entries()) {
           instance.stopWatching();
@@ -1640,7 +1638,7 @@ const executeDeploymentAction = async (
 // Deployment action methods
 const startDeployment = async () => {
   await executeDeploymentAction(
-    `/api/deployments/${deployment.value!.id}/start`,
+    () => deployment.value!.start(),
     "Deployment started successfully"
   );
   
@@ -1657,7 +1655,7 @@ const startDeployment = async () => {
 
 const stopDeployment = async () => {
   await executeDeploymentAction(
-    `/api/deployments/${deployment.value!.id}/stop`,
+    () => deployment.value!.stop(),
     "Deployment stopped successfully"
   );
   
@@ -1675,7 +1673,7 @@ const archiveDeployment = async () => {
     return;
   }
   await executeDeploymentAction(
-    `/api/deployments/${deployment.value!.id}/archive`,
+    () => deployment.value!.archive(),
     "Deployment archived successfully",
     true
   );
@@ -1687,14 +1685,11 @@ const updateReplicas = async () => {
     return;
   }
 
-  await useApiFetch(`/api/deployments/${deployment.value!.id}/update-replica-count`, {
-    method: 'PATCH',
-    auth: true,
-    body: { replicas: newReplicaCount.value }
-  });
-  toast.success(`Replica count updated to ${newReplicaCount.value}`);
-  await new Promise(r => setTimeout(r, 500));
-  await loadDeployment(true);
+  await executeDeploymentAction(
+    () => deployment.value!.updateReplicaCount(newReplicaCount.value),
+    `Replica count updated to ${newReplicaCount.value}`
+  );
+  
   newReplicaCount.value = null;
 };
 
@@ -1704,14 +1699,11 @@ const updateJobTimeout = async () => {
     return;
   }
 
-  await useApiFetch(`/api/deployments/${deployment.value!.id}/update-timeout`, {
-    method: 'PATCH',
-    auth: true,
-    body: { timeout: Math.floor(newTimeoutHours.value * 3600) }
-  });
-  toast.success(`Job timeout updated to ${newTimeoutHours.value} hours`);
-  await new Promise(r => setTimeout(r, 500));
-  await loadDeployment(true);
+  await executeDeploymentAction(
+    () => deployment.value!.updateTimeout(Math.round(newTimeoutHours.value * 3600)),
+    `Job timeout updated to ${newTimeoutHours.value} hours`
+  );
+  
   newTimeoutHours.value = null;
 };
 
@@ -1728,11 +1720,8 @@ const updateSchedule = async () => {
 
   try {
     actionLoading.value = true;
-    await useApiFetch(`/api/deployments/${deployment.value!.id}/update-schedule`, { 
-      method: 'PATCH', 
-      auth: true,
-      body: { schedule: newSchedule.value }
-    });
+    await deployment.value!.updateSchedule(newSchedule.value);
+    
     toast.success(`Schedule updated to: ${newSchedule.value} (${parseCronExpression(newSchedule.value)})`);
     
     // Wait a moment for backend to process, then refresh
@@ -1762,11 +1751,8 @@ const createRevision = async () => {
 
   try {
     actionLoading.value = true;
-    await useApiFetch(`/api/deployments/${deployment.value!.id}/create-revision`, { 
-      method: 'POST', 
-      auth: true,
-      body: revisionJobDefinition.value
-    });
+    await deployment.value!.createRevision(revisionJobDefinition.value);
+    
     toast.success("New revision created successfully!");
     showRevisionModal.value = false;
     
@@ -1792,11 +1778,8 @@ const switchToRevision = async (revisionNumber: number) => {
 
   try {
     switchingRevision.value = revisionNumber;
-    await useApiFetch(`/api/deployments/${deployment.value.id}/update-active-revision`, {
-      method: 'PATCH',
-      auth: true,
-      body: { active_revision: revisionNumber }
-    });
+    await deployment.value.updateActiveRevision(revisionNumber);
+
     toast.success(`Switched to revision ${revisionNumber} successfully!`);
     
     // Refresh deployment data
@@ -1932,15 +1915,8 @@ const loadTasks = async () => {
   tasksLoading.value = true;
   
   try {
-    const { data } = await useAPI(`/api/deployments/${deployment.value.id}/tasks`, {
-      auth: true
-    });
-    
-    if (data.value !== null && data.value !== undefined) {
-      tasks.value = data.value;
-    }
-    
-    lastTasksPoll.value = new Date();
+    const result = await deployment.value.getTasks();
+    tasks.value = result || [];
   } catch (err: any) {
     console.error("Load tasks error:", err);
     toast.error(`Failed to load tasks: ${err.message}`);

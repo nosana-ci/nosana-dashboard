@@ -55,7 +55,7 @@
                     </div>
                   </td>
                   <td>
-                    <span class="clickable-row-cell-content">{{ deployment.jobs?.length || 0 }} Jobs</span>
+                    <span class="clickable-row-cell-content">{{ (Array.isArray(deployment.jobs) ? deployment.jobs.length : 0) }} Jobs</span>
                   </td>
                   <td>
                     <span class="clickable-row-cell-content">
@@ -96,6 +96,8 @@ import QueuedIcon from '@/assets/img/icons/status/queued.svg?component';
 import DoneIcon from '@/assets/img/icons/status/done.svg?component';
 import ArchiveIcon from '@/assets/img/icons/archive.svg?component';
 import { useStatus } from '~/composables/useStatus';
+import { useSDK } from '~/composables/useSDK';
+import type { Deployment } from '@nosana/sdk';
 
 // Props
 const props = withDefaults(defineProps<{
@@ -114,26 +116,6 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
   'update:total-deployments': [count: number]
 }>()
-
-// Types
-interface DeploymentJob {
-  deployment: string
-  job: string
-  tx: string
-  created_at: string
-}
-
-interface Deployment {
-  id: string
-  name: string
-  status: 'DRAFT' | 'ERROR' | 'STARTING' | 'RUNNING' | 'STOPPING' | 'STOPPED' | 'INSUFFICIENT_FUNDS' | 'ARCHIVED'
-  jobs: DeploymentJob[]
-  balance: {
-    NOS: number
-    SOL: number
-  }
-  updated_at: string
-}
 
 // Reactive data
 const deployments = ref<Deployment[]>([])
@@ -220,11 +202,23 @@ const isAuthenticated = computed(() => {
   return status.value === 'authenticated' && token.value
 })
 
-// Use useAPI at top level for reactive fetching
-const { data: deploymentsData, error: deploymentsError, refresh: refreshDeployments, pending: loading } = await useAPI('/api/deployments', { 
-  auth: true,
-  default: () => []
-})
+const { nosana } = useSDK()
+const loading = ref(false)
+const deploymentsError = ref<string | null>(null)
+
+const refreshDeployments = async () => {
+  try {
+    deploymentsError.value = null
+    loading.value = true
+    const items = await nosana.value.deployments.list()
+    deployments.value = items || []
+  } catch (e: any) {
+    deploymentsError.value = e?.message || 'Failed to load deployments'
+    deployments.value = []
+  } finally {
+    loading.value = false
+  }
+}
 
 // Computed properties
 const filteredDeployments = computed(() => {
@@ -243,10 +237,14 @@ const filteredDeployments = computed(() => {
       d.id.toLowerCase().includes(query)
     )
   }
-  // Reverse incoming order (newest first if API returns oldest first)
-  const reversed = [...filtered].reverse()
 
-  return reversed
+  const toTime = (d: any) => {
+    const updated = (d as any)?.updated_at ?? (d as any)?.updatedAt
+    const created = (d as any)?.created_at ?? (d as any)?.createdAt
+    return updated ? new Date(updated).getTime() : created ? new Date(created).getTime() : 0
+  }
+
+  return [...filtered].sort((a, b) => toTime(b) - toTime(a))
 })
 
 // Create a computed property for the deployments actually displayed in the table
@@ -336,23 +334,17 @@ const getStatusIcon = (status: string) => {
   }
 }
 
-const formatDate = (dateString: string) => {
-  if (!dateString) return 'N/A'
-  return new Date(dateString).toLocaleString()
+const formatDate = (date: string | Date) => {
+  if (!date) return 'N/A'
+  const dateObj = date instanceof Date ? date : new Date(date)
+  return dateObj.toLocaleString()
 }
 
-watch(deploymentsData, (data) => {
-  if (data) {
-    deployments.value = data.map((d: Deployment) => ({
-      id: d.id,
-      name: d.name,
-      status: d.status,
-      jobs: d.jobs,
-      balance: d.balance || { SOL: 0, NOS: 0 },
-      updated_at: d.updated_at
-    }))
+onMounted(async () => {
+  if (isAuthenticated.value) {
+    await refreshDeployments()
   }
-}, { immediate: true })
+})
 
 watch(isAuthenticated, (authenticated) => {
   if (authenticated) {
