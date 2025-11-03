@@ -242,6 +242,7 @@ const authenticateLogin = async (code: string) => {
     await signIn(
       {
         code: code,
+        redirectUri: config.googleRedirectUri as string,
       },
       {
         redirect: false
