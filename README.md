@@ -35,16 +35,16 @@ brew install mkcert
 
 # Linux
 sudo apt-get update && apt-get install -y libnss3-tools wget
-wget https://github.com/FiloSottile/mkcert/releases/latest/download/mkcert-v*-linux-amd64
-chmod +x mkcert-v*-linux-amd64
-sudo mv mkcert-v*-linux-amd64 /usr/local/bin/mkcert
+wget https://github.com/FiloSottile/mkcert/releases/download/v1.4.4/mkcert-v1.4.4-linux-amd64
+chmod +x mkcert-v1.4.4-linux-amd64
+sudo mv mkcert-v1.4.4-linux-amd64 /usr/local/bin/mkcert
 ```
 
 ### 2. Generate SSL certificates
 
 ```bash
-chmod +x setup-local-ssl.sh
-./setup-local-ssl.sh
+chmod +x generateCert.sh
+./generateCert.sh
 ```
 
 ### 3. Update hosts file
@@ -54,8 +54,8 @@ Add this line to your hosts file:
 - macOS/Linux: `/etc/hosts`
 - Windows: `C:\Windows\System32\drivers\etc\hosts`
 
-```
-127.0.0.1    devnet.nosana.io
+```bash
+echo "127.0.0.1    devnet.nosana.io" | sudo tee -a /etc/hosts
 ```
 
 ### 4. Run the dev server
