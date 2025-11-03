@@ -5,6 +5,7 @@
   "scripts": {
     "build": "nuxt build",
     "dev": "nuxt dev --dotenv .env.local",
+    "dev:https": "nuxt dev --dotenv .env.local --https --sslKey ./devnet.nosana.io+2-key.pem --sslCert ./devnet.nosana.io+2.pem --port 443 --host 127.0.0.1",
     "generate": "nuxt generate --dotenv .env.${APP_ENV:=production}",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
