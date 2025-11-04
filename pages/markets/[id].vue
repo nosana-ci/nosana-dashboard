@@ -12,7 +12,8 @@
 
         <div class="columns is-multiline">
           <div class="column is-12">
-            <table class="table is-fullwidth is-striped">
+            <div class="table-container">
+              <table class="table is-fullwidth is-striped">
               <tbody>
                 <tr>
                   <td>GPU size</td>
@@ -69,6 +70,7 @@
                 </tr>
               </tbody>
             </table>
+            </div>
           </div>
         </div>
 
@@ -81,7 +83,8 @@
 
           <div class="card">
             <div class="card-content p-0">
-              <table class="table is-fullwidth">
+              <div class="table-container">
+                <table class="table is-fullwidth">
                 <thead>
                   <tr>
                     <th style="width: 200px;">Status</th>
@@ -233,6 +236,7 @@
                   </tr>
                 </tbody>
               </table>
+              </div>
             </div>
           </div>
         </div>

@@ -8,7 +8,7 @@
               PREMIUM
               <div class="tooltip-container">
                 <span class="has-tooltip-arrow has-text-grey no-underline" data-tooltip="Premium GPUs offer top-tier hardware from validated providers for mission-critical and time-sensitive workloads.">
-                  <img src="~/assets/img/icons/info.svg" class="info-icon" />
+                  <InfoIcon class="info-icon" />
                 </span>
               </div>
             </a>
@@ -18,7 +18,7 @@
               COMMUNITY
               <div class="tooltip-container">
                 <span class="has-tooltip-arrow has-text-grey no-underline" data-tooltip="Community GPUs provide cost-effective solutions from unvalidated hosts, ideal for testing and non-critical workloads.">
-                  <img src="~/assets/img/icons/info.svg" class="info-icon" />
+                  <InfoIcon class="info-icon" />
                 </span>
               </div>
             </a>
@@ -28,7 +28,7 @@
               OTHERS
               <div class="tooltip-container">
                 <span class="has-tooltip-arrow has-text-grey no-underline" data-tooltip="View other GPUs on the Nosana Network that are not categorized as Premium or Community.">
-                  <img src="~/assets/img/icons/info.svg" class="info-icon" />
+                  <InfoIcon class="info-icon" />
                 </span>
               </div>
             </a>
@@ -68,7 +68,7 @@
               <td class="py-2">
                 <a :href="href" class="clickable-row-link" @click="handleLinkClick($event, navigate)">
                   <div class="clickable-row-cell-content has-tooltip-arrow is-flex is-align-items-center" v-if="!isMarketCompatible(market)" data-tooltip="This GPU does not meet the required VRAM specifications for your job.">
-                    <img src="@/assets/img/icons/nvidia.svg" alt="Nvidia" class="mr-2" style="width: 20px; height: 20px;">
+                    <NvidiaIcon alt="Nvidia" class="mr-2" style="width: 20px; height: 20px;" />
                     <span v-if="testgridMarkets.find((tgm: any) => tgm.address === market.address.toString())">
                       {{
                         testgridMarkets.find(
@@ -81,7 +81,7 @@
                     </span>
                   </div>
                   <div v-else class="clickable-row-cell-content is-flex is-align-items-center">
-                    <img src="@/assets/img/icons/nvidia.svg" alt="Nvidia" class="mr-2" style="width: 20px; height: 20px;">
+                    <NvidiaIcon alt="Nvidia" class="mr-2" style="width: 20px; height: 20px;" />
                     <span v-if="testgridMarkets.find((tgm: any) => tgm.address === market.address.toString())">
                       {{
                         testgridMarkets.find(
@@ -163,6 +163,8 @@
 <script setup lang="ts">
 import { type Market } from '@nosana/sdk';
 import type { PropType } from 'vue';
+import InfoIcon from '@/assets/img/icons/info.svg?component';
+import NvidiaIcon from '@/assets/img/icons/nvidia.svg?component';
 import CurrentMarketPrice from "~/components/Market/CurrentPrice.vue";
 
 //

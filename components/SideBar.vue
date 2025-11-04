@@ -11,7 +11,19 @@
     </div>
     <div class="menu">
       <ul class="menu-list is-size-5">
-        <li v-if="connected || status === 'authenticated'">
+        <li>
+          <nuxt-link
+            :to="deployRoute"
+            class="deploy-cta"
+            @click="showMenu = false"
+          >
+            <span class="icon is-small mr-4">
+              <JobBuilderIcon  />
+            </span>
+            <span>Deploy</span>
+          </nuxt-link>
+        </li>
+        <li v-if="connected || status === 'authenticated' || status === 'loading'">
           <nuxt-link
             to="/account/deployer"
             active-class="is-active"
@@ -37,19 +49,19 @@
         </li>
         <li>
           <nuxt-link
-            to="/deploy"
+            to="/deployments"
             active-class="is-active"
             @click="showMenu = false"
           >
             <span class="icon is-small mr-4">
-              <JobBuilderIcon  />
+              <ListIcon />
             </span>
-            <span>Deploy Model</span>
+            <span>Deployments</span>
           </nuxt-link>
         </li>
         <li class="has-dropdown">
           <a class="menu-list-link sidebar-link" @click="toggleExplorer"
-            :class="{ 'is-active': $route.path === '/explorer' || $route.path.includes('/markets') || $route.path === '/leaderboards' || ($route.path === '/account/host' && status !== 'authenticated') || $route.path === '/stake'}"
+            :class="{ 'is-active': $route.path === '/explorer' || $route.path.includes('/markets') || ($route.path === '/account/host' && status !== 'authenticated') || $route.path === '/stake'}"
           >
             <div
               class="is-flex is-align-items-center"
@@ -82,7 +94,7 @@
                 class="submenu-link"
                 @click="showMenu = false"
               >
-                Deployments
+                Jobs
               </nuxt-link>
             </li>
             <li>
@@ -93,16 +105,6 @@
                 @click="showMenu = false"
               >
                 GPUs
-              </nuxt-link>
-            </li>
-            <li>
-              <nuxt-link
-                to="/leaderboards"
-                active-class="is-active"
-                class="submenu-link"
-                @click="showMenu = false"
-              >
-                Host Leaderboard
               </nuxt-link>
             </li>
             <li v-if="status !== 'authenticated'">
@@ -179,7 +181,7 @@
 
       <div class="is-flex is-align-items-center">
         <!-- Simple mobile user avatar -->
-        <div v-if="connected || status === 'authenticated'" class="dropdown mobile-avatar-dropdown mr-3" :class="{ 'is-active': showMobileDropdown }">
+        <div v-if="connected || status === 'authenticated' || status === 'loading'" class="dropdown mobile-avatar-dropdown mr-3" :class="{ 'is-active': showMobileDropdown }">
           <div class="dropdown-trigger">
             <span class="mobile-avatar-trigger" @click="showMobileDropdown = !showMobileDropdown">
               <template v-if="connected && wallet">
@@ -228,6 +230,7 @@ const showExplorerDropdown = ref(false);
 const connectingFromSidebar = ref(false);
 const showMobileDropdown = ref(false);
 import JobBuilderIcon from "@/assets/img/icons/sidebar/job-builder.svg?component";
+import ListIcon from "@/assets/img/icons/sidebar/list.svg?component";
 import ExplorerIcon from "@/assets/img/icons/sidebar/explorer.svg?component";
 import UserIcon from "@/assets/img/icons/sidebar/user.svg?component";
 import SupportIcon from "@/assets/img/icons/sidebar/support.svg?component";
@@ -241,10 +244,24 @@ const route = useRoute();
 const router = useRouter();
 const { openBothModal, openWalletModal } = useLoginModal();
 
+// Computed property for deploy route based on authentication type
+const deployRoute = computed(() => {
+  if (status.value === 'authenticated') {
+    // Logged in with Google account (credit system)
+    return '/deployments/create';
+  } else if (connected.value) {
+    // Logged in with Solana wallet
+    return '/deploy';
+  } else {
+    // Not logged in, default to credit system route
+    return '/deployments/create';
+  }
+});
+
 
 // Check if the current route is an explorer page
 const isExplorerPage = computed(() => {
-  return route.path === '/explorer' || route.path.includes('/markets') || route.path === '/leaderboards' || (route.path === '/account/host' && status.value !== 'authenticated') || route.path === '/stake';
+  return route.path === '/explorer' || route.path.includes('/markets') || (route.path === '/account/host' && status.value !== 'authenticated') || route.path === '/stake';
 });
 
 // Update dropdown states based on the current route
@@ -347,10 +364,31 @@ const getWalletAddress = () => {
     opacity: 0.5;
   }
 
-  .is-active {
+  a.is-active {
+    background-color: $menu-item-hover-background-color;
+    color: $text !important;
+    
+    .icon {
+      color: $text;
+      opacity: 1;
+    }
+    
+    span {
+      color: $text !important;
+    }
+  }
+  
+  .deploy-cta {
+    background-color: $menu-item-active-background-color;
+    color: $menu-item-active-color !important;
+    
     .icon {
       color: $secondary;
       opacity: 1;
+    }
+    
+    span:not(.icon) {
+      color: $menu-item-active-color !important;
     }
   }
 }
@@ -384,6 +422,8 @@ const getWalletAddress = () => {
     }
 
     &.is-active {
+      background-color: $menu-item-hover-background-color;
+      
       div {
         opacity: 1;
         color: inherit;
@@ -392,11 +432,11 @@ const getWalletAddress = () => {
       .icon,
       span {
         opacity: 1;
-        color: white;
+        color: $text;
       }
 
       span.icon:first-of-type {
-        color: $secondary;
+        color: $text;
       }
     }
   }
@@ -450,6 +490,35 @@ const getWalletAddress = () => {
 }
 
 .dark-mode {
+  .deploy-cta {
+    background-color: $white;
+    color: $text !important;
+    
+    .icon {
+      color: $secondary;
+    }
+    
+    span:not(.icon) {
+      color: $text !important;
+    }
+  }
+  
+  .menu-list {
+    a.is-active {
+      background-color: $grey-darker !important;
+      color: $white !important;
+      
+      .icon, 
+      span {
+        color: $white !important;
+      }
+      
+      span.icon:first-of-type {
+        color: $white !important;
+      }
+    }
+  }
+  
   .sidebar-link {
     color: $grey-lighter;
 
@@ -458,15 +527,15 @@ const getWalletAddress = () => {
     }
 
     &.is-active {
-      color: $secondary;
+      background-color: $grey-darker;
       
       .icon, 
       span {
-        color: $black !important;
+        color: $white !important;
       }
       
       span.icon:first-of-type {
-        color: $secondary !important;
+        color: $white !important;
       }
     }
   }
@@ -490,15 +559,15 @@ const getWalletAddress = () => {
   }
 
   .submenu-link {
-    color: #d8d8d8 !important;
+    color: $grey-lighter !important;
     
     &:hover {
       opacity: 1 !important;
-      background-color: #363636 !important;
+      background-color: $grey-darker !important;
     }
 
     &.is-active {
-      background-color: #363636 !important;
+      background-color: $grey-darker !important;
     }
   }
 }

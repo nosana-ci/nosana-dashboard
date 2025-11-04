@@ -3,10 +3,11 @@
     <div style="height: 400px">
       <Bar :options="barOptions" :data="queueData" style="width: 100%" />
     </div>
-    <table class="table is-fullwidth is-striped">
+    <div class="table-container">
+      <table class="table is-fullwidth is-striped">
       <tbody>
         <tr>
-          <td><b>Deployment Queue</b></td>
+          <td><b>Job Queue</b></td>
           <td>
             <span v-if="markets">
               {{
@@ -21,7 +22,7 @@
                     0,
                   )
               }}
-              deployments
+              jobs
             </span>
             <span v-else-if="loadingMarkets || loadingTestgridMarkets">...</span>
             <span v-else>-</span>
@@ -50,11 +51,11 @@
           </td>
         </tr>
         <tr>
-          <td><b>Deployments Running</b></td>
+          <td><b>Jobs Running</b></td>
           <td>
             <span v-if="jobs">
               {{ jobs.totalJobs }}
-              deployments
+              jobs
             </span>
             <span v-else-if="loadingJobs">...</span>
             <span v-else>-</span>
@@ -62,6 +63,7 @@
         </tr>
       </tbody>
     </table>
+    </div>
     <div v-if="!loadingMarkets && !markets">Could not load GPUs from blockchain</div>
     <div v-if="!loadingTestgridMarkets && (!testgridMarkets || !testgridMarkets.length)">Could not load GPUs from
       grid</div>
@@ -116,7 +118,7 @@ const queueData = computed<ChartData<'bar'>>(() => {
         data: data.map((m: any) => (m.queueType === 1 ? m.queue.length : 0)),
       },
       {
-        label: 'Deployments',
+        label: 'Jobs',
         borderWidth: 3,
         borderColor: '#f9d54b',
         backgroundColor: '#f9d54b45',

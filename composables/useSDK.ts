@@ -16,6 +16,8 @@ const prioFee = useLocalStorage("prio-fee", {
 const nosana = computed(() => {
   // Include wallet connection state to trigger reactivity when wallet connects/disconnects
   const { connected, publicKey } = useWallet();
+  // Include auth token so API client updates when session changes
+  const { token } = useAuth();
   let wallet: Ref<AnchorWallet | undefined>;
   
   try {
@@ -38,6 +40,10 @@ const nosana = computed(() => {
           ? "medium"
           : prioFee.value.strategy,
     },
+    api: {
+      backend_url: config.public.apiBase,
+    },
+    apiKey: (token.value as any) || undefined,
   };
 
   return new Client(

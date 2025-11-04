@@ -1,56 +1,26 @@
 <template>
-  <div v-if="!imageOnly" class="tag is-outlined is-light" :class="{
-    'is-success': statusString === 'SUCCESS',
-    'is-info': statusString === 'RUNNING' || statusString === 'PENDING',
-    'is-warning': statusString === 'QUEUED',
-    'is-danger': statusString === 'FAILED' || statusString === 'YAML_ERROR',
-  }">
-    <img class="mr-2" :src="`/img/icons/status/${getIcon(statusString as string)}.svg`" />
-
-    <span v-if="!imageOnly">{{ statusString }}</span>
-  </div>
-  <img v-else :src="`/img/icons/status/${getIcon(statusString as string)}.svg`" />
+  <StatusTag :status="status" :fallbackState="fallbackState" :imageOnly="imageOnly" />
 </template>
 
 <script setup lang="ts">
+import StatusTag from "~/components/Common/StatusTag.vue";
 const props = defineProps({
   status: {
     type: [String, Number],
     required: true,
+  },
+  fallbackState: {
+    type: [String, Number],
+    required: false,
+    default: undefined,
   },
   imageOnly: {
     type: Boolean,
     default: false,
   },
 });
-const statusString = computed(() => {
-  if (typeof props.status !== 'string') {
-    let string = 'STOPPED';
-    if (props.status === 0) {
-      string = 'QUEUED';
-    } else if (props.status === 1) {
-      string = 'RUNNING';
-    } else if (props.status === 2) {
-      string = 'COMPLETED';
-    }
-    return string;
-  }
-  return props.status
-})
 
-const getIcon = (status: string) => {
-  let icon = 'stopped';
-  if (status === 'QUEUED') {
-    icon = 'queued';
-  } else if (status === 'RUNNING') {
-    icon = 'running';
-  } else if (status === 'COMPLETED' || status === 'SUCCESS') {
-    icon = 'done';
-  } else if (status === 'FAILED' || status === 'YAML_ERROR') {
-    icon = 'failed';
-  }
-  return icon;
-};
+// Wrapper proxies to Common/StatusTag
 </script>
 
 <style lang="scss" scoped>
@@ -58,9 +28,11 @@ const getIcon = (status: string) => {
   min-width: max-content;
 }
 
+// Animation styles are defined globally in assets/styles/global.scss
+
 @include until-widescreen {
   .tag {
-    background: none !important;
+    background: transparent !important;
     border: none !important;
     padding: 0 !important;
 
@@ -68,8 +40,15 @@ const getIcon = (status: string) => {
       margin: 0 !important;
     }
 
-    span {
+    span:not(.status-icon-wrap) {
       display: none;
+    }
+    
+    // Preserve color inheritance for status icons
+    &.status-tag {
+      svg {
+        color: inherit !important;
+      }
     }
   }
 }

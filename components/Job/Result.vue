@@ -8,7 +8,7 @@
         title="Fullscreen Results"
       >
         <span class="icon is-small">
-          <img src="~/assets/img/icons/fullscreen.svg" alt="Fullscreen" />
+          <FullscreenIcon />
         </span>
       </button>
 
@@ -176,6 +176,7 @@
 <script lang="ts" setup>
 import { ref, onMounted, nextTick, watch } from 'vue';
 import FullscreenModal from '~/components/Common/FullscreenModal.vue';
+import FullscreenIcon from '@/assets/img/icons/fullscreen.svg?component';
 import { useModal } from '~/composables/jobs/useModal';
 import { escapeHtml } from '~/utils/htmlSanitization';
 

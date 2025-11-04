@@ -22,34 +22,34 @@
       </a>
     </div>
     <div class="mr-2 my-2" v-if="!states || states.includes(2)">
-      <a class="button is-success is-outlined" :class="{
+      <a class="button" :class="[getFilterButtonClass(2), {
         'is-hovered': state === 2,
         'is-small': small,
-      }" @click="changeState(2)">
+      }]" @click="changeState(2)">
         <b><span>Completed</span></b>
       </a>
     </div>
     <div class="mr-2 my-2" v-if="!states || states.includes(1)">
-      <a class="button is-info is-outlined" :class="{
+      <a class="button" :class="[getFilterButtonClass(1), {
         'is-hovered': state === 1,
         'is-small': small,
-      }" @click="changeState(1)">
+      }]" @click="changeState(1)">
         <b><span>Running</span></b>
       </a>
     </div>
     <div class="mr-2 my-2" v-if="!states || states.includes(0)">
-      <a class="button is-warning is-outlined" :class="{
+      <a class="button" :class="[getFilterButtonClass(0), {
         'is-hovered': state === 0,
         'is-small': small,
-      }" @click="changeState(0)">
+      }]" @click="changeState(0)">
         <b><span>Queued</span></b>
       </a>
     </div>
     <div class="mr-2 my-2" v-if="!states || states.includes(3)">
-      <a class="button is-dark is-outlined" :class="{
+      <a class="button" :class="[getFilterButtonClass(3), {
         'is-hovered': state === 3,
         'is-small': small,
-      }" @click="changeState(3)">
+      }]" @click="changeState(3)">
         <b><span>Stopped</span></b>
       </a>
     </div>
@@ -171,6 +171,7 @@ import JobPrice from "~/components/Job/Price.vue";
 import CurrentMarketPrice from "~/components/Market/CurrentPrice.vue";
 import SecondsFormatter from "~/components/SecondsFormatter.vue";
 import { useAPI } from "~/composables/useAPI";
+import { useStatus } from '~/composables/useStatus';
 
 // Fetch stats data needed for CurrentMarketPrice
 const { data: stats, pending: loadingStats } = useAPI('/api/stats');
@@ -181,6 +182,16 @@ interface ExtendedJob extends Job {
   usdRewardPerHour: number;
   jobStatus?: string;
 }
+
+// Use global status system for consistent colors
+const { getStatusClass } = useStatus();
+
+// Get button classes for filter buttons
+const getFilterButtonClass = (state: number) => {
+  const statusClass = getStatusClass(state);
+  // Convert status class to button class (remove 'is-' prefix and add 'is-outlined')
+  return `${statusClass} is-outlined`;
+};
 
 // Fetch markets data for centralized pricing
 const { data: testgridMarkets, pending: loadingTestgridMarkets } = await useAPI('/api/markets', { default: () => [] });
@@ -319,5 +330,20 @@ watch(() => props.loadingJobs, (isLoading, wasLoading) => {
 .clickable-row-cell-content {
   position: relative;
   z-index: 1;
+}
+
+// Ensure status icons have proper colors even in small mode
+:deep(.status-icon-wrap.status-tag) {
+  &.is-success, &.is-success svg { color: $success !important; }
+  &.is-info, &.is-info svg { color: $info !important; }
+  &.is-warning, &.is-warning svg { color: $warning !important; }
+  &.is-danger, &.is-danger svg { color: $danger !important; }
+  &.is-dark, &.is-dark svg { color: $dark !important; }
+}
+
+.dark-mode {
+  :deep(.status-icon-wrap.status-tag) {
+    &.is-dark, &.is-dark svg { color: $grey-light !important; }
+  }
 }
 </style> 

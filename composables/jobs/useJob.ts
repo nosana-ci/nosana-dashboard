@@ -1,10 +1,13 @@
 import {
   getJobExposedServices,
-  getJobExposeIdHash,
   type Job,
   type JobDefinition,
 } from "@nosana/sdk";
 import { useToast } from "vue-toastification";
+import { useWallet } from "solana-wallets-vue";
+import { EventSourcePolyfill } from "event-source-polyfill";
+import type { JobInfo, JobViewModel, LiveEndpoints, ResultsSection} from "~/composables/jobs/types";
+import { normalizeEndpoints } from "~/composables/jobs/normalizeEndpoints";
 
 /**
  * Helper to convert job state to a number, normalizing "RUNNING", "QUEUED", etc.
@@ -17,51 +20,21 @@ function getStateNumber(stateVal: string | number): number {
   return -1;
 }
 
-export type UseJob = Job & {
-  address: string;
-  usdRewardPerHour?: number;
-  jobDefinition?: JobDefinition & {
-    state?: {
-      "nosana/job-type"?: string;
-      "input/repo"?: string;
-      "input/commit-sha"?: string;
-    };
-  };
-  jobStatus?: "success" | "failed";
-  results?: any;
-  isActive: boolean;
-  isRunning: boolean;
-  isCompleted: boolean;
-  hasResultsRegex: boolean;
-  jobResult: any;
-
-  stopJob: () => Promise<void>;
-  extendJob: (extensionHours: number) => Promise<void>;
-  refresh: () => Promise<void>;
-};
-
-export type Endpoints = Map<
-  string,
-  {
-    url: string;
-    port: number;
-    opIndex: number;
-    opId: string;
-    hasHealthCheck: boolean;
-    status: "ONLINE" | "OFFLINE" | "UNKNOWN";
-    setStatus: (status: "ONLINE" | "OFFLINE") => void;
-  }
->;
+export type UseJob = JobViewModel;
+export type Endpoints = LiveEndpoints;
 
 export function useJob(jobId: string) {
   const job = ref<UseJob | null>(null);
   const loading = ref(true);
   const endpoints = ref<Endpoints>(new Map() as Endpoints);
+  const jobInfo = ref<JobInfo | null>(null);
 
   const toast = useToast();
   const { nosana } = useSDK();
   const { getIpfs } = useIpfs();
   const { status, data: userData, token } = useAuth();
+  const { connected, publicKey } = useWallet();
+  const { ensureAuth } = useAuthHeader();
   const { data, pending, refresh } = useAPI("/api/jobs/" + jobId, {
     watch: false,
   });
@@ -87,8 +60,7 @@ export function useJob(jobId: string) {
       const state = getStateNumber(jobResult.state || -1);
 
       const jobObject: UseJob = {
-        jobResult: undefined,
-        ...jobResult,
+        ...(jobResult as JobViewModel),
         address: jobId,
         isRunning: state === 1,
         isActive: state === 0 || state === 1,
@@ -270,26 +242,59 @@ export function useJob(jobId: string) {
         },
       };
 
+
       if (state < 2) {
         resumeJobPolling();
       } else {
         pauseJobPolling();
       }
 
+      // Determine if current user is the job poster
+      const activeAddress = computed(() => {
+        if (status.value === 'authenticated' && (userData.value as any)?.generatedAddress) {
+          return (userData.value as any).generatedAddress as string;
+        }
+        if (connected.value && publicKey.value) {
+          return publicKey.value.toString();
+        }
+        return null;
+      });
+
       try {
         if (
+          state === 2 &&
           jobResult.ipfsResult &&
-          jobResult.ipfsResult !==
-            "QmNLei78zWmzUdbeRB3CiUfAizWUrbeeZh5K1rhAQKCh51"
+          jobResult.ipfsResult !== "QmNLei78zWmzUdbeRB3CiUfAizWUrbeeZh5K1rhAQKCh51"
         ) {
-          const resultResponse = await getIpfs(jobResult.ipfsResult);
-          jobObject.hasResultsRegex = resultResponse.opStates.some(
-            (op: any) => op.results
-          );
+          const resultResponse = await getIpfs(jobResult.ipfsResult) as ResultsSection;
+          jobObject.hasResultsRegex = Array.isArray(resultResponse.opStates)
+            ? resultResponse.opStates.some((op) => (op as { results?: unknown }).results !== undefined)
+            : false;
           jobObject.results = resultResponse;
         }
       } catch (error) {
-        toast.error(`Error fetching IPFS result: ${JSON.stringify(error)}`);
+        toast.error(`Error fetching IPFS result: ${String(error)}`);
+      }
+
+      try {
+        if (!jobObject.results && job.value?.results) {
+          jobObject.results = job.value.results;
+        }
+        if (!jobObject.hasResultsRegex && job.value?.hasResultsRegex) {
+          jobObject.hasResultsRegex = job.value.hasResultsRegex;
+        }
+        
+      } catch (error) {
+        console.error(`[useJob] Error in data processing:`, error);
+      }
+
+      try {
+        const maybeJd = (jobResult as unknown as { jobDefinition?: JobDefinition })?.jobDefinition;
+        if (maybeJd) {
+          jobObject.jobDefinition = maybeJd;
+        }
+      } catch (error) {
+        console.error(`[useJob] Error extracting job definition:`, error);
       }
 
       job.value = jobObject;
@@ -300,47 +305,185 @@ export function useJob(jobId: string) {
     }
   );
 
-  watch(job, (job) => {
-    if (job === null) return;
-    if (job.jobDefinition) {
-      const setEndpointStatus = (
-        service: string,
-        status: "ONLINE" | "OFFLINE"
-      ) => {
-        const serviceObj = endpoints.value.get(service);
-        if (!serviceObj) return;
-        endpoints.value.set(service, {
-          ...serviceObj,
-          status,
-        });
-        endpoints.value = new Map(endpoints.value);
-      };
+  watch(pending, (isPending) => {
+    if (!isPending && !data.value && !job.value) {
+      loading.value = false;
+    }
+  }, { immediate: true });
 
-      const services = getJobExposedServices(job.jobDefinition, jobId);
-      for (const { hash, port, opId, opIndex, hasHealthCheck } of services) {
-        const url = `https://${hash}.${useRuntimeConfig().public.nodeDomain}`;
-
-        if (endpoints.value.has(url) || hash === "private") continue;
-
-        endpoints.value.set(url, {
-          status: "UNKNOWN",
-          url,
-          opId,
-          opIndex,
-          port: Number(port),
-          hasHealthCheck,
-          setStatus: (status: "ONLINE" | "OFFLINE") => {
-            setEndpointStatus(url, status);
-          },
-        });
+  watch([job, pending], ([currentJob, isPending]) => {
+    if (!isPending && currentJob) {
+      const nodeAddress = (currentJob.node as any)?.toString?.() || (currentJob.node as any);
+      if (!nodeAddress || nodeAddress === '11111111111111111111111111111111') {
+        loading.value = false;
+      } else {
+        loading.value = false;
       }
     }
-    loading.value = false;
+  }, { immediate: true });
+
+  let eventSource: EventSourcePolyfill | null = null;
+  let currentNodeAddress: string | null = null;
+  let fetchingNodeJobDefinition = false;
+  let fetchedNodeJobDefinition = false;
+
+  async function fetchBackendJobDefinitionOnce() {
+    try {
+      const maybeJd = (data.value as unknown as { jobDefinition?: JobDefinition })?.jobDefinition;
+      if (maybeJd) {
+        if (job.value) job.value.jobDefinition = maybeJd;
+        if (jobInfo.value) jobInfo.value = { ...jobInfo.value, jobDefinition: maybeJd } as JobInfo;
+      }
+    } catch {}
+  }
+
+  async function fetchNodeJobDefinitionOnce() {
+    try {
+      if (!job.value) return;
+      if (fetchingNodeJobDefinition || fetchedNodeJobDefinition) return;
+      fetchingNodeJobDefinition = true;
+      const nodeDomain = useRuntimeConfig().public.nodeDomain;
+      const nodeAddr = (job.value.node as unknown as { toString?: () => string })?.toString?.() || (job.value.node as unknown as string);
+      if (!nodeAddr || nodeAddr === '11111111111111111111111111111111') {
+        fetchedNodeJobDefinition = true;
+        return;
+      }
+      const url = `https://${nodeAddr}.${nodeDomain}/job/${jobId}/job-definition`;
+      const authHeader = await ensureAuth();
+      const response = await $fetch<JobDefinition | string>(url, { method: 'GET', headers: { authorization: authHeader } });
+      const parsed: JobDefinition = typeof response === 'string' ? JSON.parse(response) : response;
+      if (parsed) {
+        if (job.value) job.value.jobDefinition = parsed;
+        if (jobInfo.value) jobInfo.value = { ...jobInfo.value, jobDefinition: parsed } as JobInfo;
+        fetchedNodeJobDefinition = true;
+      }
+    } catch {
+      fetchedNodeJobDefinition = true;
+    } finally {
+      fetchingNodeJobDefinition = false;
+    }
+  }
+
+  watch(job, (currentJob: UseJob | null) => {
+    if (currentJob === null) return;
+
+    const isCompleted = Boolean(currentJob.isCompleted === true || getStateNumber(currentJob.state ?? -1) === 2);
+
+    if (!isCompleted) fetchNodeJobDefinitionOnce();
+    else fetchBackendJobDefinitionOnce();
+
+    const sdkServices = currentJob.jobDefinition
+      ? getJobExposedServices(currentJob.jobDefinition, jobId)
+      : [];
+    const metaByPort = new Map<number, { opId: string; opIndex: number; hasHealthCheck: boolean }>();
+    for (const { port, opId, opIndex, hasHealthCheck } of sdkServices) {
+      metaByPort.set(Number(port), { opId, opIndex, hasHealthCheck });
+    }
+
+    const config = useRuntimeConfig();
+    const nodeAddress = (currentJob.node as any)?.toString?.() || (currentJob.node as any);
+    
+    if (isCompleted) {
+      if (eventSource) { try { eventSource.close(); } catch {} eventSource = null; }
+      loading.value = false;
+      return;
+    }
+
+    if (eventSource && currentNodeAddress === nodeAddress && (eventSource as any).readyState !== 2) {
+      return;
+    }
+    
+    if (eventSource) {
+      eventSource.close();
+      eventSource = null;
+    }
+    
+    currentNodeAddress = nodeAddress;
+
+    (async () => {
+      try {
+        const nodeAddress = (currentJob.node as any)?.toString?.() || (currentJob.node as any);
+        
+        if (!nodeAddress || nodeAddress === '11111111111111111111111111111111') {
+          loading.value = false;
+          return;
+        }
+        
+        const authHeader = await ensureAuth();
+        const sseUrl = `https://${nodeAddress}.${config.public.nodeDomain}/job/${jobId}/info`;
+        
+        eventSource = new EventSourcePolyfill(sseUrl, {
+          headers: {
+            'Authorization': authHeader
+          }
+        });
+        
+        const handleInfo = (event: MessageEvent) => {
+          try {
+            const info = JSON.parse(event.data) as JobInfo;
+            
+            const previousJobDefinition = jobInfo.value?.jobDefinition;
+            jobInfo.value = { ...info, jobDefinition: previousJobDefinition ?? info.jobDefinition } as JobInfo;
+
+            const normalized = normalizeEndpoints(info, jobId, metaByPort);
+            if (normalized.size > 0) {
+              const newEndpoints = new Map(endpoints.value);
+              for (const [url, endpoint] of normalized.entries()) {
+                newEndpoints.set(url, endpoint);
+              }
+              endpoints.value = newEndpoints;
+            }
+            
+            try {
+              const sseResults = (info as unknown as { results?: ResultsSection }).results;
+              if (sseResults && job.value) {
+                job.value.results = sseResults;
+                job.value.hasResultsRegex = Array.isArray(sseResults.opStates)
+                  ? sseResults.opStates.some((op) => (op as { results?: unknown }).results !== undefined)
+                  : false;
+              }
+            } catch {}
+            
+            loading.value = false;
+          } catch (parseError) {
+            console.error('Failed to parse SSE message:', parseError);
+          }
+        };
+
+        try { (eventSource as unknown as EventSource).addEventListener?.('message', handleInfo as EventListener); } catch {}
+        try { (eventSource as unknown as EventSource).addEventListener?.('flow:updated', handleInfo as EventListener); } catch {}
+        
+        eventSource.onerror = (error) => {
+          console.error('SSE connection error:', error);
+
+          loading.value = false;
+
+        };
+        
+        eventSource.onopen = () => {
+          loading.value = false;
+        };
+      } catch (error) {
+        console.error('Failed to create EventSource:', error);
+        loading.value = false;
+      }
+    })();
+  });
+
+  // Cleanup on unmount
+  onBeforeUnmount(() => {
+    if (eventSource) {
+      eventSource.close();
+      eventSource = null;
+    }
   });
 
   return {
     job,
     endpoints,
     loading,
+    jobInfo,
+    pausePolling: pauseJobPolling,
+    resumePolling: resumeJobPolling,
   };
 }

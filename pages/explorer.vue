@@ -19,11 +19,11 @@
       </div>
       <div class="column is-6">
         <div class="box is-flex is-flex-direction-column">
-          <h2 class="title is-5">GPUs</h2>
+          <h2 class="title is-5">Jobs</h2>
           <MarketQueues></MarketQueues>
           <div class="has-text-right mt-auto pt-2">
-            <nuxt-link to="/markets" class="button is-text">
-              <span>All GPUs</span>
+            <nuxt-link to="/jobs" class="button is-text">
+              <span>All Jobs</span>
               <span class="icon"> &#8250; </span>
             </nuxt-link>
           </div>

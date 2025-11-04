@@ -73,7 +73,7 @@
                       <div v-if="section.type === 'thoughts'" class="thinking-section">
                         <details>
                             <summary class="thinking-toggle">
-                                <img src="~/assets/img/icons/arrow-expand.svg" alt="Expand" class="expand-arrow" />
+                                <ArrowExpandIcon class="expand-arrow" />
                                 <i class="fas fa-fw fa-chevron-down"></i>
                                 Thinking tokens
                             </summary>
@@ -137,6 +137,7 @@ import type { UseJob } from "~/composables/jobs/useJob";
 import { createOpenAIClient, sendChatCompletion, sendCustomChatCompletion, type ChatMessage } from '~/composables/useOpenaiAPI';
 import type { OperationArgsMap, ExposedPort, HttpHealthCheck } from '@nosana/sdk';
 import { marked } from 'marked';
+import ArrowExpandIcon from '@/assets/img/icons/arrow-expand.svg?component';
 import type { Tokens } from 'marked';
 
 // New interface provided by user

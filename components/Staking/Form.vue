@@ -122,7 +122,7 @@
                 <div><span class="is-size-3">{{ unstakeDays }}</span> days</div>
                 <button v-if="unstakeDays < 365" @click.prevent="showExtendModal = true;"
                   class="button is-size-7 is-small is-outlined is-primary extend px-1 mt-1 ml-2">
-                  Extend <img src="@/assets/img/icons/arrow-right.svg" style="height: 8px;" class="ml-1">
+                  Extend <ArrowRightIcon style="height: 8px;" class="ml-1" />
                 </button>
               </div>
             </div>
@@ -378,6 +378,7 @@
 <script lang="ts" setup>
 import { WalletModalProvider, useWallet } from "solana-wallets-vue";
 import { useToast } from "vue-toastification";
+import ArrowRightIcon from '@/assets/img/icons/arrow-right.svg?component';
 
 const toast = useToast();
 const { connected, publicKey } = useWallet();

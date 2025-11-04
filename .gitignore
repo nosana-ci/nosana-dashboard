@@ -25,3 +25,7 @@ logs
 # android generated files
 android/*
 !android/twa-manifest.json
+
+# Localcert files
+*.pem
+*.key

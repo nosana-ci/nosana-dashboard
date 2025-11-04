@@ -6,8 +6,7 @@
         class="has-tooltip-arrow ml-2"
         data-tooltip="Earn NOS tokens for keeping your node online and available 24/7. These rewards are separate from job execution earnings."
       >
-        <img
-          src="~/assets/img/icons/info.svg"
+        <InfoIcon
           style="height: 0.8rem; vertical-align: middle"
           alt="Info"
         />
@@ -99,6 +98,7 @@
 import { computed, ref } from "vue";
 import type { MessageSignerWalletAdapter } from "@solana/wallet-adapter-base";
 import { useToast } from "vue-toastification";
+import InfoIcon from '@/assets/img/icons/info.svg?component';
 
 // Props
 interface Props {

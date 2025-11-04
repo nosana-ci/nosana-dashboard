@@ -20,7 +20,6 @@ export function trackLinkClick(eventLabel: string, eventCategory: string = 'prim
  * @param parameters Additional event parameters
  */
 export function trackEvent(eventName: string, parameters: Record<string, any> = {}): void {
-  console.log('GA', eventName, parameters, process.env.NODE_ENV);
   if (process.env.NODE_ENV === 'production') {
     useTrackEvent(eventName, parameters);
   }

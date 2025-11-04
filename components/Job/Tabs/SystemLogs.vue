@@ -21,7 +21,7 @@
           title="Fullscreen Logs"
         >
           <span class="icon is-small">
-            <img src="~/assets/img/icons/fullscreen.svg" alt="Fullscreen" />
+            <FullscreenIcon />
           </span>
         </button>
       </div>
@@ -41,7 +41,7 @@
           </div>
           <div v-else-if="loading" class="has-text-centered p-4" key="loading">Loading logs..</div>
           <div v-else-if="job.isCompleted && !job.results" class="has-text-centered p-4" key="no-results">
-            The job was prematurely stopped so no logs are available.
+            The job was stopped, waiting for host to upload the results.
           </div>
           <div v-else-if="!job.results" class="has-text-centered p-4" key="no-logs">No logs available.</div>
           <div v-else-if="job.results && job.results[0] === 'nos/secret'" class="has-text-centered p-4" key="secret-results">
@@ -86,7 +86,7 @@
         </template>
         <div v-else-if="loading" class="has-text-centered p-4">Loading logs..</div>
         <div v-else-if="job.isCompleted && !job.results" class="has-text-centered p-4">
-          The job was prematurely stopped so no logs are available.
+          The job was stopped, waiting for host to upload the results.
         </div>
         <div v-else-if="!job.results" class="has-text-centered p-4">No logs available.</div>
         <div v-else-if="job.results && job.results[0] === 'nos/secret'" class="has-text-centered p-4">
@@ -107,6 +107,7 @@
 import { ref, watch, nextTick, computed } from 'vue';
 import JobResult from "../Result.vue";
 import FLogViewer from "~/components/Job/FLogViewer.vue";
+import FullscreenIcon from '@/assets/img/icons/fullscreen.svg?component';
 import FullscreenModal from '~/components/Common/FullscreenModal.vue';
 import { useModal } from '~/composables/jobs/useModal';
 import type { UseJob } from "~/composables/jobs/useJob";
@@ -130,6 +131,9 @@ interface Props {
   filters?: any;
   selectOp?: (opId: string | null) => void;
   toggleType?: (type: 'container' | 'info' | 'error') => void;
+  // New props for showing all logs
+  systemLogsMap?: AnyLogEntry[];
+  logsByOp?: Map<string, AnyLogEntry[]>;
 }
 
 const props = defineProps<Props>();

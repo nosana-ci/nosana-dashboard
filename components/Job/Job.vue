@@ -1,460 +1,290 @@
 <template>
-  <!-- Job Card Container -->
-  <div class="card">
-    <!-- Card Header and Service Endpoints Container -->
-    <div class="card-header-container">
-      <!-- Card Header - Always Visible -->
-      <header class="card-header">
-        <div class="w-100">
-          <!-- Main Job Info Row -->
-          <div class="job-header-main px-4 pb-2 w-100" style="flex-grow: 1">
-            <div class="job-header-grid">
-              <!-- Left Group: Title, GPU, Price -->
-              <div class="job-header-left-group">
-                <!-- Job Title -->
-                <div class="job-title-col">
-                  <div class="is-flex is-align-items-start">
-                    <img
-                      v-if="
-                        templateForJob &&
-                        (templateForJob.icon || (templateForJob as any).avatar_url)
-                      "
-                      :src="templateForJob.icon || (templateForJob as any).avatar_url"
-                      alt="Template Icon"
-                      class="mr-2"
-                      style="
-                        height: 24px;
-                        width: 24px;
-                        border-radius: 4px;
-                        object-fit: contain;
-                        flex-shrink: 0;
-                        margin-top: 1.4rem;
-                      "
-                    />
-                    <div style="margin-top: 1.16rem">
-                      <div class="job-title">
-                        <template v-if="templateForJob">
-                          {{ templateForJob.name }}
-                        </template>
-                        <template v-else-if="jobDefinitionId">
-                          {{ jobDefinitionId }}
-                        </template>
-                        <template v-else-if="formattedDockerImage">
-                          {{ formattedDockerImage.split("/").pop() }}
-                        </template>
-                        <template v-else>
-                          <span class="icon-text">
-                            <span class="icon is-small">
-                              <i class="fas fa-spinner fa-spin"></i>
-                            </span>
-                            <span>Loading</span>
-                          </span>
-                        </template>
-                      </div>
-                      <div
-                        class="job-docker"
-                        style="
-                          position: static;
-                          margin-top: 0rem; /* Override absolute positioning */
-                        "
-                      >
-                        <span v-if="formattedDockerImage">{{
-                          formattedDockerImage
-                        }}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- GPU -->
-                <div class="job-gpu-col">
-                  <div class="job-gpu">
-                    <span v-if="actualGpuInfo">{{ cleanGpuName }}</span>
-                    <span v-else>
-                      <span class="icon-text">
-                        <span class="icon is-small">
-                          <i class="fas fa-spinner fa-spin"></i>
-                        </span>
-                        <span>Loading GPU</span>
-                      </span>
-                    </span>
-                  </div>
-                </div>
-
-                <!-- Price -->
-                <div class="job-price">
-                  <div class="price-value">
-                    <JobPrice
-                      :key="`job-price-${props.job.isCompleted}-${props.job.timeEnd || 'running'}-${props.job.state}`"
-                      :job="jobDataForPriceComponent"
-                      :options="jobOptionsForPriceComponent"
-                      :marketsData="testgridMarkets"
-                    />
-                  </div>
-                </div>
+  <!-- Header Section -->
+  <div class="box is-borderless">
+    <!-- Header Section -->
+    <div class="p-5 deployment-header">
+        <div class="is-flex is-justify-content-space-between is-align-items-start">
+          <div class="header-left-section">
+            <div class="is-flex is-align-items-center mb-2">
+              <NuxtLink :to="props.deploymentId ? `/deployments/${props.deploymentId}` : '/explorer'" class="button is-ghost back-button mr-4">
+                <span class="icon is-small">
+                  <ArrowUpIcon class="icon-16 transform-rotate-270 back-arrow-icon" />
+                </span>
+              </NuxtLink>
+              <div class="header-title-section">
+                <p class="subtitle is-7 has-text-grey is-family-monospace mb-0">{{ props.job.address }}</p>
               </div>
-
-              <!-- Right Group: Actions and Status -->
-              <div class="job-actions is-hidden-mobile">
-                <div class="actions-container">
-                  <button
-                    v-if="
-                      (props.job.isRunning || props.job.state === 0) &&
-                      props.isJobPoster
-                    "
-                    @click.stop="stopJob"
-                    :class="{ 'is-loading': loading }"
-                    class="button is-small action-button mr-2"
-                    :title="
-                      props.job.state === 0 ? 'Delist the job' : 'Stop the job'
-                    "
-                  >
-                    <span class="icon is-small">
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path d="M6 6h12v12H6V6z" fill="currentColor" />
-                      </svg>
-                    </span>
-                    <span>Stop</span>
-                  </button>
-                  <button
-                    v-if="props.job.isRunning && props.isJobPoster"
-                    @click.stop="openExtendModal"
-                    :class="{ 'is-loading': loadingExtend }"
-                    class="button is-small action-button mr-2"
-                    title="Extend job duration"
-                  >
-                    <span class="icon is-small">
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"
-                          fill="currentColor"
-                        />
-                      </svg>
-                    </span>
-                    <span>Extend</span>
-                  </button>
-                  <button
-                    @click.stop="repostJob"
-                    class="button is-small action-button mr-2"
-                    title="Redeploy this job"
-                  >
-                    <span class="icon is-small">
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"
-                          fill="currentColor"
-                        />
-                      </svg>
-                    </span>
-                    <span>Redeploy</span>
-                  </button>
-                  <div class="job-status ml-2">
-                    <JobStatus
-                      :status="
-                        props.job.isCompleted && props.job.jobStatus
-                          ? props.job.jobStatus === 'success'
-                            ? 'SUCCESS'
-                            : 'FAILED'
-                          : props.job.state
-                      "
-                    />
-                  </div>
-                </div>
-              </div>
+              <StatusTag class="ml-4" :status="props.job.state" />
             </div>
           </div>
-        </div>
-
-      </header>
-
-      <!-- Service Endpoints Row -->
-      <div
-        v-if="
-          props.job.isRunning && props.endpoints && props.endpoints.size > 0
-        "
-        class="service-endpoints px-5 py-2"
-      >
-        <div
-          v-for="([url, endpointData], index) in Array.from(
-            props.endpoints.entries()
-          )"
-          :key="index"
-          class="endpoint-item mb-2"
-        >
-          <div class="endpoint-content">
-            <span class="endpoint-port">- Port {{ endpointData.port }}</span>
-            <div
-              class="tag is-outlined is-light ml-2"
-              :class="{
-                'is-success':
-                  props.job.isRunning && endpointData.status === 'ONLINE',
-                'is-danger':
-                  !props.job.isRunning ||
-                  (props.job.isRunning && endpointData.status === 'OFFLINE'),
-                'is-info':
-                  props.job.isRunning && endpointData.status === 'UNKNOWN',
-              }"
-            >
-              <span>{{
-                !props.job.isRunning || props.job.isCompleted
-                  ? "OFFLINE"
-                  : endpointData.status === "UNKNOWN"
-                    ? "LOADING"
-                    : endpointData.status
-              }}</span>
+          <div class="deployment-tabs">
+          <button 
+            v-for="tab in availableTabs"
+            :key="tab"
+            @click="activeTab = tab"
+            :class="{ 'is-active': activeTab === tab }"
+            class="tab-button"
+          >
+            {{ getTabLabel(tab) }}
+          </button>
+          <!-- Actions Dropdown -->
+          <div v-if="hasAnyActions" class="dropdown is-right" :class="{ 'is-active': showActionsDropdown }" ref="actionsDropdown">
+            <div class="dropdown-trigger">
+              <button 
+                class="tab-button actions-button" 
+                @click="toggleActionsDropdown"
+                :class="{ 'is-loading': loading }"
+              >
+                <span>Actions</span>
+                <span class="icon is-small dropdown-arrow ml-1" :class="{ 'is-rotated': showActionsDropdown }">
+                  <ChevronDownIcon />
+                </span>
+              </button>
             </div>
-            <a
-              :href="url"
-              target="_blank"
-              class="button is-small action-button"
-              @click.stop
-            >
-              <span class="icon is-small">
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
+            <div class="dropdown-menu">
+              <div class="dropdown-content">
+                <a 
+                  v-if="props.job.isRunning && props.isJobPoster"
+                  class="dropdown-item"
+                  @click="handleActionClick(openExtendModal)"
+                  :disabled="loadingExtend"
                 >
-                  <path
-                    d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"
-                    fill="currentColor"
-                  />
-                </svg>
-              </span>
-              <span>Open Service</span>
-            </a>
+                  <span class="icon is-small mr-2">
+                    <ClockIcon />
+                  </span>
+                  <span>Extend</span>
+                </a>
+
+                <a 
+                  v-if="(props.job.isRunning || props.job.state === 0) && props.isJobPoster"
+                  class="dropdown-item"
+                  @click="handleActionClick(stopJob)"
+                  :disabled="loading"
+                >
+                  <span class="icon is-small mr-2">
+                    <SquareIcon />
+                  </span>
+                  <span>{{ props.job.state === 0 ? 'Delist' : 'Stop' }}</span>
+                </a>
+                
+                <div v-if="!hasAnyActions" class="dropdown-item has-text-grey">
+                  <span>No actions available</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="card-content p-4">
-      <!-- Quick Details Compact Grid -->
-      <div class="content mb-5">
-        <!-- First Row of Quick Details -->
-        <div
-          class="columns is-multiline is-variable is-0 no-padding is-justify-content-flex-start mb-0"
-        >
-          <!-- Duration -->
-          <div
-            class="column is-narrow-desktop is-narrow-tablet is-full-mobile no-padding"
-            style="min-width: 150px"
-          >
-            <div class="quick-detail-item">
-              <span class="quick-detail-label">Duration</span>
-              <span class="quick-detail-value">
-                <span v-if="jobDurationData">
-                  <template v-if="jobDurationData.actualSeconds > 0">
-                    <SecondsFormatter :seconds="jobDurationData.actualSeconds" :showSeconds="true" />
-                    <span v-if="jobDurationData.maxDurationHours" class="has-text-grey"> (max {{ jobDurationData.maxDurationHours }})</span>
-                  </template>
-                  <template v-else-if="jobDurationData.maxDurationHours">
-                    <span class="has-text-grey">(max {{ jobDurationData.maxDurationHours }})</span>
-                  </template>
-                </span>
-                <span v-else class="icon-text">
-                  <span class="icon is-small"
-                    ><i class="fas fa-spinner fa-spin"></i
-                  ></span>
-                  <span>Loading</span>
-                </span>
-              </span>
-            </div>
-          </div>
-
-          <!-- Country -->
-          <div
-            class="column is-narrow-desktop is-narrow-tablet is-full-mobile no-padding"
-            style="min-width: 150px"
-          >
-            <div class="quick-detail-item">
-              <span class="quick-detail-label">Country</span>
-              <span class="quick-detail-value">
-                <span v-if="countryInfo">{{ countryInfo }}</span>
-                <span v-else-if="isQueuedJob" class="has-text-grey-light">
-                  Not assigned yet
-                </span>
-                <span v-else class="icon-text">
-                  <span class="icon is-small"
-                    ><i class="fas fa-spinner fa-spin"></i
-                  ></span>
-                  <span>Loading</span>
-                </span>
-              </span>
-            </div>
-          </div>
-
-          <!-- CPU -->
-          <div
-            class="column is-narrow-desktop is-narrow-tablet is-full-mobile no-padding"
-            style="min-width: 150px"
-          >
-            <div class="quick-detail-item">
-              <span class="quick-detail-label">CPU</span>
-              <span class="quick-detail-value">
-                <span v-if="combinedSpecs?.cpu">{{ combinedSpecs.cpu }}</span>
-                <span v-else-if="isQueuedJob" class="has-text-grey-light">
-                  Not assigned yet
-                </span>
-                <span v-else class="icon-text">
-                  <span class="icon is-small"
-                    ><i class="fas fa-spinner fa-spin"></i
-                  ></span>
-                  <span>Loading</span>
-                </span>
-              </span>
+    <!-- Tab Content -->
+    <div class="p-5">
+      <!-- Overview Tab -->
+      <div v-if="activeTab === 'overview'">
+        <!-- Job Details Section -->
+        <div>
+          <h2 class="title is-5 mb-3">Job details</h2>
+          <div class="box is-borderless">
+            <div class="table-container">
+              <table class="table is-fullwidth mb-0">
+              <tbody>
+                <tr>
+                  <td class="has-min-width-250">Job address</td>
+                  <td>
+                    <a :href="`https://solscan.io/account/${props.job.address}`" target="_blank" class="has-text-link is-family-monospace">
+                      {{ props.job.address }}
+                    </a>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Deployer address</td>
+                  <td>
+                    <nuxt-link :to="`/deployer/${props.job.project}`" class="has-text-link is-family-monospace">
+                      {{ props.job.project?.toString() }}
+                    </nuxt-link>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Node address</td>
+                  <td>
+                    <span v-if="props.job.node && props.job.node !== '11111111111111111111111111111111'">
+                      <nuxt-link :to="`/host/${props.job.node}`" class="has-text-link is-family-monospace">
+                        {{ props.job.node }}
+                      </nuxt-link>
+                    </span>
+                    <span v-else class="has-text-grey">--</span>
+                  </td>
+                </tr>
+                <tr v-if="!(props.hideFields?.marketAddress)">
+                  <td>Market address</td>
+                  <td>
+                    <nuxt-link :to="`/markets/${props.job.market}`" class="has-text-link is-family-monospace">
+                      {{ props.job.market?.toString() }}
+                    </nuxt-link>
+                  </td>
+                </tr>
+                <tr v-if="!(props.hideFields?.price)">
+                  <td>Price</td>
+                  <td>{{ formatPrice(props.job.price, props.nosPrice) }}</td>
+                </tr>
+                <tr v-if="combinedSpecs?.gpuCount">
+                  <td>GPU Count</td>
+                  <td>{{ combinedSpecs.gpuCount }}</td>
+                </tr>
+                <tr v-if="combinedSpecs?.gpuModel">
+                  <td>GPU Model</td>
+                  <td>{{ combinedSpecs.gpuModel }}</td>
+                </tr>
+                <tr v-if="combinedSpecs?.vram">
+                  <td>VRAM</td>
+                  <td>{{ combinedSpecs.vram }} GB</td>
+                </tr>
+                <tr v-if="combinedSpecs?.cpuModel">
+                  <td>CPU Model</td>
+                  <td>{{ combinedSpecs.cpuModel }}</td>
+                </tr>
+                <tr v-if="combinedSpecs?.cudaVersion">
+                  <td>CUDA Driver</td>
+                  <td>{{ combinedSpecs.cudaVersion }}</td>
+                </tr>
+                <tr v-if="combinedSpecs?.download">
+                  <td>Internet Speed</td>
+                  <td>{{ combinedSpecs.download }} Mbps</td>
+                </tr>
+                
+                <!-- Additional details from Quick Details and More Details -->
+                <tr v-if="jobDurationData">
+                  <td>Duration</td>
+                  <td>
+                    <span v-if="jobDurationData.actualSeconds > 0">
+                      <SecondsFormatter :seconds="jobDurationData.actualSeconds" :showSeconds="true" />
+                      <span v-if="jobDurationData.maxDurationHours" class="has-text-grey"> (max {{ jobDurationData.maxDurationHours }})</span>
+                    </span>
+                    <span v-else-if="jobDurationData.maxDurationHours" class="has-text-grey">
+                      (max {{ jobDurationData.maxDurationHours }})
+                    </span>
+                  </td>
+                </tr>
+                <tr v-if="countryInfo || isQueuedJob">
+                  <td>Country</td>
+                  <td>
+                    <span v-if="countryInfo">{{ countryInfo }}</span>
+                    <span v-else class="has-text-grey">--</span>
+                  </td>
+                </tr>
+                <tr v-if="combinedSpecs?.ram">
+                  <td>RAM</td>
+                  <td>{{ combinedSpecs.ram }} MB</td>
+                </tr>
+                <tr v-if="combinedSpecs?.diskSpace">
+                  <td>Disk Space</td>
+                  <td>{{ combinedSpecs.diskSpace }} GB</td>
+                </tr>
+                <tr v-if="combinedSpecs?.upload">
+                  <td>Upload Speed</td>
+                  <td>{{ combinedSpecs.upload }} Mbps</td>
+                </tr>
+                <tr v-if="combinedSpecs?.nvmlVersion">
+                  <td>NVIDIA Driver</td>
+                  <td>{{ combinedSpecs.nvmlVersion }}</td>
+                </tr>
+                <tr v-if="combinedSpecs?.systemEnvironment">
+                  <td>System Environment</td>
+                  <td>{{ combinedSpecs.systemEnvironment }}</td>
+                </tr>
+                <tr v-if="props.job.timeStart && formatStartTime">
+                  <td>Started</td>
+                  <td>
+                    {{ formatStartTime(props.job.timeStart) }}
+                    <span class="has-text-grey is-size-7"> ({{ formatTimeAgo(props.job.timeStart) }})</span>
+                  </td>
+                </tr>
+                <tr v-if="marketName && !(props.hideFields?.gpuPoolName)">
+                  <td>GPU Pool Name</td>
+                  <td>{{ marketName }}</td>
+                </tr>
+              </tbody>
+            </table>
             </div>
           </div>
         </div>
 
-        <!-- Second Row of Quick Details -->
-        <div
-          class="columns is-multiline is-variable is-0 no-padding is-justify-content-flex-start"
-        >
-          <!-- RAM -->
-          <div
-            class="column is-narrow-desktop is-narrow-tablet is-full-mobile no-padding"
-            style="min-width: 150px"
-          >
-            <div class="quick-detail-item">
-              <span class="quick-detail-label">RAM</span>
-              <span class="quick-detail-value">
-                <span v-if="combinedSpecs?.ram"
-                  >{{ combinedSpecs.ram }} MB</span
-                >
-                <span v-else-if="isQueuedJob" class="has-text-grey-light">
-                  Not assigned yet
-                </span>
-                <span v-else class="icon-text">
-                  <span class="icon is-small"
-                    ><i class="fas fa-spinner fa-spin"></i
-                  ></span>
-                  <span>Loading</span>
-                </span>
-              </span>
-            </div>
-          </div>
+      </div>
 
-          <!-- Disk Space -->
-          <div
-            class="column is-narrow-desktop is-narrow-tablet is-full-mobile no-padding"
-            style="min-width: 150px"
-          >
-            <div class="quick-detail-item">
-              <span class="quick-detail-label">Disk Space</span>
-              <span class="quick-detail-value">
-                <span v-if="combinedSpecs?.diskSpace"
-                  >{{ combinedSpecs.diskSpace }} GB</span
-                >
-                <span v-else-if="isQueuedJob" class="has-text-grey-light">
-                  Not assigned yet
-                </span>
-                <span v-else class="icon-text">
-                  <span class="icon is-small"
-                    ><i class="fas fa-spinner fa-spin"></i
-                  ></span>
-                  <span>Loading</span>
-                </span>
-              </span>
-            </div>
-          </div>
-
-          <!-- Download Speed -->
-          <div
-            class="column is-narrow-desktop is-narrow-tablet is-full-mobile no-padding"
-            style="min-width: 150px"
-          >
-            <div class="quick-detail-item">
-              <span class="quick-detail-label">Download</span>
-              <span class="quick-detail-value">
-                <span v-if="combinedSpecs?.download">
-                  {{ combinedSpecs.download }} Mbps
-                </span>
-                <span v-else-if="isQueuedJob" class="has-text-grey-light">
-                  Not assigned yet
-                </span>
-                <span v-else class="icon-text">
-                  <span class="icon is-small"
-                    ><i class="fas fa-spinner fa-spin"></i
-                  ></span>
-                  <span>Loading</span>
-                </span>
-              </span>
-            </div>
-          </div>
-
-          <!-- Upload Speed -->
-          <div
-            class="column is-narrow-desktop is-narrow-tablet is-full-mobile no-padding"
-            style="display: none; min-width: 150px"
-          >
-            <div class="quick-detail-item">
-              <span class="quick-detail-label">Upload</span>
-              <span class="quick-detail-value">
-                <span v-if="combinedSpecs?.upload">
-                  {{ combinedSpecs.upload }} Mbps
-                </span>
-                <span v-else class="icon-text">
-                  <span class="icon is-small"
-                    ><i class="fas fa-spinner fa-spin"></i
-                  ></span>
-                  <span>Loading</span>
-                </span>
-              </span>
-            </div>
-          </div>
+      <!-- Job Definition Tab -->
+      <div v-if="activeTab === 'job-definition'">
+        <div v-if="jobDefinitionForTab">
+          <JobDefinitionTab :job-definition="jobDefinitionForTab" />
+        </div>
+        <div v-else class="notification is-light has-text-centered">
+          <p class="has-text-grey">No job definition available</p>
         </div>
       </div>
 
-      <!-- Tabs Section -->
-      <div v-if="props.job.jobDefinition">
-        <JobTabs
-          :job="props.job"
-          :endpoints="props.endpoints"
-          :isJobPoster="props.isJobPoster"
-          :jobDefinition="props.job.jobDefinition"
-          :hasArtifacts="false"
-          :isConnecting="isConnecting"
-          :logConnectionEstablished="connectionEstablished"
-          :systemLogs="[]"
-          :containerLogs="[]"
-          :progressBars="getFlogProgressBars()"
-          :resourceProgressBars="flogResourceBarsRef"
-          :showChatTab="isChatServiceReady"
-          :chatServiceUrl="chatServiceUrl"
-          :chatApiConfig="chatApiConfig"
-          :jobCombinedSpecs="combinedSpecs"
-          :jobNodeReport="jobNodeReport"
-          :loadingJobNodeSpecs="loadingNodeSpecs"
-          :isQueuedJob="isQueuedJob"
-          :activeLogs="(flogActiveLogs as unknown as any[])"
-          :opIds="flogTabs.filter(t => t !== 'system')"
-          :filters="{ value: { opId: flogActiveTab === 'system' ? null : flogActiveTab, types: new Set(['container','info','error']) } }"
-          :selectOp="(opId: string | null) => setFlogActiveTab(opId ?? 'system')"
-          :toggleType="() => {}"
-          v-model:activeTab="activeTab"
-          ref="jobTabsRef"
-        />
+      <!-- Container Controls Tab -->
+      <div v-if="activeTab === 'container-controls'">
+        <div v-if="props.job.jobDefinition">
+          <JobOverview
+            :job="props.job"
+            :isJobPoster="props.isJobPoster"
+            :opIds="flogTabs.filter(t => t !== 'system')"
+            :activeLogs="flogActiveLogs"
+            :selectOp="(opId: string | null) => setFlogActiveTab(opId ?? 'system')"
+            :logsByOp="flogLogsByOp"
+            :systemLogsMap="flogSystemLogs"
+            :jobInfo="props.jobInfo"
+          />
+        </div>
+      </div>
+
+      <!-- System Logs Tab -->
+      <div v-if="activeTab === 'system-logs'">
+        <div v-if="props.job.jobDefinition">
+          <JobTabs
+            :job="props.job"
+            :endpoints="props.endpoints"
+            :isJobPoster="props.isJobPoster"
+            :jobInfo="props.jobInfo"
+            :isConfidential="isConfidential"
+            :jobDefinition="props.job.jobDefinition"
+            :hasArtifacts="false"
+            :isConnecting="isConnecting"
+            :logConnectionEstablished="connectionEstablished"
+            :systemLogs="[]"
+            :containerLogs="[]"
+            :progressBars="getFlogProgressBars()"
+            :resourceProgressBars="flogResourceBarsRef"
+            :showChatTab="isChatServiceReady"
+            :chatServiceUrl="chatServiceUrl"
+            :chatApiConfig="chatApiConfig"
+            :jobCombinedSpecs="combinedSpecs"
+            :jobNodeReport="jobNodeReport"
+            :loadingJobNodeSpecs="loadingNodeSpecs"
+            :isQueuedJob="isQueuedJob"
+            :activeLogs="flogActiveLogs"
+            :opIds="flogTabs.filter(t => t !== 'system')"
+            :filters="{ value: { opId: flogActiveTab === 'system' ? null : flogActiveTab, types: new Set(['container','info','error']) } }"
+            :selectOp="(opId: string | null) => setFlogActiveTab(opId ?? 'system')"
+            :toggleType="() => {}"
+            :logsByOp="flogLogsByOp"
+            :systemLogsMap="flogSystemLogs"
+            :activeTab="'logs'"
+            ref="jobTabsRef"
+          />
+        </div>
+      </div>
+      
+      <!-- Results Tab -->
+      <div v-if="activeTab === 'results'">
+        <div v-if="props.job.results">
+          <JobResult 
+            :ipfs-result="props.job.results"
+            :ipfs-job="props.job"
+          />
+        </div>
+        <div v-else class="notification is-light has-text-centered">
+          <p class="has-text-grey">No results available</p>
+        </div>
       </div>
     </div>
   </div>
@@ -495,7 +325,11 @@ import JobStatus from "~/components/Job/Status.vue";
 import JobPrice from "~/components/Job/Price.vue";
 import ExtendModal from "~/components/Job/Modals/Extend.vue";
 import JobTabs from "~/components/Job/Tabs.vue";
+import JobOverview from "~/components/Job/Tabs/Overview.vue";
+import JobResult from "~/components/Job/Result.vue";
+import JobDefinitionTab from "~/components/Job/Tabs/JobDefinition.vue";
 import SecondsFormatter from "~/components/SecondsFormatter.vue";
+import StatusTag from "~/components/Common/StatusTag.vue";
 
 import LogSubscription from "./LogSubscription.vue";
 import { useFLogs } from "~/composables/jobs/useFLogs";
@@ -505,8 +339,21 @@ import { useNosanaWallet } from "~/composables/useNosanaWallet";
 import { useAuthHeader } from "~/composables/useAuthHeader";
 import { useAPI } from "~/composables/useAPI";
 
+// Import icons as components
+import ChevronDownIcon from '@/assets/img/icons/chevron-down.svg?component';
+import ClockIcon from '@/assets/img/icons/clock.svg?component';
+import SquareIcon from '@/assets/img/icons/square.svg?component';
+import ArrowUpIcon from '@/assets/img/icons/arrow-up.svg?component';
+import RunningIcon from '@/assets/img/icons/status/running.svg?component';
+import StoppedIcon from '@/assets/img/icons/status/stopped.svg?component';
+import FailedIcon from '@/assets/img/icons/status/failed.svg?component';
+import QueuedIcon from '@/assets/img/icons/status/queued.svg?component';
+import DoneIcon from '@/assets/img/icons/status/done.svg?component';
+import { useStatus } from '~/composables/useStatus';
+
 import type { UseModal } from "~/composables/jobs/useModal";
 import type { Endpoints, UseJob } from "~/composables/jobs/useJob";
+import type { JobInfo, OpState } from "~/composables/jobs/types";
 import {
   computed,
   ref,
@@ -523,6 +370,103 @@ import type {
   OperationArgsMap,
   HttpHealthCheck,
 } from "@nosana/sdk";
+import type { FLogEntry } from "~/composables/jobs/useFLogs";
+import type { ProgressBar } from "~/composables/jobs/logTypes";
+
+// Type definitions
+interface TestgridMarket {
+  address: string;
+  name: string;
+  usd_reward_per_hour?: number;
+}
+
+interface GpuDevice {
+  name: string;
+  memory?: {
+    total_mb?: number;
+  };
+  network_architecture?: {
+    major: number;
+    minor: number;
+  };
+}
+
+interface NodeInfoGpus {
+  devices?: GpuDevice[];
+  cuda_driver_version?: string;
+  nvml_driver_version?: string;
+}
+
+interface NodeInfoData {
+  gpus?: NodeInfoGpus;
+  cpu?: {
+    model?: string;
+  };
+  ram_mb?: number;
+  disk_gb?: number;
+  country?: string;
+  version?: string;
+  system_environment?: string;
+}
+
+interface NodeInfoResponse {
+  info?: NodeInfoData;
+}
+
+interface NodeSpecs {
+  marketAddress?: string;
+  ram?: string | number;
+  diskSpace?: string | number;
+  cpu?: string;
+  country?: string;
+  avgDownload10?: number;
+  avgUpload10?: number;
+  avgPing10?: number;
+  gpus?: Array<{
+    gpu?: string;
+    memory?: number;
+    architecture?: string;
+  }>;
+  cudaVersion?: string;
+  nvmlVersion?: string;
+  nodeVersion?: string;
+  systemEnvironment?: string;
+}
+
+interface CombinedSpecs {
+  nodeAddress: string | unknown;
+  marketAddress?: string;
+  ram: number;
+  diskSpace: number;
+  cpu?: string;
+  country?: string;
+  download?: number;
+  upload?: number;
+  ping?: number;
+  gpus: Array<{
+    gpu: string;
+    memory?: number;
+    architecture?: string;
+  }>;
+  cudaVersion?: string;
+  nvmlVersion?: string;
+  nodeVersion?: string;
+  systemEnvironment?: string | null;
+}
+
+interface JobTabsComponent {
+  logsView?: {
+    scrollToBottomOnOpen?: () => void;
+  };
+}
+
+interface ResourceProgressBar extends ProgressBar {
+  metadata?: Record<string, unknown>;
+}
+
+const jobDefinitionForTab = computed<JobDefinition | null>(() => {
+  return (props.jobInfo?.jobDefinition as JobDefinition | undefined) ?? props.job.jobDefinition ?? null;
+});
 
 interface Props {
   job: UseJob;
@@ -530,6 +474,13 @@ interface Props {
   endpoints: Endpoints;
   nosPrice: number;
   isJobPoster: boolean;
+  jobInfo?: JobInfo | null;
+  deploymentId?: string | null;
+  hideFields?: {
+    marketAddress?: boolean;
+    price?: boolean;
+    gpuPoolName?: boolean;
+  };
 }
 
 const props = defineProps<Props>();
@@ -541,7 +492,14 @@ const { markets } = useMarkets();
 const { saveState } = useDeployPageState();
 
 // Fetch markets data needed for centralized pricing
-const { data: testgridMarkets } = useAPI('/api/markets', { default: () => [] });
+const { data: testgridMarkets, pending: marketsPending, execute: executeMarkets } = useAPI<TestgridMarket[]>('/api/markets', { default: () => [] });
+
+// Execute the markets API call on mount
+onMounted(() => {
+  if (!testgridMarkets.value || testgridMarkets.value.length === 0) {
+    executeMarkets();
+  }
+});
 const toast = useToast();
 const router = useRouter();
 
@@ -581,19 +539,53 @@ const isMainContentOpen = ref(true);
 const loading = ref<boolean>(false);
 const loadingExtend = ref<boolean>(false);
 
+// Choose job-definition for title: prefer live node info (confidential jobs), fallback to REST jobDefinition
+const titleJobDefinition = computed(() => {
+  return props.jobInfo?.jobDefinition || props.job.jobDefinition || null;
+});
+
 // Computed properties for job info
 const dockerImage = computed(() => {
-  if (!props.job.jobDefinition?.ops?.length) {
-    return null; // Will show loading state
-  }
-  const firstOp = props.job.jobDefinition.ops[0];
+  const jd = titleJobDefinition.value;
+  if (!jd?.ops?.length) return null;
+  const firstOp = jd.ops[0];
   if (firstOp.type === "container/run") {
     const args = firstOp.args as OperationArgsMap["container/run"];
-    if (args.image) {
-      return args.image;
-    }
+    if (args.image) return args.image;
   }
   return null; // Will show loading state
+});
+
+// Helper function to get job image (same as JobList)
+const getJobImage = (job: UseJob) => {
+  const jd = props.jobInfo?.jobDefinition || job.jobDefinition;
+  if (!jd?.ops?.length) return null;
+  const firstOp = jd.ops[0];
+  if (firstOp.type === 'container/run' && firstOp.args?.image) {
+    return firstOp.args.image;
+  }
+  return null;
+};
+
+// Extract all Docker images from all operations for job title
+const jobImages = computed(() => {
+  const jd = titleJobDefinition.value;
+  if (!jd?.ops?.length) return null;
+
+  const images: string[] = [];
+  jd.ops.forEach((op: Operation) => {
+    if (op.type === 'container/run') {
+      const args = op.args as OperationArgsMap['container/run'];
+      if (args?.image && !images.includes(args.image)) images.push(args.image);
+    }
+  });
+
+  return images.length > 0 ? images : null;
+});
+
+// Fallback to single image if multiple images logic fails
+const singleJobImage = computed(() => {
+  return getJobImage(props.job);
 });
 
 const formattedDockerImage = computed(() => {
@@ -627,14 +619,14 @@ const isGHCR = (image: string) => {
 const nodeSpecsUrl = computed(() =>
   hasRealNode.value ? `/api/nodes/${props.job.node}/specs` : ''
 );
-const { data: nodeSpecs, pending: loadingNodeSpecs } = useAPI(nodeSpecsUrl);
+const { data: nodeSpecs, pending: loadingNodeSpecs } = useAPI<NodeSpecs | null>(nodeSpecsUrl);
 
 const nodeInfoUrl = computed(() =>
   hasRealNode.value
     ? `https://${props.job.node}.${useRuntimeConfig().public.nodeDomain}/node/info`
     : ''
 );
-const { data: nodeInfo } = useAPI(nodeInfoUrl);
+const { data: nodeInfo } = useAPI<NodeInfoResponse | null>(nodeInfoUrl);
 
 // Get node report
 const jobNodeReportUrl = computed(() => {
@@ -721,6 +713,31 @@ const formatMaxDurationInHours = (seconds: number) => {
   return `${formattedHours}h`;
 };
 
+// Helper function to format relative dates
+const formatDateRelative = (timestamp: number) => {
+  if (!timestamp || timestamp === 0) return '--';
+  const date = new Date(timestamp * 1000);
+  const now = new Date();
+  const diffInMs = now.getTime() - date.getTime();
+  const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+  const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+  const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+
+  if (diffInMinutes < 1) return 'just now';
+  if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+  if (diffInHours < 24) return `${diffInHours}h ago`;
+  if (diffInDays < 7) return `${diffInDays}d ago`;
+  
+  return date.toLocaleDateString();
+};
+
+// Helper function to format price
+const formatPrice = (price: number, nosPrice: number) => {
+  if (!price || !nosPrice) return '--';
+  const usdPrice = (price * nosPrice).toFixed(4);
+  return `$${usdPrice}`;
+};
+
 watch(
   [() => props.job, currentTime],
   ([newJob, newCurrentTimeVal]) => {
@@ -803,7 +820,7 @@ const timeAgo = computed(() => {
 });
 
 // Combined node specs
-const combinedSpecs = computed(() => {
+const combinedSpecs = computed<CombinedSpecs | null>(() => {
   if (!nodeSpecs.value) return null;
 
   const nodeInfoData = nodeInfo.value?.info;
@@ -823,7 +840,7 @@ const combinedSpecs = computed(() => {
     upload: nodeSpecs.value.avgUpload10,
     ping: nodeSpecs.value.avgPing10,
     gpus: nodeInfoData?.gpus?.devices
-      ? nodeInfoData.gpus.devices.map((gpu: any) => ({
+      ? nodeInfoData.gpus.devices.map((gpu: GpuDevice) => ({
           gpu: gpu.name,
           memory: gpu.memory?.total_mb,
           architecture: `${gpu.network_architecture?.major}.${gpu.network_architecture?.minor}`,
@@ -856,6 +873,112 @@ const isQueuedJob = computed(() => {
     props.job.timeStart === 0
   ) || props.job.node === '11111111111111111111111111111111';
 });
+
+// Check if any actions are available for the job
+const hasAnyActions = computed(() => {
+  // Extend action: available for running jobs if user is job poster
+  const canExtend = props.job.isRunning && props.isJobPoster;
+  
+  // Stop/Delist action: available for running or queued jobs if user is job poster
+  const canStop = (props.job.isRunning || props.job.state === 0) && props.isJobPoster;
+  
+  return canExtend || canStop;
+});
+
+// Check if job has results to show
+const hasResults = computed(() => {
+  return props.job.results && (props.job.hasResultsRegex || props.job.isCompleted);
+});
+
+const hasContainerControls = computed(() => {
+  if (!props.job.jobDefinition) return false;
+
+
+  const isStopped = props.job.state === 3;
+  if (props.job.isCompleted || isStopped) {
+    try {
+      const haveJobInfo = Boolean(props.jobInfo);
+      const haveResults = Boolean(props.job.results);
+      const haveEndpoints = (() => {
+        try { return props.endpoints?.size > 0; } catch { return false; }
+      })();
+      if (haveJobInfo || haveResults || haveEndpoints) return true;
+
+      // Fallback: if any logs exist in final opStates, also show
+      const opStatesFromJob = props.job.results?.opStates;
+      const opStatesFromInfo = props.jobInfo?.results?.opStates;
+      const liveOpStates = props.jobInfo?.operations?.opStates;
+      const allStates: OpState[] = [
+        ...(Array.isArray(opStatesFromJob) ? opStatesFromJob : []),
+        ...(Array.isArray(opStatesFromInfo) ? opStatesFromInfo : []),
+        ...(Array.isArray(liveOpStates) ? liveOpStates : []),
+      ];
+      return allStates.some((s: OpState) => Array.isArray(s?.logs) && s.logs.length > 0);
+    } catch {
+      return false;
+    }
+  }
+
+  const operationTabs = flogTabs.value.filter((t) => t !== 'system');
+  const hasOperationLogs = operationTabs.some((tab) => {
+    const logs = flogLogsByOp.value.get(tab);
+    return logs && logs.length > 0;
+  });
+  return operationTabs.length > 0 && hasOperationLogs;
+});
+
+// Check if system logs tab should be available
+const hasSystemLogs = computed(() => {
+  if (!props.job.jobDefinition) return false;
+
+  if (props.job.isCompleted) return false;
+
+  const hasLiveLogs = (() => {
+    const hasSystem = flogSystemLogs.value.length > 0;
+    const hasOps = Array.from(flogLogsByOp.value.values()).some((logs) => (logs && logs.length > 0));
+    return hasSystem || hasOps;
+  })();
+
+  if (props.job.isRunning) {
+    return Boolean(connectionEstablished.value && hasLiveLogs);
+  }
+
+  return hasLiveLogs;
+});
+
+// Available tabs based on job state and data
+const availableTabs = computed(() => {
+  const tabs = ['overview'];
+  if (props.jobInfo?.jobDefinition || props.job.jobDefinition) {
+    tabs.push('job-definition');
+  }
+  
+  if (hasContainerControls.value) {
+    tabs.push('container-controls');
+  }
+  
+  if (hasSystemLogs.value) {
+    tabs.push('system-logs');
+  }
+  
+  if (hasResults.value) {
+    tabs.push('results');
+  }
+  
+  return tabs;
+});
+
+// Get display label for tab
+const getTabLabel = (tab: string) => {
+  switch (tab) {
+    case 'system-logs': return 'Logs';
+    case 'job-definition': return 'Definition';
+    case 'container-controls': return 'Containers';
+    case 'results': return 'Results';
+    default: return tab.charAt(0).toUpperCase() + tab.slice(1);
+  }
+};
+
 
 const toggleDetails = () => {
   isDetailsOpen.value = !isDetailsOpen.value;
@@ -962,23 +1085,13 @@ const hasOpenaiEndpoint = computed(() => {
   return false;
 });
 
-const jobType = computed(() => props.job.jobDefinition?.state?.["nosana/job-type"] || null);
-const isParallelByEndpoints = computed(() => {
+const isConfidential = computed<boolean>(() => {
   try {
-    const ids = new Set<string>();
-    for (const [, endpoint] of props.endpoints.entries()) {
-      if (endpoint.opId) ids.add(endpoint.opId);
-      if (ids.size > 1) return true;
-    }
-    return false;
+    const jd = props.job.jobDefinition;
+    return Boolean(jd && 'logistics' in jd && (jd as JobDefinition & { logistics?: unknown }).logistics);
   } catch {
     return false;
   }
-});
-const logsMode = computed<'legacy' | 'parallel'>(() => {
-  const explicit = jobType.value === 'parallel';
-  const opsCount = props.job.jobDefinition?.ops?.length || 0;
-  return explicit || opsCount > 1 || isParallelByEndpoints.value ? 'parallel' : 'legacy';
 });
 
 const {
@@ -990,6 +1103,8 @@ const {
   connectionEstablished,
   progressBars: flogProgressBarsRef,
   resourceProgressBars: flogResourceBarsRef,
+  logsByOp: flogLogsByOp,
+  systemLogs: flogSystemLogs,
 } = useFLogs(
   props.job.address,
   computed(() => props.job.node),
@@ -998,8 +1113,8 @@ const {
 );
 
 // Expose flog progress bars (directly from useFLogs)
-function getFlogProgressBars(): Map<string, any> {
-  return flogProgressBarsRef.value as unknown as Map<string, any>;
+function getFlogProgressBars(): Map<string, ProgressBar> {
+  return flogProgressBarsRef.value;
 }
 
 // Structure to hold API configuration extracted from health check
@@ -1086,17 +1201,11 @@ watch(
         isChatServiceReady.value = false; // Disable chat tab
       }
     } else {
-      isChatServiceReady.value = false; // Disable chat tab if no URL or endpoint info
+      isChatServiceReady.value = false;
     }
   },
   { deep: true }
 ); // deep true for endpoints map
-
-watch(connectionEstablished, (newValue, oldValue) => {
-  if (newValue && !oldValue) {
-    activeTab.value = "logs";
-  }
-});
 
 function activateChatAndClosePopup() {
   showChatPopup.value = false;
@@ -1112,8 +1221,30 @@ function activateChatAndClosePopup() {
   });
 }
 
-const activeTab = ref("logs");
-const jobTabsRef = ref<any>(null); // Ref for the JobTabs component
+const activeTab = ref("system-logs");
+
+const hasAutoSwitchedToLogs = ref(false);
+watch(
+  () => hasSystemLogs.value,
+  (canShowLogsNow) => {
+    if (canShowLogsNow && !hasAutoSwitchedToLogs.value) {
+      if (activeTab.value !== 'system-logs' && activeTab.value === 'overview') {
+        activeTab.value = 'system-logs';
+      }
+      hasAutoSwitchedToLogs.value = true;
+    }
+  },
+  { immediate: false }
+);
+
+// Watch for changes in available tabs and ensure active tab is valid
+watch(availableTabs, (newTabs) => {
+  if (!newTabs.includes(activeTab.value)) {
+    // Prefer system-logs (Logs tab) as default, fallback to overview
+    activeTab.value = newTabs.includes('system-logs') ? 'system-logs' : (newTabs[0] || 'overview');
+  }
+}, { immediate: true });
+const jobTabsRef = ref<JobTabsComponent | null>(null); // Ref for the JobTabs component
 
 // Watch for changes in table content (for real-time updates) - REMOVING THIS SECTION
 
@@ -1131,28 +1262,63 @@ watch(isMainContentOpen, (newValue) => {
   }
 });
 
-const getStatusIcon = (status: string) => {
+const getStatusIcon = (status: string | number) => {
+  // Handle both string (endpoint status) and number (job state)
+  if (typeof status === 'number') {
+    // Job state mapping
+    switch (status) {
+      case 0: // QUEUED
+        return QueuedIcon;
+      case 1: // RUNNING
+        return RunningIcon;
+      case 2: // COMPLETED
+        return DoneIcon;
+      case 3: // STOPPED
+        return StoppedIcon;
+      default:
+        return StoppedIcon;
+    }
+  }
+  
+  // Endpoint status mapping (legacy)
   if (!props.job.isRunning || props.job.isCompleted) {
-    return "/img/icons/status/stopped.svg"; // Offline because job is not running or completed
+    return StoppedIcon;
   }
-
-  // Job is running, determine icon by endpoint status
+  
   if (status === "ONLINE") {
-    return "/img/icons/status/done.svg";
+    return DoneIcon;
   } else if (status === "UNKNOWN") {
-    return "/img/icons/status/running.svg"; // Loading state
+    return RunningIcon;
   } else if (status === "OFFLINE") {
-    return "/img/icons/status/failed.svg"; // Offline because endpoint is offline
+    return FailedIcon;
   }
-
-  return "/img/icons/status/failed.svg"; // Default to failed if status is unexpected while job is running
+  
+  return FailedIcon;
 };
 
-const getStatusText = (status: string) => {
+const getStatusText = (status: string | number) => {
+  // Handle both string (endpoint status) and number (job state)
+  if (typeof status === 'number') {
+    // Job state mapping
+    switch (status) {
+      case 0:
+        return "QUEUED";
+      case 1:
+        return "RUNNING";
+      case 2:
+        return "COMPLETED";
+      case 3:
+        return "STOPPED";
+      default:
+        return "UNKNOWN";
+    }
+  }
+  
+  // Endpoint status mapping (legacy)
   if (!props.job.isRunning || props.job.isCompleted) {
     return "OFFLINE";
   }
-  // Job is running
+  
   if (status === "ONLINE") {
     return "ONLINE";
   } else if (status === "UNKNOWN") {
@@ -1160,14 +1326,339 @@ const getStatusText = (status: string) => {
   } else if (status === "OFFLINE") {
     return "OFFLINE";
   }
-  return "OFFLINE"; // Default to OFFLINE for any other case when job is running
+  return "OFFLINE";
 };
+
+// Market address as a simple string
+const marketAddress = computed(() => String(props.job.market ?? '').trim());
+
+// Market name from API (match by address)
+const marketName = computed(() => {
+  const address = marketAddress.value;
+  if (!address || !testgridMarkets.value?.length) return null;
+  const market = testgridMarkets.value.find((m: TestgridMarket) => String(m.address).trim() === address);
+  return market?.name ?? null;
+});
+
+const formatStartTime = (timeStart: number) => {
+  const date = new Date(timeStart * 1000);
+  return date.toISOString().replace('T', ' ').substring(0, 19);
+};
+
+const formatTimeAgo = (timeStart: number) => {
+  const now = Date.now();
+  const startTime = timeStart * 1000;
+  const diffMs = now - startTime;
+  const diffSec = Math.floor(diffMs / 1000);
+  if (diffSec < 60) return `${diffSec}s ago`;
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHours = Math.floor(diffMin / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays}d ago`;
+};
+
+const showActionsDropdown = ref(false);
+const headerIconRef = ref<HTMLElement | null>(null);
+
+const toggleActionsDropdown = () => {
+  showActionsDropdown.value = !showActionsDropdown.value;
+};
+
+const handleActionClick = (actionFn: () => void) => {
+  showActionsDropdown.value = false;
+  actionFn();
+};
+
+// Use global status system
+const { getStatusClass: statusClass } = useStatus();
+
+// getStatusText function already exists above, removed duplicate
+
+// Close dropdown when clicking outside
+const handleClickOutside = (event: MouseEvent) => {
+  const target = event.target as HTMLElement;
+  if (!target.closest('.dropdown')) {
+    showActionsDropdown.value = false;
+  }
+};
+
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside);
+});
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside);
+});
 </script>
 
 <style lang="scss" scoped>
+// Improved header layout
+.deployment-header > .is-flex {
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.header-left-section {
+  min-width: 0; // Allow text to truncate
+  flex: 1;
+}
+
+.header-title-section {
+  min-width: 0; // Allow text to truncate
+  max-width: 400px; // Prevent extremely long addresses from stretching too much
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.header-title-section .title {
+  display: block !important;
+  margin-bottom: 0.25rem !important;
+}
+
+.job-images-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.header-title-section .subtitle {
+  display: block !important;
+  word-break: break-all; // Allow long addresses to wrap
+  line-height: 1.2;
+  margin-top: 0 !important;
+}
+
+.deployment-header .status-tag { 
+  white-space: nowrap; 
+  flex-shrink: 0;
+}
+
+// Mobile responsive
+@media screen and (max-width: 768px) {
+  .deployment-header > .is-flex {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    flex-wrap: nowrap !important;
+  }
+  
+  .header-left-section {
+    width: 100%;
+    margin-bottom: 1rem;
+  }
+  
+  .deployment-tabs {
+    width: 100% !important;
+    justify-content: flex-start;
+    margin-top: 0.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  
+  .header-title-section {
+    max-width: none;
+  }
+  
+  .header-title-section .subtitle {
+    font-size: 0.75rem;
+  }
+  
+  .tab-button {
+    font-size: 0.875rem;
+    padding: 0.5rem 0.75rem;
+  }
+}
+
+// Extra small screens
+@media screen and (max-width: 480px) {
+  .deployment-tabs {
+    gap: 0.25rem;
+  }
+  
+  .tab-button {
+    font-size: 0.75rem;
+    padding: 0.375rem 0.5rem;
+  }
+}
+
+// Job header styling - matches deployment page
+.job-header {
+  border-bottom: 1px solid $grey-lighter;
+}
+
+html.dark-mode .job-header {
+  border-bottom-color: $grey-dark;
+}
+
+
+.box.is-borderless {
+  padding: 0 !important;
+}
+
+// Remove old grid styling - now using tables
+
+// Actions dropdown styling - matches deployment page pattern
+// (Most styling comes from global dropdown classes)
+
+// Remove old grid layouts - now using table format
+
+// Minimal cleanup styles
+
+// Dark mode for new compact header
+html.dark-mode {
+  .card {
+    background: transparent;
+  }
+  
+  .compact-job-header {
+    background: $black-ter;
+  }
+  
+  .actions-dropdown-btn {
+    background: $black;
+    border-color: $grey-dark;
+    color: $white;
+    
+    &:hover {
+      background: $black-bis;
+      border-color: $grey;
+    }
+  }
+  
+  .actions-dropdown-menu {
+    background: $black-ter;
+    border-color: $grey-dark;
+    box-shadow: $box-shadow;
+  }
+  
+  .dropdown-item {
+    background: $black-ter;
+    border-bottom-color: $grey-dark;
+    color: $white;
+    
+    &:hover:not(.is-disabled) {
+      background: $grey-darker;
+    }
+    
+    &.is-disabled {
+      opacity: 0.3;
+    }
+  }
+  
+  .address-grid {
+    .address-label {
+      color: $text-light;
+    }
+    
+    .address-link,
+    .address-value {
+      color: $white;
+      
+      &:hover {
+        color: $secondary;
+      }
+    }
+    
+    .address-value.has-text-grey-light {
+      color: $grey;
+    }
+  }
+  
+  .service-endpoints-new {
+    background: $black-ter;
+    
+    .endpoint-port {
+      color: $white;
+    }
+    
+    .action-button {
+      background: $black-ter;
+      border-color: $grey-dark;
+      color: $white;
+      
+      &:hover {
+        background: $grey-darker;
+        border-color: $grey;
+      }
+    }
+  }
+  
+  .title-section {
+    .job-main-title {
+      color: $white;
+    }
+  }
+  
+  .address-section {
+    .address-label {
+      color: #999;
+    }
+    
+    .address-link,
+    .address-value {
+      color: $white;
+      
+      &:hover {
+        color: $secondary;
+      }
+    }
+    
+    .address-value.has-text-grey-light {
+      color: $grey;
+    }
+  }
+  
+  .spec-item {
+    .spec-label {
+      color: $text-light;
+    }
+    
+    .spec-value {
+      color: $white;
+      
+      .market-link {
+        color: $white;
+        
+        &:hover {
+          color: $secondary;
+        }
+      }
+      
+      .time-ago {
+        color: $text-light;
+      }
+      
+      :deep(.job-price) {
+        color: inherit;
+      }
+    }
+  }
+  
+  .spec-grid-item {
+    .spec-grid-label {
+      color: #999;
+    }
+    
+    .spec-grid-value {
+      color: $white;
+    }
+  }
+}
+
 // Utility class for full width
 .w-100 {
   width: 100%;
+}
+
+// Spinner animation
+@keyframes spinAround {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .has-text-ellipsis {
@@ -1179,7 +1670,7 @@ const getStatusText = (status: string) => {
 // Card header container styling
 .card-header-container {
   cursor: pointer;
-  background-color: #ffffff;
+  background-color: $white;
   border-radius: 8px 8px 0 0; // Round top corners
 
   // When this container is directly followed by card-content (i.e., no service endpoints)
@@ -1232,14 +1723,14 @@ const getStatusText = (status: string) => {
   .job-title {
     font-size: 1.1rem;
     font-weight: 600;
-    color: #363636;
+    color: $text;
     line-height: 1.2;
   }
 
   .job-docker {
     font-size: 0.8rem;
     font-family: monospace;
-    color: #7a7a7a;
+    color: $text-dark;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1259,7 +1750,7 @@ const getStatusText = (status: string) => {
 
   .job-gpu {
     font-size: 1.1rem;
-    color: #363636;
+    color: $text;
     font-weight: 600;
     line-height: 1.2;
   }
@@ -1279,7 +1770,7 @@ const getStatusText = (status: string) => {
   .price-value {
     font-size: 1.1rem;
     font-weight: 600;
-    color: #363636;
+    color: $text;
     line-height: 1.2;
   }
 }
@@ -1355,13 +1846,13 @@ const getStatusText = (status: string) => {
 
 // Service endpoints styling
 .service-endpoints {
-  background-color: #ffffff;
-  border-top: 0px solid #e8e8e8;
+  background-color: $white;
+  border-top: 0px solid $grey-lighter;
   transition: background-color 0.2s ease;
 }
 
 .endpoint-content {
-  background-color: #ffffff;
+  background-color: $white;
   transition: background-color 0.2s ease;
 }
 
@@ -1380,13 +1871,13 @@ const getStatusText = (status: string) => {
   display: flex;
   align-items: center;
   padding: 0rem;
-  background: #ffffff;
+  background: $white;
   gap: 0.5rem;
 }
 
 .endpoint-port {
   font-weight: 500;
-  color: #363636;
+  color: $text;
   font-size: 0.93rem;
   display: flex;
   align-items: center;
@@ -1413,22 +1904,22 @@ const getStatusText = (status: string) => {
 
 // Quick Details specific styling
 .quick-detail-item {
-  padding: 0.2rem;
+  padding: 0.2rem 0.5rem;
   border-radius: 4px;
   display: flex;
   flex-direction: column;
   height: 100%;
 
   .quick-detail-label {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     font-weight: 600;
     color: #7a7a7a;
     text-transform: uppercase;
-    margin-bottom: 0;
+    margin-bottom: 0.1rem;
   }
 
   .quick-detail-value {
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     font-weight: 500;
     color: #363636;
     word-break: break-word;
@@ -1479,20 +1970,24 @@ const getStatusText = (status: string) => {
 // Dark mode adjustments
 html.dark-mode {
   .card {
-    background-color: #2c2c2c;
+    background-color: $black-ter;
     border-color: #444;
   }
 
   .card-header {
-    background-color: #2c2c2c;
+    background-color: $black-ter;
   }
 
   .card-header-container {
-    background-color: #2c2c2c;
+    background-color: $black-ter;
   }
 
   .card-content {
-    background-color: #2c2c2c;
+    background-color: transparent;
+    
+    :deep(.job-tabs-condensed) {
+      background: $black-ter;
+    }
 
     pre {
       background-color: #1f1f1f;
@@ -1510,43 +2005,41 @@ html.dark-mode {
 
   .job-title-col {
     .job-title {
-      color: #ffffff;
+      color: $white;
     }
   }
 
   .job-gpu-col {
     .job-gpu {
-      color: #ffffff;
+      color: $white;
     }
   }
 
   .job-price {
     .price-value {
-      color: #ffffff;
+      color: $white;
     }
   }
 
   .job-docker {
-    color: #b0b0b0;
+    color: $grey-light;
   }
 
   .service-endpoints {
-    background-color: #2c2c2c;
+    background-color: $black-ter;
     border-top-color: #444;
   }
 
   .endpoint-content {
-    background: #2c2c2c;
+    background: $black-ter;
     border-color: #444;
   }
 
   .endpoint-port {
-    color: #ffffff;
+    color: $white;
   }
 
   .quick-detail-item {
-    background-color: transparent;
-
     .quick-detail-label {
       color: #b0b0b0;
     }
@@ -1649,15 +2142,15 @@ html.dark-mode .content-separator {
 }
 
 .service-button {
-  background-color: #e8e8e8 !important;
+  background-color: $grey-lightest !important;
   border: none !important;
-  color: #363636 !important;
+  color: $text !important;
   text-decoration: none !important;
   outline: none !important;
   box-shadow: none !important;
 
   &:hover {
-    background-color: #d8d8d8 !important;
+    background-color: $grey-lighter !important;
     border: none !important;
     box-shadow: none !important;
   }
@@ -1674,23 +2167,19 @@ html.dark-mode .content-separator {
 
 html.dark-mode {
   .service-button {
-    background-color: #555555 !important;
-    color: #ffffff !important;
+    background-color: $grey !important;
+    color: $white !important;
 
     &:hover {
-      background-color: #656565 !important;
+      background-color: $grey-light !important;
     }
 
     &:focus,
     &:active,
     &:focus-visible {
-      background-color: #555555 !important;
+      background-color: $grey !important;
     }
   }
 }
 
-.card {
-  border-radius: 8px;
-  overflow: hidden;
-}
 </style>

@@ -148,6 +148,11 @@ export function useFLogs(
       logsByOp.value.set(opId, []);
       // Register tab in first-seen order
       tabs.value = Array.from(new Set([...tabs.value, opId]));
+      
+      // Auto-switch to first operation tab when available (if still on system)
+      if (activeTab.value === 'system' && opId !== 'system') {
+        activeTab.value = opId;
+      }
     }
   }
 
@@ -441,6 +446,8 @@ export function useFLogs(
     connectionEstablished,
     progressBars,
     resourceProgressBars,
+    logsByOp,
+    systemLogs,
   };
 }
 
