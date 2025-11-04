@@ -242,6 +242,7 @@ const authenticateLogin = async (code: string) => {
     await signIn(
       {
         code: code,
+        redirectUri: config.googleRedirectUri as string,
       },
       {
         redirect: false
@@ -480,23 +481,33 @@ const authenticateTwitterLogin = async (code: string, state: string, codeVerifie
 };
 </script>
 
-<style scoped>
+<style lang="scss" scoped>
+@import "~/assets/styles/variables.scss";
+
+/* ==========================================================================
+   Login Modal Overlay
+   ========================================================================== */
+
 .login-modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(0, 0, 0, 0.8);
+  background: rgba(0, 0, 0, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
 }
 
+/* ==========================================================================
+   Login Modal - Light Mode (Default)
+   ========================================================================== */
+
 .login-modal {
-  background: #0a0a0a;
-  color: #ffffff;
+  background: $white;
+  color: $black;
   border-radius: 16px;
   padding: 3rem;
   max-width: 500px;
@@ -506,6 +517,7 @@ const authenticateTwitterLogin = async (code: string, state: string, codeVerifie
   font-family: 'Outfit', sans-serif;
   text-align: center;
   position: relative;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
 }
 
 .login-header {
@@ -520,12 +532,12 @@ const authenticateTwitterLogin = async (code: string, state: string, codeVerifie
   font-size: 2rem;
   font-weight: 600;
   margin-bottom: 1rem;
-  color: #ffffff;
+  color: $black;
 }
 
 .login-subtitle {
   font-size: 1rem;
-  color: #a1a1aa;
+  color: $grey;
   margin-bottom: 2rem;
   line-height: 1.5;
 }
@@ -533,10 +545,10 @@ const authenticateTwitterLogin = async (code: string, state: string, codeVerifie
 .login-button {
   width: 100%;
   padding: 0.875rem 1.5rem;
-  border: 1px solid #3f3f46;
+  border: 1px solid $grey-light;
   border-radius: 8px;
-  background: #18181b;
-  color: #ffffff;
+  background: $white-bis;
+  color: $black;
   font-size: 1rem;
   font-weight: 500;
   cursor: pointer;
@@ -546,24 +558,73 @@ const authenticateTwitterLogin = async (code: string, state: string, codeVerifie
   justify-content: center;
   gap: 0.75rem;
   margin-bottom: 1rem;
-  position: relative; /* Add this */
+  position: relative;
+
+  &:hover:not(:disabled) {
+    background: $white-ter;
+    border-color: $grey;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 }
 
-/* Add loading state styles */
+.google-button {
+  background: $white;
+  border-color: $grey-light;
+  
+  &:hover:not(:disabled) {
+    background: $white-bis;
+    border-color: $grey;
+  }
+}
+
+.twitter-button {
+  background: $black;
+  color: $white;
+  border-color: $grey-dark;
+  
+  &:hover:not(:disabled) {
+    background: $grey-darker;
+    border-color: $grey;
+  }
+}
+
+.divider {
+  margin: 1.5rem 0;
+  text-align: center;
+  
+  span {
+    color: $grey;
+    font-size: 0.875rem;
+  }
+}
+
+.wallet-section {
+  margin-bottom: 0;
+}
+
+/* Loading state styles */
 .login-button.is-loading {
   color: transparent !important;
   pointer-events: none;
+
+  &::after {
+    content: '';
+    position: absolute;
+    width: 1.25rem;
+    height: 1.25rem;
+    border: 2px solid;
+    border-color: $black transparent $black transparent;
+    border-radius: 50%;
+    animation: button-loading-spinner 1.2s linear infinite;
+  }
 }
 
-.login-button.is-loading::after {
-  content: '';
-  position: absolute;
-  width: 1.25rem;
-  height: 1.25rem;
-  border: 2px solid;
-  border-color: #ffffff transparent #ffffff transparent;
-  border-radius: 50%;
-  animation: button-loading-spinner 1.2s linear infinite;
+.twitter-button.is-loading::after {
+  border-color: $white transparent $white transparent !important;
 }
 
 @keyframes button-loading-spinner {
@@ -575,53 +636,7 @@ const authenticateTwitterLogin = async (code: string, state: string, codeVerifie
   }
 }
 
-/* Add light mode variant */
-.login-modal:not(.dark-mode) .login-button.is-loading::after {
-  border-color: #000000 transparent #000000 transparent;
-}
-
-.twitter-button.is-loading::after {
-  border-color: #ffffff transparent #ffffff transparent !important;
-}
-
-.google-button:hover:not(:disabled) {
-  background: #27272a;
-  border-color: #52525b;
-}
-
-.google-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.twitter-button {
-  background: #000000;
-  border-color: #2f2f2f;
-  
-  &:hover:not(:disabled) {
-    background: #141414;
-    border-color: #3f3f3f;
-  }
-}
-
-.wallet-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.divider {
-  margin: 1.5rem 0;
-  text-align: center;
-}
-
-.divider span {
-  color: #71717a;
-  font-size: 0.875rem;
-}
-
-.wallet-section {
-  margin-bottom: 0;
-}
+/* Dark mode styles moved to global.scss following Bulma styling flowchart */
 
 .modal-close-button {
   position: absolute;
@@ -633,12 +648,12 @@ const authenticateTwitterLogin = async (code: string, state: string, codeVerifie
   padding: 0.5rem;
   border-radius: 8px;
   transition: background-color 0.2s;
-  color: #71717a;
+  color: $grey;
 }
 
 .modal-close-button:hover {
-  background-color: #18181b;
-  color: #ffffff;
+  background-color: $white-ter;
+  color: $black;
 }
 
 /* Wallet Selection Modal */
@@ -656,18 +671,20 @@ const authenticateTwitterLogin = async (code: string, state: string, codeVerifie
 }
 
 .wallet-modal-content {
-  background: #18181b;
+  background: $white;
+  color: $black;
   border-radius: 12px;
   padding: 2rem;
   max-width: 400px;
   width: 90%;
   margin: 0 auto;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
 }
 
 .wallet-modal-title {
   font-size: 1.5rem;
   font-weight: 600;
-  color: #ffffff;
+  color: $black;
   text-align: center;
   margin-bottom: 1.5rem;
 }
@@ -683,16 +700,17 @@ const authenticateTwitterLogin = async (code: string, state: string, codeVerifie
   align-items: center;
   gap: 1rem;
   padding: 1rem;
-  border: 1px solid #3f3f46;
+  border: 1px solid $grey-light;
   border-radius: 8px;
-  background: #27272a;
+  background: $white-bis;
+  color: $black;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .wallet-item:hover {
-  border-color: #10E80C;
-  background: #2a2a2a;
+  border-color: $secondary;
+  background: $white-ter;
 }
 
 .wallet-icon {
@@ -704,80 +722,10 @@ const authenticateTwitterLogin = async (code: string, state: string, codeVerifie
 .wallet-name {
   font-size: 1rem;
   font-weight: 500;
-  color: #ffffff;
+  color: $black;
 }
 
-/* Light mode overrides */
-.login-modal:not(.dark-mode) {
-  background: #ffffff;
-  color: #000000;
-}
-
-.login-modal:not(.dark-mode) .login-title {
-  color: #000000;
-}
-
-.login-modal:not(.dark-mode) .login-subtitle {
-  color: #6b7280;
-}
-
-.login-modal:not(.dark-mode) .login-button {
-  background: #f9fafb;
-  border-color: #e5e7eb;
-  color: #000000;
-}
-
-.login-modal:not(.dark-mode) .google-button:hover:not(:disabled) {
-  background: #f3f4f6;
-  border-color: #d1d5db;
-}
-
-.login-modal:not(.dark-mode) .twitter-button {
-  background: #000000;
-  border-color: #2f2f2f;
-  color: #ffffff;
-}
-
-.login-modal:not(.dark-mode) .twitter-button:hover:not(:disabled) {
-  background: #141414;
-  border-color: #3f3f3f;
-}
-
-.login-modal:not(.dark-mode) .divider span {
-  color: #6b7280;
-}
-
-.login-modal:not(.dark-mode) .modal-close-button {
-  color: #6b7280;
-}
-
-.login-modal:not(.dark-mode) .modal-close-button:hover {
-  background-color: #f3f4f6;
-  color: #000000;
-}
-
-.login-modal:not(.dark-mode) .wallet-modal-content {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-}
-
-.login-modal:not(.dark-mode) .wallet-modal-title {
-  color: #000000;
-}
-
-.login-modal:not(.dark-mode) .wallet-item {
-  background: #f9fafb;
-  border-color: #e5e7eb;
-}
-
-.login-modal:not(.dark-mode) .wallet-item:hover {
-  background: #f3f4f6;
-  border-color: #10E80C;
-}
-
-.login-modal:not(.dark-mode) .wallet-name {
-  color: #000000;
-}
+/* All overrides removed - clean implementation using Bulma variables */
 
 @media (max-width: 640px) {
   .login-modal {

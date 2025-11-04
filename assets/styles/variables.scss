@@ -26,6 +26,10 @@ $subtitle-family: 'Space Grotesk', sans-serif;
 $body-background-color: $white-bis;
 $body-background-color-dark: #181818;
 
+// Box background colors for light and dark modes
+$box-background-color: $white;
+$box-background-color-dark: $black-ter;
+
 $navbar-height: 3.5rem;
 
 $section-padding: 1rem;
@@ -54,6 +58,7 @@ $radius-small: 4px;
 
 $box-shadow: none;
 $box-padding: 1.6rem;
+$button-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 
 $tabs-border-bottom-width: 4px;
 $tabs-link-active-color: $primary;

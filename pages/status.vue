@@ -3,7 +3,8 @@
   <section class="section">
     <div class="container">
       <h1 class="title">Nosana Network Status</h1>
-      <table class="table is-striped is-fullwidth">
+      <div class="table-container">
+        <table class="table is-striped is-fullwidth">
         <thead>
           <tr>
             <th>Service Name</th>
@@ -20,6 +21,7 @@
           </tr>
         </tbody>
       </table>
+      </div>
     </div>
   </section>
 </template>

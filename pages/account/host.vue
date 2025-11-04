@@ -36,8 +36,7 @@
                 data-tooltip="This is a forecast of what your earnings will be for the rest of the month based on your earnings this month so far."
                 style="font-weight: normal; text-transform: none; letter-spacing: normal;"
               >
-              <img
-                src="~/assets/img/icons/info.svg"
+              <InfoIcon
                 style="height: 0.8rem; vertical-align: top;"
                 alt="Info"
               />
@@ -217,6 +216,7 @@
 <script setup lang="ts">
 import { useWallet } from "solana-wallets-vue";
 import { useAPI } from "~/composables/useAPI";
+import InfoIcon from '@/assets/img/icons/info.svg?component';
 import { computed, ref, onMounted, watch, nextTick } from 'vue';
 import { Bar } from 'vue-chartjs';
 import GeneralInfo from "~/components/Info/GeneralInfo.vue";

@@ -118,11 +118,8 @@
                 <button
                   @click="claimInvitation"
                   :disabled="claiming"
-                  :class="['button', 'is-success', 'is-large', { 'is-loading': claiming }]"
+                  :class="['button', 'is-dark', { 'is-loading': claiming }]"
                 >
-                  <span v-if="!claiming" class="icon">
-                    <i class="fas fa-check"></i>
-                  </span>
                   <span>
                     {{ claiming ? 'Claiming...' : `Claim ${formatCredits(invitation.creditsAmount)} Credits` }}
                   </span>
@@ -134,14 +131,15 @@
       </div>
 
       <div v-if="canShowAccountData">
-        <h3 class="title is-4 mb-4">Status</h3>
+        <h3 class="title is-4 mb-0">Status</h3>
+        <div class="mb-4"></div>
         <div class="columns is-multiline mb-4">
           <div class="column is-3">
             <div class="box has-text-centered equal-height-box">
-              <p class="heading">Deployments</p>
+              <p class="heading">{{ status === 'authenticated' ? 'Deployments' : 'Jobs' }}</p>
               <p class="title is-flex is-align-items-center is-justify-content-center">
                 <RocketIcon style="width: 16px; height: 16px; fill: #10E80C; margin-right: 0.5rem;" />
-                {{ totalDeployments }}
+                {{ status === 'authenticated' ? totalDeployments : totalJobs }}
               </p>
             </div>
           </div>
@@ -171,7 +169,7 @@
                   <span v-else>-</span>
                   <nuxt-link to="/stake" class="ml-2">
                     <span class="container-icon">
-                      <PlusSymbolIcon style="width: 12px; height: 12px;" />
+                      <FontAwesomeIcon :icon="faPlus" style="width: 12px; height: 12px;" />
                     </span>
                   </nuxt-link>
                 </p>
@@ -190,15 +188,53 @@
             </div>
           </template>
         </div>
-        <h3 class="title is-4 mb-7">Deployments</h3>
-        <ListDeploymentsList job-type="posted" :items-per-page="10" class="mb-6 deployments-list" @update:total-deployments="totalDeployments = $event" />
         
         <!-- API Tokens Section -->
         <ApiKeys class="pb-5" v-if="status === 'authenticated'" />
         
+        <!-- For Credit Users: Show Deployments -->
+        <div v-if="status === 'authenticated'">
+          <div class="is-flex is-justify-content-space-between is-align-items-center mb-4">
+            <h3 class="title is-4 mb-0">Deployments</h3>
+            <nuxt-link to="/deployments/create" class="button is-dark">
+              <span class="icon">
+                <FontAwesomeIcon :icon="faPlus" />
+              </span>
+              <span>Create Deployment</span>
+            </nuxt-link>
+          </div>
+          <DeploymentsList 
+            :items-per-page="10" 
+            :limit="10" 
+            :show-pagination="false" 
+            class="mb-2" 
+            @update:total-deployments="totalDeployments = $event" 
+          />
+        </div>
+
+        <!-- For Wallet Users: Show Jobs -->
+        <div v-else-if="connected">
+          <div class="is-flex is-justify-content-space-between is-align-items-center mb-4">
+            <h3 class="title is-4 mb-0">Job History</h3>
+            <nuxt-link to="/deploy" class="button is-dark">
+              <span class="icon">
+                <FontAwesomeIcon :icon="faPlus" />
+              </span>
+              <span>Deploy New Job</span>
+            </nuxt-link>
+          </div>
+          <JobList 
+            :items-per-page="10" 
+            job-type="combined"
+            class="mb-2" 
+            @update:total-deployments="totalJobs = $event" 
+          />
+        </div>
+        
         <div class="columns mt-6">
           <div class="column is-4">
-            <h3 class="title is-4 mb-4">Welcome to Nosana</h3>
+            <h3 class="title is-4 mb-0">Welcome to Nosana</h3>
+            <div class="mb-4"></div>
             <div class="equal-height-boxes">
               <nuxt-link to="/deploy" class="box has-text-black p-2 mb-2 is-block">
                 <div class="is-flex is-align-items-start" style="margin: 8px 8px 0 8px;">
@@ -233,7 +269,8 @@
           </div>
           
           <div class="column is-4">
-            <h3 class="title is-4 mb-4">Cost and Usage</h3>
+            <h3 class="title is-4 mb-0">Cost and Usage</h3>
+            <div class="mb-4"></div>
             <div class="box" style="height: 100%;">
               <div class="content is-flex is-flex-direction-column is-justify-content-center" style="height: 100%;">
                 <div class="is-flex is-flex-direction-column" style="flex: 1; display: flex; justify-content: center;">
@@ -288,7 +325,8 @@
           </div>
           
           <div class="column is-4">
-            <h3 class="title is-4 mb-4">Monthly History</h3>
+            <h3 class="title is-4 mb-0">Monthly History</h3>
+            <div class="mb-4"></div>
             <div class="box" style="height: 100%; position: relative;">
               <div class="content" style="height: 100%;">
                 <div class="field is-grouped is-justify-content-end" style="position: absolute; top: 12px; right: 12px; z-index: 1;">
@@ -339,7 +377,8 @@
 </template>
 
 <script setup lang="ts">
-import ListDeploymentsList from '~/components/List/AccountDeploymentsList.vue';
+import DeploymentsList from '~/components/List/DeploymentsList.vue';
+import JobList from '~/components/List/JobList.vue';
 import { useWallet } from 'solana-wallets-vue';
 import { useStake } from '~/composables/useStake';
 import { useAPI } from '~/composables/useAPI';
@@ -350,8 +389,9 @@ import ExplorerIcon from '@/assets/img/icons/sidebar/explorer.svg?component';
 import SupportIcon from '@/assets/img/icons/sidebar/support.svg?component';
 import ArrowUpIcon from '@/assets/img/icons/arrow-up.svg?component';
 import ArrowDownIcon from '@/assets/img/icons/arrow-down.svg?component';
-import PlusSymbolIcon from '@/assets/img/icons/plus_symbol.svg?component';
 import { useToast } from "vue-toastification";
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+import { faPlus } from '@fortawesome/free-solid-svg-icons';
 import { Bar } from 'vue-chartjs';
 import {
   Chart as ChartJS,
@@ -369,6 +409,7 @@ import ApiKeys from '~/components/Account/ApiKeys.vue';
 const config = useRuntimeConfig().public;
 ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale);
 const { status, data: userData, signOut, token } = useAuth();
+const { $colorMode } = useNuxtApp();
 const route = useRoute();
 const showSettingsModal = ref(false);
 const toast = useToast();
@@ -393,6 +434,7 @@ const showOnboardModal = computed(() =>
   onboardingInProgress.value
 );
 const totalDeployments = ref(0);
+const totalJobs = ref(0);
 
 const activeAddress = computed(() => {
   if (status.value === 'authenticated' && userData.value?.generatedAddress) {
@@ -882,7 +924,13 @@ function makeColorBrighter(color: string): string {
   return color;
 }
 
-const chartOptions = {
+const chartOptions = computed(() => {
+  const isDark = $colorMode?.value === 'dark';
+  const textColor = isDark ? '#ffffff' : '#000000';
+  const gridColor = isDark ? '#444444' : '#e5e5e5';
+  const tooltipBg = isDark ? 'rgba(55, 65, 81, 0.95)' : 'rgba(0, 0, 0, 0.8)';
+
+  return {
   responsive: true,
   maintainAspectRatio: false,
   devicePixelRatio: 2,
@@ -911,7 +959,7 @@ const chartOptions = {
           weight: 'normal' as const,
           lineHeight: 1.2
         },
-        color: '#000000',
+        color: textColor,
         filter: (legendItem: any) => {
           return legendItem.datasetIndex !== undefined && 
                  chartData.value.datasets[legendItem.datasetIndex]?.showInLegend;
@@ -919,7 +967,7 @@ const chartOptions = {
       }
     },
     tooltip: {
-      backgroundColor: 'rgba(0, 0, 0, 0.8)',
+      backgroundColor: tooltipBg,
       titleFont: {
         family: "'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif",
         size: 14,
@@ -977,7 +1025,7 @@ const chartOptions = {
           weight: 'normal' as const,
           lineHeight: 1.2
         },
-        color: '#000000',
+        color: textColor,
         padding: 8
       },
       border: {
@@ -988,7 +1036,7 @@ const chartOptions = {
     y: {
       stacked: true,
       grid: {
-        color: '#e5e5e5',
+        color: gridColor,
         drawBorder: false,
         lineWidth: 0.5,
         tickLength: 4,
@@ -1011,7 +1059,7 @@ const chartOptions = {
           weight: 'normal' as const,
           lineHeight: 1.2
         },
-        color: '#000000',
+        color: textColor,
         maxTicksLimit: 5,
         padding: 10
       }
@@ -1032,7 +1080,8 @@ const chartOptions = {
   font: {
     family: "'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif"
   }
-};
+  };
+});
 
 // Removed duplicate onMounted - merged into the main one above
 
@@ -1155,11 +1204,6 @@ watch([invitationToken, status], ([token, authStatus]) => {
 </script>
 
 <style scoped>
-/* Deployments section */
-.deployments-list {
-  margin-bottom: 3rem !important;
-}
-
 .container {
   max-width: 1200px;
   margin: 0 auto 0 0;
@@ -1174,10 +1218,6 @@ watch([invitationToken, status], ([token, authStatus]) => {
   margin-bottom: 0.5rem;
 }
 
-.title {
-  font-size: 1.5rem;
-  margin-bottom: 1rem !important;
-}
 
 .box {
   height: 100%;
@@ -1193,19 +1233,6 @@ watch([invitationToken, status], ([token, authStatus]) => {
   justify-content: center;
 }
 
-/* Exclude ListDeploymentsList from the height restriction */
-.deployments-list > .box {
-  max-height: none;
-  height: auto;
-  overflow: visible;
-}
-
-.deployments-list > .box .columns,
-.deployments-list > .box .column,
-.deployments-list > .box .table-container {
-  height: auto;
-  max-height: none;
-}
 
 /* Special handling for Cost and Usage and Monthly History boxes */
 .column.is-4 .box:not(.equal-height-boxes .box) {

@@ -1,39 +1,11 @@
 <template>
-  <div class="tabs is-boxed job-tabs-condensed">
-    <ul>
-      <li v-if="!job.isRunning || (isJobPoster && logConnectionEstablished)" :class="{ 'is-active': activeTab === 'logs' }">
-        <a @click.prevent="handleTabClick('logs')">Logs</a>
-      </li>
-      <li v-if="hasResultsSection" :class="{ 'is-active': activeTab === 'result' }">
-        <a @click.prevent="handleTabClick('result')">Result</a>
-      </li>
-      <li :class="{ 'is-active': activeTab === 'info' }">
-        <a @click.prevent="handleTabClick('info')">Job Definition</a>
-      </li>
-      <li :class="{ 'is-active': activeTab === 'details' }">
-        <a @click.prevent="handleTabClick('details')">More Details</a>
-      </li>
-      <li
-        v-if="hasArtifacts"
-        :class="{ 'is-active': activeTab === 'artifacts' }"
-      >
-        <a @click.prevent="handleTabClick('artifacts')">Artifacts</a>
-      </li>
-      <li
-        v-if="showChatTab" 
-        :class="{ 'is-active': activeTab === 'chat' }"
-      >
-        <a @click.prevent="handleTabClick('chat')">Test Chat</a>
-      </li>
-    </ul>
-  </div>
-  <div v-if="activeTab === 'info'" class="job-definition-container">
+  <div v-if="activeTab === 'info' && !props.isConfidential" class="json-editor-container">
     <button 
       class="button is-small is-light copy-button"
       @click="copyToClipboard(JSON.stringify(jobDefinitionModel, null, 2), 'Job Definition')"
     >
       <span class="icon is-small">
-        <img src="~/assets/img/icons/copy.svg" alt="Copy" />
+        <CopyIcon />
       </span>
     </button>
     <JsonEditorVue 
@@ -47,10 +19,10 @@
       :statusBar="false" 
       :stringified="false" 
       :readOnly="true"
-      class="job-definition-editor" 
+      class="json-editor" 
   />
   </div>
-  <div v-if="activeTab === 'logs'" class="logs-wrapper">
+  <div v-if="activeTab === 'logs' && canShowLogsTab" class="logs-wrapper">
   <JobLogsView
     :job="props.job"
     :endpoints="props.endpoints"
@@ -69,153 +41,51 @@
     :filters="props.filters"
     :selectOp="props.selectOp"
     :toggleType="props.toggleType"
-      :logsTextForCopy="logsTextForCopy"
-      :copyToClipboard="copyToClipboard"
+    :systemLogsMap="props.systemLogsMap"
+    :logsByOp="props.logsByOp"
+    :logsTextForCopy="logsTextForCopy"
+    :copyToClipboard="copyToClipboard"
     ref="logsView"
   />
   </div>
-  <div v-else-if="activeTab === 'logs' && !props.isJobPoster">
-    <!-- Placeholder or message if logs are not available for non-posters -->
-  </div>
-  <div v-if="activeTab === 'result' && props.job.results" class="job-definition-container">
-    <button 
-      class="button is-small is-light copy-button"
-      @click="copyToClipboard(JSON.stringify(structuredResults, null, 2), 'Results')"
-    >
-      <span class="icon is-small">
-        <img src="~/assets/img/icons/copy.svg" alt="Copy" />
-      </span>
-    </button>
-    <JsonEditorVue 
-      :validator="validator" 
-      :class="{ 
-        'jse-theme-dark': colorMode.value === 'dark'
-      }" 
-      v-model="structuredResults" 
-      :mode="Mode.text" 
-      :mainMenuBar="false" 
-      :statusBar="false" 
-      :stringified="false" 
-      :readOnly="true"
-      class="job-definition-editor"
-    />
-  </div>
-  <div v-else-if="activeTab === 'result' && !props.job.results">
-    <p class="p-4 has-text-centered">No results available for this job.</p>
-  </div>
+  <div v-else-if="activeTab === 'logs' && !canShowLogsTab"></div>
+  
   <JobArtifactsView v-if="activeTab === 'artifacts'" :job="props.job" />
   <JobChatView 
     v-show="activeTab === 'chat' && showChatTab" 
     :job="props.job" 
     :chatServiceUrl="chatServiceUrl" 
     :chatApiConfig="chatApiConfig" />
-  <div v-if="activeTab === 'details'" class="details-tab-content">
-    <div class="columns is-multiline">
-      <!-- Started -->
-      <div v-if="props.job && props.job.timeStart" class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
-        <div class="quick-detail-item">
-          <span class="quick-detail-label">Started</span>
-          <span class="quick-detail-value">
-            {{ formatStartTime(props.job.timeStart) }}
-            <span class="has-text-grey is-size-7"> ({{ formatTimeAgo(props.job.timeStart) }})</span>
-          </span>
-        </div>
-      </div>
-
-      <!-- NVIDIA Driver -->
-      <div v-if="hostSpecs && hostSpecs.nvmlVersion" class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
-        <div class="quick-detail-item">
-          <span class="quick-detail-label">NVIDIA Driver</span>
-          <span class="quick-detail-value">{{ hostSpecs.nvmlVersion }}</span>
-        </div>
-      </div>
-
-      <!-- CUDA Version -->
-      <div v-if="hostSpecs && hostSpecs.cudaVersion" class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
-        <div class="quick-detail-item">
-          <span class="quick-detail-label">CUDA Version</span>
-          <span class="quick-detail-value">{{ hostSpecs.cudaVersion }}</span>
-        </div>
-      </div>
-
-      <!-- System Environment -->
-      <div v-if="hostSpecs && hostSpecs.systemEnvironment" class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
-        <div class="quick-detail-item">
-          <span class="quick-detail-label">System Environment</span>
-          <span class="quick-detail-value">{{ hostSpecs.systemEnvironment }}</span>
-        </div>
-      </div>
-
-      <!-- Solana address -->
-      <div v-if="props.job" class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
-        <div class="quick-detail-item">
-          <span class="quick-detail-label">Solana address</span>
-          <span class="quick-detail-value">
-            <a :href="`https://solscan.io/account/${props.job.address}`" target="_blank" class="address is-family-monospace">
-              {{ props.job.address }}
-            </a>
-          </span>
-        </div>
-      </div>
-
-      <!-- Host address -->
-      <div v-if="props.job && props.job.node && props.job.node.toString() !== '11111111111111111111111111111111'" class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
-        <div class="quick-detail-item">
-          <span class="quick-detail-label">Host address</span>
-          <span class="quick-detail-value">
-            <nuxt-link class="address is-family-monospace" :to="`/host/${props.job.node}`">
-              {{ props.job.node }}
-            </nuxt-link>
-          </span>
-        </div>
-      </div>
-
-      <!-- Deployer address -->
-      <div v-if="props.job" class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
-        <div class="quick-detail-item">
-          <span class="quick-detail-label">Deployer address</span>
-          <span class="quick-detail-value">
-            <nuxt-link class="address is-family-monospace" :to="`/deployer/${props.job.project}`">
-              {{ props.job.project }}
-            </nuxt-link>
-          </span>
-        </div>
-      </div>
-
-      <!-- GPU pool -->
-      <div v-if="props.job" class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
-        <div class="quick-detail-item">
-          <span class="quick-detail-label">GPU pool</span>
-          <span class="quick-detail-value">
-            <nuxt-link class="address is-family-monospace" :to="`/markets/${props.job.market}`">
-              <span v-if="apiMarkets && apiMarkets.find((tgm: any) => tgm.address === props.job.market)">
-                {{ apiMarkets.find((tgm: any) => tgm.address === props.job.market)?.name || props.job.market }}
-              </span>
-              <span v-else>{{ props.job.market }}</span>
-            </nuxt-link>
-          </span>
-        </div>
-      </div>
-    </div>
-  </div>
+  <JobGroups
+    v-if="activeTab === 'groups'"
+    :job="props.job"
+    :isJobPoster="props.isJobPoster"
+    :opIds="props.opIds"
+    :activeLogs="props.activeLogs"
+    :selectOp="props.selectOp"
+    :logsByOp="props.logsByOp"
+    :systemLogsMap="props.systemLogsMap"
+    :jobInfo="props.jobInfo"
+  />
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, computed, watch } from 'vue';
+import { ref, nextTick, computed, watch, onMounted } from 'vue';
 import type { JobDefinition } from "@nosana/sdk";
 import JsonEditorVue from 'json-editor-vue';
 import { Mode } from 'vanilla-jsoneditor';
 import 'vanilla-jsoneditor/themes/jse-theme-dark.css';
+import CopyIcon from '@/assets/img/icons/copy.svg?component';
 import { useToast } from 'vue-toastification';
 
-import JobLogsView from "./Tabs/Logs.vue";
-import JobResultsView from "./Tabs/Results.vue";
+import JobLogsView from "./Tabs/SystemLogs.vue";
 import JobArtifactsView from "./Tabs/Artifacts.vue";
 import JobDefinitionView from "./Tabs/JobDefinition.vue";
 import JobChatView from "./Tabs/Chat.vue";
-// Note: Info components no longer needed for simplified More Details tab
+import JobGroups from "./Tabs/Overview.vue";
 
 import type { Endpoints, UseJob } from "~/composables/jobs/useJob";
+import type { JobInfo } from "~/composables/jobs/types";
 // Relax log entry typing to support flog entries
 type AnyLogEntry = { id: number; content: string; timestamp: number; html?: boolean };
 import type { ProgressBar } from "~/composables/jobs/useJobLogs";
@@ -231,6 +101,7 @@ interface Props {
   job: UseJob;
   endpoints: Endpoints;
   isJobPoster: boolean;
+  isConfidential?: boolean;
   jobDefinition: JobDefinition;
   hasArtifacts: boolean;
   isConnecting: boolean;
@@ -261,6 +132,11 @@ interface Props {
   jobNodeReport: NodeReportData | null;
   loadingJobNodeSpecs: boolean;
   isQueuedJob: boolean;
+  
+  // Full log maps from useFLogs
+  logsByOp?: Map<string, AnyLogEntry[]>;
+  systemLogsMap?: AnyLogEntry[];
+  jobInfo?: JobInfo | null;
 }
 
 const props = defineProps<Props>();
@@ -276,14 +152,65 @@ watch(() => props.job.address, (newAddress, oldAddress) => {
 const logsView = ref<any>(null);
 const colorMode = useColorMode();
 
-watch(() => [props.job.isRunning, props.logConnectionEstablished, props.activeTab], () => {
-  const logsTabVisible = !props.job.isRunning || (props.isJobPoster && props.logConnectionEstablished);
-  if (props.activeTab === 'logs' && !logsTabVisible) {
-    // Logs tab is not visible, but it's the active one.
-    // Switch to another tab, in this case 'info' (Job Definition).
-    emit('update:activeTab', 'info');
+const canShowLogsTab = computed(() => {
+  if (props.job.isCompleted) return false;
+  
+  if (!props.job.isRunning) return false;
+  
+  if (props.isConfidential && !props.isJobPoster) return false;
+  
+  return props.isJobPoster && props.logConnectionEstablished;
+});
+
+// Groups tab visibility: show for posters always; for non-posters only when
+// job is non-confidential and completed (so data is available from IPFS)
+const canShowGroupsTab = computed(() => {
+  if (props.isJobPoster) return true;
+  if (props.isConfidential) return false;
+  return Boolean(props.job.isCompleted);
+});
+
+
+// Compute visible tabs in left-to-right order and default to the leftmost
+const visibleTabs = computed(() => {
+  const tabs: string[] = [];
+  if (canShowGroupsTab.value) tabs.push('groups');
+  if (canShowLogsTab.value) tabs.push('logs');
+  if (!props.isConfidential) tabs.push('info');
+  if (props.hasArtifacts) tabs.push('artifacts');
+  if (props.showChatTab) tabs.push('chat');
+  return tabs;
+});
+
+const firstVisibleTab = computed(() => visibleTabs.value[0] || 'info');
+
+const isTabVisible = (tabName: string) => visibleTabs.value.includes(tabName);
+
+// Keep active tab valid and default to the leftmost visible
+watch(
+  () => [
+    canShowLogsTab.value,
+    canShowGroupsTab.value,
+    props.job.isCompleted,
+    props.isConfidential,
+    props.isJobPoster,
+    props.hasArtifacts,
+    props.showChatTab,
+    props.activeTab,
+  ],
+  () => {
+    if (!isTabVisible(props.activeTab)) {
+      emit('update:activeTab', firstVisibleTab.value);
+    }
+  },
+  { immediate: true }
+);
+
+onMounted(() => {
+  if (props.activeTab !== firstVisibleTab.value) {
+    emit('update:activeTab', firstVisibleTab.value);
   }
-}, { immediate: true });
+});
 
 // Expose logsView ref for parent component to call scrollToBottomOnOpen
 defineExpose({ logsView });
@@ -369,11 +296,6 @@ const jobDefinitionModel = computed({
   set: () => {} // Read-only, so no setter needed
 });
 
-// Create a reactive model for the job results
-const jobResultsModel = computed({
-  get: () => props.job.results,
-  set: () => {} // Read-only, so no setter needed
-});
 
 // Validator function (can be empty for read-only)
 const validator = () => [];
@@ -411,43 +333,13 @@ const handleTabClick = (tabName: string) => {
   }
 };
 
-const hasResultsSection = computed(() => {
-  if (!props.jobDefinition?.ops) return false;
-  return props.jobDefinition.ops.some(op => op.results && Object.keys(op.results).length > 0);
-});
 
-// Extract structured results without logs
-const structuredResults = computed(() => {
-  if (!props.job.results?.opStates) return {};
-  
-  const results: any = {
-    status: props.job.results.status,
-    startTime: props.job.results.startTime,
-    endTime: props.job.results.endTime,
-    opStates: []
-  };
-  
-  for (const opState of props.job.results.opStates) {
-    if (opState.results && Object.keys(opState.results).length > 0) {
-      results.opStates.push({
-        operationId: opState.operationId,
-        status: opState.status,
-        startTime: opState.startTime,
-        endTime: opState.endTime,
-        exitCode: opState.exitCode,
-        results: opState.results
-      });
-    }
-  }
-  
-  return results;
-});
 
 </script>
 
 <style lang="scss" scoped>
 .job-tabs-condensed {
-  background-color: #ffffff;
+  background-color: $white;
   border-radius: 4px 4px 0 0;
   margin-bottom: 0 !important;
   
@@ -465,13 +357,6 @@ const structuredResults = computed(() => {
   }
 }
 
-.job-definition-container {
-  background-color: #ffffff;
-  border-radius: 4px;
-  padding: 0;
-  margin-top: 0.2rem;
-  position: relative; /* For copy button positioning */
-}
 
 .logs-wrapper {
   position: relative; /* For copy button positioning */
@@ -485,18 +370,22 @@ const structuredResults = computed(() => {
   z-index: 10;
 }
 
-.job-definition-editor {
-  min-height: 300px;
-  border: none;
-  border-radius: 4px;
-  
-  :deep(.jse-main) {
-    border: none;
-  }
-  
-  :deep(.jse-contents) {
-    border-radius: 4px;
-  }
+
+/* Empty state styling (match Groups) */
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 2rem;
+  color: #7a7a7a;
+}
+
+/* Container to match Groups' white card sizing */
+.results-groups-like-container {
+  padding: 1.5rem;
+  background: $white;
+  border-radius: 8px;
 }
 
 // Dark mode styling for job definition
@@ -526,10 +415,15 @@ html.dark-mode {
     }
   }
   
-  .job-definition-container {
-  background-color: #2c2c2c;
-  border-color: #444;
-    position: relative; /* For copy button positioning */
+
+  /* Match Groups dark-mode empty state color */
+  .empty-state {
+    color: #b0b0b0;
+  }
+
+  /* Dark mode for results container to match Groups */
+  .results-groups-like-container {
+    background: #2c2c2c;
   }
 
   // Update table background in dark mode
@@ -549,89 +443,6 @@ html.dark-mode {
   }
 }
 
-// Add styles to remove extra spacing
-.tabs {
-  margin-bottom: 0.2rem !important;
-}
+// Use proper Bulma spacing classes instead of overrides
 
-.tabs + div {
-  margin-top: 0.2rem !important;
-}
-
-// Remove padding from details tab
-div[class*="has-background-white"] {
-  padding-top: 0.2rem !important;
-  padding-bottom: 0.2rem !important;
-}
-
-// Add proper spacing for details tab content
-.details-tab-content {
-  margin-top: 1.5rem;
-  padding: 0 0.75rem;
-  
-  .quick-detail-item {
-    padding: 0.2rem 0.5rem;
-    border-radius: 4px;
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-
-    .quick-detail-label {
-      font-size: 0.7rem;
-      font-weight: 600;
-      color: #7a7a7a;
-      text-transform: uppercase;
-      margin-bottom: 0.1rem;
-    }
-
-    .quick-detail-value {
-      font-size: 0.85rem;
-      font-weight: 500;
-      color: #363636;
-      word-break: break-word;
-      
-      .address {
-        word-break: break-all;
-        white-space: normal;
-        display: inline-block;
-        line-height: 1.3;
-        font-size: 0.8rem;
-      }
-
-      .has-text-grey {
-        font-size: 0.75rem;
-      }
-    }
-  }
-  
-  .no-padding {
-    padding: 0 !important;
-  }
-}
-
-// Dark mode styling for quick detail items
-html.dark-mode {
-  .details-tab-content .quick-detail-item {
-    .quick-detail-label {
-      color: #b0b0b0;
-    }
-    
-    .quick-detail-value,
-    .quick-detail-value .address,
-    .quick-detail-value .has-text-grey {
-      color: #ffffff;
-    }
-    
-    .quick-detail-value a,
-    .quick-detail-value nuxt-link,
-    .quick-detail-value .address {
-      color: #10E80C !important; // Nosana green for links in dark mode
-    }
-    
-    .quick-detail-value a:hover,
-    .quick-detail-value nuxt-link:hover {
-      color: #33ff33 !important; // Lighter green on hover
-    }
-  }
-}
 </style>
