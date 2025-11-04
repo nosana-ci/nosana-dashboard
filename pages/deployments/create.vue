@@ -8,6 +8,38 @@
       v-model="showSettingsModal"
     ></TopBar>
 
+    <!-- Wallet Auth Banner -->
+    <div 
+      v-if="shouldShowWalletAuthBanner"
+      class="notification is-light wallet-auth-banner mb-5"
+    >
+      <div class="is-flex is-align-items-center is-justify-content-space-between">
+        <div class="is-flex is-align-items-center">
+          <WalletIcon class="banner-icon mr-3" :size="24" />
+          <div>
+            <p class="banner-title">Wallet Authentication Detected</p>
+            <p class="banner-subtitle">
+              You're connected with a Solana wallet. To deploy using this interface, please create an account or use our legacy deploy page.
+            </p>
+          </div>
+        </div>
+        <div class="is-flex is-flex-direction-column banner-actions ml-4">
+          <button 
+            class="button is-small is-secondary mb-2"
+            @click="handleLoginClick"
+          >
+            Create Account
+          </button>
+          <nuxt-link 
+            to="/deploy" 
+            class="button is-small is-outlined"
+          >
+            Legacy Deploy
+          </nuxt-link>
+        </div>
+      </div>
+    </div>
+
     <!-- Show loader for external data only; editor always visible -->
     <Loader v-if="loadingTemplates || loadingMarkets" />
 
@@ -360,7 +392,9 @@ import JsonEditorVue from "json-editor-vue";
 import { Mode, ValidationSeverity } from "vanilla-jsoneditor";
 import "vanilla-jsoneditor/themes/jse-theme-dark.css";
 import { useToast } from "vue-toastification";
+import { useWallet } from "solana-wallets-vue";
 import TopBar from "~/components/TopBar.vue";
+import WalletIcon from "~/components/WalletIcon.vue";
 import { useRouter, useRoute } from "vue-router";
 import { useDebounceFn, useScrollLock } from "@vueuse/core";
 import { useEstimatedCost } from "~/composables/useMarketPricing";
@@ -409,6 +443,7 @@ const router = useRouter();
 const route = useRoute();
 const toast = useToast();
 const { status, data: userData, token } = useAuth();
+const { connected } = useWallet();
 const loading = ref(false);
 
 // Initialize redirect composable for authentication flow
@@ -700,6 +735,11 @@ const canPostJob = computed(() => {
 // Check if user is authenticated via any method
 const isAuthenticated = computed(() => {
   return status.value === "authenticated" && token.value;
+});
+
+// Check if user has wallet auth but not Google SSO (should show banner)
+const shouldShowWalletAuthBanner = computed(() => {
+  return connected.value && status.value !== "authenticated";
 });
 
 const canCreateDeployment = computed(

@@ -254,18 +254,11 @@ watch(status, (newStatus) => {
   // if loading: keep previous definitive state
 }, { flush: 'sync' })
 
-// Computed property for deploy route based on authentication type
+// Computed property for deploy route - now unified to deployments/create
 const deployRoute = computed(() => {
-  if (status.value === 'authenticated') {
-    // Logged in with Google account (credit system)
-    return '/deployments/create';
-  } else if (connected.value) {
-    // Logged in with Solana wallet
-    return '/deploy';
-  } else {
-    // Not logged in, default to credit system route
-    return '/deployments/create';
-  }
+  // Direct all users to deployments/create for unified experience
+  // The page will handle wallet auth detection with a banner
+  return '/deployments/create';
 });
 
 
