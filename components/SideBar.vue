@@ -61,7 +61,7 @@
         </li>
         <li class="has-dropdown">
           <a class="menu-list-link sidebar-link" @click="toggleExplorer"
-            :class="{ 'is-active': $route.path === '/explorer' || $route.path.includes('/markets') || ($route.path === '/account/host' && status !== 'authenticated') || $route.path === '/stake'}"
+            :class="{ 'is-active': $route.path === '/explorer' || $route.path.includes('/markets') || ($route.path === '/account/host' && !isAuthenticatedStable) || $route.path === '/stake'}"
           >
             <div
               class="is-flex is-align-items-center"
@@ -107,7 +107,7 @@
                 GPUs
               </nuxt-link>
             </li>
-            <li v-if="status !== 'authenticated'">
+            <li v-if="!isAuthenticatedStable">
               <a
                 v-if="!connected"
                 @click="openWalletModal($route.fullPath); showMenu = false"
@@ -243,6 +243,16 @@ const { status, signOut, data } = useAuth();
 const route = useRoute();
 const router = useRouter();
 const { openBothModal, openWalletModal } = useLoginModal();
+
+const isAuthenticatedStable = ref(status.value === 'authenticated')
+watch(status, (newStatus) => {
+  if (newStatus === 'authenticated') {
+    isAuthenticatedStable.value = true
+  } else if (newStatus === 'unauthenticated') {
+    isAuthenticatedStable.value = false
+  }
+  // if loading: keep previous definitive state
+}, { flush: 'sync' })
 
 // Computed property for deploy route based on authentication type
 const deployRoute = computed(() => {

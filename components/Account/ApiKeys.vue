@@ -13,7 +13,7 @@
       </button>
     </div>
     
-    <div v-if="loadingKeys" class="box">
+    <div v-if="!hasLoadedOnce && loadingKeys" class="box">
       <progress class="progress is-small is-grey" max="100"></progress>
       <p class="has-text-centered">Loading API keys...</p>
     </div>
@@ -332,6 +332,7 @@ const { status, data: userData, token } = useAuth();
 const toast = useToast();
 
 // State
+const hasLoadedOnce = ref(false)
 const showCreateKeyModal = ref(false);
 const showViewKeyModal = ref(false);
 const showEditKeyModal = ref(false);
@@ -360,8 +361,20 @@ const {
   });
 }, {
   default: () => ({ keys: [], total: 0 }),
-  watch: [status, token]
+  watch: [
+    // Only revalidate when truly authenticated and token changes
+    () => status.value === 'authenticated' ? token.value : null
+  ]
 });
+
+// (debug watchers removed)
+
+// Mark first successful resolution to keep UI stable on later refreshes
+watch(loadingKeys, (isPending) => {
+  if (!isPending) {
+    hasLoadedOnce.value = true
+  }
+}, { immediate: true })
 
 const createKey = async () => {
   if (!newKeyName.value || !token.value) return;

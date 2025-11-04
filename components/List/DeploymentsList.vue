@@ -15,7 +15,7 @@
           </div>
         </div>
 
-        <div :class="{'min-height-container': loading}">
+        <div :class="{'min-height-container': !hasLoadedOnce && loading}">
           <div class="table-container">
             <table class="table is-fullwidth is-striped is-hoverable">
             <thead>
@@ -27,7 +27,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-if="loading">
+              <tr v-if="!hasLoadedOnce && loading">
                 <td colspan="4" class="has-text-centered py-6">Loading deployments...</td>
               </tr>
               <tr v-else-if="deploymentsError">
@@ -121,6 +121,7 @@ const emit = defineEmits<{
 const deployments = ref<Deployment[]>([])
 const currentPage = ref(1)
 const currentState = ref<string | null>(null)
+const hasLoadedOnce = ref(false)
 
 // Filter states for deployment status
 const filterStates = [
@@ -217,6 +218,7 @@ const refreshDeployments = async () => {
     deployments.value = []
   } finally {
     loading.value = false
+    hasLoadedOnce.value = true
   }
 }
 
@@ -366,6 +368,8 @@ watch(status, (authStatus) => {
   }
   // Do nothing during 'loading' state to prevent flicker
 }, { immediate: true })
+
+
 
 // Emit total deployments count
 watch(totalDeployments, (count) => {

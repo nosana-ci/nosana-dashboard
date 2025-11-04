@@ -144,7 +144,7 @@
             </div>
           </div>
           <!-- Credit Balance for Google Auth Users -->
-          <div class="column is-3" v-if="status === 'authenticated'">
+          <div class="column is-3" v-if="canShowAccountData">
             <CreditBalance ref="creditBalanceRef" />
           </div>
           <!-- NOS Balance for Wallet Users -->
@@ -190,10 +190,10 @@
         </div>
         
         <!-- API Tokens Section -->
-        <ApiKeys class="pb-5" v-if="status === 'authenticated'" />
+        <ApiKeys class="pb-5" v-if="canShowAccountData" />
         
         <!-- For Credit Users: Show Deployments -->
-        <div v-if="status === 'authenticated'">
+        <div v-if="canShowAccountData">
           <div class="is-flex is-justify-content-space-between is-align-items-center mb-4">
             <h3 class="title is-4 mb-0">Deployments</h3>
             <nuxt-link to="/deployments/create" class="button is-dark">
@@ -436,6 +436,9 @@ const showOnboardModal = computed(() =>
 const totalDeployments = ref(0);
 const totalJobs = ref(0);
 
+// (debug status watcher removed)
+
+
 const activeAddress = computed(() => {
   if (status.value === 'authenticated' && userData.value?.generatedAddress) {
     return userData.value.generatedAddress;
@@ -464,6 +467,8 @@ const canShowAccountData = computed(() => {
   }
   return status.value === 'authenticated' || connected.value;
 });
+
+// (debug canShowAccountData watcher removed)
 
 // Define type for spending history results item
 interface MonthlyResult {
