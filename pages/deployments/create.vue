@@ -13,26 +13,17 @@
       v-if="shouldShowWalletAuthBanner"
       class="notification is-light wallet-auth-banner mb-5"
     >
-      <div class="is-flex is-align-items-center is-justify-content-space-between">
-        <div class="is-flex is-align-items-center">
-          <WalletIcon class="banner-icon mr-3" :size="24" />
-          <div>
-            <p class="banner-title">Wallet Authentication Detected</p>
-            <p class="banner-subtitle">
-              You're connected with a Solana wallet. To deploy using this interface, please create an account or use our legacy deploy page.
-            </p>
-          </div>
+      <div class="is-flex is-align-items-center">
+        <div>
+          <p class="banner-title">Legacy Job Deploy page</p>
+          <p class="banner-subtitle">
+            Looking for the classic job deployment experience? Use our legacy deploy page here.
+          </p>
         </div>
-        <div class="is-flex is-flex-direction-column banner-actions ml-4">
-          <button 
-            class="button is-small is-secondary mb-2"
-            @click="handleLoginClick"
-          >
-            Create Account
-          </button>
+        <div class="banner-actions ml-4">
           <nuxt-link 
             to="/deploy" 
-            class="button is-small is-outlined"
+            class="button is-small is-primary"
           >
             Legacy Deploy
           </nuxt-link>
@@ -737,9 +728,9 @@ const isAuthenticated = computed(() => {
   return status.value === "authenticated" && token.value;
 });
 
-// Check if user has wallet auth but not Google SSO (should show banner)
+// Show legacy deploy banner for all users
 const shouldShowWalletAuthBanner = computed(() => {
-  return connected.value && status.value !== "authenticated";
+  return true;
 });
 
 const canCreateDeployment = computed(
