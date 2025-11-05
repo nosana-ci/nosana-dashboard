@@ -353,11 +353,7 @@ const formatDate = (date: string | Date) => {
   return dateObj.toLocaleString()
 }
 
-onMounted(async () => {
-  if (isAuthenticated.value) {
-    await refreshDeployments()
-  }
-})
+// onMounted removed - watcher with immediate: true handles initial load
 
 watch(status, (authStatus) => {
   if (authStatus === 'authenticated' && token.value) {
