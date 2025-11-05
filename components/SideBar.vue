@@ -47,7 +47,7 @@
             <span>Login</span>
           </a>
         </li>
-        <li>
+        <li v-if="status === 'authenticated'">
           <nuxt-link
             to="/deployments"
             active-class="is-active"
