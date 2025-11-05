@@ -48,10 +48,7 @@
                   </td>
                   <td>
                     <div class="clickable-row-cell-content">
-                      <div class="tag is-outlined status-tag" :class="getStatusClass(deployment.status)">
-                        <component class="mr-2 status-icon" :is="getStatusIcon(deployment.status)" />
-                        <span>{{ deployment.status }}</span>
-                      </div>
+                      <StatusTag :status="deployment.status" :outlined="true" :show-label="true" />
                     </div>
                   </td>
                   <td>
@@ -89,13 +86,7 @@
 </template>
 
 <script setup lang="ts">
-import RunningIcon from '@/assets/img/icons/status/running.svg?component';
-import StoppedIcon from '@/assets/img/icons/status/stopped.svg?component';
-import FailedIcon from '@/assets/img/icons/status/failed.svg?component';
-import QueuedIcon from '@/assets/img/icons/status/queued.svg?component';
-import DoneIcon from '@/assets/img/icons/status/done.svg?component';
-import ArchiveIcon from '@/assets/img/icons/archive.svg?component';
-import { useStatus } from '~/composables/useStatus';
+import StatusTag from '@/components/Common/StatusTag.vue';
 import { useSDK } from '~/composables/useSDK';
 import type { Deployment } from '@nosana/sdk';
 
@@ -135,65 +126,6 @@ const filterStates = [
   { label: 'Archived', value: 'ARCHIVED' as string }
 ]
 
-// Debug instrumentation for deployment list icons
-const iconRefs: Record<string, HTMLElement | null> = reactive({}) as any
-
-const attachSmilDebugListeners = (svgEl: SVGElement, label: string) => {
-  try {
-    const animations = svgEl.querySelectorAll('animateTransform')
-    animations.forEach((anim: any) => {
-      if (anim.__dbg) return
-      anim.__dbg = true
-
-      // Force restart animation by manipulating the dur attribute
-      const originalDur = anim.getAttribute('dur') || '5s'
-      anim.setAttribute('dur', '0.001s')
-      
-      // Use multiple approaches to ensure animation starts
-      requestAnimationFrame(() => {
-        try {
-          anim.setAttribute('dur', originalDur)
-          anim.beginElement()
-        } catch {}
-        
-        // Backup approach: restart animation
-        setTimeout(() => {
-          try {
-            anim.endElement()
-            anim.beginElement()
-          } catch {}
-        }, 10)
-      })
-    })
-  } catch {}
-}
-
-const instrumentRowIcon = (dep: Deployment) => {
-  const host = iconRefs[dep.id]
-  const svg = host?.querySelector('svg') as SVGElement | null
-  if (!svg) return
-  
-  // Force immediate visibility calculation
-  try { 
-    svg.getBoundingClientRect()
-    // Force layout/paint
-    svg.style.transform = 'translateZ(0)'
-  } catch {}
-
-  // Try multiple times to ensure animation starts
-  let attempts = 0
-  const tryStartAnimation = () => {
-    attempts++
-    attachSmilDebugListeners(svg, `dep=${dep.id} status=${dep.status}-attempt-${attempts}`)
-    
-    if (attempts < 3) {
-      setTimeout(tryStartAnimation, 50 * attempts)
-    }
-  }
-  
-  // Start immediately and with delays
-  tryStartAnimation()
-}
 
 const { status, token } = useAuth()
 const router = useRouter()
@@ -246,7 +178,7 @@ const filteredDeployments = computed(() => {
     return updated ? new Date(updated).getTime() : created ? new Date(created).getTime() : 0
   }
 
-  return [...filtered].sort((a, b) => toTime(b) - toTime(a))
+  return filtered
 })
 
 // Create a computed property for the deployments actually displayed in the table
@@ -281,10 +213,6 @@ const deploymentLink = (id: string) => {
 }
 
 
-// Watch for changes
-watch(filteredDeployments, (list) => {
-  nextTick(() => list.forEach(instrumentRowIcon))
-}, { immediate: true, deep: true })
 
 // Debounced redirect to prevent flicker during session refresh
 let redirectTimer: NodeJS.Timeout | null = null
@@ -303,49 +231,6 @@ watch(status, (authStatus) => {
   }
 }, { immediate: true })
 
-// Use global status system  
-const { getStatusClass: globalStatusClass } = useStatus()
-
-const getStatusClass = (status: string) => {
-  switch (status?.toUpperCase()) {
-    case 'RUNNING':
-    case 'STARTING':
-      return 'is-info';
-    case 'STOPPED':
-    case 'STOPPING':
-    case 'ARCHIVED':
-      return 'is-dark';
-    case 'ERROR':
-    case 'INSUFFICIENT_FUNDS':
-      return 'is-danger';
-    case 'DRAFT':
-      return 'is-warning';
-    default:
-      return 'is-light';
-  }
-}
-
-const getStatusIcon = (status: string) => {
-  switch (status?.toUpperCase()) {
-    case 'RUNNING':
-    case 'STARTING':
-      return RunningIcon;
-    case 'STOPPED':
-    case 'STOPPING':
-      return StoppedIcon;
-    case 'ERROR':
-    case 'INSUFFICIENT_FUNDS':
-      return FailedIcon;
-    case 'DRAFT':
-      return QueuedIcon;
-    case 'COMPLETED':
-      return DoneIcon;
-    case 'ARCHIVED':
-      return ArchiveIcon;
-    default:
-      return StoppedIcon;
-  }
-}
 
 const formatDate = (date: string | Date) => {
   if (!date) return 'N/A'
