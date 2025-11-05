@@ -47,7 +47,7 @@
             <span>Login</span>
           </a>
         </li>
-        <li>
+        <li v-if="status === 'authenticated'">
           <nuxt-link
             to="/deployments"
             active-class="is-active"
@@ -61,7 +61,7 @@
         </li>
         <li class="has-dropdown">
           <a class="menu-list-link sidebar-link" @click="toggleExplorer"
-            :class="{ 'is-active': $route.path === '/explorer' || $route.path.includes('/markets') || ($route.path === '/account/host' && status !== 'authenticated') || $route.path === '/stake'}"
+            :class="{ 'is-active': $route.path === '/explorer' || $route.path.includes('/markets') || ($route.path === '/account/host' && !isAuthenticatedStable) || $route.path === '/stake'}"
           >
             <div
               class="is-flex is-align-items-center"
@@ -107,7 +107,7 @@
                 GPUs
               </nuxt-link>
             </li>
-            <li v-if="status !== 'authenticated'">
+            <li v-if="!isAuthenticatedStable">
               <a
                 v-if="!connected"
                 @click="openWalletModal($route.fullPath); showMenu = false"
@@ -244,18 +244,21 @@ const route = useRoute();
 const router = useRouter();
 const { openBothModal, openWalletModal } = useLoginModal();
 
-// Computed property for deploy route based on authentication type
-const deployRoute = computed(() => {
-  if (status.value === 'authenticated') {
-    // Logged in with Google account (credit system)
-    return '/deployments/create';
-  } else if (connected.value) {
-    // Logged in with Solana wallet
-    return '/deploy';
-  } else {
-    // Not logged in, default to credit system route
-    return '/deployments/create';
+const isAuthenticatedStable = ref(status.value === 'authenticated')
+watch(status, (newStatus) => {
+  if (newStatus === 'authenticated') {
+    isAuthenticatedStable.value = true
+  } else if (newStatus === 'unauthenticated') {
+    isAuthenticatedStable.value = false
   }
+  // if loading: keep previous definitive state
+}, { flush: 'sync' })
+
+// Computed property for deploy route - now unified to deployments/create
+const deployRoute = computed(() => {
+  // Direct all users to deployments/create for unified experience
+  // The page will handle wallet auth detection with a banner
+  return '/deployments/create';
 });
 
 

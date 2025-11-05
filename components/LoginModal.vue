@@ -53,10 +53,7 @@
             @click="handleWalletConnect"
             :disabled="connected"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M21 7H3C2.45 7 2 7.45 2 8V16C2 16.55 2.45 17 3 17H21C21.55 17 22 16.55 22 16V8C22 7.45 21.55 7 21 7Z" stroke="currentColor" stroke-width="2"/>
-              <path d="M16 12H20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            </svg>
+            <WalletIcon :size="20" />
             {{ connected ? 'Wallet Connected' : 'Select Wallet' }}
           </button>
         </div>
@@ -101,6 +98,7 @@ import { useRouter } from 'vue-router';
 import { useToast } from 'vue-toastification';
 import { generateCodeVerifier, generateCodeChallenge } from '~/utils/pkce';
 import { trackEvent } from '~/utils/analytics';
+import WalletIcon from '~/components/WalletIcon.vue';
 
 interface LoginModalProps {
   isOpen: boolean;

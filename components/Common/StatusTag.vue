@@ -131,6 +131,46 @@ const getIconComponent = (status: string) => {
 };
 
 const iconRef = ref<HTMLElement | null>(null);
+
+// Ensure SVG animations start immediately (fixes delay on route navigation)
+const ensureAnimationStarts = () => {
+  if (!iconRef.value) return;
+  
+  const svg = iconRef.value.querySelector('svg');
+  if (!svg) return;
+  
+  const animations = svg.querySelectorAll('animateTransform');
+  animations.forEach((anim: any) => {
+    try {
+      // Force restart: end current animation and begin new one
+      anim.endElement();
+      anim.beginElement();
+      
+      // Force immediate visual update - this fixes the 2-second delay
+      const parentSvg = anim.closest('svg');
+      if (parentSvg) {
+        // Force browser to recalculate styles and start animation immediately
+        parentSvg.style.animationPlayState = 'paused';
+        parentSvg.getBoundingClientRect(); // Force layout
+        parentSvg.style.animationPlayState = 'running';
+      }
+    } catch (e) {
+      // Fallback: just begin if end fails
+      try {
+        anim.beginElement();
+      } catch {}
+    }
+  });
+};
+
+// Restart animations when component mounts or status changes
+onMounted(() => {
+  nextTick(ensureAnimationStarts);
+});
+
+watch(() => statusString.value, () => {
+  nextTick(ensureAnimationStarts);
+});
 </script>
 
 <style lang="scss" scoped>
