@@ -6,52 +6,56 @@
         {{ title ? title : 'Deployments' }}
       </h2>
     </div>
-    <div v-if="jobs && jobs.length && (!small || (totalJobs && totalJobs > perPage))" class="column has-text-right">
-      <span v-if="totalJobs && totalJobs > perPage">{{ (page - 1) * perPage + 1 }} -
-        {{ Math.min(page * perPage, totalJobs) }} of</span>
-      {{ totalJobs }} deployments
-    </div>
-  </div>
-  <div class="is-flex is-flex-wrap-wrap state-filter">
-    <div class="mr-2 my-2" v-if="!states || states.length >= 2">
-      <a class="button is-primary is-outlined" :class="{
-        'is-hovered': state === null,
-        'is-small': small,
-      }" @click="changeState(null)">
-        <b><span>All</span></b>
-      </a>
-    </div>
-    <div class="mr-2 my-2" v-if="!states || states.includes(2)">
-      <a class="button" :class="[getFilterButtonClass(2), {
-        'is-hovered': state === 2,
-        'is-small': small,
-      }]" @click="changeState(2)">
-        <b><span>Completed</span></b>
-      </a>
-    </div>
-    <div class="mr-2 my-2" v-if="!states || states.includes(1)">
-      <a class="button" :class="[getFilterButtonClass(1), {
-        'is-hovered': state === 1,
-        'is-small': small,
-      }]" @click="changeState(1)">
-        <b><span>Running</span></b>
-      </a>
-    </div>
-    <div class="mr-2 my-2" v-if="!states || states.includes(0)">
-      <a class="button" :class="[getFilterButtonClass(0), {
-        'is-hovered': state === 0,
-        'is-small': small,
-      }]" @click="changeState(0)">
-        <b><span>Queued</span></b>
-      </a>
-    </div>
-    <div class="mr-2 my-2" v-if="!states || states.includes(3)">
-      <a class="button" :class="[getFilterButtonClass(3), {
-        'is-hovered': state === 3,
-        'is-small': small,
-      }]" @click="changeState(3)">
-        <b><span>Stopped</span></b>
-      </a>
+    <div class="column">
+      <div class="is-flex is-justify-content-flex-end is-align-items-center is-flex-wrap-wrap">
+        <div v-if="jobs && jobs.length && (!small || (totalJobs && totalJobs > perPage))" class="mr-3 has-text-right">
+          <span v-if="totalJobs && totalJobs > perPage">{{ (page - 1) * perPage + 1 }} -
+            {{ Math.min(page * perPage, totalJobs) }} of</span>
+          {{ totalJobs }} deployments
+        </div>
+        <div class="is-flex is-flex-wrap-wrap state-filter">
+          <div class="mr-2 my-2" v-if="!states || states.length >= 2">
+            <a class="button is-primary is-outlined" :class="{
+              'is-hovered': state === null,
+              'is-small': small,
+            }" @click="changeState(null)">
+              <b><span>All</span></b>
+            </a>
+          </div>
+          <div class="mr-2 my-2" v-if="!states || states.includes(2)">
+            <a class="button" :class="[getFilterButtonClass(2), {
+              'is-hovered': state === 2,
+              'is-small': small,
+            }]" @click="changeState(2)">
+              <b><span>Completed</span></b>
+            </a>
+          </div>
+          <div class="mr-2 my-2" v-if="!states || states.includes(1)">
+            <a class="button" :class="[getFilterButtonClass(1), {
+              'is-hovered': state === 1,
+              'is-small': small,
+            }]" @click="changeState(1)">
+              <b><span>Running</span></b>
+            </a>
+          </div>
+          <div class="mr-2 my-2" v-if="!states || states.includes(0)">
+            <a class="button" :class="[getFilterButtonClass(0), {
+              'is-hovered': state === 0,
+              'is-small': small,
+            }]" @click="changeState(0)">
+              <b><span>Queued</span></b>
+            </a>
+          </div>
+          <div class="mr-2 my-2" v-if="!states || states.includes(3)">
+            <a class="button" :class="[getFilterButtonClass(3), {
+              'is-hovered': state === 3,
+              'is-small': small,
+            }]" @click="changeState(3)">
+              <b><span>Stopped</span></b>
+            </a>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 

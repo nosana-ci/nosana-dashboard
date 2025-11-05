@@ -38,14 +38,16 @@
 import DeploymentsList from '~/components/List/DeploymentsList.vue';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import { faPlus } from '@fortawesome/free-solid-svg-icons';
+import { useWallet } from 'solana-wallets-vue';
 
 const searchQuery = ref('')
 
 const { status } = useAuth()
+const { connected } = useWallet()
 const router = useRouter()
 
 watch(status, (authStatus) => {
-  if (authStatus === 'unauthenticated') {
+  if (authStatus === 'unauthenticated' && !connected.value) {
     router.push('/account/deployer')
   }
 }, { immediate: true })

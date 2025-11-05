@@ -2,18 +2,6 @@
   <div class="box mt-4 has-text-left">
     <div class="columns is-multiline">
       <div class="column is-12">
-        <div class="is-flex is-justify-content-flex-start is-align-items-center mb-4">
-          <div class="select status-select">
-            <select v-model="currentState">
-              <option v-for="filterState in filterStates" 
-                :key="filterState.value === null ? 'null' : filterState.value" 
-                :value="filterState.value"
-              >
-                {{ filterState.label }}
-              </option>
-            </select>
-          </div>
-        </div>
 
         <div :class="{'min-height-container': loadingJobs || loadingNodeJobs}">
           <div class="table-container">
@@ -145,7 +133,7 @@ import { useTemplates } from '~/composables/useTemplates';
 import { useMarkets } from '~/composables/useMarkets';
 import JobPrice from "~/components/Job/Price.vue";
 import SecondsFormatter from "~/components/SecondsFormatter.vue";
-import { computed } from 'vue';
+import { computed, type PropType } from 'vue';
 import { useStatus } from '~/composables/useStatus';
 
 const router = useRouter();
@@ -172,22 +160,23 @@ const props = defineProps({
     type: String,
     default: 'combined', // 'posted', 'node', or 'combined'
     validator: (value: string) => ['posted', 'node', 'combined'].includes(value)
+  },
+  statusFilter: {
+    type: [String, null] as PropType<string | null>,
+    default: null
   }
 });
 
 const emit = defineEmits(['update:total-deployments']);
 
 const currentPage = ref(1);
-const currentState = ref<number | null>(null);
 
-// Fix the type issue with filterStates
-const filterStates = [
-  { label: 'All', value: null as null },
-  { label: 'Completed', value: 2 as number },
-  { label: 'Running', value: 1 as number },
-  { label: 'Queued', value: 0 as number },
-  { label: 'Stopped', value: 3 as number }
-];
+// Convert string status filter to number for backwards compatibility
+const currentState = computed(() => {
+  if (props.statusFilter === null) return null;
+  return parseInt(props.statusFilter) || null;
+});
+
 
 const jobStateMapping: Record<number, string> = {
   0: "QUEUED",

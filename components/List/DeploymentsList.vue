@@ -2,10 +2,26 @@
   <div class="box mt-4 has-text-left">
     <div class="columns is-multiline">
       <div class="column is-12">
-        <div class="is-flex is-justify-content-flex-start is-align-items-center mb-4">
-          <div class="select status-select">
+        <div class="is-flex is-align-items-center is-justify-content-space-between is-flex-wrap-nowrap mb-4">
+          <div class="buttons has-addons">
+            <button 
+              class="button" 
+              :class="{ 'is-dark': activeTab === 'deployments' }"
+              @click="activeTab = 'deployments'"
+            >
+              Deployments
+            </button>
+            <button 
+              class="button" 
+              :class="{ 'is-dark': activeTab === 'jobs' }"
+              @click="activeTab = 'jobs'"
+            >
+              Jobs
+            </button>
+          </div>
+          <div class="select status-select ml-auto" style="margin-left: auto;">
             <select v-model="currentState">
-              <option v-for="filterState in filterStates" 
+              <option v-for="filterState in getFilterStates" 
                 :key="filterState.value === null ? 'null' : filterState.value" 
                 :value="filterState.value"
               >
@@ -15,7 +31,7 @@
           </div>
         </div>
 
-        <div :class="{'min-height-container': !hasLoadedOnce && loading}">
+        <div v-if="activeTab === 'deployments'" :class="{'min-height-container': !hasLoadedOnce && loading}">
           <div class="table-container">
             <table class="table is-fullwidth is-striped is-hoverable">
             <thead>
@@ -67,6 +83,15 @@
           </div>
         </div>
 
+        <div v-else>
+          <JobList 
+            :items-per-page="itemsPerPageForJobs"
+            job-type="combined"
+            :status-filter="currentState"
+            class="mb-2"
+          />
+        </div>
+
         <Pagination
             v-if="showPagination && totalPages > 1"
             v-model="currentPage"
@@ -87,6 +112,8 @@
 
 <script setup lang="ts">
 import StatusTag from '@/components/Common/StatusTag.vue';
+import JobList from '~/components/List/JobList.vue';
+import { useWallet } from 'solana-wallets-vue';
 import { useSDK } from '~/composables/useSDK';
 import type { Deployment } from '@nosana/sdk';
 
@@ -113,6 +140,8 @@ const deployments = ref<Deployment[]>([])
 const currentPage = ref(1)
 const currentState = ref<string | null>(null)
 const hasLoadedOnce = ref(false)
+const activeTab = ref<'deployments' | 'jobs'>('deployments')
+const itemsPerPageForJobs = computed(() => props.itemsPerPage)
 
 // Filter states for deployment status
 const filterStates = [
@@ -126,8 +155,23 @@ const filterStates = [
   { label: 'Archived', value: 'ARCHIVED' as string }
 ]
 
+// Filter states for job status
+const jobFilterStates = [
+  { label: 'All', value: null as null },
+  { label: 'Completed', value: '2' as string },
+  { label: 'Running', value: '1' as string },
+  { label: 'Queued', value: '0' as string },
+  { label: 'Stopped', value: '3' as string }
+]
+
+// Get appropriate filter states based on active tab
+const getFilterStates = computed(() => {
+  return activeTab.value === 'deployments' ? filterStates : jobFilterStates
+})
+
 
 const { status, token } = useAuth()
+const { connected } = useWallet()
 const router = useRouter()
 const route = useRoute()
 
@@ -221,10 +265,10 @@ watch(status, (authStatus) => {
     clearTimeout(redirectTimer)
   }
   
-  if (authStatus === 'unauthenticated') {
+  if (authStatus === 'unauthenticated' && !connected.value) {
     // Add small delay to prevent redirect during quick session refresh
     redirectTimer = setTimeout(() => {
-      if (status.value === 'unauthenticated') {
+      if (status.value === 'unauthenticated' && !connected.value) {
         router.push('/account/deployer')
       }
     }, 500)
@@ -267,6 +311,12 @@ watch(() => currentState.value, () => {
 watch(() => currentPage.value, () => {
   // Refresh the data when page changes (if needed for server-side pagination)
   // For now we're doing client-side filtering so no refresh needed
+}, { immediate: false })
+
+// Reset status filter when switching tabs
+watch(() => activeTab.value, () => {
+  currentState.value = null
+  currentPage.value = 1
 }, { immediate: false })
 </script>
 
