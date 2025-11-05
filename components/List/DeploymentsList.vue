@@ -3,23 +3,23 @@
     <div class="columns is-multiline">
       <div class="column is-12">
         <div class="is-flex is-align-items-center is-justify-content-space-between is-flex-wrap-nowrap mb-4">
-          <div class="buttons has-addons">
+          <div class="deployment-tabs">
             <button 
-              class="button" 
-              :class="{ 'is-dark': activeTab === 'deployments' }"
+              class="tab-button" 
+              :class="{ 'is-active': activeTab === 'deployments' }"
               @click="activeTab = 'deployments'"
             >
               Deployments
             </button>
             <button 
-              class="button" 
-              :class="{ 'is-dark': activeTab === 'jobs' }"
+              class="tab-button" 
+              :class="{ 'is-active': activeTab === 'jobs' }"
               @click="activeTab = 'jobs'"
             >
               Jobs
             </button>
           </div>
-          <div class="select status-select ml-auto" style="margin-left: auto;">
+          <div class="select status-select ml-auto">
             <select v-model="currentState">
               <option v-for="filterState in getFilterStates" 
                 :key="filterState.value === null ? 'null' : filterState.value" 
@@ -377,5 +377,24 @@ watch(() => activeTab.value, () => {
 /* Fix for option key type error */
 select option {
   value: any;
+}
+
+/* Match deployment detail page responsive tab styling */
+@media screen and (max-width: 768px) {
+  .tab-button {
+    font-size: 0.875rem;
+    padding: 0.5rem 0.75rem;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .deployment-tabs {
+    gap: 0.25rem;
+  }
+  
+  .tab-button {
+    font-size: 0.75rem;
+    padding: 0.375rem 0.5rem;
+  }
 }
 </style>
