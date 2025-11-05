@@ -189,11 +189,11 @@
           </template>
         </div>
         
-        <!-- API Tokens Section -->
-        <ApiKeys class="pb-5" v-if="canShowAccountData" />
+        <!-- API Tokens Section (only for authenticated credit users) -->
+        <ApiKeys class="pb-5" v-if="status === 'authenticated'" />
         
         <!-- For Credit Users: Show Deployments -->
-        <div v-if="canShowAccountData">
+        <div v-if="status === 'authenticated'">
           <div class="is-flex is-justify-content-space-between is-align-items-center mb-4">
             <h3 class="title is-4 mb-0">Deployments</h3>
             <nuxt-link to="/deployments/create" class="button is-dark">
