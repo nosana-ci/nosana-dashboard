@@ -90,10 +90,30 @@
             <!-- Cost Summary -->
             <div class="mb-4">
               <p class="has-text-grey is-size-7 mb-2" style="text-transform: uppercase; letter-spacing: 0.5px; font-weight: 500;">Cost</p>
-              <h3 class="title is-3 mb-1" v-if="selectedMarket">
-                ${{ (hourlyPrice * replicas).toFixed(3) }}/h
-              </h3>
-              <p class="has-text-grey" v-else>Select a GPU to see pricing</p>
+              
+              <!-- Credit User Cost -->
+              <div v-if="isCreditMode">
+                <h3 class="title is-3 mb-1" v-if="selectedMarket">
+                  ${{ (hourlyPrice * replicas).toFixed(3) }}/h
+                </h3>
+                <p class="has-text-grey" v-else>Select a GPU to see pricing</p>
+              </div>
+              
+              <!-- Wallet User Cost -->
+              <div v-else-if="isWalletMode">
+                <h3 class="title is-3 mb-1" v-if="selectedMarket && requiredNos">
+                  {{ requiredNos.toFixed(3) }} NOS/h
+                </h3>
+                <p class="has-text-grey is-size-7 mb-1" v-if="selectedMarket && hourlyPrice">
+                  ≈ ${{ (hourlyPrice * replicas).toFixed(3) }}/h
+                </p>
+                <p class="has-text-grey" v-else>Select a GPU to see pricing</p>
+              </div>
+              
+              <!-- No Auth -->
+              <div v-else>
+                <p class="has-text-grey">Connect wallet or sign in to see pricing</p>
+              </div>
             </div>
 
             <hr style="margin: 1.5rem 0;" />
@@ -154,6 +174,66 @@
 
             <hr style="margin: 1.5rem 0;" />
 
+            <!-- Wallet Management Section -->
+            <div v-if="isWalletMode" class="mb-4">
+              <p class="has-text-grey is-size-7 mb-3 has-text-weight-medium" style="text-transform: uppercase; letter-spacing: 0.5px;">Vault Management</p>
+              
+              <!-- Vault Selection Button -->
+              <div class="field">
+                <div class="control">
+                  <button 
+                    class="button is-fullwidth is-light"
+                    @click="openVaultModal"
+                    :disabled="loadingVaults"
+                  >
+                    <span class="icon is-small">
+                      <WalletIcon />
+                    </span>
+                    <span v-if="selectedVault && selectedVault.public_key">
+                      {{ selectedVault.public_key.slice(0, 8) }}...{{ selectedVault.public_key.slice(-8) }}
+                    </span>
+                    <span v-else-if="loadingVaults">Loading vaults...</span>
+                    <span v-else>Select Vault</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Selected Vault Info -->
+              <div v-if="selectedVault" class="notification is-light">
+                <div class="level is-mobile">
+                  <div class="level-left">
+                    <div class="level-item">
+                      <div>
+                        <p class="heading">Vault Balance</p>
+                        <p class="title is-6">
+                          {{ selectedVault.balance?.SOL?.toFixed(3) || '0' }} SOL • 
+                          {{ selectedVault.balance?.NOS?.toFixed(3) || '0' }} NOS
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="level-right">
+                    <div class="level-item">
+                      <button class="button is-small" @click="clearSelection">
+                        Change
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Estimated Cost -->
+              <div v-if="selectedMarket && requiredNos" class="notification is-warning is-light">
+                <p class="heading">Estimated Cost ({{ timeout }}h)</p>
+                <p class="title is-6">
+                  ~{{ (requiredNos * timeout).toFixed(3) }} NOS
+                </p>
+                <p class="subtitle is-7">
+                  ≈ ${{ (hourlyPrice * replicas * timeout).toFixed(3) }}
+                </p>
+              </div>
+            </div>
+
             <!-- Advanced Settings Button -->
             <button 
               class="button is-light is-fullwidth mb-4" 
@@ -169,43 +249,58 @@
             </button>
 
             <ClientOnly>
-              <!-- Show login button when not authenticated -->
-              <button
-                v-if="status !== 'authenticated'"
-                class="button is-secondary is-fullwidth"
-                @click="handleLoginClick"
-              >
-                Login
-              </button>
-              
-              <!-- Show deploy button when authenticated, disabled if can't create deployment -->
-              <button
-                v-if="status === 'authenticated'"
-                class="button is-secondary is-fullwidth"
-                :disabled="!canCreateDeployment"
-                @click="createDeployment"
-              >
-                <span v-if="isCreatingDeployment">Creating...</span>
-                <span v-else>Create Deployment</span>
-              </button>
-
-              <!-- Show insufficient credits message for Google users -->
-              <div
-                v-if="
-                  status === 'authenticated' && !canPostJob && selectedMarket
-                "
-                class="has-text-centered mb-3 mt-3"
-              >
-                <p class="has-text-grey is-size-7 mb-2">
-                  Insufficient credits. Need ${{
-                    (hourlyPrice * replicas * timeout).toFixed(3) 
-                  }}, have ${{ creditBalance.toFixed(2) }}
-                </p>
-                <button 
-                  class="button is-small is-outlined is-fullwidth"
-                  @click="goToClaimCredits"
+              <!-- Credit Mode Actions -->
+              <div v-if="isCreditMode">
+                <button
+                  class="button is-secondary is-fullwidth"
+                  :disabled="!canCreateDeployment"
+                  @click="createDeployment"
                 >
-                  Claim Credit Codes
+                  <span v-if="isCreatingDeployment">Creating...</span>
+                  <span v-else>Create Deployment</span>
+                </button>
+
+                <!-- Show insufficient credits message -->
+                <div v-if="!canPostJob && selectedMarket" class="has-text-centered mb-3 mt-3">
+                  <p class="has-text-grey is-size-7 mb-2">
+                    Insufficient credits. Need ${{
+                      (hourlyPrice * replicas * timeout).toFixed(3) 
+                    }}, have ${{ creditBalance.toFixed(2) }}
+                  </p>
+                  <button 
+                    class="button is-small is-outlined is-fullwidth"
+                    @click="goToClaimCredits"
+                  >
+                    Claim Credit Codes
+                  </button>
+                </div>
+              </div>
+
+              <!-- Wallet Mode Actions -->
+              <div v-else-if="isWalletMode">
+                <button
+                  class="button is-secondary is-fullwidth"
+                  :disabled="!canCreateDeployment"
+                  @click="createDeployment"
+                >
+                  <span v-if="isCreatingDeployment">Creating...</span>
+                  <span v-else>Create Deployment</span>
+                </button>
+
+                <div v-if="!selectedVault" class="has-text-centered mt-3">
+                  <p class="has-text-grey is-size-7">
+                    A vault will be created automatically during deployment
+                  </p>
+                </div>
+              </div>
+
+              <!-- No Authentication Actions -->
+              <div v-else>
+                <button
+                  class="button is-secondary is-fullwidth"
+                  @click="handleLoginClick"
+                >
+                  Login or Connect Wallet
                 </button>
               </div>
             </ClientOnly>
@@ -215,6 +310,19 @@
     </div>
 
     <Loader v-if="loading" />
+
+    <!-- Vault Selection Modal -->
+    <VaultSelectionModal
+      :is-active="showVaultModal"
+      :vaults="availableVaults"
+      :selected-vault="modalSelectedVault"
+      :loading="loadingVaults"
+      :creating="isCreatingVault"
+      @close="handleVaultModalClose"
+      @confirm="handleVaultModalConfirm"
+      @create-vault="handleCreateVaultFromModal"
+      @select-vault="handleSelectVaultFromModal"
+    />
 
     <!-- README Modal -->
     <div class="modal" :class="{ 'is-active': showReadmeModal }">
@@ -391,6 +499,8 @@ import { useDebounceFn, useScrollLock } from "@vueuse/core";
 import { useEstimatedCost } from "~/composables/useMarketPricing";
 import type { Template } from "~/composables/useTemplates";
 import Loader from "~/components/Loader.vue";
+import VaultSelectionModal from "~/components/Vault/VaultSelectionModal.vue";
+import { useVaultManager } from "~/composables/useVaultManager";
 
 // Advanced GPU selection types (copied from deploy.vue)
 interface FilterValue {
@@ -434,7 +544,7 @@ const router = useRouter();
 const route = useRoute();
 const toast = useToast();
 const { status, data: userData, token } = useAuth();
-const { connected } = useWallet();
+const { connected, publicKey } = useWallet();
 const loading = ref(false);
 
 // Initialize redirect composable for authentication flow
@@ -480,6 +590,22 @@ const loadingCreditBalance = ref(false);
 const solPrice = ref(0);
 const usdcPrice = ref(0);
 const usdtPrice = ref(0);
+
+// Vault management
+const {
+  vaults: availableVaults,
+  selectedVault,
+  loading: loadingVaults,
+  creating: isCreatingVault,
+  isWalletMode: vaultManagerWalletMode,
+  selectVault,
+  createVault,
+  clearSelection
+} = useVaultManager();
+
+// Vault selection modal
+const showVaultModal = ref(false);
+const modalSelectedVault = ref<any>(null);
 
 // Initialize filterValues with defaults
 const filterValues = ref<FilterValues>({
@@ -728,22 +854,43 @@ const isAuthenticated = computed(() => {
   return status.value === "authenticated" && token.value;
 });
 
+// Authentication mode detection
+const isWalletMode = computed(() => {
+  return connected.value && publicKey.value && !token.value;
+});
+
+const isCreditMode = computed(() => {
+  return status.value === "authenticated" && token.value;
+});
+
+const hasAnyAuth = computed(() => {
+  return isWalletMode.value || isCreditMode.value;
+});
+
 // Show legacy deploy banner for all users
 const shouldShowWalletAuthBanner = computed(() => {
   return true;
 });
 
-const canCreateDeployment = computed(
-  () =>
+const canCreateDeployment = computed(() => {
+  const basicRequirements = 
     selectedMarket.value !== null &&
     jobDefinition.value !== null &&
     deploymentName.value.trim() !== "" &&
     replicas.value > 0 &&
     timeout.value > 0 &&
-    !isCreatingDeployment.value &&
-    isAuthenticated.value &&
-    canPostJob.value
-);
+    !isCreatingDeployment.value;
+
+  if (isCreditMode.value) {
+    return basicRequirements && canPostJob.value;
+  } else if (isWalletMode.value) {
+    // For wallet mode, basic requirements are enough
+    // Vault will be created during deployment if needed
+    return basicRequirements;
+  }
+  
+  return false;
+});
 
 const activeFilterKey = computed(
   () => `${selectedTemplate?.value?.id || "default"}-${activeFilter.value}`
@@ -775,7 +922,30 @@ const refreshCreditBalance = async () => {
 };
 
 
-// No wallet flow in API mode
+// Vault modal handlers
+const openVaultModal = () => {
+  modalSelectedVault.value = selectedVault.value;
+  showVaultModal.value = true;
+};
+
+const handleVaultModalConfirm = (vault: any) => {
+  selectVault(vault);
+  showVaultModal.value = false;
+};
+
+const handleVaultModalClose = () => {
+  showVaultModal.value = false;
+  modalSelectedVault.value = null;
+};
+
+const handleCreateVaultFromModal = async () => {
+  await createVault();
+  showVaultModal.value = false;
+};
+
+const handleSelectVaultFromModal = (vault: any) => {
+  modalSelectedVault.value = vault;
+};
 
 const createDeployment = async () => {
   if (!canCreateDeployment.value) return;
@@ -797,41 +967,54 @@ const createDeployment = async () => {
     toast.error("Timeout must be at least 1 hour");
     return;
   }
+  if (!jobDefinition.value) {
+    toast.error("Job definition is required");
+    return;
+  }
 
   loading.value = true;
   isCreatingDeployment.value = true;
 
   try {
-    // Validate job definition presence
-    if (!jobDefinition.value) {
-      throw new Error("Job definition is required");
+    let deployment;
+
+    if (isCreditMode.value) {
+      // Credit mode - use existing API flow
+      const requestBody: CreateDeployment = {
+        name: deploymentName.value.trim(),
+        market: selectedMarket.value!.address.toString(),
+        replicas: replicas.value,
+        timeout: Math.min(timeout.value * 60, 24 * 60),
+        ...(strategy.value === "SCHEDULED"
+          ? { strategy: "SCHEDULED" as const, schedule: schedule.value }
+          : { strategy: strategy.value as "SIMPLE" | "SIMPLE-EXTEND" | "INFINITE" }),
+        job_definition: jobDefinition.value,
+      };
+
+      deployment = await nosana.value.deployments.create(requestBody);
+    } else if (isWalletMode.value) {
+      // Wallet mode - use SDK deployment flow
+      // The SDK will automatically create a vault if none is selected
+      deployment = await nosana.value.deployments.create({
+        name: deploymentName.value.trim(),
+        market: selectedMarket.value!.address.toString(),
+        replicas: replicas.value,
+        timeout: timeout.value * 3600, // SDK expects seconds
+        strategy: strategy.value as "SIMPLE" | "SIMPLE-EXTEND" | "INFINITE" | "SCHEDULED",
+        ...(strategy.value === "SCHEDULED" ? { schedule: schedule.value } : {}),
+        job_definition: jobDefinition.value,
+      });
+    } else {
+      throw new Error("Please connect wallet or sign in");
     }
 
-    // Create deployment via API (authenticated only)
-    if (status.value !== 'authenticated' || !token.value) {
-      throw new Error("Please sign in to create a deployment");
-    }
-
-    const requestBody: CreateDeployment = {
-      name: deploymentName.value.trim(),
-      market: selectedMarket.value!.address.toString(),
-      replicas: replicas.value,
-      // DM expects minutes for create; cap at 24h
-      timeout: Math.min(timeout.value * 60, 24 * 60),
-      ...(strategy.value === "SCHEDULED"
-        ? { strategy: "SCHEDULED" as const, schedule: schedule.value }
-        : { strategy: strategy.value as "SIMPLE" | "SIMPLE-EXTEND" | "INFINITE" }),
-      // Send raw job definition instead of IPFS hash
-      job_definition: jobDefinition.value,
-    };
-
-    const data = await nosana.value.deployments.create(requestBody);
-
-    toast.success(`Successfully created deployment ${data.id}`)
+    toast.success(`Successfully created deployment ${deployment.id}`);
     setTimeout(() => {
-      router.push(`/deployments/${data.id}`);
+      router.push(`/deployments/${deployment.id}`);
     }, 2000);
+
   } catch (error: any) {
+    console.error("Deployment creation error:", error);
     toast.error(`Error creating deployment: ${error.message || error.toString()}`);
   } finally {
     isCreatingDeployment.value = false;
@@ -979,15 +1162,15 @@ onMounted(async () => {
     await getMarkets();
   }
 
-  // No wallet balances in API mode
-  if (status.value === 'authenticated' && token.value) {
+  // Load credit balance if authenticated
+  if (isCreditMode.value) {
     await refreshCreditBalance();
   }
 });
 
-// React to auth changes to keep credits fresh
+// React to auth changes to keep credit balance fresh
 watch([status, token], async () => {
-  if (status.value === 'authenticated' && token.value) {
+  if (isCreditMode.value) {
     await refreshCreditBalance();
   } else {
     creditBalance.value = 0;
