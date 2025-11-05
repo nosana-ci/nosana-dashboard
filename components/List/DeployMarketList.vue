@@ -4,13 +4,13 @@
       <p class="has-text-grey">No GPUs available</p>
     </div>
     <div v-else class="gpu-grid">
-      <nuxt-link v-for="market in filteredMarkets" :key="market.address.toString()"
-        :to="`/markets/${market.address.toString()}`" custom>
+      <nuxt-link v-for="market in filteredMarkets" :key="market.address?.toString() || market.id"
+        :to="`/markets/${market.address?.toString() || ''}`" custom>
         <template #default="{ navigate }">
           <div
             class="gpu-card"
             :class="{
-              'is-selected': selectedMarket && selectedMarket.address.toString() === market.address.toString(),
+              'is-selected': selectedMarket && selectedMarket.address?.toString() === market.address?.toString(),
               'is-incompatible': !isMarketCompatible(market)
             }"
             :data-tooltip="!isMarketCompatible(market) ? 'This GPU does not meet the required VRAM specifications for your job.' : null"
@@ -137,20 +137,20 @@ const requiredVRAM = computed(() => props.jobDefinition?.meta?.system_requiremen
 
 // Helper function to find market info by address
 const findMarketInfo = (market: Market): MarketInfo | undefined => {
-  return props.testgridMarkets.find(tgm => tgm.address === market.address.toString());
+  return props.testgridMarkets.find(tgm => tgm.address === market.address?.toString());
 };
 
 // Helper to get market name
 const getMarketName = (market: Market): string => {
   const marketInfo = findMarketInfo(market);
-  return marketInfo?.name || market.address.toString();
+  return marketInfo?.name || market.address?.toString() || 'Unknown Market';
 };
 
 
 // Helper to get running job count
 const getRunningJobCount = (market: Market): number => {
   if (!runningJobs.value) return 0;
-  const address = market.address.toString();
+  const address = market.address?.toString();
   return runningJobs.value[address]?.running || 0;
 };
 
@@ -198,7 +198,7 @@ const filteredMarkets = computed(() => {
 // Helper to get hourly price for sorting (uses base price without network fee for fair sorting)
 const getMarketHourlyPrice = (market: Market) => {
   // Get base USD price from market data (before network fee)
-  const marketAddress = market.address.toString();
+  const marketAddress = market.address?.toString();
   const marketInfo = props.testgridMarkets?.find(m => m.address === marketAddress);
   
   if (marketInfo?.usd_reward_per_hour) {
@@ -279,7 +279,7 @@ const selectBestMarket = async () => {
     )[0];
     
     // Find the exact reference in the markets array for proper UI highlighting
-    const exactRef = props.markets.find(m => m.address.toString() === cheapestMarket.address.toString());
+    const exactRef = props.markets.find(m => m.address?.toString() === cheapestMarket.address?.toString());
     
     // Wait for nextTick to ensure Vue updates the DOM after reactivity changes
     await nextTick();

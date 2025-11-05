@@ -488,19 +488,19 @@ const computedDockerImage = computed(() => {
 });
 
 const marketName = computed(() => {
-  if (!selectedMarket.value) return null;
+  if (!selectedMarket.value?.address) return null;
 
 try {
   trackEvent('gpu_selected', {
     user_id: userData.value?.generatedAddress || publicKey.value?.toString(),
     market: testgridMarkets.value.find(
-      (tgm: any) => tgm.address === selectedMarket.value?.address.toString())?.name || selectedMarket.value.address.toString()});
+      (tgm: any) => tgm.address === selectedMarket.value.address.toString())?.name || selectedMarket.value.address.toString()});
 } catch (error) {
   console.warn("Error tracking GPU job created:", error);
 }
   
   return testgridMarkets.value.find(
-    (tgm: any) => tgm.address === selectedMarket.value?.address.toString()
+    (tgm: any) => tgm.address === selectedMarket.value.address.toString()
   )?.name || selectedMarket.value.address.toString();
 });
 
@@ -681,11 +681,42 @@ const createJob = async () => {
         throw new Error('Wallet is not ready for signing. Please reconnect your wallet and try again.');
       }
       
+      // Determine deployment mode: market vs specific host
+      let marketAddress;
+      let hostAddress = undefined;
+      
+      if (selectedMarket.value?.address) {
+        marketAddress = selectedMarket.value.address;
+        
+        // Only pass host address if we're in advanced mode AND have a specific host selected
+        if (selectedHostAddress.value && gpuTab.value === 'advanced') {
+          hostAddress = selectedHostAddress.value;
+        }
+        // For device tab (simple mode), we deploy to the market (any available host)
+        // For advanced tab, we deploy to specific host if selected, otherwise to market
+        
+      } else if (selectedHostAddress.value) {
+        // Fallback: If we have a host but no market, find the market from available hosts
+        const hostData = availableHosts.value?.find(host => host.host_address === selectedHostAddress.value);
+        if (hostData?.market_address && markets.value) {
+          const market = markets.value.find(m => m.address?.toString() === hostData.market_address);
+          if (market) {
+            marketAddress = market.address;
+            hostAddress = selectedHostAddress.value; // This is definitely advanced mode
+            selectedMarket.value = market; // Update selectedMarket for UI consistency
+          }
+        }
+      }
+      
+      if (!marketAddress) {
+        throw new Error('No valid market selected. Please select a GPU from the list.');
+      }
+      
       const response = await nosana.value.jobs.list(
         ipfsHash,
         hours.value * 3600,
-        selectedMarket.value!.address,
-        selectedHostAddress.value || undefined
+        marketAddress,
+        hostAddress
       ) as { tx: string; job: string; run: string };
       
       toast.success(`Successfully created job ${response.job}`);
@@ -830,7 +861,7 @@ watch(() => groupedTemplates.value, (newTemplates) => {
 
 // Update GPU type when market changes
 watch(() => selectedMarket.value, (newMarket) => {
-  if (newMarket && testgridMarkets.value && activeFilter.value !== 'ALL') {
+  if (newMarket && newMarket.address && testgridMarkets.value && activeFilter.value !== 'ALL') {
     const marketInfo = testgridMarkets.value.find((tgm: any) => tgm.address === newMarket.address.toString());
     if (marketInfo && marketInfo.type) {
       gpuTypeCheckbox.value = [marketInfo.type];
@@ -1099,7 +1130,7 @@ const restoreStateIfNeeded = async () => {
     // Restore market selection (following handleRepost pattern)
     if (savedState.selectedMarket && markets.value) {
       const foundMarket = markets.value.find((m: Market) => 
-        m.address.toString() === savedState.selectedMarket?.address.toString()
+        m.address?.toString() === savedState.selectedMarket?.address?.toString()
       );
       
       if (foundMarket) {
@@ -1111,7 +1142,7 @@ const restoreStateIfNeeded = async () => {
         // Update GPU type filters based on market (same as handleRepost)
         if (testgridMarkets.value.length > 0) {
           const marketInfo = testgridMarkets.value.find((tgm: any) => 
-            tgm.address === foundMarket.address.toString()
+            tgm.address === foundMarket.address?.toString()
           );
           if (marketInfo && marketInfo.type) {
             gpuTypeCheckbox.value = [marketInfo.type];
@@ -1387,17 +1418,30 @@ const selectTemplateFromModal = (template: Template) => {
 
 // Advanced GPU selection market handler
 const handleAdvancedMarketSelection = (marketInfo: any) => {
-  if (marketInfo && marketInfo.market_address && markets.value) {
-    // Find the market in markets.value that matches the market_address
+  if (!marketInfo) {
+    selectedMarket.value = null;
+    return;
+  }
+  
+  // If it's already a proper market object with address property, use it directly
+  if (marketInfo.address) {
+    selectedMarket.value = marketInfo;
+    return;
+  }
+  
+  // If it's just market address info, find the proper market object
+  if (marketInfo.market_address && markets.value) {
     const matchingMarket = markets.value.find((m: Market) => 
-      m.address.toString() === marketInfo.market_address
+      m.address?.toString() === marketInfo.market_address
     );
     
     if (matchingMarket) {
       selectedMarket.value = matchingMarket;
+    } else {
+      console.warn('Could not find matching market for address:', marketInfo.market_address);
+      // Don't set to null here - we might still be able to use the market_address directly
+      // The job creation logic will handle finding the market when needed
     }
-  } else {
-    selectedMarket.value = null;
   }
 };
 
