@@ -22,11 +22,11 @@
           <div class="is-flex is-justify-content-space-between is-align-items-start">
             <div class="header-left-section">
               <div class="is-flex is-align-items-center mb-0">
-                <NuxtLink :to="backLink" class="button is-ghost back-button mr-4">
+                <button @click="router.back()" class="button is-ghost back-button mr-4">
                   <span class="icon is-small">
                     <ArrowUpIcon class="icon-16 transform-rotate-270 back-arrow-icon" />
                   </span>
-                </NuxtLink>
+                </button>
                 <div class="header-title-section">
                   <h1 class="title is-5 has-text-weight-normal mb-1">{{ deployment.name || 'Deployment' }}</h1>
                   <p v-if="deployment.name" class="subtitle is-7 has-text-grey is-family-monospace mb-0">{{ deployment.id }}</p>
@@ -1006,11 +1006,6 @@ const deploymentSchedule = computed<string | null>(() => {
   return d?.schedule ?? null;
 });
 
-// Back link logic - return to origin (account or deployments)
-const backLink = computed(() => {
-  const from = (useRoute().query.from as string) || '';
-  return from === 'account' ? '/account/deployer' : '/deployments';
-});
 
 
 // Use API-provided deployment.status as-is for display
