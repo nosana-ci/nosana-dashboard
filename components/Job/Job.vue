@@ -146,7 +146,7 @@
                 <tr v-if="combinedSpecs?.country || isQueuedJob">
                   <td>Country</td>
                   <td>
-                    <span v-if="combinedSpecs?.country">{{ combinedSpecs.country }}</span>
+                    <span v-if="combinedSpecs?.country">{{ formatCountry(combinedSpecs.country) }}</span>
                     <span v-else class="has-text-grey">--</span>
                   </td>
                 </tr>
@@ -700,6 +700,18 @@ const gpuSummary = computed(() => {
 const formatRam = (mb?: number) => {
   if (typeof mb !== 'number' || isNaN(mb)) return '--';
   return `${Math.round(mb / 1024)} GB`;
+};
+
+const formatCountry = (countryCode?: string) => {
+  if (!countryCode) return "-";
+  try {
+    return (
+      new Intl.DisplayNames(["en"], { type: "region" }).of(countryCode) ||
+      countryCode
+    );
+  } catch {
+    return countryCode;
+  }
 };
 
 const formatNetwork = (download?: number, upload?: number, ping?: number) => {
