@@ -42,7 +42,10 @@ export function useNosanaWallet() {
       const raw = sessionStorage.getItem(AUTH_CACHE_KEY);
       if (!raw) return null;
       const parsed = JSON.parse(raw);
-      if (!parsed?.value || !parsed?.expiresAt) return null;
+      if (!parsed?.value || !parsed?.expiresAt) {
+        sessionStorage.removeItem(AUTH_CACHE_KEY);
+        return null;
+      }
       // Ensure the cached header belongs to the currently connected wallet
       const currentOwner = publicKey.value?.toString();
       if (!currentOwner || parsed?.owner !== currentOwner) {
@@ -67,10 +70,8 @@ export function useNosanaWallet() {
     try {
       if (typeof window === 'undefined') return;
       const expiresAt = Date.now() + ttlMs;
-      sessionStorage.setItem(
-        AUTH_CACHE_KEY,
-        JSON.stringify({ value, expiresAt, owner: publicKey.value?.toString() })
-      );
+      const cacheData = { value, expiresAt, owner: publicKey.value?.toString() };
+      sessionStorage.setItem(AUTH_CACHE_KEY, JSON.stringify(cacheData));
       sessionAuthRef.value = value;
     } catch {
       /* ignore */
@@ -98,6 +99,7 @@ export function useNosanaWallet() {
   const generateAuthHeaders = async (
     options?: { key?: string; includeTime?: boolean; forceNew?: boolean }
   ): Promise<Headers> => {
+    
     if (!connected.value || !publicKey.value) {
       throw new Error("Wallet not connected or not found");
     }
@@ -106,7 +108,10 @@ export function useNosanaWallet() {
 
     // Use cached string when includeTime is false and not forcing new
     if (!options?.includeTime && !options?.forceNew) {
-      const value = sessionAuthRef.value || cachedAuthString.value || loadCachedAuth();
+      const sessionAuth = sessionAuthRef.value;
+      const memoryAuth = cachedAuthString.value;
+      const storageAuth = loadCachedAuth();
+      const value = sessionAuth || memoryAuth || storageAuth;
       if (value) {
         const headers = new Headers();
         headers.set(key, value);
@@ -174,5 +179,8 @@ export function useNosanaWallet() {
     publicKey,
     generateAuthHeaders,
     hasSessionAuth,
+    // Export cache functions for direct access (avoid recursion)
+    loadCachedAuth,
+    cachedAuthString,
   };
 }

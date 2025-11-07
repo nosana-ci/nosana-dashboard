@@ -141,8 +141,8 @@
               </p>
             </div>
           </div>
-          <!-- Credit Balance for Google Auth Users -->
-          <div class="column is-3" v-if="canShowAccountData">
+          <!-- Credit Balance for Google Auth Users Only -->
+          <div class="column is-3" v-if="status === 'authenticated'">
             <CreditBalance ref="creditBalanceRef" />
           </div>
           <!-- NOS Balance for Wallet Users -->
@@ -500,7 +500,6 @@ const checkBalances = async () => {
   try {
     if (activeAddress.value) {
       balance.value = await nosana.value.solana.getNosBalance(activeAddress.value);
-      console.log('balance', balance.value);
       // Only fetch staking data for wallet connections
       if (addressSource.value === 'wallet') {
         try {
