@@ -179,6 +179,14 @@ const isAuthenticated = computed(() => {
   return status.value === 'authenticated' && token.value
 })
 
+const isWalletMode = computed(() => {
+  return connected.value && !token.value
+})
+
+const hasAnyAuth = computed(() => {
+  return isAuthenticated.value || isWalletMode.value
+})
+
 const { nosana } = useSDK()
 const loading = ref(false)
 const deploymentsError = ref<string | null>(null)
@@ -284,11 +292,11 @@ const formatDate = (date: string | Date) => {
 
 // onMounted removed - watcher with immediate: true handles initial load
 
-watch(status, (authStatus) => {
-  if (authStatus === 'authenticated' && token.value) {
+watch([status, connected], () => {
+  if (hasAnyAuth.value) {
     refreshDeployments()
-  } else if (authStatus === 'unauthenticated') {
-    // Only clear deployments when actually unauthenticated, not during loading
+  } else if (status.value === 'unauthenticated' && !connected.value) {
+    // Only clear deployments when actually unauthenticated and not wallet connected
     deployments.value = []
   }
   // Do nothing during 'loading' state to prevent flicker

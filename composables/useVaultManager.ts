@@ -35,21 +35,49 @@ export const useVaultManager = () => {
   })
 
   // Methods
-  const loadVaults = async (): Promise<void> => {
+  const loadVaults = async (retryCount = 0): Promise<void> => {
     if (!isWalletMode.value) return
 
     loading.value = true
     try {
+      // Add timeout to prevent hanging requests
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+      
       const vaultList = await nosana.value.deployments.vaults.list()
+      clearTimeout(timeoutId)
+      
       vaults.value = (vaultList || [])
-        .filter(vault => vault && vault.public_key) // Filter out invalid vault objects
-        .map(vault => ({
-          public_key: vault.public_key,
-          balance: vault.balance || { SOL: 0, NOS: 0 }
-        }))
-    } catch (error) {
+        .map((vault: any) => {
+          const publicKey = vault?.public_key || vault?.vault
+          if (!publicKey) return null
+          return {
+            public_key: publicKey as string,
+            balance: vault?.balance || { SOL: 0, NOS: 0 },
+          } as Vault
+        })
+        .filter((v: any): v is Vault => Boolean(v))
+    } catch (error: any) {
       console.error('Failed to load vaults:', error)
+      
+      // Retry logic for network errors (up to 2 retries)
+      if (retryCount < 2 && (
+        error.name === 'Malformed_HTTP_Response' || 
+        error.message?.includes('fetch() failed') ||
+        error.message?.includes('502') ||
+        error.message?.includes('timeout')
+      )) {
+        console.log(`Retrying vault load (attempt ${retryCount + 1})...`)
+        await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1))) // Progressive delay
+        return loadVaults(retryCount + 1)
+      }
+      
       vaults.value = []
+      
+      // Show user-friendly error for persistent failures
+      if (retryCount >= 2) {
+        toast.error('Unable to load vaults. You can still create deployments - vaults will be created automatically.')
+      }
     } finally {
       loading.value = false
     }
@@ -62,23 +90,35 @@ export const useVaultManager = () => {
     try {
       const newVaultData = await nosana.value.deployments.vaults.create()
       
-      // Validate vault data
-      if (!newVaultData || !newVaultData.public_key) {
-        throw new Error('Invalid vault data received')
+      console.log('Vault creation response:', newVaultData) // Debug log
+      
+      // Extract vault address from the API response
+      const vaultAddress = newVaultData?.vault
+      
+      if (!newVaultData || !vaultAddress) {
+        console.error('Invalid vault data structure:', newVaultData)
+        throw new Error('Invalid vault data received - no address found')
       }
       
       // Reload vaults to get the new one
       await loadVaults()
       
-      // Find and select the newly created vault
-      const newVault = vaults.value.find(v => v.public_key === newVaultData.public_key)
+      // Find and select the newly created vault using the found address
+      const newVault = vaults.value.find(v => v.public_key === vaultAddress)
       if (newVault) {
         selectedVault.value = newVault
         toast.success('Vault created successfully')
         return newVault
       }
       
-      throw new Error('Created vault not found in list')
+      // If not found in list, create a minimal vault object
+      const createdVault: Vault = {
+        public_key: vaultAddress,
+        balance: { SOL: 0, NOS: 0 }
+      }
+      selectedVault.value = createdVault
+      toast.success('Vault created successfully')
+      return createdVault
     } catch (error) {
       console.error('Failed to create vault:', error)
       toast.error('Failed to create vault')

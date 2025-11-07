@@ -174,11 +174,8 @@
 
             <hr style="margin: 1.5rem 0;" />
 
-            <!-- Wallet Management Section -->
+            <!-- Wallet Management Section (simplified) -->
             <div v-if="isWalletMode" class="mb-4">
-              <p class="has-text-grey is-size-7 mb-3 has-text-weight-medium" style="text-transform: uppercase; letter-spacing: 0.5px;">Vault Management</p>
-              
-              <!-- Vault Selection Button -->
               <div class="field">
                 <div class="control">
                   <button 
@@ -186,51 +183,14 @@
                     @click="openVaultModal"
                     :disabled="loadingVaults"
                   >
-                    <span class="icon is-small">
-                      <WalletIcon />
-                    </span>
+                    <span class="icon is-small"><WalletIcon /></span>
                     <span v-if="selectedVault && selectedVault.public_key">
-                      {{ selectedVault.public_key.slice(0, 8) }}...{{ selectedVault.public_key.slice(-8) }}
+                      Vault: {{ selectedVault.public_key.slice(0, 8) }}...{{ selectedVault.public_key.slice(-8) }}
                     </span>
                     <span v-else-if="loadingVaults">Loading vaults...</span>
-                    <span v-else>Select Vault</span>
+                    <span v-else>Select or Create Vault</span>
                   </button>
                 </div>
-              </div>
-
-              <!-- Selected Vault Info -->
-              <div v-if="selectedVault" class="notification is-light">
-                <div class="level is-mobile">
-                  <div class="level-left">
-                    <div class="level-item">
-                      <div>
-                        <p class="heading">Vault Balance</p>
-                        <p class="title is-6">
-                          {{ selectedVault.balance?.SOL?.toFixed(3) || '0' }} SOL • 
-                          {{ selectedVault.balance?.NOS?.toFixed(3) || '0' }} NOS
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="level-right">
-                    <div class="level-item">
-                      <button class="button is-small" @click="clearSelection">
-                        Change
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Estimated Cost -->
-              <div v-if="selectedMarket && requiredNos" class="notification is-warning is-light">
-                <p class="heading">Estimated Cost ({{ timeout }}h)</p>
-                <p class="title is-6">
-                  ~{{ (requiredNos * timeout).toFixed(3) }} NOS
-                </p>
-                <p class="subtitle is-7">
-                  ≈ ${{ (hourlyPrice * replicas * timeout).toFixed(3) }}
-                </p>
               </div>
             </div>
 
@@ -500,7 +460,7 @@ import { useEstimatedCost } from "~/composables/useMarketPricing";
 import type { Template } from "~/composables/useTemplates";
 import Loader from "~/components/Loader.vue";
 import VaultSelectionModal from "~/components/Vault/VaultSelectionModal.vue";
-import { useVaultManager } from "~/composables/useVaultManager";
+import { useVaultManager } from "@/composables/useVaultManager";
 
 // Advanced GPU selection types (copied from deploy.vue)
 interface FilterValue {
@@ -978,32 +938,32 @@ const createDeployment = async () => {
   try {
     let deployment;
 
-    if (isCreditMode.value) {
-      // Credit mode - use existing API flow
-      const requestBody: CreateDeployment = {
+    const buildCreateDeploymentBody = (): CreateDeployment => {
+      const isScheduled = strategy.value === 'SCHEDULED';
+      const base = {
         name: deploymentName.value.trim(),
         market: selectedMarket.value!.address.toString(),
         replicas: replicas.value,
-        timeout: Math.min(timeout.value * 60, 24 * 60),
-        ...(strategy.value === "SCHEDULED"
-          ? { strategy: "SCHEDULED" as const, schedule: schedule.value }
-          : { strategy: strategy.value as "SIMPLE" | "SIMPLE-EXTEND" | "INFINITE" }),
-        job_definition: jobDefinition.value,
-      };
+        // API mode uses minutes, wallet mode uses seconds in our UI; normalize per mode
+        timeout: isWalletMode.value ? Math.floor((timeout.value as number) * 3600) : Math.min((timeout.value as number) * 60, 24 * 60),
+        job_definition: jobDefinition.value!,
+      } as const;
+      if (isScheduled) {
+        return {
+          ...base,
+          strategy: 'SCHEDULED',
+          schedule: schedule.value,
+        } as CreateDeployment;
+      }
+      return {
+        ...base,
+        strategy: (strategy.value as 'SIMPLE' | 'SIMPLE-EXTEND' | 'INFINITE'),
+      } as CreateDeployment;
+    };
 
+    if (isCreditMode.value || isWalletMode.value) {
+      const requestBody = buildCreateDeploymentBody();
       deployment = await nosana.value.deployments.create(requestBody);
-    } else if (isWalletMode.value) {
-      // Wallet mode - use SDK deployment flow
-      // The SDK will automatically create a vault if none is selected
-      deployment = await nosana.value.deployments.create({
-        name: deploymentName.value.trim(),
-        market: selectedMarket.value!.address.toString(),
-        replicas: replicas.value,
-        timeout: timeout.value * 3600, // SDK expects seconds
-        strategy: strategy.value as "SIMPLE" | "SIMPLE-EXTEND" | "INFINITE" | "SCHEDULED",
-        ...(strategy.value === "SCHEDULED" ? { schedule: schedule.value } : {}),
-        job_definition: jobDefinition.value,
-      });
     } else {
       throw new Error("Please connect wallet or sign in");
     }

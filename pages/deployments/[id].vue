@@ -156,6 +156,19 @@
                     <div v-if="!hasAnyActions" class="dropdown-item has-text-grey">
                       <span>No actions available</span>
                     </div>
+
+                    <!-- Withdraw Vault (wallet deployments only) -->
+                    <a 
+                      v-if="canWithdraw"
+                      class="dropdown-item"
+                      @click="withdrawVault(); isActionsDropdownOpen = false"
+                      :disabled="actionLoading"
+                    >
+                      <span class="icon is-small mr-2">
+                        <i class="fas fa-wallet"></i>
+                      </span>
+                      <span>Withdraw Vault</span>
+                    </a>
                   </div>
                 </div>
               </div>
@@ -896,6 +909,7 @@ import { Mode, ValidationSeverity } from "vanilla-jsoneditor";
 import JsonEditorVue from "json-editor-vue";
 import "vanilla-jsoneditor/themes/jse-theme-dark.css";
 import { useToast } from "vue-toastification";
+import { useWallet } from "solana-wallets-vue";
 import { useAuth } from '#imports';
 import JobStatus from "~/components/Job/Status.vue";
 import JobLogsContainer from "~/components/Job/LogsContainer.vue";
@@ -964,7 +978,10 @@ const route = useRoute();
 const router = useRouter();
 const toast = useToast();
 const { status, token } = useAuth();
+const { connected, publicKey } = useWallet();
 const isAuthenticated = computed(() => status.value === 'authenticated' && token.value)
+const isWalletMode = computed(() => connected.value && publicKey.value && !token.value)
+const hasAnyAuth = computed(() => isAuthenticated.value || isWalletMode.value)
 const { getIpfs } = useIpfs();
 const { nosana } = useSDK();
 
@@ -1014,7 +1031,7 @@ const autostartTriggered = ref(false)
 watch(
   () => deployment.value?.status,
   async (status) => {
-    if (status === 'DRAFT' && !autostartTriggered.value && isAuthenticated.value && !actionLoading.value) {
+    if (status === 'DRAFT' && !autostartTriggered.value && hasAnyAuth.value && !actionLoading.value) {
       autostartTriggered.value = true
       try {
         await startDeployment()
@@ -1307,8 +1324,8 @@ const loadDeployment = async (silent = false) => {
     if (!silent) loading.value = false;
     return;
   }
-  if (!isAuthenticated.value) {
-    error.value = "Please log in to view deployments";
+  if (!hasAnyAuth.value) {
+    error.value = "Please log in or connect wallet to view deployments";
     if (!silent) loading.value = false;
     return;
   }
@@ -1390,6 +1407,12 @@ const hasAnyActions = computed(() => {
   const hasMainActions = canStart.value || canStop.value || canArchive.value;
   const hasConfigActions = status !== 'ARCHIVED';
   return hasMainActions || hasConfigActions;
+});
+
+// Show withdraw only when deployment exposes a vault with withdraw (wallet mode)
+const canWithdraw = computed(() => {
+  const dep: any = deployment.value as any;
+  return Boolean(dep && dep.vault && typeof dep.vault.withdraw === 'function');
 });
 
 const statusHelpText = computed(() => {
@@ -1627,8 +1650,8 @@ const executeDeploymentAction = async (
   successMessage: string,
   shouldRedirect = false
 ) => {
-  if (!deployment.value || !isAuthenticated.value) {
-    toast.error("Please log in to perform this action");
+  if (!deployment.value || !hasAnyAuth.value) {
+    toast.error("Please log in or connect wallet to perform this action");
     return;
   }
 
@@ -1710,6 +1733,14 @@ const archiveDeployment = async () => {
   );
 };
 
+const withdrawVault = async () => {
+  if (!deployment.value) return;
+  await executeDeploymentAction(
+    () => (deployment.value as any).vault.withdraw(),
+    'Vault withdrawn to your wallet'
+  );
+};
+
 const updateReplicas = async () => {
   if (!newReplicaCount.value || newReplicaCount.value < 1) {
     toast.error("Replica count must be at least 1");
@@ -1744,8 +1775,8 @@ const updateSchedule = async () => {
     return;
   }
 
-  if (!deployment.value || !isAuthenticated.value) {
-    toast.error("Please log in to perform this action");
+  if (!deployment.value || !hasAnyAuth.value) {
+    toast.error("Please log in or connect wallet to perform this action");
     return;
   }
 
@@ -1775,8 +1806,8 @@ const createRevision = async () => {
     return;
   }
 
-  if (!deployment.value || !isAuthenticated.value) {
-    toast.error("Please log in to perform this action");
+  if (!deployment.value || !hasAnyAuth.value) {
+    toast.error("Please log in or connect wallet to perform this action");
     return;
   }
 
@@ -1802,8 +1833,8 @@ const createRevision = async () => {
 
 // Switch to a different revision
 const switchToRevision = async (revisionNumber: number) => {
-  if (!deployment.value || !isAuthenticated.value) {
-    toast.error("Please log in to perform this action");
+  if (!deployment.value || !hasAnyAuth.value) {
+    toast.error("Please log in or connect wallet to perform this action");
     return;
   }
 
@@ -2106,7 +2137,7 @@ watch(
 let authTimeout: NodeJS.Timeout | null = null;
 
 watch(
-  isAuthenticated,
+  hasAnyAuth,
   (authed) => {
     // Clear any existing timeout
     if (authTimeout) {
@@ -2116,7 +2147,7 @@ watch(
     // If authenticated, load deployment if we don't have one
     if (authed) {
       // Clear any error state
-      if (error.value === "Please log in to view deployments") {
+      if (error.value === "Please log in or connect wallet to view deployments") {
         error.value = null;
       }
       // Only load if deployment doesn't exist yet
@@ -2129,11 +2160,11 @@ watch(
     // If not authenticated, only show error after a delay and only if we don't have a deployment
     // This prevents the error from showing during temporary auth interruptions (tab switching, session refresh)
     authTimeout = setTimeout(() => {
-      if (!isAuthenticated.value) {
+      if (!hasAnyAuth.value) {
         // Only show login error if we don't already have deployment data
         // This preserves the deployment during temporary auth interruptions
         if (!deployment.value) {
-          error.value = "Please log in to view deployments";
+          error.value = "Please log in or connect wallet to view deployments";
         }
       }
     }, 2000); // 2 second delay to allow auth to re-establish
