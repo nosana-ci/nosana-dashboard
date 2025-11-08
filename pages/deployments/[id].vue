@@ -220,7 +220,7 @@
                   <tr>
                     <td>Container timeout</td>
                     <td>
-                      <SecondsFormatter :seconds="deployment.timeout * 60" :showSeconds="false" />
+                      <SecondsFormatter :seconds="deployment.timeout" :showSeconds="false" />
                     </td>
                   </tr>
                   
