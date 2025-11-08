@@ -1,10 +1,14 @@
 import { useWallet } from "solana-wallets-vue";
+import Cookies from "universal-cookie";
 
 import type { MessageSignerWalletAdapter } from "@solana/wallet-adapter-base";
 
 export function useNosanaWallet() {
   const { nosana } = useSDK();
   const { connected, publicKey, wallet } = useWallet();
+  const runtime = useRuntimeConfig().public;
+  const cookies = new Cookies();
+  const buildCookiesKey = (owner: string) => `nosana_node_auth_${runtime.network}_${owner}`;
 
   const userBalances = ref({
     nos: 0,
@@ -32,47 +36,36 @@ export function useNosanaWallet() {
     { immediate: true }
   );
 
-  // Session cache for the auth string (persists across reloads in the same tab/window)
-  const AUTH_CACHE_KEY = 'nosanaAuthHeader';
-  const DEFAULT_TTL_MS = 10 * 60 * 1000; // 10 minutes
+  // Cache keys and TTL (cookies only)
+  const DEFAULT_TTL_SECONDS = 10 * 60; // 10 minutes
+  const cookieKeyFor = (owner: string | undefined): string | null =>
+    owner ? buildCookiesKey(owner) : null;
 
   const loadCachedAuth = (): string | null => {
     try {
-      if (typeof window === 'undefined') return null;
-      const raw = sessionStorage.getItem(AUTH_CACHE_KEY);
-      if (!raw) return null;
-      const parsed = JSON.parse(raw);
-      if (!parsed?.value || !parsed?.expiresAt) {
-        sessionStorage.removeItem(AUTH_CACHE_KEY);
-        return null;
-      }
-      // Ensure the cached header belongs to the currently connected wallet
-      const currentOwner = publicKey.value?.toString();
-      if (!currentOwner || parsed?.owner !== currentOwner) {
-        sessionStorage.removeItem(AUTH_CACHE_KEY);
-        return null;
-      }
-      if (Date.now() >= parsed.expiresAt) {
-        sessionStorage.removeItem(AUTH_CACHE_KEY);
-        return null;
-      }
-      return parsed.value as string;
+      const owner = publicKey.value?.toString();
+      const cookieKey = cookieKeyFor(owner);
+      if (!cookieKey) return null;
+      const fromCookie = cookies.get(cookieKey) as string | undefined;
+      return fromCookie ?? null;
     } catch {
       return null;
     }
   };
 
-  // Reactive session auth mirror so other components can react immediately
-  const sessionAuthRef = ref<string | null>(null);
-  sessionAuthRef.value = (typeof window !== 'undefined') ? loadCachedAuth() : null;
-
-  const saveCachedAuth = (value: string, ttlMs = DEFAULT_TTL_MS) => {
+  const saveCachedAuth = (value: string, ttlSeconds = DEFAULT_TTL_SECONDS) => {
     try {
-      if (typeof window === 'undefined') return;
-      const expiresAt = Date.now() + ttlMs;
-      const cacheData = { value, expiresAt, owner: publicKey.value?.toString() };
-      sessionStorage.setItem(AUTH_CACHE_KEY, JSON.stringify(cacheData));
-      sessionAuthRef.value = value;
+      const owner = publicKey.value?.toString();
+      const key = cookieKeyFor(owner);
+      if (key) {
+        const secure = typeof location !== 'undefined' && location.protocol === 'https:';
+        cookies.set(key, value, {
+          maxAge: ttlSeconds,
+          sameSite: 'strict',
+          path: '/',
+          secure,
+        });
+      }
     } catch {
       /* ignore */
     }
@@ -80,21 +73,18 @@ export function useNosanaWallet() {
 
   const clearCachedAuth = () => {
     try {
-      if (typeof window === 'undefined') return;
-      sessionStorage.removeItem(AUTH_CACHE_KEY);
-      sessionAuthRef.value = null;
+      const owner = publicKey.value?.toString();
+      const key = cookieKeyFor(owner);
+      if (key) cookies.remove(key, { path: '/' });
     } catch {
       /* ignore */
     }
   };
 
-  // In-memory cache for the current runtime (fallback within a session)
-  const cachedAuthString = ref<string | null>(null);
-  let authInFlight: Promise<string> | null = null;
   const signMessageError = ref(false);
-  const hasSessionAuth = computed<boolean>(() => {
-    return Boolean(sessionAuthRef.value || cachedAuthString.value);
-  });
+  const hasSessionAuth = computed<boolean>(() => Boolean(loadCachedAuth()));
+  // Transient in-flight dedupe (no persistence)
+  let nodeAuthInFlight: Promise<string> | null = null;
 
   const generateAuthHeaders = async (
     options?: { key?: string; includeTime?: boolean; forceNew?: boolean }
@@ -106,54 +96,45 @@ export function useNosanaWallet() {
 
     const key = options?.key ?? 'Authorization';
 
-    // Use cached string when includeTime is false and not forcing new
+    // Use cached cookie / in-flight dedupe when includeTime is false and not forcing new
     if (!options?.includeTime && !options?.forceNew) {
-      const sessionAuth = sessionAuthRef.value;
-      const memoryAuth = cachedAuthString.value;
-      const storageAuth = loadCachedAuth();
-      const value = sessionAuth || memoryAuth || storageAuth;
-      if (value) {
+      const cached = loadCachedAuth();
+      if (cached) {
         const headers = new Headers();
-        headers.set(key, value);
+        headers.set(key, cached);
         return headers;
       }
-      // If a generation is already in-flight, reuse it to avoid double prompts
-      if (authInFlight) {
-        const authString = await authInFlight;
+      if (nodeAuthInFlight) {
+        const inFlight = await nodeAuthInFlight;
         const headers = new Headers();
-        headers.set(key, authString);
+        headers.set(key, inFlight);
         return headers;
       }
     }
 
     try {
       signMessageError.value = false;
-      // Generate a raw authorization string via SDK
-      if (!options?.includeTime && !options?.forceNew) {
-        authInFlight = nosana.value.authorization.generate('Hello Nosana Node!', {
-          includeTime: false,
+      const doGenerate = () =>
+        nosana.value.authorization.generate('Hello Nosana Node!', {
+          includeTime: options?.includeTime ?? false,
         });
-      }
-      const authString = !options?.includeTime && !options?.forceNew
-        ? await authInFlight!
-        : await nosana.value.authorization.generate('Hello Nosana Node!', {
-            includeTime: options?.includeTime ?? false,
-          });
+      const authString = (!options?.includeTime && !options?.forceNew)
+        ? await (nodeAuthInFlight = doGenerate())
+        : await doGenerate();
 
       // Cache only if not time-bound
       if (!options?.includeTime) {
-        cachedAuthString.value = authString;
         saveCachedAuth(authString);
       }
 
       const headers = new Headers();
       headers.set(key, authString);
-      authInFlight = null;
+      nodeAuthInFlight = null;
       return headers;
     } catch (error) {
       console.error('authorization.generate error:', error);
       signMessageError.value = true;
-      authInFlight = null;
+      nodeAuthInFlight = null;
       throw error as Error;
     }
   };
@@ -161,14 +142,9 @@ export function useNosanaWallet() {
   watch(
     publicKey,
     async (newPublicKey, oldPublicKey) => {
-      // Clear in-memory cache on any wallet change
-      cachedAuthString.value = null;
-      // Reset session cache when wallet disconnects or switches
       if (!newPublicKey || (oldPublicKey && newPublicKey?.toString() !== oldPublicKey?.toString())) {
         clearCachedAuth();
       }
-      // Refresh sessionAuthRef from storage (will null out if owner mismatch)
-      sessionAuthRef.value = loadCachedAuth();
     },
     { immediate: true }
   );
@@ -179,8 +155,6 @@ export function useNosanaWallet() {
     publicKey,
     generateAuthHeaders,
     hasSessionAuth,
-    // Export cache functions for direct access (avoid recursion)
     loadCachedAuth,
-    cachedAuthString,
   };
 }

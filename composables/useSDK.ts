@@ -54,24 +54,15 @@ const nosana = computed(() => {
       authorization: {
         store: {
           get: (key: string): string | undefined => {
-            try {
-              return cookies.get(buildCookiesKey(key)) as (string | undefined);
-            } catch {
-              return undefined;
-            }
+            return cookies.get(buildCookiesKey(key)) as (string | undefined);
           },
           set: (key: string, value: string): void => {
-            if (typeof document === 'undefined') return;
-            try {
-              cookies.set(buildCookiesKey(key), value, {
-                maxAge: 240, // seconds
-                sameSite: 'strict',
-                path: '/',
-                secure: typeof location !== 'undefined' && location.protocol === 'https:',
-              });
-            } catch {
-              /* ignore */
-            }
+            cookies.set(buildCookiesKey(key), value, {
+              maxAge: 240, // seconds
+              sameSite: 'strict',
+              path: '/',
+              secure: typeof location !== 'undefined' && location.protocol === 'https:',
+            });
           },
         }
       }
@@ -85,7 +76,6 @@ const nosana = computed(() => {
     clientConfig
   );
 
-  try { /* SDK Client created */ } catch {}
   return client;
 });
 
