@@ -83,8 +83,8 @@ export function useNosanaWallet() {
 
   const signMessageError = ref(false);
   const hasSessionAuth = computed<boolean>(() => Boolean(loadCachedAuth()));
-  // Transient in-flight dedupe (no persistence)
-  let nodeAuthInFlight: Promise<string> | null = null;
+  // Transient in-flight dedupe using a shared Promise
+  let nodeAuthPromise: Promise<string> | null = null;
 
   const generateAuthHeaders = async (
     options?: { key?: string; includeTime?: boolean; forceNew?: boolean }
@@ -96,7 +96,7 @@ export function useNosanaWallet() {
 
     const key = options?.key ?? 'Authorization';
 
-    // Use cached cookie / in-flight dedupe when includeTime is false and not forcing new
+    // Fast path: cached or coalesce concurrent generate calls
     if (!options?.includeTime && !options?.forceNew) {
       const cached = loadCachedAuth();
       if (cached) {
@@ -104,8 +104,8 @@ export function useNosanaWallet() {
         headers.set(key, cached);
         return headers;
       }
-      if (nodeAuthInFlight) {
-        const inFlight = await nodeAuthInFlight;
+      if (nodeAuthPromise) {
+        const inFlight = await nodeAuthPromise;
         const headers = new Headers();
         headers.set(key, inFlight);
         return headers;
@@ -114,13 +114,19 @@ export function useNosanaWallet() {
 
     try {
       signMessageError.value = false;
-      const doGenerate = () =>
-        nosana.value.authorization.generate('Hello Nosana Node!', {
-          includeTime: options?.includeTime ?? false,
-        });
-      const authString = (!options?.includeTime && !options?.forceNew)
-        ? await (nodeAuthInFlight = doGenerate())
-        : await doGenerate();
+      const isTimeBound = options?.includeTime ?? false;
+      const authString =
+        (isTimeBound || options?.forceNew)
+          ? await nosana.value.authorization.generate('Hello Nosana Node!', { includeTime: isTimeBound })
+          : await (nodeAuthPromise ||= nosana.value.authorization
+              .generate('Hello Nosana Node!', { includeTime: false })
+              .then((s) => {
+                saveCachedAuth(s);
+                return s;
+              })
+              .finally(() => {
+                nodeAuthPromise = null;
+              }));
 
       // Cache only if not time-bound
       if (!options?.includeTime) {
@@ -129,12 +135,10 @@ export function useNosanaWallet() {
 
       const headers = new Headers();
       headers.set(key, authString);
-      nodeAuthInFlight = null;
       return headers;
     } catch (error) {
       console.error('authorization.generate error:', error);
       signMessageError.value = true;
-      nodeAuthInFlight = null;
       throw error as Error;
     }
   };
