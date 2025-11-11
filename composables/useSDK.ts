@@ -1,13 +1,15 @@
 import { Client, type ClientConfig } from "@nosana/sdk";
-import Cookies from "universal-cookie";
+import { useCookies } from '@vueuse/integrations/useCookies'
 import {
   useAnchorWallet,
   type AnchorWallet,
   useWallet,
 } from "solana-wallets-vue";
+import type { CookieSetOptions } from "universal-cookie";
+
+import { createAuthCookiesKey } from "~/utils/createAuthCookiesKey";
+
 const config = useRuntimeConfig();
-const cookies = new Cookies();
-const buildCookiesKey = (key: string) => `nosana_auth_${config.public.network}_${key}`;
 
 const prioFee = useLocalStorage("prio-fee", {
   strategy: "medium",
@@ -16,13 +18,39 @@ const prioFee = useLocalStorage("prio-fee", {
   maxPriorityFee: 15000000,
 });
 
+const cookieOptions: CookieSetOptions = {
+  maxAge: 300,
+  sameSite: 'strict',
+  path: '/',
+  secure: typeof location !== 'undefined' && location.protocol === 'https:',
+}
+
 const nosana = computed(() => {
-  // Include wallet connection state to trigger reactivity when wallet connects/disconnects
-  const { connected, publicKey } = useWallet();
   // Include auth token so API client updates when session changes
   const { token } = useAuth();
+  // Include wallet connection state to trigger reactivity when wallet connects/disconnects
+  const { connected, publicKey } = useWallet();
+  const cookies = useCookies(publicKey.value ? [createAuthCookiesKey(publicKey.value.toString())] : []);
+
+  // Promise queue to ensure get waits for pending set operations
+  let pendingSetPromise: Promise<void> | null = null;
+  let pendingSetResolve: (() => void) | null = null;
+
+  cookies.addChangeListener((cookie) => {
+    if (cookie.name === createAuthCookiesKey(publicKey.value?.toString() || '') && cookie.value) {
+      if (cookie.options?.maxAge) {
+        const cookieParts = cookie.value.split(':');
+        if (cookieParts.length === 3) {
+          setTimeout(() => {
+            cookies.set(createAuthCookiesKey(publicKey.value!.toString()), `${cookieParts[0]}:${cookieParts[1]}:${Date.now()}`, cookieOptions);
+          }, (cookie.options.maxAge - 10) * 1000);
+        }
+      }
+    }
+  });
+
   let wallet: Ref<AnchorWallet | undefined>;
-  
+
   try {
     wallet = useAnchorWallet();
   } catch (error) {
@@ -50,21 +78,36 @@ const nosana = computed(() => {
     apiKey: apiKeyValue,
     api: {
       backend_url: config.public.apiBase,
-      // Provide cookie-backed auth store (client-only)
-      authorization: {
-        store: {
-          get: (key: string): string | undefined => {
-            return cookies.get(buildCookiesKey(key)) as (string | undefined);
-          },
-          set: (key: string, value: string): void => {
-            cookies.set(buildCookiesKey(key), value, {
-              maxAge: 240, // seconds
-              sameSite: 'strict',
-              path: '/',
-              secure: typeof location !== 'undefined' && location.protocol === 'https:',
+    },
+    authorization: {
+      store: {
+        get: async (key: string): Promise<string | undefined> => {
+          const cookie = cookies.get(createAuthCookiesKey(key));
+          if (cookie) return cookie;
+
+          if (pendingSetPromise) {
+            await pendingSetPromise;
+          } else {
+            pendingSetPromise = new Promise<void>((resolve) => {
+              pendingSetResolve = resolve;
             });
-          },
-        }
+          }
+
+          return cookies.get(createAuthCookiesKey(key));
+        },
+        set: (key, _, value): void => {
+          if (value) {
+            cookies.set(createAuthCookiesKey(key), value, cookieOptions);
+          } else {
+            cookies.remove(createAuthCookiesKey(key));
+          }
+
+          if (pendingSetResolve) {
+            pendingSetResolve();
+            pendingSetResolve = null;
+            pendingSetPromise = null;
+          }
+        },
       }
     }
   };
