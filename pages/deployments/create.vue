@@ -9,22 +9,20 @@
     ></TopBar>
 
     <!-- Wallet Auth Banner -->
-    <div 
+    <div
       v-if="shouldShowWalletAuthBanner"
-      class="notification is-light wallet-auth-banner mb-5"
+      class="notification wallet-auth-banner mb-5"
     >
       <div class="is-flex is-align-items-center">
         <div>
           <p class="banner-title">Legacy Job Deploy page</p>
-          <p class="banner-subtitle">
-            Looking for the classic job deployment experience? Use our legacy deploy page here.
+          <p>
+            Looking for the classic job deployment experience? Use our legacy
+            deploy page here.
           </p>
         </div>
-        <div class="banner-actions ml-4">
-          <nuxt-link 
-            to="/deploy" 
-            class="button is-small is-primary"
-          >
+        <div class="banner-actions ml-auto">
+          <nuxt-link to="/deploy" class="button is-small is-primary">
             Legacy Deploy
           </nuxt-link>
         </div>
@@ -37,13 +35,13 @@
     <div v-else class="columns is-multiline">
       <div class="column is-9-fullhd is-12">
         <!-- Name your deployment -->
-        <div class="box" style="border: none;">
+        <div class="box" style="border: none">
           <h2 class="title is-5 mb-4">Define your deployment</h2>
           <div class="field">
             <div class="control">
-              <input 
-                class="input" 
-                type="text" 
+              <input
+                class="input"
+                type="text"
                 v-model="deploymentName"
                 placeholder="Enter deployment name"
                 maxlength="50"
@@ -64,7 +62,7 @@
         />
 
         <!-- Select GPU -->
-        <div class="box" style="border: none; margin-top: 1.5rem;">
+        <div class="box" style="border: none; margin-top: 1.5rem">
           <h2 class="title is-5 mb-4">Select instance</h2>
           <DeploySimpleGpuSelection
             :markets="markets || null"
@@ -85,12 +83,21 @@
 
       <div class="column is-3-fullhd is-12">
         <div class="summary">
-          <div class="box" style="border: none; padding: 1.5rem;">
+          <div class="box" style="border: none; padding: 1.5rem">
             <h2 class="title is-5 mb-4">Summary</h2>
             <!-- Cost Summary -->
             <div class="mb-4">
-              <p class="has-text-grey is-size-7 mb-2" style="text-transform: uppercase; letter-spacing: 0.5px; font-weight: 500;">Cost</p>
-              
+              <p
+                class="has-text-grey is-size-7 mb-2"
+                style="
+                  text-transform: uppercase;
+                  letter-spacing: 0.5px;
+                  font-weight: 500;
+                "
+              >
+                Cost
+              </p>
+
               <!-- Credit User Cost -->
               <div v-if="isCreditMode">
                 <h3 class="title is-3 mb-1" v-if="selectedMarket">
@@ -98,94 +105,218 @@
                 </h3>
                 <p class="has-text-grey" v-else>Select a GPU to see pricing</p>
               </div>
-              
+
               <!-- Wallet User Cost -->
               <div v-else-if="isWalletMode">
-                <h3 class="title is-3 mb-1" v-if="selectedMarket && requiredNos">
+                <h3
+                  class="title is-3 mb-1"
+                  v-if="selectedMarket && requiredNos"
+                >
                   {{ requiredNos.toFixed(3) }} NOS/h
                 </h3>
-                <p class="has-text-grey is-size-7 mb-1" v-if="selectedMarket && hourlyPrice">
+                <p
+                  class="has-text-grey is-size-7 mb-1"
+                  v-if="selectedMarket && hourlyPrice"
+                >
                   ≈ ${{ (hourlyPrice * replicas).toFixed(3) }}/h
                 </p>
                 <p class="has-text-grey" v-else>Select a GPU to see pricing</p>
               </div>
-              
+
               <!-- No Auth -->
               <div v-else>
-                <p class="has-text-grey">Connect wallet or sign in to see pricing</p>
+                <p class="has-text-grey">
+                  Connect wallet or sign in to see pricing
+                </p>
               </div>
             </div>
 
-            <hr style="margin: 1.5rem 0;" />
+            <hr style="margin: 1.5rem 0" />
 
             <!-- Configuration Summary -->
             <div class="mb-4">
-              <p class="has-text-grey is-size-7 mb-3" style="text-transform: uppercase; letter-spacing: 0.5px; font-weight: 500;">Configuration</p>
-              
-              <div class="mb-2" style="display: flex; justify-content: space-between; align-items: start;">
+              <p
+                class="has-text-grey is-size-7 mb-3"
+                style="
+                  text-transform: uppercase;
+                  letter-spacing: 0.5px;
+                  font-weight: 500;
+                "
+              >
+                Configuration
+              </p>
+
+              <div
+                class="mb-2"
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: start;
+                "
+              >
                 <span class="has-text-grey is-size-7">Deployment name</span>
-                <span class="has-text-weight-medium is-size-7" style="text-align: right; max-width: 60%; overflow: hidden; text-overflow: ellipsis;">
-                  {{ deploymentName || '-' }}
-                </span>
-              </div>
-              
-              <div class="mb-2" style="display: flex; justify-content: space-between; align-items: start;">
-                <span class="has-text-grey is-size-7">Container(s)</span>
-                <span class="has-text-weight-medium is-size-7" style="text-align: right; max-width: 60%; overflow: hidden; text-overflow: ellipsis;">
-                  {{ computedDeploymentName || '-' }}
-                </span>
-              </div>
-              
-              <div class="mb-2" style="display: flex; justify-content: space-between; align-items: start;">
-                <span class="has-text-grey is-size-7">GPU</span>
-                <span class="has-text-weight-medium is-size-7" style="text-align: right; max-width: 60%; overflow: hidden; text-overflow: ellipsis;">
-                  {{ selectedMarket ? marketName : '-' }}
+                <span
+                  class="has-text-weight-medium is-size-7"
+                  style="
+                    text-align: right;
+                    max-width: 60%;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                  "
+                >
+                  {{ deploymentName || "-" }}
                 </span>
               </div>
 
-              <div class="mb-2" style="display: flex; justify-content: space-between; align-items: start;">
+              <div
+                class="mb-2"
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: start;
+                "
+              >
+                <span class="has-text-grey is-size-7">Container(s)</span>
+                <span
+                  class="has-text-weight-medium is-size-7"
+                  style="
+                    text-align: right;
+                    max-width: 60%;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                  "
+                >
+                  {{ computedDeploymentName || "-" }}
+                </span>
+              </div>
+
+              <div
+                class="mb-2"
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: start;
+                "
+              >
+                <span class="has-text-grey is-size-7">GPU</span>
+                <span
+                  class="has-text-weight-medium is-size-7"
+                  style="
+                    text-align: right;
+                    max-width: 60%;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                  "
+                >
+                  {{ selectedMarket ? marketName : "-" }}
+                </span>
+              </div>
+
+              <div
+                class="mb-2"
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: start;
+                "
+              >
                 <span class="has-text-grey is-size-7">Strategy</span>
-                <span class="has-text-weight-medium is-size-7" style="text-align: right; max-width: 60%; overflow: hidden; text-overflow: ellipsis;">
+                <span
+                  class="has-text-weight-medium is-size-7"
+                  style="
+                    text-align: right;
+                    max-width: 60%;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                  "
+                >
                   {{ strategy }}
                 </span>
               </div>
 
-              <div class="mb-2" style="display: flex; justify-content: space-between; align-items: start;" v-if="strategy === 'SCHEDULED'">
+              <div
+                class="mb-2"
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: start;
+                "
+                v-if="strategy === 'SCHEDULED'"
+              >
                 <span class="has-text-grey is-size-7">Schedule</span>
-                <span class="has-text-weight-medium is-size-7 is-family-monospace" style="text-align: right; max-width: 60%; overflow: hidden; text-overflow: ellipsis;">
-                  {{ schedule || '-' }}
+                <span
+                  class="has-text-weight-medium is-size-7 is-family-monospace"
+                  style="
+                    text-align: right;
+                    max-width: 60%;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                  "
+                >
+                  {{ schedule || "-" }}
                 </span>
               </div>
 
-              <div class="mb-2" style="display: flex; justify-content: space-between; align-items: start;">
+              <div
+                class="mb-2"
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: start;
+                "
+              >
                 <span class="has-text-grey is-size-7">Replicas</span>
-                <span class="has-text-weight-medium is-size-7" style="text-align: right; max-width: 60%; overflow: hidden; text-overflow: ellipsis;">
+                <span
+                  class="has-text-weight-medium is-size-7"
+                  style="
+                    text-align: right;
+                    max-width: 60%;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                  "
+                >
                   {{ replicas }}
                 </span>
               </div>
 
-              <div style="display: flex; justify-content: space-between; align-items: start;">
+              <div
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: start;
+                "
+              >
                 <span class="has-text-grey is-size-7">Timeout (hours)</span>
-                <span class="has-text-weight-medium is-size-7" style="text-align: right; max-width: 60%; overflow: hidden; text-overflow: ellipsis;">
+                <span
+                  class="has-text-weight-medium is-size-7"
+                  style="
+                    text-align: right;
+                    max-width: 60%;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                  "
+                >
                   {{ timeout }}
                 </span>
               </div>
             </div>
 
-            <hr style="margin: 1.5rem 0;" />
+            <hr style="margin: 1.5rem 0" />
 
             <!-- Wallet Management Section (simplified) -->
             <div v-if="isWalletMode" class="mb-4">
               <div class="field">
                 <div class="control">
-                  <button 
+                  <button
                     class="button is-fullwidth is-light"
                     @click="openVaultModal"
                     :disabled="loadingVaults"
                   >
                     <span class="icon is-small"><WalletIcon /></span>
                     <span v-if="selectedVault && selectedVault.public_key">
-                      Vault: {{ selectedVault.public_key.slice(0, 8) }}...{{ selectedVault.public_key.slice(-8) }}
+                      Vault: {{ selectedVault.public_key.slice(0, 8) }}...{{
+                        selectedVault.public_key.slice(-8)
+                      }}
                     </span>
                     <span v-else-if="loadingVaults">Loading vaults...</span>
                     <span v-else>Select or Create Vault</span>
@@ -195,14 +326,23 @@
             </div>
 
             <!-- Advanced Settings Button -->
-            <button 
-              class="button is-light is-fullwidth mb-4" 
+            <button
+              class="button is-light is-fullwidth mb-4"
               @click="showDeploymentSettingsModal = true"
-              style="border: 1px solid #e8eaed;"
+              style="border: 1px solid #e8eaed"
             >
               <span class="icon is-small">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z" fill="currentColor"/>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"
+                    fill="currentColor"
+                  />
                 </svg>
               </span>
               <span>Advanced Deployment Settings</span>
@@ -221,13 +361,16 @@
                 </button>
 
                 <!-- Show insufficient credits message -->
-                <div v-if="!canPostJob && selectedMarket" class="has-text-centered mb-3 mt-3">
+                <div
+                  v-if="!canPostJob && selectedMarket"
+                  class="has-text-centered mb-3 mt-3"
+                >
                   <p class="has-text-grey is-size-7 mb-2">
                     Insufficient credits. Need ${{
-                      (hourlyPrice * replicas * timeout).toFixed(3) 
+                      (hourlyPrice * replicas * timeout).toFixed(3)
                     }}, have ${{ creditBalance.toFixed(2) }}
                   </p>
-                  <button 
+                  <button
                     class="button is-small is-outlined is-fullwidth"
                     @click="goToClaimCredits"
                   >
@@ -342,20 +485,41 @@
 
     <!-- Advanced Deployment Settings Modal -->
     <div class="modal" :class="{ 'is-active': showDeploymentSettingsModal }">
-      <div class="modal-background" @click="showDeploymentSettingsModal = false"></div>
-      <div class="modal-card" style="max-width: 500px;">
+      <div
+        class="modal-background"
+        @click="showDeploymentSettingsModal = false"
+      ></div>
+      <div class="modal-card" style="max-width: 500px">
         <header class="modal-card-head">
           <p class="modal-card-title">Advanced Deployment Settings</p>
-          <button class="delete" aria-label="close" @click="showDeploymentSettingsModal = false"></button>
+          <button
+            class="delete"
+            aria-label="close"
+            @click="showDeploymentSettingsModal = false"
+          ></button>
         </header>
         <section class="modal-card-body">
           <div class="field">
             <label class="label">
               Deployment Strategy
-              <span class="icon is-small has-tooltip-arrow has-tooltip-right" style="position: relative; z-index: 3000;" data-tooltip="How your deployment manages job instances">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <circle cx="12" cy="12" r="10" stroke-width="2"/>
-                  <path d="M12 16v-4m0-4h.01" stroke-width="2" stroke-linecap="round"/>
+              <span
+                class="icon is-small has-tooltip-arrow has-tooltip-right"
+                style="position: relative; z-index: 3000"
+                data-tooltip="How your deployment manages job instances"
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                >
+                  <circle cx="12" cy="12" r="10" stroke-width="2" />
+                  <path
+                    d="M12 16v-4m0-4h.01"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  />
                 </svg>
               </span>
             </label>
@@ -370,14 +534,28 @@
               </div>
             </div>
           </div>
-          
+
           <div v-if="strategy === 'SCHEDULED'" class="field">
             <label class="label">
               Schedule
-              <span class="icon is-small has-tooltip-arrow has-tooltip-right" style="position: relative; z-index: 3000;" data-tooltip="Cron expression for scheduling jobs">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <circle cx="12" cy="12" r="10" stroke-width="2"/>
-                  <path d="M12 16v-4m0-4h.01" stroke-width="2" stroke-linecap="round"/>
+              <span
+                class="icon is-small has-tooltip-arrow has-tooltip-right"
+                style="position: relative; z-index: 3000"
+                data-tooltip="Cron expression for scheduling jobs"
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                >
+                  <circle cx="12" cy="12" r="10" stroke-width="2" />
+                  <path
+                    d="M12 16v-4m0-4h.01"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  />
                 </svg>
               </span>
             </label>
@@ -391,14 +569,28 @@
               />
             </div>
           </div>
-          
+
           <div class="field">
             <label class="label">
               Replica Count
-              <span class="icon is-small has-tooltip-arrow has-tooltip-right" style="position: relative; z-index: 3000;" data-tooltip="Number of parallel job instances (1-100)">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <circle cx="12" cy="12" r="10" stroke-width="2"/>
-                  <path d="M12 16v-4m0-4h.01" stroke-width="2" stroke-linecap="round"/>
+              <span
+                class="icon is-small has-tooltip-arrow has-tooltip-right"
+                style="position: relative; z-index: 3000"
+                data-tooltip="Number of parallel job instances (1-100)"
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                >
+                  <circle cx="12" cy="12" r="10" stroke-width="2" />
+                  <path
+                    d="M12 16v-4m0-4h.01"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  />
                 </svg>
               </span>
             </label>
@@ -413,14 +605,28 @@
               />
             </div>
           </div>
-          
+
           <div class="field">
             <label class="label">
               Container Timeout
-              <span class="icon is-small has-tooltip-arrow has-tooltip-right" style="position: relative; z-index: 3000;" data-tooltip="Maximum runtime before container auto-shutdown (minimum 1 hour)">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <circle cx="12" cy="12" r="10" stroke-width="2"/>
-                  <path d="M12 16v-4m0-4h.01" stroke-width="2" stroke-linecap="round"/>
+              <span
+                class="icon is-small has-tooltip-arrow has-tooltip-right"
+                style="position: relative; z-index: 3000"
+                data-tooltip="Maximum runtime before container auto-shutdown (minimum 1 hour)"
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                >
+                  <circle cx="12" cy="12" r="10" stroke-width="2" />
+                  <path
+                    d="M12 16v-4m0-4h.01"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  />
                 </svg>
               </span>
             </label>
@@ -436,9 +642,16 @@
             </div>
           </div>
         </section>
-        <footer class="modal-card-foot" style="justify-content: flex-end;">
-          <button class="button" @click="showDeploymentSettingsModal = false">Cancel</button>
-          <button class="button is-secondary" @click="showDeploymentSettingsModal = false">Save Settings</button>
+        <footer class="modal-card-foot" style="justify-content: flex-end">
+          <button class="button" @click="showDeploymentSettingsModal = false">
+            Cancel
+          </button>
+          <button
+            class="button is-secondary"
+            @click="showDeploymentSettingsModal = false"
+          >
+            Save Settings
+          </button>
         </footer>
       </div>
     </div>
@@ -560,7 +773,7 @@ const {
   isWalletMode: vaultManagerWalletMode,
   selectVault,
   createVault,
-  clearSelection
+  clearSelection,
 } = useVaultManager();
 
 // Vault selection modal
@@ -701,7 +914,7 @@ const computedJobTitle = computed(() => {
 const computedDeploymentName = computed(() => {
   // Collect all Docker images from job definition
   const images = new Set<string>();
-  
+
   if (jobDefinition.value?.ops) {
     jobDefinition.value.ops.forEach((op: any) => {
       if (op.args?.image) {
@@ -709,12 +922,12 @@ const computedDeploymentName = computed(() => {
       }
     });
   }
-  
+
   // If we have images, return them as a comma-separated list
   if (images.size > 0) {
-    return Array.from(images).join(', ');
+    return Array.from(images).join(", ");
   }
-  
+
   // Fallback to template name or job ID
   if (selectedTemplate.value && selectedTemplate.value.id !== "custom") {
     return selectedTemplate.value.name;
@@ -803,7 +1016,7 @@ const requiredNos = computed(() => {
 // Check if user can post job based on authentication and credits
 const canPostJob = computed(() => {
   if (status.value === "authenticated") {
-    const costUSD = (hourlyPrice.value * replicas.value * timeout.value) || 0;
+    const costUSD = hourlyPrice.value * replicas.value * timeout.value || 0;
     return creditBalance.value >= costUSD;
   }
   return false;
@@ -833,7 +1046,7 @@ const shouldShowWalletAuthBanner = computed(() => {
 });
 
 const canCreateDeployment = computed(() => {
-  const basicRequirements = 
+  const basicRequirements =
     selectedMarket.value !== null &&
     jobDefinition.value !== null &&
     deploymentName.value.trim() !== "" &&
@@ -848,7 +1061,7 @@ const canCreateDeployment = computed(() => {
     // Vault will be created during deployment if needed
     return basicRequirements;
   }
-  
+
   return false;
 });
 
@@ -867,12 +1080,15 @@ const validator = (json: any) => {
 };
 // Credit balance fetch (SDK API)
 const refreshCreditBalance = async () => {
-  if (status.value !== 'authenticated' || !token.value) return;
+  if (status.value !== "authenticated" || !token.value) return;
   loadingCreditBalance.value = true;
   try {
     const data = await nosana.value.api.credits.balance();
     if (data) {
-      creditBalance.value = (data.assignedCredits || 0) - (data.settledCredits || 0) - (data.reservedCredits || 0);
+      creditBalance.value =
+        (data.assignedCredits || 0) -
+        (data.settledCredits || 0) -
+        (data.reservedCredits || 0);
     }
   } catch (error) {
     console.error("Error fetching credit balance:", error);
@@ -880,7 +1096,6 @@ const refreshCreditBalance = async () => {
     loadingCreditBalance.value = false;
   }
 };
-
 
 // Vault modal handlers
 const openVaultModal = () => {
@@ -939,25 +1154,27 @@ const createDeployment = async () => {
     let deployment;
 
     const buildCreateDeploymentBody = (): CreateDeployment => {
-      const isScheduled = strategy.value === 'SCHEDULED';
+      const isScheduled = strategy.value === "SCHEDULED";
       const base = {
         name: deploymentName.value.trim(),
         market: selectedMarket.value!.address.toString(),
         replicas: replicas.value,
         // API mode uses minutes, wallet mode uses seconds in our UI; normalize per mode
-        timeout: isWalletMode.value ? Math.floor((timeout.value as number) * 3600) : Math.min((timeout.value as number) * 60, 24 * 60),
+        timeout: isWalletMode.value
+          ? Math.floor((timeout.value as number) * 3600)
+          : Math.min((timeout.value as number) * 60, 24 * 60),
         job_definition: jobDefinition.value!,
       } as const;
       if (isScheduled) {
         return {
           ...base,
-          strategy: 'SCHEDULED',
+          strategy: "SCHEDULED",
           schedule: schedule.value,
         } as CreateDeployment;
       }
       return {
         ...base,
-        strategy: (strategy.value as 'SIMPLE' | 'SIMPLE-EXTEND' | 'INFINITE'),
+        strategy: strategy.value as "SIMPLE" | "SIMPLE-EXTEND" | "INFINITE",
       } as CreateDeployment;
     };
 
@@ -972,10 +1189,11 @@ const createDeployment = async () => {
     setTimeout(() => {
       router.push(`/deployments/${deployment.id}`);
     }, 2000);
-
   } catch (error: any) {
     console.error("Deployment creation error:", error);
-    toast.error(`Error creating deployment: ${error.message || error.toString()}`);
+    toast.error(
+      `Error creating deployment: ${error.message || error.toString()}`
+    );
   } finally {
     isCreatingDeployment.value = false;
     loading.value = false;
@@ -1008,7 +1226,7 @@ const handleLoginClick = () => {
 
 // Navigate to account page
 const goToClaimCredits = () => {
-  navigateTo('/account/deployer');
+  navigateTo("/account/deployer");
 };
 
 // Template selection handling
@@ -1115,7 +1333,6 @@ watch(
   }
 );
 
-
 // Mounted hook
 onMounted(async () => {
   if (!markets.value && !loadingMarkets.value) {
@@ -1129,13 +1346,17 @@ onMounted(async () => {
 });
 
 // React to auth changes to keep credit balance fresh
-watch([status, token], async () => {
-  if (isCreditMode.value) {
-    await refreshCreditBalance();
-  } else {
-    creditBalance.value = 0;
-  }
-}, { immediate: true });
+watch(
+  [status, token],
+  async () => {
+    if (isCreditMode.value) {
+      await refreshCreditBalance();
+    } else {
+      creditBalance.value = 0;
+    }
+  },
+  { immediate: true }
+);
 
 // No swap modal in API mode
 
@@ -1156,31 +1377,30 @@ const selectTemplateFromModal = (template: Template) => {
   showTemplateModal.value = false;
 };
 
-
 // Watch for template modal state to control body scroll
 watch(showTemplateModal, (isOpen) => {
   if (isOpen) {
-    lockScroll('template-modal');
+    lockScroll("template-modal");
   } else {
-    unlockScroll('template-modal');
+    unlockScroll("template-modal");
   }
 });
 
 // Watch for deployment settings modal state to control body scroll
 watch(showDeploymentSettingsModal, (isOpen) => {
   if (isOpen) {
-    lockScroll('deployment-settings-modal');
+    lockScroll("deployment-settings-modal");
   } else {
-    unlockScroll('deployment-settings-modal');
+    unlockScroll("deployment-settings-modal");
   }
 });
 
 // Watch for readme modal state to control body scroll
 watch(showReadmeModal, (isOpen) => {
   if (isOpen) {
-    lockScroll('readme-modal');
+    lockScroll("readme-modal");
   } else {
-    unlockScroll('readme-modal');
+    unlockScroll("readme-modal");
   }
 });
 </script>
@@ -1310,5 +1530,9 @@ watch(showReadmeModal, (isOpen) => {
 
 .modal.is-active .modal-card-body {
   overflow-y: auto !important;
+}
+
+.dark-mode .notification {
+  background-color: #2f2f2f;
 }
 </style>
