@@ -1299,7 +1299,8 @@ watch(
       status === "DRAFT" &&
       !autostartTriggered.value &&
       hasAnyAuth.value &&
-      !actionLoading.value
+      !actionLoading.value &&
+      !isWalletMode.value
     ) {
       autostartTriggered.value = true;
       try {
