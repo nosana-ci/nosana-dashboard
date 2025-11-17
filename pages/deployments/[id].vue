@@ -1717,8 +1717,6 @@ const deploymentVault = computed(() => {
   return (deployment.value as any).vault;
 });
 
-console.log(hasVault.value);
-
 // Job activity split
 // Note: Deployment jobs don't include state info, so we show all jobs
 // Users can click through to see individual job details

@@ -39,11 +39,11 @@ export function useDeploymentVault(deploymentOrVault: Deployment | Vault): UseDe
   };
 
   const openTopupModal = () => {
-    open(vault, "topup");
+    open(vault, "topup", updateBalance);
   }
 
   const openWithdrawModal = () => {
-    open(vault, "withdraw");
+    open(vault, "withdraw", updateBalance);
   };
 
   onMounted(async () => {

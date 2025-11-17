@@ -3,6 +3,7 @@ import type { Vault } from "@nosana/sdk";
 interface VaultModalState {
   modalType: null | "topup" | "withdraw";
   vault: Vault | null;
+  updateFn: (() => void) | null;
   error: string | null;
   nosAmount: number;
   solAmount: number;
@@ -12,6 +13,7 @@ interface VaultModalState {
 const state = ref<VaultModalState>({
   modalType: null,
   vault: null,
+  updateFn: null,
   error: null,
   nosAmount: 0,
   solAmount: 0,
@@ -19,22 +21,24 @@ const state = ref<VaultModalState>({
 });
 
 export function useVaultModal() {
-  const open = (vault: Vault, type: "topup" | "withdraw") => {
+  const open = (vault: Vault, type: "topup" | "withdraw", updateFn: () => void) => {
     state.value.vault = vault;
     state.value.modalType = type;
     state.value.nosAmount = 0;
     state.value.solAmount = 0;
+    state.value.updateFn = updateFn;
   };
 
   const close = () => {
     state.value.vault = null;
     state.value.modalType = null;
     state.value.error = null;
+    state.value.updateFn = null;
   };
 
 
   const topup = async () => {
-    if (!state.value.vault || state.value.modalType !== "topup") return;
+    if (!state.value.vault || state.value.modalType !== "topup" || !state.value.updateFn) return;
 
     try {
       state.value.loading = true;
@@ -42,27 +46,29 @@ export function useVaultModal() {
         NOS: state.value.nosAmount || undefined,
         SOL: state.value.solAmount || undefined,
       });
-      close();
     } catch (error) {
       state.value.error = "Failed to top up vault";
       console.error("Failed to top up vault:", error);
     } finally {
       state.value.loading = false;
+      state.value.updateFn();
+      close();
     }
   };
 
   const withdraw = async () => {
-    if (!state.value.vault || state.value.modalType !== "withdraw") return;
+    if (!state.value.vault || state.value.modalType !== "withdraw" || !state.value.updateFn) return;
 
     try {
       state.value.loading = true;
       await state.value.vault.withdraw();
-      close();
     } catch (error) {
       state.value.error = "Failed to withdraw from vault";
       console.error("Failed to withdraw from vault:", error);
     } finally {
       state.value.loading = false;
+      state.value.updateFn();
+      close();
     }
   };
 

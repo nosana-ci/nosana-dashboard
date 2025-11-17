@@ -51,8 +51,6 @@ import type { Deployment } from "@nosana/sdk";
 import RefreshIcon from "@/assets/img/icons/refresh.svg?component";
 import ArrowSquareUpRightIcon from "@/assets/img/icons/arrow-square-up-right.svg?component";
 
-console.log("hello I loaded");
-
 interface VaultProps {
   isTableRow: boolean;
   deployment: Deployment;
