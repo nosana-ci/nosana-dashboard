@@ -5,7 +5,7 @@
   "scripts": {
     "build": "nuxt build",
     "dev": "nuxt dev --dotenv .env.local",
-    "dev:https": "sudo -E env \"PATH=$PATH\" nuxt dev --dotenv .env.local --https --sslKey local.devnet.nosana.io+2-key.pem --sslCert local.devnet.nosana.io+2.pem --port 3000 --host 127.0.0.1",
+    "dev:https": "nuxt dev --dotenv .env.local --https --sslKey ./devnet.nosana.io+2-key.pem --sslCert ./devnet.nosana.io+2.pem --port 443 --host 127.0.0.1",
     "generate": "nuxt generate --dotenv .env.${APP_ENV:=production}",
     "generate:cert": "sudo chmod +x ./generateCert.sh && sudo ./generateCert.sh",
     "preview": "nuxt preview",
