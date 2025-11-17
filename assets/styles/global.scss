@@ -1763,3 +1763,38 @@ html.dark-mode .deployment-header {
     flex-direction: column !important;
   }
 }
+
+.icon.borderless {
+  border: none !important;
+}
+.vertical-middle {
+  vertical-align: middle;
+}
+.refresh.is-loading svg {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.height-auto {
+  height: auto;
+}
+
+.va-bottom {
+  vertical-align: bottom;
+}
+
+.relative {
+  position: relative;
+}
+
+.z-index-2 {
+  z-index: 2;
+}

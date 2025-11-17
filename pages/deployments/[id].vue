@@ -26,7 +26,7 @@
                 <div class="is-flex is-align-items-center mb-0">
                   <button
                     @click="router.back()"
-                    class="button is-ghost back-button mr-4"
+                    class="button is-ghost back-button mr-4 pb-1 height-auto"
                   >
                     <span class="icon is-small">
                       <ArrowUpIcon
@@ -45,7 +45,6 @@
                       {{ deployment.id }}
                     </p>
                   </div>
-                  <StatusTag class="ml-4" :status="deployment.status" />
                 </div>
               </div>
               <div class="deployment-tabs">
@@ -220,21 +219,16 @@
                         <span>No actions available</span>
                       </div>
 
-                      <!-- Withdraw Vault (wallet deployments only) -->
-                      <a
-                        v-if="canWithdraw"
-                        class="dropdown-item"
-                        @click="
-                          withdrawVault();
-                          isActionsDropdownOpen = false;
+                      <VaultActions
+                        v-if="hasVault && deploymentVault"
+                        :vault="deploymentVault"
+                        :closeMenu="
+                          () => {
+                            isActionsDropdownOpen = false;
+                          }
                         "
-                        :disabled="actionLoading"
-                      >
-                        <span class="icon is-small mr-2">
-                          <i class="fas fa-wallet"></i>
-                        </span>
-                        <span>Withdraw Vault</span>
-                      </a>
+                        :isDisabled="actionLoading"
+                      />
                     </div>
                   </div>
                 </div>
@@ -253,6 +247,18 @@
                   <div class="table-container">
                     <table class="table is-fullwidth mb-0">
                       <tbody>
+                        <tr>
+                          <td class="va-bottom">Status</td>
+                          <td>
+                            <StatusTag :status="deployment.status" />
+                          </td>
+                        </tr>
+                        <!-- Vault Details Section -->
+                        <VaultOverviewRows
+                          v-if="hasVault && deploymentVault"
+                          :isTableRow="true"
+                          :deployment="deployment"
+                        />
                         <tr>
                           <td>Deployment strategy</td>
                           <td>{{ deployment.strategy }}</td>
@@ -1174,6 +1180,7 @@
       </div>
     </template>
   </div>
+  <VaultModal />
 </template>
 
 <script setup lang="ts">
@@ -1189,6 +1196,8 @@ import JobLogsContainer from "~/components/Job/LogsContainer.vue";
 import SecondsFormatter from "~/components/SecondsFormatter.vue";
 import { useJob } from "~/composables/jobs/useJob";
 import StatusTag from "~/components/Common/StatusTag.vue";
+import VaultModal from "~/components/Vault/Modal/VaultModal.vue";
+import VaultActions from "~/components/Vault/VaultActions.vue";
 
 // Import icons as components
 import ArrowUpIcon from "@/assets/img/icons/arrow-up.svg?component";
@@ -1693,27 +1702,22 @@ const hasAnyActions = computed(() => {
 });
 
 // Show withdraw only when deployment exposes a vault with withdraw (wallet mode)
-const canWithdraw = computed(() => {
-  const dep: any = deployment.value as any;
-  return Boolean(dep && dep.vault && typeof dep.vault.withdraw === "function");
+const hasVault = computed(() => {
+  if (!deployment.value || typeof deployment.value !== "object") return false;
+  return "vault" in deployment.value;
 });
 
-const statusHelpText = computed(() => {
-  switch (deploymentStatus.value) {
-    case "DRAFT":
-      return "Start the deployment to begin running jobs.";
-    case "RUNNING":
-      return "Stop the deployment to halt all running jobs.";
-    case "STOPPED":
-      return "You can start the deployment again or archive it.";
-    case "ERROR":
-      return "Fix any issues and restart the deployment.";
-    case "ARCHIVED":
-      return "This deployment is archived and cannot be modified.";
-    default:
-      return "";
-  }
+const deploymentVault = computed(() => {
+  if (
+    !hasVault.value ||
+    !deployment.value ||
+    typeof deployment.value.vault !== "object"
+  )
+    return null;
+  return (deployment.value as any).vault;
 });
+
+console.log(hasVault.value);
 
 // Job activity split
 // Note: Deployment jobs don't include state info, so we show all jobs
