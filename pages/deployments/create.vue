@@ -303,28 +303,6 @@
 
             <hr style="margin: 1.5rem 0" />
 
-            <!-- Wallet Management Section (simplified) -->
-            <div v-if="isWalletMode" class="mb-4">
-              <div class="field">
-                <div class="control">
-                  <button
-                    class="button is-fullwidth is-light"
-                    @click="openVaultModal"
-                    :disabled="loadingVaults"
-                  >
-                    <span class="icon is-small"><WalletIcon /></span>
-                    <span v-if="selectedVault && selectedVault.public_key">
-                      Vault: {{ selectedVault.public_key.slice(0, 8) }}...{{
-                        selectedVault.public_key.slice(-8)
-                      }}
-                    </span>
-                    <span v-else-if="loadingVaults">Loading vaults...</span>
-                    <span v-else>Select or Create Vault</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-
             <!-- Advanced Settings Button -->
             <button
               class="button is-light is-fullwidth mb-4"
@@ -389,12 +367,6 @@
                   <span v-if="isCreatingDeployment">Creating...</span>
                   <span v-else>Create Deployment</span>
                 </button>
-
-                <div v-if="!selectedVault" class="has-text-centered mt-3">
-                  <p class="has-text-grey is-size-7">
-                    A vault will be created automatically during deployment
-                  </p>
-                </div>
               </div>
 
               <!-- No Authentication Actions -->
@@ -413,19 +385,6 @@
     </div>
 
     <Loader v-if="loading" />
-
-    <!-- Vault Selection Modal -->
-    <VaultSelectionModal
-      :is-active="showVaultModal"
-      :vaults="availableVaults"
-      :selected-vault="modalSelectedVault"
-      :loading="loadingVaults"
-      :creating="isCreatingVault"
-      @close="handleVaultModalClose"
-      @confirm="handleVaultModalConfirm"
-      @create-vault="handleCreateVaultFromModal"
-      @select-vault="handleSelectVaultFromModal"
-    />
 
     <!-- README Modal -->
     <div class="modal" :class="{ 'is-active': showReadmeModal }">
@@ -641,6 +600,12 @@
               />
             </div>
           </div>
+          <VaultSelector
+            v-if="isWalletMode"
+            :setSelectedVault="
+              (vault: string | undefined) => (modalSelectedVault = vault)
+            "
+          />
         </section>
         <footer class="modal-card-foot" style="justify-content: flex-end">
           <button class="button" @click="showDeploymentSettingsModal = false">
@@ -659,64 +624,30 @@
 </template>
 
 <script lang="ts" setup>
-import type { Market, JobDefinition, CreateDeployment } from "@nosana/sdk";
-import JsonEditorVue from "json-editor-vue";
-import { Mode, ValidationSeverity } from "vanilla-jsoneditor";
+import {
+  type Market,
+  type JobDefinition,
+  type CreateDeployment,
+  DeploymentStrategy,
+} from "@nosana/sdk";
+import { ValidationSeverity } from "vanilla-jsoneditor";
 import "vanilla-jsoneditor/themes/jse-theme-dark.css";
 import { useToast } from "vue-toastification";
 import { useWallet } from "solana-wallets-vue";
 import TopBar from "~/components/TopBar.vue";
-import WalletIcon from "~/components/WalletIcon.vue";
-import { useRouter, useRoute } from "vue-router";
-import { useDebounceFn, useScrollLock } from "@vueuse/core";
+import { useRouter } from "vue-router";
 import { useEstimatedCost } from "~/composables/useMarketPricing";
 import type { Template } from "~/composables/useTemplates";
 import Loader from "~/components/Loader.vue";
-import VaultSelectionModal from "~/components/Vault/VaultSelectionModal.vue";
-import { useVaultManager } from "@/composables/useVaultManager";
-
-// Advanced GPU selection types (copied from deploy.vue)
-interface FilterValue {
-  min: number;
-  max: number;
-}
-
-interface FilterValues {
-  [key: string]: string | FilterValue;
-}
-
-interface HostInterface {
-  host_address: string;
-  label: string;
-  USD_per_hour: number;
-  market_address?: string;
-  market_type?: string;
-  specs: {
-    CPU_CORES: number;
-    RAM_MB?: number;
-    MEMORY_GB?: number;
-    DISK_SPACE_GB: number;
-    DOWNLOAD_SPEED_MB?: number;
-    BANDWIDTH_MB?: number;
-    PLATFORM_OS?: string;
-    UPLOAD_SPEED_MB?: number;
-  };
-  country?: string;
-}
+import VaultSelector from "~/components/Vault/VaultSelector.vue";
 
 // Setup composables
 const { markets, getMarkets, loadingMarkets } = useMarkets();
-const {
-  templates,
-  groupedTemplates,
-  loadingTemplates,
-  loadingGroupedTemplates,
-} = useTemplates();
+const { templates, groupedTemplates, loadingTemplates } = useTemplates();
 const { nosana } = useSDK();
 const router = useRouter();
-const route = useRoute();
 const toast = useToast();
-const { status, data: userData, token } = useAuth();
+const { status, token } = useAuth();
 const { connected, publicKey } = useWallet();
 const loading = ref(false);
 
@@ -728,7 +659,6 @@ const { lockScroll, unlockScroll } = useModalScrollLock();
 
 // State
 const config = useRuntimeConfig();
-const gpuTab = ref<"simple" | "advanced">("simple");
 // Show all markets on devnet, only premium on mainnet
 const gpuTypeCheckbox = ref<string[]>(
   config.public.network === "devnet" ? ["PREMIUM", "COMMUNITY"] : ["PREMIUM"]
@@ -742,7 +672,6 @@ const timeout = ref(1);
 const isCreatingDeployment = ref(false);
 const showSettingsModal = ref(false); // For priority fee settings (TopBar)
 const showDeploymentSettingsModal = ref(false); // For deployment settings
-const showSwapModal = ref(false);
 const skipAutoSelection = ref(false);
 const isUpdatingFromJobDef = ref(false);
 const isRestoringState = ref(false);
@@ -751,7 +680,7 @@ const isEditorCollapsed = ref(false);
 // Deployment-specific state
 const deploymentName = ref("");
 const replicas = ref(1);
-const strategy = ref("SIMPLE");
+const strategy = ref<DeploymentStrategy>("SIMPLE");
 const schedule = ref("0 0 * * *"); // Default schedule
 
 // Balance and price state
@@ -764,70 +693,9 @@ const solPrice = ref(0);
 const usdcPrice = ref(0);
 const usdtPrice = ref(0);
 
-// Vault management
-const {
-  vaults: availableVaults,
-  selectedVault,
-  loading: loadingVaults,
-  creating: isCreatingVault,
-  isWalletMode: vaultManagerWalletMode,
-  selectVault,
-  createVault,
-  clearSelection,
-} = useVaultManager();
-
 // Vault selection modal
 const showVaultModal = ref(false);
 const modalSelectedVault = ref<any>(null);
-
-// Initialize filterValues with defaults
-const filterValues = ref<FilterValues>({
-  PLATFORM_OS: "All",
-  CUDA_DRIVER: "All",
-  CPU_CORES: { min: 0, max: 128 },
-  RAM_MB: { min: 12288, max: 131072 },
-  DISK_SPACE_GB: { min: 256, max: 1000 },
-  BANDWIDTH_MB: { min: 100, max: 1000 },
-});
-
-// Field mappings constants for GPU selection (copied from deploy.vue)
-const FIELD_MAPPINGS = {
-  API_PARAMS: {
-    PLATFORM_OS: "platform_os",
-    CUDA_DRIVER: "cuda_drivers",
-    CPU_CORES: "cpu_cores",
-    RAM_MB: "ram_mb",
-    DISK_SPACE_GB: "disk_space_gb",
-    BANDWIDTH_MB: "download_speed_mb",
-    DOWNLOAD_SPEED_MB: "download_speed_mb",
-    UPLOAD_SPEED_MB: "upload_speed_mb",
-    REGION: "region",
-  },
-  LABELS: {
-    PLATFORM_OS: "Select OS",
-    CUDA_DRIVER: "Select CUDA driver",
-    CPU_CORES: "CPU",
-    RAM_MB: "Memory",
-    DISK_SPACE_GB: "Storage",
-    BANDWIDTH_MB: "Download Speed",
-    DOWNLOAD_SPEED_MB: "Download Speed",
-  },
-  DESCRIPTIONS: {
-    CPU_CORES: "Select amount of vCPUs",
-    RAM_MB: "Set minimum memory in GB",
-    DISK_SPACE_GB: "Set minimum storage in GB",
-    BANDWIDTH_MB: "Set the minimum download speed in MB/s",
-    DOWNLOAD_SPEED_MB: "Set the minimum download speed in MB/s",
-  },
-  UNITS: {
-    CPU_CORES: "vCPU",
-    RAM_MB: "GB",
-    DISK_SPACE_GB: "GB",
-    BANDWIDTH_MB: "MB/s",
-    DOWNLOAD_SPEED_MB: "MB/s",
-  },
-  ZERO_MIN_FIELDS: ["RAM_MB", "CPU_CORES", "DISK_SPACE_GB"],
-};
 
 // API data
 const { data: stats } = await useAPI("/api/stats");
@@ -896,21 +764,6 @@ watch(
   { immediate: true }
 );
 
-// Computed properties
-const computedJobTitle = computed(() => {
-  if (selectedTemplate.value && selectedTemplate.value.id !== "custom") {
-    return selectedTemplate.value.name;
-  }
-  if (jobDefinition.value?.ops?.[0]?.id) {
-    return jobDefinition.value.ops[0].id;
-  }
-  if (computedDockerImage.value) {
-    const imageNameParts = computedDockerImage.value.split("/");
-    return imageNameParts.pop() || "Custom Job";
-  }
-  return "Custom Job Definition";
-});
-
 const computedDeploymentName = computed(() => {
   // Collect all Docker images from job definition
   const images = new Set<string>();
@@ -955,26 +808,6 @@ const isNameTemplateManaged = computed(() => {
   return !name || templateNames.value.has(name);
 });
 
-const computedDockerImage = computed(() => {
-  if (
-    selectedTemplate.value &&
-    selectedTemplate.value.id !== "custom" &&
-    selectedTemplate.value.jobDefinition?.ops?.[0]?.args
-  ) {
-    const args = selectedTemplate.value.jobDefinition.ops[0].args as any;
-    if (args.image) {
-      return args.image;
-    }
-  }
-  if (jobDefinition.value?.ops?.[0]?.args) {
-    const args = jobDefinition.value.ops[0].args as any;
-    if (args.image) {
-      return args.image;
-    }
-  }
-  return null;
-});
-
 const marketName = computed(() => {
   if (!selectedMarket.value) return null;
   return (
@@ -999,7 +832,6 @@ const { estimatedCost, formattedCost, formattedHourlyRate, usdPricePerHour } =
 
 // Legacy computed properties for backward compatibility
 const hourlyPrice = computed(() => usdPricePerHour.value || 0);
-const totalPrice = computed(() => (estimatedCost.value || 0) * replicas.value);
 
 const requiredNos = computed(() => {
   if (!selectedMarket.value || !timeout.value) return 0;
@@ -1022,11 +854,6 @@ const canPostJob = computed(() => {
   return false;
 });
 
-// Check if user is authenticated via any method
-const isAuthenticated = computed(() => {
-  return status.value === "authenticated" && token.value;
-});
-
 // Authentication mode detection
 const isWalletMode = computed(() => {
   return connected.value && publicKey.value && !token.value;
@@ -1034,10 +861,6 @@ const isWalletMode = computed(() => {
 
 const isCreditMode = computed(() => {
   return status.value === "authenticated" && token.value;
-});
-
-const hasAnyAuth = computed(() => {
-  return isWalletMode.value || isCreditMode.value;
 });
 
 // Show legacy deploy banner for all users
@@ -1097,31 +920,6 @@ const refreshCreditBalance = async () => {
   }
 };
 
-// Vault modal handlers
-const openVaultModal = () => {
-  modalSelectedVault.value = selectedVault.value;
-  showVaultModal.value = true;
-};
-
-const handleVaultModalConfirm = (vault: any) => {
-  selectVault(vault);
-  showVaultModal.value = false;
-};
-
-const handleVaultModalClose = () => {
-  showVaultModal.value = false;
-  modalSelectedVault.value = null;
-};
-
-const handleCreateVaultFromModal = async () => {
-  await createVault();
-  showVaultModal.value = false;
-};
-
-const handleSelectVaultFromModal = (vault: any) => {
-  modalSelectedVault.value = vault;
-};
-
 const createDeployment = async () => {
   if (!canCreateDeployment.value) return;
 
@@ -1151,44 +949,24 @@ const createDeployment = async () => {
   isCreatingDeployment.value = true;
 
   try {
-    let deployment;
-
-    const buildCreateDeploymentBody = (): CreateDeployment => {
-      const isScheduled = strategy.value === "SCHEDULED";
-      const base = {
-        name: deploymentName.value.trim(),
-        market: selectedMarket.value!.address.toString(),
-        replicas: replicas.value,
-        // API mode uses minutes, wallet mode uses seconds in our UI; normalize per mode
-        timeout: isWalletMode.value
-          ? Math.floor((timeout.value as number) * 3600)
-          : Math.min((timeout.value as number) * 60, 24 * 60),
-        job_definition: jobDefinition.value!,
-      } as const;
-      if (isScheduled) {
-        return {
-          ...base,
-          strategy: "SCHEDULED",
-          schedule: schedule.value,
-        } as CreateDeployment;
-      }
-      return {
-        ...base,
-        strategy: strategy.value as "SIMPLE" | "SIMPLE-EXTEND" | "INFINITE",
-      } as CreateDeployment;
-    };
-
-    if (isCreditMode.value || isWalletMode.value) {
-      const requestBody = buildCreateDeploymentBody();
-      deployment = await nosana.value.deployments.create(requestBody);
-    } else {
+    if (!isCreditMode.value && !isWalletMode.value) {
       throw new Error("Please connect wallet or sign in");
     }
+    const deployment = await nosana.value.deployments.create({
+      name: deploymentName.value.trim(),
+      market: selectedMarket.value!.address.toString(),
+      replicas: replicas.value,
+      timeout: Math.floor(timeout.value * 3600),
+      strategy: strategy.value,
+      ...(strategy.value === DeploymentStrategy.SCHEDULED
+        ? { schedule: schedule.value }
+        : {}),
+      ...(modalSelectedVault.value ? { vault: modalSelectedVault.value } : {}),
+      job_definition: jobDefinition.value,
+    });
 
     toast.success(`Successfully created deployment ${deployment.id}`);
-    setTimeout(() => {
-      router.push(`/deployments/${deployment.id}`);
-    }, 2000);
+    router.push(`/deployments/${deployment.id}`);
   } catch (error: any) {
     console.error("Deployment creation error:", error);
     toast.error(
