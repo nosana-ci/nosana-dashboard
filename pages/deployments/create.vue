@@ -299,6 +299,27 @@
                   {{ timeout }}
                 </span>
               </div>
+              <div
+                :v-if="isWalletMode"
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: start;
+                "
+              >
+                <span class="has-text-grey is-size-7">Vault</span>
+                <span
+                  class="has-text-weight-medium is-size-7"
+                  style="
+                    text-align: right;
+                    max-width: 60%;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                  "
+                >
+                  {{ modalSelectedVault || "Create new vault" }}
+                </span>
+              </div>
             </div>
 
             <hr style="margin: 1.5rem 0" />
