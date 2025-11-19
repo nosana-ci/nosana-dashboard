@@ -27,8 +27,8 @@
           >
             {{ getTabLabel(tab) }}
           </button>
-          <!-- Actions Dropdown -->
-          <div v-if="hasAnyActions" class="dropdown is-right" :class="{ 'is-active': showActionsDropdown }" ref="actionsDropdown">
+          <!-- Actions Dropdown - Commented out for deployment job pages -->
+          <!-- <div v-if="hasAnyActions" class="dropdown is-right" :class="{ 'is-active': showActionsDropdown }" ref="actionsDropdown">
             <div class="dropdown-trigger">
               <button 
                 class="tab-button actions-button" 
@@ -72,7 +72,7 @@
                 </div>
               </div>
             </div>
-          </div>
+          </div> -->
         </div>
       </div>
     </div>
