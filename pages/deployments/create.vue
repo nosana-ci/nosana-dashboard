@@ -300,7 +300,7 @@
                 </span>
               </div>
               <div
-                :v-if="isWalletMode"
+                v-if="isWalletMode"
                 style="
                   display: flex;
                   justify-content: space-between;

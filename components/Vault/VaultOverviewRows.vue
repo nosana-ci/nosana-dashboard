@@ -6,7 +6,7 @@
     </tr>
     <tr>
       <td>
-        Vault Balance
+        Vault balance
         <span
           class="refresh icon is-small ml-1 borderless vertical-middle"
           @click="updateBalance"

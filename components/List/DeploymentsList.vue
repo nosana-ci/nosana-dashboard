@@ -223,10 +223,9 @@ const hasMore = computed(() => {
   return filteredDeployments.value.length > max;
 });
 
-// Build nuxt-link target with origin marker
+// Build nuxt-link target
 const deploymentLink = (id: string) => {
-  const from = route.path.startsWith("/account") ? "account" : "deployments";
-  return { path: `/deployments/${id}`, query: { from } };
+  return `/deployments/${id}`;
 };
 
 // Debounced redirect to prevent flicker during session refresh
