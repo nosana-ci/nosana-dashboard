@@ -200,13 +200,7 @@
               <span>Create Deployment</span>
             </nuxt-link>
           </div>
-          <DeploymentsList 
-            :items-per-page="10" 
-            :limit="10" 
-            :show-pagination="false" 
-            class="mb-2" 
-            @update:total-deployments="totalDeployments = $event" 
-          />
+          <DeploymentsTable :items-per-page="10" />
         </div>
         
         <div class="columns mt-6">
@@ -355,7 +349,7 @@
 </template>
 
 <script setup lang="ts">
-import DeploymentsList from '~/components/List/DeploymentsList.vue';
+import DeploymentsTable from '~/components/DeploymentsTable/Table.vue';
 import JobList from '~/components/List/JobList.vue';
 import { useWallet } from 'solana-wallets-vue';
 import { useStake } from '~/composables/useStake';
