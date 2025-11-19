@@ -296,7 +296,6 @@ export function useFLogs(
         const outer = JSON.parse(event.data);
         const inner = outer.data ? JSON.parse(outer.data) : outer;
         // Debug incoming shape
-        console.debug('[useFLogs] ws message received', { path: (outer as any)?.path, innerKeys: inner && typeof inner === 'object' ? Object.keys(inner) : typeof inner });
         // First, handle embedded progress events regardless of shape
         let possibleMsg = (inner && typeof inner === 'object') ? (inner as any).message : undefined;
         // If message is a JSON string representing a progress event, parse it
@@ -407,7 +406,6 @@ export function useFLogs(
             timestamp,
             message: asStringRaw,
           };
-          console.debug('[useFLogs] adding flog entry', { opId, type: entry.type, preview: asStringRaw.slice(0, 120) });
           addMessage(entry);
           return;
         }
