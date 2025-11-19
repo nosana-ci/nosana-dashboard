@@ -11,22 +11,23 @@
     <!-- Wallet Auth Banner -->
     <div
       v-if="shouldShowWalletAuthBanner"
-      class="notification wallet-auth-banner mb-5"
+      class="notification is-light wallet-auth-banner mb-5 clickable-notification"
     >
-      <div class="is-flex is-align-items-center">
-        <div>
-          <p class="banner-title">Legacy Job Deploy page</p>
-          <p>
-            Looking for the classic job deployment experience? Use our legacy
-            deploy page here.
-          </p>
+      <nuxt-link
+        to="/deploy"
+        class="is-block"
+        style="color: inherit; text-decoration: none;"
+      >
+        <div class="is-flex is-align-items-center">
+          <div class="is-flex-grow-1">
+            <p class="banner-title">Legacy Job Deploy page</p>
+            <p class="mb-0">
+              Looking for the classic job deployment experience? Use our legacy
+              deploy page click here.
+            </p>
+          </div>
         </div>
-        <div class="banner-actions ml-auto">
-          <nuxt-link to="/deploy" class="button is-small is-primary">
-            Legacy Deploy
-          </nuxt-link>
-        </div>
-      </div>
+      </nuxt-link>
     </div>
 
     <!-- Show loader for external data only; editor always visible -->
