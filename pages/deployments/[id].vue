@@ -694,7 +694,7 @@
 
                 <!-- Selected Job Logs -->
                 <div v-if="activeLogsJobId" class="selected-job-logs">
-                  <JobLogsContainer :job-id="activeLogsJobId" />
+                  <JobLogsContainer :job-id="activeLogsJobId" :deployment-id="(route.params.id as string)" />
                 </div>
               </div>
             </div>
