@@ -1759,6 +1759,8 @@ watch(
     return jobs.filter((j) => jobStates.value[j.job] === 1);
   },
   (runningJobs: DeploymentJob[]) => {
+    // Disable node-level SSE and job-definition fetching from the deployment page
+    return;
     const currentRunningJobIds = runningJobs.map((j) => j.job).filter(Boolean);
 
     // Clean up instances for jobs that are no longer running
