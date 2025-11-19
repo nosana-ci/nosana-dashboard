@@ -1,5 +1,6 @@
 export function useAuthHeader() {
   const { status, data: userData } = useAuth();
+  const { nosana } = useSDK();
   const { generateAuthHeaders, hasSessionAuth } = useNosanaWallet();
 
   const creditHeader = computed<string | null>(() => {
@@ -8,11 +9,20 @@ export function useAuthHeader() {
   });
 
   const hasAuth = computed<boolean>(() => {
-    return Boolean(creditHeader.value || hasSessionAuth.value);
+    return Boolean(creditHeader.value || hasSessionAuth);
   });
 
-  const ensureAuth = async (): Promise<string> => {
+  /**
+   * Returns a node Authorization string. If a deploymentId is provided,
+   * retrieves a vault-signed header via SDK (DM).
+   */
+  const ensureAuth = async (options?: { deploymentId?: string }): Promise<string> => {
     if (creditHeader.value) return creditHeader.value;
+    if (options?.deploymentId) {
+      const dep = await nosana.value.deployments.get(options.deploymentId);
+      // SDK returns the raw "message:signature[:timestamp]" string
+      return await dep.generateAuthHeader();
+    }
     const headers = await generateAuthHeaders({ key: 'Authorization' });
     return headers.get('Authorization') || headers.get('authorization') || '';
   };
