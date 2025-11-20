@@ -480,7 +480,6 @@ const authenticateTwitterLogin = async (code: string, state: string, codeVerifie
 </script>
 
 <style lang="scss" scoped>
-@import "~/assets/styles/variables.scss";
 
 /* ==========================================================================
    Login Modal Overlay

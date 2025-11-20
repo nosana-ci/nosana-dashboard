@@ -966,6 +966,7 @@ const restartGroup = async (groupName: string) => {
 </script>
 
 <style lang="scss" scoped>
+@use "sass:color";
 // Use Bulma utility classes instead of custom containers
 .groups-container {
   // Remove hardcoded background and radius - use Bulma classes in template
@@ -1311,7 +1312,7 @@ html.dark-mode {
     }
 
     .tree-row__content:hover {
-      background-color: lighten($grey-darker, 3%);
+      background-color: color.adjust($grey-darker, $lightness: 3%);
     }
 
     .tree-row.is-expanded > .tree-row__content {
@@ -1319,7 +1320,7 @@ html.dark-mode {
     }
 
     .operation-details-panel {
-      background: darken($grey-darker, 2%);
+      background: color.adjust($grey-darker, $lightness: -2%);
       border-left-color: $grey;
     }
 
@@ -1328,7 +1329,7 @@ html.dark-mode {
     }
 
     .tree-row__children {
-      background: darken($grey-darker, 2%);
+      background: color.adjust($grey-darker, $lightness: -2%);
     }
 
     .tree-row__expand-icon {
@@ -1372,7 +1373,7 @@ html.dark-mode {
       }
 
       &.is-expanded {
-        background-color: lighten($grey-darker, 3%);
+        background-color: color.adjust($grey-darker, $lightness: 3%);
       }
     }
 
@@ -1427,7 +1428,7 @@ html.dark-mode {
 
   .endpoint-item {
     background: $grey-darker;
-    border-color: lighten($grey-dark, 10%);
+    border-color: color.adjust($grey-dark, $lightness: 10%);
   }
   
   .endpoints-empty {
@@ -1440,15 +1441,15 @@ html.dark-mode {
 
   .status-dot {
     &.dot-online {
-      background: lighten($success, 10%);
+      background: color.adjust($success, $lightness: 10%);
     }
     
     &.dot-offline {
-      background: lighten($danger, 10%);
+      background: color.adjust($danger, $lightness: 10%);
     }
     
     &.dot-unknown {
-      background: lighten($warning, 10%);
+      background: color.adjust($warning, $lightness: 10%);
     }
   }
 
@@ -1457,7 +1458,7 @@ html.dark-mode {
     color: $black;
     
     &:hover {
-      background: darken($secondary, 5%);
+      background: color.adjust($secondary, $lightness: -5%);
       box-shadow: 0 2px 4px rgba($secondary, 0.3);
     }
     
@@ -1562,8 +1563,8 @@ html.dark-mode {
     }
 
     &:hover:not(:disabled) {
-      background: lighten($grey-darker, 5%);
-      border-color: lighten($grey-dark, 10%);
+      background: color.adjust($grey-darker, $lightness: 5%);
+      border-color: color.adjust($grey-dark, $lightness: 10%);
       color: $white;
     }
     

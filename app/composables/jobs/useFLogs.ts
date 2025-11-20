@@ -148,7 +148,7 @@ export function useFLogs(
       logsByOp.value.set(opId, []);
       // Register tab in first-seen order
       tabs.value = Array.from(new Set([...tabs.value, opId]));
-      
+
       // Auto-switch to first operation tab when available (if still on system)
       if (activeTab.value === 'system' && opId !== 'system') {
         activeTab.value = opId;
@@ -289,7 +289,7 @@ export function useFLogs(
     host,
     getAuth,
     // Suppress frontend connection/retry noise entirely for flogs
-    (_log: string) => {},
+    (_log: string) => { },
     // onMessage
     (event: MessageEvent) => {
       try {
@@ -306,7 +306,7 @@ export function useFLogs(
             if (parsed && typeof parsed === 'object') {
               possibleMsg = parsed;
             }
-          } catch {}
+          } catch { }
         }
         // Handle resource progress bar messages (process-bar-start, process-bar-update, process-bar-stop)
         if (possibleMsg && typeof possibleMsg === 'object' && possibleMsg.type === 'process-bar-start') {
@@ -353,7 +353,7 @@ export function useFLogs(
           }
           return;
         }
-        
+
         if (possibleMsg && typeof possibleMsg === 'object' && possibleMsg.type === 'multi-process-bar-update' && possibleMsg.payload?.event) {
           handleProgressEvent(possibleMsg.payload.event);
           return;
@@ -411,7 +411,7 @@ export function useFLogs(
           addMessage(entry);
           return;
         }
-      } catch {}
+      } catch { }
     },
     3,
     3000,

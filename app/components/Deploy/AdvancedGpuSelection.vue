@@ -435,6 +435,7 @@ const selectHost = (host: HostInterface) => {
 </script>
 
 <style lang="scss" scoped>
+@use "sass:color";
 .advanced-gpu-selection {
   width: 100%;
 }
@@ -684,7 +685,7 @@ const selectHost = (host: HostInterface) => {
     border-color: var(--grey-darker, #333);
 
     &:hover {
-      background: lighten(#121212, 2%);
+      background: color.adjust(#121212, $lightness: 2%);
     }
 
     &.is-selected {

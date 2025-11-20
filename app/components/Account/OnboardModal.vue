@@ -127,6 +127,7 @@ const completeOnboarding = () => {
 </script>
 
 <style lang="scss" scoped>
+@use "sass:color";
 .onboarding-button {
   height: 48px !important;
   width: 100%;
@@ -147,7 +148,7 @@ const completeOnboarding = () => {
   .onboarding-button {
     &:not(:disabled) {
       &:hover {
-        background-color: lighten($black, 10%) !important;
+      background-color: color.adjust($black, $lightness: 10%) !important;
       }
     }
   }

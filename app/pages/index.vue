@@ -142,6 +142,7 @@ const isDarkMode = computed(() =>
 </script>
 
 <style lang="scss" scoped>
+@use "sass:color";
 .login-page {
   position: fixed;
   top: 0;
@@ -358,7 +359,7 @@ const isDarkMode = computed(() =>
   font-weight: bold !important;
 
   &:hover {
-    background-color: darken(#10e80c, 5%) !important;
+    background-color: color.adjust(#10e80c, $lightness: -5%) !important;
   }
 
   &.is-outlined {

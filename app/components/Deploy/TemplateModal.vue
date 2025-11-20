@@ -347,7 +347,6 @@ const communityTemplates = computed(() => {
 </script>
 
 <style lang="scss" scoped>
-@import '~/assets/styles/variables.scss';
 
 .new-badge {
   position: absolute;

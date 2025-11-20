@@ -432,6 +432,7 @@ defineExpose({
 </script>
 
 <style scoped lang="scss">
+@use "sass:color";
 .profile-dropdown {
   position: relative;
   cursor: pointer;
@@ -597,7 +598,7 @@ defineExpose({
 }
 
 .dark-mode .dropdown-item-simple:hover {
-  background-color: darken($box-background-color-dark, 5%);
+  background-color: color.adjust($box-background-color-dark, $lightness: -5%);
 }
 
 .dark-mode .dropdown-item-simple.logout-item {

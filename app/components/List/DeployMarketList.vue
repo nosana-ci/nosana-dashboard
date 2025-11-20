@@ -316,6 +316,7 @@ const selectBestMarket = async () => {
 // }, { immediate: true });
 </script>
 <style lang="scss" scoped>
+@use "sass:color";
 .columns {
   position: static;
 }
@@ -438,7 +439,7 @@ td {
   max-width: 100px;
 
   &::-webkit-progress-bar {
-    background-color: lighten($secondary, 43%);
+    background-color: color.adjust($secondary, $lightness: 43%);
   }
 }
 

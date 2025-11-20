@@ -438,6 +438,7 @@ watch(isLoading, (newValue) => {
 </script>
 
 <style lang="scss" scoped>
+@use "sass:color";
 // Define CSS Variables for theming based on global website theme
 
 // Default Light Mode Variables within the component scope
@@ -930,7 +931,7 @@ details[open] .thinking-content {
   margin-left: 4px;
   transition: background-color $transition-speed ease;
    &:hover:not(:disabled) {
-    background-color: lighten($nosana-green, 10%);
+    background-color: color.adjust($nosana-green, $lightness: 10%);
   }
   &:disabled {
     background-color: rgba($nosana-green, 0.4);
