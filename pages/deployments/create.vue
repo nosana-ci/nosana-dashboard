@@ -245,17 +245,28 @@
                 v-if="strategy === 'SCHEDULED'"
               >
                 <span class="has-text-grey is-size-7">Schedule</span>
-                <span
-                  class="has-text-weight-medium is-size-7 is-family-monospace"
-                  style="
-                    text-align: right;
-                    max-width: 60%;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                  "
-                >
-                  {{ schedule || "-" }}
-                </span>
+                <div style="text-align: right; max-width: 60%;">
+                  <div
+                    class="has-text-weight-medium is-size-7 is-family-monospace"
+                    style="
+                      overflow: hidden;
+                      text-overflow: ellipsis;
+                    "
+                  >
+                    {{ schedule || "-" }}
+                  </div>
+                  <div
+                    v-if="schedule"
+                    class="has-text-grey is-size-8 mt-1"
+                    style="
+                      overflow: hidden;
+                      text-overflow: ellipsis;
+                      white-space: nowrap;
+                    "
+                  >
+                    {{ parseCronExpression(schedule) }}
+                  </div>
+                </div>
               </div>
 
               <div
@@ -549,6 +560,9 @@
                 required
               />
             </div>
+            <div v-if="schedule" class="help has-text-grey mt-2">
+              {{ parseCronExpression(schedule) }}
+            </div>
           </div>
 
           <div class="field">
@@ -662,6 +676,7 @@ import { useEstimatedCost } from "~/composables/useMarketPricing";
 import type { Template } from "~/composables/useTemplates";
 import Loader from "~/components/Loader.vue";
 import VaultSelector from "~/components/Vault/VaultSelector.vue";
+import { parseCronExpression } from "~/utils/parseCronExpression";
 
 // Setup composables
 const { markets, getMarkets, loadingMarkets } = useMarkets();
