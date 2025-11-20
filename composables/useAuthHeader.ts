@@ -1,10 +1,16 @@
+import type { SessionDataObject } from '@sidebase/nuxt-auth/dist/runtime/types'
+
+interface AuthenticatedUser extends SessionDataObject {
+  authenticationHeader?: string;
+}
+
 export function useAuthHeader() {
   const { status, data: userData } = useAuth();
   const { nosana } = useSDK();
   const { generateAuthHeaders, hasSessionAuth } = useNosanaWallet();
 
   const creditHeader = computed<string | null>(() => {
-    const header = (userData.value as any)?.authenticationHeader as string | undefined;
+    const header = (userData.value as AuthenticatedUser)?.authenticationHeader;
     return status.value === 'authenticated' && header ? header : null;
   });
 
@@ -24,7 +30,11 @@ export function useAuthHeader() {
       return await dep.generateAuthHeader();
     }
     const headers = await generateAuthHeaders({ key: 'Authorization' });
-    return headers.get('Authorization') || headers.get('authorization') || '';
+    const authHeader = headers.get('Authorization') || headers.get('authorization');
+    if (!authHeader) {
+      throw new Error('Failed to generate authentication header');
+    }
+    return authHeader;
   };
 
   return { hasAuth, ensureAuth, creditHeader };
