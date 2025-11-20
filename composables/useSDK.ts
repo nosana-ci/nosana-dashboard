@@ -45,7 +45,9 @@ const nosana = computed(() => {
         const cookieParts = cookie.value.split(':');
         if (cookieParts.length === 3) {
           setTimeout(() => {
-            cookies.set(createAuthCookiesKey(publicKey.value!.toString()), `${cookieParts[0]}:${cookieParts[1]}:${Date.now()}`, cookieOptions);
+            const keyString = publicKey.value?.toString();
+            if (!keyString) return;
+            cookies.set(createAuthCookiesKey(keyString), `${cookieParts[0]}:${cookieParts[1]}:${Date.now()}`, cookieOptions);
           }, (cookie.options.maxAge - AUTH_COOKIE_REFRESH_BUFFER_SECONDS) * 1000);
         }
       }
@@ -67,17 +69,18 @@ const nosana = computed(() => {
   const apiKeyValue: string | undefined =
     typeof token.value === 'string' && token.value.trim().length > 0 ? token.value : undefined;
 
-  const clientConfig: Partial<ClientConfig> = {
-    solana: {
-      network: config.public.rpcUrl,
-      priority_fee: prioFee.value.staticFee,
-      dynamicPriorityFee: prioFee.value.dynamicPriorityFee,
-      // @ts-ignore - Todo: fix config typing
-      priorityFeeStrategy:
-        prioFee.value.strategy === "disable"
-          ? "medium"
-          : prioFee.value.strategy,
-    },
+  const solanaConfig: any = {
+    network: config.public.rpcUrl,
+    priority_fee: prioFee.value.staticFee,
+    dynamicPriorityFee: prioFee.value.dynamicPriorityFee,
+    priorityFeeStrategy:
+      prioFee.value.strategy === "disable"
+        ? "medium"
+        : prioFee.value.strategy,
+  };
+
+  const clientConfig: any = {
+    solana: solanaConfig,
     apiKey: apiKeyValue,
     api: {
       backend_url: config.public.apiBase,
@@ -98,7 +101,7 @@ const nosana = computed(() => {
 
           return cookies.get(createAuthCookiesKey(key));
         },
-        set: (key, _, value): void => {
+        set: (key: string, _: unknown, value: string | undefined): void => {
           if (value) {
             cookies.set(createAuthCookiesKey(key), value, cookieOptions);
           } else {
@@ -115,12 +118,7 @@ const nosana = computed(() => {
     }
   };
 
-  const client = new Client(
-    // @ts-ignore - Todo: fix config typing
-    config.public.network,
-    walletValue,
-    clientConfig
-  );
+  const client = new Client(config.public.network as any, walletValue as any, clientConfig as any);
 
   return client;
 });
