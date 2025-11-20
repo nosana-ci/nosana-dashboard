@@ -69,7 +69,7 @@ const nosana = computed(() => {
   const apiKeyValue: string | undefined =
     typeof token.value === 'string' && token.value.trim().length > 0 ? token.value : undefined;
 
-  const solanaConfig: any = {
+  const solanaConfig = {
     network: config.public.rpcUrl,
     priority_fee: prioFee.value.staticFee,
     dynamicPriorityFee: prioFee.value.dynamicPriorityFee,
@@ -77,9 +77,20 @@ const nosana = computed(() => {
       prioFee.value.strategy === "disable"
         ? "medium"
         : prioFee.value.strategy,
+  } as unknown as ClientConfig["solana"];
+
+  type AuthStore = {
+    authorization: {
+      store: {
+        get: (key: string) => Promise<string | undefined>;
+        set: (key: string, _: unknown, value?: string) => void;
+      };
+    };
   };
 
-  const clientConfig: any = {
+  type ClientConfigWithAuth = Partial<ClientConfig> & AuthStore;
+
+  const clientConfig: ClientConfigWithAuth = {
     solana: solanaConfig,
     apiKey: apiKeyValue,
     api: {
@@ -118,7 +129,10 @@ const nosana = computed(() => {
     }
   };
 
-  const client = new Client(config.public.network as any, walletValue as any, clientConfig as any);
+  const network = (config.public.network === "devnet" || config.public.network === "mainnet")
+    ? config.public.network
+    : "mainnet";
+  const client = new Client(network, walletValue as unknown as any, clientConfig as unknown as ClientConfig);
 
   return client;
 });

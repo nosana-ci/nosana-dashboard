@@ -376,7 +376,7 @@ const props = defineProps<Props>();
 const isJobCompleted = computed(() => {
   const job = (props && props.job) ? props.job : null;
   if (job && job.isCompleted !== undefined) return Boolean(job.isCompleted);
-  if (job && (job as any).timeEnd) return true;
+  if (job && job.timeEnd) return true;
   const completedStatuses = new Set(['finished', 'success']);
   if (Array.isArray(operations.value) && operations.value.length > 0) {
     const allCompleted = operations.value.every(op => completedStatuses.has(String(op.status).toLowerCase()));
