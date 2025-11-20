@@ -144,7 +144,7 @@
             </div>
           </div>
           <!-- Credit Balance for Google Auth Users -->
-          <div class="column is-3" v-if="status === 'authenticated'">
+          <div class="column is-3" v-if="canShowAccountData">
             <CreditBalance ref="creditBalanceRef" />
           </div>
           <!-- NOS Balance for Wallet Users -->
@@ -189,7 +189,7 @@
           </template>
         </div>
         
-        <!-- API Tokens Section -->
+        <!-- API Tokens Section (only for authenticated credit users) -->
         <ApiKeys class="pb-5" v-if="status === 'authenticated'" />
         
         <!-- For Credit Users: Show Deployments -->
@@ -216,7 +216,7 @@
         <div v-else-if="connected">
           <div class="is-flex is-justify-content-space-between is-align-items-center mb-4">
             <h3 class="title is-4 mb-0">Job History</h3>
-            <nuxt-link to="/deploy" class="button is-dark">
+            <nuxt-link to="/deployments/create" class="button is-dark">
               <span class="icon">
                 <FontAwesomeIcon :icon="faPlus" />
               </span>
@@ -236,7 +236,7 @@
             <h3 class="title is-4 mb-0">Welcome to Nosana</h3>
             <div class="mb-4"></div>
             <div class="equal-height-boxes">
-              <nuxt-link to="/deploy" class="box has-text-black p-2 mb-2 is-block">
+              <nuxt-link to="/deployments/create" class="box has-text-black p-2 mb-2 is-block">
                 <div class="is-flex is-align-items-start" style="margin: 8px 8px 0 8px;">
                   <RocketIcon style="width: 16px; height: 16px; fill: #10E80C; margin-right: 0.5rem; margin-top: 4px;" />
                   <div>
@@ -436,6 +436,9 @@ const showOnboardModal = computed(() =>
 const totalDeployments = ref(0);
 const totalJobs = ref(0);
 
+// (debug status watcher removed)
+
+
 const activeAddress = computed(() => {
   if (status.value === 'authenticated' && userData.value?.generatedAddress) {
     return userData.value.generatedAddress;
@@ -464,6 +467,8 @@ const canShowAccountData = computed(() => {
   }
   return status.value === 'authenticated' || connected.value;
 });
+
+// (debug canShowAccountData watcher removed)
 
 // Define type for spending history results item
 interface MonthlyResult {

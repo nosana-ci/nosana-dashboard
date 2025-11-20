@@ -207,11 +207,7 @@
                   <tr>
                     <td>Container timeout</td>
                     <td>
-                      {{ Math.floor(deployment.timeout / 60) }} hours
-                      <span v-if="runningJobDurationSeconds !== null" class="has-text-grey is-size-7">
-                        – running 
-                        <SecondsFormatter :seconds="runningJobDurationSeconds" :showSeconds="true" />
-                      </span>
+                      <SecondsFormatter :seconds="deployment.timeout * 60" :showSeconds="false" />
                     </td>
                   </tr>
                   
@@ -305,6 +301,7 @@
                     <th>Name</th>
                     <th>Revision</th>
                     <th>Status</th>
+                    <th>Duration</th>
                     <th>Created on</th>
                     <th></th>
                   </tr>
@@ -322,6 +319,12 @@
                       </td>
                       <td>
                         <JobStatus :status="job.state || 0" />
+                      </td>
+                      <td>
+                        <span v-if="getJobDuration(job.job)">
+                          <SecondsFormatter :seconds="getJobDuration(job.job)" :showSeconds="true" />
+                        </span>
+                        <span v-else>-</span>
                       </td>
                       <td>{{ formatDate(job.created_at) }}</td>
                       <td>
@@ -353,6 +356,7 @@
                     <th>Name</th>
                     <th>Revision</th>
                     <th>Status</th>
+                    <th>Duration</th>
                     <th>Created on</th>
                     <th></th>
                   </tr>
@@ -370,6 +374,12 @@
                       </td>
                       <td>
                         <JobStatus :status="job.state || 0" />
+                      </td>
+                      <td>
+                        <span v-if="getJobDuration(job.job)">
+                          <SecondsFormatter :seconds="getJobDuration(job.job)" :showSeconds="true" />
+                        </span>
+                        <span v-else>-</span>
                       </td>
                       <td>{{ formatDate(job.created_at) }}</td>
                       <td>
@@ -1341,6 +1351,7 @@ const loadDeployment = async (silent = false) => {
           const { data } = await useAPI(`/api/jobs/${job.job}`);
           if (data.value?.state !== undefined) {
             jobStates.value[job.job] = data.value.state;
+            allJobsData.value[job.job] = data.value;
           }
         } catch (err) {
           // Silent polling shouldn't spam console warnings
@@ -1406,6 +1417,7 @@ const statusHelpText = computed(() => {
 // Note: Deployment jobs don't include state info, so we show all jobs
 // Users can click through to see individual job details
 const jobStates = ref<Record<string, number>>({});
+const allJobsData = ref<Record<string, any>>({});
 
 // SSE-based endpoint status aggregation per job
 const jobEndpointsMap = ref<Map<string, Map<string, any>>>(new Map());
@@ -1524,13 +1536,36 @@ const runningJobDurationSeconds = computed<number | null>(() => {
   return Math.max(0, Math.floor(nowTs.value / 1000) - js);
 });
 
+// Function to get duration for individual jobs
+const getJobDuration = (jobId: string): number | null => {
+  const jobState = jobStates.value[jobId];
+  const jobData = allJobsData.value[jobId];
+  
+  if (!jobData?.timeStart) return null;
+  
+  const timeStart = jobData.timeStart;
+  const timeFinished = jobData.timeFinished;
+  
+  // For completed jobs, use timeFinished - timeStart
+  if (timeFinished && jobState >= 2) {
+    return Math.max(0, timeFinished - timeStart);
+  }
+  
+  // For running jobs, use current time - timeStart
+  if (jobState === 1) {
+    return Math.max(0, Math.floor(nowTs.value / 1000) - timeStart);
+  }
+  
+  return null;
+};
+
 const activeJobs = computed((): DeploymentJob[] => {
   const jobs = (deployment.value?.jobs as DeploymentJob[]) || [];
-  // Enrich jobs with fetched states and reverse to show most recent first
+  // Enrich jobs with fetched states
   const enrichedJobs = jobs.map(job => ({
     ...job,
     state: jobStates.value[job.job] ?? 0
-  })).reverse();
+  }));
   
   // Filter for running jobs (states: QUEUED=0, RUNNING=1)
   return enrichedJobs.filter(job => job.state === 0 || job.state === 1);
@@ -1538,11 +1573,11 @@ const activeJobs = computed((): DeploymentJob[] => {
 
 const historicalJobs = computed((): DeploymentJob[] => {
   const jobs = (deployment.value?.jobs as DeploymentJob[]) || [];
-  // Enrich jobs with fetched states and reverse to show most recent first
+  // Enrich jobs with fetched states
   const enrichedJobs = jobs.map(job => ({
     ...job,
     state: jobStates.value[job.job] ?? 0
-  })).reverse();
+  }));
   
   // Filter for completed/stopped jobs (states: DONE=2, STOPPED=3, TIMEOUT=4, ERROR=5)
   return enrichedJobs.filter(job => job.state >= 2);

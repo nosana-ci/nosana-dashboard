@@ -195,6 +195,42 @@
   margin-bottom: 0 !important;
 }
 
+// Wallet authentication banner
+.wallet-auth-banner {
+  border-left: 4px solid $secondary;
+  
+  .banner-icon {
+    color: $secondary;
+    flex-shrink: 0;
+  }
+  
+  .banner-title {
+    font-weight: $weight-semibold;
+    margin-bottom: 0.25rem;
+    color: $text;
+  }
+  
+  .banner-subtitle {
+    font-size: $size-7;
+    color: $text-dark;
+    line-height: 1.4;
+  }
+  
+  .banner-actions {
+    gap: 0.5rem;
+  }
+}
+
+.dark-mode .wallet-auth-banner {
+  .banner-title {
+    color: $white;
+  }
+  
+  .banner-subtitle {
+    color: $grey-light;
+  }
+}
+
 .dark-mode {
   .dropdown-menu {
     .dropdown-content {
@@ -759,8 +795,8 @@
       }
 
       &.is-active {
-        background-color: $white-bis;
-        color: black;
+        background-color: $grey-darker;
+        color: $grey;
       }
     }
   }

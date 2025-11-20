@@ -11,7 +11,19 @@
     </div>
     <div class="menu">
       <ul class="menu-list is-size-5">
-        <li v-if="connected || status === 'authenticated'">
+        <li>
+          <nuxt-link
+            :to="deployRoute"
+            class="deploy-cta"
+            @click="showMenu = false"
+          >
+            <span class="icon is-small mr-4">
+              <JobBuilderIcon  />
+            </span>
+            <span>Deploy</span>
+          </nuxt-link>
+        </li>
+        <li v-if="connected || status === 'authenticated' || status === 'loading'">
           <nuxt-link
             to="/account/deployer"
             active-class="is-active"
@@ -35,19 +47,7 @@
             <span>Login</span>
           </a>
         </li>
-        <li>
-          <nuxt-link
-            to="/deployments/create"
-            active-class="is-active"
-            @click="showMenu = false"
-          >
-            <span class="icon is-small mr-4">
-              <JobBuilderIcon  />
-            </span>
-            <span>Deploy</span>
-          </nuxt-link>
-        </li>
-        <li>
+        <li v-if="status === 'authenticated'">
           <nuxt-link
             to="/deployments"
             active-class="is-active"
@@ -61,7 +61,7 @@
         </li>
         <li class="has-dropdown">
           <a class="menu-list-link sidebar-link" @click="toggleExplorer"
-            :class="{ 'is-active': $route.path === '/explorer' || $route.path.includes('/markets') || ($route.path === '/account/host' && status !== 'authenticated') || $route.path === '/stake'}"
+            :class="{ 'is-active': $route.path === '/explorer' || $route.path.includes('/markets') || ($route.path === '/account/host' && !isAuthenticatedStable) || $route.path === '/stake'}"
           >
             <div
               class="is-flex is-align-items-center"
@@ -107,7 +107,7 @@
                 GPUs
               </nuxt-link>
             </li>
-            <li v-if="status !== 'authenticated'">
+            <li v-if="!isAuthenticatedStable">
               <a
                 v-if="!connected"
                 @click="openWalletModal($route.fullPath); showMenu = false"
@@ -181,7 +181,7 @@
 
       <div class="is-flex is-align-items-center">
         <!-- Simple mobile user avatar -->
-        <div v-if="connected || status === 'authenticated'" class="dropdown mobile-avatar-dropdown mr-3" :class="{ 'is-active': showMobileDropdown }">
+        <div v-if="connected || status === 'authenticated' || status === 'loading'" class="dropdown mobile-avatar-dropdown mr-3" :class="{ 'is-active': showMobileDropdown }">
           <div class="dropdown-trigger">
             <span class="mobile-avatar-trigger" @click="showMobileDropdown = !showMobileDropdown">
               <template v-if="connected && wallet">
@@ -243,6 +243,23 @@ const { status, signOut, data } = useAuth();
 const route = useRoute();
 const router = useRouter();
 const { openBothModal, openWalletModal } = useLoginModal();
+
+const isAuthenticatedStable = ref(status.value === 'authenticated')
+watch(status, (newStatus) => {
+  if (newStatus === 'authenticated') {
+    isAuthenticatedStable.value = true
+  } else if (newStatus === 'unauthenticated') {
+    isAuthenticatedStable.value = false
+  }
+  // if loading: keep previous definitive state
+}, { flush: 'sync' })
+
+// Computed property for deploy route - now unified to deployments/create
+const deployRoute = computed(() => {
+  // Direct all users to deployments/create for unified experience
+  // The page will handle wallet auth detection with a banner
+  return '/deployments/create';
+});
 
 
 // Check if the current route is an explorer page
@@ -350,10 +367,31 @@ const getWalletAddress = () => {
     opacity: 0.5;
   }
 
-  .is-active {
+  a.is-active {
+    background-color: $menu-item-hover-background-color;
+    color: $text !important;
+    
+    .icon {
+      color: $text;
+      opacity: 1;
+    }
+    
+    span {
+      color: $text !important;
+    }
+  }
+  
+  .deploy-cta {
+    background-color: $menu-item-active-background-color;
+    color: $menu-item-active-color !important;
+    
     .icon {
       color: $secondary;
       opacity: 1;
+    }
+    
+    span:not(.icon) {
+      color: $menu-item-active-color !important;
     }
   }
 }
@@ -387,6 +425,8 @@ const getWalletAddress = () => {
     }
 
     &.is-active {
+      background-color: $menu-item-hover-background-color;
+      
       div {
         opacity: 1;
         color: inherit;
@@ -395,11 +435,11 @@ const getWalletAddress = () => {
       .icon,
       span {
         opacity: 1;
-        color: white;
+        color: $text;
       }
 
       span.icon:first-of-type {
-        color: $secondary;
+        color: $text;
       }
     }
   }
@@ -453,6 +493,35 @@ const getWalletAddress = () => {
 }
 
 .dark-mode {
+  .deploy-cta {
+    background-color: $white;
+    color: $text !important;
+    
+    .icon {
+      color: $secondary;
+    }
+    
+    span:not(.icon) {
+      color: $text !important;
+    }
+  }
+  
+  .menu-list {
+    a.is-active {
+      background-color: $grey-darker !important;
+      color: $white !important;
+      
+      .icon, 
+      span {
+        color: $white !important;
+      }
+      
+      span.icon:first-of-type {
+        color: $white !important;
+      }
+    }
+  }
+  
   .sidebar-link {
     color: $grey-lighter;
 
@@ -461,15 +530,15 @@ const getWalletAddress = () => {
     }
 
     &.is-active {
-      color: $secondary;
+      background-color: $grey-darker;
       
       .icon, 
       span {
-        color: $black !important;
+        color: $white !important;
       }
       
       span.icon:first-of-type {
-        color: $secondary !important;
+        color: $white !important;
       }
     }
   }
@@ -493,15 +562,15 @@ const getWalletAddress = () => {
   }
 
   .submenu-link {
-    color: #d8d8d8 !important;
+    color: $grey-lighter !important;
     
     &:hover {
       opacity: 1 !important;
-      background-color: #363636 !important;
+      background-color: $grey-darker !important;
     }
 
     &.is-active {
-      background-color: #363636 !important;
+      background-color: $grey-darker !important;
     }
   }
 }

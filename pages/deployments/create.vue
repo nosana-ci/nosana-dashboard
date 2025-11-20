@@ -8,6 +8,38 @@
       v-model="showSettingsModal"
     ></TopBar>
 
+    <!-- Wallet Auth Banner -->
+    <div 
+      v-if="shouldShowWalletAuthBanner"
+      class="notification is-light wallet-auth-banner mb-5"
+    >
+      <div class="is-flex is-align-items-center is-justify-content-space-between">
+        <div class="is-flex is-align-items-center">
+          <WalletIcon class="banner-icon mr-3" :size="24" />
+          <div>
+            <p class="banner-title">Wallet Authentication Detected</p>
+            <p class="banner-subtitle">
+              You're connected with a Solana wallet. To deploy using this interface, please create an account or use our legacy deploy page.
+            </p>
+          </div>
+        </div>
+        <div class="is-flex is-flex-direction-column banner-actions ml-4">
+          <button 
+            class="button is-small is-secondary mb-2"
+            @click="handleLoginClick"
+          >
+            Create Account
+          </button>
+          <nuxt-link 
+            to="/deploy" 
+            class="button is-small is-outlined"
+          >
+            Legacy Deploy
+          </nuxt-link>
+        </div>
+      </div>
+    </div>
+
     <!-- Show loader for external data only; editor always visible -->
     <Loader v-if="loadingTemplates || loadingMarkets" />
 
@@ -68,12 +100,9 @@
             <div class="mb-4">
               <p class="has-text-grey is-size-7 mb-2" style="text-transform: uppercase; letter-spacing: 0.5px; font-weight: 500;">Cost</p>
               <h3 class="title is-3 mb-1" v-if="selectedMarket">
-                ${{ (hourlyPrice * replicas * timeout).toFixed(3) }}
+                ${{ (hourlyPrice * replicas).toFixed(3) }}/h
               </h3>
               <p class="has-text-grey" v-else>Select a GPU to see pricing</p>
-              <p class="has-text-grey is-size-7" v-if="selectedMarket">
-                ${{ (hourlyPrice * replicas).toFixed(3) }}/hour
-              </p>
             </div>
 
             <hr style="margin: 1.5rem 0;" />
@@ -83,16 +112,16 @@
               <p class="has-text-grey is-size-7 mb-3" style="text-transform: uppercase; letter-spacing: 0.5px; font-weight: 500;">Configuration</p>
               
               <div class="mb-2" style="display: flex; justify-content: space-between; align-items: start;">
-                <span class="has-text-grey is-size-7">Deployment</span>
+                <span class="has-text-grey is-size-7">Deployment name</span>
                 <span class="has-text-weight-medium is-size-7" style="text-align: right; max-width: 60%; overflow: hidden; text-overflow: ellipsis;">
                   {{ deploymentName || '-' }}
                 </span>
               </div>
               
               <div class="mb-2" style="display: flex; justify-content: space-between; align-items: start;">
-                <span class="has-text-grey is-size-7">Model</span>
+                <span class="has-text-grey is-size-7">Container(s)</span>
                 <span class="has-text-weight-medium is-size-7" style="text-align: right; max-width: 60%; overflow: hidden; text-overflow: ellipsis;">
-                  {{ computedJobTitle || '-' }}
+                  {{ computedDeploymentName || '-' }}
                 </span>
               </div>
               
@@ -110,7 +139,14 @@
                 </span>
               </div>
 
-              <div class="mb-2" style="display: flex; justify-content: space-between; align-items: start;" v-if="replicas && replicas > 1">
+              <div class="mb-2" style="display: flex; justify-content: space-between; align-items: start;" v-if="strategy === 'SCHEDULED'">
+                <span class="has-text-grey is-size-7">Schedule</span>
+                <span class="has-text-weight-medium is-size-7 is-family-monospace" style="text-align: right; max-width: 60%; overflow: hidden; text-overflow: ellipsis;">
+                  {{ schedule || '-' }}
+                </span>
+              </div>
+
+              <div class="mb-2" style="display: flex; justify-content: space-between; align-items: start;">
                 <span class="has-text-grey is-size-7">Replicas</span>
                 <span class="has-text-weight-medium is-size-7" style="text-align: right; max-width: 60%; overflow: hidden; text-overflow: ellipsis;">
                   {{ replicas }}
@@ -174,9 +210,12 @@
                     (hourlyPrice * replicas * timeout).toFixed(3) 
                   }}, have ${{ creditBalance.toFixed(2) }}
                 </p>
-                <p class="has-text-grey is-size-7">
-                  Claim credit codes on your account page
-                </p>
+                <button 
+                  class="button is-small is-outlined is-fullwidth"
+                  @click="goToClaimCredits"
+                >
+                  Claim Credit Codes
+                </button>
               </div>
             </ClientOnly>
           </div>
@@ -271,12 +310,11 @@
                 </select>
               </div>
             </div>
-            <p class="help">Choose how your deployment manages job instances</p>
           </div>
           
           <div v-if="strategy === 'SCHEDULED'" class="field">
             <label class="label">
-              Schedule (Cron Expression)
+              Schedule
               <span class="icon is-small has-tooltip-arrow has-tooltip-right" style="position: relative; z-index: 3000;" data-tooltip="Cron expression for scheduling jobs">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                   <circle cx="12" cy="12" r="10" stroke-width="2"/>
@@ -293,7 +331,6 @@
                 required
               />
             </div>
-            <p class="help">Define when jobs should run using cron syntax</p>
           </div>
           
           <div class="field">
@@ -316,13 +353,12 @@
                 @blur="enforceReplicasMax"
               />
             </div>
-            <p class="help">Number of parallel instances to run (1-100)</p>
           </div>
           
           <div class="field">
             <label class="label">
-              Container Timeout (hours)
-              <span class="icon is-small has-tooltip-arrow has-tooltip-right" style="position: relative; z-index: 3000;" data-tooltip="Maximum runtime before container auto-shutdown">
+              Container Timeout
+              <span class="icon is-small has-tooltip-arrow has-tooltip-right" style="position: relative; z-index: 3000;" data-tooltip="Maximum runtime before container auto-shutdown (minimum 1 hour)">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                   <circle cx="12" cy="12" r="10" stroke-width="2"/>
                   <path d="M12 16v-4m0-4h.01" stroke-width="2" stroke-linecap="round"/>
@@ -333,11 +369,12 @@
               <input
                 class="input"
                 type="number"
-                v-model.number="timeout"
+                v-model="timeout"
                 min="1"
+                step="0.1"
+                @blur="enforceTimeoutMin"
               />
             </div>
-            <p class="help">Maximum runtime before auto-shutdown</p>
           </div>
         </section>
         <footer class="modal-card-foot" style="justify-content: flex-end;">
@@ -355,7 +392,9 @@ import JsonEditorVue from "json-editor-vue";
 import { Mode, ValidationSeverity } from "vanilla-jsoneditor";
 import "vanilla-jsoneditor/themes/jse-theme-dark.css";
 import { useToast } from "vue-toastification";
+import { useWallet } from "solana-wallets-vue";
 import TopBar from "~/components/TopBar.vue";
+import WalletIcon from "~/components/WalletIcon.vue";
 import { useRouter, useRoute } from "vue-router";
 import { useDebounceFn, useScrollLock } from "@vueuse/core";
 import { useEstimatedCost } from "~/composables/useMarketPricing";
@@ -404,14 +443,14 @@ const router = useRouter();
 const route = useRoute();
 const toast = useToast();
 const { status, data: userData, token } = useAuth();
+const { connected } = useWallet();
 const loading = ref(false);
 
 // Initialize redirect composable for authentication flow
 useRedirect();
 
-// Scroll lock for README modal
-const scrollLockTarget = ref<HTMLElement | null>(null);
-const isLocked = useScrollLock(scrollLockTarget);
+// Global modal scroll lock
+const { lockScroll, unlockScroll } = useModalScrollLock();
 
 // State
 const config = useRuntimeConfig();
@@ -582,6 +621,33 @@ const computedJobTitle = computed(() => {
   return "Custom Job Definition";
 });
 
+const computedDeploymentName = computed(() => {
+  // Collect all Docker images from job definition
+  const images = new Set<string>();
+  
+  if (jobDefinition.value?.ops) {
+    jobDefinition.value.ops.forEach((op: any) => {
+      if (op.args?.image) {
+        images.add(op.args.image);
+      }
+    });
+  }
+  
+  // If we have images, return them as a comma-separated list
+  if (images.size > 0) {
+    return Array.from(images).join(', ');
+  }
+  
+  // Fallback to template name or job ID
+  if (selectedTemplate.value && selectedTemplate.value.id !== "custom") {
+    return selectedTemplate.value.name;
+  }
+  if (jobDefinition.value?.ops?.[0]?.id) {
+    return jobDefinition.value.ops[0].id;
+  }
+  return "Custom Deployment";
+});
+
 const templateNames = computed(() => {
   const names = new Set<string>();
   (groupedTemplates.value || []).forEach((t: Template) => {
@@ -671,6 +737,11 @@ const isAuthenticated = computed(() => {
   return status.value === "authenticated" && token.value;
 });
 
+// Check if user has wallet auth but not Google SSO (should show banner)
+const shouldShowWalletAuthBanner = computed(() => {
+  return connected.value && status.value !== "authenticated";
+});
+
 const canCreateDeployment = computed(
   () =>
     selectedMarket.value !== null &&
@@ -731,8 +802,8 @@ const createDeployment = async () => {
     toast.error("Number of replicas cannot exceed 100");
     return;
   }
-  if (timeout.value <= 0) {
-    toast.error("Timeout must be greater than 0");
+  if (timeout.value < 1) {
+    toast.error("Timeout must be at least 1 hour");
     return;
   }
 
@@ -786,10 +857,24 @@ const enforceReplicasMax = () => {
   }
 };
 
+const enforceTimeoutMin = () => {
+  const numValue = parseFloat(timeout.value as any) || 0;
+  if (numValue < 1) {
+    timeout.value = 1;
+  } else {
+    timeout.value = numValue;
+  }
+};
+
 // Handle login click
 const handleLoginClick = () => {
   const { openBothModal } = useLoginModal();
   openBothModal();
+};
+
+// Navigate to account page
+const goToClaimCredits = () => {
+  navigateTo('/account/deployer');
 };
 
 // Template selection handling
@@ -899,10 +984,6 @@ watch(
 
 // Mounted hook
 onMounted(async () => {
-  if (process.client) {
-    scrollLockTarget.value = document.documentElement;
-  }
-
   if (!markets.value && !loadingMarkets.value) {
     await getMarkets();
   }
@@ -941,15 +1022,31 @@ const selectTemplateFromModal = (template: Template) => {
   showTemplateModal.value = false;
 };
 
-// Watch for README modal state to control body scroll
-watch(showReadmeModal, (isOpen) => {
-  isLocked.value = isOpen;
-});
 
 // Watch for template modal state to control body scroll
 watch(showTemplateModal, (isOpen) => {
-  if (!showReadmeModal.value) {
-    isLocked.value = isOpen;
+  if (isOpen) {
+    lockScroll('template-modal');
+  } else {
+    unlockScroll('template-modal');
+  }
+});
+
+// Watch for deployment settings modal state to control body scroll
+watch(showDeploymentSettingsModal, (isOpen) => {
+  if (isOpen) {
+    lockScroll('deployment-settings-modal');
+  } else {
+    unlockScroll('deployment-settings-modal');
+  }
+});
+
+// Watch for readme modal state to control body scroll
+watch(showReadmeModal, (isOpen) => {
+  if (isOpen) {
+    lockScroll('readme-modal');
+  } else {
+    unlockScroll('readme-modal');
   }
 });
 </script>

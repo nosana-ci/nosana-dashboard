@@ -13,6 +13,14 @@
               </NuxtLink>
               <div class="header-title-section">
                 <p class="subtitle is-7 has-text-grey is-family-monospace mb-0">{{ props.job.address }}</p>
+                <div v-if="props.job.timeStart || jobDurationData" class="is-size-7 has-text-grey mt-1">
+                  <span v-if="props.job.timeStart && formatStartTime">
+                    Started: {{ formatStartTime(props.job.timeStart) }}
+                  </span>
+                  <span v-if="jobDurationData" class="ml-2">
+                    Duration: <SecondsFormatter :seconds="jobDurationData.actualSeconds" :showSeconds="true" />
+                  </span>
+                </div>
               </div>
               <StatusTag class="ml-4" :status="props.job.state" />
             </div>
@@ -89,15 +97,7 @@
               <table class="table is-fullwidth mb-0">
               <tbody>
                 <tr>
-                  <td class="has-min-width-250">Job address</td>
-                  <td>
-                    <a :href="`https://solscan.io/account/${props.job.address}`" target="_blank" class="has-text-link is-family-monospace">
-                      {{ props.job.address }}
-                    </a>
-                  </td>
-                </tr>
-                <tr>
-                  <td>Deployer address</td>
+                  <td>Deployer</td>
                   <td>
                     <nuxt-link :to="`/deployer/${props.job.project}`" class="has-text-link is-family-monospace">
                       {{ props.job.project?.toString() }}
@@ -105,7 +105,7 @@
                   </td>
                 </tr>
                 <tr>
-                  <td>Node address</td>
+                  <td>Node</td>
                   <td>
                     <span v-if="props.job.node && props.job.node !== '11111111111111111111111111111111'">
                       <nuxt-link :to="`/host/${props.job.node}`" class="has-text-link is-family-monospace">
@@ -116,7 +116,7 @@
                   </td>
                 </tr>
                 <tr v-if="!(props.hideFields?.marketAddress)">
-                  <td>Market address</td>
+                  <td>Market</td>
                   <td>
                     <nuxt-link :to="`/markets/${props.job.market}`" class="has-text-link is-family-monospace">
                       {{ props.job.market?.toString() }}
@@ -125,83 +125,38 @@
                 </tr>
                 <tr v-if="!(props.hideFields?.price)">
                   <td>Price</td>
-                  <td>{{ formatPrice(props.job.price, props.nosPrice) }}</td>
+                  <td v-html="formatPrice(props.job.price, props.nosPrice)"></td>
                 </tr>
-                <tr v-if="combinedSpecs?.gpuCount">
-                  <td>GPU Count</td>
-                  <td>{{ combinedSpecs.gpuCount }}</td>
+                <tr v-if="gpuSummary">
+                  <td>GPU</td>
+                  <td>{{ gpuSummary }}</td>
                 </tr>
-                <tr v-if="combinedSpecs?.gpuModel">
-                  <td>GPU Model</td>
-                  <td>{{ combinedSpecs.gpuModel }}</td>
-                </tr>
-                <tr v-if="combinedSpecs?.vram">
-                  <td>VRAM</td>
-                  <td>{{ combinedSpecs.vram }} GB</td>
-                </tr>
-                <tr v-if="combinedSpecs?.cpuModel">
-                  <td>CPU Model</td>
-                  <td>{{ combinedSpecs.cpuModel }}</td>
-                </tr>
-                <tr v-if="combinedSpecs?.cudaVersion">
-                  <td>CUDA Driver</td>
-                  <td>{{ combinedSpecs.cudaVersion }}</td>
-                </tr>
-                <tr v-if="combinedSpecs?.download">
-                  <td>Internet Speed</td>
-                  <td>{{ combinedSpecs.download }} Mbps</td>
-                </tr>
-                
-                <!-- Additional details from Quick Details and More Details -->
-                <tr v-if="jobDurationData">
-                  <td>Duration</td>
-                  <td>
-                    <span v-if="jobDurationData.actualSeconds > 0">
-                      <SecondsFormatter :seconds="jobDurationData.actualSeconds" :showSeconds="true" />
-                      <span v-if="jobDurationData.maxDurationHours" class="has-text-grey"> (max {{ jobDurationData.maxDurationHours }})</span>
-                    </span>
-                    <span v-else-if="jobDurationData.maxDurationHours" class="has-text-grey">
-                      (max {{ jobDurationData.maxDurationHours }})
-                    </span>
-                  </td>
-                </tr>
-                <tr v-if="countryInfo || isQueuedJob">
-                  <td>Country</td>
-                  <td>
-                    <span v-if="countryInfo">{{ countryInfo }}</span>
-                    <span v-else class="has-text-grey">--</span>
-                  </td>
+                <tr v-if="combinedSpecs?.cpu">
+                  <td>CPU</td>
+                  <td>{{ combinedSpecs.cpu }}</td>
                 </tr>
                 <tr v-if="combinedSpecs?.ram">
                   <td>RAM</td>
-                  <td>{{ combinedSpecs.ram }} MB</td>
+                  <td>{{ formatRam(combinedSpecs.ram) }}</td>
                 </tr>
                 <tr v-if="combinedSpecs?.diskSpace">
-                  <td>Disk Space</td>
+                  <td>Diskspace</td>
                   <td>{{ combinedSpecs.diskSpace }} GB</td>
                 </tr>
-                <tr v-if="combinedSpecs?.upload">
-                  <td>Upload Speed</td>
-                  <td>{{ combinedSpecs.upload }} Mbps</td>
-                </tr>
-                <tr v-if="combinedSpecs?.nvmlVersion">
-                  <td>NVIDIA Driver</td>
-                  <td>{{ combinedSpecs.nvmlVersion }}</td>
-                </tr>
-                <tr v-if="combinedSpecs?.systemEnvironment">
-                  <td>System Environment</td>
-                  <td>{{ combinedSpecs.systemEnvironment }}</td>
-                </tr>
-                <tr v-if="props.job.timeStart && formatStartTime">
-                  <td>Started</td>
+                <tr v-if="combinedSpecs?.country || isQueuedJob">
+                  <td>Country</td>
                   <td>
-                    {{ formatStartTime(props.job.timeStart) }}
-                    <span class="has-text-grey is-size-7"> ({{ formatTimeAgo(props.job.timeStart) }})</span>
+                    <span v-if="combinedSpecs?.country">{{ formatCountry(combinedSpecs.country) }}</span>
+                    <span v-else class="has-text-grey">--</span>
                   </td>
                 </tr>
-                <tr v-if="marketName && !(props.hideFields?.gpuPoolName)">
-                  <td>GPU Pool Name</td>
-                  <td>{{ marketName }}</td>
+                <tr v-if="combinedSpecs?.download || combinedSpecs?.upload || combinedSpecs?.ping">
+                  <td>Network</td>
+                  <td v-html="formatNetwork(combinedSpecs?.download, combinedSpecs?.upload, combinedSpecs?.ping)"></td>
+                </tr>
+                <tr>
+                  <td>OS</td>
+                  <td>{{ combinedSpecs?.systemEnvironment || '--' }}</td>
                 </tr>
               </tbody>
             </table>
@@ -434,8 +389,6 @@ interface NodeSpecs {
 }
 
 interface CombinedSpecs {
-  nodeAddress: string | unknown;
-  marketAddress?: string;
   ram: number;
   diskSpace: number;
   cpu?: string;
@@ -443,14 +396,8 @@ interface CombinedSpecs {
   download?: number;
   upload?: number;
   ping?: number;
-  gpus: Array<{
-    gpu: string;
-    memory?: number;
-    architecture?: string;
-  }>;
+  gpu?: string;
   cudaVersion?: string;
-  nvmlVersion?: string;
-  nodeVersion?: string;
   systemEnvironment?: string | null;
 }
 
@@ -641,50 +588,9 @@ const { data: jobNodeReport, pending: loadingJobNodeReport } = useAPI(
   }
 );
 
-const actualGpuInfo = computed(() => {
-  // Try to get GPU info from node info first
-  if (nodeInfo.value?.info?.gpus?.devices?.length) {
-    const gpu = nodeInfo.value.info.gpus.devices[0];
-    return gpu.name || "GPU";
-  }
 
-  // Fallback to node specs
-  if (nodeSpecs.value?.gpus?.length) {
-    return nodeSpecs.value.gpus[0].gpu || "GPU";
-  }
 
-  return "GPU";
-});
 
-const countryInfo = computed(() => {
-  // Try to get country from node info first
-  if (nodeInfo.value?.info?.country) {
-    try {
-      return (
-        new Intl.DisplayNames(["en"], { type: "region" }).of(
-          nodeInfo.value.info.country
-        ) || nodeInfo.value.info.country
-      );
-    } catch {
-      return nodeInfo.value.info.country;
-    }
-  }
-
-  // Fallback to node specs
-  if (nodeSpecs.value?.country) {
-    try {
-      return (
-        new Intl.DisplayNames(["en"], { type: "region" }).of(
-          nodeSpecs.value.country
-        ) || nodeSpecs.value.country
-      );
-    } catch {
-      return nodeSpecs.value.country;
-    }
-  }
-
-  return null;
-});
 
 const jobDataForPriceComponent = computed(() => {
   return {
@@ -733,58 +639,94 @@ const formatDateRelative = (timestamp: number) => {
 
 // Helper function to format price
 const formatPrice = (price: number, nosPrice: number) => {
-  if (!price || !nosPrice) return '--';
-  const usdPrice = (price * nosPrice).toFixed(4);
-  return `$${usdPrice}`;
+  const timeout = props.job?.timeout ?? 0;
+  if (!price || !timeout) return '--';
+  const totalNos = (price * timeout) / 1e6;
+  if (!nosPrice) return `NOS: ${totalNos.toFixed(4)}`;
+  const usdPrice = (totalNos * nosPrice).toFixed(4);
+  return `NOS: ${totalNos.toFixed(4)} <br> USD: $${usdPrice}`;
 };
 
 watch(
   [() => props.job, currentTime],
   ([newJob, newCurrentTimeVal]) => {
-    if (newJob.timeStart === undefined || newJob.timeout === undefined) {
+    if (newJob.timeStart === undefined) {
       jobDurationData.value = null;
       return;
     }
 
-    const maxDurationInHoursFormatted = formatMaxDurationInHours(
-      newJob.timeout
-    );
+    const maxDurationInHoursFormatted =
+      typeof newJob.timeout === 'number'
+        ? formatMaxDurationInHours(newJob.timeout)
+        : undefined;
 
     if (newJob.isCompleted && newJob.timeEnd !== undefined) {
       const actualDuration = newJob.timeEnd - newJob.timeStart;
-      jobDurationData.value = {
-        actualSeconds: actualDuration,
-        maxDurationHours: maxDurationInHoursFormatted
-      };
+      const data: { actualSeconds: number; maxDurationHours?: string } = { actualSeconds: actualDuration };
+      if (maxDurationInHoursFormatted) data.maxDurationHours = maxDurationInHoursFormatted;
+      jobDurationData.value = data;
     } else if (newJob.isRunning && newJob.timeStart) {
       const currentDuration = newCurrentTimeVal - newJob.timeStart;
-      jobDurationData.value = {
-        actualSeconds: currentDuration,
-        maxDurationHours: maxDurationInHoursFormatted
-      };
+      const data: { actualSeconds: number; maxDurationHours?: string } = { actualSeconds: currentDuration };
+      if (maxDurationInHoursFormatted) data.maxDurationHours = maxDurationInHoursFormatted;
+      jobDurationData.value = data;
     } else if (newJob.state === 0 && newJob.timeStart === 0) {
-      // Queued - show only max duration
-      jobDurationData.value = {
-        actualSeconds: 0,
-        maxDurationHours: maxDurationInHoursFormatted
-      };
+      jobDurationData.value = null;
     } else {
       // Fallback or other states
-      jobDurationData.value = {
-        actualSeconds: 0,
-        maxDurationHours: maxDurationInHoursFormatted
-      };
+      const data: { actualSeconds: number; maxDurationHours?: string } = { actualSeconds: 0 };
+      if (maxDurationInHoursFormatted) data.maxDurationHours = maxDurationInHoursFormatted;
+      jobDurationData.value = data;
     }
   },
   { immediate: true, deep: true }
 );
 
-const cleanGpuName = computed(() => {
-  if (actualGpuInfo.value.startsWith("NVIDIA GeForce")) {
-    return actualGpuInfo.value.substring(15);
+
+
+const gpuSummary = computed(() => {
+  const model = combinedSpecs.value?.gpu || '';
+  if (!model) return null;
+  let shortModel = model;
+  if (shortModel.startsWith('NVIDIA GeForce ')) {
+    shortModel = 'Nvidia ' + shortModel.substring('NVIDIA GeForce '.length);
+  } else if (/^NVIDIA /i.test(shortModel)) {
+    shortModel = shortModel.replace(/^NVIDIA /i, 'Nvidia ');
   }
-  return actualGpuInfo.value;
+  const cuda = combinedSpecs.value?.cudaVersion;
+  return cuda ? `${shortModel} (CUDA ${cuda})` : shortModel;
 });
+
+const formatRam = (mb?: number) => {
+  if (typeof mb !== 'number' || isNaN(mb)) return '--';
+  return `${Math.round(mb / 1024)} GB`;
+};
+
+const formatCountry = (countryCode?: string) => {
+  if (!countryCode) return "-";
+  try {
+    return (
+      new Intl.DisplayNames(["en"], { type: "region" }).of(countryCode) ||
+      countryCode
+    );
+  } catch {
+    return countryCode;
+  }
+};
+
+const formatNetwork = (download?: number, upload?: number, ping?: number) => {
+  const parts: string[] = [];
+  if (typeof download === 'number' && !isNaN(download)) {
+    parts.push(`Download: ${Math.round(download)} Mbps`);
+  }
+  if (typeof upload === 'number' && !isNaN(upload)) {
+    parts.push(`Upload: ${Math.round(upload)} Mbps`);
+  }
+  if (typeof ping === 'number' && !isNaN(ping)) {
+    parts.push(`Ping: ${Math.round(ping)} ms`);
+  }
+  return parts.length ? parts.join(' <br>') : '--';
+};
 
 // Format time started
 const timeStartFormatted = computed(() => {
@@ -825,32 +767,33 @@ const combinedSpecs = computed<CombinedSpecs | null>(() => {
 
   const nodeInfoData = nodeInfo.value?.info;
 
+  const gpusArray = nodeInfoData?.gpus?.devices
+    ? nodeInfoData.gpus.devices.map((gpu: GpuDevice) => ({
+        gpu: gpu.name,
+        memory: gpu.memory?.total_mb,
+        architecture: `${gpu.network_architecture?.major}.${gpu.network_architecture?.minor}`,
+      }))
+    : (nodeSpecs.value.gpus ?? []);
+
+  const firstGpu = gpusArray.length > 0 ? gpusArray[0] : undefined;
+
+  const cpuModel = nodeInfoData?.cpu?.model ?? nodeSpecs.value.cpu;
+
   return {
-    nodeAddress: props.job.node,
-    marketAddress: nodeSpecs.value.marketAddress,
     ram: nodeInfoData?.ram_mb
       ? Math.round(nodeInfoData.ram_mb)
       : Math.round(Number(nodeSpecs.value.ram)),
     diskSpace: nodeInfoData?.disk_gb
       ? Math.round(Number(nodeInfoData.disk_gb))
       : Math.round(Number(nodeSpecs.value.diskSpace)),
-    cpu: nodeInfoData?.cpu?.model ?? nodeSpecs.value.cpu,
+    cpu: cpuModel,
     country: nodeInfoData?.country ?? nodeSpecs.value.country,
-    download: nodeSpecs.value.avgDownload10,
-    upload: nodeSpecs.value.avgUpload10,
-    ping: nodeSpecs.value.avgPing10,
-    gpus: nodeInfoData?.gpus?.devices
-      ? nodeInfoData.gpus.devices.map((gpu: GpuDevice) => ({
-          gpu: gpu.name,
-          memory: gpu.memory?.total_mb,
-          architecture: `${gpu.network_architecture?.major}.${gpu.network_architecture?.minor}`,
-        }))
-      : nodeSpecs.value.gpus,
+    download: nodeSpecs.value.avgDownload10 ?? (jobNodeReport.value as any)?.avgDownload10,
+    upload: nodeSpecs.value.avgUpload10 ?? (jobNodeReport.value as any)?.avgUpload10,
+    ping: nodeSpecs.value.avgPing10 ?? (jobNodeReport.value as any)?.avgPing10,
+    gpu: firstGpu?.gpu,
     cudaVersion:
       nodeInfoData?.gpus?.cuda_driver_version ?? nodeSpecs.value.cudaVersion,
-    nvmlVersion:
-      nodeInfoData?.gpus?.nvml_driver_version ?? nodeSpecs.value.nvmlVersion,
-    nodeVersion: nodeInfoData?.version ?? nodeSpecs.value.nodeVersion,
     systemEnvironment: nodeInfoData?.system_environment
       ? nodeInfoData.system_environment.toLowerCase().includes("wsl")
         ? "WSL"
