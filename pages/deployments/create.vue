@@ -978,7 +978,7 @@ const createDeployment = async () => {
       name: deploymentName.value.trim(),
       market: selectedMarket.value!.address.toString(),
       replicas: replicas.value,
-      timeout: Math.floor(timeout.value * 3600),
+      timeout: Math.floor(timeout.value * 60),
       strategy: strategy.value,
       ...(strategy.value === DeploymentStrategy.SCHEDULED
         ? { schedule: schedule.value }
