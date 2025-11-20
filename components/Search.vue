@@ -119,14 +119,12 @@ const searchItems = computed(() => {
   }
 
   // combine jobs and markets in one list
-  items.value = markets.value
-    ? markets.value!.map((a: any) => {
-        return { value: a.address.toString(), type: "market" };
-      })
-    : [];
+  items.value = (markets.value || []).map((a: any) => {
+    return { value: a.address.toString(), type: "market" };
+  });
 
   let matches = 0;
-  const results = items.value!.filter((item: any) => {
+  const results = (items.value || []).filter((item: any) => {
     if (
       item.value
         .toString()
@@ -146,7 +144,9 @@ const searchItems = computed(() => {
     try {
       const pk = new PublicKey(address.value);
       results.push({ value: pk.toString(), type: "account" });
-    } catch (error) {}
+    } catch (error) {
+      if (import.meta.dev) console.debug("Invalid public key in search", error);
+    }
   }
 
   return results;
