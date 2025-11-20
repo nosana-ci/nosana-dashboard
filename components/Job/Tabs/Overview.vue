@@ -399,8 +399,8 @@ let pollInterval: NodeJS.Timeout | null = null;
 
 const { ensureAuth } = useAuthHeader();
 const route = useRoute();
-const deploymentId = computed<string | null>(() => {
-  try { return (route.params?.id as string) || null; } catch { return null; }
+const deploymentId = computed<string | undefined>(() => {
+  return route.params?.id as string || undefined;
 });
 
 const jobInfo = computed<LocalJobInfo | null>(() => props.jobInfo ?? null);
@@ -860,7 +860,7 @@ const stopOperation = async (op: Operation) => {
     const baseUrl = getNodeUrl();
     const group = op.group || op.id;
     const url = `${baseUrl}/job/${jobId}/group/${group}/operation/${op.id}/stop`;
-    const authHeader = await ensureAuth({ deploymentId: deploymentId.value || undefined });
+    const authHeader = await ensureAuth({ deploymentId: deploymentId.value });
     
     await $fetch(url, {
       method: 'POST',
@@ -889,7 +889,7 @@ const restartOperation = async (op: Operation) => {
     const baseUrl = getNodeUrl();
     const group = op.group || op.id;
     const url = `${baseUrl}/job/${jobId}/group/${group}/operation/${op.id}/restart`;
-    const authHeader = await ensureAuth({ deploymentId: deploymentId.value || undefined });
+    const authHeader = await ensureAuth({ deploymentId: deploymentId.value });
     
     await $fetch(url, {
       method: 'POST',
@@ -921,7 +921,7 @@ const stopGroup = async (groupName: string) => {
     const jobId = props.job.address;
     const baseUrl = getNodeUrl();
     const url = `${baseUrl}/job/${jobId}/group/${groupName}/stop`;
-    const authHeader = await ensureAuth({ deploymentId: deploymentId.value || undefined });
+    const authHeader = await ensureAuth({ deploymentId: deploymentId.value });
     
     await $fetch(url, {
       method: 'POST',
@@ -952,7 +952,7 @@ const restartGroup = async (groupName: string) => {
     const jobId = props.job.address;
     const baseUrl = getNodeUrl();
     const url = `${baseUrl}/job/${jobId}/group/${groupName}/restart`;
-    const authHeader = await ensureAuth({ deploymentId: deploymentId.value || undefined });
+    const authHeader = await ensureAuth({ deploymentId: deploymentId.value });
     
     await $fetch(url, {
       method: 'POST',

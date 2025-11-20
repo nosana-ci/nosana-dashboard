@@ -30,10 +30,8 @@ export function useJob(jobId: string) {
   const jobInfo = ref<JobInfo | null>(null);
   const route = useRoute();
   const isDeploymentContext = computed<boolean>(() => {
-    try {
-      const p = (route as any)?.path || (route as any)?.fullPath || '';
-      return typeof p === 'string' && p.startsWith('/deployments/');
-    } catch { return false; }
+    const p = route.path || route.fullPath || '';
+    return typeof p === 'string' && p.startsWith('/deployments/');
   });
 
   const toast = useToast();
