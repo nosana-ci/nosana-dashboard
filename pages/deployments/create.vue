@@ -974,9 +974,12 @@ const createDeployment = async () => {
     if (!isCreditMode.value && !isWalletMode.value) {
       throw new Error("Please connect wallet or sign in");
     }
+    if (!selectedMarket.value) {
+      throw new Error("Please select a market");
+    }
     const deployment = await nosana.value.deployments.create({
       name: deploymentName.value.trim(),
-      market: selectedMarket.value!.address.toString(),
+      market: selectedMarket.value.address.toString(),
       replicas: replicas.value,
       timeout: Math.floor(timeout.value * 60),
       strategy: strategy.value,
