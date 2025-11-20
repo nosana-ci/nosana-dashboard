@@ -18,8 +18,11 @@ const prioFee = useLocalStorage("prio-fee", {
   maxPriorityFee: 15000000,
 });
 
+const AUTH_COOKIE_MAX_AGE_SECONDS = 300; // 5 minutes
+const AUTH_COOKIE_REFRESH_BUFFER_SECONDS = 10; // Refresh 10 seconds before expiry
+
 const cookieOptions: CookieSetOptions = {
-  maxAge: 300,
+  maxAge: AUTH_COOKIE_MAX_AGE_SECONDS,
   sameSite: 'strict',
   path: '/',
   secure: typeof location !== 'undefined' && location.protocol === 'https:',
@@ -43,7 +46,7 @@ const nosana = computed(() => {
         if (cookieParts.length === 3) {
           setTimeout(() => {
             cookies.set(createAuthCookiesKey(publicKey.value!.toString()), `${cookieParts[0]}:${cookieParts[1]}:${Date.now()}`, cookieOptions);
-          }, (cookie.options.maxAge - 10) * 1000);
+          }, (cookie.options.maxAge - AUTH_COOKIE_REFRESH_BUFFER_SECONDS) * 1000);
         }
       }
     }
