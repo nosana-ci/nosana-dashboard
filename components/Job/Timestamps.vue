@@ -80,7 +80,6 @@ const time: Ref<number | string> = ref(365 / 12 * 24 * 3600); // 1 month
 
 const timestampsUrl = computed(() => { return `/api/jobs/stats/timestamps?period=${time.value}` })
 watch(timestampsUrl, () => {
-  console.log('resetting timestamps..')
   timestamps.value = null
 })
 
