@@ -1,24 +1,161 @@
-/* Import Bulma Utilities */
-@import 'bulma/sass/utilities/initial-variables';
-@import 'bulma/sass/utilities/functions';
+@use "sass:color";
+
+// Bulma defaults (copied from upstream docs so we know what's untouched)
+$orange: hsl(14, 100%, 53%);
+$yellow: hsl(42, 100%, 53%);
+$green: hsl(153, 53%, 53%);
+$turquoise: hsl(171, 100%, 41%);
+$cyan: hsl(198, 100%, 70%);
+$blue: hsl(233, 100%, 63%);
+$purple: hsl(271, 100%, 71%);
+$red: hsl(348, 100%, 70%);
+
+$family-monospace: "Inconsolata", "Hack", "SF Mono", "Roboto Mono", "Source Code Pro", "Ubuntu Mono", monospace;
+$render-mode: optimizeLegibility;
+$weight-extrabold: 800;
+
+// Layout rhythm + breakpoint sizes
+$block-spacing: 1.5rem;
+$gap: 32px;
+$tablet: 769px;
+$desktop: 1024px;
+$widescreen: 1216px;
+$fullhd: 1408px;
+$widescreen-enabled: true;
+$fullhd-enabled: true;
+$breakpoints: (
+  "mobile": (
+    "until": $tablet,
+  ),
+  "tablet": (
+    "from": $tablet,
+  ),
+  "tablet-only": (
+    "from": $tablet,
+    "until": $desktop,
+  ),
+  "touch": (
+    "from": $desktop,
+  ),
+  "desktop": (
+    "from": $desktop,
+  ),
+  "desktop-only": (
+    "from": $desktop,
+    "until": $widescreen,
+  ),
+  "until-widescreen": (
+    "until": $widescreen,
+  ),
+  "widescreen": (
+    "from": $widescreen,
+  ),
+  "widescreen-only": (
+    "from": $widescreen,
+    "until": $fullhd,
+  ),
+  "until-fullhd": (
+    "until": $fullhd,
+  ),
+  "fullhd": (
+    "from": $fullhd,
+  ),
+);
+
+$duration: 294ms;
+$easing: ease-out;
+$radius-small: 4px;
+$radius: 6px;
+$radius-medium: 0.5em;
+$radius-large: 12px;
+$radius-rounded: 9999px;
+$speed: 86ms;
+$variable-columns: true;
+$rtl: false;
+$class-prefix: "";
+$cssvars-prefix: "bulma-";
+$helpers-prefix: "is-";
+$helpers-has-prefix: "has-";
+$variables-host: ":root";
+
+// Base palette (mirrors Bulma defaults)
+$black: hsl(221, 14%, 4%);
+$black-bis: hsl(221, 14%, 9%);
+$black-ter: hsl(221, 14%, 14%);
+$grey-darker: hsl(221, 14%, 21%);
+$grey-dark: hsl(221, 14%, 29%);
+$grey: hsl(221, 14%, 48%);
+$grey-light: hsl(221, 14%, 71%);
+$grey-lighter: hsl(221, 14%, 86%);
+$grey-lightest: hsl(221, 14%, 93%);
+$white-ter: hsl(221, 14%, 96%);
+$white-bis: hsl(221, 14%, 98%);
+$white: hsl(221, 14%, 100%);
+$dark: $grey-darker;
+$light: $white-ter;
+
+// Typography weights
+$weight-light: 300;
+$weight-normal: 400;
+$weight-medium: 500;
+$weight-semibold: 600;
+$weight-bold: 700;
+
+// Scheme colors (matching Bulma derived defaults)
+$scheme-main: $white;
+$scheme-main-bis: $white-bis;
+$scheme-main-ter: $white-ter;
+$scheme-invert: $black;
+$scheme-invert-bis: $black-bis;
+$scheme-invert-ter: $black-ter;
 
 // Update Bulma's global variables
 $family-sans-serif: 'Outfit', sans-serif;
 $primary: black;
+$primary-invert: #ffffff;
 $secondary: #10E80C;
 $info: #0066FF;
 $success: #04DE00;
 $warning: #FFB800;
+$danger: #FF4D4F;
 $custom-colors: (
   'secondary': $secondary,
 );
 $text: #000;
 $text-light: #999999;
 $text-dark: #666666;
+$text-strong: $grey-darker;
+$text-weak: $grey;
+$text-invert: $white;
+
+$background: $white-ter;
+$border: $grey-lighter;
+$border-light: $grey-lightest;
+$border-weak: $grey-lightest;
+$code: $danger;
+$code-background: $background;
+$pre: $text;
+$pre-background: $background;
+$shadow-color: $black;
+
+// Size scale
+$size-1: 2.125rem;
+$size-2: 1.875rem;
+$size-3: 1.375rem;
+$size-4: 1.25rem;
+$size-5: 1.125rem;
+$size-6: 1rem;
+$size-7: 0.75rem;
+
+// Size aliases
+$size-small: $size-7;
+$size-normal: $size-6;
+$size-medium: $size-5;
+$size-large: $size-4;
 $body-size: 14px !default;
 
 $link: $secondary;
-$link-hover: darken($link, 10%);
+$link-hover: color.adjust($link, $lightness: -10%);
 
 $title-family: 'Space Grotesk', sans-serif;
 $subtitle-family: 'Space Grotesk', sans-serif;
@@ -39,22 +176,12 @@ $footer-padding: 1rem;
 $title-weight: $weight-semibold;
 $subtitle-color: $grey;
 
-$size-1:	2.125rem;
-$size-2:	1.875rem;
-$size-3:	1.375rem;
-$size-4:	1.25rem;
-$size-5:	1.125rem;
-$size-6:	1rem;
-$size-7:	0.75rem;
-
 $menu-item-radius: $radius-large;
 $menu-item-active-background-color: $primary;
 $menu-item-active-color: white;
 $menu-list-link-padding: 0.65em 1em;
 $menu-item-color: $text-dark;
 $menu-item-hover-background-color: $grey-lightest;
-
-$radius-small: 4px;
 
 $box-shadow: none;
 $box-padding: 1.6rem;
@@ -73,4 +200,21 @@ $input-focus-box-shadow-color: rgba($secondary, 0.25);
 $label-weight: 400;
 $label-color: $grey;
 
-@import 'bulma/sass/utilities/mixins';
+// Responsive mixins (replacement for Bulma helpers)
+@mixin touch {
+  @media screen and (max-width: ($tablet - 1px)) {
+    @content;
+  }
+}
+
+@mixin until-widescreen {
+  @media screen and (max-width: ($widescreen - 1px)) {
+    @content;
+  }
+}
+
+@mixin from($breakpoint) {
+  @media screen and (min-width: $breakpoint) {
+    @content;
+  }
+}

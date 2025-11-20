@@ -1,3 +1,47 @@
+@use "variables" as *;
+@use "sass:color";
+@use "bulma/sass" as bulma with (
+  $family-sans-serif: $family-sans-serif,
+  $primary: $primary,
+  $info: $info,
+  $success: $success,
+  $warning: $warning,
+  $danger: $danger,
+  $custom-colors: $custom-colors,
+  $text: $text,
+  $body-size: $body-size,
+  $link: $link,
+  $title-family: $title-family,
+  $subtitle-family: $subtitle-family,
+  $body-background-color: $body-background-color,
+  $box-background-color: $box-background-color,
+  $navbar-height: $navbar-height,
+  $section-padding: $section-padding,
+  $section-padding-desktop: $section-padding-desktop,
+  $footer-padding: $footer-padding,
+  $title-weight: $title-weight,
+  $subtitle-color: $subtitle-color,
+  $size-1: $size-1,
+  $size-2: $size-2,
+  $size-3: $size-3,
+  $size-4: $size-4,
+  $size-5: $size-5,
+  $size-6: $size-6,
+  $size-7: $size-7,
+  $menu-item-radius: $menu-item-radius,
+  $menu-list-link-padding: $menu-list-link-padding,
+  $radius-small: $radius-small,
+  $box-shadow: $box-shadow,
+  $box-padding: $box-padding,
+  $tabs-border-bottom-width: $tabs-border-bottom-width,
+  $tabs-link-active-color: $tabs-link-active-color,
+  $tabs-link-active-border-bottom-color: $tabs-link-active-border-bottom-color,
+  $tabs-link-color: $tabs-link-color,
+  $input-shadow: $input-shadow,
+  $label-weight: $label-weight,
+  $label-color: $label-color
+);
+
 .tag.is-success {
   background-color: $white !important;
 }
@@ -5,10 +49,6 @@
 .dark-mode .tag.is-success {
   background-color: $black-ter !important;
 }
-// /* Import the rest of Bulma */
-@import "bulma/bulma";
-@import "bulma-o-steps/bulma-steps.css";
-@import "@creativebulma/bulma-tooltip";
 
 // Table column alignment for consistent two-column tables
 .table.two-column-labels tbody tr td:first-child {
@@ -63,6 +103,46 @@
       border-color: #dbdbdb !important;
       border-width: 1px !important;
       background-color: inherit;
+    }
+  }
+}
+
+$state-filter-outline-colors: (
+  "is-primary": ("bg": $primary, "color": $primary-invert),
+  "is-success": ("bg": $success, "color": $white),
+  "is-info": ("bg": $info, "color": $white),
+  "is-warning": ("bg": $warning, "color": $black),
+  "is-danger": ("bg": $danger, "color": $white),
+  "is-dark": ("bg": $dark, "color": $white)
+);
+
+.state-filter {
+  .button.is-outlined {
+    border-width: 1px;
+    box-sizing: border-box;
+    --bulma-button-border-width: 1px;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  }
+
+  @each $modifier, $settings in $state-filter-outline-colors {
+    $background: map-get($settings, "bg");
+    $text-color: map-get($settings, "color");
+
+    .button.#{$modifier}.is-outlined {
+      border-width: 1px;
+      box-sizing: border-box;
+      --bulma-button-border-width: 1px;
+
+      &:hover,
+      &.is-hovered {
+        border-width: 1px;
+        box-sizing: border-box;
+        --bulma-button-border-width: 1px;
+        background-color: $background;
+        border-color: $background;
+        color: $text-color !important;
+        box-shadow: none;
+      }
     }
   }
 }
@@ -398,6 +478,21 @@
 
   .menu-list a[disabled] {
     opacity: 0.5;
+  }
+}
+
+.sidebar {
+  .menu-list a {
+    color: $menu-item-color;
+    transition: color 0.2s ease;
+
+    span:not(.icon) {
+      color: inherit;
+    }
+  }
+
+  .menu-list .icon {
+    color: $menu-item-color;
   }
 }
 
@@ -834,6 +929,7 @@
 
 .address {
   -webkit-line-clamp: 1;
+  line-clamp: 1;
   -webkit-box-orient: vertical;
   display: -webkit-box;
   overflow: hidden;
