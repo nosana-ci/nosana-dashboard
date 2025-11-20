@@ -1,22 +1,16 @@
 import type { SessionDataObject } from '@sidebase/nuxt-auth/dist/runtime/types'
 
-interface AuthenticatedUser extends SessionDataObject {
-  authenticationHeader?: string;
-}
-
 export function useAuthHeader() {
   const { status, data: userData } = useAuth();
   const { nosana } = useSDK();
-  const { generateAuthHeaders, hasSessionAuth } = useNosanaWallet();
+  const { generateAuthHeaders } = useNosanaWallet();
 
   const creditHeader = computed<string | null>(() => {
-    const header = (userData.value as AuthenticatedUser)?.authenticationHeader;
+    const header = (userData.value as any)?.authenticationHeader as string | undefined;
     return status.value === 'authenticated' && header ? header : null;
   });
 
-  const hasAuth = computed<boolean>(() => {
-    return Boolean(creditHeader.value || hasSessionAuth);
-  });
+  const hasAuth = computed<boolean>(() => Boolean(creditHeader.value));
 
   /**
    * Returns a node Authorization string. If a deploymentId is provided,

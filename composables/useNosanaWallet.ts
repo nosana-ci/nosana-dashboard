@@ -59,6 +59,5 @@ export function useNosanaWallet() {
     connected,
     publicKey,
     generateAuthHeaders,
-    hasSessionAuth: true,
   };
 }
