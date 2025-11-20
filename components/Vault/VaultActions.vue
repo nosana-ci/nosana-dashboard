@@ -32,6 +32,7 @@ import type { Vault } from "@nosana/sdk";
 
 import PiggyBank01Icon from "@/assets/img/icons/piggy-bank-01.svg?component";
 import PiggyBank02Icon from "@/assets/img/icons/piggy-bank-02.svg?component";
+import { useDeploymentVault } from "~/composables/useDeploymentVault";
 
 const { vault, closeMenu } = defineProps<{
   vault: Vault;
