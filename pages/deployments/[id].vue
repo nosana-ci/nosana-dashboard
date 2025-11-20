@@ -1194,7 +1194,6 @@ import { useAuth } from "#imports";
 import JobStatus from "~/components/Job/Status.vue";
 import JobLogsContainer from "~/components/Job/LogsContainer.vue";
 import SecondsFormatter from "~/components/SecondsFormatter.vue";
-import { useJob } from "~/composables/jobs/useJob";
 import StatusTag from "~/components/Common/StatusTag.vue";
 import VaultModal from "~/components/Vault/Modal/VaultModal.vue";
 import VaultActions from "~/components/Vault/VaultActions.vue";
@@ -1723,102 +1722,8 @@ const deploymentVault = computed(() => {
 const jobStates = ref<Record<string, number>>({});
 const allJobsData = ref<Record<string, any>>({});
 
-// SSE-based endpoint status aggregation per job
-const jobEndpointsMap = ref<Map<string, Map<string, any>>>(new Map());
 
-// Track useJob instances for proper cleanup
-const activeJobInstances = ref<
-  Map<string, { stopWatching: () => void; cleanup?: () => void }>
->(new Map());
 
-// Clean up job instances that are no longer running
-const cleanupJobInstances = (currentRunningJobIds: string[]) => {
-  const runningSet = new Set(currentRunningJobIds);
-
-  for (const [jobId, instance] of activeJobInstances.value.entries()) {
-    if (!runningSet.has(jobId)) {
-      // Job is no longer running, clean it up
-      instance.stopWatching();
-      if (instance.cleanup) instance.cleanup();
-      activeJobInstances.value.delete(jobId);
-      jobEndpointsMap.value.delete(jobId);
-    }
-  }
-
-  // Trigger reactivity
-  activeJobInstances.value = new Map(activeJobInstances.value);
-  jobEndpointsMap.value = new Map(jobEndpointsMap.value);
-};
-
-// Watch deployment jobs and set up SSE connections via useJob
-// Only watch running jobs (state 1) that have endpoints
-watch(
-  () => {
-    const jobs = (deployment.value?.jobs as DeploymentJob[]) || [];
-    // Only include running jobs that have state = 1
-    return jobs.filter((j) => jobStates.value[j.job] === 1);
-  },
-  (runningJobs: DeploymentJob[]) => {
-    const currentRunningJobIds = runningJobs.map((j) => j.job).filter(Boolean);
-
-    // Clean up instances for jobs that are no longer running
-    cleanupJobInstances(currentRunningJobIds);
-
-    if (!runningJobs || runningJobs.length === 0) return;
-
-    for (const jobItem of runningJobs) {
-      const jobId = jobItem.job;
-      if (!jobId) continue;
-
-      // Skip if already watching this job
-      if (activeJobInstances.value.has(jobId)) continue;
-
-      try {
-        // Use the useJob composable to get live endpoint statuses via SSE
-        const { endpoints, pausePolling } = useJob(jobId);
-
-        // Watch this job's endpoints and update our aggregated map
-        const stopWatching = watch(
-          endpoints,
-          (endpointsData) => {
-            if (endpointsData) {
-              jobEndpointsMap.value.set(jobId, endpointsData);
-              // Trigger reactivity
-              jobEndpointsMap.value = new Map(jobEndpointsMap.value);
-            }
-          },
-          { immediate: true, deep: true }
-        );
-
-        // Track this instance for cleanup
-        activeJobInstances.value.set(jobId, {
-          stopWatching,
-          cleanup: pausePolling,
-        });
-      } catch (error) {
-        console.warn(`Failed to set up SSE for job ${jobId}:`, error);
-      }
-    }
-  },
-  { immediate: true, deep: true }
-);
-
-// Aggregate all endpoint statuses by URL across all jobs
-const liveEndpointStatusByUrl = computed<
-  Map<string, "ONLINE" | "OFFLINE" | "UNKNOWN">
->(() => {
-  const statusMap = new Map<string, "ONLINE" | "OFFLINE" | "UNKNOWN">();
-
-  for (const endpointsForJob of jobEndpointsMap.value.values()) {
-    for (const [url, endpointData] of endpointsForJob.entries()) {
-      if (endpointData?.status) {
-        statusMap.set(url, endpointData.status);
-      }
-    }
-  }
-
-  return statusMap;
-});
 
 // Running job duration (for concise timeout row suffix)
 const firstRunningJobId = computed<string | null>(() => {
@@ -1896,40 +1801,16 @@ const historicalJobs = computed((): DeploymentJob[] => {
   return enrichedJobs.filter((job) => job.state >= 2);
 });
 
-// Deployment endpoints - use live SSE status from nodes when available
+// Deployment endpoints
 const deploymentEndpoints = computed(() => {
   if (!deployment.value?.endpoints) return [];
-  const deploymentIsRunning = deployment.value.status === "RUNNING";
-  const hasRunningJobs = activeJobs.value.length > 0;
-
+  
   return (deployment.value.endpoints as DeploymentEndpoint[]).map(
-    (endpoint: DeploymentEndpoint) => {
-      const liveStatus = liveEndpointStatusByUrl.value.get(endpoint.url);
-
-      // Determine status using global status system
-      let status: "OFFLINE" | "ONLINE" | "UNKNOWN" | "LOADING" = "OFFLINE";
-
-      // If deployment or jobs aren't running, endpoints are offline
-      if (!deploymentIsRunning || !hasRunningJobs) {
-        status = "OFFLINE";
-      } else if (liveStatus === "ONLINE") {
-        // SSE confirmed online
-        status = "ONLINE";
-      } else if (liveStatus === "OFFLINE") {
-        // SSE confirmed offline
-        status = "OFFLINE";
-      } else {
-        // Jobs are running but no SSE status yet - still checking
-        status = "LOADING";
-      }
-
-      return {
-        opId: endpoint.opId,
-        port: endpoint.port,
-        url: endpoint.url,
-        status,
-      };
-    }
+    (endpoint: DeploymentEndpoint) => ({
+      opId: endpoint.opId,
+      port: endpoint.port,
+      url: endpoint.url,
+    })
   );
 });
 
@@ -1963,17 +1844,6 @@ const executeDeploymentAction = async (
       await new Promise((resolve) => setTimeout(resolve, 500));
       await loadDeployment(true);
 
-      // Clear SSE connections and cleanup job instances when stopping to force reconnect on restart
-      if ((successMessage || "").toLowerCase().includes("stopped")) {
-        // Clean up all active job instances
-        for (const [jobId, instance] of activeJobInstances.value.entries()) {
-          instance.stopWatching();
-          if (instance.cleanup) instance.cleanup();
-        }
-        activeJobInstances.value.clear();
-        jobEndpointsMap.value.clear();
-        jobEndpointsMap.value = new Map(jobEndpointsMap.value);
-      }
     }
   } catch (err: any) {
     console.error("Deployment action error:", err);
@@ -2339,13 +2209,6 @@ onUnmounted(() => {
   stopJobPolling();
   stopTasksPolling();
 
-  // Clean up all active job instances and their polling/SSE connections
-  for (const [jobId, instance] of activeJobInstances.value.entries()) {
-    instance.stopWatching();
-    if (instance.cleanup) instance.cleanup();
-  }
-  activeJobInstances.value.clear();
-  jobEndpointsMap.value.clear();
 
   // Clear any timeout from auth debouncing
   if (authTimeout) {
