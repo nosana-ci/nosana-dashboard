@@ -6,7 +6,11 @@ import { nodePolyfills } from "vite-plugin-node-polyfills";
 export default defineNuxtConfig({
   devtools: { enabled: true },
   ssr: false,
-  css: ["~/assets/styles/global.scss"],
+  css: [
+    "~/assets/styles/global.scss",
+    "bulma-o-steps/bulma-steps.css",
+    "@creativebulma/bulma-tooltip/dist/bulma-tooltip.min.css",
+  ],
   dir: {
     public: "static",
   },
@@ -156,8 +160,8 @@ export default defineNuxtConfig({
       preprocessorOptions: {
         scss: {
           sourceMap: false,
-          additionalData: '@import "@/assets/styles/variables.scss";',
-          silenceDeprecations: ["mixed-decls", "slash-div"],
+          additionalData: '@use "@/assets/styles/variables.scss" as *;',
+          silenceDeprecations: ["slash-div"],
         },
       },
     },
