@@ -1857,6 +1857,10 @@ const executeDeploymentAction = async (
 
 // Deployment action methods
 const startDeployment = async () => {
+  if (!deployment.value) {
+    toast.error("Deployment is not loaded yet");
+    return;
+  }
   await executeDeploymentAction(
     () => deployment.value!.start(),
     "Deployment started successfully"
@@ -1877,6 +1881,10 @@ const startDeployment = async () => {
 };
 
 const stopDeployment = async () => {
+  if (!deployment.value) {
+    toast.error("Deployment is not loaded yet");
+    return;
+  }
   await executeDeploymentAction(
     () => deployment.value!.stop(),
     "Deployment stopped successfully"
@@ -1897,6 +1905,10 @@ const archiveDeployment = async () => {
       "Are you sure you want to archive this deployment? This action cannot be undone."
     )
   ) {
+    return;
+  }
+  if (!deployment.value) {
+    toast.error("Deployment is not loaded yet");
     return;
   }
   await executeDeploymentAction(
@@ -1935,8 +1947,7 @@ const updateJobTimeout = async () => {
   }
 
   await executeDeploymentAction(
-    () =>
-      deployment.value!.updateTimeout(Math.round(newTimeoutHours.value * 3600)),
+    () => deployment.value!.updateTimeout(Math.round(newTimeoutHours.value * 3600)),
     `Job timeout updated to ${newTimeoutHours.value} hours`
   );
 
@@ -1956,7 +1967,7 @@ const updateSchedule = async () => {
 
   try {
     actionLoading.value = true;
-    await deployment.value!.updateSchedule(newSchedule.value);
+    await deployment.value.updateSchedule(newSchedule.value);
 
     toast.success(
       `Schedule updated to: ${newSchedule.value} (${parseCronExpression(newSchedule.value)})`
@@ -1990,7 +2001,7 @@ const createRevision = async () => {
 
   try {
     actionLoading.value = true;
-    await deployment.value!.createRevision(revisionJobDefinition.value);
+    await deployment.value.createRevision(revisionJobDefinition.value);
 
     toast.success("New revision created successfully!");
     showRevisionModal.value = false;
