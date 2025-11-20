@@ -374,10 +374,9 @@ interface Props {
 const props = defineProps<Props>();
 
 const isJobCompleted = computed(() => {
-  try {
-    if (props?.job?.isCompleted !== undefined) return Boolean(props.job.isCompleted);
-    if (props?.job?.timeEnd) return true;
-  } catch (_) {}
+  const job = (props && props.job) ? props.job : null;
+  if (job && job.isCompleted !== undefined) return Boolean(job.isCompleted);
+  if (job && (job as any).timeEnd) return true;
   const completedStatuses = new Set(['finished', 'success']);
   if (Array.isArray(operations.value) && operations.value.length > 0) {
     const allCompleted = operations.value.every(op => completedStatuses.has(String(op.status).toLowerCase()));
