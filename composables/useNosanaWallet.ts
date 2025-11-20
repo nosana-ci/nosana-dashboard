@@ -42,10 +42,16 @@ export function useNosanaWallet() {
   ): Promise<Headers> => {
     try {
       if (options?.forceNew) {
-        cookies.remove(createAuthCookiesKey(publicKey.value!.toString()));
+        if (publicKey.value) {
+          cookies.remove(createAuthCookiesKey(publicKey.value.toString()));
+        }
       }
 
-      return await nosana.value.authorization.generateHeader('NosanaApiAuthorization', options?.includeTime ? { includeTime: options.includeTime } : undefined);
+      const headerName = options?.key || 'NosanaApiAuthorization';
+      return await nosana.value.authorization.generateHeader(
+        headerName,
+        options?.includeTime ? { includeTime: options.includeTime } : undefined
+      );
     } catch (error) {
       console.error('authorization.generate error:', error);
       signMessageError.value = true;
@@ -59,5 +65,6 @@ export function useNosanaWallet() {
     connected,
     publicKey,
     generateAuthHeaders,
+    signMessageError,
   };
 }
