@@ -132,7 +132,7 @@ const nosana = computed(() => {
   const network = (config.public.network === "devnet" || config.public.network === "mainnet")
     ? config.public.network
     : "mainnet";
-  const client = new Client(network, walletValue as unknown as any, clientConfig as unknown as ClientConfig);
+  const client = new Client(network, walletValue, clientConfig as ClientConfig);
 
   return client;
 });
