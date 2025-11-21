@@ -1,5 +1,6 @@
-@use "variables" as *;
 @use "sass:color";
+@use "variables" as *;
+@use "dark-mode" as *;
 @use "bulma/sass" as bulma with (
   $family-sans-serif: $family-sans-serif,
   $primary: $primary,
@@ -44,10 +45,6 @@
 
 .tag.is-success {
   background-color: $white !important;
-}
-
-.dark-mode .tag.is-success {
-  background-color: $black-ter !important;
 }
 
 // Table column alignment for consistent two-column tables
@@ -301,84 +298,6 @@ $state-filter-outline-colors: (
   }
 }
 
-.dark-mode .wallet-auth-banner {
-  .banner-title {
-    color: $white;
-  }
-  
-  .banner-subtitle {
-    color: $grey-light;
-  }
-}
-
-.dark-mode {
-  .dropdown-menu {
-    .dropdown-content {
-      background: $black-ter;
-      border-color: $grey-dark;
-    }
-
-    .dropdown-item {
-      color: $grey-light;
-      
-      svg {
-        color: inherit;
-      }
-      
-      img[src$=".svg"] {
-        filter: brightness(0) saturate(100%) invert(88%) sepia(0%) saturate(0%) hue-rotate(180deg) brightness(100%) contrast(88%);
-      }
-      
-      &:hover {
-        background: $grey-darker;
-        color: $white;
-      }
-    }
-
-    .dropdown-divider {
-      background-color: $grey-dark;
-    }
-  }
-
-  .action-btn,
-  .group-action-btn {
-    background: $grey-darker;
-    border-color: $grey-dark;
-    color: $grey-light;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-    
-    .icon img {
-      filter: brightness(0) saturate(100%) invert(88%) sepia(0%) saturate(0%) hue-rotate(180deg) brightness(100%) contrast(88%);
-    }
-
-    &:hover:not(:disabled) {
-      background: lighten($grey-darker, 5%);
-      border-color: lighten($grey-dark, 10%);
-      color: $white;
-    }
-    
-    &.is-loading {
-      &:after {
-        border-color: $grey;
-        border-right-color: transparent;
-        border-top-color: transparent;
-      }
-    }
-  }
-
-  .port-badge {
-    background: rgba($secondary, 0.15);
-    color: $secondary;
-    border-color: $secondary;
-    
-    &:hover {
-      background: $secondary;
-      color: $black;
-      box-shadow: 0 2px 4px rgba($secondary, 0.3);
-    }
-  }
-}
-
 // Tab button styling (used for navigation tabs and toggle buttons)
 .tab-button {
   background: $white;
@@ -423,21 +342,6 @@ $state-filter-outline-colors: (
   }
 }
 
-.dark-mode .tab-button {
-  background: $grey-darker;
-  border-color: $grey-dark;
-  color: $grey-light;
-
-  &:hover {
-    background: lighten($grey-darker, 5%);
-  }
-
-  &.is-active {
-    background: $white;
-    color: $black;
-    border-color: $white;
-  }
-}
 
 // Deployment tabs container styling (used for tab navigation containers)
 .deployment-tabs {
@@ -494,7 +398,11 @@ $state-filter-outline-colors: (
   .menu-list .icon {
     color: $menu-item-color;
   }
+  .menu-list a:not(.deploy-cta) {
+    background-color: transparent !important;	
+  }
 }
+
 
 /* Extra bulma classes */
 .has-radius {
@@ -571,78 +479,6 @@ $state-filter-outline-colors: (
   --jse-theme-color: #353535 !important;
 }
 
-.dark-mode {
-  --swv-button-background-color: black !important;
-  --swv-button-outline-color: white !important;
-  --swv-button-hover-background-color: #cbcbcb !important;
-  // --swv-button-text-color: black !important;
-  .new-badge {
-    background: white !important;
-    color: black !important;
-  }
-
-  .modal-card-head:not(.light-mode) {
-    background-color: $black-bis;
-    border-bottom-color: $grey-darker;
-
-    .modal-card-title strong {
-      color: $white !important;
-    }
-  }
-
-  .modal-card-body:not(.light-mode) {
-    background-color: $black-bis;
-    color: $white;
-
-    .has-text-black {
-      color: $white !important;
-    }
-
-    .has-text-weight-bold {
-      color: $white !important;
-    }
-
-    .button.has-background-white-ter {
-      background-color: $black-ter !important;
-
-      &:hover {
-        background-color: $grey-darker !important;
-        strong, .has-text-weight-bold {
-          color: $secondary !important;
-        }
-      }
-
-      strong, .has-text-weight-bold {
-        color: $white !important;
-      }
-    }
-
-    .dropdown-item {
-      &:hover {
-        background-color: $grey-darker;
-        
-        strong, .has-text-weight-bold {
-          color: $secondary !important;
-        }
-      }
-
-      strong, .has-text-weight-bold {
-        color: $white !important;
-      }
-    }
-
-    .dropdown-content {
-      background-color: $black-ter;
-    }
-
-    .icon.is-medium {
-      &[style*="background: black"] {
-        background: white !important;
-      }
-    }
-  }
-}
-
 .swv-button {
   font-family: inherit !important;
   font-weight: 400 !important;
@@ -676,255 +512,6 @@ $state-filter-outline-colors: (
 
 .has-background-body {
   background-color: $body-background-color !important;
-}
-
-.dark-mode {
-  .sidebar {
-    box-shadow: 0px 6px 40px 0px rgba(255, 255, 255, 0.02) !important;
-  }
-  body:not(.light-mode) {
-    background-color: $body-background-color-dark;
-  }
-
-  .modal-card-foot:not(.light-mode) {
-    background-color: $black-bis;
-    border-top-color: $grey-darker;
-  }
-
-  .modal-card-title:not(.light-mode) {
-    color: $white;
-  }
-
-  .delete:not(.light-mode) {
-    background-color: rgba($white, 0.2);
-    &:hover {
-      background-color: rgba($white, 0.3);
-    }
-  }
-
-  .tag {
-    // color:white !important;
-    background-color: $black-ter !important;
-    &:not(.is-outlined) span {
-      color: white;
-    }
-  }
-
-  .has-background-body:not(.light-mode) {
-    background-color: $body-background-color-dark !important;
-  }
-  .vjs-tree-node.is-highlight,
-  .vjs-tree-node:hover {
-    background-color: $grey-darker;
-  }
-  .progress {
-    // background-color: $black-ter;
-    &:indeterminate {
-      background-color: $black-ter;
-    }
-    &.is-info:indeterminate {
-      background-image: linear-gradient(
-        to right,
-        hsl(207, 61%, 53%) 30%,
-        $black-ter 30%
-      );
-    }
-  }
-  .navbar:not(.light-mode) {
-    background: $black;
-
-    .navbar-burger {
-      color: $white;
-    }
-
-    &.has-shadow {
-      box-shadow: 0 2px 0 0 $grey-dark;
-    }
-  }
-  .pagination-previous,
-  .pagination-next,
-  .pagination-link {
-    color: $white;
-    &.is-current {
-      color: $text;
-    }
-  }
-  .select:not(.light-mode) select {
-    background-color: $grey-darker;
-    border-color: $black-ter;
-    color: white;
-  }
-  .table:not(.light-mode) {
-    color: $white;
-    background-color: $black-bis;
-
-    thead th {
-      color: $white;
-    }
-    td,
-    th {
-      border-color: $grey-dark;
-      color: $white;
-      
-      strong {
-        color: $white;
-      }
-    }
-    &.is-hoverable {
-      tbody {
-        tr:not(.is-selected) {
-          &:hover {
-            background-color: $black-ter !important;
-          }
-        }
-      }
-    }
-    &.is-striped {
-      tbody {
-        tr:not(.is-selected) {
-          &:nth-child(even) {
-            background-color: darken($black-ter, 3%);
-          }
-        }
-      }
-    }
-    .has-text-white {
-      color: $white !important;
-    }
-  }
-
-  .light-only {
-    display: none;
-  }
-
-  .has-text-white:not(.light-mode) {
-    color: $black !important;
-  }
-
-  .has-text-black:not(.light-mode) {
-    color: $white !important;
-  }
-
-  a.has-text-black:hover:not(.light-mode) {
-    color: $grey-light !important;
-  }
-
-  .has-background-white:not(.light-mode) {
-    background-color: $black !important;
-  }
-  .has-background-light:not(.light-mode) {
-    background-color: $black-ter !important;
-  }
-
-  .sidebar:not(.light-mode) {
-    background-color: $black-bis !important;
-  }
-
-  .has-background-black:not(.light-mode) {
-    background-color: $white !important;
-  }
-
-  .has-background-white-ter:not(.light-mode) {
-    background-color: $black-ter !important;
-  }
-
-  .has-background-white-bis:not(.light-mode) {
-    background-color: $black-bis !important;
-  }
-
-  .title:not(.light-mode) {
-    color: white;
-  }
-
-  .box:not(.light-mode) {
-    background-color: $black-bis;
-    color: white;
-  }
-
-  .button:not(.light-mode) {
-    &.is-dark {
-      &.is-outlined {
-        color: $light;
-      }
-    }
-    &.is-text {
-      color: $white;
-      &:hover {
-        background-color: $black-ter;
-      }
-    }
-    &.is-primary {
-      background-color: $primary-invert;
-      color: $primary;
-
-      &.is-outlined {
-        background-color: transparent;
-        border-color: $primary-invert;
-        color: $primary-invert;
-
-        &:hover {
-          background-color: $primary-invert;
-          border-color: $primary-invert;
-          color: $primary;
-        }
-      }
-    }
-  }
-
-  .input:not(.light-mode) {
-    background-color: $grey-darker;
-    border-color: $black-bis;
-    color: white;
-
-    &::placeholder {
-      color: $grey;
-    }
-  }
-
-  .menu-list:not(.light-mode) {
-    a {
-      color: $grey-lighter;
-
-      &:hover {
-        background-color: $grey-darker;
-      }
-
-      &.is-active {
-        background-color: $grey-darker;
-        color: $grey;
-      }
-    }
-  }
-
-  .footer:not(.light-mode) {
-    background-color: $body-background-color-dark;
-    color: white;
-  }
-
-  .tabs:not(.light-mode) {
-    ul {
-      border-bottom: 3px solid $grey-darker;
-    }
-    li.is-active a {
-      border-bottom-color: $grey;
-      border-color: $grey;
-      color: $primary-invert;
-      background-color: $black-bis;
-    }
-
-    a {
-      color: $grey;
-      border-bottom-width: 3px;
-      border-bottom-color: transparent;
-      margin-bottom: -3px;
-
-      &:hover {
-        color: $grey-light;
-        border-bottom-color: $grey;
-        background-color: $black-ter;
-      }
-    }
-  }
 }
 
 .address {
@@ -968,10 +555,6 @@ $state-filter-outline-colors: (
   50% {
     opacity: 0.5;
   }
-}
-
-.dark-mode .has-tooltip-arrow img {
-  filter: invert(1);
 }
 
 .modal-card {
@@ -1176,49 +759,6 @@ button[disabled][data-tooltip] {
   }
 }
 
-.dark-mode {
-  .status-select {
-    select {
-      background-color: $grey-darker;
-      border-color: $grey-dark;
-      color: $white;
-
-      &:focus {
-        border-color: $grey;
-      }
-
-      option {
-        background-color: $black-ter;
-        border-color: $grey-dark;
-        
-        &:hover {
-          background-color: $grey-darker;
-        }
-
-        &.has-text-success {
-          color: $success !important;
-          border-color: $success;
-        }
-        
-        &.has-text-info {
-          color: $info !important;
-          border-color: $info;
-        }
-        
-        &.has-text-warning {
-          color: $warning !important;
-          border-color: $warning;
-        }
-        
-        &.has-text-dark {
-          color: $white !important;
-          border-color: $white;
-        }
-      }
-    }
-  }
-}
-
 /* Filter button styles */
 .button-filter {
   &.button {
@@ -1252,50 +792,6 @@ button[disabled][data-tooltip] {
   }
 }
 
-/* Add dark mode styles */
-.dark-mode {
-  .button-filter.button {
-    background-color: $black !important;
-    border-color: $white !important;
-    color: $white !important;
-
-    &:hover,
-    &:focus,
-    &.is-selected,
-    &:active {
-      background-color: $white !important;
-      border-color: $white !important;
-      color: $black !important;
-    }
-
-    &.is-primary {
-      &:hover,
-      &:focus,
-      &:active,
-      &.is-selected {
-        background-color: $white !important;
-        border-color: $white !important;
-        color: $black !important;
-      }
-    }
-
-    &.is-outlined {
-      background-color: transparent !important;
-      border-color: $white !important;
-      color: $white !important;
-
-      &:hover,
-      &:focus,
-      &:active,
-      &.is-selected {
-        background-color: $white !important;
-        border-color: $white !important;
-        color: $black !important;
-      }
-    }
-  }
-}
-
 // Ensure all modals appear above profile dropdowns and other UI elements
 .modal {
   z-index: 1001 !important;
@@ -1314,10 +810,6 @@ button[disabled][data-tooltip] {
   &:hover {
     background-color: rgba(0, 0, 0, 0.02);
   }
-}
-
-.dark-mode .clickable-row:hover {
-  background-color: rgba(255, 255, 255, 0.05);
 }
 
 .clickable-row-link {
@@ -1356,14 +848,6 @@ button[disabled][data-tooltip] {
   --status-warning-color: #{$warning}; // Orange for queued
   --status-danger-color: #{$danger}; // Red for failed/error
   --status-dark-color: #{$dark}; // Gray for stopped/default
-}
-
-.dark-mode {
-  --status-success-color: #{$success};
-  --status-info-color: #{$info};
-  --status-warning-color: #{$warning};
-  --status-danger-color: #{$danger};
-  --status-dark-color: #{$grey-light};
 }
 
 /* Global status tag styling with consistent colors */
@@ -1422,12 +906,6 @@ button[disabled][data-tooltip] {
   background-color: $white;
 }
 
-.dark-mode .tag.status-tag {
-  background-color: $black-ter;
-}
-
-// Removed specific light/success overrides; enforce via .status-tag base instead
-
 /* Center status icons inside tags */
 .status-icon-wrap {
   display: inline-flex;
@@ -1478,15 +956,6 @@ button[disabled][data-tooltip] {
     border-bottom: none !important;
   }
 }
-
-.dark-mode .icon.has-tooltip-arrow {
-  color: #b5b5b5;
-  
-  &:hover {
-    color: #f5f5f5;
-  }
-}
-
 /* Utility classes for consistent spacing and sizing */
 .has-min-width-250 {
   min-width: 250px;
@@ -1638,40 +1107,6 @@ html.dark-mode .deployment-header {
   background-color: $grey-lightest !important;
 }
 
-.dark-mode .json-editor-container {
-  background-color: $grey-darker !important;
-  border-color: $grey-dark;
-  
-  .json-editor {
-    background-color: $grey-darker !important;
-    
-    :deep(.jse-main) {
-      background-color: $grey-darker !important;
-    }
-    
-    :deep(.jse-contents) {
-      background-color: $grey-darker !important;
-    }
-    
-    :deep(.jse-text-mode) {
-      background-color: $grey-darker !important;
-    }
-    
-    :deep(.cm-editor) {
-      background-color: $grey-darker !important;
-    }
-    
-    :deep(.cm-focused) {
-      background-color: $grey-darker !important;
-    }
-  }
-}
-
-/* Override any box backgrounds when containing JSON editor in dark mode */
-.dark-mode .box .json-editor-container {
-  background-color: $grey-darker !important;
-}
-
 /* ==========================================================================
    Category Tag Styling (Events Tab and Other Lists)
    ========================================================================== */
@@ -1682,13 +1117,6 @@ html.dark-mode .deployment-header {
   color: $text !important;
   border: 1px solid $grey-lighter !important;
 }
-
-.dark-mode .category-tag {
-  background-color: $grey-dark !important;
-  color: $white !important;
-  border: 1px solid $grey !important;
-}
-
 /* ==========================================================================
    Back Arrow Icon Styling (Global for all pages)
    ========================================================================== */
@@ -1697,139 +1125,16 @@ html.dark-mode .deployment-header {
 .back-arrow-icon {
   color: $text !important;
 }
-
-.dark-mode .back-arrow-icon {
-  color: $white !important;
-}
-
 /* Ensure back buttons don't inherit link colors */
 .back-button .back-arrow-icon {
   color: $text !important;
-}
-
-.dark-mode .back-button .back-arrow-icon {
-  color: $white !important;
 }
 
 /* ==========================================================================
    Global Dark Mode Box Styling (Using Bulma Variables)
    ========================================================================== */
 
-/* Apply consistent box backgrounds across all components using Bulma variables */
-.dark-mode .box {
-  background-color: $box-background-color-dark;
-}
 
-/* ==========================================================================
-   Login Modal Dark Mode Support (Using Bulma Variables)
-   ========================================================================== */
-
-.dark-mode .login-modal {
-  background: $black-ter !important;
-  color: $white !important;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
-}
-
-.dark-mode .login-modal .login-title {
-  color: $white !important;
-}
-
-.dark-mode .login-modal .login-subtitle {
-  color: $grey-light !important;
-}
-
-.dark-mode .login-modal .login-button {
-  background: $grey-darker !important;
-  color: $white !important;
-  border-color: $grey-dark !important;
-}
-
-.dark-mode .login-modal .login-button:hover:not(:disabled) {
-  background: $grey-dark !important;
-  border-color: $grey !important;
-}
-
-.dark-mode .login-modal .google-button {
-  background: $grey-darker !important;
-  border-color: $grey-dark !important;
-}
-
-.dark-mode .login-modal .google-button:hover:not(:disabled) {
-  background: $grey-dark !important;
-  border-color: $grey !important;
-}
-
-.dark-mode .login-modal .twitter-button {
-  background: $black !important;
-  border-color: $grey-darker !important;
-}
-
-.dark-mode .login-modal .twitter-button:hover:not(:disabled) {
-  background: $grey-darker !important;
-  border-color: $grey-dark !important;
-}
-
-.dark-mode .login-modal .divider span {
-  color: $grey-light !important;
-}
-
-/* ==========================================================================
-   Wallet Selection Modal Dark Mode Support (Using Bulma Variables)
-   ========================================================================== */
-
-.dark-mode .wallet-modal-content {
-  background: $black-ter !important;
-  color: $white !important;
-}
-
-.dark-mode .wallet-modal-title {
-  color: $white !important;
-}
-
-.dark-mode .wallet-item {
-  background: $grey-darker !important;
-  border-color: $grey-dark !important;
-  color: $white !important;
-}
-
-.dark-mode .wallet-item:hover {
-  background: $grey-dark !important;
-  border-color: $secondary !important;
-}
-
-.dark-mode .wallet-name {
-  color: $white !important;
-}
-
-.dark-mode .modal-close-button {
-  color: $grey-light !important;
-}
-
-.dark-mode .modal-close-button:hover {
-  background-color: $grey-darker !important;
-  color: $white !important;
-}
-
-.dark-mode .login-button.is-loading::after {
-  border-color: $white transparent $white transparent !important;
-}
-
-/* ==========================================================================
-   Loader Component Dark Mode Support
-   ========================================================================== */
-
-.dark-mode .spinner-bg {
-  background-color: rgba(0, 0, 0, 0.7) !important;
-}
-
-/* ==========================================================================
-   Deployment Logs - Empty State Dark Mode
-   ========================================================================== */
-.dark-mode .deployment-logs-container .notification.is-light {
-  background-color: $box-background-color-dark !important;
-  color: $white !important;
-  border-color: $grey-darker !important;
-}
 
 @media screen and (max-width: 768px) {
   .is-flex-direction-column-mobile {

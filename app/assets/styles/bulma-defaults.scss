@@ -1,0 +1,104 @@
+$black:        hsl(0, 0%, 4%) !default;
+$black-bis:    hsl(0, 0%, 7%) !default;
+$black-ter:    hsl(0, 0%, 14%) !default;
+
+$grey-darker:  hsl(0, 0%, 21%) !default;
+$grey-dark:    hsl(0, 0%, 29%) !default;
+$grey:         hsl(0, 0%, 48%) !default;
+$grey-light:   hsl(0, 0%, 71%) !default;
+$grey-lighter: hsl(0, 0%, 86%) !default;
+$grey-lightest: hsl(0, 0%, 93%) !default;
+
+$white-ter:    hsl(0, 0%, 96%) !default;
+$white-bis:    hsl(0, 0%, 98%) !default;
+$white:        hsl(0, 0%, 100%) !default;
+
+$orange:       hsl(14,  100%, 53%) !default;
+$yellow:       hsl(44,  100%, 77%) !default;
+$green:        hsl(153, 53%,  53%) !default;
+$turquoise:    hsl(171, 100%, 41%) !default;
+$cyan:         hsl(207, 61%,  53%) !default;
+$blue:         hsl(229, 53%,  53%) !default;
+$purple:       hsl(271, 100%, 71%) !default;
+$red:          hsl(348, 86%, 61%) !default;
+
+// $family-sans-serif: BlinkMacSystemFont, -apple-system, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", "Helvetica", "Arial", sans-serif !default;
+$family-monospace: "Inconsolata", "Hack", "SF Mono", "Roboto Mono", "Source Code Pro", "Ubuntu Mono", monospace !default;
+$render-mode: optimizeLegibility !default;
+
+$weight-light: 300 !default;
+$weight-normal: 400 !default;
+$weight-medium: 500 !default;
+$weight-semibold: 600 !default;
+$weight-bold: 700 !default;
+$weight-extrabold: 800 !default;
+
+$block-spacing: 1.5rem !default;
+
+$gap: 32px !default;
+$tablet: 769px !default;
+$desktop: 960px + (2 * $gap) !default;
+$widescreen: 1152px + (2 * $gap) !default;
+$widescreen-enabled: true !default;
+
+$fullhd: 1344px + (2 * $gap) !default;
+$fullhd-enabled: true !default;
+$breakpoints: ("mobile": ("until": $tablet), "tablet": ("from": $tablet), "tablet-only": ("from": $tablet, "until": $desktop), "touch": ("from": $desktop), "desktop": ("from": $desktop), "desktop-only": ("from": $desktop, "until": $widescreen), "until-widescreen": ("until": $widescreen), "widescreen": ("from": $widescreen), "widescreen-only": ("from": $widescreen, "until": $fullhd), "until-fullhd": ("until": $fullhd), "fullhd": ("from": $fullhd)) !default;
+
+$easing: ease-out !default;
+$duration: 294ms !default;
+$radius: 6px !default;
+$radius-medium: 0.5em !default;
+$radius-large: 12px !default;
+$radius-rounded: 9999px !default;
+$speed: 86ms !default;
+
+$variable-columns: true !default;
+$rtl: false !default;
+$class-prefix: "" !default;
+$cssvars-prefix: "bulma-" !default;
+$helpers-prefix: "is-" !default;
+$helpers-has-prefix: "has-" !default;
+$variables-host: ":root" !default;
+
+$dark: $grey-darker !default;
+$light: $white-ter !default;
+
+$scheme-main: $white !default;
+$scheme-main-bis: $white-bis !default;
+$scheme-main-ter: $white-ter !default;
+$scheme-invert: $black !default;
+$scheme-invert-bis: $black-bis !default;
+$scheme-invert-ter: $black-ter !default;
+
+$primary-invert: #ffffff !default;
+$danger: #FF4D4F !default;
+
+$text-strong: $grey-darker !default;
+$text-weak: $grey !default;
+$text-invert: $white !default;
+
+$background: $white-ter !default;
+$border: $grey-lighter !default;
+$border-light: $grey-lightest !default;
+$border-weak: $grey-lightest !default;
+
+$shadow-color: $black !default;
+
+@mixin touch {
+  @media screen and (max-width: ($desktop - 1px)) {
+    @content;
+  }
+}
+
+@mixin until-widescreen {
+  @media screen and (max-width: ($widescreen - 1px)) {
+    @content;
+  }
+}
+
+@mixin from($breakpoint) {
+  @media screen and (min-width: $breakpoint) {
+    @content;
+  }
+}
