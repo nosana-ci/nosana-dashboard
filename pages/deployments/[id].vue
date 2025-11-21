@@ -1746,6 +1746,31 @@ const startDeployment = async () => {
     toast.error("Deployment is not loaded yet");
     return;
   }
+  
+  // Check vault balance before starting deployment (wallet mode only)
+  if (deployment.value.vault) {
+    try {
+      const vaultBalance = await deployment.value.vault.getBalance();
+      const hasSol = vaultBalance.SOL > 0;
+      const hasNos = vaultBalance.NOS > 0;
+      
+      if (!hasSol && !hasNos) {
+        toast.error("Vault has no balance. Please top up your vault with both SOL and NOS before starting the deployment.");
+        return;
+      } else if (!hasSol) {
+        toast.error("Vault needs SOL for transaction fees. Please top up your vault with SOL before starting the deployment.");
+        return;
+      } else if (!hasNos) {
+        toast.error("Vault needs NOS for job costs. Please top up your vault with NOS before starting the deployment.");
+        return;
+      }
+    } catch (error) {
+      console.error("Error checking vault balance:", error);
+      toast.error("Failed to check vault balance. Please try again.");
+      return;
+    }
+  }
+  
   await executeDeploymentAction(
     () => deployment.value!.start(),
     "Deployment started successfully"
