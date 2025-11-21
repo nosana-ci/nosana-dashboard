@@ -6,6 +6,8 @@ import { getJobExposedServices } from "@nosana/sdk";
 import type { JobInfo, JobViewModel, LiveEndpoints, ResultsSection} from "~/composables/jobs/types";
 import { normalizeEndpoints } from "~/composables/jobs/normalizeEndpoints";
 
+const DEFAULT_NODE_ADDRESS = "11111111111111111111111111111111";
+
 function getStateNumber(stateVal: string | number | undefined): number {
   if (stateVal === "QUEUED" || stateVal === 0) return 0;
   if (stateVal === "RUNNING" || stateVal === 1) return 1;
@@ -268,7 +270,7 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
       if (!job.value) return;
       const config = useRuntimeConfig();
       const nodeAddress = (job.value.node as unknown as { toString?: () => string })?.toString?.() || (job.value.node as unknown as string);
-      if (!nodeAddress || nodeAddress === "11111111111111111111111111111111") { hasFetchedFinalInfo = true; return; }
+      if (!nodeAddress || nodeAddress === DEFAULT_NODE_ADDRESS) { hasFetchedFinalInfo = true; return; }
       const authHeader = await ensureAuth({ deploymentId });
       const sseUrl = `https://${nodeAddress}.${config.public.nodeDomain}/job/${jobId}/info`;
 
@@ -322,7 +324,7 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
     if (!job.value) return;
     const config = useRuntimeConfig();
     const nodeAddress = (job.value.node as unknown as { toString?: () => string })?.toString?.() || (job.value.node as unknown as string);
-    if (!nodeAddress || nodeAddress === "11111111111111111111111111111111") {
+    if (!nodeAddress || nodeAddress === DEFAULT_NODE_ADDRESS) {
       loading.value = false;
       return;
     }

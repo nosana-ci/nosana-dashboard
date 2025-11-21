@@ -54,66 +54,75 @@ const mapNumericState = (val: number): string => {
   return "STOPPED";
 };
 
+const VALID_STATUS_MAP: Record<string, string> = {
+  SUCCESS: "SUCCESS",
+  FAILED: "FAILED", 
+  STOPPED: "STOPPED",
+  STOPPING: "STOPPING",
+  QUEUED: "QUEUED",
+  RUNNING: "RUNNING",
+  STARTING: "STARTING",
+  COMPLETED: "COMPLETED",
+  DRAFT: "DRAFT",
+  ERROR: "ERROR",
+  INSUFFICIENT_FUNDS: "INSUFFICIENT_FUNDS",
+  ARCHIVED: "ARCHIVED",
+  ACTIVE: "ACTIVE",
+  INACTIVE: "INACTIVE", 
+  ONLINE: "ONLINE",
+  OFFLINE: "OFFLINE",
+  UNKNOWN: "UNKNOWN",
+  LOADING: "LOADING"
+};
+
+const isEmptyOrInvalid = (val: string): boolean => {
+  const lowered = val.toLowerCase().trim();
+  return lowered === "null" || lowered === "undefined" || lowered === "";
+};
+
 const normalizeStringStatus = (val: string): string | null => {
-  const v = val.toLowerCase().trim();
-  if (v === "success") return "SUCCESS";
-  if (v === "failed") return "FAILED";
-  if (v === "stopped") return "STOPPED";
-  if (v === "stopping") return "STOPPING";
-  if (v === "queued") return "QUEUED";
-  if (v === "running") return "RUNNING";
-  if (v === "starting") return "STARTING";
-  if (v === "completed") return "COMPLETED";
-  if (v === "draft") return "DRAFT";
-  if (v === "error") return "ERROR";
-  if (v === "insufficient_funds") return "INSUFFICIENT_FUNDS";
-  if (v === "archived") return "ARCHIVED";
-  // Revision statuses
-  if (v === "active") return "ACTIVE";
-  if (v === "inactive") return "INACTIVE";
-  // Endpoint statuses
-  if (v === "online") return "ONLINE";
-  if (v === "offline") return "OFFLINE";
-  if (v === "unknown") return "UNKNOWN";
-  if (v === "loading") return "LOADING";
-  return null;
+  const upperVal = val.toUpperCase().trim();
+  return VALID_STATUS_MAP[upperVal] || null;
+};
+
+const mapStringState = (val: string): string | null => {
+  if (isEmptyOrInvalid(val)) {
+    return null;
+  }
+  return normalizeStringStatus(val);
+};
+
+const mapFallbackStringState = (val: string): string => {
+  if (isEmptyOrInvalid(val)) {
+    return "STOPPED";
+  }
+  return normalizeStringStatus(val) ?? "STOPPED";
 };
 
 const statusString = computed(() => {
-  const primary = props.status as any;
+  const primary = props.status;
   let resolved: string | null = null;
-  let used: "primary" | "fallback" = "primary";
+  let isPrimary = true;
 
   if (typeof primary === "number") {
     resolved = mapNumericState(primary);
   } else if (typeof primary === "string") {
-    const lowered = primary.toLowerCase().trim();
-    if (lowered !== "null" && lowered !== "undefined" && lowered !== "") {
-      const normalized = normalizeStringStatus(primary);
-      if (normalized) {
-        resolved = normalized;
-      } else {
-        used = "fallback";
-      }
+    const stringResult = mapStringState(primary);
+    if (stringResult) {
+      resolved = stringResult;
     } else {
-      used = "fallback";
+      isPrimary = false;
     }
   } else {
-    used = "fallback";
+    isPrimary = false;
   }
 
-  if (used === "fallback" || !resolved) {
-    const fb = props.fallbackState as any;
+  if (!isPrimary || !resolved) {
+    const fb = props.fallbackState;
     if (typeof fb === "number") {
       resolved = mapNumericState(fb);
     } else if (typeof fb === "string") {
-      const lowered = fb.toLowerCase().trim();
-      if (lowered === "null" || lowered === "undefined" || lowered === "") {
-        resolved = "STOPPED";
-      } else {
-        const normalized = normalizeStringStatus(fb);
-        resolved = normalized ?? "STOPPED";
-      }
+      resolved = mapFallbackStringState(fb);
     } else {
       resolved = "STOPPED";
     }
@@ -122,27 +131,30 @@ const statusString = computed(() => {
   return resolved as string;
 });
 
+const ICON_MAP: Record<string, any> = {
+  QUEUED: QueuedIcon,
+  DRAFT: QueuedIcon,
+  RUNNING: RunningIcon,
+  STARTING: RunningIcon,
+  STOPPING: StoppedIcon,
+  COMPLETED: DoneIcon,
+  SUCCESS: DoneIcon,
+  FAILED: FailedIcon,
+  YAML_ERROR: FailedIcon,
+  ERROR: FailedIcon,
+  INSUFFICIENT_FUNDS: FailedIcon,
+  ARCHIVED: ArchiveIcon,
+  ACTIVE: RunningIcon,
+  INACTIVE: StoppedIcon,
+  ONLINE: DoneIcon,
+  OFFLINE: StoppedIcon,
+  UNKNOWN: QueuedIcon,
+  LOADING: QueuedIcon,
+  STOPPED: StoppedIcon
+};
+
 const getIconComponent = (status: string) => {
-  if (status === "QUEUED" || status === "DRAFT") return QueuedIcon;
-  if (status === "RUNNING" || status === "STARTING") return RunningIcon;
-  if (status === "STOPPING") return StoppedIcon; // Use stop square icon for stopping state
-  if (status === "COMPLETED" || status === "SUCCESS") return DoneIcon;
-  if (
-    status === "FAILED" ||
-    status === "YAML_ERROR" ||
-    status === "ERROR" ||
-    status === "INSUFFICIENT_FUNDS"
-  )
-    return FailedIcon;
-  if (status === "ARCHIVED") return ArchiveIcon; // Use archive icon for archived status
-  // Revision statuses
-  if (status === "ACTIVE") return RunningIcon; // Running icon for active
-  if (status === "INACTIVE") return StoppedIcon; // Square icon for inactive
-  // Endpoint statuses - reuse appropriate existing icons
-  if (status === "ONLINE") return DoneIcon; // Green checkmark for online
-  if (status === "OFFLINE") return StoppedIcon; // Gray square for offline
-  if (status === "UNKNOWN" || status === "LOADING") return QueuedIcon; // Orange ? for unknown/loading
-  return StoppedIcon; // For STOPPED and any other states
+  return ICON_MAP[status] || StoppedIcon;
 };
 
 const iconRef = ref<HTMLElement | null>(null);
