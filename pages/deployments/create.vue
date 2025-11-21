@@ -292,6 +292,7 @@
               </div>
 
               <div
+                class="mb-2"
                 style="
                   display: flex;
                   justify-content: space-between;

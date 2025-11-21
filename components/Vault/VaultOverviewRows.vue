@@ -18,7 +18,7 @@
         </span>
       </td>
       <td>
-        SOL: {{ balance.SOL }} NOS: {{ balance.NOS }}
+        SOL: {{ balance.SOL }} | NOS: {{ balance.NOS }}
         <span @click="topup" class="button small ml-3 pt-0 pb-0 height-auto"
           ><small>Topup</small></span
         >
@@ -27,7 +27,7 @@
   </template>
   <template v-else>
     <td class="relative z-index-2">
-      <div>SOL: {{ balance.SOL }} NOS: {{ balance.NOS }}</div>
+      <div>SOL: {{ balance.SOL }} | NOS: {{ balance.NOS }}</div>
       <span
         class="is-size-7 is-family-monospace has-text-grey"
         @click="
