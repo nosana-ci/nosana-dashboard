@@ -11,22 +11,42 @@ export function useStake(publicKey: any) {
     "getStake",
     async () => {
       errorStake.value = null;
-      if (publicKey.value) {
-        try {
-          const stakeAccount = await nosana.value.stake.get(publicKey.value);
-          return {
-            xnos: stakeAccount.xnos.toString(),
-            address: stakeAccount.authority.toString(),
-            time_unstake: stakeAccount.timeUnstake.toString(),
-            amount: stakeAccount.amount.toString(),
-            duration: stakeAccount.duration.toString(),
-          };
-        } catch (error: any) {
-          if (!error.message.includes("Account does not exist")) {
-            throw new Error(error.message);
-          } else {
-            return null;
-          }
+      
+      // Early return if no valid publicKey
+      if (!publicKey.value) {
+        return null;
+      }
+      
+      // Validate publicKey is a proper object with toString method
+      if (!publicKey.value.toString || typeof publicKey.value.toString !== 'function') {
+        return null;
+      }
+      
+      
+      try {
+        const stakeAccount = await nosana.value.stake.get(publicKey.value);
+        return {
+          xnos: stakeAccount.xnos.toString(),
+          address: stakeAccount.authority.toString(),
+          time_unstake: stakeAccount.timeUnstake.toString(),
+          amount: stakeAccount.amount.toString(),
+          duration: stakeAccount.duration.toString(),
+        };
+      } catch (error: any) {
+        
+        // Handle various error types that indicate no stake account
+        const isAccountNotFound = error.message && (
+          error.message.includes("Account does not exist") ||
+          error.message.includes("buffer length") ||
+          error.message.includes("Trying to access beyond buffer length") ||
+          error.message.includes("Invalid account data")
+        );
+        
+        if (isAccountNotFound) {
+          return null;
+        } else {
+          console.error("Unexpected stake error:", error);
+          throw new Error(error.message);
         }
       }
     },

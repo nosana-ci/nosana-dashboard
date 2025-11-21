@@ -92,7 +92,8 @@
   function scrollToBottom(force: boolean = false) {
     if ((shouldAutoScroll.value || force) && logContainer.value) {
       nextTick(() => {
-        const container = logContainer.value!;
+        const container = logContainer.value;
+        if (!container) return;
         container.scrollTop = container.scrollHeight;
       });
     }

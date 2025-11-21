@@ -6,11 +6,11 @@
         <div class="is-flex is-justify-content-space-between is-align-items-start">
           <div class="header-left-section">
             <div class="is-flex is-align-items-center mb-2">
-              <NuxtLink :to="props.deploymentId ? `/deployments/${props.deploymentId}` : '/explorer'" class="button is-ghost back-button mr-4">
+              <button @click="router.back()" class="button is-ghost back-button mr-4">
                 <span class="icon is-small">
                   <ArrowUpIcon class="icon-16 transform-rotate-270 back-arrow-icon" />
                 </span>
-              </NuxtLink>
+              </button>
               <div class="header-title-section">
                 <p class="subtitle is-7 has-text-grey is-family-monospace mb-0">{{ props.job.address }}</p>
                 <div v-if="props.job.timeStart || jobDurationData" class="is-size-7 has-text-grey mt-1">
@@ -35,8 +35,8 @@
           >
             {{ getTabLabel(tab) }}
           </button>
-          <!-- Actions Dropdown -->
-          <div v-if="hasAnyActions" class="dropdown is-right" :class="{ 'is-active': showActionsDropdown }" ref="actionsDropdown">
+          <!-- Actions Dropdown - Commented out for deployment job pages -->
+          <!-- <div v-if="hasAnyActions" class="dropdown is-right" :class="{ 'is-active': showActionsDropdown }" ref="actionsDropdown">
             <div class="dropdown-trigger">
               <button 
                 class="tab-button actions-button" 
@@ -80,7 +80,7 @@
                 </div>
               </div>
             </div>
-          </div>
+          </div> -->
         </div>
       </div>
     </div>

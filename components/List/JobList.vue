@@ -1,152 +1,197 @@
 <template>
-  <div class="box mt-4 has-text-left">
-    <div class="columns is-multiline">
-      <div class="column is-12">
-        <div class="is-flex is-justify-content-flex-start is-align-items-center mb-4">
-          <div class="select status-select">
-            <select v-model="currentState">
-              <option v-for="filterState in filterStates" 
-                :key="filterState.value === null ? 'null' : filterState.value" 
-                :value="filterState.value"
-              >
-                {{ filterState.label }}
-              </option>
-            </select>
-          </div>
-        </div>
-
-        <div :class="{'min-height-container': loadingJobs || loadingNodeJobs}">
-          <div class="table-container">
-            <table class="table is-fullwidth is-striped is-hoverable">
-            <thead>
-              <tr>
-                <th>GPU</th>
-                <th>Image</th>
-                <th>Country</th>
-                <th>Started</th>
-                <th class="is-hidden-mobile">Duration</th>
-                <th class="is-hidden-touch">Price</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-if="loadingJobs || loadingNodeJobs">
-                <td colspan="7" class="has-text-centered py-6">Loading deployments...</td>
-              </tr>
-              <tr v-else-if="displayedJobs.length === 0">
-                <td colspan="7" class="has-text-centered">No deployments found</td>
-              </tr>
-              <template v-else>
-                <tr v-for="job in displayedJobs" :key="job.address" class="clickable-row">
-                  <td>
-                    <NuxtLink :to="`/jobs/${job.address}`" class="clickable-row-link">
-                      <div class="clickable-row-cell-content is-flex is-align-items-center">
-                        <NvidiaIcon alt="Nvidia" class="mr-2" style="width: 20px; height: 20px;" />
-                        <span v-if="testgridMarkets && testgridMarkets.find((tgm: any) => tgm.address === job.market.toString())">
-                          {{ testgridMarkets.find((tgm: any) => tgm.address === job.market.toString()).name }}
-                        </span>
-                        <span v-else class="is-family-monospace">{{ job.market.toString() }}</span>
-                      </div>
-                    </NuxtLink>
-                  </td>
-                  <td>
-                    <div class="clickable-row-cell-content is-flex is-align-items-center">
-                      <template v-if="getTemplateForJob(job)">
-                        <div class="template-icon mr-2">
-                          <img :src="getTemplateForJob(job)?.icon" :alt="getTemplateForJob(job)?.name">
-                        </div>
-                        <span>{{ getTemplateForJob(job)?.name }}</span>
-                      </template>
-                      <template v-else>
-                        <template v-if="isGHCR(getJobImage(job))">
-                          <div class="container-icon mr-2">
-                            <GithubIcon alt="GitHub" class="github-icon" style="width: 16px; height: 16px;" />
-                          </div>
-                        </template>
-                        <template v-else>
-                          <div class="container-icon mr-2">
-                            <img src="/img/icons/type/docker.svg" alt="Docker" class="docker-icon" style="width: 16px; height: 16px;">
-                          </div>
-                        </template>
-                        <span class="is-family-monospace">{{ getJobImage(job) }}</span>
-                      </template>
+  <div :class="{ 'min-height-container': loadingJobs || loadingNodeJobs }">
+    <div class="table-container">
+      <table class="table is-fullwidth is-striped is-hoverable">
+        <thead>
+          <tr>
+            <th>GPU</th>
+            <th>Image</th>
+            <th>Country</th>
+            <th>Started</th>
+            <th class="is-hidden-mobile">Duration</th>
+            <th class="is-hidden-touch">Price</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-if="loadingJobs || loadingNodeJobs">
+            <td colspan="7" class="has-text-centered py-6">
+              Loading deployments...
+            </td>
+          </tr>
+          <tr v-else-if="displayedJobs.length === 0">
+            <td colspan="7" class="has-text-centered">No deployments found</td>
+          </tr>
+          <template v-else>
+            <tr
+              v-for="job in displayedJobs"
+              :key="job.address"
+              class="clickable-row"
+            >
+              <td>
+                <NuxtLink
+                  :to="`/jobs/${job.address}`"
+                  class="clickable-row-link"
+                >
+                  <div
+                    class="clickable-row-cell-content is-flex is-align-items-center"
+                  >
+                    <NvidiaIcon
+                      alt="Nvidia"
+                      class="mr-2"
+                      style="width: 20px; height: 20px"
+                    />
+                    <span
+                      v-if="
+                        testgridMarkets &&
+                        testgridMarkets.find(
+                          (tgm: any) => tgm.address === job.market.toString()
+                        )
+                      "
+                    >
+                      {{
+                        testgridMarkets.find(
+                          (tgm: any) => tgm.address === job.market.toString()
+                        ).name
+                      }}
+                    </span>
+                    <span v-else class="is-family-monospace">{{
+                      job.market.toString()
+                    }}</span>
+                  </div>
+                </NuxtLink>
+              </td>
+              <td>
+                <div
+                  class="clickable-row-cell-content is-flex is-align-items-center"
+                >
+                  <template v-if="getTemplateForJob(job)">
+                    <div class="template-icon mr-2">
+                      <img
+                        :src="getTemplateForJob(job)?.icon"
+                        :alt="getTemplateForJob(job)?.name"
+                      />
                     </div>
-                  </td>
-                  <td>
-                    <span class="clickable-row-cell-content">
-                      <span v-if="nodeSpecs[job.node]">{{ formatCountry(nodeSpecs[job.node].country) }}</span>
-                      <span v-else>-</span>
-                    </span>
-                  </td>
-                  <td>
-                    <span class="clickable-row-cell-content">
-                      <span v-if="job.timeStart">{{ formatTimeAgo(job.timeStart) }}</span>
-                      <span v-else>-</span>
-                    </span>
-                  </td>
-                  <td class="is-hidden-mobile">
-                    <span class="clickable-row-cell-content">
-                      <span v-if="job.timeStart && job.timeEnd">
-                        <SecondsFormatter :seconds="job.timeEnd - job.timeStart" :showSeconds="true" />
-                      </span>
-                      <span v-else>-</span>
-                    </span>
-                  </td>
-                  <td class="is-hidden-touch">
-                    <span class="clickable-row-cell-content">
-                      <JobPrice :job="job" :options="{ showPerHour: job.state === 1 || (!job.timeStart && !job.timeEnd) }" :marketsData="testgridMarkets" />
-                    </span>
-                  </td>
-                  <td>
-                    <div class="clickable-row-cell-content">
-                      <div class="tag is-outlined status-tag" :class="{
-                        'is-success': job.state === 2,
-                        'is-info': job.state === 1,
-                        'is-warning': job.state === 0,
-                        'is-dark': job.state === 3,
-                        'is-light': ![0,1,2,3].includes(job.state)
-                      }">
-                        <component class="mr-2 status-icon" :is="getStatusIconComponent(job.state)" />
-                        <span>{{ getStatusText(job.state) }}</span>
+                    <span>{{ getTemplateForJob(job)?.name }}</span>
+                  </template>
+                  <template v-else>
+                    <template v-if="isGHCR(getJobImage(job))">
+                      <div class="container-icon mr-2">
+                        <GithubIcon
+                          alt="GitHub"
+                          class="github-icon"
+                          style="width: 16px; height: 16px"
+                        />
                       </div>
-                    </div>
-                  </td>
-                </tr>
-              </template>
-            </tbody>
-          </table>
-          </div>
-        </div>
-
-        <Pagination
-            v-if="totalPages > 1"
-            v-model="currentPage"
-            class="pagination is-centered mt-4"
-            :total-page="totalPages"
-            :max-page="6"
-        />
-      </div>
+                    </template>
+                    <template v-else>
+                      <div class="container-icon mr-2">
+                        <img
+                          src="/img/icons/type/docker.svg"
+                          alt="Docker"
+                          class="docker-icon"
+                          style="width: 16px; height: 16px"
+                        />
+                      </div>
+                    </template>
+                    <span class="is-family-monospace">{{
+                      getJobImage(job)
+                    }}</span>
+                  </template>
+                </div>
+              </td>
+              <td>
+                <span class="clickable-row-cell-content">
+                  <span v-if="nodeSpecs[job.node]">{{
+                    formatCountry(nodeSpecs[job.node].country)
+                  }}</span>
+                  <span v-else>-</span>
+                </span>
+              </td>
+              <td>
+                <span class="clickable-row-cell-content">
+                  <span v-if="job.timeStart">{{
+                    formatTimeAgo(job.timeStart)
+                  }}</span>
+                  <span v-else>-</span>
+                </span>
+              </td>
+              <td class="is-hidden-mobile">
+                <span class="clickable-row-cell-content">
+                  <span v-if="job.timeStart && job.timeEnd">
+                    <SecondsFormatter
+                      :seconds="job.timeEnd - job.timeStart"
+                      :showSeconds="true"
+                    />
+                  </span>
+                  <span v-else>-</span>
+                </span>
+              </td>
+              <td class="is-hidden-touch">
+                <span class="clickable-row-cell-content">
+                  <JobPrice
+                    :job="job"
+                    :options="{
+                      showPerHour:
+                        job.state === 1 || (!job.timeStart && !job.timeEnd),
+                    }"
+                    :marketsData="testgridMarkets"
+                  />
+                </span>
+              </td>
+              <td>
+                <div class="clickable-row-cell-content">
+                  <div
+                    class="tag is-outlined status-tag"
+                    :class="{
+                      'is-success': job.state === 2,
+                      'is-info': job.state === 1,
+                      'is-warning': job.state === 0,
+                      'is-dark': job.state === 3,
+                      'is-light': ![0, 1, 2, 3].includes(job.state),
+                    }"
+                  >
+                    <component
+                      class="mr-2 status-icon"
+                      :is="getStatusIconComponent(job.state)"
+                    />
+                    <span>{{ getStatusText(job.state) }}</span>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
     </div>
   </div>
+
+  <Pagination
+    v-if="totalPages > 1"
+    v-model="currentPage"
+    class="pagination is-centered mt-4"
+    :total-page="totalPages"
+    :max-page="6"
+  />
 </template>
 
 <script setup lang="ts">
-import { useRouter } from 'vue-router';
-import { useWallet } from 'solana-wallets-vue';
-import NvidiaIcon from '@/assets/img/icons/nvidia.svg?component';
-import GithubIcon from '@/assets/img/icons/github.svg?component';
-import PlusSymbolIcon from '@/assets/img/icons/plus_symbol.svg?component';
-import RunningIcon from '@/assets/img/icons/status/running.svg?component';
-import StoppedIcon from '@/assets/img/icons/status/stopped.svg?component';
-import FailedIcon from '@/assets/img/icons/status/failed.svg?component';
-import QueuedIcon from '@/assets/img/icons/status/queued.svg?component';
-import DoneIcon from '@/assets/img/icons/status/done.svg?component';
-import { useTemplates } from '~/composables/useTemplates';
-import { useMarkets } from '~/composables/useMarkets';
+import { useRouter } from "vue-router";
+import { useWallet } from "solana-wallets-vue";
+import NvidiaIcon from "@/assets/img/icons/nvidia.svg?component";
+import GithubIcon from "@/assets/img/icons/github.svg?component";
+import PlusSymbolIcon from "@/assets/img/icons/plus_symbol.svg?component";
+import RunningIcon from "@/assets/img/icons/status/running.svg?component";
+import StoppedIcon from "@/assets/img/icons/status/stopped.svg?component";
+import FailedIcon from "@/assets/img/icons/status/failed.svg?component";
+import QueuedIcon from "@/assets/img/icons/status/queued.svg?component";
+import DoneIcon from "@/assets/img/icons/status/done.svg?component";
+import { useTemplates } from "~/composables/useTemplates";
+import { useMarkets } from "~/composables/useMarkets";
 import JobPrice from "~/components/Job/Price.vue";
 import SecondsFormatter from "~/components/SecondsFormatter.vue";
-import { computed } from 'vue';
-import { useStatus } from '~/composables/useStatus';
+import { computed, type PropType } from "vue";
+import { useStatus } from "~/composables/useStatus";
 
 const router = useRouter();
 const { publicKey: walletPublicKey } = useWallet();
@@ -154,7 +199,7 @@ const { templates } = useTemplates();
 const { status, data: userData } = useAuth();
 
 const activeAddress = computed(() => {
-  if (status.value === 'authenticated' && userData.value?.generatedAddress) {
+  if (status.value === "authenticated" && userData.value?.generatedAddress) {
     return userData.value.generatedAddress;
   }
   if (walletPublicKey.value) {
@@ -166,28 +211,29 @@ const activeAddress = computed(() => {
 const props = defineProps({
   itemsPerPage: {
     type: Number,
-    default: 10
+    default: 10,
   },
   jobType: {
     type: String,
-    default: 'combined', // 'posted', 'node', or 'combined'
-    validator: (value: string) => ['posted', 'node', 'combined'].includes(value)
-  }
+    default: "combined", // 'posted', 'node', or 'combined'
+    validator: (value: string) =>
+      ["posted", "node", "combined"].includes(value),
+  },
+  statusFilter: {
+    type: [String, null] as PropType<string | null>,
+    default: null,
+  },
 });
 
-const emit = defineEmits(['update:total-deployments']);
+const emit = defineEmits(["update:total-deployments"]);
 
 const currentPage = ref(1);
-const currentState = ref<number | null>(null);
 
-// Fix the type issue with filterStates
-const filterStates = [
-  { label: 'All', value: null as null },
-  { label: 'Completed', value: 2 as number },
-  { label: 'Running', value: 1 as number },
-  { label: 'Queued', value: 0 as number },
-  { label: 'Stopped', value: 3 as number }
-];
+// Convert string status filter to number for backwards compatibility
+const currentState = computed(() => {
+  if (props.statusFilter === null) return null;
+  return parseInt(props.statusFilter) || null;
+});
 
 const jobStateMapping: Record<number, string> = {
   0: "QUEUED",
@@ -199,44 +245,55 @@ const jobStateMapping: Record<number, string> = {
 // URL for posted jobs
 const postedJobsUrl = computed(() => {
   const address = activeAddress.value;
-  if (!address) return '';
-  return `/api/jobs?limit=${props.itemsPerPage}&offset=${(currentPage.value - 1) * props.itemsPerPage}${currentState.value !== null ? `&state=${jobStateMapping[currentState.value as keyof typeof jobStateMapping]}` : ''}&poster=${address}`;
+  if (!address) return "";
+  return `/api/jobs?limit=${props.itemsPerPage}&offset=${(currentPage.value - 1) * props.itemsPerPage}${currentState.value !== null ? `&state=${jobStateMapping[currentState.value as keyof typeof jobStateMapping]}` : ""}&poster=${address}`;
 });
 
 // URL for node jobs
 const nodeJobsUrl = computed(() => {
   const address = activeAddress.value;
-  if (!address) return '';
-  return `/api/jobs?limit=${props.itemsPerPage}&offset=${(currentPage.value - 1) * props.itemsPerPage}${currentState.value !== null ? `&state=${jobStateMapping[currentState.value as keyof typeof jobStateMapping]}` : ''}&node=${address}`;
+  if (!address) return "";
+  return `/api/jobs?limit=${props.itemsPerPage}&offset=${(currentPage.value - 1) * props.itemsPerPage}${currentState.value !== null ? `&state=${jobStateMapping[currentState.value as keyof typeof jobStateMapping]}` : ""}&node=${address}`;
 });
 
 // Fetch jobs API calls
-const { data: postedJobs, pending: loadingJobs, refresh: refreshPostedJobs } = useAPI(() => {
-  return activeAddress.value ? postedJobsUrl.value : '';
-}, { 
-  default: () => ({ jobs: [], totalJobs: 0 })
-});
+const {
+  data: postedJobs,
+  pending: loadingJobs,
+  refresh: refreshPostedJobs,
+} = useAPI(
+  () => {
+    return activeAddress.value ? postedJobsUrl.value : "";
+  },
+  {
+    default: () => ({ jobs: [], totalJobs: 0 }),
+  }
+);
 
-const { data: nodeJobs, pending: loadingNodeJobs, refresh: refreshNodeJobs } = useAPI(() => 
-  activeAddress.value ? nodeJobsUrl.value : '', { 
-  default: () => ({ jobs: [], totalJobs: 0 })
+const {
+  data: nodeJobs,
+  pending: loadingNodeJobs,
+  refresh: refreshNodeJobs,
+} = useAPI(() => (activeAddress.value ? nodeJobsUrl.value : ""), {
+  default: () => ({ jobs: [], totalJobs: 0 }),
 });
 
 // Combine jobs and remove duplicates
 const combinedJobs = computed(() => {
   switch (props.jobType) {
-    case 'posted':
+    case "posted":
       return postedJobs.value?.jobs || [];
-    case 'node':
+    case "node":
       return nodeJobs.value?.jobs || [];
-    case 'combined':
+    case "combined":
     default:
       const allJobs = [
         ...(postedJobs.value?.jobs || []),
-        ...(nodeJobs.value?.jobs || [])
+        ...(nodeJobs.value?.jobs || []),
       ];
-      return allJobs.filter((job, index, self) =>
-        index === self.findIndex((j) => j.address === job.address)
+      return allJobs.filter(
+        (job, index, self) =>
+          index === self.findIndex((j) => j.address === job.address)
       );
   }
 });
@@ -249,24 +306,30 @@ const displayedJobs = computed(() => {
 
 const totalJobs = computed(() => {
   switch (props.jobType) {
-    case 'posted':
+    case "posted":
       return postedJobs.value?.totalJobs || 0;
-    case 'node':
+    case "node":
       return nodeJobs.value?.totalJobs || 0;
-    case 'combined':
+    case "combined":
     default:
       const postedTotal = postedJobs.value?.totalJobs || 0;
       const nodeTotal = nodeJobs.value?.totalJobs || 0;
-      return Math.max(postedTotal, nodeTotal); 
+      return Math.max(postedTotal, nodeTotal);
   }
 });
 
 // Emit total jobs count when it changes
-watch(totalJobs, (newValue) => {
-  emit('update:total-deployments', newValue);
-}, { immediate: true });
+watch(
+  totalJobs,
+  (newValue) => {
+    emit("update:total-deployments", newValue);
+  },
+  { immediate: true }
+);
 
-const totalPages = computed(() => Math.ceil(totalJobs.value / props.itemsPerPage));
+const totalPages = computed(() =>
+  Math.ceil(totalJobs.value / props.itemsPerPage)
+);
 
 const formatTimeAgo = (timestamp: number) => {
   const date = new Date(timestamp * 1000);
@@ -279,49 +342,25 @@ const formatTimeAgo = (timestamp: number) => {
   return `${Math.floor(seconds / 86400)}d ago`;
 };
 
+const { data: testgridMarkets } = useAPI("/api/markets", { default: () => [] });
 
-const { data: testgridMarkets, pending: loadingTestgridMarkets } = useAPI('/api/markets', { default: () => [] });
-
-const { markets, getMarkets, loadingMarkets } = useMarkets();
+const { markets, getMarkets } = useMarkets();
 if (!markets.value) {
   getMarkets();
 }
 
-const getStateButtonClass = (state: number | null) => {
-  if (state === currentState.value) {
-    return 'is-active';
-  }
-  switch (state) {
-    case null: return 'is-outlined';
-    case 2: return 'is-success is-outlined';
-    case 1: return 'is-info is-outlined';
-    case 0: return 'is-warning is-outlined';
-    case 3: return 'is-dark is-outlined';
-    default: return 'is-outlined';
-  }
-};
-
-// Use global status system
-const { getStatusClass: globalStatusClass } = useStatus();
-const getStatusClass = (state: number) => `tag status-tag ${globalStatusClass(state)}`;
-
-const getStatusText = (state: number) => {
-  switch (state) {
-    case 2: return 'Completed';
-    case 1: return 'Running';
-    case 0: return 'Queued';
-    case 3: return 'Stopped';
-    default: return 'Unknown';
-  }
-};
-
 const getStatusIconComponent = (state: number) => {
   switch (state) {
-    case 2: return DoneIcon;
-    case 1: return RunningIcon;
-    case 0: return QueuedIcon;
-    case 3: return StoppedIcon;
-    default: return StoppedIcon;
+    case 2:
+      return DoneIcon;
+    case 1:
+      return RunningIcon;
+    case 0:
+      return QueuedIcon;
+    case 3:
+      return StoppedIcon;
+    default:
+      return StoppedIcon;
   }
 };
 
@@ -332,7 +371,10 @@ const nodeSpecs = ref<Record<string, any>>({});
 const formatCountry = (countryCode: string) => {
   if (!countryCode) return "-";
   try {
-    return new Intl.DisplayNames(["en"], { type: "region" }).of(countryCode) || countryCode;
+    return (
+      new Intl.DisplayNames(["en"], { type: "region" }).of(countryCode) ||
+      countryCode
+    );
   } catch {
     return countryCode;
   }
@@ -340,8 +382,9 @@ const formatCountry = (countryCode: string) => {
 
 // Helper function to fetch node specs
 const fetchNodeSpecs = async (nodeAddress: string) => {
-  if (!nodeAddress || nodeAddress === '11111111111111111111111111111111') return null;
-  
+  if (!nodeAddress || nodeAddress === "11111111111111111111111111111111")
+    return null;
+
   try {
     const { data } = await useAPI(`/api/nodes/${nodeAddress}/specs`);
     if (data.value) {
@@ -355,62 +398,77 @@ const fetchNodeSpecs = async (nodeAddress: string) => {
 };
 
 // Watch for changes in combined jobs to fetch node specs
-watch([combinedJobs, currentPage], async ([jobs]) => {
-  if (!jobs) return;
-  
-  // Get unique node addresses that we haven't fetched yet
-  const nodeAddresses = [...new Set(jobs.map(job => job.node))]
-    .filter(address => !nodeSpecs.value[address as string] && address !== '11111111111111111111111111111111');
-  
-  // Fetch specs for each node in parallel
-  const specsPromises = nodeAddresses.map(async (nodeAddress) => {
-    const specs = await fetchNodeSpecs(nodeAddress as string);
-    if (specs) {
-      nodeSpecs.value[nodeAddress as string] = specs;
-    }
-  });
-  
-  await Promise.all(specsPromises);
-}, { immediate: true });
+watch(
+  [combinedJobs, currentPage],
+  async ([jobs]) => {
+    if (!jobs) return;
+
+    // Get unique node addresses that we haven't fetched yet
+    const nodeAddresses = [...new Set(jobs.map((job) => job.node))].filter(
+      (address) =>
+        !nodeSpecs.value[address as string] &&
+        address !== "11111111111111111111111111111111"
+    );
+
+    // Fetch specs for each node in parallel
+    const specsPromises = nodeAddresses.map(async (nodeAddress) => {
+      const specs = await fetchNodeSpecs(nodeAddress as string);
+      if (specs) {
+        nodeSpecs.value[nodeAddress as string] = specs;
+      }
+    });
+
+    await Promise.all(specsPromises);
+  },
+  { immediate: true }
+);
 
 // Add watcher for status filter changes
-watch(() => currentState.value, () => {
-  // Reset to first page when filter changes
-  currentPage.value = 1;
-  
-  // Refresh the data
-  refreshPostedJobs();
-  refreshNodeJobs();
-}, { immediate: false });
+watch(
+  () => currentState.value,
+  () => {
+    // Reset to first page when filter changes
+    currentPage.value = 1;
+
+    // Refresh the data
+    refreshPostedJobs();
+    refreshNodeJobs();
+  },
+  { immediate: false }
+);
 
 // Add watcher for page changes
-watch(() => currentPage.value, () => {
-  // Refresh the data when page changes
-  refreshPostedJobs();
-  refreshNodeJobs();
-}, { immediate: false });
+watch(
+  () => currentPage.value,
+  () => {
+    // Refresh the data when page changes
+    refreshPostedJobs();
+    refreshNodeJobs();
+  },
+  { immediate: false }
+);
 
 // Helper function to get job image from job definition
 const getJobImage = (job: any) => {
-  if (!job.jobDefinition?.ops?.length) return 'Unknown';
+  if (!job.jobDefinition?.ops?.length) return "Unknown";
   const firstOp = job.jobDefinition.ops[0];
-  if (firstOp.type === 'container/run' && firstOp.args?.image) {
+  if (firstOp.type === "container/run" && firstOp.args?.image) {
     return firstOp.args.image;
   }
-  return 'Unknown';
+  return "Unknown";
 };
 
 // Helper function to find template for a job
 const getTemplateForJob = (job: any) => {
   if (!templates.value || !job.jobDefinition) return null;
-  return templates.value.find(t => 
-    JSON.stringify(t.jobDefinition) === JSON.stringify(job.jobDefinition)
+  return templates.value.find(
+    (t) => JSON.stringify(t.jobDefinition) === JSON.stringify(job.jobDefinition)
   );
 };
 
 // Helper function to check if image is from GHCR
 const isGHCR = (image: string) => {
-  return image.startsWith('ghcr.io');
+  return image.startsWith("ghcr.io");
 };
 </script>
 
@@ -494,13 +552,15 @@ const isGHCR = (image: string) => {
 }
 
 .docker-icon {
-  filter: invert(48%) sepia(90%) saturate(2299%) hue-rotate(188deg) brightness(97%) contrast(91%);
+  filter: invert(48%) sepia(90%) saturate(2299%) hue-rotate(188deg)
+    brightness(97%) contrast(91%);
   width: 16px;
   height: 16px;
 }
 
 .dark-mode .docker-icon {
-  filter: invert(48%) sepia(90%) saturate(2299%) hue-rotate(188deg) brightness(97%) contrast(91%);
+  filter: invert(48%) sepia(90%) saturate(2299%) hue-rotate(188deg)
+    brightness(97%) contrast(91%);
 }
 
 .dark-mode img[src*="github.svg"] {
@@ -512,8 +572,8 @@ const isGHCR = (image: string) => {
 }
 
 .button:hover {
-  color: #10E80C !important;
-  border-color: #10E80C !important;
+  color: #10e80c !important;
+  border-color: #10e80c !important;
 }
 
 .plus-icon {
@@ -525,14 +585,12 @@ const isGHCR = (image: string) => {
 }
 
 .button:hover .plus-icon {
-  fill: #10E80C;
+  fill: #10e80c;
 }
-
 
 .dark-mode .tag img[src*="status/stopped.svg"] {
   filter: brightness(100) !important;
 }
-
 
 .min-height-container {
   min-height: 430px;
@@ -542,4 +600,4 @@ const isGHCR = (image: string) => {
 select option {
   value: any;
 }
-</style> 
+</style>

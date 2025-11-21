@@ -269,7 +269,7 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
       const config = useRuntimeConfig();
       const nodeAddress = (job.value.node as unknown as { toString?: () => string })?.toString?.() || (job.value.node as unknown as string);
       if (!nodeAddress || nodeAddress === "11111111111111111111111111111111") { hasFetchedFinalInfo = true; return; }
-      const authHeader = await ensureAuth();
+      const authHeader = await ensureAuth({ deploymentId });
       const sseUrl = `https://${nodeAddress}.${config.public.nodeDomain}/job/${jobId}/info`;
 
       const sdkServices = job.value?.jobDefinition ? getJobExposedServices(job.value.jobDefinition, jobId) : [];
@@ -334,7 +334,7 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
     currentNodeAddress = nodeAddress;
     (async () => {
       try {
-        const authHeader = await ensureAuth();
+        const authHeader = await ensureAuth({ deploymentId });
         const sseUrl = `https://${nodeAddress}.${config.public.nodeDomain}/job/${jobId}/info`;
         eventSource = new EventSourcePolyfill(sseUrl, { headers: { Authorization: authHeader } });
 
