@@ -1,5 +1,5 @@
 <template>
-  <div class="box has-text-centered equal-height-box">
+  <div v-if="token" class="box has-text-centered equal-height-box">
     <p class="heading">Credit Balance</p>
     <p class="title is-4 mb-1" v-if="!loading">
       ${{ creditBalance.toFixed(2) }}
@@ -67,8 +67,6 @@
 import { ref, onMounted } from "vue";
 import { useToast } from "vue-toastification";
 import { trackEvent } from "~/utils/analytics";
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-import { faPlus } from '@fortawesome/free-solid-svg-icons';
 
 const config = useRuntimeConfig().public;
 const { token, data: userData } = useAuth();
