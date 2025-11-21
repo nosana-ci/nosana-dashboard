@@ -19,7 +19,7 @@
       </div>
       <div class="column is-6">
         <div class="box is-flex is-flex-direction-column">
-          <h2 class="title is-5">Jobs</h2>
+          <h2 class="title is-5">Hosts</h2>
           <MarketQueues></MarketQueues>
           <div class="has-text-right mt-auto pt-2">
             <nuxt-link to="/jobs" class="button is-text">
