@@ -117,46 +117,6 @@
   }
 }
 
-$state-filter-outline-colors: (
-  "is-primary": ("bg": $primary, "color": $primary-invert),
-  "is-success": ("bg": $success, "color": $white),
-  "is-info": ("bg": $info, "color": $white),
-  "is-warning": ("bg": $warning, "color": $black),
-  "is-danger": ("bg": $danger, "color": $white),
-  "is-dark": ("bg": $dark, "color": $white)
-);
-
-.state-filter {
-  .button.is-outlined {
-    border-width: 1px;
-    box-sizing: border-box;
-    --bulma-button-border-width: 1px;
-    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
-  }
-
-  @each $modifier, $settings in $state-filter-outline-colors {
-    $background: map.get($settings, "bg");
-    $text-color: map.get($settings, "color");
-
-    .button.#{$modifier}.is-outlined {
-      border-width: 1px;
-      box-sizing: border-box;
-      --bulma-button-border-width: 1px;
-
-      &:hover,
-      &.is-hovered {
-        border-width: 1px;
-        box-sizing: border-box;
-        --bulma-button-border-width: 1px;
-        background-color: $background;
-        border-color: $background;
-        color: $text-color !important;
-        box-shadow: none;
-      }
-    }
-  }
-}
-
 // Dropdown styling
 .dropdown-menu {
   .dropdown-content {
