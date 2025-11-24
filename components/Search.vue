@@ -43,11 +43,13 @@ import { type Node } from "@nosana/sdk";
 import { onKeyStroke } from "@vueuse/core";
 import { PublicKey } from "@solana/web3.js";
 import SearchIcon from "@/assets/img/icons/search.svg?component";
+import type { Market } from "@nosana/sdk";
+type SearchItem = { value: string; type: "market" | "account" | "job" | "node" };
 
 const router = useRouter();
 const address = ref("");
 const { markets } = useMarkets();
-const items: Ref<Array<any>> = ref([]);
+const items: Ref<SearchItem[]> = ref([]);
 const activeSearchItem: Ref<number> = ref(0);
 const checkingIfJob = ref(false);
 
@@ -119,14 +121,13 @@ const searchItems = computed(() => {
   }
 
   // combine jobs and markets in one list
-  items.value = markets.value
-    ? markets.value!.map((a: any) => {
-        return { value: a.address.toString(), type: "market" };
-      })
-    : [];
+  items.value = (markets.value ?? []).map((m: Market) => ({
+    value: m.address.toString(),
+    type: "market",
+  }));
 
   let matches = 0;
-  const results = items.value!.filter((item: any) => {
+  const results = (items.value ?? []).filter((item: SearchItem) => {
     if (
       item.value
         .toString()
@@ -146,7 +147,9 @@ const searchItems = computed(() => {
     try {
       const pk = new PublicKey(address.value);
       results.push({ value: pk.toString(), type: "account" });
-    } catch (error) {}
+    } catch (error) {
+      if (import.meta.dev) console.debug("Invalid public key in search", error);
+    }
   }
 
   return results;

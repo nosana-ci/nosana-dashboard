@@ -28,7 +28,7 @@
       <div class="logs-content">
         <transition name="logs-fade" mode="out-in">
           <div v-if="job.isRunning" class="logs-running-container" key="logs-running">
-            <div v-if="isJobPoster" class="logs-viewers-wrapper">
+            <div v-if="isJobPoster || isConnecting || logConnectionEstablished" class="logs-viewers-wrapper">
               <FLogViewer
                 :logs="activeLogs || []"
                 :isConnecting="isConnecting"
@@ -73,7 +73,7 @@
         </div>
         <template v-if="job.isRunning">
           <FLogViewer
-            v-if="isJobPoster"
+            v-if="isJobPoster || isConnecting || logConnectionEstablished"
             :logs="activeLogs || []"
             :isConnecting="isConnecting"
             :fullscreen="true"

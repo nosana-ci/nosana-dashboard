@@ -460,7 +460,8 @@ const expectedRewards: ComputedRef<number | null> = computed(() => {
   if (activeStake.value && activeStake.value.amount) {
     totalXnos -= activeStake.value.amount;
   }
-  const rewards = ((xNOS.value! * 1e6) / (totalXnos + (xNOS.value! * 1e6))) * ((poolInfo.value.emission.toNumber() / 1e6) * SECONDS_PER_DAY)
+  const xnosScore = (xNOS.value ?? 0) * 1e6;
+  const rewards = (xnosScore / (totalXnos + xnosScore)) * ((poolInfo.value.emission.toNumber() / 1e6) * SECONDS_PER_DAY)
   return Math.max(0, rewards);
 })
 
@@ -482,7 +483,7 @@ const createRewardAccount = async () => {
   await refreshStake();
   await refreshBalance();
   toast.success('Succesfully created reward account');
-  console.log('create reward account tx', createRewardAccount);
+  if (import.meta.dev) console.debug('create reward account tx', createRewardAccount);
 }
 
 const topup = async () => {

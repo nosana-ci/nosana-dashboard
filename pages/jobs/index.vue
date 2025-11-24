@@ -38,7 +38,6 @@ const jobStateMapping: any = {
 const limit: Ref<number> = ref(17);
 const jobsUrl = computed(() => { return `/api/jobs?limit=${limit.value}&offset=${(page.value - 1) * limit.value}${state.value !== null ? `&state=${jobStateMapping[state.value]}` : ''}` })
 watch(jobsUrl, () => {
-  console.log('resetting jobs..')
   jobs.value = null
 })
 const { data: jobs, pending: loadingJobs, refresh: refreshJobs } = await useAPI(jobsUrl, { watch: [jobsUrl] });

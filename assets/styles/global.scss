@@ -17,7 +17,6 @@
   white-space: nowrap;
 }
 
-
 // Section titles
 .title.is-5 {
   color: $text;
@@ -54,7 +53,9 @@
   }
 
   // Only apply border and background overrides to buttons without color classes
-  &:not(.is-primary):not(.is-secondary):not(.is-success):not(.is-danger):not(.is-warning):not(.is-info):not(.is-light):not(.is-dark):not(.is-link) {
+  &:not(.is-primary):not(.is-secondary):not(.is-success):not(.is-danger):not(
+      .is-warning
+    ):not(.is-info):not(.is-light):not(.is-dark):not(.is-link) {
     &:hover,
     &:focus,
     &:focus-visible,
@@ -85,15 +86,16 @@
     border-radius: $radius-small;
     display: flex;
     align-items: center;
-    
+
     svg {
       color: inherit;
     }
-    
+
     img[src$=".svg"] {
-      filter: brightness(0) saturate(100%) invert(48%) sepia(9%) saturate(665%) hue-rotate(180deg) brightness(93%) contrast(87%);
+      filter: brightness(0) saturate(100%) invert(48%) sepia(9%) saturate(665%)
+        hue-rotate(180deg) brightness(93%) contrast(87%);
     }
-    
+
     &:hover {
       background: $grey-lightest;
       color: $text;
@@ -122,16 +124,17 @@
   box-shadow: $button-shadow;
   font-size: $size-6;
   font-weight: $weight-medium;
-  
+
   .icon {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    
+
     img {
       display: block;
       flex-shrink: 0;
-      filter: brightness(0) saturate(100%) invert(48%) sepia(9%) saturate(665%) hue-rotate(180deg) brightness(93%) contrast(87%);
+      filter: brightness(0) saturate(100%) invert(48%) sepia(9%) saturate(665%)
+        hue-rotate(180deg) brightness(93%) contrast(87%);
     }
   }
 
@@ -144,15 +147,15 @@
     opacity: 0.4;
     cursor: not-allowed;
   }
-  
+
   &.is-loading {
     position: relative;
     color: transparent;
-    
+
     span {
       opacity: 0;
     }
-    
+
     &:after {
       position: absolute;
       content: "";
@@ -181,7 +184,7 @@
   transition: all 0.2s ease;
   font-size: $size-7;
   line-height: 1.2;
-  
+
   &:hover {
     background: $secondary;
     color: $white;
@@ -198,24 +201,24 @@
 // Wallet authentication banner
 .wallet-auth-banner {
   border-left: 4px solid $secondary;
-  
+
   .banner-icon {
     color: $secondary;
     flex-shrink: 0;
   }
-  
+
   .banner-title {
     font-weight: $weight-semibold;
     margin-bottom: 0.25rem;
     color: $text;
   }
-  
+
   .banner-subtitle {
     font-size: $size-7;
     color: $text-dark;
     line-height: 1.4;
   }
-  
+
   .banner-actions {
     gap: 0.5rem;
   }
@@ -225,13 +228,16 @@
   .banner-title {
     color: $white;
   }
-  
+
   .banner-subtitle {
     color: $grey-light;
   }
 }
 
 .dark-mode {
+  p {
+    color: $white;
+  }
   .dropdown-menu {
     .dropdown-content {
       background: $black-ter;
@@ -240,15 +246,16 @@
 
     .dropdown-item {
       color: $grey-light;
-      
+
       svg {
         color: inherit;
       }
-      
+
       img[src$=".svg"] {
-        filter: brightness(0) saturate(100%) invert(88%) sepia(0%) saturate(0%) hue-rotate(180deg) brightness(100%) contrast(88%);
+        filter: brightness(0) saturate(100%) invert(88%) sepia(0%) saturate(0%)
+          hue-rotate(180deg) brightness(100%) contrast(88%);
       }
-      
+
       &:hover {
         background: $grey-darker;
         color: $white;
@@ -266,9 +273,10 @@
     border-color: $grey-dark;
     color: $grey-light;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-    
+
     .icon img {
-      filter: brightness(0) saturate(100%) invert(88%) sepia(0%) saturate(0%) hue-rotate(180deg) brightness(100%) contrast(88%);
+      filter: brightness(0) saturate(100%) invert(88%) sepia(0%) saturate(0%)
+        hue-rotate(180deg) brightness(100%) contrast(88%);
     }
 
     &:hover:not(:disabled) {
@@ -276,7 +284,7 @@
       border-color: lighten($grey-dark, 10%);
       color: $white;
     }
-    
+
     &.is-loading {
       &:after {
         border-color: $grey;
@@ -290,7 +298,7 @@
     background: rgba($secondary, 0.15);
     color: $secondary;
     border-color: $secondary;
-    
+
     &:hover {
       background: $secondary;
       color: $black;
@@ -328,9 +336,13 @@
   }
 
   // spacing when icon is on the left of text
-  .icon:first-child { margin-right: 0.5rem; }
+  .icon:first-child {
+    margin-right: 0.5rem;
+  }
   // spacing when icon is on the right of text (e.g., dropdown arrow)
-  .icon:last-child { margin-left: 0.5rem; }
+  .icon:last-child {
+    margin-left: 0.5rem;
+  }
 
   &:hover {
     background: $grey-lightest;
@@ -366,7 +378,7 @@
   flex-wrap: nowrap;
   align-items: center;
   overflow: visible;
-  
+
   .tab-button {
     min-width: auto; // allow natural width
     white-space: nowrap; // prevent wrap but allow full label
@@ -512,12 +524,14 @@
 
       &:hover {
         background-color: $grey-darker !important;
-        strong, .has-text-weight-bold {
+        strong,
+        .has-text-weight-bold {
           color: $secondary !important;
         }
       }
 
-      strong, .has-text-weight-bold {
+      strong,
+      .has-text-weight-bold {
         color: $white !important;
       }
     }
@@ -525,13 +539,15 @@
     .dropdown-item {
       &:hover {
         background-color: $grey-darker;
-        
-        strong, .has-text-weight-bold {
+
+        strong,
+        .has-text-weight-bold {
           color: $secondary !important;
         }
       }
 
-      strong, .has-text-weight-bold {
+      strong,
+      .has-text-weight-bold {
         color: $white !important;
       }
     }
@@ -670,7 +686,7 @@
     th {
       border-color: $grey-dark;
       color: $white;
-      
+
       strong {
         color: $white;
       }
@@ -881,12 +897,12 @@
 .modal-card {
   width: 420px;
   max-width: 90%;
-  
+
   &.modal-card-wide {
     width: 90%;
     max-width: 1200px;
   }
-  
+
   &-body {
     &.modal-card-body-scrollable {
       max-height: 70vh;
@@ -938,7 +954,8 @@ button[disabled][data-tooltip] {
 /* Add before dark-mode styles */
 .dropdown-item {
   &:hover {
-    strong, .has-text-weight-bold {
+    strong,
+    .has-text-weight-bold {
       color: $secondary !important;
     }
   }
@@ -1041,33 +1058,33 @@ button[disabled][data-tooltip] {
     outline: none !important;
     box-shadow: none !important;
     padding-left: 12px;
-    
+
     &:focus {
       border-color: $grey-light;
     }
-    
+
     option {
       text-align: left;
       border: 1px solid $grey-lighter;
       border-radius: 4px;
       margin: 2px;
       padding: 4px 8px;
-      
+
       &.has-text-success {
         color: $success !important;
         border-color: $success;
       }
-      
+
       &.has-text-info {
         color: $info !important;
         border-color: $info;
       }
-      
+
       &.has-text-warning {
         color: $warning !important;
         border-color: $warning;
       }
-      
+
       &.has-text-dark {
         color: $dark !important;
         border-color: $dark;
@@ -1094,7 +1111,7 @@ button[disabled][data-tooltip] {
       option {
         background-color: $black-ter;
         border-color: $grey-dark;
-        
+
         &:hover {
           background-color: $grey-darker;
         }
@@ -1103,17 +1120,17 @@ button[disabled][data-tooltip] {
           color: $success !important;
           border-color: $success;
         }
-        
+
         &.has-text-info {
           color: $info !important;
           border-color: $info;
         }
-        
+
         &.has-text-warning {
           color: $warning !important;
           border-color: $warning;
         }
-        
+
         &.has-text-dark {
           color: $white !important;
           border-color: $white;
@@ -1224,6 +1241,21 @@ button[disabled][data-tooltip] {
   background-color: rgba(255, 255, 255, 0.05);
 }
 
+/* Clickable notifications */
+.clickable-notification {
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+}
+
+.dark-mode .clickable-notification:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
 .clickable-row-link {
   display: block;
   color: inherit;
@@ -1234,7 +1266,7 @@ button[disabled][data-tooltip] {
   }
 
   &::after {
-    content: '';
+    content: "";
     position: absolute;
     top: 0;
     left: 0;
@@ -1256,7 +1288,7 @@ button[disabled][data-tooltip] {
 /* Status color mapping to ensure consistency across all components */
 :root {
   --status-success-color: #{$success}; // Green for completed/success
-  --status-info-color: #{$info}; // Blue for running/pending  
+  --status-info-color: #{$info}; // Blue for running/pending
   --status-warning-color: #{$warning}; // Orange for queued
   --status-danger-color: #{$danger}; // Red for failed/error
   --status-dark-color: #{$dark}; // Gray for stopped/default
@@ -1273,48 +1305,50 @@ button[disabled][data-tooltip] {
 /* Global status tag styling with consistent colors */
 .tag.status-tag.is-outlined {
   background-color: transparent !important;
-  
+
   &.is-success {
     color: var(--status-success-color) !important;
     border-color: var(--status-success-color) !important;
-    
+
     svg {
       color: var(--status-success-color) !important;
     }
   }
-  
+
   &.is-info {
     color: var(--status-info-color) !important;
     border-color: var(--status-info-color) !important;
-    
+
     svg {
       color: var(--status-info-color) !important;
     }
   }
-  
+
   &.is-warning {
     color: var(--status-warning-color) !important;
     border-color: var(--status-warning-color) !important;
-    
+
     svg {
       color: var(--status-warning-color) !important;
     }
   }
-  
+
   &.is-danger {
     color: var(--status-danger-color) !important;
     border-color: var(--status-danger-color) !important;
-    
+
     svg {
       color: var(--status-danger-color) !important;
     }
   }
-  
+
   &.is-dark {
     color: var(--status-dark-color) !important;
     border-color: var(--status-dark-color) !important;
-    
-    svg, .status-icon-wrap, .status-icon {
+
+    svg,
+    .status-icon-wrap,
+    .status-icon {
       color: var(--status-dark-color) !important;
       fill: var(--status-dark-color) !important;
     }
@@ -1339,7 +1373,7 @@ button[disabled][data-tooltip] {
   justify-content: center;
   vertical-align: middle;
   line-height: 0;
-  
+
   svg {
     color: inherit;
   }
@@ -1375,7 +1409,7 @@ button[disabled][data-tooltip] {
   margin-left: 0.25rem;
   text-decoration: none !important;
   border-bottom: none !important;
-  
+
   &:hover {
     color: #363636;
     text-decoration: none !important;
@@ -1385,7 +1419,7 @@ button[disabled][data-tooltip] {
 
 .dark-mode .icon.has-tooltip-arrow {
   color: #b5b5b5;
-  
+
   &:hover {
     color: #f5f5f5;
   }
@@ -1417,7 +1451,7 @@ button[disabled][data-tooltip] {
 .dropdown-arrow {
   transition: transform 0.2s ease;
   transform: rotate(90deg);
-  
+
   &.is-rotated {
     transform: rotate(0deg);
   }
@@ -1442,7 +1476,7 @@ html.dark-mode .deployment-header {
 
 .back-button.is-ghost {
   border: none !important;
-  
+
   &:hover,
   &:focus,
   &:active {
@@ -1478,8 +1512,12 @@ html.dark-mode .deployment-header {
 }
 
 @keyframes statusSpinFallback {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 /* Force SMIL animations to restart immediately when component mounts */
@@ -1506,31 +1544,31 @@ html.dark-mode .deployment-header {
   padding: 0;
   margin-top: 0.2rem;
   position: relative; /* For copy button positioning */
-  
+
   .json-editor {
     min-height: 300px;
     border: none;
     border-radius: 4px;
     background-color: $grey-lightest !important;
-    
+
     :deep(.jse-main) {
       border: none;
       background-color: $grey-lightest !important;
     }
-    
+
     :deep(.jse-contents) {
       border-radius: 4px;
       background-color: $grey-lightest !important;
     }
-    
+
     :deep(.jse-text-mode) {
       background-color: $grey-lightest !important;
     }
-    
+
     :deep(.cm-editor) {
       background-color: $grey-lightest !important;
     }
-    
+
     :deep(.cm-focused) {
       background-color: $grey-lightest !important;
     }
@@ -1545,26 +1583,26 @@ html.dark-mode .deployment-header {
 .dark-mode .json-editor-container {
   background-color: $grey-darker !important;
   border-color: $grey-dark;
-  
+
   .json-editor {
     background-color: $grey-darker !important;
-    
+
     :deep(.jse-main) {
       background-color: $grey-darker !important;
     }
-    
+
     :deep(.jse-contents) {
       background-color: $grey-darker !important;
     }
-    
+
     :deep(.jse-text-mode) {
       background-color: $grey-darker !important;
     }
-    
+
     :deep(.cm-editor) {
       background-color: $grey-darker !important;
     }
-    
+
     :deep(.cm-focused) {
       background-color: $grey-darker !important;
     }
@@ -1739,4 +1777,39 @@ html.dark-mode .deployment-header {
   .is-flex-direction-column-mobile {
     flex-direction: column !important;
   }
+}
+
+.icon.borderless {
+  border: none !important;
+}
+.vertical-middle {
+  vertical-align: middle;
+}
+.refresh.is-loading svg {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.height-auto {
+  height: auto;
+}
+
+.va-bottom {
+  vertical-align: bottom;
+}
+
+.relative {
+  position: relative;
+}
+
+.z-index-2 {
+  z-index: 2;
 }
