@@ -28,6 +28,11 @@ export function useJob(jobId: string) {
   const loading = ref(true);
   const endpoints = ref<Endpoints>(new Map() as Endpoints);
   const jobInfo = ref<JobInfo | null>(null);
+  const route = useRoute();
+  const isDeploymentContext = computed<boolean>(() => {
+    const p = route.path || route.fullPath || '';
+    return typeof p === 'string' && p.startsWith('/deployments/');
+  });
 
   const toast = useToast();
   const { nosana } = useSDK();
@@ -340,6 +345,11 @@ export function useJob(jobId: string) {
   async function fetchNodeJobDefinitionOnce() {
     try {
       if (!job.value) return;
+      // Avoid node job-definition calls from the deployments page
+      if (isDeploymentContext.value) {
+        fetchedNodeJobDefinition = true;
+        return;
+      }
       if (fetchingNodeJobDefinition || fetchedNodeJobDefinition) return;
       fetchingNodeJobDefinition = true;
       const nodeDomain = useRuntimeConfig().public.nodeDomain;
@@ -385,6 +395,12 @@ export function useJob(jobId: string) {
     
     if (isCompleted) {
       if (eventSource) { try { eventSource.close(); } catch {} eventSource = null; }
+      loading.value = false;
+      return;
+    }
+
+    // Avoid opening node SSE (/job/:id/info) from the deployments page
+    if (isDeploymentContext.value) {
       loading.value = false;
       return;
     }

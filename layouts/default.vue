@@ -2,7 +2,10 @@
   <div id="app">
     <section class="columns ml-0 mr-0 mt-0 mb-0">
       <side-bar />
-      <div id="content" class="column has-navbar-fixed-top-mobile is-flex is-flex-direction-column ultrawide-centered">
+      <div
+        id="content"
+        class="column has-navbar-fixed-top-mobile is-flex is-flex-direction-column ultrawide-centered"
+      >
         <div class="section">
           <div>
             <slot />
@@ -13,7 +16,7 @@
     </section>
 
     <!-- Login Modal -->
-    <LoginModal 
+    <LoginModal
       :isOpen="modalState.isOpen"
       :mode="modalState.mode"
       :redirectPath="modalState.redirectPath"
@@ -24,10 +27,10 @@
 </template>
 
 <script setup lang="ts">
-import { useRedirect } from '~/composables/useRedirect';
-import { useLoginModal } from '~/composables/useLoginModal';
-import { useRouter, useRoute } from 'vue-router';
-import LoginModal from '~/components/LoginModal.vue';
+import { useRedirect } from "~/composables/useRedirect";
+import { useLoginModal } from "~/composables/useLoginModal";
+import { useRouter, useRoute } from "vue-router";
+import LoginModal from "~/components/LoginModal.vue";
 
 // Initialize redirect to handle navigation on connect/disconnect
 useRedirect();
@@ -35,7 +38,6 @@ useRedirect();
 // Initialize login modal
 const { modalState, closeModal } = useLoginModal();
 const router = useRouter();
-const route = useRoute();
 
 // Handle successful login
 const handleLoginSuccess = () => {
@@ -49,13 +51,16 @@ const handleLoginSuccess = () => {
 // Handle OAuth redirect for Google login popup
 onMounted(() => {
   const urlParams = new URLSearchParams(window.location.search);
-  const code = urlParams.get('code');
-  
+  const code = urlParams.get("code");
+
   if (code && window.opener) {
-    window.opener.postMessage({
-      type: 'GOOGLE_AUTH_CODE',
-      code: code
-    }, window.location.origin);
+    window.opener.postMessage(
+      {
+        type: "GOOGLE_AUTH_CODE",
+        code: code,
+      },
+      window.location.origin
+    );
     window.close();
   }
 });
@@ -76,7 +81,7 @@ onMounted(() => {
     padding-left: 2rem;
     padding-right: 2rem;
   }
-  
+
   /* Adjust the main columns container to accommodate centered content */
   .columns {
     justify-content: flex-start;

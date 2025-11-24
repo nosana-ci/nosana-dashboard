@@ -39,6 +39,7 @@ import { useWallet } from 'solana-wallets-vue';
 
 interface Props {
   jobId: string;
+  deploymentId?: string;
 }
 
 const props = defineProps<Props>();
@@ -52,14 +53,18 @@ onMounted(() => {
   pausePolling();
 });
 
-// Authentication setup (matching main branch pattern)
+// Authentication setup (use DM header when deploymentId is provided)
 const { hasAuth, ensureAuth } = useAuthHeader();
-const getAuth = async () => ensureAuth();
+const getAuth = async () => {
+  if (props.deploymentId) return ensureAuth({ deploymentId: props.deploymentId });
+  return ensureAuth();
+};
 
 // Check if user is job poster
 const { status, data: userData } = useAuth();
 const { connected, publicKey } = useWallet();
 
+// Consider DM-vault auth on deployment page equivalent to poster for viewing logs
 const isJobPoster = computed(() => {
   if (!job.value) return false;
   
@@ -73,12 +78,15 @@ const isJobPoster = computed(() => {
     return publicKey.value.toString() === job.value.project?.toString();
   }
   
+  // If viewing from a deployment context and we can fetch DM auth, allow logs
+  if (props.deploymentId) return true;
   return false;
 });
 
 // Connection logic (matching main branch pattern)
 const hasRealNode = computed(() => Boolean(job.value?.node && job.value.node !== '11111111111111111111111111111111'));
-const shouldConnect = computed(() => isJobPoster.value && job.value?.isRunning && hasRealNode.value);
+// Allow connection when running and node is real; auth is enforced server-side with DM header
+const shouldConnect = computed(() => Boolean(job.value?.isRunning) && hasRealNode.value);
 
 // Use flog system for logs (matching main branch exact pattern)
 const {

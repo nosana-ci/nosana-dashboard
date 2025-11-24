@@ -1,5 +1,5 @@
 <template>
-  <div class="box has-text-centered equal-height-box">
+  <div v-if="token" class="box has-text-centered equal-height-box">
     <p class="heading">Credit Balance</p>
     <p class="title is-4 mb-1" v-if="!loading">
       ${{ creditBalance.toFixed(2) }}
@@ -67,8 +67,6 @@
 import { ref, onMounted } from "vue";
 import { useToast } from "vue-toastification";
 import { trackEvent } from "~/utils/analytics";
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-import { faPlus } from '@fortawesome/free-solid-svg-icons';
 
 const config = useRuntimeConfig().public;
 const { token, data: userData } = useAuth();
@@ -85,6 +83,13 @@ const claiming = ref(false);
 
 // Fetch credit balance
 const fetchBalance = async () => {
+  // Only fetch if user has auth token (credit system authentication)
+  if (!token.value) {
+    creditBalance.value = 0;
+    reservedCredits.value = 0;
+    return;
+  }
+
   loading.value = true;
   try {
     const data = await nosana.value.api.credits.balance();
@@ -94,6 +99,8 @@ const fetchBalance = async () => {
     reservedCredits.value = data.reservedCredits || 0;
   } catch (error) {
     console.error("Error fetching credit balance:", error);
+    creditBalance.value = 0;
+    reservedCredits.value = 0;
   } finally {
     loading.value = false;
   }
@@ -157,6 +164,14 @@ const closeClaimModal = () => {
 onMounted(() => {
   fetchBalance();
 });
+
+// Watch for token changes to refetch balance when user logs in/out
+watch(token, (newToken, oldToken) => {
+  // Only fetch if token actually changed (not just initial load)
+  if (newToken !== oldToken) {
+    fetchBalance();
+  }
+}, { immediate: false });
 
 // Expose refresh function for parent components
 defineExpose({

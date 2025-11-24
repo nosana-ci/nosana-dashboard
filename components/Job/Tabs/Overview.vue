@@ -374,10 +374,9 @@ interface Props {
 const props = defineProps<Props>();
 
 const isJobCompleted = computed(() => {
-  try {
-    if (props?.job?.isCompleted !== undefined) return Boolean(props.job.isCompleted);
-    if (props?.job?.timeEnd) return true;
-  } catch (_) {}
+  const job = (props && props.job) ? props.job : null;
+  if (job && job.isCompleted !== undefined) return Boolean(job.isCompleted);
+  if (job && job.timeEnd) return true;
   const completedStatuses = new Set(['finished', 'success']);
   if (Array.isArray(operations.value) && operations.value.length > 0) {
     const allCompleted = operations.value.every(op => completedStatuses.has(String(op.status).toLowerCase()));
@@ -398,6 +397,10 @@ const clearedAtByOp = ref<Map<string, number>>(new Map());
 let pollInterval: NodeJS.Timeout | null = null;
 
 const { ensureAuth } = useAuthHeader();
+const route = useRoute();
+const deploymentId = computed<string | undefined>(() => {
+  return route.params?.id as string || undefined;
+});
 
 const jobInfo = computed<LocalJobInfo | null>(() => props.jobInfo ?? null);
 
@@ -856,7 +859,7 @@ const stopOperation = async (op: Operation) => {
     const baseUrl = getNodeUrl();
     const group = op.group || op.id;
     const url = `${baseUrl}/job/${jobId}/group/${group}/operation/${op.id}/stop`;
-    const authHeader = await ensureAuth();
+    const authHeader = await ensureAuth({ deploymentId: deploymentId.value });
     
     await $fetch(url, {
       method: 'POST',
@@ -885,7 +888,7 @@ const restartOperation = async (op: Operation) => {
     const baseUrl = getNodeUrl();
     const group = op.group || op.id;
     const url = `${baseUrl}/job/${jobId}/group/${group}/operation/${op.id}/restart`;
-    const authHeader = await ensureAuth();
+    const authHeader = await ensureAuth({ deploymentId: deploymentId.value });
     
     await $fetch(url, {
       method: 'POST',
@@ -917,7 +920,7 @@ const stopGroup = async (groupName: string) => {
     const jobId = props.job.address;
     const baseUrl = getNodeUrl();
     const url = `${baseUrl}/job/${jobId}/group/${groupName}/stop`;
-    const authHeader = await ensureAuth();
+    const authHeader = await ensureAuth({ deploymentId: deploymentId.value });
     
     await $fetch(url, {
       method: 'POST',
@@ -948,7 +951,7 @@ const restartGroup = async (groupName: string) => {
     const jobId = props.job.address;
     const baseUrl = getNodeUrl();
     const url = `${baseUrl}/job/${jobId}/group/${groupName}/restart`;
-    const authHeader = await ensureAuth();
+    const authHeader = await ensureAuth({ deploymentId: deploymentId.value });
     
     await $fetch(url, {
       method: 'POST',
