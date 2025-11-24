@@ -1191,7 +1191,6 @@ import "vanilla-jsoneditor/themes/jse-theme-dark.css";
 import { useToast } from "vue-toastification";
 import { useWallet } from "solana-wallets-vue";
 import { useAuth } from "#imports";
-import { beforeRouteLeave } from "vue-router";
 import JobStatus from "~/components/Job/Status.vue";
 import JobLogsContainer from "~/components/Job/LogsContainer.vue";
 import SecondsFormatter from "~/components/SecondsFormatter.vue";
@@ -2134,7 +2133,7 @@ onUnmounted(() => {
 });
 
 // Stop all polling when navigating away from the page
-beforeRouteLeave(() => {
+onBeforeRouteLeave(() => {
   // Clean up all polling intervals to prevent them from continuing
   stopDeploymentPolling();
   stopJobPolling();
