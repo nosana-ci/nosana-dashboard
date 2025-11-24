@@ -117,6 +117,7 @@ export default defineNuxtConfig({
     plugins: [
       svgLoader({
         defaultImport: "url",
+        svgo: false
       }),
       nodePolyfills({
         // To exclude specific polyfills, add them to this list.
