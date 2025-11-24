@@ -1,5 +1,6 @@
 @use "bulma-defaults" as *;
 @use "variables" as *;
+@use "sass:color";
 
 /* ==========================================================================
    Dark Mode Theme Overrides
@@ -201,7 +202,7 @@
     color: $grey-light;
 
     &:hover {
-      background: lighten($grey-darker, 5%);
+      background: color.adjust($grey-darker, $lightness: 5%);
     }
 
     &.is-active {
@@ -224,8 +225,8 @@
     }
 
     &:hover:not(:disabled) {
-      background: lighten($grey-darker, 5%);
-      border-color: lighten($grey-dark, 10%);
+      background: color.adjust($grey-darker, $lightness: 5%);
+      border-color: color.adjust($grey-dark, $lightness: 10%);
       color: $white;
     }
 
@@ -447,7 +448,7 @@
       tbody {
         tr:not(.is-selected) {
           &:nth-child(even) {
-            background-color: darken($black-ter, 3%);
+            background-color: color.adjust($black-ter, $lightness: -3%);
           }
         }
       }

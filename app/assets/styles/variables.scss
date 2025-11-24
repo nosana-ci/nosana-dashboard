@@ -17,7 +17,7 @@ $text-light: #999999;
 $text-dark: #666666;
 $body-size: 14px !default;
 $link: $secondary;
-$link-hover: darken($link, 10%);
+$link-hover: color.adjust($link, $lightness: -10%);
 $title-family: 'Space Grotesk', sans-serif;
 $subtitle-family: 'Space Grotesk', sans-serif;
 $body-background-color: $white-bis;

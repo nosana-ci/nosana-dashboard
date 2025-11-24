@@ -1,4 +1,5 @@
 @use "sass:color";
+@use "sass:map";
 @use "variables" as *;
 @use "dark-mode" as *;
 @use "bulma/sass" as bulma with (
@@ -40,7 +41,19 @@
   $tabs-link-color: $tabs-link-color,
   $input-shadow: $input-shadow,
   $label-weight: $label-weight,
-  $label-color: $label-color
+  $label-color: $label-color,
+  $black: $black,
+  $black-bis: $black-bis,
+  $black-ter: $black-ter,
+  $grey-darker: $grey-darker,
+  $grey-dark: $grey-dark,
+  $grey: $grey,
+  $grey-light: $grey-light,
+  $grey-lighter: $grey-lighter,
+  $grey-lightest: $grey-lightest,
+  $white-ter: $white-ter,
+  $white-bis: $white-bis,
+  $white: $white
 );
 
 .tag.is-success {
@@ -122,8 +135,8 @@ $state-filter-outline-colors: (
   }
 
   @each $modifier, $settings in $state-filter-outline-colors {
-    $background: map-get($settings, "bg");
-    $text-color: map-get($settings, "color");
+    $background: map.get($settings, "bg");
+    $text-color: map.get($settings, "color");
 
     .button.#{$modifier}.is-outlined {
       border-width: 1px;
@@ -397,9 +410,6 @@ $state-filter-outline-colors: (
 
   .menu-list .icon {
     color: $menu-item-color;
-  }
-  .menu-list a:not(.deploy-cta) {
-    background-color: transparent !important;	
   }
 }
 

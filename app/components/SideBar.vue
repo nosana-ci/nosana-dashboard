@@ -499,6 +499,15 @@ const getWalletAddress = () => {
   }
   
   .menu-list {
+    a:not(.deploy-cta) {
+      background-color: transparent !important;
+      color: $grey-lighter;
+      
+      &:hover {
+        background-color: $grey-darker !important;
+      }
+    }
+    
     a.is-active {
       background-color: $grey-darker !important;
       color: $white !important;
@@ -555,6 +564,7 @@ const getWalletAddress = () => {
 
   .submenu-link {
     color: $grey-lighter !important;
+    background-color: transparent !important;
     
     &:hover {
       opacity: 1 !important;
