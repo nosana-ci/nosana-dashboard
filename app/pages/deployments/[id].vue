@@ -1748,7 +1748,7 @@ const startDeployment = async () => {
   }
   
   // Check vault balance before starting deployment (wallet mode only)
-  if (deployment.value.vault) {
+  if (isWalletMode.value && deployment.value.vault) {
     try {
       const vaultBalance = await deployment.value.vault.getBalance();
       const hasSol = vaultBalance.SOL > 0;
