@@ -156,7 +156,7 @@
     <div
       class="is-flex is-justify-content-space-between is-align-items-center mt-auto"
     >
-      <a href="https://nosana.statuspage.io" target="_blank" rel="noopener" @click="showMenu = false">
+      <a href="https://nosana.statuspage.io" target="_blank" rel="noopener" @click="showMenu = false" class="status-link">
         <div class="status-dot dot-online"></div>
         Status
       </a>

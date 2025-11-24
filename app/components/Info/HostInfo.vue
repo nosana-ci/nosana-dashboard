@@ -575,28 +575,4 @@ const cliVersion = computed(() => {
   padding: 0 !important;
 }
 
-html.dark-mode {
-  .quick-detail-item {
-    .quick-detail-label {
-      color: #b0b0b0;
-    }
-
-    .quick-detail-value,
-    .quick-detail-value .icon-text,
-    .quick-detail-value .address {
-      color: #ffffff;
-    }
-    
-    .quick-detail-value a,
-    .quick-detail-value nuxt-link,
-    .quick-detail-value .address {
-      color: #10E80C !important; // Nosana green for links in dark mode
-    }
-    
-    .quick-detail-value a:hover,
-    .quick-detail-value nuxt-link:hover {
-      color: #33ff33 !important; // Lighter green on hover
-    }
-  }
-}
 </style>

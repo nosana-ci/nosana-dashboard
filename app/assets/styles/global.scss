@@ -535,6 +535,13 @@ $state-filter-outline-colors: (
   word-break: break-all;
 }
 
+.status-link {
+  color: $link;
+  &:hover {
+    color: $link-hover;
+  }
+}
+
 .status-dot {
   display: inline-block;
   width: 10px;

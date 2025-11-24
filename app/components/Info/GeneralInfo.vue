@@ -166,31 +166,4 @@ defineExpose({
 .columns.is-multiline .column.no-padding {
    // margin-bottom: 0.75rem; // Spacing for items when they wrap
 }
-
-
-html.dark-mode {
-  .quick-detail-item {
-    .quick-detail-label {
-      color: #b0b0b0;
-    }
-
-    .quick-detail-value,
-    .quick-detail-value .icon-text {
-      color: #ffffff;
-    }
-    
-    .quick-detail-value a,
-    .quick-detail-value nuxt-link {
-      color: #10E80C !important; // Nosana green for links in dark mode
-    }
-    
-    .quick-detail-value a:hover,
-    .quick-detail-value nuxt-link:hover {
-      color: #33ff33 !important; // Lighter green on hover
-    }
-  }
-  .account-address {
-    color: #ffffff;
-  }
-}
 </style>
