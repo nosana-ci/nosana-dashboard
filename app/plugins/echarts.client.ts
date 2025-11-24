@@ -28,7 +28,6 @@ export default defineNuxtPlugin((nuxtApp) => {
   try {
     if (!echarts.getMap('world')) {
       echarts.registerMap('world', worldJson as any);
-      console.log('World map registered globally');
     }
   } catch (error) {
     console.error('Error registering world map:', error);
@@ -36,6 +35,4 @@ export default defineNuxtPlugin((nuxtApp) => {
 
   // Register VChart component globally
   nuxtApp.vueApp.component('v-chart', VChart);
-
-  console.log('ECharts plugin initialized');
 }); 

@@ -8,9 +8,7 @@
     >
       <template v-if="activeAddress" #extra>
         <div class="is-flex is-align-items-center">
-          <span class="tag is-light mr-2">
-            {{ addressSource === 'wallet' ? 'Wallet Connected' : 'Generated Address' }}
-          </span>
+          <span class="tag is-light mr-2">Address</span>
           <span class="is-family-monospace is-size-7">
             {{ activeAddress.slice(0, 4) }}...{{ activeAddress.slice(-4) }}
           </span>
@@ -136,19 +134,19 @@
         <div class="columns is-multiline mb-4">
           <div class="column is-3">
             <div class="box has-text-centered equal-height-box">
-              <p class="heading">{{ status === 'authenticated' ? 'Deployments' : 'Jobs' }}</p>
+              <p class="heading">Deployments</p>
               <p class="title is-flex is-align-items-center is-justify-content-center">
                 <RocketIcon style="width: 16px; height: 16px; fill: #10E80C; margin-right: 0.5rem;" />
-                {{ status === 'authenticated' ? totalDeployments : totalJobs }}
+                {{ totalDeployments }}
               </p>
             </div>
           </div>
-          <!-- Credit Balance for Google Auth Users -->
-          <div class="column is-3" v-if="canShowAccountData">
+          <!-- Credit Balance for Google Auth Users Only -->
+          <div class="column is-3" v-if="status === 'authenticated'">
             <CreditBalance ref="creditBalanceRef" />
           </div>
           <!-- NOS Balance for Wallet Users -->
-          <div class="column is-3" v-if="connected">
+          <div class="column is-3" v-if="activeAddress">
             <div class="box has-text-centered">
               <p class="heading">NOS Balance</p>
               <p class="title" v-if="balance && nosPrice">
@@ -192,8 +190,7 @@
         <!-- API Tokens Section (only for authenticated credit users) -->
         <ApiKeys class="pb-5" v-if="status === 'authenticated'" />
         
-        <!-- For Credit Users: Show Deployments -->
-        <div v-if="status === 'authenticated'">
+        <div v-if="canShowAccountData">
           <div class="is-flex is-justify-content-space-between is-align-items-center mb-4">
             <h3 class="title is-4 mb-0">Deployments</h3>
             <nuxt-link to="/deployments/create" class="button is-dark">
@@ -203,32 +200,7 @@
               <span>Create Deployment</span>
             </nuxt-link>
           </div>
-          <DeploymentsList 
-            :items-per-page="10" 
-            :limit="10" 
-            :show-pagination="false" 
-            class="mb-2" 
-            @update:total-deployments="totalDeployments = $event" 
-          />
-        </div>
-
-        <!-- For Wallet Users: Show Jobs -->
-        <div v-else-if="connected">
-          <div class="is-flex is-justify-content-space-between is-align-items-center mb-4">
-            <h3 class="title is-4 mb-0">Job History</h3>
-            <nuxt-link to="/deployments/create" class="button is-dark">
-              <span class="icon">
-                <FontAwesomeIcon :icon="faPlus" />
-              </span>
-              <span>Deploy New Job</span>
-            </nuxt-link>
-          </div>
-          <JobList 
-            :items-per-page="10" 
-            job-type="combined"
-            class="mb-2" 
-            @update:total-deployments="totalJobs = $event" 
-          />
+          <DeploymentsTable :items-per-page="10" />
         </div>
         
         <div class="columns mt-6">
@@ -377,7 +349,7 @@
 </template>
 
 <script setup lang="ts">
-import DeploymentsList from '~/components/List/DeploymentsList.vue';
+import DeploymentsTable from '~/components/DeploymentsTable/Table.vue';
 import JobList from '~/components/List/JobList.vue';
 import { useWallet } from 'solana-wallets-vue';
 import { useStake } from '~/composables/useStake';
@@ -522,7 +494,6 @@ const checkBalances = async () => {
   try {
     if (activeAddress.value) {
       balance.value = await nosana.value.solana.getNosBalance(activeAddress.value);
-      console.log('balance', balance.value);
       // Only fetch staking data for wallet connections
       if (addressSource.value === 'wallet') {
         try {

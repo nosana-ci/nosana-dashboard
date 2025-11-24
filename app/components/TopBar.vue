@@ -191,7 +191,10 @@ const getNosBalanceUSD = () => nosBalanceUSD.value;
 
 // Fetch credit balance
 const fetchCreditBalance = async (signal?: AbortSignal) => {
-  if (status.value !== 'authenticated') return;
+  // Only fetch if user is authenticated AND has a valid token
+  if (status.value !== 'authenticated' || !token.value) {
+    return;
+  }
   
   loadingCreditBalance.value = true;
   try {

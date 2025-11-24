@@ -1140,4 +1140,51 @@ html.dark-mode .deployment-header {
   .is-flex-direction-column-mobile {
     flex-direction: column !important;
   }
+
+  /* Clickable notifications */
+.clickable-notification {
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+}
+
+
+.icon.borderless {
+  border: none !important;
+}
+.vertical-middle {
+  vertical-align: middle;
+}
+.refresh.is-loading svg {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.height-auto {
+  height: auto;
+}
+
+.va-bottom {
+  vertical-align: bottom;
+}
+
+.relative {
+  position: relative;
+}
+
+.z-index-2 {
+  z-index: 2;
+}
 }
