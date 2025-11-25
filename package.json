@@ -36,7 +36,6 @@
     "@chenfengyuan/vue-countdown": "^2.1.2",
     "@creativebulma/bulma-tooltip": "^1.2.0",
     "@fortawesome/vue-fontawesome": "^3.0.8",
-    "@metaplex-foundation/js": "^0.20.1",
     "@nosana/sdk": "^0.4.66",
     "@solana/wallet-adapter-wallets": "^0.19.25",
     "@types/dompurify": "^3.0.5",
