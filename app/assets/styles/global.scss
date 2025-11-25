@@ -75,6 +75,10 @@
 }
 
 .button {
+  &.is-primary:not(.is-outlined):not(.is-inverted) {
+    color: $primary-invert;
+  }
+
   &.is-wide {
     min-width: 140px;
   }
