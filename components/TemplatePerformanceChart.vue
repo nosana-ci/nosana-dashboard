@@ -136,15 +136,27 @@ const error = computed(() => {
   return null;
 });
 
-// Market options for dropdown
+// Market options for dropdown (filtered to only show PREMIUM markets)
 const marketOptions = computed(() => {
-  return templateData.value?.marketOptions || {};
+  const allMarkets = templateData.value?.marketOptions || {};
+  return Object.fromEntries(
+    Object.entries(allMarkets).filter(([address, market]) => market.type === 'PREMIUM')
+  );
 });
 
-// Set default market to current market when data loads
+// Set default market - use premium counterpart for community markets
 watch(templateData, (newData) => {
-  if (newData && newData.currentMarket && !selectedMarket.value) {
-    selectedMarket.value = newData.currentMarket;
+  if (newData?.currentMarket && !selectedMarket.value) {
+    const currentMarket = newData.marketOptions[newData.currentMarket];
+    const baseSlug = currentMarket?.slug.replace('-community', '') || '';
+    
+    // Find premium market (either current market or its counterpart)
+    const premiumMarket = Object.entries(newData.marketOptions)
+      .find(([_, market]) => market.type === 'PREMIUM' && market.slug === baseSlug);
+    
+    if (premiumMarket) {
+      selectedMarket.value = premiumMarket[0];
+    }
   }
 }, { immediate: true });
 
