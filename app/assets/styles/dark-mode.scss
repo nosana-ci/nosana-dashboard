@@ -1,0 +1,837 @@
+@use "bulma-defaults" as *;
+@use "variables" as *;
+@use "sass:color";
+
+/* ==========================================================================
+   Dark Mode Theme Overrides
+   ========================================================================== */
+.dark-mode {
+  /* Theme Tokens --------------------------------------------------------- */
+  --swv-button-background-color: black !important;
+  --swv-button-outline-color: white !important;
+  --swv-button-hover-background-color: #cbcbcb !important;
+  // --swv-button-text-color: black !important;
+  --status-success-color: #{$success};
+  --status-info-color: #{$info};
+  --status-warning-color: #{$warning};
+  --status-danger-color: #{$danger};
+  --status-dark-color: #{$grey-light};
+
+  .new-badge {
+    background: white !important;
+    color: black !important;
+  }
+
+  /* Layout & Surfaces ---------------------------------------------------- */
+  body:not(.light-mode) {
+    background-color: $body-background-color-dark;
+  }
+
+  .light-only {
+    display: none;
+  }
+
+  .sidebar {
+    box-shadow: 0px 6px 40px 0px rgba(255, 255, 255, 0.02) !important;
+  }
+
+  .sidebar:not(.light-mode) {
+    background-color: $black-bis !important;
+  }
+
+  .has-background-body:not(.light-mode) {
+    background-color: $body-background-color-dark !important;
+  }
+
+  .has-background-white:not(.light-mode) {
+    background-color: $black !important;
+  }
+
+  .has-background-light:not(.light-mode) {
+    background-color: $black-ter !important;
+  }
+
+  .has-background-white-ter:not(.light-mode) {
+    background-color: $black-ter !important;
+  }
+
+  .has-background-white-bis:not(.light-mode) {
+    background-color: $black-bis !important;
+  }
+
+  .has-background-black:not(.light-mode) {
+    background-color: $white !important;
+  }
+
+  .box:not(.light-mode) {
+    background-color: $black-bis;
+    color: white;
+  }
+
+  .box {
+    background-color: $box-background-color-dark;
+  }
+
+  .wallet-auth-banner {
+    .banner-title {
+      color: $white;
+    }
+
+    .banner-subtitle {
+      color: $grey-light;
+    }
+  }
+
+  .port-badge {
+    background: rgba($secondary, 0.15);
+    color: $secondary;
+    border-color: $secondary;
+
+    &:hover {
+      background: $secondary;
+      color: $black;
+      box-shadow: 0 2px 4px rgba($secondary, 0.3);
+    }
+  }
+
+  .tag {
+    background-color: $black-ter !important;
+
+    &:not(.is-outlined) span {
+      color: white;
+    }
+  }
+
+  .tag.status-tag {
+    background-color: $black-ter;
+  }
+
+  .tag.is-success {
+    background-color: $black-ter !important;
+  }
+
+  .category-tag {
+    background-color: $grey-dark !important;
+    color: $white !important;
+    border: 1px solid $grey !important;
+  }
+
+  .title:not(.light-mode) {
+    color: white;
+  }
+
+  .footer:not(.light-mode) {
+    background-color: $body-background-color-dark;
+    color: white;
+  }
+
+  .back-arrow-icon,
+  .back-button .back-arrow-icon {
+    color: $white !important;
+  }
+
+  .clickable-row:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+
+  /* Text Utilities ------------------------------------------------------- */
+  .has-text-white:not(.light-mode) {
+    color: $black !important;
+  }
+
+  .has-text-black:not(.light-mode) {
+    color: $white !important;
+  }
+
+  a.has-text-black:hover:not(.light-mode) {
+    color: $grey-light !important;
+  }
+
+  /* Navigation ----------------------------------------------------------- */
+  .navbar:not(.light-mode) {
+    background: $black;
+
+    .navbar-burger {
+      color: $white;
+    }
+
+    &.has-shadow {
+      box-shadow: 0 2px 0 0 $grey-dark;
+    }
+  }
+
+  .pagination-previous,
+  .pagination-next,
+  .pagination-link {
+    color: $white;
+
+    &.is-current {
+      color: $text;
+    }
+  }
+
+  .tabs:not(.light-mode) {
+    ul {
+      border-bottom: 3px solid $grey-darker;
+    }
+
+    li.is-active a {
+      border-bottom-color: $grey;
+      border-color: $grey;
+      color: $primary-invert;
+      background-color: $black-bis;
+    }
+
+    a {
+      color: $grey;
+      border-bottom-width: 3px;
+      border-bottom-color: transparent;
+      margin-bottom: -3px;
+
+      &:hover {
+        color: $grey-light;
+        border-bottom-color: $grey;
+        background-color: $black-ter;
+      }
+    }
+  }
+
+  .tab-button {
+    background: $grey-darker;
+    border-color: $grey-dark;
+    color: $grey-light;
+
+    &:hover {
+      background: color.adjust($grey-darker, $lightness: 5%);
+    }
+
+    &.is-active {
+      background: $white;
+      color: $black;
+      border-color: $white;
+    }
+  }
+
+  /* Buttons & Actions ---------------------------------------------------- */
+  .action-btn,
+  .group-action-btn {
+    background: $grey-darker;
+    border-color: $grey-dark;
+    color: $grey-light;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+
+    .icon img {
+      filter: brightness(0) saturate(100%) invert(88%) sepia(0%) saturate(0%) hue-rotate(180deg) brightness(100%) contrast(88%);
+    }
+
+    &:hover:not(:disabled) {
+      background: color.adjust($grey-darker, $lightness: 5%);
+      border-color: color.adjust($grey-dark, $lightness: 10%);
+      color: $white;
+    }
+
+    &.is-loading {
+      &:after {
+        border-color: $grey;
+        border-right-color: transparent;
+        border-top-color: transparent;
+      }
+    }
+  }
+
+  .button.is-outlined {
+    &.is-primary {
+      background-color: transparent;
+      border-color: $white;
+      color: $white;
+      
+      &:hover,
+      &.is-hovered {
+        background-color: $white !important;
+        color: $black !important;
+        border-color: $white !important;
+      }
+    }
+    
+    &.is-success {
+      &:hover,
+      &.is-hovered {
+        background-color: $success !important;
+        color: $black !important;
+        border-color: $success !important;
+      }
+    }
+    
+    &.is-info {
+      &:hover,
+      &.is-hovered {
+        background-color: $info !important;
+        color: $white !important;
+        border-color: $info !important;
+      }
+    }
+    
+    &.is-warning {
+      &:hover,
+      &.is-hovered {
+        background-color: $warning !important;
+        color: $black !important;
+        border-color: $warning !important;
+      }
+    }
+    
+    &.is-danger {
+      &:hover,
+      &.is-hovered {
+        background-color: $danger !important;
+        color: $white !important;
+        border-color: $danger !important;
+      }
+    }
+    
+    &.is-dark {
+      border-color: $grey-light;
+      color: $grey-light;
+      
+      &:hover,
+      &.is-hovered {
+        background-color: $grey-light !important;
+        color: $black !important;
+        border-color: $grey-light !important;
+      }
+    }
+  }
+
+  .state-filter .button {
+    &.is-small {
+      padding: 3px 1em !important;
+      
+      &:hover,
+      &.is-hovered,
+      &:focus,
+      &:active {
+        padding: 3px 1em !important;
+      }
+    }
+  }
+
+  .button-filter.button {
+    background-color: $black !important;
+    border-color: $white !important;
+    color: $white !important;
+
+    &:hover,
+    &:focus,
+    &.is-selected,
+    &:active {
+      background-color: $white !important;
+      border-color: $white !important;
+      color: $black !important;
+    }
+
+    &.is-primary {
+      &:hover,
+      &:focus,
+      &:active,
+      &.is-selected {
+        background-color: $white !important;
+        border-color: $white !important;
+        color: $black !important;
+      }
+    }
+
+    &.is-outlined {
+      background-color: transparent !important;
+      border-color: $white !important;
+      color: $white !important;
+
+      &:hover,
+      &:focus,
+      &:active,
+      &.is-selected {
+        background-color: $white !important;
+        border-color: $white !important;
+        color: $black !important;
+      }
+    }
+  }
+
+  .button:not(.light-mode) {
+    &.is-dark {
+      &.is-outlined {
+        color: $light;
+      }
+    }
+
+    &.is-text {
+      color: $white;
+
+      &:hover {
+        background-color: $black-ter;
+      }
+    }
+
+    &.is-primary {
+      background-color: $primary-invert;
+      color: $primary;
+
+      &.is-outlined {
+        background-color: transparent;
+        border-color: $primary-invert;
+        color: $primary-invert;
+
+        &:hover {
+          background-color: $primary-invert;
+          border-color: $primary-invert;
+          color: $primary;
+        }
+      }
+    }
+  }
+
+  /* Forms & Inputs ------------------------------------------------------- */
+  .input:not(.light-mode) {
+    background-color: $grey-darker;
+    border-color: $black-bis;
+    color: white;
+
+    &::placeholder {
+      color: $grey;
+    }
+  }
+
+  .select:not(.light-mode) select {
+    background-color: $grey-darker;
+    border-color: $black-ter;
+    color: white;
+  }
+
+  .status-select {
+    select {
+      background-color: $grey-darker;
+      border-color: $grey-dark;
+      color: $white;
+
+      &:focus {
+        border-color: $grey;
+      }
+
+      option {
+        background-color: $black-ter;
+        border-color: $grey-dark;
+
+        &:hover {
+          background-color: $grey-darker;
+        }
+
+        &.has-text-success {
+          color: $success !important;
+          border-color: $success;
+        }
+
+        &.has-text-info {
+          color: $info !important;
+          border-color: $info;
+        }
+
+        &.has-text-warning {
+          color: $warning !important;
+          border-color: $warning;
+        }
+
+        &.has-text-dark {
+          color: $white !important;
+          border-color: $white;
+        }
+      }
+    }
+  }
+
+  /* Dropdowns & Menus ---------------------------------------------------- */
+  .dropdown-menu {
+    .dropdown-content {
+      background: $black-ter;
+      border-color: $grey-dark;
+    }
+
+    .dropdown-item {
+      color: $grey-light;
+
+      svg {
+        color: inherit;
+      }
+
+      img[src$=".svg"] {
+        filter: brightness(0) saturate(100%) invert(88%) sepia(0%) saturate(0%) hue-rotate(180deg) brightness(100%) contrast(88%);
+      }
+
+      &:hover {
+        background: $grey-darker;
+        color: $white;
+      }
+    }
+
+    .dropdown-divider {
+      background-color: $grey-dark;
+    }
+  }
+
+  .menu-list:not(.light-mode) {
+    a {
+      color: $grey-lighter;
+
+      &:hover {
+        background-color: $grey-darker;
+      }
+
+      &.is-active {
+        background-color: $grey-darker;
+        color: $grey;
+      }
+    }
+  }
+
+  /* Tables & Lists ------------------------------------------------------- */
+  .table:not(.light-mode) {
+    color: $white;
+    background-color: $black-bis;
+
+    thead th {
+      color: $white;
+    }
+
+    td,
+    th {
+      border-color: $grey-dark;
+      color: $white;
+
+      strong {
+        color: $white;
+      }
+    }
+
+    &.is-hoverable {
+      tbody {
+        tr:not(.is-selected) {
+          &:hover {
+            background-color: $black-ter !important;
+          }
+        }
+      }
+    }
+
+    &.is-striped {
+      tbody {
+        tr:not(.is-selected) {
+          &:nth-child(even) {
+            background-color: color.adjust($black-ter, $lightness: -3%);
+          }
+        }
+      }
+    }
+
+    .has-text-white {
+      color: $white !important;
+    }
+  }
+
+  /* Components ----------------------------------------------------------- */
+  .json-editor-container {
+    background-color: $grey-darker !important;
+    border-color: $grey-dark;
+
+    .json-editor {
+      background-color: $grey-darker !important;
+
+      :deep(.jse-main) {
+        background-color: $grey-darker !important;
+      }
+
+      :deep(.jse-contents) {
+        background-color: $grey-darker !important;
+      }
+
+      :deep(.jse-text-mode) {
+        background-color: $grey-darker !important;
+      }
+
+      :deep(.cm-editor) {
+        background-color: $grey-darker !important;
+      }
+
+      :deep(.cm-focused) {
+        background-color: $grey-darker !important;
+      }
+    }
+  }
+
+  .box .json-editor-container {
+    background-color: $grey-darker !important;
+  }
+
+  .vjs-tree-node.is-highlight,
+  .vjs-tree-node:hover {
+    background-color: $grey-darker;
+  }
+
+  .progress {
+    &:indeterminate {
+      background-color: $black-ter;
+    }
+
+    &.is-info:indeterminate {
+      background-image: linear-gradient(
+        to right,
+        hsl(207, 61%, 53%) 30%,
+        $black-ter 30%
+      );
+    }
+  }
+
+  .icon.has-tooltip-arrow {
+    color: #b5b5b5;
+
+    &:hover {
+      color: #f5f5f5;
+    }
+  }
+
+  .has-tooltip-arrow img {
+    filter: invert(1);
+  }
+
+  /* Modals & Overlays ---------------------------------------------------- */
+  .modal-card-head:not(.light-mode) {
+    background-color: $black-bis;
+    border-bottom-color: $grey-darker;
+
+    .modal-card-title strong {
+      color: $white !important;
+    }
+  }
+
+  .modal-card-body:not(.light-mode) {
+    background-color: $black-bis;
+    color: $white;
+
+    .has-text-black {
+      color: $white !important;
+    }
+
+    .has-text-weight-bold {
+      color: $white !important;
+    }
+
+    .button.has-background-white-ter {
+      background-color: $black-ter !important;
+
+      &:hover {
+        background-color: $grey-darker !important;
+
+        strong,
+        .has-text-weight-bold {
+          color: $secondary !important;
+        }
+      }
+
+      strong,
+      .has-text-weight-bold {
+        color: $white !important;
+      }
+    }
+
+    .dropdown-item {
+      &:hover {
+        background-color: $grey-darker;
+
+        strong,
+        .has-text-weight-bold {
+          color: $secondary !important;
+        }
+      }
+
+      strong,
+      .has-text-weight-bold {
+        color: $white !important;
+      }
+    }
+
+    .dropdown-content {
+      background-color: $black-ter;
+    }
+
+    .icon.is-medium {
+      &[style*="background: black"] {
+        background: white !important;
+      }
+    }
+  }
+
+  .modal-card-foot:not(.light-mode) {
+    background-color: $black-bis;
+    border-top-color: $grey-darker;
+  }
+
+  .modal-card-title:not(.light-mode) {
+    color: $white;
+  }
+
+  .delete:not(.light-mode) {
+    background-color: rgba($white, 0.2);
+
+    &:hover {
+      background-color: rgba($white, 0.3);
+    }
+  }
+
+  .login-modal {
+    background: $black-ter !important;
+    color: $white !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
+
+    .login-title {
+      color: $white !important;
+    }
+
+    .login-subtitle {
+      color: $grey-light !important;
+    }
+
+    .login-button {
+      background: $grey-darker !important;
+      color: $white !important;
+      border-color: $grey-dark !important;
+
+      &:hover:not(:disabled) {
+        background: $grey-dark !important;
+        border-color: $grey !important;
+      }
+
+      &.is-loading::after {
+        border-color: $white transparent $white transparent !important;
+      }
+    }
+
+    .google-button {
+      background: $grey-darker !important;
+      border-color: $grey-dark !important;
+
+      &:hover:not(:disabled) {
+        background: $grey-dark !important;
+        border-color: $grey !important;
+      }
+    }
+
+    .twitter-button {
+      background: $black !important;
+      border-color: $grey-darker !important;
+
+      &:hover:not(:disabled) {
+        background: $grey-darker !important;
+        border-color: $grey-dark !important;
+      }
+    }
+
+    .divider span {
+      color: $grey-light !important;
+    }
+  }
+
+  .wallet-modal-content {
+    background: $black-ter !important;
+    color: $white !important;
+  }
+
+  .wallet-modal-title {
+    color: $white !important;
+  }
+
+  .wallet-item {
+    background: $grey-darker !important;
+    border-color: $grey-dark !important;
+    color: $white !important;
+
+    &:hover {
+      background: $grey-dark !important;
+      border-color: $secondary !important;
+    }
+  }
+
+  .wallet-name {
+    color: $white !important;
+  }
+
+  .modal-close-button {
+    color: $grey-light !important;
+
+    &:hover {
+      background-color: $grey-darker !important;
+      color: $white !important;
+    }
+  }
+
+  .spinner-bg {
+    background-color: rgba(0, 0, 0, 0.7) !important;
+  }
+
+  .deployment-logs-container {
+    .notification.is-light {
+      background-color: $box-background-color-dark !important;
+      color: $white !important;
+      border-color: $grey-darker !important;
+    }
+  }
+
+  .dark-mode .clickable-notification:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+  
+}
+
+.quick-detail-item {
+    .quick-detail-label {
+      color: #b0b0b0;
+    }
+
+    .quick-detail-value,
+    .quick-detail-value .icon-text,
+    .quick-detail-value .address {
+      color: $white;
+    }
+    
+    .quick-detail-value a,
+    .quick-detail-value nuxt-link,
+    .quick-detail-value .address {
+      color: $link !important;
+    }
+    
+    .quick-detail-value a:hover,
+    .quick-detail-value nuxt-link:hover {
+      color: $link-hover !important;
+    }
+  }
+
+html.dark-mode {
+  .quick-detail-item {
+    .quick-detail-label {
+      color: #b0b0b0;
+    }
+
+    .quick-detail-value,
+    .quick-detail-value .icon-text,
+    .quick-detail-value .address {
+      color: #ffffff;
+    }
+    
+    .quick-detail-value a,
+    .quick-detail-value nuxt-link,
+    .quick-detail-value .address {
+      color: #10E80C !important; // Nosana green for links in dark mode
+    }
+    
+    .quick-detail-value a:hover,
+    .quick-detail-value nuxt-link:hover {
+      color: #33ff33 !important; // Lighter green on hover
+    }
+  }
+}
