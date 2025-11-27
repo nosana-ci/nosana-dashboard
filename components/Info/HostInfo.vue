@@ -217,10 +217,10 @@
         </div>
       </div>
 
-      <!-- Performance Score -->
+      <!-- Anti-spoof percentage -->
       <div class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
         <div class="quick-detail-item">
-          <span class="quick-detail-label">Performance Score</span>
+          <span class="quick-detail-label">Anti-spoof percentage</span>
           <span class="quick-detail-value">
             <span v-if="nodeRanking && nodeRanking.participationRate">{{ nodeRanking.participationRate.toFixed(1) }}%</span>
             <span v-else>-</span>
