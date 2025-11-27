@@ -119,6 +119,92 @@
       background-color: inherit;
     }
   }
+
+  &.is-outlined {
+    box-sizing: border-box !important;
+    border-width: 1px !important;
+    border-style: solid !important;
+    
+    &.is-primary {
+      &:hover,
+      &.is-hovered {
+        background-color: $primary !important;
+        color: $primary-invert !important;
+        border-color: $primary !important;
+      }
+    }
+    
+    &.is-success {
+      &:hover,
+      &.is-hovered {
+        background-color: $success !important;
+        color: $white !important;
+        border-color: $success !important;
+      }
+    }
+    
+    &.is-info {
+      &:hover,
+      &.is-hovered {
+        background-color: $info !important;
+        color: $white !important;
+        border-color: $info !important;
+      }
+    }
+    
+    &.is-warning {
+      &:hover,
+      &.is-hovered {
+        background-color: $warning !important;
+        color: $white !important;
+        border-color: $warning !important;
+      }
+    }
+    
+    &.is-danger {
+      &:hover,
+      &.is-hovered {
+        background-color: $danger !important;
+        color: $white !important;
+        border-color: $danger !important;
+      }
+    }
+    
+    &.is-dark {
+      &:hover,
+      &.is-hovered {
+        background-color: $dark !important;
+        color: $white !important;
+        border-color: $dark !important;
+      }
+    }
+  }
+}
+
+.state-filter {
+  .button {
+    box-sizing: border-box !important;
+    border-width: 1px !important;
+    border-style: solid !important;
+    
+    &:hover,
+    &.is-hovered,
+    &:focus,
+    &:active {
+      transform: none !important;
+    }
+    
+    &.is-small {
+      padding: 3px 1em !important;
+      
+      &:hover,
+      &.is-hovered,
+      &:focus,
+      &:active {
+        padding: 3px 1em !important;
+      }
+    }
+  }
 }
 
 // Dropdown styling

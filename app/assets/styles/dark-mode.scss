@@ -239,6 +239,82 @@
     }
   }
 
+  .button.is-outlined {
+    &.is-primary {
+      background-color: transparent;
+      border-color: $white;
+      color: $white;
+      
+      &:hover,
+      &.is-hovered {
+        background-color: $white !important;
+        color: $black !important;
+        border-color: $white !important;
+      }
+    }
+    
+    &.is-success {
+      &:hover,
+      &.is-hovered {
+        background-color: $success !important;
+        color: $black !important;
+        border-color: $success !important;
+      }
+    }
+    
+    &.is-info {
+      &:hover,
+      &.is-hovered {
+        background-color: $info !important;
+        color: $white !important;
+        border-color: $info !important;
+      }
+    }
+    
+    &.is-warning {
+      &:hover,
+      &.is-hovered {
+        background-color: $warning !important;
+        color: $black !important;
+        border-color: $warning !important;
+      }
+    }
+    
+    &.is-danger {
+      &:hover,
+      &.is-hovered {
+        background-color: $danger !important;
+        color: $white !important;
+        border-color: $danger !important;
+      }
+    }
+    
+    &.is-dark {
+      border-color: $grey-light;
+      color: $grey-light;
+      
+      &:hover,
+      &.is-hovered {
+        background-color: $grey-light !important;
+        color: $black !important;
+        border-color: $grey-light !important;
+      }
+    }
+  }
+
+  .state-filter .button {
+    &.is-small {
+      padding: 3px 1em !important;
+      
+      &:hover,
+      &.is-hovered,
+      &:focus,
+      &:active {
+        padding: 3px 1em !important;
+      }
+    }
+  }
+
   .button-filter.button {
     background-color: $black !important;
     border-color: $white !important;
