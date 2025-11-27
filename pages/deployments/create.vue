@@ -1002,7 +1002,7 @@ const createDeployment = async () => {
       ...(strategy.value === DeploymentStrategy.SCHEDULED
         ? { schedule: schedule.value }
         : {}),
-      ...(modalSelectedVault.value ? { vault: modalSelectedVault.value } : {}),
+      ...(modalSelectedVault.value && modalSelectedVault.value !== "" ? { vault: modalSelectedVault.value } : {}),
       job_definition: jobDefinition.value,
     });
 

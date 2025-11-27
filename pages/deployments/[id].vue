@@ -1748,7 +1748,7 @@ const startDeployment = async () => {
   }
   
   // Check vault balance before starting deployment (wallet mode only)
-  if (deployment.value.vault) {
+  if (isWalletMode.value && deployment.value.vault) {
     try {
       const vaultBalance = await deployment.value.vault.getBalance();
       const hasSol = vaultBalance.SOL > 0;
@@ -2036,7 +2036,7 @@ const startTasksPolling = () => {
   tasksPollingInterval.value = setInterval(async () => {
     if (!deployment.value) return;
     await loadTasks(true);
-  }, 30000);
+  }, 5000);
 };
 
 const stopTasksPolling = () => {
@@ -2065,7 +2065,7 @@ const startDeploymentPolling = () => {
       stopJobPolling();
       stopTasksPolling();
     }
-  }, 10000);
+  }, 5000);
 };
 
 const stopDeploymentPolling = () => {
@@ -2076,7 +2076,7 @@ const stopDeploymentPolling = () => {
   }
 };
 
-const startJobPolling = (intervalMs: number = 10000) => {
+const startJobPolling = (intervalMs: number = 5000) => {
   if (jobPollingInterval.value) {
     clearInterval(jobPollingInterval.value);
   }
@@ -2125,17 +2125,19 @@ onMounted(() => {
 onUnmounted(() => {
   document.removeEventListener("click", handleClickOutside);
 
-  // Clean up all polling intervals
-  stopDeploymentPolling();
-  stopJobPolling();
-  stopTasksPolling();
-
-
   // Clear any timeout from auth debouncing
   if (authTimeout) {
     clearTimeout(authTimeout);
     authTimeout = null;
   }
+});
+
+// Stop all polling when navigating away from the page
+onBeforeRouteLeave(() => {
+  // Clean up all polling intervals to prevent them from continuing
+  stopDeploymentPolling();
+  stopJobPolling();
+  stopTasksPolling();
 });
 
 // Auto-select first job when switching to logs tab

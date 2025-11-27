@@ -11,7 +11,7 @@
         "
         style="width: 100%; padding: 0.5rem"
       >
-        <option :value="undefined">Create a new vault</option>
+        <option value="">Create a new vault</option>
         <option
           v-for="option in options"
           :key="option.vault"
