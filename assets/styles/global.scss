@@ -267,6 +267,45 @@
     }
   }
 
+  .notification {
+    &.is-warning {  
+      background-color: darken($warning, 15%);
+      &.is-light {
+        background-color: darken($warning, 35%);
+      }
+    }
+    &.is-link {
+      background-color: darken($link, 15%);
+      &.is-light {
+        background-color: darken($link, 35%);
+      }
+    }
+    &.is-info {
+      background-color: darken($info, 15%);
+      &.is-light {
+        background-color: darken($info, 35%);
+      }
+    }
+    &.is-danger {
+      background-color: darken($danger, 15%);
+      &.is-light {
+        background-color: darken($danger, 35%);
+      }
+    }
+    &.is-success {
+      background-color: darken($success, 15%);
+      &.is-light {
+        background-color: darken($success, 35%);
+      }
+    }
+    &.is-primary {
+      background-color: darken($primary, 15%);
+      &.is-light {
+        background-color: darken($primary, 35%);
+      }
+    }
+  }
+
   .action-btn,
   .group-action-btn {
     background: $grey-darker;
@@ -721,6 +760,8 @@
   .has-text-white:not(.light-mode) {
     color: $black !important;
   }
+
+  
 
   .has-text-black:not(.light-mode) {
     color: $white !important;
