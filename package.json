@@ -5,7 +5,7 @@
   "scripts": {
     "build": "nuxt build",
     "dev": "nuxt dev --dotenv .env.local",
-    "dev:https": "nuxt dev --dotenv .env.local --https --sslKey ./local.devnet.nosana.io+2-key.pem --sslCert ./local.devnet.nosana.io+2.pem --port 443 --host 127.0.0.1",
+    "dev:https": "sudo -E env \"PATH=$PATH\" nuxt dev --dotenv .env.local --https --sslKey ./local.devnet.nosana.io+2-key.pem --sslCert ./local.devnet.nosana.io+2.pem --port 3000 --host 127.0.0.1",
     "generate": "nuxt generate --dotenv .env.${APP_ENV:=production}",
     "generate:cert": "sudo chmod +x ./generateCert.sh && sudo ./generateCert.sh",
     "preview": "nuxt preview",
@@ -37,7 +37,7 @@
     "@creativebulma/bulma-tooltip": "^1.2.0",
     "@fortawesome/vue-fontawesome": "^3.0.8",
     "@metaplex-foundation/js": "^0.20.1",
-    "@nosana/sdk": "^0.4.68",
+    "@nosana/sdk": "^0.4.69",
     "@solana/wallet-adapter-wallets": "^0.19.25",
     "@types/dompurify": "^3.0.5",
     "@vueuse/components": "^10.9.0",
