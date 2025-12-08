@@ -342,6 +342,19 @@ export function useJob(jobId: string) {
     } catch {}
   }
 
+  // Check if current user is the job poster
+  const isJobPoster = computed(() => {
+    if (!job.value) return false;
+    const projectAddr = job.value.project?.toString?.() || job.value.project;
+    if (status.value === 'authenticated' && (userData.value as any)?.generatedAddress) {
+      return (userData.value as any).generatedAddress === projectAddr;
+    }
+    if (connected.value && publicKey.value) {
+      return publicKey.value.toString() === projectAddr;
+    }
+    return false;
+  });
+
   async function fetchNodeJobDefinitionOnce() {
     try {
       if (!job.value) return;
@@ -351,6 +364,11 @@ export function useJob(jobId: string) {
         return;
       }
       if (fetchingNodeJobDefinition || fetchedNodeJobDefinition) return;
+      // Only fetch from node if user is job poster
+      if (!isJobPoster.value) {
+        fetchedNodeJobDefinition = true;
+        return;
+      }
       fetchingNodeJobDefinition = true;
       const nodeDomain = useRuntimeConfig().public.nodeDomain;
       const nodeAddr = (job.value.node as unknown as { toString?: () => string })?.toString?.() || (job.value.node as unknown as string);
@@ -401,6 +419,12 @@ export function useJob(jobId: string) {
 
     // Avoid opening node SSE (/job/:id/info) from the deployments page
     if (isDeploymentContext.value) {
+      loading.value = false;
+      return;
+    }
+
+    // Only connect to node SSE if user is job poster
+    if (!isJobPoster.value) {
       loading.value = false;
       return;
     }
