@@ -622,6 +622,19 @@ const createJob = async () => {
     // Check authentication method and use appropriate posting method
     if (status.value === 'authenticated') {
       // Credit-based posting for Google authenticated users
+      // Determine market address (with fallback for advanced mode)
+      let marketAddress = selectedMarket.value?.address;
+      if (!marketAddress && selectedHostAddress.value) {
+        const hostData = availableHosts.value?.find(host => host.host_address === selectedHostAddress.value);
+        if (hostData?.market_address && markets.value) {
+          const market = markets.value.find(m => m.address?.toString() === hostData.market_address);
+          if (market) marketAddress = market.address;
+        }
+      }
+      if (!marketAddress) {
+        throw new Error('No valid market selected. Please select a GPU from the list.');
+      }
+      
       const response = await fetch(`${config.public.apiBase}/api/jobs/create-with-credits`, {
         method: 'POST',
         headers: {
@@ -631,9 +644,9 @@ const createJob = async () => {
         },
         body: JSON.stringify({
           ipfsHash: ipfsHash,
-          market: selectedMarket.value!.address,
+          market: marketAddress,
           timeout: Math.min(hours.value * 3600, 86400), // Convert hours to seconds, max 24 hours
-          host: selectedHostAddress.value || undefined
+          node: selectedHostAddress.value || undefined
         }),
       });
 
