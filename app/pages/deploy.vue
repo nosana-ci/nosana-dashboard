@@ -632,7 +632,7 @@ const createJob = async () => {
         body: JSON.stringify({
           ipfsHash: ipfsHash,
           market: selectedMarket.value!.address,
-          timeout: Math.min(hours.value * 60, 1440), // Convert hours to minutes, max 24 hours
+          timeout: Math.min(hours.value * 3600, 86400), // Convert hours to seconds, max 24 hours
           host: selectedHostAddress.value || undefined
         }),
       });
