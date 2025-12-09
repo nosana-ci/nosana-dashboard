@@ -342,18 +342,16 @@ export function useJob(jobId: string) {
     } catch {}
   }
 
-  // Check if current user is the job poster
-  const isJobPoster = computed(() => {
-    if (!job.value) return false;
-    const projectAddr = job.value.project?.toString?.() || job.value.project;
-    if (status.value === 'authenticated' && (userData.value as any)?.generatedAddress) {
-      return (userData.value as any).generatedAddress === projectAddr;
+  // Check if an address matches the current user (credit user or wallet)
+  const isCurrentUser = (address: string): boolean => {
+    if (status.value === 'authenticated' && userData.value?.generatedAddress) {
+      return userData.value.generatedAddress === address;
     }
     if (connected.value && publicKey.value) {
-      return publicKey.value.toString() === projectAddr;
+      return publicKey.value.toString() === address;
     }
     return false;
-  });
+  };
 
   async function fetchNodeJobDefinitionOnce() {
     try {
@@ -365,7 +363,7 @@ export function useJob(jobId: string) {
       }
       if (fetchingNodeJobDefinition || fetchedNodeJobDefinition) return;
       // Only fetch from node if user is job poster
-      if (!isJobPoster.value) {
+      if (!isCurrentUser(job.value.project.toString())) {
         fetchedNodeJobDefinition = true;
         return;
       }
@@ -424,7 +422,7 @@ export function useJob(jobId: string) {
     }
 
     // Only connect to node SSE if user is job poster
-    if (!isJobPoster.value) {
+    if (!isCurrentUser(currentJob.project.toString())) {
       loading.value = false;
       return;
     }
