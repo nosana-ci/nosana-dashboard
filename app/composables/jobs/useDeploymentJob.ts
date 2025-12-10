@@ -5,6 +5,7 @@ import type { Job, JobDefinition } from "@nosana/sdk";
 import { getJobExposedServices } from "@nosana/sdk";
 import type { JobInfo, JobViewModel, LiveEndpoints, ResultsSection} from "~/composables/jobs/types";
 import { normalizeEndpoints } from "~/composables/jobs/normalizeEndpoints";
+import { useAuthHeader } from "~/composables/useAuthHeader";
 
 const DEFAULT_NODE_ADDRESS = "11111111111111111111111111111111";
 

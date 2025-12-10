@@ -55,7 +55,7 @@ Add this line to your hosts file:
 - Windows: `C:\Windows\System32\drivers\etc\hosts`
 
 ```bash
-echo "127.0.0.1    devnet.nosana.io" | sudo tee -a /etc/hosts
+echo "127.0.0.1    local.devnet.nosana.io" | sudo tee -a /etc/hosts
 ```
 
 ### 4. Run the dev server
@@ -64,4 +64,4 @@ echo "127.0.0.1    devnet.nosana.io" | sudo tee -a /etc/hosts
 sudo npm run dev:https
 ```
 
-Access at: https://devnet.nosana.io
+Access at: https://local.devnet.nosana.io
