@@ -289,12 +289,17 @@ const debouncedFetchNosBalance = () => {
 // Watch for authentication status and token changes (optimized)
 watch([status, token], async (newValues, oldValues) => {
   const [newStatus, newToken] = newValues;
-  const [oldStatus, oldToken] = oldValues || [];
   
-  // Only fetch if authentication state actually changed to authenticated
-  if (newStatus === 'authenticated' && newToken && 
-      (oldStatus !== 'authenticated' || oldToken !== newToken)) {
+  // Skip loading state (session refresh in progress)
+  if (newStatus === 'loading') return;
+  
+  // Only fetch if authenticated AND haven't loaded yet
+  if (newStatus === 'authenticated' && newToken && !hasLoadedCreditBalance.value) {
     debouncedFetchCreditBalance();
+  } else if (newStatus === 'unauthenticated') {
+    // Reset on logout so next login will fetch
+    hasLoadedCreditBalance.value = false;
+    creditBalance.value = 0;
   }
 }, { immediate: true });
 

@@ -636,40 +636,40 @@ const createJob = async () => {
       }
       
       const { job, credits } = await nosana.value.api.jobs.list({
-        ipfsHash: ipfsHash,
+          ipfsHash: ipfsHash,
         market: marketAddress,
         timeout: Math.min(hours.value * 3600, 86400),
         node: selectedHostAddress.value || undefined
       });
 
       toast.success(`Successfully created job ${job}`);
-      clearDeployState();
-      await refreshCreditBalance();
-      try {
-        trackEvent('credit_used', {
-          user_id: userData.value?.generatedAddress,
+        clearDeployState();
+        await refreshCreditBalance();
+        try {
+          trackEvent('credit_used', {
+            user_id: userData.value?.generatedAddress,
           job_id: job,
-          market: marketName.value,
+            market: marketName.value,
           credits_used: credits.creditsUsed,
           cost_usd: credits.costUSD,
-          remaining_credits: creditBalance.value,
-        });
-        trackEvent('gpu_job_created', {
-          user_id: userData.value?.generatedAddress,
+            remaining_credits: creditBalance.value,
+          });
+          trackEvent('gpu_job_created', {
+            user_id: userData.value?.generatedAddress,
           job_id: job,
-          market: marketName.value,
+            market: marketName.value,
           credits_used: credits.creditsUsed,
           cost_usd: credits.costUSD,
-          hours: hours.value,
-          remaining_credits: creditBalance.value,
-          type: 'credit',
-        });
-      } catch (error) {
-        console.warn("Error tracking credit used:", error);
-      }
-      setTimeout(() => {
+            hours: hours.value,
+            remaining_credits: creditBalance.value,
+            type: 'credit',
+          });
+        } catch (error) {
+          console.warn("Error tracking credit used:", error);
+        }
+        setTimeout(() => {
         router.push('/jobs/' + job);
-      }, 3000);
+        }, 3000);
     } else if (connected.value) {
       // Wallet-based posting for wallet users
       // Ensure wallet is fully ready for signing
