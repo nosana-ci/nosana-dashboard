@@ -64,12 +64,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, watch } from "vue";
 import { useToast } from "vue-toastification";
 import { trackEvent } from "~/utils/analytics";
 
 const config = useRuntimeConfig().public;
-const { token, data: userData } = useAuth();
+const { status, token, data: userData } = useAuth();
 const { nosana } = useSDK();
 const toast = useToast();
 
@@ -171,9 +171,6 @@ onMounted(() => {
 
 // Watch for auth changes - only fetch if not already loaded
 watch([() => status.value, token], ([newStatus, newToken]) => {
-  // Skip loading state (session refresh in progress)
-  if (newStatus === 'loading') return;
-  
   // Only fetch if authenticated AND haven't loaded yet
   if (newToken && newStatus === 'authenticated' && !hasLoadedOnce.value) {
     fetchBalance();

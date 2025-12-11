@@ -352,13 +352,11 @@ const stableAuthToken = ref<string | null>(
 
 // Only update stable token on logout (to trigger refetch on next login)
 watch([() => status.value, token], ([newStatus, newToken]) => {
-  // Skip loading state
-  if (newStatus === 'loading') return;
-  
   // Only clear on logout - don't update on every auth change
   if (newStatus === 'unauthenticated') {
     stableAuthToken.value = null;
-  } else if (newStatus === 'authenticated' && newToken && !stableAuthToken.value) {
+  }
+  if (newStatus === 'authenticated' && newToken && !stableAuthToken.value) {
     // Only set if was null (after logout)
     stableAuthToken.value = newToken;
   }
