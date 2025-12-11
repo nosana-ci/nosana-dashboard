@@ -345,6 +345,23 @@ const selectedKey = ref<any>(null);
 const editKeyName = ref('');
 const editKeyStatus = ref('active');
 
+// Initialize stable token immediately if already authenticated (prevents refetch on session refresh)
+const stableAuthToken = ref<string | null>(
+  status.value === 'authenticated' && token.value ? token.value : null
+);
+
+// Only update stable token on logout (to trigger refetch on next login)
+watch([() => status.value, token], ([newStatus, newToken]) => {
+  // Only clear on logout - don't update on every auth change
+  if (newStatus === 'unauthenticated') {
+    stableAuthToken.value = null;
+  }
+  if (newStatus === 'authenticated' && newToken && !stableAuthToken.value) {
+    // Only set if was null (after logout)
+    stableAuthToken.value = newToken;
+  }
+}, { immediate: false }); // Not immediate - we initialized above
+
 const {
   data: apiKeys,
   pending: loadingKeys,
@@ -361,10 +378,7 @@ const {
   });
 }, {
   default: () => ({ keys: [], total: 0 }),
-  watch: [
-    // Only revalidate when truly authenticated and token changes
-    () => status.value === 'authenticated' ? token.value : null
-  ]
+  watch: [stableAuthToken]
 });
 
 // (debug watchers removed)

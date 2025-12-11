@@ -64,12 +64,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, watch } from "vue";
 import { useToast } from "vue-toastification";
 import { trackEvent } from "~/utils/analytics";
 
 const config = useRuntimeConfig().public;
-const { token, data: userData } = useAuth();
+const { status, token, data: userData } = useAuth();
 const { nosana } = useSDK();
 const toast = useToast();
 
@@ -77,6 +77,7 @@ const toast = useToast();
 const creditBalance = ref(0);
 const reservedCredits = ref(0);
 const loading = ref(false);
+const hasLoadedOnce = ref(false);
 const showClaimModal = ref(false);
 const claimCode = ref("");
 const claiming = ref(false);
@@ -93,6 +94,7 @@ const fetchBalance = async () => {
   loading.value = true;
   try {
     const data = await nosana.value.api.credits.balance();
+    hasLoadedOnce.value = true;
     creditBalance.value = data.assignedCredits
       ? data.assignedCredits - data.settledCredits - data.reservedCredits
       : 0;
@@ -160,16 +162,24 @@ const closeClaimModal = () => {
   claimCode.value = "";
 };
 
-// Initialize
+// Initialize - only fetch if not already loaded
 onMounted(() => {
-  fetchBalance();
+  if (token.value && !hasLoadedOnce.value) {
+    fetchBalance();
+  }
 });
 
-// Watch for token changes to refetch balance when user logs in/out
-watch(token, (newToken, oldToken) => {
-  // Only fetch if token actually changed (not just initial load)
-  if (newToken !== oldToken) {
+// Watch for auth changes - only fetch if not already loaded
+watch([() => status.value, token], ([newStatus, newToken]) => {
+  // Only fetch if authenticated AND haven't loaded yet
+  if (newToken && newStatus === 'authenticated' && !hasLoadedOnce.value) {
     fetchBalance();
+  }
+  // Reset on logout
+  if (newStatus === 'unauthenticated') {
+    creditBalance.value = 0;
+    reservedCredits.value = 0;
+    hasLoadedOnce.value = false;
   }
 }, { immediate: false });
 
