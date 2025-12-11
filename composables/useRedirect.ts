@@ -28,8 +28,8 @@ export function useRedirect() {
         redirectTimer = null;
       }
       
-      // No need to handle login page redirects since login page is removed
-      // The modal handles authentication flows now
+      // Ignore loading state - wait for definitive auth status
+      if (authStatus === 'loading') return;
 
       // Only redirect on protected routes when user is not authenticated
       const protectedRoutes = ['/account/deployer', '/account/host'];
@@ -38,12 +38,10 @@ export function useRedirect() {
       if (!isAuthenticated.value && isProtectedRoute) {
         // Add a small delay to prevent redirects during tab switches
         redirectTimer = setTimeout(() => {
-          // Double-check authentication status before redirecting
-          if (!isAuthenticated.value) {
-            // Open login modal instead of redirecting to login page
-            const fullPath = route.fullPath;
-            openBothModal(fullPath);
-          }
+          // Double-check: ignore if still loading or now authenticated
+          if (status.value === 'loading' || isAuthenticated.value) return;
+          // Open login modal instead of redirecting to login page
+          openBothModal(route.fullPath);
         }, 500);
       }
     }

@@ -251,14 +251,20 @@ watch(
 
 watch(
   [status, connected],
-  () => {
-    if (hasAnyAuth.value) {
+  ([newStatus, newConnected], [oldStatus, oldConnected]) => {
+    // Skip loading state (session refresh in progress)
+    if (newStatus === 'loading') return;
+    
+    const isAuth = newStatus === 'authenticated' || newConnected;
+    
+    // Only fetch if authenticated AND haven't loaded yet
+    if (isAuth && !hasLoadedOnce.value) {
       refreshDeployments();
-    } else if (status.value === "unauthenticated" && !connected.value) {
-      // Only clear deployments when actually unauthenticated and not wallet connected
+    } else if (newStatus === 'unauthenticated' && !newConnected) {
+      // Clear on logout (definitive unauthenticated state)
       deployments.value = [];
+      hasLoadedOnce.value = false; // Reset so next login will fetch
     }
-    // Do nothing during 'loading' state to prevent flicker
   },
   { immediate: true }
 );
