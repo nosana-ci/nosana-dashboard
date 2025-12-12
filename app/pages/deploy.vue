@@ -622,43 +622,44 @@ const createJob = async () => {
     // Check authentication method and use appropriate posting method
     if (status.value === 'authenticated') {
       // Credit-based posting for Google authenticated users
-      const response = await fetch(`${config.public.apiBase}/api/jobs/create-with-credits`, {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-          'Authorization': token.value as string,
-        },
-        body: JSON.stringify({
+      // Determine market address (with fallback for advanced mode)
+      let marketAddress = selectedMarket.value?.address?.toString();
+      if (!marketAddress && selectedHostAddress.value) {
+        const hostData = availableHosts.value?.find(host => host.host_address === selectedHostAddress.value);
+        if (hostData?.market_address && markets.value) {
+          const market = markets.value.find(m => m.address?.toString() === hostData.market_address);
+          if (market) marketAddress = market.address?.toString();
+        }
+      }
+      if (!marketAddress) {
+        throw new Error('No valid market selected. Please select a GPU from the list.');
+      }
+      
+      const { job, credits } = await nosana.value.api.jobs.list({
           ipfsHash: ipfsHash,
-          market: selectedMarket.value!.address,
-          timeout: Math.min(hours.value * 3600, 86400), // Convert hours to seconds, max 24 hours
-          host: selectedHostAddress.value || undefined
-        }),
+        market: marketAddress,
+        timeout: Math.min(hours.value * 3600, 86400),
+        node: selectedHostAddress.value || undefined
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        toast.success(`Successfully created job ${data.jobAddress}`);
-        // Clear saved deploy state after successful job creation
+      toast.success(`Successfully created job ${job}`);
         clearDeployState();
-        // Refresh credit balance after successful job creation
         await refreshCreditBalance();
         try {
           trackEvent('credit_used', {
             user_id: userData.value?.generatedAddress,
-            job_id: data.jobAddress,
+          job_id: job,
             market: marketName.value,
-            credits_used: data.creditsUsed,
-            cost_usd: data.costUsd,
+          credits_used: credits.creditsUsed,
+          cost_usd: credits.costUSD,
             remaining_credits: creditBalance.value,
           });
           trackEvent('gpu_job_created', {
             user_id: userData.value?.generatedAddress,
-            job_id: data.jobAddress,
+          job_id: job,
             market: marketName.value,
-            credits_used: data.creditsUsed,
-            cost_usd: data.costUsd,
+          credits_used: credits.creditsUsed,
+          cost_usd: credits.costUSD,
             hours: hours.value,
             remaining_credits: creditBalance.value,
             type: 'credit',
@@ -667,12 +668,8 @@ const createJob = async () => {
           console.warn("Error tracking credit used:", error);
         }
         setTimeout(() => {
-          router.push('/jobs/' + data.jobAddress);
+        router.push('/jobs/' + job);
         }, 3000);
-      } else {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create job with credits');
-      }
     } else if (connected.value) {
       // Wallet-based posting for wallet users
       // Ensure wallet is fully ready for signing

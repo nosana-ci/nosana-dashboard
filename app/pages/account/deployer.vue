@@ -1,7 +1,7 @@
 <template>
   <div>
     <TopBar 
-      :title="status === 'authenticated' ? 'Hi ' + (userData?.email || userData?.name || 'User') : 'My Account'"
+      :title="(status === 'authenticated' || status === 'loading') && userData?.email ? 'Hi ' + (userData.email || userData.name || 'User') : 'My Account'"
       :subtitle="'Your personal overview'" 
       ref="topBar"
       v-model="showSettingsModal"
@@ -141,13 +141,13 @@
               </p>
             </div>
           </div>
-          <!-- Credit Balance for Google Auth Users Only -->
-          <div class="column is-3" v-if="status === 'authenticated'">
+          <!-- Credit Balance for Google Auth Users Only (keep mounted during loading to prevent refetch) -->
+          <div class="column is-3" v-if="status === 'authenticated' || status === 'loading'">
             <CreditBalance ref="creditBalanceRef" />
           </div>
-          <!-- NOS Balance for Wallet Users -->
-          <div class="column is-3" v-if="activeAddress">
-            <div class="box has-text-centered">
+          <!-- NOS Balance for Wallet Users Only -->
+          <div class="column is-3" v-if="connected && publicKey">
+            <div class="box has-text-centered equal-height-box">
               <p class="heading">NOS Balance</p>
               <p class="title" v-if="balance && nosPrice">
                 {{ balance.uiAmount.toFixed(2) }} NOS
@@ -187,8 +187,8 @@
           </template>
         </div>
         
-        <!-- API Tokens Section (only for authenticated credit users) -->
-        <ApiKeys class="pb-5" v-if="status === 'authenticated'" />
+        <!-- API Tokens Section (keep mounted during loading to prevent refetch) -->
+        <ApiKeys class="pb-5" v-if="status === 'authenticated' || status === 'loading'" />
         
         <div v-if="canShowAccountData">
           <div class="is-flex is-justify-content-space-between is-align-items-center mb-4">

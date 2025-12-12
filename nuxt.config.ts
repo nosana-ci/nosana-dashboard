@@ -55,6 +55,7 @@ export default defineNuxtConfig({
     classPrefix: "",
     classSuffix: "-mode",
     storageKey: "nuxt-color-mode",
+    dataValue: "theme",
   },
   runtimeConfig: {
     public: {
