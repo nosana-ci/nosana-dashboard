@@ -86,8 +86,8 @@
       <div class="quick-detail-item">
         <span class="quick-detail-label">Download Speed</span>
         <span class="quick-detail-value">
-          <span v-if="!props.specs?.download">-</span>
-          <span v-else>{{ props.specs?.download }} Mbps</span>
+          <span v-if="!hasDownload">-</span>
+          <span v-else>{{ formatMbps(props.specs?.download) }} Mbps</span>
         </span>
       </div>
     </div>
@@ -97,8 +97,8 @@
       <div class="quick-detail-item">
         <span class="quick-detail-label">Upload Speed</span>
         <span class="quick-detail-value">
-          <span v-if="!props.specs?.upload">-</span>
-          <span v-else>{{ props.specs?.upload }} Mbps</span>
+          <span v-if="!hasUpload">-</span>
+          <span v-else>{{ formatMbps(props.specs?.upload) }} Mbps</span>
         </span>
       </div>
     </div>
@@ -137,6 +137,16 @@ const props = defineProps<{
   nodeRanking?: NodeRanking | null;
   showInJobContext?: boolean;
 }>();
+
+const hasDownload = computed(() => props.specs?.download !== null && props.specs?.download !== undefined);
+const hasUpload = computed(() => props.specs?.upload !== null && props.specs?.upload !== undefined);
+
+const formatMbps = (val?: number | null) => {
+  if (val === null || val === undefined) return "-";
+  const num = Number(val);
+  if (!Number.isFinite(num)) return "-";
+  return Math.round(num);
+};
 
 const formatCountry = (countryCode?: string) => {
   if (!countryCode) return "-";

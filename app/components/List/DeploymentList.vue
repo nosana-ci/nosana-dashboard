@@ -3,7 +3,7 @@
   <div class="columns is-mobile is-vcentered">
     <div class="column">
       <h2 class="title" :class="{ 'is-5': small, 'is-4': !small }">
-        {{ title ? title : 'Deployments' }}
+        {{ title ? title : 'Jobs' }}
       </h2>
     </div>
     <div class="column">
@@ -11,7 +11,7 @@
         <div v-if="jobs && jobs.length && (!small || (totalJobs && totalJobs > perPage))" class="mr-3 has-text-right">
           <span v-if="totalJobs && totalJobs > perPage">{{ (page - 1) * perPage + 1 }} -
             {{ Math.min(page * perPage, totalJobs) }} of</span>
-          {{ totalJobs }} deployments
+          {{ totalJobs }} jobs
         </div>
         <div class="is-flex is-flex-wrap-wrap state-filter">
           <div class="mr-2 my-2" v-if="!states || states.length >= 2">
@@ -74,10 +74,10 @@
     </thead>
     <tbody>
       <tr v-if="!jobs">
-        <td colspan="5">Loading deployments..</td>
+        <td colspan="5">Loading jobs..</td>
       </tr>
       <tr v-else-if="!jobs.length">
-        <td colspan="5">No deployments</td>
+        <td colspan="5">No jobs</td>
       </tr>
       <tr v-for="job in jobs" v-else :key="job.address" class="clickable-row" @click="navigateToJob(job.address, $event)" @auxclick="navigateToJob(job.address, $event)">
         <td>
@@ -105,11 +105,17 @@
         </td>
         <td class="is-family-monospace is-hidden-mobile">
           <span class="clickable-row-cell-content">
-            <span v-if="job.timeStart && job.timeEnd">
-              <SecondsFormatter :seconds="job.timeEnd - job.timeStart" :showSeconds="true" />
+            <span v-if="job.timeStart && job.timeEnd" class="duration-cell">
+              <SecondsFormatter :seconds="job.timeEnd - job.timeStart" />
+              <span v-if="job.timeout" class="max-duration">
+                (Max <SecondsFormatter :seconds="job.timeout" :showSeconds="false" />)
+              </span>
             </span>
-            <span v-else-if="job.timeStart">
-              <SecondsFormatter :seconds="Math.floor(timestamp / 1000) - job.timeStart" :showSeconds="true" />
+            <span v-else-if="job.timeStart" class="duration-cell">
+              <SecondsFormatter :seconds="Math.floor(timestamp / 1000) - job.timeStart" />
+              <span v-if="job.timeout" class="max-duration">
+                (Max <SecondsFormatter :seconds="job.timeout" :showSeconds="false" />)
+              </span>
             </span>
             <span v-else> - </span>
           </span>
@@ -181,10 +187,12 @@ import { useStatus } from '~/composables/useStatus';
 const { data: stats, pending: loadingStats } = useAPI('/api/stats');
 
 // Extended job type to include additional properties
-interface ExtendedJob extends Job {
+interface ExtendedJob extends Omit<Job, 'market' | 'timeout'> {
+  market: any;
   address: string;
   usdRewardPerHour: number;
   jobStatus?: string;
+  timeout?: number;
 }
 
 // Use global status system for consistent colors
@@ -334,6 +342,18 @@ watch(() => props.loadingJobs, (isLoading, wasLoading) => {
 .clickable-row-cell-content {
   position: relative;
   z-index: 1;
+}
+
+.duration-cell {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35em;
+}
+
+.max-duration {
+  font-size: 0.85em;
+  color: $grey;
+  white-space: nowrap;
 }
 
 // Ensure status icons have proper colors even in small mode

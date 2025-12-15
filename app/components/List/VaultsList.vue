@@ -22,7 +22,7 @@
           </tr>
           <tr
             v-else
-            v-for="vault in filteredVaults"
+            v-for="vault in displayedVaults"
             :key="vault.publicKey.toString()"
           >
             <VaultRow :vault="vault" />
@@ -31,6 +31,15 @@
       </table>
     </div>
   </div>
+
+  <Pagination
+    v-if="totalPages > 1"
+    v-model="currentPage"
+    class="pagination is-centered mt-4"
+    :total-page="totalPages"
+    :max-page="6"
+  />
+
   <VaultModal />
 </template>
 <script setup lang="ts">
@@ -38,6 +47,11 @@ import { type Vault } from "@nosana/sdk";
 import { useRouter } from "vue-router";
 import VaultRow from "@/components/Vault/VaultRow.vue";
 import VaultModal from "@/components/Vault/Modal/VaultModal.vue";
+import Pagination from "@/components/Pagination.vue";
+
+const props = defineProps<{
+  itemsPerPage?: number;
+}>();
 
 const router = useRouter();
 const { nosana } = useSDK();
@@ -45,6 +59,7 @@ const { nosana } = useSDK();
 const loading = ref(true);
 const vaults = ref<Vault[]>([]);
 const filteredVaults = ref<Vault[]>([]);
+const currentPage = ref(1);
 
 watch(
   [() => router.currentRoute.value.query.search, vaults],
@@ -59,7 +74,22 @@ watch(
     } else {
       filteredVaults.value = vaults.value;
     }
+    // Reset to first page when search changes
+    currentPage.value = 1;
   }
+);
+
+// Pagination logic
+const displayedVaults = computed(() => {
+  const start = (currentPage.value - 1) * (props.itemsPerPage || 10);
+  const end = start + (props.itemsPerPage || 10);
+  return filteredVaults.value.slice(start, end);
+});
+
+const totalVaults = computed(() => filteredVaults.value.length);
+
+const totalPages = computed(() =>
+  Math.ceil(totalVaults.value / (props.itemsPerPage || 10))
 );
 
 onMounted(async () => {

@@ -405,40 +405,40 @@
   }
 
   .notification {
-    &.is-warning {  
-      background-color: darken($warning, 15%);
+    &.is-warning {
+      background-color: color.adjust($warning, $lightness: -15%);
       &.is-light {
-        background-color: darken($warning, 35%);
+        background-color: color.adjust($warning, $lightness: -35%);
       }
     }
     &.is-link {
-      background-color: darken($link, 15%);
+      background-color: color.adjust($link, $lightness: -15%);
       &.is-light {
-        background-color: darken($link, 35%);
+        background-color: color.adjust($link, $lightness: -35%);
       }
     }
     &.is-info {
-      background-color: darken($info, 15%);
+      background-color: color.adjust($info, $lightness: -15%);
       &.is-light {
-        background-color: darken($info, 35%);
+        background-color: color.adjust($info, $lightness: -35%);
       }
     }
     &.is-danger {
-      background-color: darken($danger, 15%);
+      background-color: color.adjust($danger, $lightness: -15%);
       &.is-light {
-        background-color: darken($danger, 35%);
+        background-color: color.adjust($danger, $lightness: -35%);
       }
     }
     &.is-success {
-      background-color: darken($success, 15%);
+      background-color: color.adjust($success, $lightness: -15%);
       &.is-light {
-        background-color: darken($success, 35%);
+        background-color: color.adjust($success, $lightness: -35%);
       }
     }
     &.is-primary {
-      background-color: darken($primary, 15%);
+      background-color: color.adjust($primary, $lightness: -15%);
       &.is-light {
-        background-color: darken($primary, 35%);
+        background-color: color.adjust($primary, $lightness: -35%);
       }
     }
   }
@@ -455,11 +455,11 @@
         hue-rotate(180deg) brightness(100%) contrast(88%);
     }
 
-    &:hover:not(:disabled) {
-      background: lighten($grey-darker, 5%);
-      border-color: lighten($grey-dark, 10%);
-      color: $white;
-    }
+      &:hover:not(:disabled) {
+        background: color.adjust($grey-darker, $lightness: 5%);
+        border-color: color.adjust($grey-dark, $lightness: 10%);
+        color: $white;
+      }
 
     &.is-loading {
       &:after {
@@ -801,7 +801,7 @@
       tbody {
         tr:not(.is-selected) {
           &:nth-child(even) {
-            background-color: darken($black-ter, 3%);
+            background-color: color.adjust($black-ter, $lightness: -3%);
           }
         }
       }

@@ -16,11 +16,11 @@
         <tbody>
           <tr v-if="loadingJobs || loadingNodeJobs">
             <td colspan="7" class="has-text-centered py-6">
-              Loading deployments...
+              Loading jobs...
             </td>
           </tr>
           <tr v-else-if="displayedJobs.length === 0">
-            <td colspan="7" class="has-text-centered">No deployments found</td>
+            <td colspan="7" class="has-text-centered">No jobs found</td>
           </tr>
           <template v-else>
             <tr
@@ -118,11 +118,14 @@
               </td>
               <td class="is-hidden-mobile">
                 <span class="clickable-row-cell-content">
-                  <span v-if="job.timeStart && job.timeEnd">
+                  <span v-if="job.timeStart && job.timeEnd" class="duration-cell">
                     <SecondsFormatter
                       :seconds="job.timeEnd - job.timeStart"
-                      :showSeconds="true"
+                      :showSeconds="false"
                     />
+                    <span v-if="job.timeout" class="max-duration">
+                      (Max <SecondsFormatter :seconds="job.timeout" :showSeconds="false" />)
+                    </span>
                   </span>
                   <span v-else>-</span>
                 </span>
@@ -231,8 +234,9 @@ const currentPage = ref(1);
 
 // Convert string status filter to number for backwards compatibility
 const currentState = computed(() => {
-  if (props.statusFilter === null) return null;
-  return parseInt(props.statusFilter) || null;
+  if (props.statusFilter === null || props.statusFilter === undefined) return null;
+  const parsed = parseInt(props.statusFilter);
+  return isNaN(parsed) ? null : parsed;
 });
 
 const jobStateMapping: Record<number, string> = {
@@ -246,14 +250,14 @@ const jobStateMapping: Record<number, string> = {
 const postedJobsUrl = computed(() => {
   const address = activeAddress.value;
   if (!address) return "";
-  return `/api/jobs?limit=${props.itemsPerPage}&offset=${(currentPage.value - 1) * props.itemsPerPage}${currentState.value !== null ? `&state=${jobStateMapping[currentState.value as keyof typeof jobStateMapping]}` : ""}&poster=${address}`;
+  return `/api/jobs?limit=${props.itemsPerPage}&offset=${(currentPage.value - 1) * props.itemsPerPage}${currentState.value != null ? `&state=${jobStateMapping[currentState.value as keyof typeof jobStateMapping]}` : ""}&poster=${address}`;
 });
 
 // URL for node jobs
 const nodeJobsUrl = computed(() => {
   const address = activeAddress.value;
   if (!address) return "";
-  return `/api/jobs?limit=${props.itemsPerPage}&offset=${(currentPage.value - 1) * props.itemsPerPage}${currentState.value !== null ? `&state=${jobStateMapping[currentState.value as keyof typeof jobStateMapping]}` : ""}&node=${address}`;
+  return `/api/jobs?limit=${props.itemsPerPage}&offset=${(currentPage.value - 1) * props.itemsPerPage}${currentState.value != null ? `&state=${jobStateMapping[currentState.value as keyof typeof jobStateMapping]}` : ""}&node=${address}`;
 });
 
 // Fetch jobs API calls
@@ -561,6 +565,18 @@ const isGHCR = (image: string) => {
 .dark-mode .docker-icon {
   filter: invert(48%) sepia(90%) saturate(2299%) hue-rotate(188deg)
     brightness(97%) contrast(91%);
+}
+
+.duration-cell {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35em;
+}
+
+.max-duration {
+  font-size: 0.85em;
+  color: $grey;
+  white-space: nowrap;
 }
 
 .dark-mode img[src*="github.svg"] {

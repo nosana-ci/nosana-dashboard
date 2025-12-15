@@ -49,14 +49,9 @@
               </div>
               <div class="deployment-tabs">
                 <button
-                  v-for="tab in [
-                    'overview',
-                    'logs',
-                    'events',
-                    'job-definition',
-                  ]"
+                  v-for="tab in availableTabs"
                   :key="tab"
-                  @click="activeTab = tab"
+                  @click="switchTab(tab)"
                   :class="{ 'is-active': activeTab === tab }"
                   class="tab-button"
                 >
@@ -733,16 +728,11 @@
                     v-else-if="jobDefinitionModel"
                     class="json-editor-container"
                   >
-                    <JsonEditorVue
-                      :validator="validator"
-                      :class="{ 'jse-theme-dark': colorMode.value === 'dark' }"
+                    <CommonJsonEditor
+                      ref="currentJobDefEditor"
                       :modelValue="jobDefinitionModel"
-                      :mode="Mode.text"
-                      :mainMenuBar="false"
-                      :statusBar="false"
-                      :stringified="false"
                       :readOnly="false"
-                      class="json-editor"
+                      :validateJobDefinition="true"
                       @update:modelValue="
                         (value: unknown) => {
                           if (value && typeof value === 'object') {
@@ -1102,14 +1092,10 @@
           <section class="modal-card-body has-min-height-500">
             <div class="field full-height">
               <div class="control full-height">
-                <JsonEditorVue
-                  :validator="validator"
-                  :class="{ 'jse-theme-dark': colorMode.value === 'dark' }"
+                <CommonJsonEditor
+                  ref="revisionJobDefEditor"
                   v-model="revisionJobDefinition"
-                  :mode="Mode.text"
-                  :mainMenuBar="false"
-                  :statusBar="false"
-                  :stringified="false"
+                  :validateJobDefinition="true"
                   class="has-height-500"
                 />
               </div>
@@ -1156,15 +1142,9 @@
               v-if="viewingRevision.job_definition"
               class="json-editor-container"
             >
-              <JsonEditorVue
-                :validator="validator"
+              <CommonJsonEditor
                 v-model="viewingRevision.job_definition"
-                :mode="Mode.text"
-                :mainMenuBar="false"
-                :statusBar="false"
-                :stringified="false"
                 :readOnly="true"
-                class="json-editor"
               />
             </div>
             <div v-else class="has-text-grey has-text-centered py-4">
@@ -1185,9 +1165,6 @@
 
 <script setup lang="ts">
 import type { Deployment, JobDefinition } from "@nosana/sdk";
-import { Mode, ValidationSeverity } from "vanilla-jsoneditor";
-import JsonEditorVue from "json-editor-vue";
-import "vanilla-jsoneditor/themes/jse-theme-dark.css";
 import { useToast } from "vue-toastification";
 import { useWallet } from "solana-wallets-vue";
 import { useAuth } from "#imports";
@@ -1270,6 +1247,15 @@ const deployment = ref<Deployment | null>(null);
 const loading = ref(true);
 const error = ref<string | null>(null);
 const activeTab = ref("overview");
+
+// Available tabs
+const availableTabs = ['overview', 'logs', 'events', 'job-definition'];
+
+// Initialize activeTab from URL query parameter
+const initialTab = route.query.tab?.toString();
+if (initialTab && availableTabs.includes(initialTab)) {
+  activeTab.value = initialTab;
+}
 const activeLogsJobId = ref<string | null>(null);
 const jobActivityTab = ref("running");
 const actionLoading = ref(false);
@@ -1373,18 +1359,15 @@ const formatDate = (dateString: string | Date) => {
   return new Date(dateString).toLocaleString();
 };
 
-const validator = (json: any) => {
-  const errors: {
-    path: string[];
-    message: string;
-    severity: ValidationSeverity;
-  }[] = [];
-  return errors;
-};
-
 const jobDefinitionModel = ref<JobDefinition | null>(null);
 const loadingJobDefinition = ref(false);
 const originalDefinition = ref<JobDefinition | null>(null);
+
+// Editor refs and validation
+const currentJobDefEditor = ref<{ hasErrors: boolean } | null>(null);
+const revisionJobDefEditor = ref<{ hasErrors: boolean } | null>(null);
+const { canSave: canSaveCurrent } = useJsonEditorValidation(currentJobDefEditor);
+const { canSave: canSaveRevision } = useJsonEditorValidation(revisionJobDefEditor);
 
 const loadJobDefinition = async () => {
   // Try to get job definition from deployment revisions first
@@ -1455,13 +1438,8 @@ const resetDefinition = () => {
 const makeRevision = async () => {
   if (!deployment.value || !hasDefinitionChanged.value) return;
 
-  // Validate JSON before making revision
-  try {
-    JSON.stringify(jobDefinitionModel.value);
-  } catch (err) {
-    toast.error(
-      "Invalid JSON: Please fix the job definition before creating a revision"
-    );
+  // Check for validation errors
+  if (!canSaveCurrent('Cannot create revision: Please fix the errors in the job definition')) {
     return;
   }
 
@@ -1904,6 +1882,11 @@ const createRevision = async () => {
     return;
   }
 
+  // Check for validation errors
+  if (!canSaveRevision('Cannot create revision: Please fix the errors in the job definition')) {
+    return;
+  }
+
   if (!deployment.value || !hasAnyAuth.value) {
     toast.error("Please log in or connect wallet to perform this action");
     return;
@@ -2223,6 +2206,17 @@ watch(
   },
   { immediate: true }
 );
+
+// Switch tab and update URL
+const switchTab = (tab: string) => {
+  activeTab.value = tab;
+  router.replace({
+    query: {
+      ...route.query,
+      tab: tab === 'overview' ? undefined : tab // Don't include tab=overview in URL for cleaner URLs
+    }
+  });
+};
 
 // Watch revision modal to initialize job definition
 watch(
