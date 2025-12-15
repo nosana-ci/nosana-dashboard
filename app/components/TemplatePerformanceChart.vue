@@ -18,23 +18,6 @@
           </div>
         </div>
       </div>
-      <div class="field">
-        <label class="label">Compare with Market</label>
-        <div class="control">
-          <div class="select is-fullwidth">
-            <select v-model="selectedMarket">
-              <option value="">No comparison</option>
-              <option
-                v-for="(market, address) in marketOptions"
-                :key="address"
-                :value="address"
-              >
-                {{ market.name }} ({{ market.type }})
-              </option>
-            </select>
-          </div>
-        </div>
-      </div>
     </div>
 
     <div class="chart-wrapper">
@@ -48,7 +31,13 @@
       <div v-else-if="!templateData || templateData.templates.length === 0" class="notification is-info">
         No benchmark data available for this node.
       </div>
-      <Bar v-else :data="chartData" :options="chartOptions" :height="300" />
+      <Bar
+        v-else
+        :data="chartData"
+        :options="chartOptions"
+        :plugins="chartPlugins"
+        :height="300"
+      />
     </div>
   </div>
 </template>
@@ -110,7 +99,23 @@ interface TemplateData {
 }
 
 const selectedMetric = ref(props.defaultMetric);
-const selectedMarket = ref('');
+
+// Always compare with the premium market counterpart
+const selectedMarket = computed(() => {
+  if (!templateData.value?.currentMarket || !templateData.value.marketOptions) {
+    return '';
+  }
+
+  const currentMarket = templateData.value.marketOptions[templateData.value.currentMarket];
+  const baseSlug = currentMarket?.slug.replace('-community', '') || '';
+
+  // Find premium market (either current market or its counterpart)
+  const premiumMarket = (
+    Object.entries(templateData.value.marketOptions) as [string, MarketOption][]
+  ).find(([, market]) => market.type === 'PREMIUM' && market.slug === baseSlug);
+
+  return premiumMarket ? premiumMarket[0] : '';
+});
 
 const metricOptions = [
   { value: 'tokensPerSecond', label: 'Tokens / Second' },
@@ -137,28 +142,16 @@ const error = computed(() => {
 });
 
 // Market options for dropdown (filtered to only show PREMIUM markets)
-const marketOptions = computed(() => {
-  const allMarkets = templateData.value?.marketOptions || {};
+const marketOptions = computed<Record<string, MarketOption>>(() => {
+  const allMarkets = (templateData.value?.marketOptions ||
+    {}) as Record<string, MarketOption>;
   return Object.fromEntries(
-    Object.entries(allMarkets).filter(([address, market]) => market.type === 'PREMIUM')
+    Object.entries(allMarkets).filter(
+      ([, market]: [string, MarketOption]) => market.type === 'PREMIUM'
+    )
   );
 });
 
-// Set default market - use premium counterpart for community markets
-watch(templateData, (newData) => {
-  if (newData?.currentMarket && !selectedMarket.value) {
-    const currentMarket = newData.marketOptions[newData.currentMarket];
-    const baseSlug = currentMarket?.slug.replace('-community', '') || '';
-    
-    // Find premium market (either current market or its counterpart)
-    const premiumMarket = Object.entries(newData.marketOptions)
-      .find(([_, market]) => market.type === 'PREMIUM' && market.slug === baseSlug);
-    
-    if (premiumMarket) {
-      selectedMarket.value = premiumMarket[0];
-    }
-  }
-}, { immediate: true });
 
 const chartData = computed(() => {
   if (!templateData.value?.templates || templateData.value.templates.length === 0) {
@@ -208,31 +201,122 @@ const chartData = computed(() => {
   };
 });
 
-const chartOptions = computed(() => ({
-  responsive: true,
-  maintainAspectRatio: false,
-  scales: {
-    x: {
-      title: {
-        display: false,
+const comparisonLegend = computed<
+  Array<{ templateId: string; templateName: string; delta: number }>
+>(() => {
+  if (
+    !selectedMarket.value ||
+    !templateData.value?.templates ||
+    !templateData.value.marketOptions[selectedMarket.value]
+  ) {
+    return [];
+  }
+
+  const marketData = templateData.value.marketOptions[selectedMarket.value];
+
+  return templateData.value.templates.map((t: TemplatePerformance) => {
+    const nodeVal = Number(
+      t.node[selectedMetric.value as keyof NodePerformance] ?? 0
+    );
+    const marketTemplate = marketData.templates[t.templateId];
+    const marketVal = Number(
+      marketTemplate?.[selectedMetric.value as keyof NodePerformance] ?? 0
+    );
+
+    let delta = 0;
+    if (Number.isFinite(nodeVal) && Number.isFinite(marketVal) && marketVal !== 0) {
+      delta = Math.round(((nodeVal - marketVal) / marketVal) * 100);
+    }
+
+    return {
+      templateId: t.templateId,
+      templateName: t.templateName,
+      delta,
+    };
+  });
+});
+
+const comparisonDeltaByLabel = computed<Record<string, number>>(() => {
+  return Object.fromEntries(
+    comparisonLegend.value.map((item) => [item.templateName, item.delta])
+  );
+});
+
+const chartOptions = computed(() => {
+  const deltaMap = comparisonDeltaByLabel.value;
+  const labels = chartData.value.labels || [];
+
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    layout: {
+      padding: {
+        bottom: 10,
       },
     },
-    y: {
-      title: {
+    scales: {
+      x: {
+        title: {
+          display: false,
+        },
+        ticks: {
+          callback(value: any, index: number) {
+            return labels[index] ?? value;
+          },
+        },
+      },
+      y: {
+        title: {
+          display: true,
+          text:
+            metricOptions.find((m) => m.value === selectedMetric.value)?.label ||
+            '',
+        },
+        beginAtZero: true,
+      },
+    },
+    plugins: {
+      legend: {
         display: true,
-        text: metricOptions.find(m => m.value === selectedMetric.value)?.label || '',
+        position: 'top' as const,
+        align: 'end' as const,
       },
-      beginAtZero: true,
     },
+  };
+});
+
+const percentileOverlayPlugin = {
+  id: 'percentileOverlayPlugin',
+  afterDraw(chart: any) {
+    const deltaMap = comparisonDeltaByLabel.value;
+    const labels = chartData.value.labels || [];
+    const xScale = chart.scales?.x;
+    if (!xScale || !labels.length) return;
+
+    const ctx = chart.ctx;
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.font = 'bold 10px "Helvetica Neue", Arial, sans-serif';
+
+    const baseY = chart.chartArea.bottom + 26;
+    labels.forEach((label: string, idx: number) => {
+      const delta = deltaMap[label];
+      if (delta === undefined) return;
+      const x = xScale.getPixelForTick(idx);
+      ctx.fillStyle = delta >= 0 ? '#23d160' : '#f14668';
+      const text = `${delta >= 0 ? '+' : ''}${delta}%`;
+      ctx.fillText(text, x, baseY);
+    });
+
+    ctx.restore();
   },
-  plugins: {
-    legend: {
-      display: true,
-      position: 'top' as const,
-      align: 'end' as const,
-    },
-  },
-}));
+};
+
+const chartPlugins = computed(() => {
+  const hasComparison = comparisonLegend.value.length > 0 && selectedMarket.value;
+  return hasComparison ? [percentileOverlayPlugin] : [];
+});
 </script>
 
 <style lang="scss" scoped>
@@ -246,7 +330,7 @@ const chartOptions = computed(() => ({
   height: 400px;
   position: relative;
   width: 100%;
-  margin: 20px 0;
+  margin: 0;
 }
 
 .filters {
@@ -255,7 +339,6 @@ const chartOptions = computed(() => ({
 }
 
 .field {
-  flex: 1;
   max-width: 300px;
 }
 </style>

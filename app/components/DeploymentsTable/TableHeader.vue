@@ -26,6 +26,14 @@
           <GreenDownChevron />
         </span>
       </div>
+      <div class="select page-size-select ml-2">
+        <select v-model="pageSizeValue">
+          <option value="10">10 per page</option>
+          <option value="25">25 per page</option>
+          <option value="50">50 per page</option>
+          <option value="all">All</option>
+        </select>
+      </div>
       <div v-if="filtersOptions" class="select status-select ml-2">
         <select v-model="filterValue">
           <option
@@ -86,6 +94,20 @@ const filterValue = computed({
       query: {
         ...currentRoute.value.query,
         filter: newFilter ?? undefined,
+      },
+    });
+  },
+});
+
+const pageSizeValue = computed({
+  get() {
+    return currentRoute.value.query.size?.toString() || "10";
+  },
+  set(newSize: string) {
+    replace({
+      query: {
+        ...currentRoute.value.query,
+        size: newSize === "10" ? undefined : newSize, // Don't include size=10 in URL for cleaner URLs
       },
     });
   },

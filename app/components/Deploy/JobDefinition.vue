@@ -77,7 +77,7 @@
               <!-- Edit Job Definition Button -->
               <button
                   class="button is-light is-small"
-                  @click="showEditorModal = true"
+                  @click="openEditorModal"
                   title="Edit job definition" 
               >
                   <span class="icon is-small">
@@ -151,31 +151,31 @@
     
     <!-- Job Definition Editor Modal -->
     <div class="modal" :class="{ 'is-active': showEditorModal }">
-      <div class="modal-background" @click="showEditorModal = false"></div>
+      <div class="modal-background" @click="handleCancel"></div>
       <div class="modal-card" style="width: 90%; max-width: 1200px;">
         <header class="modal-card-head">
           <p class="modal-card-title">Edit Job Definition</p>
-          <button class="delete" aria-label="close" @click="showEditorModal = false"></button>
+          <button class="delete" aria-label="close" @click="handleCancel"></button>
         </header>
         <section class="modal-card-body" style="min-height: 500px;">
           <div class="field full-height">
             <div class="control full-height json-editor-container">
-              <JsonEditorVue 
-                  :validator="validator" 
-                  :class="{ 'jse-theme-dark': $colorMode.value === 'dark' }" 
-                  v-model="jobDefinition" 
-                  :mode="Mode.text" 
-                  :mainMenuBar="false" 
-                  :statusBar="false" 
-                  :stringified="false" 
-                  class="json-editor"
+              <CommonJsonEditor 
+                  ref="jobDefEditor"
+                  v-model="editingJobDefinition" 
+                  :validateJobDefinition="true"
                   style="height: 500px;" />
             </div>
           </div>
         </section>
         <footer class="modal-card-foot">
-          <button class="button is-success" @click="showEditorModal = false">Save changes</button>
-          <button class="button" @click="showEditorModal = false">Cancel</button>
+          <button 
+            class="button is-success" 
+            @click="handleSaveChanges"
+          >
+            Save changes
+          </button>
+          <button class="button" @click="handleCancel">Cancel</button>
         </footer>
       </div>
     </div>
@@ -183,8 +183,6 @@
 </template>
 
 <script setup lang="ts">
-import { Mode } from 'vanilla-jsoneditor';
-  import JsonEditorVue from 'json-editor-vue';
   import type { JobDefinition, Market } from '@nosana/sdk';
   import type { Template } from '~/composables/useTemplates';
   import DeploySimpleGpuSelection from './SimpleGpuSelection.vue';
@@ -195,7 +193,6 @@ interface Props {
   selectedTemplate: Template | null;
   jobDefinition: JobDefinition | null | string;
   isEditorCollapsed: boolean;
-  validator: any;
   title?: string; // Optional title for the section
     // GPU Selection props (optional - only for /deploy page)
     markets?: Market[] | null;
@@ -239,6 +236,14 @@ const props = defineProps<Props>();
 
 // Modal state
 const showEditorModal = ref(false);
+
+// Editor ref and validation
+const jobDefEditor = ref<{ hasErrors: boolean } | null>(null);
+const { canSave } = useJsonEditorValidation(jobDefEditor);
+
+// Store original job definition for cancel functionality
+const originalJobDefinition = ref<JobDefinition | null | string>(null);
+const editingJobDefinition = ref<JobDefinition | null | string>(null);
 
 // GPU Tab state
 const gpuTab = ref<"simple" | "advanced">("simple");
@@ -290,8 +295,29 @@ const computedDockerImage = computed(() => {
 
 // Methods
 const openReadmeModal = (readme: string) => {
-
   emit('openReadme', readme);
+};
+
+// Open modal and store original state
+const openEditorModal = () => {
+  originalJobDefinition.value = JSON.parse(JSON.stringify(props.jobDefinition));
+  editingJobDefinition.value = JSON.parse(JSON.stringify(props.jobDefinition));
+  showEditorModal.value = true;
+};
+
+// Handle save with validation
+const handleSaveChanges = () => {
+  if (!canSave()) return;
+  // Emit the edited job definition
+  emit('update:jobDefinition', editingJobDefinition.value as JobDefinition);
+  showEditorModal.value = false;
+};
+
+// Handle cancel - restore original state
+const handleCancel = () => {
+  // Restore original job definition
+  editingJobDefinition.value = originalJobDefinition.value;
+  showEditorModal.value = false;
 };
 </script>
 
