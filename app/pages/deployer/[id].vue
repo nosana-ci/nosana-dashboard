@@ -41,14 +41,14 @@
       </div>
     </div>
 
-    <!-- Deployment List -->
+    <!-- Job List -->
     <div v-if="isPoster">
       <DeploymentList
         :per-page="limit"
         :total-jobs="totalJobs"
         v-model:page="page"
         :loading-jobs="loadingJobs"
-        title="Deployments Ran"
+        title="Jobs Ran"
         :jobs="jobs?.jobs || []"
         :states="[1, 2]"
       />

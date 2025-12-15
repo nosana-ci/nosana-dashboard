@@ -8,7 +8,15 @@
         <!-- General Account Info -->
         <GeneralInfo :address="address" />
         <!-- Host Info -->
-        <HostInfo :address="address" />
+        <HostInfo
+          :address="address"
+          :node-specs="nodeSpecs"
+          :node-info="nodeInfo"
+          :node-ranking="nodeRanking"
+          :loading-node-specs="loadingSpecs"
+          :loading-node-info="loadingNodeInfo"
+          :loading-node-ranking="loadingNodeRanking"
+        />
       </div>
     </div>
   </div>
@@ -22,14 +30,14 @@
     />
   </div>
   
-  <!-- Deployments ran list moved from HostInfo to here -->
+  <!-- Jobs ran list moved from HostInfo to here -->
   <DeploymentList
     :per-page="limit"
     :total-jobs="totalJobs"
     v-model:page="page"
     v-model:state="state"
     :loading-jobs="loadingJobs"
-    title="Deployments Ran"
+      title="Jobs Ran"
     :jobs="jobs?.jobs || []"
     :states="[1, 2]"
   />
@@ -77,15 +85,14 @@ interface NodeRanking {
   participationRate: number;
   uptimePercentage: number;
 }
-const nodeRankingUrl = computed(() => {
-  if (!address.value || !nodeSpecs.value?.marketAddress) return '';
-  return `/api/benchmarks/node-report?node=${address.value}`;
-});
 const { data: nodeRanking, pending: loadingNodeRanking } = useAPI(
-  nodeRankingUrl,
+  () =>
+    address.value
+      ? `/api/benchmarks/node-report?node=${address.value}`
+      : '',
   {
     default: () => null,
-    watch: [nodeRankingUrl]
+    watch: [address]
   }
 );
 

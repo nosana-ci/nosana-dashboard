@@ -1,240 +1,210 @@
 <template>
-  <template v-if="!isNode">
-    <div class="column is-full" v-if="loadingJobs || loadingSpecs || loadingMarkets || loadingRuns">
-      <div class="quick-detail-item">
-        <span class="quick-detail-label">Status</span>
-        <span class="quick-detail-value">Checking if account is host..</span>
-      </div>
-    </div>
-    <div class="column is-full" v-else>
-      <div class="quick-detail-item">
-        <span class="quick-detail-label">Host Status</span>
-        <span class="quick-detail-value">Not a node</span>
-      </div>
-    </div>
-  </template>
-  <template v-else>
-      <!-- Deployments ran -->
-      <div class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
-        <div class="quick-detail-item">
-          <span class="quick-detail-label">Deployments ran</span>
-          <span class="quick-detail-value">
-            <span v-if="loadingJobs">...</span>
-            <span v-else-if="jobs">{{ jobs.totalJobs }}</span>
-            <span v-else class="has-text-danger">Could not retrieve deployments</span>
-          </span>
-        </div>
-      </div>
-
-      <!-- Status -->
-      <div class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
-        <div class="quick-detail-item">
-          <span class="quick-detail-label">Status</span>
-          <span class="quick-detail-value">
-            <span v-if="!queueInfo">
-              <span v-if="loadingMarkets || loadingRuns">...</span>
-              <span v-else>
-                <div
-                  v-if="nodeRuns && nodeRuns.length"
-                  data-tooltip="Host is running a deployment"
-                  style="width: fit-content"
-                  class="is-flex"
-                >
-                  <JobStatus :status="'RUNNING'"></JobStatus>
-                </div>
-                <div v-else>
-                  <span v-if="nodeInfo">(Re)starting</span>
-                  <span v-else-if="loadingInfo">...</span>
-                  <span v-else>Offline</span>
-                </div>
-              </span>
-            </span>
-            <div v-else style="width: fit-content" class="is-flex">
-              <div
-                data-tooltip="Host is queued in market"
-                style="width: fit-content"
-                class="is-flex"
-              >
-                <JobStatus :status="'QUEUED'"></JobStatus>
-              </div>
+  <!-- Status -->
+  <div class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+    <div class="quick-detail-item">
+      <span class="quick-detail-label">Status</span>
+      <span class="quick-detail-value">
+        <span v-if="!isNode">
+          <span v-if="loadingJobs || loadingSpecs || loadingMarkets || loadingRuns">...</span>
+          <span v-else>Not a node</span>
+        </span>
+        <span v-else-if="!queueInfo">
+          <span v-if="loadingMarkets || loadingRuns">...</span>
+          <span v-else>
+            <div
+              v-if="nodeRuns && nodeRuns.length"
+              data-tooltip="Host is running a deployment"
+              style="width: fit-content"
+              class="is-flex"
+            >
+              <JobStatus :status="'RUNNING'"></JobStatus>
+            </div>
+            <div v-else>
+              <span v-if="nodeInfo">(Re)starting</span>
+              <span v-else-if="loadingInfo">...</span>
+              <span v-else>Offline</span>
             </div>
           </span>
+        </span>
+        <div v-else style="width: fit-content" class="is-flex">
+          <div
+            data-tooltip="Host is queued in market"
+            style="width: fit-content"
+            class="is-flex"
+          >
+            <JobStatus :status="'QUEUED'"></JobStatus>
+          </div>
         </div>
-      </div>
+      </span>
+    </div>
+  </div>
 
-      <!-- Availability -->
-      <div class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
-        <div class="quick-detail-item">
-          <span class="quick-detail-label">
-            <span class="is-flex-inline">
-              <span>Availability</span>
-              <span
-                class="has-tooltip-arrow ml-1"
-                style="vertical-align: middle"
-                data-tooltip="The percentage of time this host has been available to process deployments while in queue"
-              >
-                <InfoIcon />
-              </span>
+  <!-- Host API Status -->
+  <div class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+    <div class="quick-detail-item">
+      <span class="quick-detail-label">Host API Status</span>
+      <span class="quick-detail-value">
+        <span v-if="nodeInfo">Online</span>
+        <span v-else-if="loadingInfo">...</span>
+        <span v-else>Offline</span>
+      </span>
+    </div>
+  </div>
+
+  <!-- Running job -->
+  <div class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+    <div class="quick-detail-item">
+      <span class="quick-detail-label">Running job</span>
+      <span class="quick-detail-value">
+        <nuxt-link
+          v-if="nodeRuns && nodeRuns.length > 0"
+          :to="`/jobs/${nodeRuns[0].account.job}`"
+          class="address is-family-monospace"
+        >{{ nodeRuns[0].account.job }}</nuxt-link>
+        <span v-else-if="loadingRuns">...</span>
+        <span v-else>-</span>
+      </span>
+    </div>
+  </div>
+
+  <!-- Host market -->
+  <div class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+    <div class="quick-detail-item">
+      <span class="quick-detail-label">Host market</span>
+      <span class="quick-detail-value">
+        <span v-if="queueInfo">
+          <nuxt-link
+            :to="`/markets/${queueInfo.market.address.toString()}`"
+            class="address is-family-monospace"
+          >
+            <span
+              v-if="
+                testgridMarkets &&
+                testgridMarkets.find(
+                  (tgm: any) =>
+                    tgm.address === queueInfo!.market.address.toString()
+                )
+              "
+            >
+              {{
+                testgridMarkets.find(
+                  (tgm: any) =>
+                    tgm.address === queueInfo!.market.address.toString()
+                ).name
+              }}
             </span>
-          </span>
-          <span class="quick-detail-value">
-            <span v-if="loadingRanking || !nodeSpecs?.marketAddress">...</span>
-            <span v-else-if="!nodeRanking || typeof nodeRanking.uptimePercentage === 'undefined'">
-              <span
-                class="has-tooltip-arrow"
-                data-tooltip="This host hasn't been online long enough to calculate availibily"
-              >
-                unknown
-              </span>
-            </span>
-            <span v-else>{{ nodeRanking.uptimePercentage.toFixed(1) }}%</span>
-          </span>
-        </div>
-      </div>
-
-      <!-- Running deployment -->
-      <div v-if="nodeRuns && nodeRuns.length > 0" class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
-        <div class="quick-detail-item">
-          <span class="quick-detail-label">Running deployment</span>
-          <span class="quick-detail-value">
-            <nuxt-link
-              :to="`/jobs/${nodeRuns[0].account.job}`"
-              class="address is-family-monospace"
-            >{{ nodeRuns[0].account.job }}</nuxt-link>
-          </span>
-        </div>
-      </div>
-
-      <!-- Host pool -->
-      <div class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
-        <div class="quick-detail-item">
-          <span class="quick-detail-label">Host pool</span>
-          <span class="quick-detail-value">
-            <span v-if="queueInfo">
+            <span v-else>{{ queueInfo.market.address.toString() }}</span>
+          </nuxt-link>
+        </span>
+        <span v-else>
+          <span v-if="nodeSpecs">
+            <template v-if="nodeSpecs.marketAddress">
               <nuxt-link
-                :to="`/markets/${queueInfo.market.address.toString()}`"
+                :to="`/markets/${nodeSpecs.marketAddress}`"
                 class="address is-family-monospace"
               >
                 <span
                   v-if="
                     testgridMarkets &&
                     testgridMarkets.find(
-                      (tgm: any) =>
-                        tgm.address === queueInfo!.market.address.toString()
+                      (tgm: any) => tgm.address === nodeSpecs.marketAddress
                     )
                   "
                 >
                   {{
                     testgridMarkets.find(
-                      (tgm: any) =>
-                        tgm.address === queueInfo!.market.address.toString()
+                      (tgm: any) => tgm.address === nodeSpecs.marketAddress
                     ).name
                   }}
                 </span>
-                <span v-else>{{ queueInfo.market.address.toString() }}</span>
+                <span v-else>{{ nodeSpecs.marketAddress }}</span>
               </nuxt-link>
-            </span>
-            <span v-else>
-              <span v-if="nodeSpecs">
-                <template v-if="nodeSpecs.marketAddress">
-                  <nuxt-link
-                    :to="`/markets/${nodeSpecs.marketAddress}`"
-                    class="address is-family-monospace"
-                  >
-                    <span
-                      v-if="
-                        testgridMarkets &&
-                        testgridMarkets.find(
-                          (tgm: any) => tgm.address === nodeSpecs.marketAddress
-                        )
-                      "
-                    >
-                      {{
-                        testgridMarkets.find(
-                          (tgm: any) => tgm.address === nodeSpecs.marketAddress
-                        ).name
-                      }}
-                    </span>
-                    <span v-else>{{ nodeSpecs.marketAddress }}</span>
-                  </nuxt-link>
-                </template>
-                <template v-else>
-                  <span>-</span>
-                </template>
-              </span>
-              <span v-else-if="loadingMarkets || loadingSpecs">...</span>
-              <span v-else>-</span>
-            </span>
+            </template>
+            <template v-else>
+              <span>-</span>
+            </template>
           </span>
-        </div>
-      </div>
+          <span v-else-if="loadingMarkets || loadingSpecs">...</span>
+          <span v-else>-</span>
+        </span>
+      </span>
+    </div>
+  </div>
 
-      <!-- CLI Version -->
-      <div class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
-        <div class="quick-detail-item">
-          <span class="quick-detail-label">CLI Version</span>
-          <span class="quick-detail-value">
-            <span v-if="combinedSpecs && combinedSpecs.nodeVersion">
-              v{{ combinedSpecs.nodeVersion }}
-            </span>
-            <span v-else-if="loadingInfo || loadingSpecs">...</span>
-            <span v-else>Offline</span>
+  <!-- Total Jobs -->
+  <div class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+    <div class="quick-detail-item">
+      <span class="quick-detail-label">Total Jobs</span>
+      <span class="quick-detail-value">
+        <span v-if="loadingJobs">...</span>
+        <span v-else-if="jobs">{{ jobs.totalJobs }}</span>
+        <span v-else>-</span>
+      </span>
+    </div>
+  </div>
+
+  <!-- Availability -->
+  <div class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+    <div class="quick-detail-item">
+      <span class="quick-detail-label">
+        <span class="is-flex-inline">
+          <span>Availability</span>
+          <span
+            class="has-tooltip-arrow ml-1"
+            style="vertical-align: middle"
+            data-tooltip="The percentage of time this host has been available to process deployments while in queue"
+          >
+            <InfoIcon />
           </span>
-        </div>
-      </div>
-
-      <!-- Host API Status -->
-      <div class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
-        <div class="quick-detail-item">
-          <span class="quick-detail-label">Host API Status</span>
-          <span class="quick-detail-value">
-            <span v-if="nodeInfo">Online</span>
-            <span v-else-if="loadingInfo">...</span>
-            <span v-else>Offline</span>
+        </span>
+      </span>
+      <span class="quick-detail-value">
+        <span v-if="loadingRanking || loadingSpecs">...</span>
+        <span v-else-if="!nodeSpecs?.marketAddress">-</span>
+        <span v-else-if="!nodeRanking || typeof nodeRanking.uptimePercentage === 'undefined'">
+          <span
+            class="has-tooltip-arrow"
+            data-tooltip="This host hasn't been online long enough to calculate availibily"
+          >
+            unknown
           </span>
-        </div>
-      </div>
+        </span>
+        <span v-else>{{ nodeRanking.uptimePercentage.toFixed(1) }}%</span>
+      </span>
+    </div>
+  </div>
 
-      <!-- Total Jobs -->
-      <div class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
-        <div class="quick-detail-item">
-          <span class="quick-detail-label">Total Jobs</span>
-          <span class="quick-detail-value">
-            <span v-if="loadingJobs">...</span>
-            <span v-else-if="jobs">{{ jobs.totalJobs }}</span>
-            <span v-else>-</span>
-          </span>
-        </div>
-      </div>
+  <!-- Anti-spoof percentage -->
+  <div class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+    <div class="quick-detail-item">
+      <span class="quick-detail-label">Anti-spoof percentage</span>
+      <span class="quick-detail-value">
+        <span v-if="nodeRanking && nodeRanking.participationRate">{{ nodeRanking.participationRate.toFixed(1) }}%</span>
+        <span v-else>-</span>
+      </span>
+    </div>
+  </div>
 
-      <!-- Node Address -->
-      <div class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
-        <div class="quick-detail-item">
-          <span class="quick-detail-label">Node Address</span>
-          <span class="quick-detail-value">
-            <span class="address is-family-monospace">{{ props.address }}</span>
-          </span>
-        </div>
-      </div>
+  <!-- CLI Version -->
+  <div class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+    <div class="quick-detail-item">
+      <span class="quick-detail-label">CLI Version</span>
+      <span class="quick-detail-value">
+        <span v-if="combinedSpecs && combinedSpecs.nodeVersion">
+          v{{ combinedSpecs.nodeVersion }}
+        </span>
+        <span v-else-if="loadingInfo || loadingSpecs">...</span>
+        <span v-else>Offline</span>
+      </span>
+    </div>
+  </div>
 
-      <!-- Anti-spoof percentage -->
-      <div class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
-        <div class="quick-detail-item">
-          <span class="quick-detail-label">Anti-spoof percentage</span>
-          <span class="quick-detail-value">
-            <span v-if="nodeRanking && nodeRanking.participationRate">{{ nodeRanking.participationRate.toFixed(1) }}%</span>
-            <span v-else>-</span>
-          </span>
-        </div>
-      </div>
-
-      <!-- Host Specifications -->
-      <HostSpecifications
-        v-if="combinedSpecs"
-        :specs="combinedSpecs"
-        :node-ranking="nodeRanking"
-      />
-    </template>
+  <!-- Host Specifications -->
+  <HostSpecifications
+    v-if="combinedSpecs"
+    :specs="combinedSpecs"
+    :node-ranking="nodeRanking"
+  />
 </template>
 
 <script lang="ts" setup>
@@ -442,16 +412,18 @@ watch(isNode, (val) => {
   }
 });
 
-// When specs are loaded, retrieve node ranking
+// Always attempt to fetch node ranking if we have an address
+const rankingUrl = computed(() =>
+  props.address
+    ? `/api/benchmarks/node-report?node=${props.address}`
+    : ''
+);
+
 const { data: rankingData, pending: loadingRanking } = useAPI(
-  () => 
-    nodeSpecs.value?.marketAddress 
-      ? `/api/benchmarks/node-report?node=${props.address}` 
-      : '',
+  rankingUrl,
   {
     // @ts-ignore
     disableToastOnError: true,
-    watch: [() => props.address, nodeSpecs]
   }
 );
 

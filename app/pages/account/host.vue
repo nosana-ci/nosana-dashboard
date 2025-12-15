@@ -206,7 +206,7 @@
       v-model:page="jobPage"
       v-model:state="jobState"
       :loading-jobs="loadingJobs"
-      title="Deployments Ran"
+      title="Jobs Ran"
       :jobs="jobs?.jobs || []"
       :states="[1, 2]"
     />

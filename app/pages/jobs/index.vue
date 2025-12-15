@@ -1,6 +1,6 @@
 <template>
   <div>
-    <TopBar :title="'Explorer'" :subtitle="'Deployments'"></TopBar>
+    <TopBar :title="'Explorer'" :subtitle="'Jobs'"></TopBar>
     <div class="box has-background-white-ter">
       <Search />
     </div>

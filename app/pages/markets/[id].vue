@@ -242,7 +242,7 @@
         </div>
 
         <DeploymentList :per-page="limit" :total-jobs="jobs ? jobs.totalJobs : null" v-model:page="page"
-          v-model:state="state" :loading-jobs="loadingJobs" title="All Deployments for this GPU"
+          v-model:state="state" :loading-jobs="loadingJobs" title="All Jobs for this GPU"
           :jobs="jobs ? jobs.jobs : []">
         </DeploymentList>
       </div>

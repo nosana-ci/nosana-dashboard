@@ -19,7 +19,6 @@
           :selectedTemplate="selectedTemplate"
           v-model:jobDefinition="jobDefinition"
           v-model:isEditorCollapsed="isEditorCollapsed"
-          :validator="validator"
           :markets="markets || null"
           :testgridMarkets="testgridMarkets"
           :loadingMarkets="loadingMarkets"
@@ -201,8 +200,6 @@
 <script lang="ts" setup>
 import type { Market, JobDefinition } from "@nosana/sdk";
 import { trackEvent } from "~/utils/analytics";
-import { ValidationSeverity } from 'vanilla-jsoneditor';
-import 'vanilla-jsoneditor/themes/jse-theme-dark.css';
 import { useToast } from "vue-toastification";
 import { useWallet } from "solana-wallets-vue";
 import TopBar from '~/components/TopBar.vue';
@@ -563,11 +560,6 @@ const activeFilterKey = computed(() =>
   `${selectedTemplate?.value?.id || 'default'}-${activeFilter.value}`
 );
 
-// Validation function
-const validator = (json: any) => {
-  const errors: { path: string[], message: string, severity: ValidationSeverity }[] = [];
-  return errors;
-};
 
 // Category constants moved to components
 

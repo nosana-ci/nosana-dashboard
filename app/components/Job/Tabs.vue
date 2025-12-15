@@ -8,18 +8,9 @@
         <CopyIcon />
       </span>
     </button>
-    <JsonEditorVue 
-      :validator="validator" 
-      :class="{ 
-        'jse-theme-dark': colorMode.value === 'dark'
-      }" 
+    <CommonJsonEditor 
       v-model="jobDefinitionModel" 
-      :mode="Mode.text" 
-      :mainMenuBar="false" 
-      :statusBar="false" 
-      :stringified="false" 
       :readOnly="true"
-      class="json-editor" 
   />
   </div>
   <div v-if="activeTab === 'logs' && canShowLogsTab" class="logs-wrapper">
@@ -72,9 +63,6 @@
 <script setup lang="ts">
 import { ref, nextTick, computed, watch, onMounted } from 'vue';
 import type { JobDefinition } from "@nosana/sdk";
-import JsonEditorVue from 'json-editor-vue';
-import { Mode } from 'vanilla-jsoneditor';
-import 'vanilla-jsoneditor/themes/jse-theme-dark.css';
 import CopyIcon from '@/assets/img/icons/copy.svg?component';
 import { useToast } from 'vue-toastification';
 
@@ -296,9 +284,6 @@ const jobDefinitionModel = computed({
   set: () => {} // Read-only, so no setter needed
 });
 
-
-// Validator function (can be empty for read-only)
-const validator = () => [];
 
 const toast = useToast(); // Correctly get toast functions
 
