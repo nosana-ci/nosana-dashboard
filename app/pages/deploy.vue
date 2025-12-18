@@ -208,16 +208,13 @@ import { useDebounceFn, useScrollLock } from "@vueuse/core";
 import countries from 'i18n-iso-countries';
 import en from 'i18n-iso-countries/langs/en.json';
 import { useEstimatedCost } from '~/composables/useMarketPricing';
+import { MAX_TIMEOUT_HOURS, MIN_TIMEOUT_HOURS } from '~/composables/useTimeoutConstants';
 import SwapModal from '~/components/SwapModal.vue';
 import type { Template } from '~/composables/useTemplates';
 import Loader from '~/components/Loader.vue';
 
 // Initialize the countries library with English locale
 countries.registerLocale(en);
-
-// Maximum timeout in hours (100 hours = 360000 seconds)
-export const MAX_TIMEOUT_HOURS = 100;
-export const MIN_TIMEOUT_HOURS = 0.02; // 72 seconds, above backend minimum of 60 seconds
 
 // Country name helper function
 const getCountryName = (code: string): string => {
