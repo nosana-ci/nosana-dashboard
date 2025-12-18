@@ -241,7 +241,7 @@ watch(
       // Add small delay to prevent redirect during quick session refresh
       redirectTimer = setTimeout(() => {
         if (status.value === "unauthenticated" && !connected.value) {
-          router.push("/account/deployer");
+          router.push("/account");
         }
       }, 500);
     }

@@ -32,7 +32,7 @@
                 </span>
                 <h1 class="title is-4 mt-2">Invalid Invitation</h1>
                 <p>{{ invitationError }}</p>
-                <button @click="openBothModal($route.fullPath)" class="button is-primary mt-3">
+                <button @click="$router.push({ path: '/', query: { redirect: $route.fullPath } })" class="button is-primary mt-3">
                   Go to Login
                 </button>
               </div>
@@ -82,7 +82,7 @@
                 
                 <div v-else>
                   <button 
-                    @click="openGoogleModal($route.fullPath)"
+                    @click="$router.push({ path: '/', query: { redirect: $route.fullPath } })"
                     class="button is-primary is-large"
                   >
                     <span class="icon">
@@ -156,52 +156,10 @@
               <p class="title" v-else>-</p>
             </div>
           </div>
-          <template v-if="showStakingData">
-            <div v-if="nosStaked && nosStaked.amount > 0" class="column is-3">
-              <div class="box has-text-centered">
-                <p class="heading">NOS Staked</p>
-                <p class="title is-flex is-align-items-center is-justify-content-center">
-                  <span v-if="nosStaked && nosStaked.amount >= 0">
-                    {{ (nosStaked.amount / 1e6).toFixed(2) }} NOS
-                  </span>
-                  <span v-else>-</span>
-                  <nuxt-link to="/stake" class="ml-2">
-                    <span class="container-icon">
-                      <FontAwesomeIcon :icon="faPlus" style="width: 12px; height: 12px;" />
-                    </span>
-                  </nuxt-link>
-                </p>
-              </div>
-            </div>
-            <div v-if="pendingRewards > 0" class="column is-3">
-              <div class="box has-text-centered">
-                <p class="heading">Pending Rewards</p>
-                <p class="title is-flex is-align-items-center is-justify-content-center">
-                  {{ pendingRewards.toFixed(2) }} NOS
-                  <button @click="claimRewards" class="ml-2 button is-small is-primary" :class="{ 'is-loading': claimingRewards }">
-                    Claim
-                  </button>
-                </p>
-              </div>
-            </div>
-          </template>
         </div>
         
         <!-- API Tokens Section (keep mounted during loading to prevent refetch) -->
         <ApiKeys class="pb-5" v-if="status === 'authenticated' || status === 'loading'" />
-        
-        <div v-if="canShowAccountData">
-          <div class="is-flex is-justify-content-space-between is-align-items-center mb-4">
-            <h3 class="title is-4 mb-0">Deployments</h3>
-            <nuxt-link to="/deployments/create" class="button is-dark">
-              <span class="icon">
-                <FontAwesomeIcon :icon="faPlus" />
-              </span>
-              <span>Create Deployment</span>
-            </nuxt-link>
-          </div>
-          <DeploymentsTable :items-per-page="10" />
-        </div>
         
         <div class="columns mt-6">
           <div class="column is-4">
@@ -218,7 +176,7 @@
                 </div>
               </nuxt-link>
 
-              <a href="https://docs.nosana.com/about/intro.html" target="_blank" class="box has-text-black p-2 mb-2 is-block">
+              <a href="https://learn.nosana.com/" target="_blank" class="box has-text-black p-2 mb-2 is-block">
                 <div class="is-flex is-align-items-start" style="margin: 8px 8px 0 8px;">
                   <ExplorerIcon class="nosana-icon" style="width: 16px; height: 16px; margin-right: 0.5rem; margin-top: 4px;" />
                   <div>
@@ -352,7 +310,6 @@
 import DeploymentsTable from '~/components/DeploymentsTable/Table.vue';
 import JobList from '~/components/List/JobList.vue';
 import { useWallet } from 'solana-wallets-vue';
-import { useStake } from '~/composables/useStake';
 import { useAPI } from '~/composables/useAPI';
 import { computed, ref, onMounted, watch } from 'vue';
 import CreditBalance from "~/components/Account/CreditBalance.vue";
@@ -391,7 +348,6 @@ const claimingRewards = ref(false);
 const onboardingInProgress = ref(false);
 const creditBalanceRef = ref();
 const { triggerCreditRefresh } = useCreditRefresh();
-const { openGoogleModal } = useLoginModal();
 
 // Credit invitation variables
 const invitationToken = computed(() => route.query.token as string);
@@ -458,35 +414,6 @@ const loading = ref(false);
 // Get NOS price
 const { data: stats } = useAPI('/api/stats');
 const nosPrice = computed(() => stats.value?.price || null);
-
-// Get staking info
-const { activeStake, rewardsInfo, poolInfo, refreshStake, refreshBalance } = useStake(publicKey);
-const timestamp = useTimestamp({ interval: 1000 });
-
-const showStakingData = computed(() => {
-  return addressSource.value === 'wallet';
-});
-
-const pendingRewards = computed(() => {
-  if (!showStakingData.value) return 0;
-  if (rewardsInfo.value?.account && poolInfo.value) {
-    const currentReflection = rewardsInfo.value.account.reflection;
-    const currentXnos = rewardsInfo.value.account.xnos;
-    const totalReflection = rewardsInfo.value.global.totalReflection;
-    const totalXnos = rewardsInfo.value.global.totalXnos;
-    
-    if (totalXnos === 0 || totalReflection === 0) return 0;
-    
-    const rate = totalReflection / totalXnos;
-    if (rate === 0) return 0;
-    
-    const xnosBalance = currentReflection / rate;
-    const pendingReward = Math.max(0, (xnosBalance - currentXnos) / 1e6);
-    
-    return pendingReward;
-  }
-  return 0;
-});
 
 // Fetch balances
 const checkBalances = async () => {
@@ -1058,27 +985,6 @@ const chartOptions = computed(() => {
   }
   };
 });
-
-// Removed duplicate onMounted - merged into the main one above
-
-// Claim rewards function
-const claimRewards = async () => {
-  if (!showStakingData.value || !activeStake.value || !pendingRewards.value || pendingRewards.value <= 0) return;
-  
-  claimingRewards.value = true;
-  try {
-    const claim = await nosana.value.stake.claimRewards();
-    await refreshStake();
-    await refreshBalance();
-    console.log('claim', claim);
-    toast.success('Successfully claimed rewards');
-  } catch (error: any) {
-    console.error('Cannot claim rewards', error);
-    toast.error(error.toString());
-  } finally {
-    claimingRewards.value = false;
-  }
-};
 
 const logout = async () => {
   loading.value = true;

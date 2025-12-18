@@ -14,7 +14,7 @@
                 </h4>
                 <p class="mb-5 is-size-5 p-2" style="color: #666">
                   Receive prompt, personalized support for staking or wallet issues from our dedicated support team.<br>
-                  <a href="https://discord.gg/KFNu8Skx8T" target="_blank" class="button mt-4">
+                  <a href="https://nosana.com/discord" target="_blank" class="button mt-4">
                     <img src="~/assets/img/icons/discord.svg" style="width: 16px; margin-right: 8px;">Support
                   </a>
                 </p>
@@ -28,7 +28,7 @@
                 <p class="mb-5 is-size-5 p-2" style="color: #666">
                   We pride ourselves on being open-source. Visit our GitHub repository to contribute,
                   build, and report technical issues.<br>
-                  <a href="https://github.com/nosana-ci" target="_blank" class="button mt-4">
+                  <a href="https://nosana.com/github" target="_blank" class="button mt-4">
                     <img src="~/assets/img/icons/github.svg" style="width: 18px; margin-right: 8px;">GitHub
                   </a>
                 </p>
@@ -41,7 +41,7 @@
                 </h4>
                 <p class="mb-5 is-size-5 p-2" style="color: #666">
                   Our server is where you can connect with others, chat, and interact with team members.<br>
-                  <a href="https://discord.gg/nosana-ai" target="_blank" class="button mt-4">
+                  <a href="https://nosana.com/discord" target="_blank" class="button mt-4">
                     <img src="~/assets/img/icons/discord.svg" style="width: 16px; margin-right: 8px;">Discord
                   </a>
                 </p>
@@ -95,7 +95,7 @@ export default {
         {
           question: 'What is the contract address of Nosana’s token and the max supply?',
           answer:
-            'The contract address is <code>nosXBVoaCTtYdLvKY6Csb4AC8JCdQKKAaWYtx2ZMoo7</code>, and the total fixed supply is 100,000,000 $NOS. For detailed information and tokenomics, please refer to <a href="https://docs.nosana.com/" target="_blank">our docs</a>'
+            'The contract address is <code>nosXBVoaCTtYdLvKY6Csb4AC8JCdQKKAaWYtx2ZMoo7</code>, and the total fixed supply is 100,000,000 $NOS. For detailed information and tokenomics, please refer to <a href="https://learn.nosana.com/" target="_blank">our docs</a>'
         },
         {
           question: 'How does the staking program work?',

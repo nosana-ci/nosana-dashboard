@@ -14,6 +14,17 @@ export default defineNuxtConfig({
   dir: {
     public: "static",
   },
+  app: {
+    head: {
+      title: 'Nosana Dashboard',
+      htmlAttrs: {
+        lang: 'en',
+      },
+      link: [
+        { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
+      ],
+    },
+  },
   pwa: {
     manifest: {
       name: "Nosana Dashboard",
