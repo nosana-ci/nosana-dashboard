@@ -607,7 +607,7 @@
               <span
                 class="icon is-small has-tooltip-arrow has-tooltip-right"
                 style="position: relative; z-index: 3000"
-                data-tooltip="Maximum runtime before container auto-shutdown (minimum 1 hour)"
+                data-tooltip="Maximum runtime before container auto-shutdown (1-100 hours)"
               >
                 <svg
                   width="14"
@@ -631,6 +631,7 @@
                 type="number"
                 v-model="timeout"
                 min="1"
+                max="100"
                 step="0.1"
                 @blur="enforceTimeoutMin"
               />
@@ -964,6 +965,10 @@ const createDeployment = async () => {
   }
   if (timeout.value < 1) {
     toast.error("Timeout must be at least 1 hour");
+    return;
+  }
+  if (timeout.value > 100) {
+    toast.error("Timeout cannot exceed 100 hours");
     return;
   }
   if (!jobDefinition.value) {

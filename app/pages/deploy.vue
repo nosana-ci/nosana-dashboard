@@ -86,7 +86,7 @@
                   step="0.1"
                 />
               </div>
-              <p class="help is-size-7">Auto-shutdown time</p>
+              <p class="help is-size-7">Auto-shutdown time ({{ MIN_TIMEOUT_HOURS }}-{{ MAX_TIMEOUT_HOURS }} hours)</p>
             </div>
             <hr />
             <div class="is-flex is-justify-content-space-between">
@@ -214,6 +214,10 @@ import Loader from '~/components/Loader.vue';
 
 // Initialize the countries library with English locale
 countries.registerLocale(en);
+
+// Maximum timeout in hours (100 hours = 360000 seconds)
+const MAX_TIMEOUT_HOURS = 100;
+const MIN_TIMEOUT_HOURS = 0.02; // 72 seconds, above backend minimum of 60 seconds
 
 // Country name helper function
 const getCountryName = (code: string): string => {
@@ -601,8 +605,12 @@ const createJob = async () => {
   if (!canCreateJob.value) return;
   
   // Double-check hours value is valid
-  if (hours.value <= 0) {
-    toast.error('Auto-shutdown time must be greater than 0');
+  if (hours.value < MIN_TIMEOUT_HOURS) {
+    toast.error(`Auto-shutdown time must be at least ${MIN_TIMEOUT_HOURS} hours`);
+    return;
+  }
+  if (hours.value > MAX_TIMEOUT_HOURS) {
+    toast.error(`Auto-shutdown time cannot exceed ${MAX_TIMEOUT_HOURS} hours`);
     return;
   }
   
@@ -630,7 +638,7 @@ const createJob = async () => {
       const { job, credits } = await nosana.value.api.jobs.list({
           ipfsHash: ipfsHash,
         market: marketAddress,
-        timeout: Math.min(hours.value * 3600, 86400),
+        timeout: Math.min(hours.value * 3600, MAX_TIMEOUT_HOURS * 3600),
         node: selectedHostAddress.value || undefined
       });
 
@@ -703,7 +711,7 @@ const createJob = async () => {
       
       const response = await nosana.value.jobs.list(
         ipfsHash,
-        hours.value * 3600,
+        Math.min(hours.value * 3600, MAX_TIMEOUT_HOURS * 3600),
         marketAddress,
         hostAddress
       ) as { tx: string; job: string; run: string };
