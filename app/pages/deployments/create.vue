@@ -676,7 +676,7 @@ import type { Template } from "~/composables/useTemplates";
 import Loader from "~/components/Loader.vue";
 import VaultSelector from "~/components/Vault/VaultSelector.vue";
 import { parseCronExpression } from "~/utils/parseCronExpression";
-import { MAX_TIMEOUT_HOURS, MIN_TIMEOUT_HOURS } from "~/pages/deploy.vue";
+import { MAX_TIMEOUT_HOURS, MIN_TIMEOUT_HOURS } from "~/composables/useTimeoutConstants";
 
 // Setup composables
 const { markets, getMarkets, loadingMarkets } = useMarkets();
