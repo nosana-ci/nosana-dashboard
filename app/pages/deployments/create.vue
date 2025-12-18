@@ -607,7 +607,7 @@
               <span
                 class="icon is-small has-tooltip-arrow has-tooltip-right"
                 style="position: relative; z-index: 3000"
-                data-tooltip="Maximum runtime before container auto-shutdown (1-100 hours)"
+                data-tooltip="Maximum runtime before container auto-shutdown (0.02-100 hours)"
               >
                 <svg
                   width="14"
@@ -630,7 +630,7 @@
                 class="input"
                 type="number"
                 v-model="timeout"
-                min="1"
+                min="0.02"
                 max="100"
                 step="0.1"
                 @blur="enforceTimeoutMin"
@@ -963,8 +963,8 @@ const createDeployment = async () => {
     toast.error("Number of replicas cannot exceed 100");
     return;
   }
-  if (timeout.value < 1) {
-    toast.error("Timeout must be at least 1 hour");
+  if (timeout.value < 0.02) {
+    toast.error("Timeout must be at least 0.02 hours");
     return;
   }
   if (timeout.value > 100) {
@@ -1023,10 +1023,10 @@ const enforceReplicasMax = () => {
 
 const enforceTimeoutMin = () => {
   const numValue = parseFloat(timeout.value as any) || 0;
-  if (numValue < 1) {
-    timeout.value = 1;
-  } else {
-    timeout.value = numValue;
+  if (numValue < 0.02) {
+    toast.error("Timeout must be at least 0.02 hours");
+  } else if (numValue > 100) {
+    toast.error("Timeout cannot exceed 100 hours");
   }
 };
 

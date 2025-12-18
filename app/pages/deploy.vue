@@ -86,7 +86,7 @@
                   step="0.1"
                 />
               </div>
-              <p class="help is-size-7">Auto-shutdown time ({{ MIN_TIMEOUT_HOURS }}-{{ MAX_TIMEOUT_HOURS }} hours)</p>
+              <p class="help is-size-7">Auto-shutdown time</p>
             </div>
             <hr />
             <div class="is-flex is-justify-content-space-between">

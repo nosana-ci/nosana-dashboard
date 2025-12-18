@@ -103,14 +103,19 @@ export function useJobPricing(
   const marketAddress = computed(() => jobData.value?.market || null);
   const { usdPricePerHour, isLoading } = useMarketUsdPrice(marketAddress, marketsData);
 
-  // Calculate job duration in hours
+  // Calculate job duration in hours (capped at timeout if set)
   const durationHours = computed(() => {
     const job = jobData.value;
     if (!job || !job.timeStart) return 0;
 
     const timeStart = job.timeStart;
     const timeEnd = job.timeEnd || Math.floor(Date.now() / 1000);
-    const duration = Math.max(0, timeEnd - timeStart);
+    let duration = Math.max(0, timeEnd - timeStart);
+    
+    // Cap duration at timeout if set (timeout is in seconds)
+    if (job.timeout && duration > job.timeout) {
+      duration = job.timeout;
+    }
     
     return duration / 3600; // Convert seconds to hours
   });
