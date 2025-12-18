@@ -137,7 +137,7 @@ const openPriorityFeeSettings = () => {
 
 const goToAccount = () => {
   showUserProfileDropdown.value = false;
-  router.push('/account/deployer');
+  router.push('/account');
 };
 
 // Wallet address formatting
@@ -240,12 +240,10 @@ const logout = async () => {
   try {
     if (connected.value) {
       await disconnect();
+      await navigateTo('/');
     } else if (status.value === 'authenticated') {
-      const redirect = window.location.pathname === '/account/deployer' ? true : false;
       await signOut({ redirect: false });
-      if (redirect) {
-        await navigateTo('/');
-      }
+      await navigateTo('/');
     }
   } catch (error) {
     console.error('Error logging out:', error);

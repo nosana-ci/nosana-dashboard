@@ -8,28 +8,6 @@
       v-model="showSettingsModal"
     ></TopBar>
 
-    <!-- Wallet Auth Banner -->
-    <div
-      v-if="shouldShowWalletAuthBanner"
-      class="notification is-light wallet-auth-banner mb-5 clickable-notification"
-    >
-      <nuxt-link
-        to="/deploy"
-        class="is-block"
-        style="color: inherit; text-decoration: none;"
-      >
-        <div class="is-flex is-align-items-center">
-          <div class="is-flex-grow-1">
-            <p class="banner-title">Legacy Job Deploy page</p>
-            <p class="mb-0">
-              Looking for the classic job deployment experience? Use our legacy
-              deploy page click here.
-            </p>
-          </div>
-        </div>
-      </nuxt-link>
-    </div>
-
     <!-- Show loader for external data only; editor always visible -->
     <Loader v-if="loadingTemplates || loadingMarkets" />
 
@@ -670,7 +648,7 @@ import {
 import { useToast } from "vue-toastification";
 import { useWallet } from "solana-wallets-vue";
 import TopBar from "~/components/TopBar.vue";
-import { useRouter } from "vue-router";
+import { useRouter, useRoute } from "vue-router";
 import { useEstimatedCost } from "~/composables/useMarketPricing";
 import type { Template } from "~/composables/useTemplates";
 import Loader from "~/components/Loader.vue";
@@ -683,6 +661,7 @@ const { markets, getMarkets, loadingMarkets } = useMarkets();
 const { templates, groupedTemplates, loadingTemplates } = useTemplates();
 const { nosana } = useSDK();
 const router = useRouter();
+const route = useRoute();
 const toast = useToast();
 const { status, token } = useAuth();
 const { connected, publicKey } = useWallet();
@@ -900,11 +879,6 @@ const isCreditMode = computed(() => {
   return status.value === "authenticated" && token.value;
 });
 
-// Show legacy deploy banner for all users
-const shouldShowWalletAuthBanner = computed(() => {
-  return true;
-});
-
 const canCreateDeployment = computed(() => {
   const basicRequirements =
     selectedMarket.value !== null &&
@@ -1033,13 +1007,12 @@ const enforceTimeoutMin = () => {
 
 // Handle login click
 const handleLoginClick = () => {
-  const { openBothModal } = useLoginModal();
-  openBothModal();
+  router.push({ path: '/', query: { redirect: route.fullPath } });
 };
 
 // Navigate to account page
 const goToClaimCredits = () => {
-  navigateTo("/account/deployer");
+  navigateTo("/account");
 };
 
 // Template selection handling

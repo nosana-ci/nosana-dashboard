@@ -36,7 +36,7 @@
               network works with detailed examples and tutorials.
               <br />
               <a
-                href="https://docs.nosana.com/about/intro.html"
+                href="https://learn.nosana.com/"
                 target="_blank"
                 class="button mt-4 is-primary is-outlined"
               >

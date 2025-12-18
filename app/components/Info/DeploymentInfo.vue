@@ -1,11 +1,19 @@
 <template>
   <template v-if="props.job">
     <!-- Solana address - hide in job context since it's already shown in header -->
-    <div v-if="!props.showInJobContext" class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+    <div
+      v-if="!props.showInJobContext"
+      class="column is-one-fifth is-full-mobile no-padding"
+      style="min-width: 220px; margin-bottom: 0.75rem"
+    >
       <div class="quick-detail-item">
         <span class="quick-detail-label">Solana Address</span>
         <span class="quick-detail-value">
-          <a :href="`https://solscan.io/account/${props.job.address}`" target="_blank" class="address is-family-monospace">
+          <a
+            :href="`https://solscan.io/account/${props.job.address}`"
+            target="_blank"
+            class="address is-family-monospace"
+          >
             {{ props.job.address }}
           </a>
         </span>
@@ -13,12 +21,24 @@
     </div>
 
     <!-- Host address - hide in job context since it's already shown in header -->
-    <div v-if="!props.showInJobContext" class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+    <div
+      v-if="!props.showInJobContext"
+      class="column is-one-fifth is-full-mobile no-padding"
+      style="min-width: 220px; margin-bottom: 0.75rem"
+    >
       <div class="quick-detail-item">
         <span class="quick-detail-label">Host Address</span>
         <span class="quick-detail-value">
-          <span v-if="props.job.node === '11111111111111111111111111111111'" class="has-text-grey-light">--</span>
-          <nuxt-link v-else class="address is-family-monospace" :to="`/host/${props.job.node}`">
+          <span
+            v-if="props.job.node === '11111111111111111111111111111111'"
+            class="has-text-grey-light"
+            >--</span
+          >
+          <nuxt-link
+            v-else
+            class="address is-family-monospace"
+            :to="`/host/${props.job.node}`"
+          >
             {{ props.job.node }}
           </nuxt-link>
         </span>
@@ -26,38 +46,60 @@
     </div>
 
     <!-- Deployer address - hide in job context since it's already shown in header -->
-    <div v-if="!props.showInJobContext" class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+    <div
+      v-if="!props.showInJobContext"
+      class="column is-one-fifth is-full-mobile no-padding"
+      style="min-width: 220px; margin-bottom: 0.75rem"
+    >
       <div class="quick-detail-item">
         <span class="quick-detail-label">Deployer Address</span>
         <span class="quick-detail-value">
-          <nuxt-link class="address is-family-monospace" :to="`/deployer/${props.job.project}`">
-            {{ props.job.project }}
-          </nuxt-link>
+          {{ props.job.project }}
         </span>
       </div>
     </div>
 
     <!-- GPU pool - hide in job context since it's already shown in header -->
-    <div v-if="!props.showInJobContext" class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+    <div
+      v-if="!props.showInJobContext"
+      class="column is-one-fifth is-full-mobile no-padding"
+      style="min-width: 220px; margin-bottom: 0.75rem"
+    >
       <div class="quick-detail-item">
         <span class="quick-detail-label">GPU Pool</span>
         <span class="quick-detail-value">
-          <nuxt-link class="address is-family-monospace" :to="`/markets/${props.job.market}`">
-            <span v-if="apiMarkets && apiMarkets.find((tgm: any) => tgm.address === props.job.market)">
-              {{ apiMarkets.find((tgm: any) => tgm.address === props.job.market)?.name || props.job.market }}
+          <a
+            class="address is-family-monospace"
+            :href="`https://explorer.nosana.com/markets/${props.job.market}`"
+            target="_blank"
+          >
+            <span
+              v-if="
+                apiMarkets &&
+                apiMarkets.find((tgm: any) => tgm.address === props.job.market)
+              "
+            >
+              {{
+                apiMarkets.find((tgm: any) => tgm.address === props.job.market)
+                  ?.name || props.job.market
+              }}
             </span>
             <span v-else>{{ props.job.market }}</span>
-          </nuxt-link>
+          </a>
         </span>
       </div>
     </div>
 
     <!-- Price - hide in job context since it's already shown in header -->
-    <div v-if="!props.showInJobContext" class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+    <div
+      v-if="!props.showInJobContext"
+      class="column is-one-fifth is-full-mobile no-padding"
+      style="min-width: 220px; margin-bottom: 0.75rem"
+    >
       <div class="quick-detail-item">
         <span class="quick-detail-label">Price</span>
         <span class="quick-detail-value">
-          <JobPrice 
+          <JobPrice
             :key="`deployment-price-${props.job.isCompleted}-${props.job.timeEnd || 'running'}-${props.job.state}`"
             :job="jobDataForPrice"
             :options="priceOptions"
@@ -67,7 +109,11 @@
     </div>
 
     <!-- Started - hide in job context since it's already shown in header -->
-    <div v-if="!props.showInJobContext" class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+    <div
+      v-if="!props.showInJobContext"
+      class="column is-one-fifth is-full-mobile no-padding"
+      style="min-width: 220px; margin-bottom: 0.75rem"
+    >
       <div class="quick-detail-item">
         <span class="quick-detail-label">Started</span>
         <span class="quick-detail-value">
@@ -81,7 +127,11 @@
     </div>
 
     <!-- Duration - hide in job context since it's already shown in Quick Details -->
-    <div v-if="!props.showInJobContext" class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+    <div
+      v-if="!props.showInJobContext"
+      class="column is-one-fifth is-full-mobile no-padding"
+      style="min-width: 220px; margin-bottom: 0.75rem"
+    >
       <div class="quick-detail-item">
         <span class="quick-detail-label">Duration</span>
         <span class="quick-detail-value">
@@ -89,8 +139,14 @@
             {{ formatDuration(props.job.timeEnd - props.job.timeStart) }}
           </span>
           <span v-else-if="props.job.timeStart">
-            {{ formatDuration(Math.floor(Date.now() / 1000) - props.job.timeStart) }}
-            <span class="has-text-grey is-size-7"> (max {{ formatDuration(props.job.timeout || 7200) }})</span>
+            {{
+              formatDuration(
+                Math.floor(Date.now() / 1000) - props.job.timeStart
+              )
+            }}
+            <span class="has-text-grey is-size-7">
+              (max {{ formatDuration(props.job.timeout || 7200) }})</span
+            >
           </span>
           <span v-else>-</span>
         </span>
@@ -98,22 +154,40 @@
     </div>
 
     <!-- Market -->
-    <div class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+    <div
+      class="column is-one-fifth is-full-mobile no-padding"
+      style="min-width: 220px; margin-bottom: 0.75rem"
+    >
       <div class="quick-detail-item">
         <span class="quick-detail-label">Market</span>
         <span class="quick-detail-value">
-          <nuxt-link class="address is-family-monospace" :to="`/markets/${props.job.market}`">
-            <span v-if="apiMarkets && apiMarkets.find((tgm: any) => tgm.address === props.job.market)">
-              {{ apiMarkets.find((tgm: any) => tgm.address === props.job.market)?.name || props.job.market }}
+          <a
+            class="address is-family-monospace"
+            :href="`https://explorer.nosana.com/markets/${props.job.market}`"
+            target="_blank"
+          >
+            <span
+              v-if="
+                apiMarkets &&
+                apiMarkets.find((tgm: any) => tgm.address === props.job.market)
+              "
+            >
+              {{
+                apiMarkets.find((tgm: any) => tgm.address === props.job.market)
+                  ?.name || props.job.market
+              }}
             </span>
             <span v-else>{{ props.job.market }}</span>
-          </nuxt-link>
+          </a>
         </span>
       </div>
     </div>
 
     <!-- Job State -->
-    <div class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+    <div
+      class="column is-one-fifth is-full-mobile no-padding"
+      style="min-width: 220px; margin-bottom: 0.75rem"
+    >
       <div class="quick-detail-item">
         <span class="quick-detail-label">Job State</span>
         <span class="quick-detail-value">
@@ -127,7 +201,10 @@
     </div>
 
     <!-- Timeout -->
-    <div class="column is-one-fifth is-full-mobile no-padding" style="min-width: 220px; margin-bottom: 0.75rem;">
+    <div
+      class="column is-one-fifth is-full-mobile no-padding"
+      style="min-width: 220px; margin-bottom: 0.75rem"
+    >
       <div class="quick-detail-item">
         <span class="quick-detail-label">Timeout</span>
         <span class="quick-detail-value">
@@ -144,7 +221,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref } from "vue";
 import { PublicKey } from "@solana/web3.js";
 import JobPrice from "~/components/Job/Price.vue";
 import SecondsFormatter from "~/components/SecondsFormatter.vue";
@@ -158,20 +235,21 @@ const props = defineProps<{
 }>();
 
 const formatDuration = (seconds: number) => {
-  if (isNaN(seconds) || seconds < 0) return '0s';
+  if (isNaN(seconds) || seconds < 0) return "0s";
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
   const remainingSeconds = seconds % 60;
 
   let parts = [];
   if (hours > 0) parts.push(`${hours}h`);
-  if (minutes > 0 || (hours > 0 && remainingSeconds >= 0) ) parts.push(`${minutes}m`); // Show minutes if hours are shown or if minutes > 0
-  if (remainingSeconds >= 0 || (hours === 0 && minutes === 0) ) parts.push(`${remainingSeconds}s`); // Always show seconds if no h/m, or if s > 0
-  
-  const result = parts.join(' ');
-  return result.length > 0 ? result : '0s';
-};
+  if (minutes > 0 || (hours > 0 && remainingSeconds >= 0))
+    parts.push(`${minutes}m`); // Show minutes if hours are shown or if minutes > 0
+  if (remainingSeconds >= 0 || (hours === 0 && minutes === 0))
+    parts.push(`${remainingSeconds}s`); // Always show seconds if no h/m, or if s > 0
 
+  const result = parts.join(" ");
+  return result.length > 0 ? result : "0s";
+};
 
 // Get NOS price from API
 const { data: stats } = useAPI("/api/stats");
@@ -179,7 +257,7 @@ const { data: stats } = useAPI("/api/stats");
 const timeStartFormatted = computed(() => {
   if (!props.job.timeStart) return null;
   const date = new Date(props.job.timeStart * 1000);
-  return date.toISOString().replace('T', ' ').substring(0, 19);
+  return date.toISOString().replace("T", " ").substring(0, 19);
 });
 
 const timeAgo = computed(() => {
@@ -215,14 +293,16 @@ const jobDataForPrice = computed(() => {
     timeStart: props.job.timeStart,
     timeEnd: props.job.timeEnd,
     timeout: props.job.timeout,
-    state: props.job.state ?? (props.job.isCompleted ? 2 : props.job.timeStart ? 1 : 0),
-    market: props.job.market?.toString()
+    state:
+      props.job.state ??
+      (props.job.isCompleted ? 2 : props.job.timeStart ? 1 : 0),
+    market: props.job.market?.toString(),
   };
 });
 
 const priceOptions = computed(() => {
   return {
-    showPerHour: !props.job.isCompleted
+    showPerHour: !props.job.isCompleted,
   };
 });
 </script>
@@ -277,17 +357,17 @@ html.dark-mode {
     .quick-detail-value .has-text-grey {
       color: #ffffff;
     }
-    
+
     .quick-detail-value a,
     .quick-detail-value nuxt-link,
     .quick-detail-value .address {
-      color: #10E80C !important; // Nosana green for links in dark mode
+      color: #10e80c !important; // Nosana green for links in dark mode
     }
-    
+
     .quick-detail-value a:hover,
     .quick-detail-value nuxt-link:hover {
       color: #33ff33 !important; // Lighter green on hover
     }
   }
 }
-</style> 
+</style>
