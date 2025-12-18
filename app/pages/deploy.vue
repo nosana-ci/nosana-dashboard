@@ -216,8 +216,8 @@ import Loader from '~/components/Loader.vue';
 countries.registerLocale(en);
 
 // Maximum timeout in hours (100 hours = 360000 seconds)
-const MAX_TIMEOUT_HOURS = 100;
-const MIN_TIMEOUT_HOURS = 0.02; // 72 seconds, above backend minimum of 60 seconds
+export const MAX_TIMEOUT_HOURS = 100;
+export const MIN_TIMEOUT_HOURS = 0.02; // 72 seconds, above backend minimum of 60 seconds
 
 // Country name helper function
 const getCountryName = (code: string): string => {

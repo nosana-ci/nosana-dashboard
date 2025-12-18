@@ -607,7 +607,7 @@
               <span
                 class="icon is-small has-tooltip-arrow has-tooltip-right"
                 style="position: relative; z-index: 3000"
-                data-tooltip="Maximum runtime before container auto-shutdown (0.02-100 hours)"
+                :data-tooltip="`Maximum runtime before container auto-shutdown (${MIN_TIMEOUT_HOURS}-${MAX_TIMEOUT_HOURS} hours)`"
               >
                 <svg
                   width="14"
@@ -630,8 +630,8 @@
                 class="input"
                 type="number"
                 v-model="timeout"
-                min="0.02"
-                max="100"
+                :min="MIN_TIMEOUT_HOURS"
+                :max="MAX_TIMEOUT_HOURS"
                 step="0.1"
                 @blur="enforceTimeoutMin"
               />
@@ -676,6 +676,7 @@ import type { Template } from "~/composables/useTemplates";
 import Loader from "~/components/Loader.vue";
 import VaultSelector from "~/components/Vault/VaultSelector.vue";
 import { parseCronExpression } from "~/utils/parseCronExpression";
+import { MAX_TIMEOUT_HOURS, MIN_TIMEOUT_HOURS } from "~/pages/deploy.vue";
 
 // Setup composables
 const { markets, getMarkets, loadingMarkets } = useMarkets();
@@ -963,12 +964,12 @@ const createDeployment = async () => {
     toast.error("Number of replicas cannot exceed 100");
     return;
   }
-  if (timeout.value < 0.02) {
-    toast.error("Timeout must be at least 0.02 hours");
+  if (timeout.value < MIN_TIMEOUT_HOURS) {
+    toast.error(`Timeout must be at least ${MIN_TIMEOUT_HOURS} hours`);
     return;
   }
-  if (timeout.value > 100) {
-    toast.error("Timeout cannot exceed 100 hours");
+  if (timeout.value > MAX_TIMEOUT_HOURS) {
+    toast.error(`Timeout cannot exceed ${MAX_TIMEOUT_HOURS} hours`);
     return;
   }
   if (!jobDefinition.value) {
@@ -1023,10 +1024,10 @@ const enforceReplicasMax = () => {
 
 const enforceTimeoutMin = () => {
   const numValue = parseFloat(timeout.value as any) || 0;
-  if (numValue < 0.02) {
-    toast.error("Timeout must be at least 0.02 hours");
-  } else if (numValue > 100) {
-    toast.error("Timeout cannot exceed 100 hours");
+  if (numValue < MIN_TIMEOUT_HOURS) {
+    toast.error(`Timeout must be at least ${MIN_TIMEOUT_HOURS} hours`);
+  } else if (numValue > MAX_TIMEOUT_HOURS) {
+    toast.error(`Timeout cannot exceed ${MAX_TIMEOUT_HOURS} hours`);
   }
 };
 
