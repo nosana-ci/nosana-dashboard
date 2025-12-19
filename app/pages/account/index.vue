@@ -299,10 +299,6 @@
       </div>
     </div>
     <Loader v-if="loading" />
-    <OnboardModal 
-      v-model:show="showOnboardModal"
-      @onboarding-progress="onboardingInProgress = $event"
-    />
   </div>
 </template>
 
@@ -332,7 +328,6 @@ import {
   LinearScale
 } from 'chart.js';
 import { useRouter } from "vue-router";
-import OnboardModal from '~/components/Account/OnboardModal.vue';
 import ApiKeys from '~/components/Account/ApiKeys.vue';
 
 const config = useRuntimeConfig().public;
@@ -356,11 +351,6 @@ const loadingInvitation = ref(false);
 const invitationError = ref('');
 const claiming = ref(false);
 
-const showOnboardModal = computed(() => 
-  status.value === 'authenticated' && 
-  userData.value && 
-  onboardingInProgress.value
-);
 const totalDeployments = ref(0);
 const totalJobs = ref(0);
 

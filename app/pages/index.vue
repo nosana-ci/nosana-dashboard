@@ -90,10 +90,14 @@
               <button
                 class="login-button wallet-button"
                 @click="handleWalletConnect"
-                :disabled="connected"
+                :disabled="connected || signingMessage"
+                :class="{ 'is-loading': signingMessage }"
               >
                 <WalletIcon :size="20" />
-                {{ connected ? "Wallet Connected" : "Select Wallet" }}
+                {{
+                  signingMessage ? "Signing Message..." :
+                  connected ? "Wallet Connected" : "Select Wallet"
+                }}
               </button>
             </div>
 
@@ -158,12 +162,14 @@ const twitterLoading = ref(false);
 const showWalletModal = ref(false);
 const codeVerifier = ref("");
 const loading = ref(false);
+const signingMessage = ref(false);
 
-// Redirect if already authenticated
+// Redirect if already authenticated (for Google/Twitter login)
+// Wallet redirects are handled manually after message signing
 watch(
-  [status, connected],
-  ([authStatus, isConnected]) => {
-    if (authStatus === "authenticated" || isConnected) {
+  status,
+  (authStatus) => {
+    if (authStatus === "authenticated") {
       const redirect =
         (router.currentRoute.value.query.redirect as string) || "/account";
       router.replace(redirect);
@@ -207,7 +213,7 @@ onMounted(() => {
     return;
   }
 
-  if (status.value === "authenticated" || connected.value) {
+  if (status.value === "authenticated") {
     const redirect =
       (router.currentRoute.value.query.redirect as string) || "/account";
     router.replace(redirect);
@@ -377,23 +383,52 @@ const selectWallet = async (walletName: string) => {
     } catch (error) {
       console.warn("Error tracking wallet connected:", error);
     }
+
+    // After connecting, trigger message signing
+    await signAuthMessage(walletName);
   } catch (error) {
     console.error("Error selecting wallet:", error);
     toast.error(`Failed to connect to ${walletName}. Please try again.`);
   }
 };
 
-watch(connected, (isConnected) => {
-  if (isConnected) {
-    if (status.value === "authenticated") {
-      signOut({ redirect: false });
+const signAuthMessage = async (walletName: string) => {
+  signingMessage.value = true;
+
+  try {
+    const { generateAuthHeaders } = useNosanaWallet();
+
+    await generateAuthHeaders();
+    // toast.success("Successfully signed auth message");
+
+    try {
+      trackEvent("wallet_authorized", {
+        user_id: publicKey.value?.toString(),
+        wallet: walletName,
+      });
+    } catch (error) {
+      console.warn("Error tracking wallet authorized:", error);
     }
 
     const redirect =
       (router.currentRoute.value.query.redirect as string) || "/account";
     router.replace(redirect);
+  } catch (error: any) {
+    console.error("Error signing auth message:", error);
+    toast.error(error.message || "Error signing message");
+
+    // Disconnect wallet on signing failure so user can try again
+    try {
+      await disconnect();
+    } catch (disconnectError) {
+      console.warn("Error disconnecting wallet:", disconnectError);
+    }
+  } finally {
+    signingMessage.value = false;
   }
-});
+};
+
+// Removed immediate redirect - will handle after message signing
 
 // Twitter login logic
 const selectTwitterLogin = async () => {

@@ -40,7 +40,7 @@ watch(
   status,
   (authStatus) => {
     if (authStatus === "unauthenticated" && !connected.value) {
-      router.push("/account");
+      router.push("/");
     }
   },
   { immediate: true }
