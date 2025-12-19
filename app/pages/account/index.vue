@@ -352,7 +352,21 @@ const invitationError = ref('');
 const claiming = ref(false);
 
 const totalDeployments = ref(0);
-const totalJobs = ref(0);
+
+const fetchDeploymentsCount = async () => {
+  if (!canShowAccountData.value || !activeAddress.value) {
+    totalDeployments.value = 0;
+    return;
+  }
+
+  try {
+    const deployments = await nosana.value.deployments.list();
+    totalDeployments.value = deployments ? deployments.length : 0;
+  } catch (error) {
+    console.error('Error fetching deployments count:', error);
+    totalDeployments.value = 0;
+  }
+};
 
 // (debug status watcher removed)
 
@@ -465,10 +479,11 @@ watch(
     
     if (addressReallyChanged) {
       lastStableAddress = newAddress;
-      
+
       refreshTimeout = setTimeout(() => {
         checkBalances();
         refreshSpendingHistory();
+        fetchDeploymentsCount();
       }, 500);
     } else {
       // Update stable address if we have a valid one
@@ -484,6 +499,7 @@ onMounted(() => {
     lastStableAddress = activeAddress.value; // Initialize stable address
     checkBalances();
     refreshSpendingHistory();
+    fetchDeploymentsCount();
   }
   
   // Add CSS to improve text rendering
