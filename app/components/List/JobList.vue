@@ -29,9 +29,8 @@
               class="clickable-row"
             >
               <td>
-                <a
-                  :href="`https://explorer.nosana.com/jobs/${job.address}`"
-                  target="_blank"
+                <NuxtLink
+                  :to="`/jobs/${job.address}`"
                   class="clickable-row-link"
                 >
                   <div
@@ -60,7 +59,7 @@
                       job.market.toString()
                     }}</span>
                   </div>
-                </a>
+                </NuxtLink>
               </td>
               <td>
                 <div
