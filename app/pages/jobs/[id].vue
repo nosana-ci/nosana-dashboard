@@ -7,7 +7,6 @@
       v-model="showSettingsModal"
     />
 
-    {{ loading }}
     <Loader v-if="loading" />
     <div v-else-if="!job" class="box">
       <div class="notification">
