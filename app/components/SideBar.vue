@@ -25,7 +25,7 @@
         </li>
         <li>
           <nuxt-link
-            to="/account/deployer"
+            to="/account"
             active-class="is-active"
             @click="showMenu = false"
             style="padding-left: 1.1rem"
@@ -35,17 +35,6 @@
             </span>
             <span>Account</span>
           </nuxt-link>
-        </li>
-        <li v-if="!connected && status === 'unauthenticated'">
-          <a
-            @click="openBothModal($route.fullPath); showMenu = false"
-            style="padding-left: 1.1rem; cursor: pointer"
-          >
-            <span class="icon is-small mr-4">
-              <UserIcon />
-            </span>
-            <span>Login</span>
-          </a>
         </li>
         <li>
           <nuxt-link
@@ -58,85 +47,6 @@
             </span>
             <span>Deployments</span>
           </nuxt-link>
-        </li>
-        <li class="has-dropdown">
-          <a class="menu-list-link sidebar-link" @click="toggleExplorer"
-            :class="{ 'is-active': $route.path === '/explorer' || $route.path.includes('/markets') || $route.path === '/account/host' || $route.path === '/stake'}"
-          >
-            <div
-              class="is-flex is-align-items-center"
-              style="width: 100%; padding-left: 0.6rem;"
-            >
-              <span class="icon is-small mr-4">
-                <ExplorerIcon />
-              </span>
-              <span style="opacity: 1">Explorer</span>
-              <span class="icon is-small ml-auto">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  class="chevron"
-                  :class="{ 'is-active': showExplorerDropdown }"
-                >
-                  <path
-                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                  />
-                </svg>
-              </span>
-            </div>
-          </a>
-          <ul class="submenu" :class="{ 'is-active': showExplorerDropdown }">
-            <li>
-              <nuxt-link
-                to="/explorer"
-                active-class="is-active"
-                class="submenu-link"
-                @click="showMenu = false"
-              >
-                Jobs
-              </nuxt-link>
-            </li>
-            <li>
-              <nuxt-link
-                to="/markets"
-                active-class="is-active"
-                class="submenu-link"
-                @click="showMenu = false"
-              >
-                GPUs
-              </nuxt-link>
-            </li>
-            <li>
-              <a
-                v-if="!connected"
-                @click="openWalletModal($route.fullPath); showMenu = false"
-                class="submenu-link"
-                style="cursor: pointer"
-              >
-                Host Earnings
-              </a>
-              <nuxt-link
-                v-else
-                to="/account/host"
-                active-class="is-active"
-                class="submenu-link"
-                @click="showMenu = false"
-              >
-                Host Earnings
-              </nuxt-link>
-            </li>
-            <li>
-              <nuxt-link
-                to="/stake"
-                active-class="is-active"
-                class="submenu-link"
-                @click="showMenu = false"
-              >
-                Staking
-              </nuxt-link>
-            </li>
-          </ul>
         </li>
         <li>
           <nuxt-link
@@ -242,7 +152,6 @@ const { connected, disconnect, publicKey, wallet } = useWallet();
 const { status, signOut, data } = useAuth();
 const route = useRoute();
 const router = useRouter();
-const { openBothModal, openWalletModal } = useLoginModal();
 
 // removed auth-based gating in navigation; keep links visible
 
@@ -277,16 +186,11 @@ watch(() => route.path, () => {
 // Navigate to account page only when connecting from sidebar
 watch(connected, (isConnected, prevConnected) => {
   if (isConnected && !prevConnected && connectingFromSidebar.value) {
-    router.push('/account/deployer');
+    router.push('/account');
     showMenu.value = false;  // Close mobile menu if open
     connectingFromSidebar.value = false;  // Reset the flag
   }
 });
-
-
-const toggleExplorer = () => {
-  showExplorerDropdown.value = !showExplorerDropdown.value;
-};
 
 const isActive = (paths: string[]) => {
   return paths.includes(route.path);
@@ -298,12 +202,10 @@ const handleLogout = async () => {
   try {
     if (connected.value) {
       await disconnect();
+      await navigateTo('/');
     } else if (status.value === 'authenticated') {
-      const redirect = window.location.pathname === '/account/deployer' ? true : false;
       await signOut({ redirect: false });
-      if (redirect) {
-        await navigateTo('/');
-      }
+      await navigateTo('/');
     }
   } catch (error) {
     console.error('Error logging out:', error);

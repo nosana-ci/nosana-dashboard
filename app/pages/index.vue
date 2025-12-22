@@ -1,89 +1,226 @@
 <template>
   <div class="login-page" :class="{ 'dark-mode': isDarkMode }">
-    <!-- World Map Background -->
-    <div class="world-map-wrapper">
-      <WorldMap />
-    </div>
-
     <!-- Main Content -->
     <div class="content-wrapper">
-      <!-- Top Left -->
-      <div class="left-content">
-        <h1 class="title is-2">Nosana dashboard</h1>
-        <!-- <h2 class="subtitle is-4 mb-6">Launch the dashboard</h2> -->
+      <!-- World Map Background -->
+      <div class="world-map-background">
+        <img :key="backgroundImageKey" src="/img/worldmap.png" alt="" class="world-map-image" />
+      </div>
+      <!-- Center Login Card -->
+      <div class="login-card-container">
+        <div class="login-card">
+          <!-- Header with Logo -->
+          <div class="login-header">
+            <logo width="120px" :animated="true" class="light-only" />
+            <logo
+              width="120px"
+              :white="true"
+              class="dark-only"
+              :animated="true"
+            />
+          </div>
 
-        <!-- Bottom Stats -->
-        <div class="hosts-stats">
-          <div class="stats-box">
-            <span class="icon mr-3">
-              <RocketIcon class="rocket-icon" />
-            </span>
-            <div class="stats-text">
-              <div class="has-text-grey is-size-6">GPUs Available</div>
-              <div class="has-text-black has-text-weight-bold is-size-4">
-                {{ queuedHosts }}/{{ activeHosts }}
+          <!-- Main Login Content -->
+          <div class="login-content">
+            <h1 class="login-title">Build with Nosana</h1>
+            <p class="login-subtitle">
+              Sign in or create an account to build with the Nosana AI Platform
+            </p>
+
+            <!-- Google Login Button -->
+            <button
+              class="login-button google-button"
+              @click="selectGoogleLogin"
+              :disabled="googleLoading"
+              :class="{ 'is-loading': googleLoading }"
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                  fill="#4285F4"
+                />
+                <path
+                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                  fill="#34A853"
+                />
+                <path
+                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                  fill="#FBBC05"
+                />
+                <path
+                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                  fill="#EA4335"
+                />
+              </svg>
+              Continue with Google
+            </button>
+
+            <button
+              class="login-button twitter-button"
+              @click="selectTwitterLogin"
+              :disabled="twitterLoading"
+              :class="{ 'is-loading': twitterLoading }"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  fill="currentColor"
+                  d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"
+                />
+              </svg>
+              Continue with X
+            </button>
+
+            <div class="divider">
+              <span>OR</span>
+            </div>
+
+            <!-- Wallet Connection Button -->
+            <div class="wallet-section">
+              <button
+                class="login-button wallet-button"
+                @click="handleWalletConnect"
+                :disabled="connected || signingMessage"
+                :class="{ 'is-loading': signingMessage }"
+              >
+                <WalletIcon :size="20" />
+                {{
+                  signingMessage ? "Signing Message..." :
+                  connected ? "Wallet Connected" : "Select Wallet"
+                }}
+              </button>
+            </div>
+
+            <!-- Wallet Selection Modal -->
+            <div
+              v-if="showWalletModal"
+              class="wallet-selection-modal"
+              @click="showWalletModal = false"
+            >
+              <div class="wallet-modal-content" @click.stop>
+                <h3 class="wallet-modal-title">Select a Wallet</h3>
+                <div class="wallet-list">
+                  <div
+                    v-for="wallet in wallets"
+                    :key="wallet.adapter.name"
+                    class="wallet-item"
+                    @click="selectWallet(wallet.adapter.name)"
+                  >
+                    <img
+                      :src="wallet.adapter.icon"
+                      :alt="wallet.adapter.name"
+                      class="wallet-icon"
+                    />
+                    <span class="wallet-name">{{ wallet.adapter.name }}</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-
-      <!-- Top Right -->
-      <div class="right-content">
-        <div class="topbar-wrapper">
-          <TopBar 
-            title="" 
-            :hide-buttons="false"
-            v-model="showSettingsModal"
-          />
-        </div>
-      </div>
     </div>
 
-
-    <Loader v-if="loading" />
+    <!-- <Loader v-if="loading" /> -->
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, watch, nextTick } from "vue";
 import { useWallet } from "solana-wallets-vue";
 import { useRouter } from "vue-router";
-import { useAPI } from "~/composables/useAPI";
-import WorldMap from "~/components/WorldMap.vue";
-import RocketIcon from "~/assets/img/icons/rocket.svg?component";
+import { useToast } from "vue-toastification";
+import { generateCodeVerifier, generateCodeChallenge } from "~/utils/pkce";
+import { trackEvent } from "~/utils/analytics";
+import WalletIcon from "~/components/WalletIcon.vue";
 import Loader from "~/components/Loader.vue";
-import TopBar from "~/components/TopBar.vue";
+import { useAPI } from "~/composables/useAPI";
 
-const { data: nodeStatsResponse } = await useAPI("/api/stats/nodes-country");
-const { status } = useAuth();
-const { connected } = useWallet();
-const router = useRouter();
-
-const showSettingsModal = ref(false);
-const loading = ref(false);
-
-// Check if user is authenticated
-const isAuthenticated = computed(() => {
-  return status.value === 'authenticated' || connected.value;
+definePageMeta({
+  layout: false, // No sidebar/layout for login page
 });
 
-// Handle Google OAuth callback on root page
+const { connected, disconnect, select, connect, wallets, publicKey } =
+  useWallet();
+const { status, signOut, data: userData } = useAuth();
+const router = useRouter();
+const toast = useToast();
+const config = useRuntimeConfig().public;
+
+const googleLoading = ref(false);
+const twitterLoading = ref(false);
+const showWalletModal = ref(false);
+const codeVerifier = ref("");
+const loading = ref(false);
+const signingMessage = ref(false);
+const backgroundImageKey = ref(0);
+
+// Redirect if already authenticated (for Google/Twitter login)
+// Wallet redirects are handled manually after message signing
+watch(
+  status,
+  (authStatus) => {
+    if (authStatus === "authenticated") {
+      const redirect =
+        (router.currentRoute.value.query.redirect as string) || "/account";
+      router.replace(redirect);
+    }
+  },
+  { immediate: true }
+);
+
+// Check if user is already authenticated on mount
 onMounted(() => {
   const urlParams = new URLSearchParams(window.location.search);
-  const code = urlParams.get('code');
-  
-  if (code) {
-    // This is a popup window completing OAuth, just close it
-    if (window.opener) {
-      window.close();
-      return;
+  const code = urlParams.get("code");
+  const state = urlParams.get("state");
+
+  if (code && window.opener) {
+    // This is a popup window completing OAuth (Google or Twitter)
+    console.log("Popup detected, sending message to parent");
+
+    // Check if this is Twitter (has state param) or Google
+    if (state) {
+      // Twitter OAuth
+      window.opener.postMessage(
+        {
+          type: "TWITTER_AUTH_CODE",
+          code: code,
+          state: state,
+        },
+        window.location.origin
+      );
+    } else {
+      // Google OAuth
+      window.opener.postMessage(
+        {
+          type: "GOOGLE_AUTH_CODE",
+          code: code,
+        },
+        window.location.origin
+      );
     }
+    window.close();
+    return;
   }
-  
+
+  if (status.value === "authenticated") {
+    const redirect =
+      (router.currentRoute.value.query.redirect as string) || "/account";
+    router.replace(redirect);
+  }
 });
 
-// Get running nodes from jobs API
+// Stats data
 const { data: runningNodesData } = useAPI("/api/jobs/running", {
   transform: (data: any) => {
     if (!data) return { total: 0 };
@@ -97,66 +234,376 @@ const { data: runningNodesData } = useAPI("/api/jobs/running", {
   default: () => ({ total: 0 }),
 });
 
-// Define interface for node stats item
-interface NodeStatsItem {
-  country: string;
-  running: number;
-  queue: number;
-  offline: number;
-  total: number;
-}
+const colorMode = useColorMode();
+const isDarkMode = computed(() => colorMode.value === "dark");
 
-// Calculate queued hosts
-const queuedHosts = computed(() => {
-  if (
-    !nodeStatsResponse.value?.data ||
-    !Array.isArray(nodeStatsResponse.value.data)
-  )
-    return 0;
+// used for event tracking, we can assume sign up if account was created within the last 10 seconds
+const checkIsSignUp = (createdAt: string | undefined): boolean => {
+  if (!createdAt) return false;
 
-  let total = 0;
-  // Group by country and sum up queues
-  nodeStatsResponse.value.data.forEach((item: NodeStatsItem) => {
-    if (item.queue > 0) {
-      total += item.queue;
+  const createdAtTime = new Date(createdAt).getTime();
+  const now = Date.now();
+  const timeDifference = now - createdAtTime;
+
+  return timeDifference <= 10000;
+};
+
+// Google login logic
+const selectGoogleLogin = async () => {
+  googleLoading.value = true;
+  let popup: Window | null = null;
+
+  try {
+    if (connected.value) {
+      await disconnect();
     }
-  });
 
-  // Use API's total if available, otherwise use our calculation
-  return nodeStatsResponse.value.totals?.totalQueued ?? total;
-});
+    console.log("config.googleRedirectUri", config.googleRedirectUri);
 
-// Calculate active hosts using running nodes from jobs API
-const activeHosts = computed(() => {
-  const runningCount = runningNodesData.value?.total || 0;
-  const queuedCount = queuedHosts.value;
-  return runningCount + queuedCount;
-});
+    const query = {
+      client_id: config.googleClientId as string,
+      response_type: "code",
+      redirect_uri: config.googleRedirectUri as string,
+      scope:
+        "https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile",
+    };
+    const url = new URL("https://accounts.google.com/o/oauth2/v2/auth");
+    url.search = new URLSearchParams(query).toString();
 
+    popup = window.open(
+      url.toString(),
+      "google-auth",
+      "width=500,height=600,scrollbars=yes,resizable=yes"
+    );
 
-// Add dark mode detection
-const isDarkMode = computed(() =>
-  document.documentElement.classList.contains("dark-mode")
-);
+    if (!popup) {
+      throw new Error("Popup blocked. Please allow popups for this site.");
+    }
 
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+
+      if (event.data.type === "GOOGLE_AUTH_CODE" && event.data.code) {
+        window.removeEventListener("message", handleMessage);
+        popup?.close();
+        
+        // Force background image re-render to fix disappearing issue
+        backgroundImageKey.value++;
+        
+        authenticateLogin(event.data.code);
+      }
+    };
+
+    window.addEventListener("message", handleMessage);
+  } catch (error) {
+    if (popup) popup.close();
+    toast.error("Error preparing Google login");
+    googleLoading.value = false;
+  }
+};
+
+const authenticateLogin = async (code: string) => {
+  let originalEndpoint: any;
+
+  try {
+    const { signIn } = useAuth();
+
+    originalEndpoint = config.auth.provider.endpoints.signIn;
+    config.auth.provider.endpoints.signIn = {
+      path: "/api/auth/login/google",
+      method: "post",
+      propertyName: "token",
+    };
+
+    await signIn(
+      {
+        code: code,
+        redirectUri: config.googleRedirectUri as string,
+      },
+      {
+        redirect: false,
+      }
+    );
+
+    config.auth.provider.endpoints.signIn = originalEndpoint;
+    googleLoading.value = false;
+
+    try {
+      const isSignUp = checkIsSignUp(userData.value?.created_at);
+      const eventType = isSignUp ? "sign_up" : "login";
+      trackEvent(eventType, {
+        user_id: userData.value?.generatedAddress,
+        provider: "google",
+      });
+    } catch (error) {
+      console.warn("Error tracking Google login:", error);
+    }
+
+    const redirect =
+      (router.currentRoute.value.query.redirect as string) || "/account";
+    router.replace(redirect);
+  } catch (error) {
+    console.error("Authentication error in authenticateLogin:", error);
+
+    if (originalEndpoint) {
+      config.auth.provider.endpoints.signIn = originalEndpoint;
+    }
+
+    toast.error("Failed to authenticate. Please try again.");
+    googleLoading.value = false;
+  }
+};
+
+// Wallet connection logic
+const handleWalletConnect = async () => {
+  try {
+    if (status.value === "authenticated") {
+      await signOut({ redirect: false });
+    }
+
+    if (wallets.value && wallets.value.length > 0) {
+      showWalletModal.value = true;
+    } else {
+      toast.error("No wallets found");
+    }
+  } catch (error) {
+    console.error("Error preparing wallet selection:", error);
+    toast.error("Failed to prepare wallet connection.");
+  }
+};
+
+const selectWallet = async (walletName: string) => {
+  showWalletModal.value = false;
+
+  try {
+    await select(walletName as any);
+    await connect();
+
+    try {
+      trackEvent("wallet_connected", {
+        user_id: publicKey.value?.toString(),
+        wallet: walletName,
+      });
+    } catch (error) {
+      console.warn("Error tracking wallet connected:", error);
+    }
+
+    // After connecting, trigger message signing
+    await signAuthMessage(walletName);
+  } catch (error) {
+    console.error("Error selecting wallet:", error);
+    toast.error(`Failed to connect to ${walletName}. Please try again.`);
+  }
+};
+
+const signAuthMessage = async (walletName: string) => {
+  signingMessage.value = true;
+
+  try {
+    const { generateAuthHeaders } = useNosanaWallet();
+
+    await generateAuthHeaders();
+    // toast.success("Successfully signed auth message");
+
+    try {
+      trackEvent("wallet_authorized", {
+        user_id: publicKey.value?.toString(),
+        wallet: walletName,
+      });
+    } catch (error) {
+      console.warn("Error tracking wallet authorized:", error);
+    }
+
+    const redirect =
+      (router.currentRoute.value.query.redirect as string) || "/account";
+    router.replace(redirect);
+  } catch (error: any) {
+    console.error("Error signing auth message:", error);
+    toast.error(error.message || "Error signing message");
+
+    // Disconnect wallet on signing failure so user can try again
+    try {
+      await disconnect();
+    } catch (disconnectError) {
+      console.warn("Error disconnecting wallet:", disconnectError);
+    }
+  } finally {
+    signingMessage.value = false;
+  }
+};
+
+// Removed immediate redirect - will handle after message signing
+
+// Twitter login logic
+const selectTwitterLogin = async () => {
+  twitterLoading.value = true;
+  let popup: Window | null = null;
+
+  try {
+    if (connected.value) {
+      await disconnect();
+    }
+
+    codeVerifier.value = generateCodeVerifier();
+    const codeChallenge = await generateCodeChallenge(codeVerifier.value);
+
+    const query = {
+      response_type: "code",
+      client_id: config.twitterClientId as string,
+      redirect_uri: config.twitterRedirectUri as string,
+      scope: "users.read users.email offline.access tweet.read",
+      state: crypto.randomUUID(),
+      code_challenge: codeChallenge,
+      code_challenge_method: "S256",
+    };
+
+    const url = new URL("https://twitter.com/i/oauth2/authorize");
+    url.search = new URLSearchParams(query).toString();
+
+    popup = window.open(
+      url.toString(),
+      "twitter-auth",
+      "width=500,height=600,scrollbars=yes,resizable=yes"
+    );
+
+    if (!popup) {
+      throw new Error("Popup blocked. Please allow popups for this site.");
+    }
+
+    // Use postMessage pattern like Google OAuth instead of polling
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+
+      if (event.data.type === "TWITTER_AUTH_CODE" && event.data.code) {
+        window.removeEventListener("message", handleMessage);
+        popup?.close();
+        
+        // Force background image re-render to fix disappearing issue
+        backgroundImageKey.value++;
+        
+        authenticateTwitterLogin(
+          event.data.code,
+          event.data.state || "",
+          codeVerifier.value
+        );
+      }
+    };
+
+    window.addEventListener("message", handleMessage);
+  } catch (error) {
+    if (popup) popup.close();
+    toast.error("Error preparing Twitter login");
+    twitterLoading.value = false;
+  }
+};
+
+const authenticateTwitterLogin = async (
+  code: string,
+  state: string,
+  codeVerifier: string
+) => {
+  let originalEndpoint: any;
+
+  try {
+    const { signIn } = useAuth();
+
+    originalEndpoint = config.auth.provider.endpoints.signIn;
+    config.auth.provider.endpoints.signIn = {
+      path: "/api/auth/login/twitter",
+      method: "post",
+      propertyName: "token",
+    };
+
+    await signIn(
+      {
+        code,
+        state,
+        codeVerifier,
+      },
+      {
+        redirect: false,
+      }
+    );
+
+    config.auth.provider.endpoints.signIn = originalEndpoint;
+    twitterLoading.value = false;
+
+    try {
+      const isSignUp = checkIsSignUp(userData.value?.created_at);
+      const eventType = isSignUp ? "sign_up" : "login";
+
+      trackEvent(eventType, {
+        user_id: userData.value?.generatedAddress,
+        provider: "twitter",
+      });
+    } catch (error) {
+      console.warn("Error tracking Twitter login:", error);
+    }
+
+    const redirect =
+      (router.currentRoute.value.query.redirect as string) || "/account";
+    router.replace(redirect);
+  } catch (error) {
+    console.error("Authentication error in authenticateTwitterLogin:", error);
+
+    if (originalEndpoint) {
+      config.auth.provider.endpoints.signIn = originalEndpoint;
+    }
+
+    toast.error("Failed to authenticate with X. Please try again.");
+    twitterLoading.value = false;
+  }
+};
 </script>
 
 <style lang="scss" scoped>
 @use "sass:color";
+
 .login-page {
   position: fixed;
   top: 0;
-  left: 280px;
-  width: calc(100vw - 280px);
+  left: 0;
+  width: 100vw;
   height: 100vh;
   overflow: hidden;
-  background: transparent;
+  background: #f9f9f9;
 
   &.dark-mode {
-    .world-map-wrapper {
-      background: #121212;
+    background: #121212;
+
+    .login-card {
+      background: $black-bis;
+      color: $white;
+      h1 {
+        color: $white;
+      }
     }
+
+    .world-map-background {
+      opacity: 0.2;
+    }
+    
   }
+}
+
+.world-map-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  will-change: transform;
+}
+
+.world-map-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  filter: blur(4px) grayscale(30%);
+  opacity: 0.55;
+  will-change: transform;
 }
 
 .world-map-wrapper {
@@ -170,7 +617,6 @@ const isDarkMode = computed(() =>
   align-items: center;
   justify-content: center;
   background: #f9f9f9;
-  transition: background-color 0.3s ease;
   overflow: hidden;
 
   :deep(.box) {
@@ -190,134 +636,246 @@ const isDarkMode = computed(() =>
     justify-content: center;
     overflow: hidden;
   }
-
-  :deep(.aspect-ratio-container) {
-    /* No max-width to allow the map to be cut off at the sides */
-    overflow: hidden;
-  }
-
-  :deep(.v-chart) {
-    overflow: hidden;
-  }
 }
 
 .content-wrapper {
   position: absolute;
-  z-index: 2;
+  z-index: 9999;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
   padding: 2rem;
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
+  align-items: center;
   pointer-events: none;
+
   @media screen and (max-width: 1024px) {
-    top: 50px;
     padding: 1rem;
   }
+}
 
-  @media screen and (max-width: 450px) {
-    flex-direction: column;
+.login-card-container {
+  pointer-events: auto;
+  z-index: 10000;
+}
+
+.login-card {
+  background: $white;
+  color: $black;
+  border-radius: 16px;
+  padding: 3rem;
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  text-align: center;
+  position: relative;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+
+  @media screen and (max-width: 640px) {
+    padding: 2rem;
   }
 }
 
-.left-content {
+.login-header {
+  margin-bottom: 2rem;
+}
+
+.login-content {
+  margin-bottom: 2rem;
+}
+
+.login-title {
+  font-size: 2rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: $black;
+
+  @media screen and (max-width: 640px) {
+    font-size: 1.75rem;
+  }
+}
+
+.login-subtitle {
+  font-size: 1rem;
+  color: $grey;
+  margin-bottom: 2rem;
+  line-height: 1.5;
+}
+
+.login-button {
+  width: 100%;
+  padding: 0.875rem 1.5rem;
+  border: 1px solid $grey-light;
+  border-radius: 8px;
+  background: $white-bis;
+  color: $black;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  position: relative;
+
+  &:hover:not(:disabled) {
+    background: $white-ter;
+    border-color: $grey;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.google-button {
+  background: $white;
+  border-color: $grey-light;
+
+  &:hover:not(:disabled) {
+    background: $white-bis;
+    border-color: $grey;
+  }
+}
+
+.twitter-button {
+  background: $black;
+  color: $white;
+  border-color: $grey-dark;
+
+  &:hover:not(:disabled) {
+    background: $grey-darker;
+    border-color: $grey;
+  }
+}
+
+.divider {
+  margin: 1.5rem 0;
+  text-align: center;
+
+  span {
+    color: $grey;
+    font-size: 0.875rem;
+  }
+}
+
+.wallet-section {
+  margin-bottom: 0;
+}
+
+.login-button.is-loading {
+  color: transparent !important;
+  pointer-events: none;
+
+  &::after {
+    content: "";
+    position: absolute;
+    width: 1.25rem;
+    height: 1.25rem;
+    border: 2px solid;
+    border-color: $black transparent $black transparent;
+    border-radius: 50%;
+    animation: button-loading-spinner 1.2s linear infinite;
+  }
+}
+
+.twitter-button.is-loading::after {
+  border-color: $white transparent $white transparent !important;
+}
+
+@keyframes button-loading-spinner {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.wallet-selection-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1001;
+}
+
+.wallet-modal-content {
+  background: $white;
+  color: $black;
+  border-radius: 12px;
+  padding: 2rem;
+  max-width: 400px;
+  width: 90%;
+  margin: 0 auto;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.wallet-modal-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: $black;
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.wallet-list {
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
-  align-items: flex-start;
-  pointer-events: none;
-
-  .button {
-    pointer-events: auto;
-    position: relative;
-    z-index: 3;
-  }
-
-  @media screen and (max-width: 450px) {
-    h1.title {
-      font-size: 1.5rem;
-      margin-bottom: 0.5rem;
-    }
-
-    .button {
-      font-size: 0.85rem;
-      padding: 0.5em 0.75em;
-    }
-  }
+  gap: 0.75rem;
 }
 
-.right-content {
+.wallet-item {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 1rem;
-  pointer-events: none;
+  padding: 1rem;
+  border: 1px solid $grey-light;
+  border-radius: 8px;
+  background: $white-bis;
+  color: $black;
+  cursor: pointer;
+  transition: all 0.2s ease;
 
-  .button {
-    pointer-events: auto;
-    position: relative;
-    z-index: 3;
-  }
-
-  @media screen and (max-width: 450px) {
-    position: absolute;
-    top: 0.75rem;
-    right: 0.75rem;
-    gap: 0.5rem;
-    align-items: center;
-
-    .button {
-      padding: 0.25rem;
-      height: auto;
-      display: flex;
-      align-items: center;
-
-      .icon {
-        width: 1.5rem;
-        height: 1.5rem;
-
-        svg {
-          width: 1.5rem;
-          height: 1.5rem;
-        }
-      }
-    }
+  &:hover {
+    border-color: $secondary;
+    background: $white-ter;
   }
 }
 
-.wallet-container {
-  pointer-events: auto;
-  position: relative;
-  z-index: 999;
+.wallet-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+}
 
-  @media screen and (max-width: 450px) {
-    transform: scale(0.85);
-    transform-origin: right center;
-
-    :deep(.wallet-adapter-button) {
-      font-size: 0.7rem;
-      padding: 0 0.5rem;
-      height: 1.75rem;
-
-      .wallet-adapter-button-start-icon {
-        margin-right: 4px;
-        width: 16px;
-        height: 16px;
-      }
-    }
-  }
+.wallet-name {
+  font-size: 1rem;
+  font-weight: 500;
+  color: $black;
 }
 
 .hosts-stats {
-  margin-top: auto;
-  padding-bottom: 2rem;
+  position: absolute;
+  bottom: 2rem;
+  left: 2rem;
   pointer-events: auto;
-  position: relative;
   z-index: 3;
 
   @media screen and (max-width: 450px) {
-    padding-bottom: 1rem;
+    bottom: 1rem;
+    left: 1rem;
   }
 }
 
@@ -350,47 +908,5 @@ const isDarkMode = computed(() =>
     width: 20px;
     height: 20px;
   }
-}
-
-.left-content :deep(.button.is-primary) {
-  background-color: #10e80c !important;
-  border-color: transparent !important;
-  color: #1a1a1a !important;
-  font-weight: bold !important;
-
-  &:hover {
-    background-color: color.adjust(#10e80c, $lightness: -5%) !important;
-  }
-
-  &.is-outlined {
-    background-color: transparent !important;
-    border-color: #10e80c !important;
-    color: #10e80c !important;
-  }
-}
-
-@include touch {
-  .login-page {
-    left: 0;
-    width: 100vw;
-  }
-}
-
-.modal-content {
-  position: relative;
-  z-index: 2;
-}
-
-/* Ensure modals are always on top */
-:deep(.modal) {
-  z-index: 1000;
-}
-
-:deep(.modal.is-active) {
-  display: flex;
-}
-
-.topbar-wrapper {
-  pointer-events: auto;
 }
 </style>

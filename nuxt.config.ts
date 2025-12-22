@@ -14,14 +14,25 @@ export default defineNuxtConfig({
   dir: {
     public: "static",
   },
+  app: {
+    head: {
+      title: 'Nosana Deploy',
+      htmlAttrs: {
+        lang: 'en',
+      },
+      link: [
+        { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
+      ],
+    },
+  },
   pwa: {
     manifest: {
-      name: "Nosana Dashboard",
+      name: "Nosana Deploy",
       short_name: "nosana",
       theme_color: "#10E80C",
       background_color: "#ffffff",
       display: "standalone",
-      description: "Nosana Dashboard",
+      description: "Nosana Deploy",
       icons: [
         {
           src: "icon.png",

@@ -31,8 +31,6 @@
 <script setup lang="ts">
 // Views
 import Job from "~/components/Job/Job.vue";
-import ArrowUpIcon from '@/assets/img/icons/arrow-up.svg?component';
-// Composables
 import { useDeploymentJobPage } from "~/composables/jobs/useDeploymentJobPage";
 const showSettingsModal = ref(false);
 const { params } = useRoute();

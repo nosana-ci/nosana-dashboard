@@ -16,7 +16,7 @@
               Connect with our community for prompt, personalized support for deployments and setting up your host.
               <br />
               <a
-                href="https://discord.gg/nosana-ai"
+                href="https://nosana.com/discord"
                 target="_blank"
                 class="button mt-4 is-primary is-outlined"
               >
@@ -36,7 +36,7 @@
               network works with detailed examples and tutorials.
               <br />
               <a
-                href="https://docs.nosana.com/about/intro.html"
+                href="https://learn.nosana.com/"
                 target="_blank"
                 class="button mt-4 is-primary is-outlined"
               >
@@ -55,7 +55,7 @@
               We pride ourselves on being open-source. Visit our GitHub
               repository to contribute, build, and report technical issues.<br />
               <a
-                href="https://github.com/nosana-ci"
+                href="https://nosana.com/github"
                 target="_blank"
                 class="button mt-4 is-primary is-outlined"
               >
