@@ -1,12 +1,11 @@
 <template>
   <div class="login-page" :class="{ 'dark-mode': isDarkMode }">
-    <!-- World Map Background -->
-    <div class="world-map-background">
-      <img src="/img/worldmap.png" alt="" class="world-map-image" />
-    </div>
-
     <!-- Main Content -->
     <div class="content-wrapper">
+      <!-- World Map Background -->
+      <div class="world-map-background">
+        <img :key="backgroundImageKey" src="/img/worldmap.png" alt="" class="world-map-image" />
+      </div>
       <!-- Center Login Card -->
       <div class="login-card-container">
         <div class="login-card">
@@ -136,7 +135,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, nextTick } from "vue";
 import { useWallet } from "solana-wallets-vue";
 import { useRouter } from "vue-router";
 import { useToast } from "vue-toastification";
@@ -163,6 +162,7 @@ const showWalletModal = ref(false);
 const codeVerifier = ref("");
 const loading = ref(false);
 const signingMessage = ref(false);
+const backgroundImageKey = ref(0);
 
 // Redirect if already authenticated (for Google/Twitter login)
 // Wallet redirects are handled manually after message signing
@@ -286,6 +286,10 @@ const selectGoogleLogin = async () => {
       if (event.data.type === "GOOGLE_AUTH_CODE" && event.data.code) {
         window.removeEventListener("message", handleMessage);
         popup?.close();
+        
+        // Force background image re-render to fix disappearing issue
+        backgroundImageKey.value++;
+        
         authenticateLogin(event.data.code);
       }
     };
@@ -473,6 +477,10 @@ const selectTwitterLogin = async () => {
       if (event.data.type === "TWITTER_AUTH_CODE" && event.data.code) {
         window.removeEventListener("message", handleMessage);
         popup?.close();
+        
+        // Force background image re-render to fix disappearing issue
+        backgroundImageKey.value++;
+        
         authenticateTwitterLogin(
           event.data.code,
           event.data.state || "",
@@ -563,6 +571,14 @@ const authenticateTwitterLogin = async (
   &.dark-mode {
     background: #121212;
 
+    .login-card {
+      background: $black-bis;
+      color: $white;
+      h1 {
+        color: $white;
+      }
+    }
+
     .world-map-background {
       opacity: 0.2;
     }
@@ -576,8 +592,8 @@ const authenticateTwitterLogin = async (
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 9998;
   overflow: hidden;
+  will-change: transform;
 }
 
 .world-map-image {
@@ -587,6 +603,7 @@ const authenticateTwitterLogin = async (
   object-position: center;
   filter: blur(4px) grayscale(30%);
   opacity: 0.55;
+  will-change: transform;
 }
 
 .world-map-wrapper {
