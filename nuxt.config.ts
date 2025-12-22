@@ -16,7 +16,7 @@ export default defineNuxtConfig({
   },
   app: {
     head: {
-      title: 'Nosana Dashboard',
+      title: 'Nosana Deploy',
       htmlAttrs: {
         lang: 'en',
       },
@@ -27,12 +27,12 @@ export default defineNuxtConfig({
   },
   pwa: {
     manifest: {
-      name: "Nosana Dashboard",
+      name: "Nosana Deploy",
       short_name: "nosana",
       theme_color: "#10E80C",
       background_color: "#ffffff",
       display: "standalone",
-      description: "Nosana Dashboard",
+      description: "Nosana Deploy",
       icons: [
         {
           src: "icon.png",
