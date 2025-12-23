@@ -89,13 +89,12 @@
               <button
                 class="login-button wallet-button"
                 @click="handleWalletConnect"
-                :disabled="connected || signingMessage"
+                :disabled="signingMessage"
                 :class="{ 'is-loading': signingMessage }"
               >
                 <WalletIcon :size="20" />
                 {{
-                  signingMessage ? "Signing Message..." :
-                  connected ? "Wallet Connected" : "Select Wallet"
+                  signingMessage ? "Signing Message..." : "Select Wallet"
                 }}
               </button>
             </div>
