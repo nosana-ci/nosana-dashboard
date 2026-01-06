@@ -198,6 +198,9 @@
                         @click="
                           showRevisionModal = true;
                           isActionsDropdownOpen = false;
+                          router.replace({
+                            query: { ...route.query, action: 'create-revision' },
+                          });
                         "
                         :disabled="actionLoading"
                       >
@@ -1275,6 +1278,12 @@ const switchingRevision = ref<number | null>(null);
 const showRevisionDefinitionModal = ref(false);
 const viewingRevision = ref<any>(null);
 const actionsDropdown = ref<HTMLElement | null>(null);
+
+// Check for action query parameter to open modals
+const action = route.query.action?.toString();
+if (action === "create-revision") {
+  showRevisionModal.value = true;
+}
 // Debug instrumentation for page header icon
 const headerIconRef = ref<HTMLElement | null>(null);
 const { data: testgridMarkets } = useAPI("/api/markets");
@@ -2220,13 +2229,22 @@ const switchTab = (tab: string) => {
 
 // Watch revision modal to initialize job definition
 watch(
-  () => showRevisionModal.value,
-  (isOpen) => {
-    if (isOpen && jobDefinitionModel.value) {
+  [() => showRevisionModal.value, () => jobDefinitionModel.value],
+  ([isOpen, definition]) => {
+    if (isOpen && definition && !revisionJobDefinition.value) {
       // Initialize revision job definition with current job definition
       revisionJobDefinition.value = JSON.parse(
-        JSON.stringify(jobDefinitionModel.value)
+        JSON.stringify(definition)
       );
+    }
+
+    if (!isOpen) {
+      revisionJobDefinition.value = null;
+      // Clear action from URL when modal is closed
+      if (route.query.action === "create-revision") {
+        const { action, ...query } = route.query;
+        router.replace({ query });
+      }
     }
   }
 );
