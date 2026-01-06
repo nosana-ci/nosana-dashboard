@@ -3,7 +3,7 @@
   <a
     class="dropdown-item"
     @click="
-      topup();
+      switchAction('topup');
       closeMenu();
     "
     :disabled="isDisabled"
@@ -16,7 +16,7 @@
   <a
     class="dropdown-item"
     @click="
-      withdraw();
+      switchAction('withdraw');
       closeMenu();
     "
     :disabled="isDisabled"
@@ -34,9 +34,10 @@ import PiggyBank01Icon from "@/assets/img/icons/piggy-bank-01.svg?component";
 import PiggyBank02Icon from "@/assets/img/icons/piggy-bank-02.svg?component";
 import { useDeploymentVault } from "~/composables/useDeploymentVault";
 
-const { vault, closeMenu } = defineProps<{
+const { vault, closeMenu, switchAction } = defineProps<{
   vault: Vault;
   closeMenu: () => void;
+  switchAction: (action: string) => void;
   isDisabled: boolean;
 }>();
 
