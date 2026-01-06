@@ -14,8 +14,9 @@
         <li>
           <nuxt-link
             :to="deployRoute"
-            class="deploy-cta"
+            active-class="is-active"
             @click="showMenu = false"
+            style="padding-left: 1.1rem"
           >
             <span class="icon is-small mr-4">
               <JobBuilderIcon  />
@@ -41,6 +42,7 @@
             to="/deployments"
             active-class="is-active"
             @click="showMenu = false"
+            style="padding-left: 1.1rem"
           >
             <span class="icon is-small mr-4">
               <ListIcon />
@@ -274,20 +276,6 @@ const getWalletAddress = () => {
       color: $text !important;
     }
   }
-  
-  .deploy-cta {
-    background-color: $menu-item-active-background-color;
-    color: $menu-item-active-color !important;
-    
-    .icon {
-      color: $secondary;
-      opacity: 1;
-    }
-    
-    span:not(.icon) {
-      color: $menu-item-active-color !important;
-    }
-  }
 }
 
 .has-dropdown {
@@ -387,21 +375,8 @@ const getWalletAddress = () => {
 }
 
 .dark-mode {
-  .deploy-cta {
-    background-color: $white;
-    color: $text !important;
-    
-    .icon {
-      color: $secondary;
-    }
-    
-    span:not(.icon) {
-      color: $text !important;
-    }
-  }
-  
   .menu-list {
-    a:not(.deploy-cta) {
+    a {
       background-color: transparent !important;
       color: $grey-lighter;
       

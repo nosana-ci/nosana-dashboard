@@ -22,9 +22,14 @@
 
           <!-- Main Login Content -->
           <div class="login-content">
-            <h1 class="login-title">Build with Nosana</h1>
+            <h1 class="login-title">
+              {{ isCampaignMode ? 'Claim your Free Credits' : 'Build with Nosana' }}
+            </h1>
             <p class="login-subtitle">
-              Sign in or create an account to build with the Nosana AI Platform
+              {{ isCampaignMode 
+                ? 'Sign in or create an account to claim your $10.00 credit grant.' 
+                : 'Sign in or create an account to build with the Nosana AI Platform' 
+              }}
             </p>
 
             <!-- Google Login Button -->
@@ -80,24 +85,26 @@
               Continue with X
             </button>
 
-            <div class="divider">
-              <span>OR</span>
-            </div>
+            <template v-if="!isCampaignMode">
+              <div class="divider">
+                <span>OR</span>
+              </div>
 
-            <!-- Wallet Connection Button -->
-            <div class="wallet-section">
-              <button
-                class="login-button wallet-button"
-                @click="handleWalletConnect"
-                :disabled="signingMessage"
-                :class="{ 'is-loading': signingMessage }"
-              >
-                <WalletIcon :size="20" />
-                {{
-                  signingMessage ? "Signing Message..." : "Select Wallet"
-                }}
-              </button>
-            </div>
+              <!-- Wallet Connection Button -->
+              <div class="wallet-section">
+                <button
+                  class="login-button wallet-button"
+                  @click="handleWalletConnect"
+                  :disabled="signingMessage"
+                  :class="{ 'is-loading': signingMessage }"
+                >
+                  <WalletIcon :size="20" />
+                  {{
+                    signingMessage ? "Signing Message..." : "Select Wallet"
+                  }}
+                </button>
+              </div>
+            </template>
 
             <!-- Wallet Selection Modal -->
             <div
@@ -134,9 +141,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from "vue";
+import { ref, computed, watch, nextTick, onMounted } from "vue";
 import { useWallet } from "solana-wallets-vue";
-import { useRouter } from "vue-router";
+import { useRouter, useRoute } from "vue-router";
 import { useToast } from "vue-toastification";
 import { generateCodeVerifier, generateCodeChallenge } from "~/utils/pkce";
 import { trackEvent } from "~/utils/analytics";
@@ -152,6 +159,7 @@ const { connected, disconnect, select, connect, wallets, publicKey } =
   useWallet();
 const { status, signOut, data: userData } = useAuth();
 const router = useRouter();
+const route = useRoute();
 const toast = useToast();
 const config = useRuntimeConfig().public;
 
@@ -162,6 +170,11 @@ const codeVerifier = ref("");
 const loading = ref(false);
 const signingMessage = ref(false);
 const backgroundImageKey = ref(0);
+
+const isCampaignMode = computed(() => {
+  // Check for specific campaign code, but only if not in an OAuth popup flow
+  return route.query.code === 'n7k2m5' && (typeof window !== 'undefined' && !window.opener);
+});
 
 // Redirect if already authenticated (for Google/Twitter login)
 // Wallet redirects are handled manually after message signing
