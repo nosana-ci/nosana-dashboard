@@ -145,7 +145,7 @@
                         v-if="deployment.status !== 'ARCHIVED'"
                         class="dropdown-item"
                         @click="
-                          showReplicasModal = true;
+                          switchAction('update-replicas');
                           isActionsDropdownOpen = false;
                         "
                         :disabled="actionLoading"
@@ -161,7 +161,7 @@
                         v-if="deployment.status !== 'ARCHIVED'"
                         class="dropdown-item"
                         @click="
-                          showTimeoutModal = true;
+                          switchAction('update-timeout');
                           isActionsDropdownOpen = false;
                         "
                         :disabled="actionLoading"
@@ -180,7 +180,7 @@
                         "
                         class="dropdown-item"
                         @click="
-                          showScheduleModal = true;
+                          switchAction('update-schedule');
                           isActionsDropdownOpen = false;
                         "
                         :disabled="actionLoading"
@@ -196,11 +196,8 @@
                         v-if="deployment.status !== 'ARCHIVED'"
                         class="dropdown-item"
                         @click="
-                          showRevisionModal = true;
+                          switchAction('create-revision');
                           isActionsDropdownOpen = false;
-                          router.replace({
-                            query: { ...route.query, action: 'create-revision' },
-                          });
                         "
                         :disabled="actionLoading"
                       >
@@ -225,6 +222,7 @@
                             isActionsDropdownOpen = false;
                           }
                         "
+                        :switchAction="switchAction"
                         :isDisabled="actionLoading"
                       />
                     </div>
@@ -1057,17 +1055,17 @@
               </div>
             </div>
           </section>
-          <footer class="modal-card-foot is-justify-content-flex-end">
-            <button class="button" @click="showScheduleModal = false">
-              Cancel
-            </button>
-            <button
-              class="button is-success"
-              @click="
-                updateSchedule();
-                showScheduleModal = false;
-              "
-              :class="{ 'is-loading': actionLoading }"
+            <footer class="modal-card-foot is-justify-content-flex-end">
+              <button class="button" @click="showScheduleModal = false">
+                Cancel
+              </button>
+              <button
+                class="button is-success"
+                @click="
+                  updateSchedule();
+                  showScheduleModal = false;
+                "
+                :class="{ 'is-loading': actionLoading }"
               :disabled="
                 actionLoading ||
                 !newSchedule ||
@@ -1168,6 +1166,7 @@
 
 <script setup lang="ts">
 import type { Deployment, JobDefinition } from "@nosana/sdk";
+import { useVaultModal } from "~/composables/useVaultModal";
 import { useToast } from "vue-toastification";
 import { useWallet } from "solana-wallets-vue";
 import { useAuth } from "#imports";
@@ -1233,6 +1232,7 @@ interface DeploymentEvent {
 const route = useRoute();
 const router = useRouter();
 const toast = useToast();
+const { open: openVaultModal, state: vaultModalState } = useVaultModal();
 const { status, token } = useAuth();
 const { connected, publicKey } = useWallet();
 const isAuthenticated = computed(
@@ -1252,7 +1252,7 @@ const error = ref<string | null>(null);
 const activeTab = ref("overview");
 
 // Available tabs
-const availableTabs = ['overview', 'logs', 'events', 'job-definition'];
+const availableTabs = ["overview", "logs", "events", "job-definition"];
 
 // Initialize activeTab from URL query parameter
 const initialTab = route.query.tab?.toString();
@@ -1279,10 +1279,24 @@ const showRevisionDefinitionModal = ref(false);
 const viewingRevision = ref<any>(null);
 const actionsDropdown = ref<HTMLElement | null>(null);
 
-// Check for action query parameter to open modals
-const action = route.query.action?.toString();
-if (action === "create-revision") {
-  showRevisionModal.value = true;
+// Available actions
+const availableActions = [
+  "create-revision",
+  "update-replicas",
+  "update-timeout",
+  "update-schedule",
+  "topup",
+  "withdraw",
+];
+
+// Initialize action from URL query parameter
+const initialAction = route.query.action?.toString();
+if (initialAction && availableActions.includes(initialAction)) {
+  if (initialAction === "create-revision") showRevisionModal.value = true;
+  else if (initialAction === "update-replicas") showReplicasModal.value = true;
+  else if (initialAction === "update-timeout") showTimeoutModal.value = true;
+  else if (initialAction === "update-schedule") showScheduleModal.value = true;
+  // Vault actions will be handled when deploymentVault loads
 }
 // Debug instrumentation for page header icon
 const headerIconRef = ref<HTMLElement | null>(null);
@@ -2227,27 +2241,80 @@ const switchTab = (tab: string) => {
   });
 };
 
-// Watch revision modal to initialize job definition
+// Switch action and update URL
+const switchAction = (action: string) => {
+  if (action === "create-revision") showRevisionModal.value = true;
+  else if (action === "update-replicas") showReplicasModal.value = true;
+  else if (action === "update-timeout") showTimeoutModal.value = true;
+  else if (action === "update-schedule") showScheduleModal.value = true;
+  else if (action === "topup" && deploymentVault.value) {
+    openVaultModal(deploymentVault.value, "topup", () => {});
+  } else if (action === "withdraw" && deploymentVault.value) {
+    openVaultModal(deploymentVault.value, "withdraw", () => {});
+  }
+
+  router.replace({
+    query: {
+      ...route.query,
+      action,
+    },
+  });
+};
+
+// Clear action from URL
+const clearAction = () => {
+  if (route.query.action) {
+    const { action, ...query } = route.query;
+    router.replace({ query });
+  }
+};
+
+// Watch revision modal to initialize job definition and clear URL when closed
 watch(
   [() => showRevisionModal.value, () => jobDefinitionModel.value],
   ([isOpen, definition]) => {
     if (isOpen && definition && !revisionJobDefinition.value) {
-      // Initialize revision job definition with current job definition
-      revisionJobDefinition.value = JSON.parse(
-        JSON.stringify(definition)
-      );
+      revisionJobDefinition.value = JSON.parse(JSON.stringify(definition));
     }
-
     if (!isOpen) {
       revisionJobDefinition.value = null;
-      // Clear action from URL when modal is closed
       if (route.query.action === "create-revision") {
-        const { action, ...query } = route.query;
-        router.replace({ query });
+        clearAction();
       }
     }
   }
 );
+
+// Watch other modals to clear URL when closed
+watch(showReplicasModal, (isOpen) => {
+  if (!isOpen && route.query.action === "update-replicas") clearAction();
+});
+
+watch(showTimeoutModal, (isOpen) => {
+  if (!isOpen && route.query.action === "update-timeout") clearAction();
+});
+
+watch(showScheduleModal, (isOpen) => {
+  if (!isOpen && route.query.action === "update-schedule") clearAction();
+});
+
+// Watch for vault becoming available and open modal if URL has vault action
+watch(
+  deploymentVault,
+  (vault) => {
+    const action = route.query.action?.toString();
+    if (vault && (action === "topup" || action === "withdraw")) {
+      openVaultModal(vault, action, () => {});
+    }
+  },
+  { immediate: true }
+);
+
+watch(() => vaultModalState.modalType, (modalType) => {
+  if (!modalType && (route.query.action === "topup" || route.query.action === "withdraw")) {
+    clearAction();
+  }
+});
 
 // Head
 useHead({
