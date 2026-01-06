@@ -311,10 +311,14 @@ export function useJob(jobId: string) {
   );
 
   watch(pending, (isPending) => {
-    if (!isPending && !data.value && !job.value) {
-      loading.value = false;
+    if (!isPending) {
+      if (!data.value && !job.value) {
+        loading.value = false;
+      }
+    } else {
+      loading.value = true;
     }
-  }, { immediate: true });
+  });
 
   watch([job, pending], ([currentJob, isPending]) => {
     if (!isPending && currentJob) {
