@@ -1,8 +1,8 @@
 import { EventSourcePolyfill } from "event-source-polyfill";
 import { useToast } from "vue-toastification";
-import { useWallet } from "solana-wallets-vue";
-import type { Job, JobDefinition } from "@nosana/sdk";
-import { getJobExposedServices } from "@nosana/sdk";
+import { useWallet } from "@nosana/solana-vue";
+import type { Job, JobDefinition } from "@nosana/kit";
+import { getJobExposedServices } from "@nosana/kit";
 import type { JobInfo, JobViewModel, LiveEndpoints, ResultsSection} from "~/composables/jobs/types";
 import { normalizeEndpoints } from "~/composables/jobs/normalizeEndpoints";
 import { useAuthHeader } from "~/composables/useAuthHeader";
@@ -60,16 +60,16 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
   const loading = ref<boolean>(true);
 
   const toast = useToast();
-  const { nosana } = useSDK();
+  const { nosana } = useKit();
   const { status, data: userData, token } = useAuth();
-  const { connected, publicKey } = useWallet();
+  const { connected, account } = useWallet();
   const { ensureAuth } = useAuthHeader();
 
   const isCreditUser = computed(() => status.value === "authenticated" && Boolean(userData.value?.generatedAddress));
 
   const activeAddress = computed(() => {
     if (status.value === "authenticated" && userData.value?.generatedAddress) return userData.value.generatedAddress as string;
-    if (connected.value && publicKey.value) return publicKey.value.toString();
+    if (connected.value && account.value?.address) return account.value.address;
     return null;
   });
 
@@ -79,7 +79,7 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
 
   async function fetchDeploymentJob(): Promise<DeploymentJobApiResponse | null> {
     try {
-      const dep = (await nosana.value.deployments.get(deploymentId)) as any;
+      const dep = (await nosana.value.api.deployments.get(deploymentId)) as any;
       const response = await dep.getJob(jobId);
       return response as unknown as DeploymentJobApiResponse;
     } catch (e) {
@@ -141,7 +141,7 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
         try {
           if (isCreditUser.value) {
             const config = useRuntimeConfig();
-            const resp = await $fetch<{ message: string; creditRefund?: number; delisted?: boolean }>(`${config.public.apiBase}/api/jobs/stop-with-credits`, {
+            const resp = await $fetch<{ message: string; creditRefund?: number; delisted?: boolean }>(`${config.public.backend_url}/api/jobs/stop-with-credits`, {
               method: "POST",
               body: { jobAddress: jobId },
               headers: { Authorization: `Bearer ${token.value}` },
@@ -152,11 +152,11 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
             else setTimeout(() => job.value?.refresh(), 1000);
           } else {
             if (numericState === 0) {
-              await nosana.value.jobs.delist(jobId);
+              await nosana.value.jobs.delist({ job: jobId });
               toast.success("Job successfully delisted (canceled) from queue!");
               setTimeout(() => navigateTo("/deploy"), 3000);
             } else if (numericState === 1) {
-              await nosana.value.jobs.end(jobId);
+              await nosana.value.jobs.end({ job: jobId });
               toast.success("Job successfully ended!");
               setTimeout(() => job.value?.refresh(), 1000);
             } else {
@@ -197,7 +197,7 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
           const extensionSeconds = extensionHours * 3600;
           if (isCreditUser.value) {
             const config = useRuntimeConfig();
-            const resp = await $fetch<{ message: string; newTimeout?: number; creditsUsed?: number }>(`${config.public.apiBase}/api/jobs/extend-with-credits`, {
+            const resp = await $fetch<{ message: string; newTimeout?: number; creditsUsed?: number }>(`${config.public.backend_url}/api/jobs/extend-with-credits`, {
               method: "POST",
               body: { jobAddress: jobId, extensionSeconds },
               headers: { Authorization: `Bearer ${token.value}` },
@@ -208,7 +208,7 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
             } else toast.success(`Job extended by ${extensionHours} hour${extensionHours !== 1 ? "s" : ""}!`);
             setTimeout(() => job.value?.refresh(), 1000);
           } else {
-            await nosana.value.jobs.extend(jobId, extensionSeconds);
+            await nosana.value.jobs.extend({ job: jobId, timeout: extensionSeconds });
             toast.success(`Job extended by ${extensionHours} hour${extensionHours !== 1 ? "s" : ""}!`);
             setTimeout(() => job.value?.refresh(), 1000);
           }

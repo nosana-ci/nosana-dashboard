@@ -1,17 +1,17 @@
-import type { Market } from "@nosana/sdk";
+import type { Market } from "@nosana/kit";
 
 const markets: Ref<Array<Market> | undefined> = ref(undefined);
-
-const { nosana } = useSDK();
-
 const loadingMarkets = ref(false);
+
+export const useMarkets = () => {
+  const { nosana } = useKit();
 
 const getMarkets = async () => {
   loadingMarkets.value = true;
   try {
-    markets.value = (await nosana.value.jobs.allMarkets()).sort(
+      markets.value = (await nosana.value.jobs.markets()).sort(
       function (a, b) {
-        return parseInt(a.jobPrice) < parseInt(b.jobPrice) ? -1 : 1;
+          return parseInt(String(a.jobPrice)) < parseInt(String(b.jobPrice)) ? -1 : 1;
       }
     );
   } catch (e) {
@@ -20,6 +20,5 @@ const getMarkets = async () => {
   loadingMarkets.value = false;
 };
 
-export const useMarkets = () => {
   return { markets, getMarkets, loadingMarkets };
 };

@@ -1,12 +1,21 @@
-import { useWallet } from "solana-wallets-vue";
+import { useWallet } from "@nosana/solana-vue";
 import { useCookies } from '@vueuse/integrations/useCookies'
 
 import { createAuthCookiesKey } from "~/utils/createAuthCookiesKey";
 
 export function useNosanaWallet() {
-  const { nosana } = useSDK();
-  const { connected, publicKey } = useWallet();
+  const { nosana } = useKit();
+  const { connected, account } = useWallet();
   const cookies = useCookies();
+
+  // Compatibility: create publicKey-like object from account
+  const publicKey = computed(() => {
+    if (!account.value?.address) return null;
+    return {
+      toString: () => account.value!.address,
+      toBase58: () => account.value!.address,
+    };
+  });
 
   const userBalances = ref({
     nos: 0,
@@ -17,8 +26,8 @@ export function useNosanaWallet() {
 
   const refreshAllBalances = async () => {
     try {
-      const nosBal = await nosana.value.solana.getNosBalance();
-      userBalances.value.nos = nosBal?.uiAmount ?? 0;
+      const nosBal = await nosana.value.nos.getBalance();
+      userBalances.value.nos = nosBal ?? 0;
     } catch (error) {
       console.error("Failed to refresh NOS balance", error);
     }
@@ -42,18 +51,19 @@ export function useNosanaWallet() {
   ): Promise<Headers> => {
     try {
       if (options?.forceNew) {
-        if (publicKey.value) {
-          cookies.remove(createAuthCookiesKey(publicKey.value.toString()));
+        if (account.value?.address) {
+          cookies.remove(createAuthCookiesKey(account.value.address));
         }
       }
 
       const headerName = options?.key || 'NosanaApiAuthorization';
-      return await nosana.value.authorization.generateHeader(
-        headerName,
-        options?.includeTime ? { includeTime: options.includeTime } : undefined
+      const message = options?.includeTime ? Date.now().toString() : 'nosana-auth';
+      
+      return await nosana.value.authorization.generateHeaders(
+        message,
+        { key: headerName, includeTime: options?.includeTime ?? false }
       );
     } catch (error) {
-      console.error('authorization.generate error:', error);
       signMessageError.value = true;
       throw error as Error;
     }

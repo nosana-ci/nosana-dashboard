@@ -1170,10 +1170,10 @@
 </template>
 
 <script setup lang="ts">
-import type { Deployment, JobDefinition } from "@nosana/sdk";
+import type { Deployment, JobDefinition } from "@nosana/kit";
 import { useVaultModal } from "~/composables/useVaultModal";
 import { useToast } from "vue-toastification";
-import { useWallet } from "solana-wallets-vue";
+import { useWallet } from "@nosana/solana-vue";
 import { useAuth } from "#imports";
 import JobStatus from "~/components/Job/Status.vue";
 import JobLogsContainer from "~/components/Job/LogsContainer.vue";
@@ -1195,7 +1195,7 @@ import EditIcon from "@/assets/img/icons/edit.svg?component";
 import RefreshIcon from "@/assets/img/icons/refresh.svg?component";
 import InfoCircleIcon from "@/assets/img/icons/info-circle.svg?component";
 import { useTimestamp } from "@vueuse/core";
-import { useSDK } from "~/composables/useSDK";
+import { useKit } from "~/composables/useKit";
 import { parseCronExpression } from "~/utils/parseCronExpression";
 
 const colorMode = useColorMode();
@@ -1239,16 +1239,26 @@ const router = useRouter();
 const toast = useToast();
 const { open: openVaultModal, state: vaultModalState } = useVaultModal();
 const { status, token } = useAuth();
-const { connected, publicKey } = useWallet();
+const { connected, account } = useWallet();
+
+// Compatibility: create publicKey-like object from account
+const publicKey = computed(() => {
+  if (!account.value?.address) return null;
+  return {
+    toString: () => account.value!.address,
+    toBase58: () => account.value!.address,
+  };
+});
+
 const isAuthenticated = computed(
   () => status.value === "authenticated" && token.value
 );
 const isWalletMode = computed(
-  () => connected.value && publicKey.value && !token.value
+  () => connected.value && account.value?.address && !token.value
 );
 const hasAnyAuth = computed(() => isAuthenticated.value || isWalletMode.value);
 const { getIpfs } = useIpfs();
-const { nosana } = useSDK();
+const { nosana } = useKit();
 
 // State
 const deployment = ref<Deployment | null>(null);
@@ -1506,6 +1516,22 @@ const loadDeployment = async (silent = false) => {
     return;
   }
 
+  // Wait for SDK to be ready (wallet set for wallet users)
+  if (isWalletMode.value && !nosana.value.wallet) {
+    // Wait for the SDK watch to set the wallet - try multiple times
+    for (let i = 0; i < 10; i++) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      if (nosana.value.wallet) {
+        break;
+      }
+    }
+    // If still not ready, wait for next tick
+    if (!nosana.value.wallet) {
+      await nextTick();
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+  }
+
   try {
     // Only show loading for non-silent operations (initial load, user actions)
     if (!silent) {
@@ -1514,7 +1540,7 @@ const loadDeployment = async (silent = false) => {
     }
 
     const deploymentId = route.params.id as string;
-    const data = await nosana.value.deployments.get(deploymentId);
+    const data = await nosana.value.api.deployments.get(deploymentId);
 
     deployment.value = data as Deployment;
 

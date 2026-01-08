@@ -71,8 +71,7 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       rpcUrl: process.env.RPC_URL,
-      apiBase: process.env.API_BASE,
-      oldApiBase: process.env.OLD_API_BASE || "https://backend.k8s.prd.nos.ci",
+      backend_url: process.env.NUXT_PUBLIC_BACKEND_URL,
       network: process.env.NETWORK || "mainnet",
       nodeDomain: process.env.NODE_DOMAIN,
       frpServer: process.env.FRP_SERVER || "node.k8s.prd.nos.ci",
@@ -87,7 +86,7 @@ export default defineNuxtConfig({
     id: "G-HNDP62SH8M",
   },
   auth: {
-    baseURL: process.env.NUXT_PUBLIC_API_BASE,
+    baseURL: process.env.NUXT_PUBLIC_BACKEND_URL,
     provider: {
       type: "local",
       endpoints: {

@@ -50,13 +50,13 @@
 
         <!-- Type: Automatic Grant -->
         <template v-else-if="type === 'grant'">
-          <h1 class="title is-3 mb-3">Free Credits!</h1>
+          <h1 class="title is-3 mb-3">{{ claimedSuccessfully ? 'Credits Added' : 'Your Credits Are Ready' }}</h1>
           <p class="subtitle is-6 has-text-grey mb-5">
             <template v-if="claimedSuccessfully">
-              Your <strong class="has-text-success">$10.00</strong> grant has been claimed successfully.
+              <strong class="has-text-success">$10</strong> in compute credits have been added to your account.
             </template>
             <template v-else>
-              To help you get started, we've awarded your account a one-time grant of <strong class="has-text-success">$10.00</strong>.
+              You can now add <strong class="has-text-success">$10</strong> in compute credits to your account.
             </template>
           </p>
           <div class="mt-5">
@@ -168,12 +168,12 @@ const handleClaim = async () => {
     let body = {};
 
     if (props.type === 'manual') {
-      url = `${config.apiBase}/api/credits/claim`;
+      url = `${config.backend_url}/api/credits/claim`;
       body = { code: claimCode.value.trim() };
     } else if (props.type === 'grant') {
-      url = `${config.apiBase}/api/credits/request`;
+      url = `${config.backend_url}/api/credits/request`;
     } else if (props.type === 'invitation') {
-      url = `${config.apiBase}/api/credits/invitations/${props.token}/claim`;
+      url = `${config.backend_url}/api/credits/invitations/${props.token}/claim`;
     }
 
     const response = await fetch(url, {

@@ -41,7 +41,6 @@
   </div>
   <div v-else-if="activeTab === 'logs' && !canShowLogsTab"></div>
   
-  <JobArtifactsView v-if="activeTab === 'artifacts'" :job="props.job" />
   <JobChatView 
     v-show="activeTab === 'chat' && showChatTab" 
     :job="props.job" 
@@ -62,12 +61,11 @@
 
 <script setup lang="ts">
 import { ref, nextTick, computed, watch, onMounted } from 'vue';
-import type { JobDefinition } from "@nosana/sdk";
+import type { JobDefinition } from "@nosana/kit";
 import CopyIcon from '@/assets/img/icons/copy.svg?component';
 import { useToast } from 'vue-toastification';
 
 import JobLogsView from "./Tabs/SystemLogs.vue";
-import JobArtifactsView from "./Tabs/Artifacts.vue";
 import JobDefinitionView from "./Tabs/JobDefinition.vue";
 import JobChatView from "./Tabs/Chat.vue";
 import JobGroups from "./Tabs/Overview.vue";
@@ -91,7 +89,6 @@ interface Props {
   isJobPoster: boolean;
   isConfidential?: boolean;
   jobDefinition: JobDefinition;
-  hasArtifacts: boolean;
   isConnecting: boolean;
   logConnectionEstablished: boolean;
   systemLogs: AnyLogEntry[];
@@ -165,7 +162,6 @@ const visibleTabs = computed(() => {
   if (canShowGroupsTab.value) tabs.push('groups');
   if (canShowLogsTab.value) tabs.push('logs');
   if (!props.isConfidential) tabs.push('info');
-  if (props.hasArtifacts) tabs.push('artifacts');
   if (props.showChatTab) tabs.push('chat');
   return tabs;
 });
@@ -182,7 +178,6 @@ watch(
     props.job.isCompleted,
     props.isConfidential,
     props.isJobPoster,
-    props.hasArtifacts,
     props.showChatTab,
     props.activeTab,
   ],

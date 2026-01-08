@@ -259,7 +259,6 @@
             :jobInfo="props.jobInfo"
             :isConfidential="isConfidential"
             :jobDefinition="props.job.jobDefinition"
-            :hasArtifacts="false"
             :isConnecting="isConnecting"
             :logConnectionEstablished="connectionEstablished"
             :systemLogs="[]"
@@ -385,7 +384,7 @@ import type {
   Operation,
   OperationArgsMap,
   HttpHealthCheck,
-} from "@nosana/sdk";
+} from "@nosana/kit";
 import type { FLogEntry } from "~/composables/jobs/useFLogs";
 import type { ProgressBar } from "~/composables/jobs/logTypes";
 

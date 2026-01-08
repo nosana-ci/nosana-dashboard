@@ -183,7 +183,7 @@
 </template>
 
 <script setup lang="ts">
-  import type { JobDefinition, Market } from '@nosana/sdk';
+  import type { JobDefinition, Market } from '@nosana/kit';
   import type { Template } from '~/composables/useTemplates';
   import DeploySimpleGpuSelection from './SimpleGpuSelection.vue';
   import DeployAdvancedGpuSelection from './AdvancedGpuSelection.vue';

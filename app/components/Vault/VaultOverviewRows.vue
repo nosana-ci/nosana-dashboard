@@ -47,7 +47,7 @@
 </template>
 <script setup lang="ts">
 import { useRouter } from "vue-router";
-import type { Deployment } from "@nosana/sdk";
+import type { Deployment } from "@nosana/kit";
 import RefreshIcon from "@/assets/img/icons/refresh.svg?component";
 import ArrowSquareUpRightIcon from "@/assets/img/icons/arrow-square-up-right.svg?component";
 import { useDeploymentVault } from "~/composables/useDeploymentVault";

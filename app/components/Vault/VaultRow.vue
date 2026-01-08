@@ -11,7 +11,7 @@
   </td>
 </template>
 <script setup lang="ts">
-import { type Vault } from "@nosana/sdk";
+import { type Vault } from "@nosana/kit";
 import { useDeploymentVault } from "~/composables/useDeploymentVault";
 
 const props = defineProps<{

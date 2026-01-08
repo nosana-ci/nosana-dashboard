@@ -1,4 +1,4 @@
-import type { JobDefinition } from "@nosana/sdk"
+import type { JobDefinition } from "@nosana/kit"
 
 const emptyJobDefinition: JobDefinition = {
   "version": "0.1",

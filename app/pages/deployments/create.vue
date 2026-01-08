@@ -644,9 +644,9 @@ import {
   type JobDefinition,
   type CreateDeployment,
   DeploymentStrategy,
-} from "@nosana/sdk";
+} from "@nosana/kit";
 import { useToast } from "vue-toastification";
-import { useWallet } from "solana-wallets-vue";
+import { useWallet } from "@nosana/solana-vue";
 import TopBar from "~/components/TopBar.vue";
 import { useRouter, useRoute } from "vue-router";
 import { useEstimatedCost } from "~/composables/useMarketPricing";
@@ -659,12 +659,21 @@ import { MAX_TIMEOUT_HOURS, MIN_TIMEOUT_HOURS } from "~/composables/useTimeoutCo
 // Setup composables
 const { markets, getMarkets, loadingMarkets } = useMarkets();
 const { templates, groupedTemplates, loadingTemplates } = useTemplates();
-const { nosana } = useSDK();
+const { nosana } = useKit();
 const router = useRouter();
 const route = useRoute();
 const toast = useToast();
 const { status, token } = useAuth();
-const { connected, publicKey } = useWallet();
+const { connected, account } = useWallet();
+
+// Compatibility: create publicKey-like object from account
+const publicKey = computed(() => {
+  if (!account.value?.address) return null;
+  return {
+    toString: () => account.value!.address,
+    toBase58: () => account.value!.address,
+  };
+});
 const loading = ref(false);
 
 // Initialize redirect composable for authentication flow
@@ -961,7 +970,7 @@ const createDeployment = async () => {
     if (!selectedMarket.value) {
       throw new Error("Please select a market");
     }
-    const deployment = await nosana.value.deployments.create({
+    const deployment = await nosana.value.api.deployments.create({
       name: deploymentName.value.trim(),
       market: selectedMarket.value.address.toString(),
       replicas: replicas.value,
