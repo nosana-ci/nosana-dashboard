@@ -782,8 +782,13 @@
                             <StatusTag
                               :status="
                                 revision.revision === deployment.active_revision
-                                  ? 'ACTIVE'
+                                  ? 'COMPLETED'
                                   : 'INACTIVE'
+                              "
+                              :customLabel="
+                                revision.revision === deployment.active_revision
+                                  ? 'ACTIVE'
+                                  : undefined
                               "
                               :showLabel="true"
                               :imageOnly="false"

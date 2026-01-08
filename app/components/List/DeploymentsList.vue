@@ -60,7 +60,9 @@
               <td>
                 <span class="clickable-row-cell-content"
                   >{{
-                    Array.isArray(deployment.jobs) ? deployment.jobs.length : 0
+                    Array.isArray(deployment.jobs) 
+                      ? deployment.jobs.filter(job => ['PENDING', 'RUNNING', 'QUEUED'].includes(job.status)).length 
+                      : 0
                   }}
                   Jobs</span
                 >
