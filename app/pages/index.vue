@@ -4,7 +4,12 @@
     <div class="content-wrapper">
       <!-- World Map Background -->
       <div class="world-map-background">
-        <img :key="backgroundImageKey" src="/img/worldmap.png" alt="" class="world-map-image" />
+        <img
+          :key="backgroundImageKey"
+          src="/img/worldmap.png"
+          alt=""
+          class="world-map-image"
+        />
       </div>
       <!-- Center Login Card -->
       <div class="login-card-container">
@@ -23,12 +28,15 @@
           <!-- Main Login Content -->
           <div class="login-content">
             <h1 class="login-title">
-              {{ isCampaignMode ? 'Claim your Free Credits' : 'Build with Nosana' }}
+              {{
+                isCampaignMode ? "Claim your Free Credits" : "Build with Nosana"
+              }}
             </h1>
             <p class="login-subtitle">
-              {{ isCampaignMode 
-                ? 'Sign in or create an account to claim your $10.00 credit grant.' 
-                : 'Sign in or create an account to build with the Nosana AI Platform' 
+              {{
+                isCampaignMode
+                  ? "Sign in or create an account to claim your $10.00 credit grant."
+                  : "Sign in or create an account to build with the Nosana AI Platform"
               }}
             </p>
 
@@ -99,9 +107,7 @@
                   :class="{ 'is-loading': signingMessage }"
                 >
                   <WalletIcon :size="20" />
-                  {{
-                    signingMessage ? "Signing Message..." : "Select Wallet"
-                  }}
+                  {{ signingMessage ? "Signing Message..." : "Select Wallet" }}
                 </button>
               </div>
             </template>
@@ -172,12 +178,22 @@ const signingMessage = ref(false);
 const backgroundImageKey = ref(0);
 
 const isCampaignMode = computed(() => {
-  console.log("route.query.code", route.query.code);
-  console.log("typeof window", window);
-  console.log("window.opener", window.opener);
   // Check for specific campaign code, but only if not in an OAuth popup flow
-  return route.query.code === 'n7k2m5' && (typeof window !== 'undefined' && !window.opener);
+  return (
+    route.query.code === "n7k2m5" &&
+    typeof window !== "undefined" &&
+    !window.opener
+  );
 });
+
+// Watch route query to ensure computed is evaluated
+watch(
+  () => route.query.code,
+  () => {
+    const _ = isCampaignMode.value;
+  },
+  { immediate: true }
+);
 
 // Redirect if already authenticated (for Google/Twitter login)
 // Wallet redirects are handled manually after message signing
@@ -301,10 +317,10 @@ const selectGoogleLogin = async () => {
       if (event.data.type === "GOOGLE_AUTH_CODE" && event.data.code) {
         window.removeEventListener("message", handleMessage);
         popup?.close();
-        
+
         // Force background image re-render to fix disappearing issue
         backgroundImageKey.value++;
-        
+
         authenticateLogin(event.data.code);
       }
     };
@@ -492,10 +508,10 @@ const selectTwitterLogin = async () => {
       if (event.data.type === "TWITTER_AUTH_CODE" && event.data.code) {
         window.removeEventListener("message", handleMessage);
         popup?.close();
-        
+
         // Force background image re-render to fix disappearing issue
         backgroundImageKey.value++;
-        
+
         authenticateTwitterLogin(
           event.data.code,
           event.data.state || "",
@@ -597,7 +613,6 @@ const authenticateTwitterLogin = async (
     .world-map-background {
       opacity: 0.2;
     }
-    
   }
 }
 
