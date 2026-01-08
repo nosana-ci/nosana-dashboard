@@ -1,4 +1,4 @@
-import type { Deployment, Vault } from "@nosana/sdk";
+import type { Deployment, Vault } from "@nosana/kit";
 
 import { useVaultModal } from "~/composables/useVaultModal";
 import { formatDate } from "~/utils/formatDate";
@@ -27,15 +27,30 @@ export function useDeploymentVault(deploymentOrVault: Deployment | Vault): UseDe
   const { open } = useVaultModal();
 
   const balance = ref<VaultBalance>({ NOS: 0, SOL: 0, loading: false });
-  const vaultRef = ref<string>(vault.publicKey.toString());
-  const createdAtRef = ref<string>(formatDate(vault.created_at));
+  
+  // Vault has address property, use it directly
+  const vaultAddress = vault.address || '';
+  const vaultRef = ref<string>(vaultAddress);
+  
+  // Handle created_at - access it safely with type assertion for runtime values
+  const createdAtValue = (vault as Vault & { created_at?: Date | string }).created_at;
+  const createdAtRef = ref<string>(createdAtValue ? formatDate(createdAtValue) : '');
 
   const updateBalance = async () => {
+    if (!vault || typeof vault.getBalance !== 'function') {
+      return;
+    }
+    
     balance.value.loading = true;
+    try {
     const balanceData = await vault.getBalance();
     balance.value.NOS = balanceData.NOS;
     balance.value.SOL = balanceData.SOL;
+    } catch (error) {
+      console.warn('Failed to fetch vault balance:', error);
+    } finally {
     balance.value.loading = false;
+    }
   };
 
   const openTopupModal = () => {
@@ -46,8 +61,8 @@ export function useDeploymentVault(deploymentOrVault: Deployment | Vault): UseDe
     open(vault, "withdraw", updateBalance);
   };
 
-  onMounted(async () => {
-    await updateBalance();
+  onMounted(() => {
+    updateBalance();
   });
 
 

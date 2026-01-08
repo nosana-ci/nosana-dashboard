@@ -50,7 +50,7 @@
 </template>
 <script setup lang="ts">
 import { useRouter } from "vue-router";
-import { useWallet } from "solana-wallets-vue";
+import { useWallet } from "@nosana/solana-vue";
 import GreenDownChevron from "@/assets/img/icons/green-down-chevron.svg?component";
 import { filters } from "./filters";
 

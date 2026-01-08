@@ -97,7 +97,7 @@
           <div class="dropdown-trigger">
             <span class="mobile-avatar-trigger" @click="showMobileDropdown = !showMobileDropdown">
               <template v-if="connected && wallet">
-                <img v-if="wallet.adapter.icon" :src="wallet.adapter.icon" :alt="wallet.adapter.name + ' icon'" class="wallet-icon" />
+                <img v-if="wallet.icon" :src="wallet.icon" :alt="wallet.name + ' icon'" class="wallet-icon" />
                 <span v-else>W</span>
               </template>
               <template v-else>
@@ -146,11 +146,20 @@ import ListIcon from "@/assets/img/icons/sidebar/list.svg?component";
 import ExplorerIcon from "@/assets/img/icons/sidebar/explorer.svg?component";
 import UserIcon from "@/assets/img/icons/sidebar/user.svg?component";
 import SupportIcon from "@/assets/img/icons/sidebar/support.svg?component";
-import { useWallet } from "solana-wallets-vue";
+import { useWallet } from "@nosana/solana-vue";
 import { computed, onMounted, watch, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
-const { connected, disconnect, publicKey, wallet } = useWallet();
+const { connected, disconnect, account, wallet } = useWallet();
+
+// Compatibility: create publicKey-like object from account
+const publicKey = computed(() => {
+  if (!account.value?.address) return null;
+  return {
+    toString: () => account.value!.address,
+    toBase58: () => account.value!.address,
+  };
+});
 const { status, signOut, data } = useAuth();
 const route = useRoute();
 const router = useRouter();
@@ -202,6 +211,10 @@ const isActive = (paths: string[]) => {
 const handleLogout = async () => {
   showMobileDropdown.value = false;
   try {
+    // Clear wallet session cookie
+    const sessionCookie = useCookie('nosana-wallet-session');
+    sessionCookie.value = null;
+    
     if (connected.value) {
       await disconnect();
       await navigateTo('/');

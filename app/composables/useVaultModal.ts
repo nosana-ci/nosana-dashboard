@@ -1,4 +1,5 @@
-import type { Vault } from "@nosana/sdk";
+import type { Vault } from "@nosana/kit";
+import { useKit } from "~/composables/useKit";
 
 interface VaultModalState {
   modalType: null | "topup" | "withdraw";
@@ -21,6 +22,8 @@ const state = ref<VaultModalState>({
 });
 
 export function useVaultModal() {
+  const { nosana } = useKit();
+
   const open = (vault: Vault, type: "topup" | "withdraw", updateFn: () => void) => {
     state.value.vault = vault;
     state.value.modalType = type;
@@ -36,19 +39,22 @@ export function useVaultModal() {
     state.value.updateFn = null;
   };
 
-
   const topup = async () => {
     if (!state.value.vault || state.value.modalType !== "topup" || !state.value.updateFn) return;
 
     try {
       state.value.loading = true;
+      
+      if (!nosana.value.wallet) {
+        throw new Error("Wallet not connected. Please connect your wallet first.");
+      }
+      
       await state.value.vault.topup({
         NOS: state.value.nosAmount || undefined,
         SOL: state.value.solAmount || undefined,
       });
-    } catch (error) {
-      state.value.error = "Failed to top up vault";
-      console.error("Failed to top up vault:", error);
+    } catch (error: any) {
+      state.value.error = error.message || "Failed to top up vault";
     } finally {
       state.value.loading = false;
       state.value.updateFn();
@@ -61,10 +67,14 @@ export function useVaultModal() {
 
     try {
       state.value.loading = true;
+      
+      if (!nosana.value.wallet) {
+        throw new Error("Wallet not connected. Please connect your wallet first.");
+      }
+      
       await state.value.vault.withdraw();
-    } catch (error) {
-      state.value.error = "Failed to withdraw from vault";
-      console.error("Failed to withdraw from vault:", error);
+    } catch (error: any) {
+      state.value.error = error.message || "Failed to withdraw from vault";
     } finally {
       state.value.loading = false;
       state.value.updateFn();

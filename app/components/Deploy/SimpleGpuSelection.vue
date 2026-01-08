@@ -52,7 +52,7 @@
 </template>
 
 <script setup lang="ts">
-import type { Market, JobDefinition } from "@nosana/sdk";
+import type { Market, JobDefinition } from "@nosana/kit";
 
 // Define props
 interface Props {

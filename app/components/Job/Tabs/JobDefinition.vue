@@ -21,7 +21,7 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue';
-import type { JobDefinition } from "@nosana/sdk";
+import type { JobDefinition } from "@nosana/kit";
 
 interface Props {
   jobDefinition: JobDefinition | null;

@@ -4,12 +4,7 @@
     <div class="content-wrapper">
       <!-- World Map Background -->
       <div class="world-map-background">
-        <img
-          :key="backgroundImageKey"
-          src="/img/worldmap.png"
-          alt=""
-          class="world-map-image"
-        />
+        <img :key="backgroundImageKey" src="/img/worldmap.png" alt="" class="world-map-image" />
       </div>
       <!-- Center Login Card -->
       <div class="login-card-container">
@@ -28,15 +23,12 @@
           <!-- Main Login Content -->
           <div class="login-content">
             <h1 class="login-title">
-              {{
-                isCampaignMode ? "Claim your Free Credits" : "Build with Nosana"
-              }}
+              {{ isCampaignMode ? 'Claim your Free Credits' : 'Build with Nosana' }}
             </h1>
             <p class="login-subtitle">
-              {{
-                isCampaignMode
-                  ? "Sign in or create an account to claim your $10.00 credit grant."
-                  : "Sign in or create an account to build with the Nosana AI Platform"
+              {{ isCampaignMode 
+                ? 'Sign in or create an account to receive $10 in free compute credits.' 
+                : 'Sign in or create an account to build with the Nosana AI Platform' 
               }}
             </p>
 
@@ -107,7 +99,9 @@
                   :class="{ 'is-loading': signingMessage }"
                 >
                   <WalletIcon :size="20" />
-                  {{ signingMessage ? "Signing Message..." : "Select Wallet" }}
+                  {{
+                    signingMessage ? "Signing Message..." : "Select Wallet"
+                  }}
                 </button>
               </div>
             </template>
@@ -123,16 +117,16 @@
                 <div class="wallet-list">
                   <div
                     v-for="wallet in wallets"
-                    :key="wallet.adapter.name"
+                    :key="wallet.name"
                     class="wallet-item"
-                    @click="selectWallet(wallet.adapter.name)"
+                    @click="selectWallet(wallet)"
                   >
                     <img
-                      :src="wallet.adapter.icon"
-                      :alt="wallet.adapter.name"
+                      :src="wallet.icon"
+                      :alt="wallet.name"
                       class="wallet-icon"
                     />
-                    <span class="wallet-name">{{ wallet.adapter.name }}</span>
+                    <span class="wallet-name">{{ wallet.name }}</span>
                   </div>
                 </div>
               </div>
@@ -147,22 +141,34 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onMounted } from "vue";
-import { useWallet } from "solana-wallets-vue";
-import { useRouter, useRoute } from "vue-router";
+import { ref, computed, watch, nextTick } from "vue";
+import { useWallet } from "@nosana/solana-vue";
+import { useRouter } from "vue-router";
 import { useToast } from "vue-toastification";
 import { generateCodeVerifier, generateCodeChallenge } from "~/utils/pkce";
 import { trackEvent } from "~/utils/analytics";
 import WalletIcon from "~/components/WalletIcon.vue";
 import Loader from "~/components/Loader.vue";
 import { useAPI } from "~/composables/useAPI";
+import { useNosanaWallet } from "~/composables/useNosanaWallet";
 
 definePageMeta({
   layout: false, // No sidebar/layout for login page
 });
 
-const { connected, disconnect, select, connect, wallets, publicKey } =
-  useWallet();
+const { connected, disconnect, connect, account } = useWallet();
+import { useSolanaWallets } from "@nosana/solana-vue";
+const { wallets } = useSolanaWallets();
+const { generateAuthHeaders } = useNosanaWallet();
+
+// Compatibility: create publicKey-like object from account
+const publicKey = computed(() => {
+  if (!account.value?.address) return null;
+  return {
+    toString: () => account.value!.address,
+    toBase58: () => account.value!.address,
+  };
+});
 const { status, signOut, data: userData } = useAuth();
 const router = useRouter();
 const route = useRoute();
@@ -179,21 +185,8 @@ const backgroundImageKey = ref(0);
 
 const isCampaignMode = computed(() => {
   // Check for specific campaign code, but only if not in an OAuth popup flow
-  return (
-    route.query.code === "n7k2m5" &&
-    typeof window !== "undefined" &&
-    !window.opener
-  );
+  return route.query.code === 'n7k2m5' && (typeof window !== 'undefined' && !window.opener);
 });
-
-// Watch route query to ensure computed is evaluated
-watch(
-  () => route.query.code,
-  () => {
-    const _ = isCampaignMode.value;
-  },
-  { immediate: true }
-);
 
 // Redirect if already authenticated (for Google/Twitter login)
 // Wallet redirects are handled manually after message signing
@@ -317,10 +310,10 @@ const selectGoogleLogin = async () => {
       if (event.data.type === "GOOGLE_AUTH_CODE" && event.data.code) {
         window.removeEventListener("message", handleMessage);
         popup?.close();
-
+        
         // Force background image re-render to fix disappearing issue
         backgroundImageKey.value++;
-
+        
         authenticateLogin(event.data.code);
       }
     };
@@ -403,12 +396,12 @@ const handleWalletConnect = async () => {
   }
 };
 
-const selectWallet = async (walletName: string) => {
+const selectWallet = async (wallet: any) => {
   showWalletModal.value = false;
+  const walletName = wallet.name;
 
   try {
-    await select(walletName as any);
-    await connect();
+    await connect(wallet);
 
     try {
       trackEvent("wallet_connected", {
@@ -429,16 +422,25 @@ const selectWallet = async (walletName: string) => {
 
 const signAuthMessage = async (walletName: string) => {
   signingMessage.value = true;
+  const sessionCookie = useCookie<{ authenticated: boolean; address: string; timestamp: number } | null>('nosana-wallet-session');
 
   try {
-    const { generateAuthHeaders } = useNosanaWallet();
-
     await generateAuthHeaders();
-    // toast.success("Successfully signed auth message");
+    
+    // Store wallet session in cookie for middleware to read
+    // Middleware can't access WalletProvider context, so we use a cookie
+    const walletAddress = publicKey.value?.toString();
+    if (walletAddress) {
+      sessionCookie.value = {
+        authenticated: true,
+        address: walletAddress,
+        timestamp: Date.now()
+      };
+    }
 
     try {
       trackEvent("wallet_authorized", {
-        user_id: publicKey.value?.toString(),
+        user_id: walletAddress,
         wallet: walletName,
       });
     } catch (error) {
@@ -447,13 +449,15 @@ const signAuthMessage = async (walletName: string) => {
 
     const redirect =
       (router.currentRoute.value.query.redirect as string) || "/account";
-    router.replace(redirect);
+    
+    await navigateTo(redirect);
   } catch (error: any) {
     console.error("Error signing auth message:", error);
     toast.error(error.message || "Error signing message");
 
     // Disconnect wallet on signing failure so user can try again
     try {
+      sessionCookie.value = null;
       await disconnect();
     } catch (disconnectError) {
       console.warn("Error disconnecting wallet:", disconnectError);
@@ -508,10 +512,10 @@ const selectTwitterLogin = async () => {
       if (event.data.type === "TWITTER_AUTH_CODE" && event.data.code) {
         window.removeEventListener("message", handleMessage);
         popup?.close();
-
+        
         // Force background image re-render to fix disappearing issue
         backgroundImageKey.value++;
-
+        
         authenticateTwitterLogin(
           event.data.code,
           event.data.state || "",
@@ -613,6 +617,7 @@ const authenticateTwitterLogin = async (
     .world-map-background {
       opacity: 0.2;
     }
+    
   }
 }
 

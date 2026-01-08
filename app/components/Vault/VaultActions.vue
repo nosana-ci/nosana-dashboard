@@ -28,7 +28,7 @@
   </a>
 </template>
 <script setup lang="ts">
-import type { Vault } from "@nosana/sdk";
+import type { Vault } from "@nosana/kit";
 
 import PiggyBank01Icon from "@/assets/img/icons/piggy-bank-01.svg?component";
 import PiggyBank02Icon from "@/assets/img/icons/piggy-bank-02.svg?component";

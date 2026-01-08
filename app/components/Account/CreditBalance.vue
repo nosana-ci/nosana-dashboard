@@ -32,7 +32,7 @@ import AccountClaimModal from "./ClaimModal.vue";
 
 const config = useRuntimeConfig().public;
 const { status, token } = useAuth();
-const { nosana } = useSDK();
+const { nosana } = useKit();
 
 // State
 const creditBalance = ref(0);

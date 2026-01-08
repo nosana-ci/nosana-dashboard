@@ -371,7 +371,7 @@ const {
     return { keys: [], total: 0 };
   }
   
-  return await $fetch(`${config.apiBase}/api/api-keys`, {
+  return await $fetch(`${config.backend_url}/api/api-keys`, {
     headers: {
       'Authorization': `Bearer ${token.value}`
     }
@@ -400,7 +400,7 @@ const createKey = async () => {
       payload.expiresIn = parseInt(newKeyExpiration.value);
     }
     
-    const response = await $fetch(`${config.apiBase}/api/api-keys`, {
+    const response = await $fetch(`${config.backend_url}/api/api-keys`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token.value}`,
@@ -445,7 +445,7 @@ const updateKey = async () => {
   try {
     updatingKey.value = true;
     
-    await $fetch(`${config.apiBase}/api/api-keys/${selectedKey.value.id}/update`, {
+    await $fetch(`${config.backend_url}/api/api-keys/${selectedKey.value.id}/update`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token.value}`,
@@ -480,7 +480,7 @@ const deleteKey = async (keyData: any) => {
   try {
     deletingKeyId.value = keyData.id;
     
-    await $fetch(`${config.apiBase}/api/api-keys/${keyData.id}/delete`, {
+    await $fetch(`${config.backend_url}/api/api-keys/${keyData.id}/delete`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token.value}`

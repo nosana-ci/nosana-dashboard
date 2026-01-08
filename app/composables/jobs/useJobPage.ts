@@ -1,11 +1,11 @@
-import { useWallet } from "solana-wallets-vue";
+import { useWallet } from "@nosana/solana-vue";
 
 import { useJob } from "./useJob";
 import { useNosPrice } from "./useNosPrice";
 import { useModal } from "./useModal";
 
 export function useJobPage(id: string) {
-  const { connected, publicKey } = useWallet();
+  const { connected, account } = useWallet();
   const { status, data: userData } = useAuth();
 
   const { job, endpoints, loading, jobInfo } = useJob(id);
@@ -17,8 +17,8 @@ export function useJobPage(id: string) {
     if (status.value === 'authenticated' && userData.value?.generatedAddress) {
       return userData.value.generatedAddress;
     }
-    if (connected.value && publicKey.value) {
-      return publicKey.value.toString();
+    if (connected.value && account.value?.address) {
+      return account.value.address;
     }
     return null;
   });

@@ -283,7 +283,7 @@
 <script setup lang="ts">
 import DeploymentsTable from '~/components/DeploymentsTable/Table.vue';
 import JobList from '~/components/List/JobList.vue';
-import { useWallet } from 'solana-wallets-vue';
+import { useWallet } from '@nosana/solana-vue';
 import { useAPI } from '~/composables/useAPI';
 import { computed, ref, onMounted, watch } from 'vue';
 import CreditBalance from "~/components/Account/CreditBalance.vue";
@@ -314,8 +314,17 @@ const { $colorMode } = useNuxtApp();
 const route = useRoute();
 const showSettingsModal = ref(false);
 const toast = useToast();
-const { connected, publicKey, wallet } = useWallet();
-const { nosana } = useSDK();
+const { connected, account, wallet } = useWallet();
+
+// Compatibility: create publicKey-like object from account
+const publicKey = computed(() => {
+  if (!account.value?.address) return null;
+  return {
+    toString: () => account.value!.address,
+    toBase58: () => account.value!.address,
+  };
+});
+const { nosana } = useKit();
 const claimingRewards = ref(false);
 const onboardingInProgress = ref(false);
 const creditBalanceRef = ref();
@@ -351,7 +360,7 @@ const checkFreeCreditsEligibility = async () => {
   }
 
   try {
-    const data = await $fetch<{ eligible: boolean }>(`${config.apiBase}/api/credits/request/eligibility`, {
+    const data = await $fetch<{ eligible: boolean }>(`${config.backend_url}/api/credits/request/eligibility`, {
       headers: {
         'Authorization': `Bearer ${token.value}`
       }
@@ -386,7 +395,7 @@ const fetchDeploymentsCount = async () => {
   }
 
   try {
-    const deployments = await nosana.value.deployments.list();
+    const deployments = await nosana.value.api.deployments.list();
     totalDeployments.value = deployments ? deployments.length : 0;
   } catch (error) {
     console.error('Error fetching deployments count:', error);
@@ -450,7 +459,8 @@ const checkBalances = async () => {
   loading.value = true;
   try {
     if (activeAddress.value) {
-      balance.value = await nosana.value.solana.getNosBalance(activeAddress.value);
+      const nosBalance = await nosana.value.nos.getBalance(activeAddress.value);
+      balance.value = { uiAmount: nosBalance };
       // Only fetch staking data for wallet connections
       if (addressSource.value === 'wallet') {
         try {
@@ -665,10 +675,11 @@ const GPU_COLORS: Record<string, string> = {
 const marketAddressToInfo = computed(() => {
   if (!marketsData.value) return {};
   return marketsData.value.reduce((acc: Record<string, { name: string, isCommunity: boolean }>, market: any) => {
-    if (market.slug?.toLowerCase().includes('nvidia')) {
+    // Include all markets, not just NVIDIA ones
+    if (market.address) {
       acc[market.address] = {
-        name: market.name.replace(' Community', ''), // Remove Community suffix
-        isCommunity: market.name.includes('Community')
+        name: market.name?.replace(' Community', '') || market.address.slice(0, 8) + '...', // Remove Community suffix or use truncated address
+        isCommunity: market.name?.includes('Community') || false
       };
     }
     return acc;
@@ -733,6 +744,7 @@ const chartData = computed(() => {
   (spendingHistory.value?.results || []).forEach((monthItem: MonthlyResult) => {
     monthItem.breakdown.forEach((b: any) => {
       const marketInfo = marketAddressToInfo.value[b.market];
+      // Include all markets, even if not in marketsData (custom markets)
       if (marketInfo) {
         const baseName = marketInfo.name;
         if (!marketGroups.has(baseName)) {
@@ -743,6 +755,16 @@ const chartData = computed(() => {
         // Note: Use total_usd from the *month* for ranking, not breakdown totalSpent
         // to handle cases where breakdown might be incomplete? Check API logic.
         // Let's stick to summing breakdown for now as it seems intended for usage calc.
+        gpuUsageCounts.set(baseName, (gpuUsageCounts.get(baseName) || 0) + b.totalSpent);
+      } else {
+        // Handle custom markets that aren't in marketsData
+        // Use truncated address as the name
+        const baseName = `Custom (${b.market.slice(0, 8)}...)`;
+        if (!marketGroups.has(baseName)) {
+          marketGroups.set(baseName, new Set());
+          gpuUsageCounts.set(baseName, 0);
+        }
+        marketGroups.get(baseName)?.add(b.market);
         gpuUsageCounts.set(baseName, (gpuUsageCounts.get(baseName) || 0) + b.totalSpent);
       }
     });
@@ -782,6 +804,9 @@ const chartData = computed(() => {
               } else {
                 premiumTotal += marketData.totalSpent;
               }
+            } else {
+              // Handle custom markets - treat as premium by default
+              premiumTotal += marketData.totalSpent;
             }
           }
         });
@@ -1052,7 +1077,7 @@ const loadInvitation = async () => {
     loadingInvitation.value = true;
     invitationError.value = '';
     
-    const response = await $fetch<Invitation>(`${config.apiBase}/api/credits/invitations/${invitationToken.value}`);
+    const response = await $fetch<Invitation>(`${config.backend_url}/api/credits/invitations/${invitationToken.value}`);
     invitation.value = response;
     
     if (response.isClaimed) {
