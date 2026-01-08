@@ -172,6 +172,9 @@ const signingMessage = ref(false);
 const backgroundImageKey = ref(0);
 
 const isCampaignMode = computed(() => {
+  console.log("route.query.code", route.query.code);
+  console.log("typeof window", window);
+  console.log("window.opener", window.opener);
   // Check for specific campaign code, but only if not in an OAuth popup flow
   return route.query.code === 'n7k2m5' && (typeof window !== 'undefined' && !window.opener);
 });
