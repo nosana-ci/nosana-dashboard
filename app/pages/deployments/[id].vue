@@ -45,6 +45,7 @@
                       {{ deployment.id }}
                     </p>
                   </div>
+                  <StatusTag :status="deployment.status" class="ml-4" />
                 </div>
               </div>
               <div class="deployment-tabs">
@@ -236,110 +237,18 @@
           <div class="p-5">
             <!-- Overview Tab -->
             <div v-if="activeTab === 'overview'">
-              <!-- Deployment Details Section -->
-              <div class="mb-5">
-                <h2 class="title is-5 mb-3">Deployment details</h2>
-                <div class="box is-borderless">
-                  <div class="table-container">
-                    <table class="table is-fullwidth mb-0">
-                      <tbody>
-                        <tr>
-                          <td class="va-bottom">Status</td>
-                          <td>
-                            <StatusTag :status="deployment.status" />
-                          </td>
-                        </tr>
-                        <!-- Vault Details Section -->
-                        <VaultOverviewRows
-                          v-if="hasVault && deploymentVault"
-                          :isTableRow="true"
-                          :deployment="deployment"
-                        />
-                        <tr>
-                          <td>Deployment strategy</td>
-                          <td>{{ deployment.strategy }}</td>
-                        </tr>
-                        <tr>
-                          <td>Replicas count</td>
-                          <td>{{ deployment.replicas }}</td>
-                        </tr>
-                        <tr>
-                          <td>GPU</td>
-                          <td v-if="deployment && deployment.market">
-                            <span
-                              v-if="
-                                testgridMarkets &&
-                                testgridMarkets.find(
-                                  (tgm: any) =>
-                                    tgm.address === deployment?.market
-                                )
-                              "
-                            >
-                              {{
-                                testgridMarkets.find(
-                                  (tgm: any) =>
-                                    tgm.address === deployment?.market
-                                ).name
-                              }}
-                            </span>
-                            <span v-else>{{ deployment.market }}</span>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td>Container timeout</td>
-                          <td>
-                            <SecondsFormatter
-                              :seconds="deployment.timeout * 60"
-                              :showSeconds="false"
-                            />
-                          </td>
-                        </tr>
-
-                        <!-- Scheduled deployment cron schedule -->
-                        <tr
-                          v-if="
-                            deployment.strategy?.toUpperCase() ===
-                              'SCHEDULED' && deploymentSchedule
-                          "
-                        >
-                          <td>Schedule</td>
-                          <td>
-                            <div class="is-flex is-flex-direction-column">
-                              <span class="is-family-monospace">{{
-                                deploymentSchedule
-                              }}</span>
-                              <span class="is-size-7 has-text-grey mt-1">{{
-                                parseCronExpression(deploymentSchedule || "")
-                              }}</span>
-                            </div>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td>Created on</td>
-                          <td>{{ formatDate(deployment.created_at) }}</td>
-                        </tr>
-                        <tr>
-                          <td>Last updated on</td>
-                          <td>{{ formatDate(deployment.updated_at) }}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-
               <!-- Endpoints Section -->
               <div v-if="deploymentEndpoints.length > 0" class="mb-5">
                 <h2 class="title is-5 mb-3">Endpoints</h2>
                 <div class="box is-borderless">
                   <div class="table-container">
-                    <table class="table is-fullwidth mb-0">
+                    <table class="table is-fullwidth mb-0" style="table-layout: fixed;">
                       <thead>
                         <tr>
-                          <th>Operation</th>
-                          <th>Port</th>
-                          <th>URL</th>
-                          <th>Status</th>
+                          <th style="width: 25%;">Operation</th>
+                          <th style="width: 10%;">Port</th>
+                          <th style="width: 12%;">Status</th>
+                          <th style="width: 53%;">URL</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -350,6 +259,17 @@
                         >
                           <td>{{ endpoint.opId }}</td>
                           <td>{{ endpoint.port }}</td>
+                          <td>
+                            <span
+                              v-if="deployment.status === 'RUNNING' || deployment.status === 'STARTING'"
+                              class="tag is-success is-light"
+                            >
+                              Active
+                            </span>
+                            <span v-else class="tag is-danger is-light">
+                              Inactive
+                            </span>
+                          </td>
                           <td>
                             <a
                               v-if="deployment.status === 'RUNNING' || deployment.status === 'STARTING'"
@@ -362,17 +282,6 @@
                               {{ endpoint.url }}
                             </span>
                           </td>
-                          <td>
-                            <span
-                              v-if="deployment.status === 'RUNNING' || deployment.status === 'STARTING'"
-                              class="tag is-success is-light"
-                            >
-                              Active
-                            </span>
-                            <span v-else class="tag is-danger is-light">
-                              Inactive
-                            </span>
-                          </td>
                         </tr>
                       </tbody>
                     </table>
@@ -381,29 +290,95 @@
               </div>
 
               <!-- Job Activity Section -->
-              <div>
-                <h2 class="title is-5 mb-3">Job activity</h2>
-
-                <!-- Job Activity Tabs -->
-                <div class="deployment-tabs mb-3 ml-4">
-                  <button
-                    @click="jobActivityTab = 'running'"
-                    class="tab-button"
-                    :class="{ 'is-active': jobActivityTab === 'running' }"
-                  >
-                    Running
-                  </button>
-                  <button
-                    @click="jobActivityTab = 'history'"
-                    class="tab-button"
-                    :class="{ 'is-active': jobActivityTab === 'history' }"
-                  >
-                    History
-                  </button>
+              <div class="mb-5">
+                <div class="is-flex is-align-items-center mb-3">
+                  <h2 class="title is-5 mb-0 mr-3">Job activity</h2>
+                  <!-- Job Activity Tabs (only show if 5+ jobs) -->
+                  <div v-if="totalJobs >= 5" class="deployment-tabs">
+                    <button
+                      @click="jobActivityTab = 'running'"
+                      class="tab-button is-small"
+                      :class="{ 'is-active': jobActivityTab === 'running' }"
+                    >
+                      Running
+                    </button>
+                    <button
+                      @click="jobActivityTab = 'history'"
+                      class="tab-button is-small"
+                      :class="{ 'is-active': jobActivityTab === 'history' }"
+                    >
+                      History
+                    </button>
+                  </div>
                 </div>
 
-                <!-- Running Jobs -->
-                <div v-if="jobActivityTab === 'running'">
+                <!-- All Jobs (when tabs are hidden, < 5 jobs) -->
+                <div v-if="totalJobs < 5">
+                  <div
+                    v-if="allJobs.length === 0"
+                    class="box has-text-centered p-6"
+                  >
+                    <p class="has-text-grey">
+                      <span v-if="deployment.status === 'DRAFT'"
+                        >Start deployment to create jobs</span
+                      >
+                      <span v-else>No jobs yet</span>
+                    </p>
+                  </div>
+
+                  <div v-else class="box is-borderless">
+                    <div class="table-container">
+                      <table class="table is-fullwidth mb-0" style="table-layout: fixed;">
+                        <thead>
+                          <tr>
+                            <th style="width: 25%;">Name</th>
+                            <th style="width: 10%;">Revision</th>
+                            <th style="width: 12%;">Status</th>
+                            <th style="width: 15%;">Duration</th>
+                            <th style="width: 18%;">Created on</th>
+                            <th style="width: 20%;">Navigation</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr v-for="job in allJobs" :key="job.job">
+                            <td style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 0;">
+                              <span class="is-family-monospace is-size-7">{{
+                                job.job
+                              }}</span>
+                            </td>
+                            <td>
+                              {{ job.revision || "-" }}
+                            </td>
+                            <td>
+                              <JobStatus :status="job.state || 0" />
+                            </td>
+                            <td>
+                              <span v-if="getJobDuration(job.job)">
+                                <SecondsFormatter
+                                  :seconds="getJobDuration(job.job)"
+                                  :showSeconds="true"
+                                />
+                              </span>
+                              <span v-else>-</span>
+                            </td>
+                            <td>{{ formatDate(job.created_at) }}</td>
+                            <td>
+                              <NuxtLink
+                                :to="`/deployments/${deployment.id}/jobs/${job.job}`"
+                                class="has-text-link"
+                              >
+                                View job
+                              </NuxtLink>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Running Jobs (when tabs are shown, >= 5 jobs) -->
+                <div v-else-if="jobActivityTab === 'running'">
                   <div
                     v-if="activeJobs.length === 0"
                     class="box has-text-centered p-6"
@@ -418,20 +393,20 @@
 
                   <div v-else class="box is-borderless">
                     <div class="table-container">
-                      <table class="table is-fullwidth mb-0">
+                      <table class="table is-fullwidth mb-0" style="table-layout: fixed;">
                         <thead>
                           <tr>
-                            <th>Name</th>
-                            <th>Revision</th>
-                            <th>Status</th>
-                            <th>Duration</th>
-                            <th>Created on</th>
-                            <th></th>
+                            <th style="width: 25%;">Name</th>
+                            <th style="width: 10%;">Revision</th>
+                            <th style="width: 12%;">Status</th>
+                            <th style="width: 15%;">Duration</th>
+                            <th style="width: 18%;">Created on</th>
+                            <th style="width: 20%;">Navigation</th>
                           </tr>
                         </thead>
                         <tbody>
                           <tr v-for="job in activeJobs" :key="job.job">
-                            <td>
+                            <td style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 0;">
                               <span class="is-family-monospace is-size-7">{{
                                 job.job
                               }}</span>
@@ -478,20 +453,20 @@
 
                   <div v-else class="box is-borderless">
                     <div class="table-container">
-                      <table class="table is-fullwidth mb-0">
+                      <table class="table is-fullwidth mb-0" style="table-layout: fixed;">
                         <thead>
                           <tr>
-                            <th>Name</th>
-                            <th>Revision</th>
-                            <th>Status</th>
-                            <th>Duration</th>
-                            <th>Created on</th>
-                            <th></th>
+                            <th style="width: 25%;">Name</th>
+                            <th style="width: 10%;">Revision</th>
+                            <th style="width: 12%;">Status</th>
+                            <th style="width: 15%;">Duration</th>
+                            <th style="width: 18%;">Created on</th>
+                            <th style="width: 20%;">Navigation</th>
                           </tr>
                         </thead>
                         <tbody>
                           <tr v-for="job in historicalJobs" :key="job.job">
-                            <td>
+                            <td style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 0;">
                               <span class="is-family-monospace is-size-7">{{
                                 job.job
                               }}</span>
@@ -526,6 +501,98 @@
                     </div>
                   </div>
                 </div>
+              </div>
+
+              <!-- Deployment Details Section -->
+              <div class="mb-5">
+                <h2 class="title is-5 mb-3">Deployment details</h2>
+                <div class="box is-borderless">
+                  <div class="table-container">
+                    <table class="table is-fullwidth mb-0" style="table-layout: fixed;">
+                      <tbody>
+                        <!-- Vault Details Section -->
+                        <VaultOverviewRows
+                          v-if="hasVault && deploymentVault"
+                          :isTableRow="true"
+                          :deployment="deployment"
+                        />
+                        <tr>
+                          <td style="width: 25%;">Deployment strategy</td>
+                          <td style="width: 75%;">{{ deployment.strategy }}</td>
+                        </tr>
+                        <tr>
+                          <td style="width: 25%;">Replicas count</td>
+                          <td style="width: 75%;">{{ deployment.replicas }}</td>
+                        </tr>
+                        <tr>
+                          <td style="width: 25%;">GPU</td>
+                          <td style="width: 75%;" v-if="deployment && deployment.market">
+                            <span
+                              v-if="
+                                testgridMarkets &&
+                                testgridMarkets.find(
+                                  (tgm: any) =>
+                                    tgm.address === deployment?.market
+                                )
+                              "
+                            >
+                              {{
+                                testgridMarkets.find(
+                                  (tgm: any) =>
+                                    tgm.address === deployment?.market
+                                ).name
+                              }}
+                            </span>
+                            <span v-else>{{ deployment.market }}</span>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td style="width: 25%;">Container timeout</td>
+                          <td style="width: 75%;">
+                            <SecondsFormatter
+                              :seconds="deployment.timeout * 60"
+                              :showSeconds="false"
+                            />
+                          </td>
+                        </tr>
+
+                        <!-- Scheduled deployment cron schedule -->
+                        <tr
+                          v-if="
+                            deployment.strategy?.toUpperCase() ===
+                              'SCHEDULED' && deploymentSchedule
+                          "
+                        >
+                          <td style="width: 25%;">Schedule</td>
+                          <td style="width: 75%;">
+                            <div class="is-flex is-flex-direction-column">
+                              <span class="is-family-monospace">{{
+                                deploymentSchedule
+                              }}</span>
+                              <span class="is-size-7 has-text-grey mt-1">{{
+                                parseCronExpression(deploymentSchedule || "")
+                              }}</span>
+                            </div>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td style="width: 25%;">Created on</td>
+                          <td style="width: 75%;">{{ formatDate(deployment.created_at) }}</td>
+                        </tr>
+                        <tr>
+                          <td style="width: 25%;">Last updated on</td>
+                          <td style="width: 75%;">{{ formatDate(deployment.updated_at) }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Logs Section (only show if single job) -->
+              <div v-if="activeJobs.length === 1 && activeLogsJobId" class="mb-5">
+                <h2 class="title is-5 mb-3">Logs</h2>
+                <JobLogsContainer :job-id="activeLogsJobId" :deployment-id="route.params.id as string" />
               </div>
             </div>
 
@@ -692,8 +759,8 @@
                 <p class="has-text-grey">No running jobs to show logs for</p>
               </div>
               <div v-else class="deployment-logs-content">
-                <!-- Job Tabs -->
-                <div class="deployment-tabs mb-3">
+                <!-- Job Tabs (only show if more than one job) -->
+                <div v-if="activeJobs.length > 1" class="deployment-tabs mb-3">
                   <button
                     v-for="job in activeJobs"
                     :key="job.job"
@@ -1283,12 +1350,18 @@ const loading = ref(true);
 const error = ref<string | null>(null);
 const activeTab = ref("overview");
 
-// Available tabs
-const availableTabs = ["overview", "logs", "events", "job-definition"];
+// Available tabs - hide logs tab if only 1 job (shown in overview instead)
+const availableTabs = computed(() => {
+  const tabs = ["overview", "logs", "events", "job-definition"];
+  if (activeJobs.value.length <= 1) {
+    return tabs.filter(t => t !== "logs");
+  }
+  return tabs;
+});
 
 // Initialize activeTab from URL query parameter
 const initialTab = route.query.tab?.toString();
-if (initialTab && availableTabs.includes(initialTab)) {
+if (initialTab && ["overview", "logs", "events", "job-definition"].includes(initialTab)) {
   activeTab.value = initialTab;
 }
 const activeLogsJobId = ref<string | null>(null);
@@ -1332,7 +1405,7 @@ if (initialAction && availableActions.includes(initialAction)) {
 }
 // Debug instrumentation for page header icon
 const headerIconRef = ref<HTMLElement | null>(null);
-const { data: testgridMarkets } = useAPI("/api/markets");
+const { data: testgridMarkets } = useAPI("/api/markets", { default: () => [] });
 // Safe accessors for optional DM fields
 const deploymentSchedule = computed<string | null>(() => {
   const d = deployment.value as unknown as { schedule?: string } | null;
@@ -1734,6 +1807,12 @@ const historicalJobs = computed((): DeploymentJob[] => {
   // Filter for completed/stopped jobs (states: DONE=2, STOPPED=3, TIMEOUT=4, ERROR=5)
   return enrichedJobs.filter((job) => job.state >= 2);
 });
+
+// Total jobs count for determining if tabs should be shown
+const totalJobs = computed(() => activeJobs.value.length + historicalJobs.value.length);
+
+// Combined jobs list (when tabs are hidden)
+const allJobs = computed(() => [...activeJobs.value, ...historicalJobs.value]);
 
 // Deployment endpoints
 const deploymentEndpoints = computed(() => {
@@ -2194,13 +2273,21 @@ onBeforeRouteLeave(() => {
   stopTasksPolling();
 });
 
-// Auto-select first job when switching to logs tab
+// Auto-select job for logs display
 watch(
   () => [activeTab.value, activeJobs.value],
   ([newTab, jobs]) => {
-    if (newTab === "logs" && jobs.length > 0 && !activeLogsJobId.value) {
-      const first: any = (jobs as any)[0];
-      activeLogsJobId.value = (first?.job || first) as string;
+    if (jobs && jobs.length > 0) {
+      // Single job: always select for overview logs
+      if (jobs.length === 1) {
+        const first: any = (jobs as any)[0];
+        activeLogsJobId.value = (first?.job || first) as string;
+      }
+      // Multiple jobs: select when switching to logs tab
+      else if (newTab === "logs" && !activeLogsJobId.value) {
+        const first: any = (jobs as any)[0];
+        activeLogsJobId.value = (first?.job || first) as string;
+      }
     }
   },
   { immediate: true }

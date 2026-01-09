@@ -285,7 +285,7 @@ const { data: nodeInfo } = useAPI(
   `https://${props.job.node}.${useRuntimeConfig().public.nodeDomain}/node/info`
 );
 
-const { data: apiMarkets, pending: loadingMarkets } = useAPI("/api/markets");
+const { data: apiMarkets, pending: loadingMarkets } = useAPI("/api/markets", { default: () => [] });
 
 const jobDataForPrice = computed(() => {
   return {
