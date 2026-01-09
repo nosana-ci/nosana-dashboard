@@ -185,7 +185,7 @@ const backgroundImageKey = ref(0);
 
 const isCampaignMode = computed(() => {
   // Check for specific campaign code, but only if not in an OAuth popup flow
-  return route.query.code === 'n7k2m5' && (typeof window !== 'undefined' && !window.opener);
+  return route.query.context === 'get-started' && (typeof window !== 'undefined' && !window.opener);
 });
 
 // Redirect if already authenticated (for Google/Twitter login)
