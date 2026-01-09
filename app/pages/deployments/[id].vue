@@ -339,22 +339,39 @@
                           <th>Operation</th>
                           <th>Port</th>
                           <th>URL</th>
+                          <th>Status</th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr
                           v-for="endpoint in deploymentEndpoints"
                           :key="`${endpoint.opId}-${endpoint.port}`"
+                          :style="{ opacity: deployment.status !== 'RUNNING' && deployment.status !== 'STARTING' ? '0.5' : '1' }"
                         >
                           <td>{{ endpoint.opId }}</td>
                           <td>{{ endpoint.port }}</td>
                           <td>
                             <a
+                              v-if="deployment.status === 'RUNNING' || deployment.status === 'STARTING'"
                               :href="endpoint.url"
                               target="_blank"
                               class="has-text-link endpoint-url"
                               >{{ endpoint.url }} ↗</a
                             >
+                            <span v-else class="has-text-grey-light" style="text-decoration: line-through;">
+                              {{ endpoint.url }}
+                            </span>
+                          </td>
+                          <td>
+                            <span
+                              v-if="deployment.status === 'RUNNING' || deployment.status === 'STARTING'"
+                              class="tag is-success is-light"
+                            >
+                              Active
+                            </span>
+                            <span v-else class="tag is-danger is-light">
+                              Inactive
+                            </span>
                           </td>
                         </tr>
                       </tbody>
