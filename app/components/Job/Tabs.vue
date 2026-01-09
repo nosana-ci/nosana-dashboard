@@ -250,7 +250,7 @@ const hostSpecs = computed(() => {
 });
 
 // Get market data for GPU pool names
-const { data: apiMarkets } = useAPI("/api/markets");
+const { data: apiMarkets } = useAPI("/api/markets", { default: () => [] });
 
 // Format start time
 const formatStartTime = (timeStart: number) => {
