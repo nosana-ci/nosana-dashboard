@@ -25,7 +25,7 @@
               <div class="header-left-section">
                 <div class="is-flex is-align-items-center mb-0">
                   <button
-                    @click="router.back()"
+                    @click="router.push(`/deployments`)"
                     class="button is-ghost back-button mr-4 pb-1 height-auto"
                   >
                     <span class="icon is-small">
