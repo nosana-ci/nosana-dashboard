@@ -1,5 +1,5 @@
-import { createNosanaClient, type NosanaClient, NosanaNetwork, type AuthorizationStore, type GenerateOptions, type Wallet } from "@nosana/kit";
-import { useWalletAccountSigner, useWalletAccountTransactionSigner, useWallet } from "@nosana/solana-vue";
+import { createNosanaClient, type NosanaClient, NosanaNetwork, type AuthorizationStore, type GenerateOptions, type Wallet, type PartialClientConfig } from "@nosana/kit";
+import { useWalletAccountPartialSigner, useWallet } from "@nosana/solana-vue";
 import { computed, ref, watch } from "vue";
 import { useCookies } from '@vueuse/integrations/useCookies';
 import type { CookieSetOptions } from 'universal-cookie';
@@ -44,57 +44,8 @@ export function useKit() {
     return null;
   });
   
-  // Combine signers to create a complete Wallet (MessageSigner & TransactionSigner)
-  const walletSigner = useWalletAccountSigner(account, currentChain);
-  const transactionSigner = useWalletAccountTransactionSigner(account, currentChain);
-  
-  const wallet = computed<Wallet | null>(() => {
-    if (!account.value?.address) {
-      return null;
-    }
-    
-    const sendingSigner = walletSigner.value;
-    const signingSigner = transactionSigner.value;
-    
-    if (!sendingSigner || !signingSigner) {
-      return null;
-    }
-    
-    // Combine both signers - signingSigner should have signTransaction/signTransactions
-    // The order matters: signingSigner last so its methods override sendingSigner if there are conflicts
-    const combinedWallet: any = {
-      ...sendingSigner,
-      ...signingSigner,
-      address: account.value.address,
-    };
-    
-    // If wallet has modifyAndSignTransactions but not signTransactions, create a wrapper
-    // modifyAndSignTransactions returns Transaction[], but signTransactions should return SignatureDictionary[]
-    // We need to extract signatures from the modified transactions
-    if ('modifyAndSignTransactions' in combinedWallet && !('signTransactions' in combinedWallet)) {
-      const originalModifyAndSign = combinedWallet.modifyAndSignTransactions;
-      combinedWallet.signTransactions = async (transactions: any[]) => {
-        // Call modifyAndSignTransactions which returns modified transactions with signatures
-        const modifiedTransactions = await originalModifyAndSign.call(combinedWallet, transactions);
-        // Extract signatures from the modified transactions
-        // Each transaction has a signatures property which is a SignatureDictionary
-        return modifiedTransactions.map((tx: any) => {
-          if (tx && typeof tx === 'object' && 'signatures' in tx) {
-            return tx.signatures;
-          }
-          // Fallback: return empty dict if structure is unexpected
-          return {};
-        });
-      };
-    }
-    
-    // If wallet has modifyAndSignMessages but not signMessages, add signMessages as alias
-    if ('modifyAndSignMessages' in combinedWallet && !('signMessages' in combinedWallet)) {
-      combinedWallet.signMessages = combinedWallet.modifyAndSignMessages;
-    }
-    
-    return combinedWallet as Wallet;
-  });
+  // retrieve Wallet from UiWalletAccount.
+  const wallet: Ref<Wallet | null> = useWalletAccountPartialSigner(account, currentChain);
   
   const connected = computed(() => walletConnected.value && account.value !== null);
   
@@ -129,12 +80,7 @@ export function useKit() {
       const rpcUrl = config.public.rpcUrl as string | undefined;
       const store = !apiKey && account.value?.address ? createAuthorizationStore() : undefined;
       
-      const clientConfig: {
-        api?: { apiKey?: string; backend_url?: string };
-        authorization?: { store: AuthorizationStore['actions'] };
-        solana?: { rpcEndpoint: string };
-        wallet?: typeof walletAdapter;
-      } = {};
+      const clientConfig: PartialClientConfig = {};
       
       if (apiKey || backendUrl) {
         clientConfig.api = {};
