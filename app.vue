@@ -9,14 +9,14 @@
 
 <script setup lang="ts">
 useSeoMeta({
-  title: 'Nosana Dashboard',
-  ogTitle: 'Nosana Dashboard',
-  twitterTitle: 'Nosana Dashboard',
+  title: 'Nosana Deploy',
+  ogTitle: 'Nosana Deploy',
+  twitterTitle: 'Nosana Deploy',
   description: 'Powering the AI revolution',
   ogDescription: 'Powering the AI revolution',
   twitterDescription: 'Powering the AI revolution',
-  ogImage: 'https://dashboard.nosana.com/img/screenshot.png',
-  twitterImage: 'https://dashboard.nosana.com/img/screenshot.png',
+  ogImage: 'https://deploy.nosana.com/img/screenshot.png',
+  twitterImage: 'https://deploy.nosana.com/img/screenshot.png',
   twitterCard: 'summary_large_image'
 })
 
@@ -27,8 +27,9 @@ useHead({
   link: [
     {
       rel: 'icon',
-      type: 'image/ico',
-      href: '/favicon.ico'
+      type: 'image/x-icon',
+      href: '/favicon.ico',
+      sizes: 'any'
     }
   ]
 })
