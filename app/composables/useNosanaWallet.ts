@@ -76,5 +76,6 @@ export function useNosanaWallet() {
     publicKey,
     generateAuthHeaders,
     signMessageError,
+    refreshAllBalances,
   };
 }

@@ -260,15 +260,9 @@
                           <td>{{ endpoint.opId }}</td>
                           <td>{{ endpoint.port }}</td>
                           <td>
-                            <span
-                              v-if="deployment.status === 'RUNNING' || deployment.status === 'STARTING'"
-                              class="tag is-success is-light"
-                            >
-                              Active
-                            </span>
-                            <span v-else class="tag is-danger is-light">
-                              Inactive
-                            </span>
+                            <StatusTag
+                              :status="deployment.status === 'RUNNING' || deployment.status === 'STARTING' ? 'ACTIVE' : 'INACTIVE'"
+                            />
                           </td>
                           <td>
                             <a
@@ -1256,6 +1250,7 @@
 <script setup lang="ts">
 import type { Deployment, JobDefinition } from "@nosana/kit";
 import { useVaultModal } from "~/composables/useVaultModal";
+import { updateVaultBalance } from "~/composables/useDeploymentVault";
 import { useToast } from "vue-toastification";
 import { useWallet } from "@nosana/solana-vue";
 import { useAuth } from "#imports";
@@ -1467,6 +1462,15 @@ watch(
 const statusPollingInterval = ref<NodeJS.Timeout | null>(null);
 const jobPollingInterval = ref<NodeJS.Timeout | null>(null);
 
+// Adaptive polling state tracking
+const adaptivePollingState = ref<{
+  isFastPolling: boolean;
+  expectedStatus?: string;
+  fastPollStartTime?: number;
+}>({
+  isFastPolling: false,
+});
+
 // Add debugging for polling state
 const pollingDebug = ref({
   statusPollingActive: false,
@@ -1594,7 +1598,7 @@ const makeRevision = async () => {
   }
 };
 
-const loadDeployment = async (silent = false) => {
+const loadDeployment = async (silent = false, forceRefreshJobStates = false) => {
   // Skip parent deployment fetch when on job subroute
   if ((route.params as any)?.jobaddress) {
     if (!silent) loading.value = false;
@@ -1644,11 +1648,16 @@ const loadDeployment = async (silent = false) => {
     // Update job states for active jobs during polling
     if (deployment.value.jobs && deployment.value.jobs.length > 0) {
       for (const job of deployment.value.jobs) {
-        // Only fetch state for jobs that aren't already in a completed state
+        // If forceRefreshJobStates is true, always fetch state regardless of current state
+        // On initial load (!silent), fetch all jobs to get duration data
+        // During polling (silent), only fetch state for jobs that aren't already in a completed state
         // Completed states: DONE=2, STOPPED=3, TIMEOUT=4, ERROR=5
         const currentState = jobStates.value[job.job];
-        if (currentState !== undefined && currentState >= 2) {
-          // Job is already completed, skip fetching
+        const hasJobData = allJobsData.value[job.job] !== undefined;
+        
+        // Skip completed jobs during polling if we already have their data
+        if (!forceRefreshJobStates && silent && currentState !== undefined && currentState >= 2 && hasJobData) {
+          // Job is already completed and we have data, skip fetching during polling
           continue;
         }
 
@@ -1729,6 +1738,11 @@ const deploymentVault = computed(() => {
 const jobStates = ref<Record<string, number>>({});
 const allJobsData = ref<Record<string, any>>({});
 
+// Check if there are any queued (0) or running (1) jobs
+const hasActiveJobs = computed(() => {
+  return Object.values(jobStates.value).some(state => state === 0 || state === 1);
+});
+
 
 
 
@@ -1769,11 +1783,11 @@ const getJobDuration = (jobId: string): number | null => {
   if (!jobData?.timeStart) return null;
 
   const timeStart = jobData.timeStart;
-  const timeFinished = jobData.timeFinished;
+  const timeEnd = jobData.timeEnd || jobData.timeFinished;
 
-  // For completed jobs, use timeFinished - timeStart
-  if (timeFinished && jobState >= 2) {
-    return Math.max(0, timeFinished - timeStart);
+  // For completed jobs, use timeEnd - timeStart
+  if (timeEnd && jobState >= 2) {
+    return Math.max(0, timeEnd - timeStart);
   }
 
   // For running jobs, use current time - timeStart
@@ -1904,18 +1918,8 @@ const startDeployment = async () => {
     "Deployment started successfully"
   );
 
-  // Do an initial quick poll after 3 seconds to get faster feedback
-  setTimeout(async () => {
-    if (
-      deployment.value?.status?.toUpperCase() === "RUNNING" ||
-      deployment.value?.status?.toUpperCase() === "STARTING"
-    ) {
-      await loadDeployment(true);
-    }
-  }, 3000);
-
-  // Start regular job polling after starting
-  startJobPolling();
+  // Start fast polling expecting RUNNING status
+  startFastPolling("RUNNING");
 };
 
 const stopDeployment = async () => {
@@ -1928,13 +1932,16 @@ const stopDeployment = async () => {
     "Deployment stopped successfully"
   );
 
-  // Stop job polling after stopping - status polling will continue to monitor stop progress
-  stopJobPolling();
+  // Force refresh job states to update running jobs to stopped state
+  await loadDeployment(true, true);
 
-  // Status polling will automatically stop when deployment reaches STOPPED state
-  if (!statusPollingInterval.value) {
-    startDeploymentPolling();
+  // Only stop job polling if there are no queued or running jobs
+  if (!hasActiveJobs.value) {
+    stopJobPolling();
   }
+
+  // Start fast polling expecting STOPPED status
+  startFastPolling("STOPPED");
 };
 
 const archiveDeployment = async () => {
@@ -1970,12 +1977,18 @@ const updateReplicas = async () => {
     return;
   }
 
+  const currentStatus = deployment.value?.status?.toUpperCase();
   await executeDeploymentAction(
     () => deployment.value!.updateReplicaCount(newReplicaCount.value),
     `Replica count updated to ${newReplicaCount.value}`
   );
 
   newReplicaCount.value = null;
+
+  // Start fast polling if deployment is running (jobs will change)
+  if (currentStatus === "RUNNING" || currentStatus === "STARTING") {
+    startFastPolling("RUNNING");
+  }
 };
 
 const updateJobTimeout = async () => {
@@ -1984,12 +1997,18 @@ const updateJobTimeout = async () => {
     return;
   }
 
+  const currentStatus = deployment.value?.status?.toUpperCase();
   await executeDeploymentAction(
     () => deployment.value!.updateTimeout(Math.round(newTimeoutHours.value * 3600)),
     `Job timeout updated to ${newTimeoutHours.value} hours`
   );
 
   newTimeoutHours.value = null;
+
+  // Start fast polling if deployment is running (jobs might change)
+  if (currentStatus === "RUNNING" || currentStatus === "STARTING") {
+    startFastPolling("RUNNING");
+  }
 };
 
 const updateSchedule = async () => {
@@ -2003,6 +2022,7 @@ const updateSchedule = async () => {
     return;
   }
 
+  const currentStatus = deployment.value?.status?.toUpperCase();
   try {
     actionLoading.value = true;
     await deployment.value.updateSchedule(newSchedule.value);
@@ -2014,6 +2034,11 @@ const updateSchedule = async () => {
     // Wait a moment for backend to process, then refresh
     await new Promise((resolve) => setTimeout(resolve, 500));
     await loadDeployment(true);
+
+    // Start fast polling if deployment is running (jobs might change)
+    if (currentStatus === "RUNNING" || currentStatus === "STARTING") {
+      startFastPolling("RUNNING");
+    }
 
     newSchedule.value = "";
   } catch (error: any) {
@@ -2179,7 +2204,7 @@ const stopTasksPolling = () => {
   }
 };
 
-const startDeploymentPolling = () => {
+const startDeploymentPolling = (intervalMs: number = 5000) => {
   if (statusPollingInterval.value) {
     clearInterval(statusPollingInterval.value);
   }
@@ -2192,13 +2217,38 @@ const startDeploymentPolling = () => {
     pollingDebug.value.lastStatusPoll = new Date();
     await loadDeployment(true);
 
+    // Check if expected state transition occurred (adaptive polling)
+    const currentStatus = deployment.value?.status?.toUpperCase() || "";
+    if (adaptivePollingState.value.expectedStatus && 
+        currentStatus === adaptivePollingState.value.expectedStatus.toUpperCase()) {
+      // Expected state reached, switch back to normal polling
+      adaptivePollingState.value.isFastPolling = false;
+      adaptivePollingState.value.expectedStatus = undefined;
+      adaptivePollingState.value.fastPollStartTime = undefined;
+      stopDeploymentPolling();
+      startDeploymentPolling(5000); // Normal interval
+      return;
+    }
+
+    // Stop fast polling after 30 seconds if expected state not reached
+    if (adaptivePollingState.value.isFastPolling && 
+        adaptivePollingState.value.fastPollStartTime &&
+        Date.now() - adaptivePollingState.value.fastPollStartTime > 30000) {
+      adaptivePollingState.value.isFastPolling = false;
+      adaptivePollingState.value.expectedStatus = undefined;
+      adaptivePollingState.value.fastPollStartTime = undefined;
+      stopDeploymentPolling();
+      startDeploymentPolling(5000); // Fall back to normal interval
+      return;
+    }
+
     const finalStates = ["STOPPED", "ARCHIVED", "ERROR"];
-    if (finalStates.includes(deployment.value?.status?.toUpperCase() || "")) {
+    if (finalStates.includes(currentStatus)) {
       stopDeploymentPolling();
       stopJobPolling();
       stopTasksPolling();
     }
-  }, 5000);
+  }, intervalMs);
 };
 
 const stopDeploymentPolling = () => {
@@ -2222,12 +2272,38 @@ const startJobPolling = (intervalMs: number = 5000) => {
     pollingDebug.value.lastJobPoll = new Date();
 
     const status = deployment.value?.status?.toUpperCase();
-    if (status !== "RUNNING" && status !== "STARTING") {
+    
+    // Only stop polling if deployment is not running/starting AND no queued/running jobs
+    if (status !== "RUNNING" && status !== "STARTING" && !hasActiveJobs.value) {
       stopJobPolling();
       return;
     }
 
     await loadDeployment(true);
+
+    // Check if expected state transition occurred (adaptive polling)
+    if (adaptivePollingState.value.expectedStatus && 
+        status === adaptivePollingState.value.expectedStatus.toUpperCase()) {
+      // Expected state reached, switch back to normal polling
+      adaptivePollingState.value.isFastPolling = false;
+      adaptivePollingState.value.expectedStatus = undefined;
+      adaptivePollingState.value.fastPollStartTime = undefined;
+      stopJobPolling();
+      startJobPolling(5000); // Normal interval
+      return;
+    }
+
+    // Stop fast polling after 30 seconds if expected state not reached
+    if (adaptivePollingState.value.isFastPolling && 
+        adaptivePollingState.value.fastPollStartTime &&
+        Date.now() - adaptivePollingState.value.fastPollStartTime > 30000) {
+      adaptivePollingState.value.isFastPolling = false;
+      adaptivePollingState.value.expectedStatus = undefined;
+      adaptivePollingState.value.fastPollStartTime = undefined;
+      stopJobPolling();
+      startJobPolling(5000); // Fall back to normal interval
+      return;
+    }
   }, intervalMs);
 };
 
@@ -2239,7 +2315,29 @@ const stopJobPolling = () => {
   }
 };
 
-// Removed fast job polling - was too aggressive at 1 second intervals
+// Start fast polling after an action that expects a state change
+const startFastPolling = (expectedStatus: string) => {
+  adaptivePollingState.value = {
+    isFastPolling: true,
+    expectedStatus,
+    fastPollStartTime: Date.now(),
+  };
+
+  // Start fast polling at 1.5 second intervals
+  if (statusPollingInterval.value) {
+    stopDeploymentPolling();
+  }
+  startDeploymentPolling(1500);
+
+  // Also start fast job polling if deployment is running/starting
+  const currentStatus = deployment.value?.status?.toUpperCase();
+  if (currentStatus === "RUNNING" || currentStatus === "STARTING") {
+    if (jobPollingInterval.value) {
+      stopJobPolling();
+    }
+    startJobPolling(1500);
+  }
+};
 
 // Click outside handler to close dropdown
 const handleClickOutside = (event: MouseEvent) => {
@@ -2355,11 +2453,17 @@ watch(
       startTasksPolling();
     }
 
-    // Stop all polling when deployment stops running
+    // Stop job polling when deployment stops running, but only if no queued/running jobs
+    // Keep deployment polling if fast polling is active (waiting for expected state)
     if (status !== "RUNNING" && status !== "STARTING") {
-      stopJobPolling();
-      stopDeploymentPolling();
-      stopTasksPolling();
+      if (!hasActiveJobs.value) {
+        stopJobPolling();
+      }
+      // Don't stop deployment polling if we're in fast polling mode (waiting for expected state)
+      if (!adaptivePollingState.value.isFastPolling) {
+        stopDeploymentPolling();
+        stopTasksPolling();
+      }
     }
   },
   { immediate: true }
@@ -2383,9 +2487,9 @@ const switchAction = (action: string) => {
   else if (action === "update-timeout") showTimeoutModal.value = true;
   else if (action === "update-schedule") showScheduleModal.value = true;
   else if (action === "topup" && deploymentVault.value) {
-    openVaultModal(deploymentVault.value, "topup", () => {});
+    openVaultModal(deploymentVault.value, "topup", () => updateVaultBalance(deploymentVault.value!));
   } else if (action === "withdraw" && deploymentVault.value) {
-    openVaultModal(deploymentVault.value, "withdraw", () => {});
+    openVaultModal(deploymentVault.value, "withdraw", () => updateVaultBalance(deploymentVault.value!));
   }
 
   router.replace({
@@ -2438,14 +2542,14 @@ watch(
   deploymentVault,
   (vault) => {
     const action = route.query.action?.toString();
-    if (vault && (action === "topup" || action === "withdraw")) {
-      openVaultModal(vault, action, () => {});
+    if (vault && (action === "topup" || action === "withdraw") && !vaultModalState.value.modalType) {
+      openVaultModal(vault, action, () => updateVaultBalance(vault));
     }
   },
   { immediate: true }
 );
 
-watch(() => vaultModalState.modalType, (modalType) => {
+watch(() => vaultModalState.value.modalType, (modalType) => {
   if (!modalType && (route.query.action === "topup" || route.query.action === "withdraw")) {
     clearAction();
   }

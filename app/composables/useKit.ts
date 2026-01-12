@@ -14,7 +14,7 @@ const prioFee = useLocalStorage("prio-fee", {
   maxPriorityFee: 15000000,
 });
 
-const AUTH_COOKIE_MAX_AGE_SECONDS = 300; // 5 minutes
+const AUTH_COOKIE_MAX_AGE_SECONDS = 1200; // 20 minutes
 
 const cookieOptions: CookieSetOptions = {
   maxAge: AUTH_COOKIE_MAX_AGE_SECONDS,
