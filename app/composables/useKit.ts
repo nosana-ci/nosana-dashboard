@@ -59,8 +59,9 @@ export function useKit() {
     const cookies = useCookies();
 
     return {
-      get: async (identifier: string, options: Omit<GenerateOptions, "store">): Promise<string | undefined> => {
-        return cookies.get(createAuthCookiesKey(identifier)) || undefined;
+      get: (identifier: string, options: Omit<GenerateOptions, "store">): Promise<string | undefined> | string | undefined => {
+        const value = cookies.get(createAuthCookiesKey(identifier));
+        return value || undefined;
       },
       set: (identifier: string, options: Omit<GenerateOptions, "store">, value: string | undefined): void => {
         const cookieKey = createAuthCookiesKey(identifier);
