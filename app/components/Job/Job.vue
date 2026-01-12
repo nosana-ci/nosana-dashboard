@@ -139,7 +139,7 @@
                         "
                       >
                         <nuxt-link
-                          :href="`https://explorer.nosana.com/host/${props.job.node}`"
+                          :href="`https://explore.nosana.com/hosts/${props.job.node}`"
                           target="_blank"
                           class="has-text-link is-family-monospace"
                         >

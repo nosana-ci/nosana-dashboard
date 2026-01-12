@@ -1,5 +1,7 @@
 import type { Vault } from "@nosana/kit";
 import { useKit } from "~/composables/useKit";
+import { useNosanaWallet } from "~/composables/useNosanaWallet";
+import { getVaultBalance, setVaultBalance } from "~/composables/useDeploymentVault";
 
 interface VaultModalState {
   modalType: null | "topup" | "withdraw";
@@ -23,6 +25,7 @@ const state = ref<VaultModalState>({
 
 export function useVaultModal() {
   const { nosana } = useKit();
+  const { refreshAllBalances } = useNosanaWallet();
 
   const open = (vault: Vault, type: "topup" | "withdraw", updateFn: () => void) => {
     state.value.vault = vault;
@@ -39,8 +42,42 @@ export function useVaultModal() {
     state.value.updateFn = null;
   };
 
+  // Poll vault balance until it changes from baseline
+  const pollVaultBalance = async (vault: Vault, baseline: { NOS: number; SOL: number }, updateFn: () => void) => {
+    const maxAttempts = 20; // 30 seconds max (20 * 1.5s)
+    let attempts = 0;
+
+    const poll = async () => {
+      if (attempts >= maxAttempts) return;
+      attempts++;
+
+      try {
+        const current = await vault.getBalance();
+        if (current.NOS !== baseline.NOS || current.SOL !== baseline.SOL) {
+          // Balance changed - update shared state directly (UI will react automatically)
+          setVaultBalance(vault, current);
+          return;
+        }
+      } catch (e) {
+        // Ignore errors, keep polling
+      }
+
+      // Continue polling
+      setTimeout(poll, 1500);
+    };
+
+    // Start polling after a short delay
+    setTimeout(poll, 1000);
+  };
+
   const topup = async () => {
-    if (!state.value.vault || state.value.modalType !== "topup" || !state.value.updateFn) return;
+    if (!state.value.vault || state.value.modalType !== "topup") return;
+
+    const vault = state.value.vault;
+    const updateFn = state.value.updateFn || (() => {});
+
+    // Get baseline from shared state (no fetch needed)
+    const baseline = getVaultBalance(vault);
 
     try {
       state.value.loading = true;
@@ -49,21 +86,32 @@ export function useVaultModal() {
         throw new Error("Wallet not connected. Please connect your wallet first.");
       }
       
-      await state.value.vault.topup({
+      await vault.topup({
         NOS: state.value.nosAmount || undefined,
         SOL: state.value.solAmount || undefined,
       });
+
+      // Refresh wallet balance after 1 second
+      setTimeout(() => refreshAllBalances(), 1000);
+
+      // Start polling vault balance - will call updateFn when balance changes
+      pollVaultBalance(vault, baseline, updateFn);
     } catch (error: any) {
       state.value.error = error.message || "Failed to top up vault";
     } finally {
       state.value.loading = false;
-      state.value.updateFn();
       close();
     }
   };
 
   const withdraw = async () => {
-    if (!state.value.vault || state.value.modalType !== "withdraw" || !state.value.updateFn) return;
+    if (!state.value.vault || state.value.modalType !== "withdraw") return;
+
+    const vault = state.value.vault;
+    const updateFn = state.value.updateFn || (() => {});
+
+    // Get baseline from shared state (no fetch needed)
+    const baseline = getVaultBalance(vault);
 
     try {
       state.value.loading = true;
@@ -72,12 +120,17 @@ export function useVaultModal() {
         throw new Error("Wallet not connected. Please connect your wallet first.");
       }
       
-      await state.value.vault.withdraw();
+      await vault.withdraw();
+
+      // Refresh wallet balance after 1 second
+      setTimeout(() => refreshAllBalances(), 1000);
+
+      // Start polling vault balance - will call updateFn when balance changes
+      pollVaultBalance(vault, baseline, updateFn);
     } catch (error: any) {
       state.value.error = error.message || "Failed to withdraw from vault";
     } finally {
       state.value.loading = false;
-      state.value.updateFn();
       close();
     }
   };
