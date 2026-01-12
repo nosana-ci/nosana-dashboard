@@ -60,7 +60,9 @@
               <td>
                 <span class="clickable-row-cell-content"
                   >{{
-                    Array.isArray(deployment.jobs) ? deployment.jobs.length : 0
+                    Array.isArray(deployment.jobs) 
+                      ? deployment.jobs.filter(job => ['PENDING', 'RUNNING', 'QUEUED'].includes(job.status)).length 
+                      : 0
                   }}
                   Jobs</span
                 >
@@ -104,9 +106,9 @@
 import StatusTag from "@/components/Common/StatusTag.vue";
 import VaultOverviewRows from "@/components/Vault/VaultOverviewRows.vue";
 
-import { useWallet } from "solana-wallets-vue";
-import { useSDK } from "~/composables/useSDK";
-import type { Deployment } from "@nosana/sdk";
+import { useWallet } from "@nosana/solana-vue";
+import { useKit } from "~/composables/useKit";
+import type { Deployment } from "@nosana/kit";
 import { formatDate } from "~/utils/formatDate";
 
 // Props
@@ -148,7 +150,7 @@ const hasAnyAuth = computed(() => {
   return isAuthenticated.value || isWalletMode.value;
 });
 
-const { nosana } = useSDK();
+const { nosana } = useKit();
 const loading = ref(false);
 const deploymentsError = ref<string | null>(null);
 
@@ -156,7 +158,7 @@ const refreshDeployments = async () => {
   try {
     deploymentsError.value = null;
     loading.value = true;
-    const items = await nosana.value.deployments.list();
+    const items = await nosana.value.api.deployments.list();
     deployments.value = items || [];
   } catch (e: any) {
     deploymentsError.value = e?.message || "Failed to load deployments";

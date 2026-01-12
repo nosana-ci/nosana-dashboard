@@ -180,7 +180,7 @@
 
 <script setup lang="ts">
 import { useRouter } from "vue-router";
-import { useWallet } from "solana-wallets-vue";
+import { useWallet } from "@nosana/solana-vue";
 import NvidiaIcon from "@/assets/img/icons/nvidia.svg?component";
 import GithubIcon from "@/assets/img/icons/github.svg?component";
 import PlusSymbolIcon from "@/assets/img/icons/plus_symbol.svg?component";
@@ -197,7 +197,7 @@ import { computed, type PropType } from "vue";
 import { useStatus } from "~/composables/useStatus";
 
 const router = useRouter();
-const { publicKey: walletPublicKey } = useWallet();
+const { account: walletAccount } = useWallet();
 const { templates } = useTemplates();
 const { status, data: userData } = useAuth();
 
@@ -205,8 +205,8 @@ const activeAddress = computed(() => {
   if (status.value === "authenticated" && userData.value?.generatedAddress) {
     return userData.value.generatedAddress;
   }
-  if (walletPublicKey.value) {
-    return walletPublicKey.value.toString();
+  if (walletAccount.value?.address) {
+    return walletAccount.value.address;
   }
   return null;
 });

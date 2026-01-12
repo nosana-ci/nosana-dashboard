@@ -9,7 +9,7 @@
 <script setup lang="ts">
 import { computed, type PropType } from 'vue';
 import { useJobPricing, useMarketUsdPrice, type JobData, type MarketPricingOptions } from '~/composables/useMarketPricing';
-import type { Market } from '@nosana/sdk';
+import type { Market } from '@nosana/kit';
 
 const props = defineProps({
   // For job-based pricing (shows total cost or hourly rate based on job data)

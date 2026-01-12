@@ -1,4 +1,4 @@
-import type { Job, JobDefinition } from "@nosana/sdk";
+import type { Job, JobDefinition } from "@nosana/kit";
 
 export type EndpointStatus = "ONLINE" | "OFFLINE" | "UNKNOWN";
 

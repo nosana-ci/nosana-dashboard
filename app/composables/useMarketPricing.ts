@@ -1,5 +1,5 @@
 import { computed, ref, watch, type Ref, type ComputedRef } from 'vue';
-import type { Market } from '@nosana/sdk';
+import type { Market } from '@nosana/kit';
 
 // Network fee constant (10% = 1.1 multiplier)
 const NETWORK_FEE_MULTIPLIER = 1.1;
@@ -206,7 +206,7 @@ export function useHostNosRate(
   marketAddress: Ref<string | Market | null | undefined>,
   marketsData?: Ref<any[] | null | undefined>
 ) {
-  const { nosana } = useSDK();
+  const { nosana } = useKit();
   
   const nosRatePerHour = computed(() => {
     if (!marketAddress.value) return null;

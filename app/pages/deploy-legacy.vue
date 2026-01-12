@@ -198,10 +198,10 @@
 </template>
 
 <script lang="ts" setup>
-import type { Market, JobDefinition } from "@nosana/sdk";
+import type { Market, JobDefinition } from "@nosana/kit";
 import { trackEvent } from "~/utils/analytics";
 import { useToast } from "vue-toastification";
-import { useWallet } from "solana-wallets-vue";
+import { useWallet } from "@nosana/solana-vue";
 import TopBar from '~/components/TopBar.vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useDebounceFn, useScrollLock } from "@vueuse/core";
@@ -261,11 +261,20 @@ interface HostInterface {
 // Setup composables
 const { markets, getMarkets, loadingMarkets } = useMarkets();
 const { templates, groupedTemplates, loadingTemplates, loadingGroupedTemplates } = useTemplates();
-const { nosana } = useSDK();
+const { nosana } = useKit();
 const router = useRouter();
 const route = useRoute();
 const toast = useToast();
-const { connected, publicKey, wallet } = useWallet();
+const { connected, account, wallet } = useWallet();
+
+// Compatibility: create publicKey-like object from account
+const publicKey = computed(() => {
+  if (!account.value?.address) return null;
+  return {
+    toString: () => account.value!.address,
+    toBase58: () => account.value!.address,
+  };
+});
 const { status, data: userData, token } = useAuth();
 const loading = ref(false);
 
@@ -706,19 +715,23 @@ const createJob = async () => {
         throw new Error('No valid market selected. Please select a GPU from the list.');
       }
       
-      const response = await nosana.value.jobs.list(
-        ipfsHash,
-        Math.min(hours.value * 3600, MAX_TIMEOUT_HOURS * 3600),
-        marketAddress,
-        hostAddress
-      ) as { tx: string; job: string; run: string };
+      // Create the post instruction using new kit API
+      const postInstruction = await nosana.value.jobs.post({
+        market: marketAddress as any,
+        timeout: Math.min(hours.value * 3600, MAX_TIMEOUT_HOURS * 3600),
+        ipfsHash: ipfsHash,
+        node: hostAddress as any,
+      });
       
-      toast.success(`Successfully created job ${response.job}`);
+      // Build, sign and send the transaction
+      const signature = await nosana.value.solana.buildSignAndSend(postInstruction);
+      
+      toast.success(`Successfully posted job (tx: ${signature})`);
 
       try {
         trackEvent('gpu_job_created', {
           user_id: publicKey.value?.toString(),
-          job_id: response.job,
+          job_id: signature, // Use transaction signature as identifier
           market: marketName.value,
           cost_usd: estimatedCost.value,
           hours: hours.value,
@@ -730,8 +743,10 @@ const createJob = async () => {
 
       // Clear saved deploy state after successful job creation
       clearDeployState();
+      // Note: With the new kit, we don't get the job address directly
+      // Navigate to deployments page instead
       setTimeout(() => {
-        router.push('/jobs/' + response.job);
+        router.push('/deployments');
       }, 3000);
     } else {
       throw new Error('No authentication method available');
@@ -870,7 +885,7 @@ watch(() => selectedMarket.value, (newMarket) => {
 const fetchGpuFilters = async (resetValues = true) => {
   try {
     loadingHosts.value = true;
-    const response = await fetch(`${config.public.apiBase}/api/markets/filters?market_type=${selectedMarketType.value}`);
+    const response = await fetch(`${config.public.backend_url}/api/markets/filters?market_type=${selectedMarketType.value}`);
     const data = await response.json();
     
     // Fix the duplicate "All GPUs" issue
@@ -996,7 +1011,7 @@ const debouncedSearch = useDebounceFn(async () => {
     });
     
     // Fetch available hosts
-    const response = await fetch(`${config.public.apiBase}/api/markets/hosts?${queryParams}`);
+    const response = await fetch(`${config.public.backend_url}/api/markets/hosts?${queryParams}`);
     const data = await response.json();
     
     // Process host data
@@ -1207,8 +1222,8 @@ const refreshBalance = async () => {
   errorBalance.value = null;
   
   try {
-    const balanceData = await nosana.value.solana.getNosBalance(publicKey.value.toString());
-    balance.value = balanceData?.uiAmount || 0;
+    const balanceData = await nosana.value.nos.getBalance(publicKey.value.toString());
+    balance.value = balanceData || 0;
   } catch (error: any) {
     errorBalance.value = error.toString();
     console.error('Error fetching NOS balance:', error);
@@ -1222,18 +1237,16 @@ const refreshAllBalances = async () => {
   if (!publicKey.value || !nosana.value) return;
   
   try {
-    const [nosBal, solBal, usdcBal, usdtBal] = await Promise.all([
-      nosana.value.solana.getNosBalance(),
-      nosana.value.solana.getSolBalance(),
-      nosana.value.solana.getUsdcBalance(),
-      nosana.value.solana.getUsdtBalance()
+    const [nosBal, solBal] = await Promise.all([
+      nosana.value.nos.getBalance(),
+      nosana.value.solana.getBalance()
     ]);
 
     userBalances.value = {
-      nos: nosBal?.uiAmount ?? 0,
+      nos: nosBal ?? 0,
       sol: solBal / 1e9,
-      usdc: usdcBal?.uiAmount ?? 0,
-      usdt: usdtBal?.uiAmount ?? 0
+      usdc: 0,
+      usdt: 0
     };
     await refreshBalance();
   } catch (error) {

@@ -25,7 +25,7 @@
               <div class="header-left-section">
                 <div class="is-flex is-align-items-center mb-0">
                   <button
-                    @click="router.back()"
+                    @click="router.push(`/deployments`)"
                     class="button is-ghost back-button mr-4 pb-1 height-auto"
                   >
                     <span class="icon is-small">
@@ -45,6 +45,7 @@
                       {{ deployment.id }}
                     </p>
                   </div>
+                  <StatusTag :status="deployment.status" class="ml-4" />
                 </div>
               </div>
               <div class="deployment-tabs">
@@ -236,125 +237,44 @@
           <div class="p-5">
             <!-- Overview Tab -->
             <div v-if="activeTab === 'overview'">
-              <!-- Deployment Details Section -->
-              <div class="mb-5">
-                <h2 class="title is-5 mb-3">Deployment details</h2>
-                <div class="box is-borderless">
-                  <div class="table-container">
-                    <table class="table is-fullwidth mb-0">
-                      <tbody>
-                        <tr>
-                          <td class="va-bottom">Status</td>
-                          <td>
-                            <StatusTag :status="deployment.status" />
-                          </td>
-                        </tr>
-                        <!-- Vault Details Section -->
-                        <VaultOverviewRows
-                          v-if="hasVault && deploymentVault"
-                          :isTableRow="true"
-                          :deployment="deployment"
-                        />
-                        <tr>
-                          <td>Deployment strategy</td>
-                          <td>{{ deployment.strategy }}</td>
-                        </tr>
-                        <tr>
-                          <td>Replicas count</td>
-                          <td>{{ deployment.replicas }}</td>
-                        </tr>
-                        <tr>
-                          <td>GPU</td>
-                          <td v-if="deployment && deployment.market">
-                            <span
-                              v-if="
-                                testgridMarkets &&
-                                testgridMarkets.find(
-                                  (tgm: any) =>
-                                    tgm.address === deployment?.market
-                                )
-                              "
-                            >
-                              {{
-                                testgridMarkets.find(
-                                  (tgm: any) =>
-                                    tgm.address === deployment?.market
-                                ).name
-                              }}
-                            </span>
-                            <span v-else>{{ deployment.market }}</span>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td>Container timeout</td>
-                          <td>
-                            <SecondsFormatter
-                              :seconds="deployment.timeout * 60"
-                              :showSeconds="false"
-                            />
-                          </td>
-                        </tr>
-
-                        <!-- Scheduled deployment cron schedule -->
-                        <tr
-                          v-if="
-                            deployment.strategy?.toUpperCase() ===
-                              'SCHEDULED' && deploymentSchedule
-                          "
-                        >
-                          <td>Schedule</td>
-                          <td>
-                            <div class="is-flex is-flex-direction-column">
-                              <span class="is-family-monospace">{{
-                                deploymentSchedule
-                              }}</span>
-                              <span class="is-size-7 has-text-grey mt-1">{{
-                                parseCronExpression(deploymentSchedule || "")
-                              }}</span>
-                            </div>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td>Created on</td>
-                          <td>{{ formatDate(deployment.created_at) }}</td>
-                        </tr>
-                        <tr>
-                          <td>Last updated on</td>
-                          <td>{{ formatDate(deployment.updated_at) }}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-
               <!-- Endpoints Section -->
               <div v-if="deploymentEndpoints.length > 0" class="mb-5">
                 <h2 class="title is-5 mb-3">Endpoints</h2>
                 <div class="box is-borderless">
                   <div class="table-container">
-                    <table class="table is-fullwidth mb-0">
+                    <table class="table is-fullwidth mb-0" style="table-layout: fixed;">
                       <thead>
                         <tr>
-                          <th>Operation</th>
-                          <th>Port</th>
-                          <th>URL</th>
+                          <th style="width: 25%;">Operation</th>
+                          <th style="width: 10%;">Port</th>
+                          <th style="width: 12%;">Status</th>
+                          <th style="width: 53%;">URL</th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr
                           v-for="endpoint in deploymentEndpoints"
                           :key="`${endpoint.opId}-${endpoint.port}`"
+                          :style="{ opacity: deployment.status !== 'RUNNING' && deployment.status !== 'STARTING' ? '0.5' : '1' }"
                         >
                           <td>{{ endpoint.opId }}</td>
                           <td>{{ endpoint.port }}</td>
                           <td>
+                            <StatusTag
+                              :status="deployment.status === 'RUNNING' || deployment.status === 'STARTING' ? 'ACTIVE' : 'INACTIVE'"
+                            />
+                          </td>
+                          <td>
                             <a
+                              v-if="deployment.status === 'RUNNING' || deployment.status === 'STARTING'"
                               :href="endpoint.url"
                               target="_blank"
                               class="has-text-link endpoint-url"
                               >{{ endpoint.url }} ↗</a
                             >
+                            <span v-else class="has-text-grey-light" style="text-decoration: line-through;">
+                              {{ endpoint.url }}
+                            </span>
                           </td>
                         </tr>
                       </tbody>
@@ -364,29 +284,95 @@
               </div>
 
               <!-- Job Activity Section -->
-              <div>
-                <h2 class="title is-5 mb-3">Job activity</h2>
-
-                <!-- Job Activity Tabs -->
-                <div class="deployment-tabs mb-3 ml-4">
-                  <button
-                    @click="jobActivityTab = 'running'"
-                    class="tab-button"
-                    :class="{ 'is-active': jobActivityTab === 'running' }"
-                  >
-                    Running
-                  </button>
-                  <button
-                    @click="jobActivityTab = 'history'"
-                    class="tab-button"
-                    :class="{ 'is-active': jobActivityTab === 'history' }"
-                  >
-                    History
-                  </button>
+              <div class="mb-5">
+                <div class="is-flex is-align-items-center mb-3">
+                  <h2 class="title is-5 mb-0 mr-3">Job activity</h2>
+                  <!-- Job Activity Tabs (only show if 5+ jobs) -->
+                  <div v-if="totalJobs >= 5" class="deployment-tabs">
+                    <button
+                      @click="jobActivityTab = 'running'"
+                      class="tab-button is-small"
+                      :class="{ 'is-active': jobActivityTab === 'running' }"
+                    >
+                      Running
+                    </button>
+                    <button
+                      @click="jobActivityTab = 'history'"
+                      class="tab-button is-small"
+                      :class="{ 'is-active': jobActivityTab === 'history' }"
+                    >
+                      History
+                    </button>
+                  </div>
                 </div>
 
-                <!-- Running Jobs -->
-                <div v-if="jobActivityTab === 'running'">
+                <!-- All Jobs (when tabs are hidden, < 5 jobs) -->
+                <div v-if="totalJobs < 5">
+                  <div
+                    v-if="allJobs.length === 0"
+                    class="box has-text-centered p-6"
+                  >
+                    <p class="has-text-grey">
+                      <span v-if="deployment.status === 'DRAFT'"
+                        >Start deployment to create jobs</span
+                      >
+                      <span v-else>No jobs yet</span>
+                    </p>
+                  </div>
+
+                  <div v-else class="box is-borderless">
+                    <div class="table-container">
+                      <table class="table is-fullwidth mb-0" style="table-layout: fixed;">
+                        <thead>
+                          <tr>
+                            <th style="width: 25%;">Name</th>
+                            <th style="width: 10%;">Revision</th>
+                            <th style="width: 12%;">Status</th>
+                            <th style="width: 15%;">Duration</th>
+                            <th style="width: 18%;">Created on</th>
+                            <th style="width: 20%;">Navigation</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr v-for="job in allJobs" :key="job.job">
+                            <td style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 0;">
+                              <span class="is-family-monospace is-size-7">{{
+                                job.job
+                              }}</span>
+                            </td>
+                            <td>
+                              {{ job.revision || "-" }}
+                            </td>
+                            <td>
+                              <JobStatus :status="job.state || 0" />
+                            </td>
+                            <td>
+                              <span v-if="getJobDuration(job.job)">
+                                <SecondsFormatter
+                                  :seconds="getJobDuration(job.job)"
+                                  :showSeconds="true"
+                                />
+                              </span>
+                              <span v-else>-</span>
+                            </td>
+                            <td>{{ formatDate(job.created_at) }}</td>
+                            <td>
+                              <NuxtLink
+                                :to="`/deployments/${deployment.id}/jobs/${job.job}`"
+                                class="has-text-link"
+                              >
+                                View job
+                              </NuxtLink>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Running Jobs (when tabs are shown, >= 5 jobs) -->
+                <div v-else-if="jobActivityTab === 'running'">
                   <div
                     v-if="activeJobs.length === 0"
                     class="box has-text-centered p-6"
@@ -401,20 +387,20 @@
 
                   <div v-else class="box is-borderless">
                     <div class="table-container">
-                      <table class="table is-fullwidth mb-0">
+                      <table class="table is-fullwidth mb-0" style="table-layout: fixed;">
                         <thead>
                           <tr>
-                            <th>Name</th>
-                            <th>Revision</th>
-                            <th>Status</th>
-                            <th>Duration</th>
-                            <th>Created on</th>
-                            <th></th>
+                            <th style="width: 25%;">Name</th>
+                            <th style="width: 10%;">Revision</th>
+                            <th style="width: 12%;">Status</th>
+                            <th style="width: 15%;">Duration</th>
+                            <th style="width: 18%;">Created on</th>
+                            <th style="width: 20%;">Navigation</th>
                           </tr>
                         </thead>
                         <tbody>
                           <tr v-for="job in activeJobs" :key="job.job">
-                            <td>
+                            <td style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 0;">
                               <span class="is-family-monospace is-size-7">{{
                                 job.job
                               }}</span>
@@ -461,20 +447,20 @@
 
                   <div v-else class="box is-borderless">
                     <div class="table-container">
-                      <table class="table is-fullwidth mb-0">
+                      <table class="table is-fullwidth mb-0" style="table-layout: fixed;">
                         <thead>
                           <tr>
-                            <th>Name</th>
-                            <th>Revision</th>
-                            <th>Status</th>
-                            <th>Duration</th>
-                            <th>Created on</th>
-                            <th></th>
+                            <th style="width: 25%;">Name</th>
+                            <th style="width: 10%;">Revision</th>
+                            <th style="width: 12%;">Status</th>
+                            <th style="width: 15%;">Duration</th>
+                            <th style="width: 18%;">Created on</th>
+                            <th style="width: 20%;">Navigation</th>
                           </tr>
                         </thead>
                         <tbody>
                           <tr v-for="job in historicalJobs" :key="job.job">
-                            <td>
+                            <td style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 0;">
                               <span class="is-family-monospace is-size-7">{{
                                 job.job
                               }}</span>
@@ -509,6 +495,98 @@
                     </div>
                   </div>
                 </div>
+              </div>
+
+              <!-- Deployment Details Section -->
+              <div class="mb-5">
+                <h2 class="title is-5 mb-3">Deployment details</h2>
+                <div class="box is-borderless">
+                  <div class="table-container">
+                    <table class="table is-fullwidth mb-0" style="table-layout: fixed;">
+                      <tbody>
+                        <!-- Vault Details Section -->
+                        <VaultOverviewRows
+                          v-if="hasVault && deploymentVault"
+                          :isTableRow="true"
+                          :deployment="deployment"
+                        />
+                        <tr>
+                          <td style="width: 25%;">Deployment strategy</td>
+                          <td style="width: 75%;">{{ deployment.strategy }}</td>
+                        </tr>
+                        <tr>
+                          <td style="width: 25%;">Replicas count</td>
+                          <td style="width: 75%;">{{ deployment.replicas }}</td>
+                        </tr>
+                        <tr>
+                          <td style="width: 25%;">GPU</td>
+                          <td style="width: 75%;" v-if="deployment && deployment.market">
+                            <span
+                              v-if="
+                                testgridMarkets &&
+                                testgridMarkets.find(
+                                  (tgm: any) =>
+                                    tgm.address === deployment?.market
+                                )
+                              "
+                            >
+                              {{
+                                testgridMarkets.find(
+                                  (tgm: any) =>
+                                    tgm.address === deployment?.market
+                                ).name
+                              }}
+                            </span>
+                            <span v-else>{{ deployment.market }}</span>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td style="width: 25%;">Container timeout</td>
+                          <td style="width: 75%;">
+                            <SecondsFormatter
+                              :seconds="deployment.timeout * 60"
+                              :showSeconds="false"
+                            />
+                          </td>
+                        </tr>
+
+                        <!-- Scheduled deployment cron schedule -->
+                        <tr
+                          v-if="
+                            deployment.strategy?.toUpperCase() ===
+                              'SCHEDULED' && deploymentSchedule
+                          "
+                        >
+                          <td style="width: 25%;">Schedule</td>
+                          <td style="width: 75%;">
+                            <div class="is-flex is-flex-direction-column">
+                              <span class="is-family-monospace">{{
+                                deploymentSchedule
+                              }}</span>
+                              <span class="is-size-7 has-text-grey mt-1">{{
+                                parseCronExpression(deploymentSchedule || "")
+                              }}</span>
+                            </div>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td style="width: 25%;">Created on</td>
+                          <td style="width: 75%;">{{ formatDate(deployment.created_at) }}</td>
+                        </tr>
+                        <tr>
+                          <td style="width: 25%;">Last updated on</td>
+                          <td style="width: 75%;">{{ formatDate(deployment.updated_at) }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Logs Section (only show if single job) -->
+              <div v-if="activeJobs.length === 1 && activeLogsJobId" class="mb-5">
+                <h2 class="title is-5 mb-3">Logs</h2>
+                <JobLogsContainer :job-id="activeLogsJobId" :deployment-id="route.params.id as string" />
               </div>
             </div>
 
@@ -675,8 +753,8 @@
                 <p class="has-text-grey">No running jobs to show logs for</p>
               </div>
               <div v-else class="deployment-logs-content">
-                <!-- Job Tabs -->
-                <div class="deployment-tabs mb-3">
+                <!-- Job Tabs (only show if more than one job) -->
+                <div v-if="activeJobs.length > 1" class="deployment-tabs mb-3">
                   <button
                     v-for="job in activeJobs"
                     :key="job.job"
@@ -782,8 +860,13 @@
                             <StatusTag
                               :status="
                                 revision.revision === deployment.active_revision
-                                  ? 'ACTIVE'
+                                  ? 'COMPLETED'
                                   : 'INACTIVE'
+                              "
+                              :customLabel="
+                                revision.revision === deployment.active_revision
+                                  ? 'ACTIVE'
+                                  : undefined
                               "
                               :showLabel="true"
                               :imageOnly="false"
@@ -1165,10 +1248,11 @@
 </template>
 
 <script setup lang="ts">
-import type { Deployment, JobDefinition } from "@nosana/sdk";
+import type { Deployment, JobDefinition } from "@nosana/kit";
 import { useVaultModal } from "~/composables/useVaultModal";
+import { updateVaultBalance } from "~/composables/useDeploymentVault";
 import { useToast } from "vue-toastification";
-import { useWallet } from "solana-wallets-vue";
+import { useWallet } from "@nosana/solana-vue";
 import { useAuth } from "#imports";
 import JobStatus from "~/components/Job/Status.vue";
 import JobLogsContainer from "~/components/Job/LogsContainer.vue";
@@ -1190,7 +1274,7 @@ import EditIcon from "@/assets/img/icons/edit.svg?component";
 import RefreshIcon from "@/assets/img/icons/refresh.svg?component";
 import InfoCircleIcon from "@/assets/img/icons/info-circle.svg?component";
 import { useTimestamp } from "@vueuse/core";
-import { useSDK } from "~/composables/useSDK";
+import { useKit } from "~/composables/useKit";
 import { parseCronExpression } from "~/utils/parseCronExpression";
 
 const colorMode = useColorMode();
@@ -1234,16 +1318,26 @@ const router = useRouter();
 const toast = useToast();
 const { open: openVaultModal, state: vaultModalState } = useVaultModal();
 const { status, token } = useAuth();
-const { connected, publicKey } = useWallet();
+const { connected, account } = useWallet();
+
+// Compatibility: create publicKey-like object from account
+const publicKey = computed(() => {
+  if (!account.value?.address) return null;
+  return {
+    toString: () => account.value!.address,
+    toBase58: () => account.value!.address,
+  };
+});
+
 const isAuthenticated = computed(
   () => status.value === "authenticated" && token.value
 );
 const isWalletMode = computed(
-  () => connected.value && publicKey.value && !token.value
+  () => connected.value && account.value?.address && !token.value
 );
 const hasAnyAuth = computed(() => isAuthenticated.value || isWalletMode.value);
 const { getIpfs } = useIpfs();
-const { nosana } = useSDK();
+const { nosana } = useKit();
 
 // State
 const deployment = ref<Deployment | null>(null);
@@ -1251,12 +1345,18 @@ const loading = ref(true);
 const error = ref<string | null>(null);
 const activeTab = ref("overview");
 
-// Available tabs
-const availableTabs = ["overview", "logs", "events", "job-definition"];
+// Available tabs - hide logs tab if only 1 job (shown in overview instead)
+const availableTabs = computed(() => {
+  const tabs = ["overview", "logs", "events", "job-definition"];
+  if (activeJobs.value.length <= 1) {
+    return tabs.filter(t => t !== "logs");
+  }
+  return tabs;
+});
 
 // Initialize activeTab from URL query parameter
 const initialTab = route.query.tab?.toString();
-if (initialTab && availableTabs.includes(initialTab)) {
+if (initialTab && ["overview", "logs", "events", "job-definition"].includes(initialTab)) {
   activeTab.value = initialTab;
 }
 const activeLogsJobId = ref<string | null>(null);
@@ -1300,7 +1400,7 @@ if (initialAction && availableActions.includes(initialAction)) {
 }
 // Debug instrumentation for page header icon
 const headerIconRef = ref<HTMLElement | null>(null);
-const { data: testgridMarkets } = useAPI("/api/markets");
+const { data: testgridMarkets } = useAPI("/api/markets", { default: () => [] });
 // Safe accessors for optional DM fields
 const deploymentSchedule = computed<string | null>(() => {
   const d = deployment.value as unknown as { schedule?: string } | null;
@@ -1361,6 +1461,15 @@ watch(
 );
 const statusPollingInterval = ref<NodeJS.Timeout | null>(null);
 const jobPollingInterval = ref<NodeJS.Timeout | null>(null);
+
+// Adaptive polling state tracking
+const adaptivePollingState = ref<{
+  isFastPolling: boolean;
+  expectedStatus?: string;
+  fastPollStartTime?: number;
+}>({
+  isFastPolling: false,
+});
 
 // Add debugging for polling state
 const pollingDebug = ref({
@@ -1489,7 +1598,7 @@ const makeRevision = async () => {
   }
 };
 
-const loadDeployment = async (silent = false) => {
+const loadDeployment = async (silent = false, forceRefreshJobStates = false) => {
   // Skip parent deployment fetch when on job subroute
   if ((route.params as any)?.jobaddress) {
     if (!silent) loading.value = false;
@@ -1501,6 +1610,22 @@ const loadDeployment = async (silent = false) => {
     return;
   }
 
+  // Wait for SDK to be ready (wallet set for wallet users)
+  if (isWalletMode.value && !nosana.value.wallet) {
+    // Wait for the SDK watch to set the wallet - try multiple times
+    for (let i = 0; i < 10; i++) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      if (nosana.value.wallet) {
+        break;
+      }
+    }
+    // If still not ready, wait for next tick
+    if (!nosana.value.wallet) {
+      await nextTick();
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+  }
+
   try {
     // Only show loading for non-silent operations (initial load, user actions)
     if (!silent) {
@@ -1509,7 +1634,7 @@ const loadDeployment = async (silent = false) => {
     }
 
     const deploymentId = route.params.id as string;
-    const data = await nosana.value.deployments.get(deploymentId);
+    const data = await nosana.value.api.deployments.get(deploymentId);
 
     deployment.value = data as Deployment;
 
@@ -1523,11 +1648,16 @@ const loadDeployment = async (silent = false) => {
     // Update job states for active jobs during polling
     if (deployment.value.jobs && deployment.value.jobs.length > 0) {
       for (const job of deployment.value.jobs) {
-        // Only fetch state for jobs that aren't already in a completed state
+        // If forceRefreshJobStates is true, always fetch state regardless of current state
+        // On initial load (!silent), fetch all jobs to get duration data
+        // During polling (silent), only fetch state for jobs that aren't already in a completed state
         // Completed states: DONE=2, STOPPED=3, TIMEOUT=4, ERROR=5
         const currentState = jobStates.value[job.job];
-        if (currentState !== undefined && currentState >= 2) {
-          // Job is already completed, skip fetching
+        const hasJobData = allJobsData.value[job.job] !== undefined;
+        
+        // Skip completed jobs during polling if we already have their data
+        if (!forceRefreshJobStates && silent && currentState !== undefined && currentState >= 2 && hasJobData) {
+          // Job is already completed and we have data, skip fetching during polling
           continue;
         }
 
@@ -1608,6 +1738,11 @@ const deploymentVault = computed(() => {
 const jobStates = ref<Record<string, number>>({});
 const allJobsData = ref<Record<string, any>>({});
 
+// Check if there are any queued (0) or running (1) jobs
+const hasActiveJobs = computed(() => {
+  return Object.values(jobStates.value).some(state => state === 0 || state === 1);
+});
+
 
 
 
@@ -1648,11 +1783,11 @@ const getJobDuration = (jobId: string): number | null => {
   if (!jobData?.timeStart) return null;
 
   const timeStart = jobData.timeStart;
-  const timeFinished = jobData.timeFinished;
+  const timeEnd = jobData.timeEnd || jobData.timeFinished;
 
-  // For completed jobs, use timeFinished - timeStart
-  if (timeFinished && jobState >= 2) {
-    return Math.max(0, timeFinished - timeStart);
+  // For completed jobs, use timeEnd - timeStart
+  if (timeEnd && jobState >= 2) {
+    return Math.max(0, timeEnd - timeStart);
   }
 
   // For running jobs, use current time - timeStart
@@ -1686,6 +1821,12 @@ const historicalJobs = computed((): DeploymentJob[] => {
   // Filter for completed/stopped jobs (states: DONE=2, STOPPED=3, TIMEOUT=4, ERROR=5)
   return enrichedJobs.filter((job) => job.state >= 2);
 });
+
+// Total jobs count for determining if tabs should be shown
+const totalJobs = computed(() => activeJobs.value.length + historicalJobs.value.length);
+
+// Combined jobs list (when tabs are hidden)
+const allJobs = computed(() => [...activeJobs.value, ...historicalJobs.value]);
 
 // Deployment endpoints
 const deploymentEndpoints = computed(() => {
@@ -1777,18 +1918,8 @@ const startDeployment = async () => {
     "Deployment started successfully"
   );
 
-  // Do an initial quick poll after 3 seconds to get faster feedback
-  setTimeout(async () => {
-    if (
-      deployment.value?.status?.toUpperCase() === "RUNNING" ||
-      deployment.value?.status?.toUpperCase() === "STARTING"
-    ) {
-      await loadDeployment(true);
-    }
-  }, 3000);
-
-  // Start regular job polling after starting
-  startJobPolling();
+  // Start fast polling expecting RUNNING status
+  startFastPolling("RUNNING");
 };
 
 const stopDeployment = async () => {
@@ -1801,13 +1932,16 @@ const stopDeployment = async () => {
     "Deployment stopped successfully"
   );
 
-  // Stop job polling after stopping - status polling will continue to monitor stop progress
-  stopJobPolling();
+  // Force refresh job states to update running jobs to stopped state
+  await loadDeployment(true, true);
 
-  // Status polling will automatically stop when deployment reaches STOPPED state
-  if (!statusPollingInterval.value) {
-    startDeploymentPolling();
+  // Only stop job polling if there are no queued or running jobs
+  if (!hasActiveJobs.value) {
+    stopJobPolling();
   }
+
+  // Start fast polling expecting STOPPED status
+  startFastPolling("STOPPED");
 };
 
 const archiveDeployment = async () => {
@@ -1843,12 +1977,18 @@ const updateReplicas = async () => {
     return;
   }
 
+  const currentStatus = deployment.value?.status?.toUpperCase();
   await executeDeploymentAction(
     () => deployment.value!.updateReplicaCount(newReplicaCount.value),
     `Replica count updated to ${newReplicaCount.value}`
   );
 
   newReplicaCount.value = null;
+
+  // Start fast polling if deployment is running (jobs will change)
+  if (currentStatus === "RUNNING" || currentStatus === "STARTING") {
+    startFastPolling("RUNNING");
+  }
 };
 
 const updateJobTimeout = async () => {
@@ -1857,12 +1997,18 @@ const updateJobTimeout = async () => {
     return;
   }
 
+  const currentStatus = deployment.value?.status?.toUpperCase();
   await executeDeploymentAction(
     () => deployment.value!.updateTimeout(Math.round(newTimeoutHours.value * 3600)),
     `Job timeout updated to ${newTimeoutHours.value} hours`
   );
 
   newTimeoutHours.value = null;
+
+  // Start fast polling if deployment is running (jobs might change)
+  if (currentStatus === "RUNNING" || currentStatus === "STARTING") {
+    startFastPolling("RUNNING");
+  }
 };
 
 const updateSchedule = async () => {
@@ -1876,6 +2022,7 @@ const updateSchedule = async () => {
     return;
   }
 
+  const currentStatus = deployment.value?.status?.toUpperCase();
   try {
     actionLoading.value = true;
     await deployment.value.updateSchedule(newSchedule.value);
@@ -1887,6 +2034,11 @@ const updateSchedule = async () => {
     // Wait a moment for backend to process, then refresh
     await new Promise((resolve) => setTimeout(resolve, 500));
     await loadDeployment(true);
+
+    // Start fast polling if deployment is running (jobs might change)
+    if (currentStatus === "RUNNING" || currentStatus === "STARTING") {
+      startFastPolling("RUNNING");
+    }
 
     newSchedule.value = "";
   } catch (error: any) {
@@ -2052,7 +2204,7 @@ const stopTasksPolling = () => {
   }
 };
 
-const startDeploymentPolling = () => {
+const startDeploymentPolling = (intervalMs: number = 5000) => {
   if (statusPollingInterval.value) {
     clearInterval(statusPollingInterval.value);
   }
@@ -2065,13 +2217,38 @@ const startDeploymentPolling = () => {
     pollingDebug.value.lastStatusPoll = new Date();
     await loadDeployment(true);
 
+    // Check if expected state transition occurred (adaptive polling)
+    const currentStatus = deployment.value?.status?.toUpperCase() || "";
+    if (adaptivePollingState.value.expectedStatus && 
+        currentStatus === adaptivePollingState.value.expectedStatus.toUpperCase()) {
+      // Expected state reached, switch back to normal polling
+      adaptivePollingState.value.isFastPolling = false;
+      adaptivePollingState.value.expectedStatus = undefined;
+      adaptivePollingState.value.fastPollStartTime = undefined;
+      stopDeploymentPolling();
+      startDeploymentPolling(5000); // Normal interval
+      return;
+    }
+
+    // Stop fast polling after 30 seconds if expected state not reached
+    if (adaptivePollingState.value.isFastPolling && 
+        adaptivePollingState.value.fastPollStartTime &&
+        Date.now() - adaptivePollingState.value.fastPollStartTime > 30000) {
+      adaptivePollingState.value.isFastPolling = false;
+      adaptivePollingState.value.expectedStatus = undefined;
+      adaptivePollingState.value.fastPollStartTime = undefined;
+      stopDeploymentPolling();
+      startDeploymentPolling(5000); // Fall back to normal interval
+      return;
+    }
+
     const finalStates = ["STOPPED", "ARCHIVED", "ERROR"];
-    if (finalStates.includes(deployment.value?.status?.toUpperCase() || "")) {
+    if (finalStates.includes(currentStatus)) {
       stopDeploymentPolling();
       stopJobPolling();
       stopTasksPolling();
     }
-  }, 5000);
+  }, intervalMs);
 };
 
 const stopDeploymentPolling = () => {
@@ -2095,12 +2272,38 @@ const startJobPolling = (intervalMs: number = 5000) => {
     pollingDebug.value.lastJobPoll = new Date();
 
     const status = deployment.value?.status?.toUpperCase();
-    if (status !== "RUNNING" && status !== "STARTING") {
+    
+    // Only stop polling if deployment is not running/starting AND no queued/running jobs
+    if (status !== "RUNNING" && status !== "STARTING" && !hasActiveJobs.value) {
       stopJobPolling();
       return;
     }
 
     await loadDeployment(true);
+
+    // Check if expected state transition occurred (adaptive polling)
+    if (adaptivePollingState.value.expectedStatus && 
+        status === adaptivePollingState.value.expectedStatus.toUpperCase()) {
+      // Expected state reached, switch back to normal polling
+      adaptivePollingState.value.isFastPolling = false;
+      adaptivePollingState.value.expectedStatus = undefined;
+      adaptivePollingState.value.fastPollStartTime = undefined;
+      stopJobPolling();
+      startJobPolling(5000); // Normal interval
+      return;
+    }
+
+    // Stop fast polling after 30 seconds if expected state not reached
+    if (adaptivePollingState.value.isFastPolling && 
+        adaptivePollingState.value.fastPollStartTime &&
+        Date.now() - adaptivePollingState.value.fastPollStartTime > 30000) {
+      adaptivePollingState.value.isFastPolling = false;
+      adaptivePollingState.value.expectedStatus = undefined;
+      adaptivePollingState.value.fastPollStartTime = undefined;
+      stopJobPolling();
+      startJobPolling(5000); // Fall back to normal interval
+      return;
+    }
   }, intervalMs);
 };
 
@@ -2112,7 +2315,29 @@ const stopJobPolling = () => {
   }
 };
 
-// Removed fast job polling - was too aggressive at 1 second intervals
+// Start fast polling after an action that expects a state change
+const startFastPolling = (expectedStatus: string) => {
+  adaptivePollingState.value = {
+    isFastPolling: true,
+    expectedStatus,
+    fastPollStartTime: Date.now(),
+  };
+
+  // Start fast polling at 1.5 second intervals
+  if (statusPollingInterval.value) {
+    stopDeploymentPolling();
+  }
+  startDeploymentPolling(1500);
+
+  // Also start fast job polling if deployment is running/starting
+  const currentStatus = deployment.value?.status?.toUpperCase();
+  if (currentStatus === "RUNNING" || currentStatus === "STARTING") {
+    if (jobPollingInterval.value) {
+      stopJobPolling();
+    }
+    startJobPolling(1500);
+  }
+};
 
 // Click outside handler to close dropdown
 const handleClickOutside = (event: MouseEvent) => {
@@ -2146,13 +2371,21 @@ onBeforeRouteLeave(() => {
   stopTasksPolling();
 });
 
-// Auto-select first job when switching to logs tab
+// Auto-select job for logs display
 watch(
   () => [activeTab.value, activeJobs.value],
   ([newTab, jobs]) => {
-    if (newTab === "logs" && jobs.length > 0 && !activeLogsJobId.value) {
-      const first: any = (jobs as any)[0];
-      activeLogsJobId.value = (first?.job || first) as string;
+    if (jobs && jobs.length > 0) {
+      // Single job: always select for overview logs
+      if (jobs.length === 1) {
+        const first: any = (jobs as any)[0];
+        activeLogsJobId.value = (first?.job || first) as string;
+      }
+      // Multiple jobs: select when switching to logs tab
+      else if (newTab === "logs" && !activeLogsJobId.value) {
+        const first: any = (jobs as any)[0];
+        activeLogsJobId.value = (first?.job || first) as string;
+      }
     }
   },
   { immediate: true }
@@ -2220,11 +2453,17 @@ watch(
       startTasksPolling();
     }
 
-    // Stop all polling when deployment stops running
+    // Stop job polling when deployment stops running, but only if no queued/running jobs
+    // Keep deployment polling if fast polling is active (waiting for expected state)
     if (status !== "RUNNING" && status !== "STARTING") {
-      stopJobPolling();
-      stopDeploymentPolling();
-      stopTasksPolling();
+      if (!hasActiveJobs.value) {
+        stopJobPolling();
+      }
+      // Don't stop deployment polling if we're in fast polling mode (waiting for expected state)
+      if (!adaptivePollingState.value.isFastPolling) {
+        stopDeploymentPolling();
+        stopTasksPolling();
+      }
     }
   },
   { immediate: true }
@@ -2248,9 +2487,9 @@ const switchAction = (action: string) => {
   else if (action === "update-timeout") showTimeoutModal.value = true;
   else if (action === "update-schedule") showScheduleModal.value = true;
   else if (action === "topup" && deploymentVault.value) {
-    openVaultModal(deploymentVault.value, "topup", () => {});
+    openVaultModal(deploymentVault.value, "topup", () => updateVaultBalance(deploymentVault.value!));
   } else if (action === "withdraw" && deploymentVault.value) {
-    openVaultModal(deploymentVault.value, "withdraw", () => {});
+    openVaultModal(deploymentVault.value, "withdraw", () => updateVaultBalance(deploymentVault.value!));
   }
 
   router.replace({
@@ -2303,14 +2542,14 @@ watch(
   deploymentVault,
   (vault) => {
     const action = route.query.action?.toString();
-    if (vault && (action === "topup" || action === "withdraw")) {
-      openVaultModal(vault, action, () => {});
+    if (vault && (action === "topup" || action === "withdraw") && !vaultModalState.value.modalType) {
+      openVaultModal(vault, action, () => updateVaultBalance(vault));
     }
   },
   { immediate: true }
 );
 
-watch(() => vaultModalState.modalType, (modalType) => {
+watch(() => vaultModalState.value.modalType, (modalType) => {
   if (!modalType && (route.query.action === "topup" || route.query.action === "withdraw")) {
     clearAction();
   }

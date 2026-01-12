@@ -23,7 +23,7 @@
           <tr
             v-else
             v-for="vault in displayedVaults"
-            :key="vault.publicKey.toString()"
+            :key="vault.address"
           >
             <VaultRow :vault="vault" />
           </tr>
@@ -43,7 +43,7 @@
   <VaultModal />
 </template>
 <script setup lang="ts">
-import { type Vault } from "@nosana/sdk";
+import { type Vault } from "@nosana/kit";
 import { useRouter } from "vue-router";
 import VaultRow from "@/components/Vault/VaultRow.vue";
 import VaultModal from "@/components/Vault/Modal/VaultModal.vue";
@@ -54,7 +54,7 @@ const props = defineProps<{
 }>();
 
 const router = useRouter();
-const { nosana } = useSDK();
+const { nosana } = useKit();
 
 const loading = ref(true);
 const vaults = ref<Vault[]>([]);
@@ -66,8 +66,7 @@ watch(
   ([searchQuery]) => {
     if (searchQuery) {
       filteredVaults.value = vaults.value.filter((vault) =>
-        vault.publicKey
-          .toString()
+        vault.address
           .toLowerCase()
           .includes(searchQuery.toString().toLowerCase())
       );
@@ -93,7 +92,7 @@ const totalPages = computed(() =>
 );
 
 onMounted(async () => {
-  const data = await nosana.value.deployments.vaults.list();
+  const data = await nosana.value.api.deployments.vaults.list();
   vaults.value = data;
   loading.value = false;
 });

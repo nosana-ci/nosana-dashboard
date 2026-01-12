@@ -1,9 +1,9 @@
 import type { SessionDataObject } from '@sidebase/nuxt-auth/dist/runtime/types'
-import { useWallet } from "solana-wallets-vue";
+import { useWallet } from "@nosana/solana-vue";
 
 export function useAuthHeader() {
   const { status, data: userData } = useAuth();
-  const { nosana } = useSDK();
+  const { nosana } = useKit();
   const { generateAuthHeaders } = useNosanaWallet();
   const { connected } = useWallet();
 
@@ -21,7 +21,7 @@ export function useAuthHeader() {
   const ensureAuth = async (options?: { deploymentId?: string }): Promise<string> => {
     if (creditHeader.value) return creditHeader.value;
     if (options?.deploymentId) {
-      const dep = await nosana.value.deployments.get(options.deploymentId);
+      const dep = await nosana.value.api.deployments.get(options.deploymentId);
       // SDK returns the raw "message:signature[:timestamp]" string
       return await dep.generateAuthHeader();
     }

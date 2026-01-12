@@ -9,7 +9,7 @@
         <div class="header-left-section">
           <div class="is-flex is-align-items-center mb-2">
             <button
-              @click="router.back()"
+              @click="router.push(`/deployments/${deploymentId}`)"
               class="button is-ghost back-button mr-4"
             >
               <span class="icon is-small">
@@ -139,7 +139,7 @@
                         "
                       >
                         <nuxt-link
-                          :href="`https://explorer.nosana.com/host/${props.job.node}`"
+                          :href="`https://explore.nosana.com/hosts/${props.job.node}`"
                           target="_blank"
                           class="has-text-link is-family-monospace"
                         >
@@ -259,7 +259,6 @@
             :jobInfo="props.jobInfo"
             :isConfidential="isConfidential"
             :jobDefinition="props.job.jobDefinition"
-            :hasArtifacts="false"
             :isConnecting="isConnecting"
             :logConnectionEstablished="connectionEstablished"
             :systemLogs="[]"
@@ -385,7 +384,7 @@ import type {
   Operation,
   OperationArgsMap,
   HttpHealthCheck,
-} from "@nosana/sdk";
+} from "@nosana/kit";
 import type { FLogEntry } from "~/composables/jobs/useFLogs";
 import type { ProgressBar } from "~/composables/jobs/logTypes";
 

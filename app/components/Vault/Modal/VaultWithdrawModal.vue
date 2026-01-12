@@ -48,6 +48,6 @@ import { useVaultModal } from "~/composables/useVaultModal";
 const vaultModal = useVaultModal();
 
 const vaultKey = computed(
-  () => vaultModal.state.value.vault?.publicKey.toString() || ""
+  () => vaultModal.state.value.vault?.address || ""
 );
 </script>

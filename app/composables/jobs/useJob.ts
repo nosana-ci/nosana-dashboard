@@ -2,9 +2,9 @@ import {
   getJobExposedServices,
   type Job,
   type JobDefinition,
-} from "@nosana/sdk";
+} from "@nosana/kit";
 import { useToast } from "vue-toastification";
-import { useWallet } from "solana-wallets-vue";
+import { useWallet } from "@nosana/solana-vue";
 import { EventSourcePolyfill } from "event-source-polyfill";
 import type { JobInfo, JobViewModel, LiveEndpoints, ResultsSection} from "~/composables/jobs/types";
 import { normalizeEndpoints } from "~/composables/jobs/normalizeEndpoints";
@@ -35,10 +35,10 @@ export function useJob(jobId: string) {
   });
 
   const toast = useToast();
-  const { nosana } = useSDK();
+  const { nosana, publicKey } = useKit();
   const { getIpfs } = useIpfs();
   const { status, data: userData, token } = useAuth();
-  const { connected, publicKey } = useWallet();
+  const { connected } = useWallet();
   const { ensureAuth } = useAuthHeader();
   const { data, pending, refresh } = useAPI("/api/jobs/" + jobId, {
     watch: false,
@@ -89,7 +89,7 @@ export function useJob(jobId: string) {
             // Use credit API for authenticated users with generated addresses
             if (isCreditUser.value) {
               const config = useRuntimeConfig();
-              const response = await $fetch<{ message: string; creditRefund?: number; delisted?: boolean }>(`${config.public.apiBase}/api/jobs/stop-with-credits`, {
+              const response = await $fetch<{ message: string; creditRefund?: number; delisted?: boolean }>(`${config.public.backend_url}/api/jobs/stop-with-credits`, {
                 method: 'POST',
                 body: { jobAddress: jobId },
                 headers: {
@@ -114,13 +114,13 @@ export function useJob(jobId: string) {
               // Use SDK for wallet users
               try {
                 if (numericState === 0) {
-                  await nosana.value.jobs.delist(jobId);
+                  await nosana.value.jobs.delist({ job: jobId });
                   toast.success('Job successfully delisted (canceled) from queue!');
                   setTimeout(() => {
                     navigateTo('/deploy');
                   }, 3000);
                 } else if (numericState === 1) {
-                  await nosana.value.jobs.end(jobId);
+                  await nosana.value.jobs.end({ job: jobId });
                   toast.success('Job successfully ended!');
                   setTimeout(() => refresh(), 1000);
                 } else {
@@ -189,7 +189,7 @@ export function useJob(jobId: string) {
             // Use credit API for authenticated users with generated addresses
             if (isCreditUser.value) {
               const config = useRuntimeConfig();
-              const response = await $fetch<{ message: string; newTimeout?: number; creditsUsed?: number }>(`${config.public.apiBase}/api/jobs/extend-with-credits`, {
+              const response = await $fetch<{ message: string; newTimeout?: number; creditsUsed?: number }>(`${config.public.backend_url}/api/jobs/extend-with-credits`, {
                 method: 'POST',
                 body: { 
                   jobAddress: jobId,
@@ -209,7 +209,7 @@ export function useJob(jobId: string) {
               setTimeout(() => refresh(), 1000);
             } else {
               // Use SDK for wallet users
-              await nosana.value.jobs.extend(jobId, extensionSeconds);
+              await nosana.value.jobs.extend({ job: jobId, timeout: extensionSeconds });
               toast.success(`Job extended by ${extensionHours} hour${extensionHours !== 1 ? 's' : ''}!`);
               setTimeout(() => refresh(), 1000);
             }
@@ -311,10 +311,14 @@ export function useJob(jobId: string) {
   );
 
   watch(pending, (isPending) => {
-    if (!isPending && !data.value && !job.value) {
-      loading.value = false;
+    if (!isPending) {
+      if (!data.value && !job.value) {
+        loading.value = false;
+      }
+    } else {
+      loading.value = true;
     }
-  }, { immediate: true });
+  });
 
   watch([job, pending], ([currentJob, isPending]) => {
     if (!isPending && currentJob) {

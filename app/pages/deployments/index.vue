@@ -27,7 +27,7 @@
 </template>
 
 <script setup lang="ts">
-import { useWallet } from "solana-wallets-vue";
+import { useWallet } from "@nosana/solana-vue";
 import { faPlus } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import DeploymentsTable from "~/components/DeploymentsTable/Table.vue";

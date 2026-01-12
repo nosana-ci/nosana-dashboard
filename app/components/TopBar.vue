@@ -64,7 +64,7 @@
         <!-- Wallet User -->
         <template v-else-if="connected && wallet">
           <div class="profile-avatar wallet-avatar">
-            <img v-if="wallet.adapter.icon" :src="wallet.adapter.icon" :alt="wallet.adapter.name + ' icon'" class="wallet-icon" />
+            <img v-if="wallet.icon" :src="wallet.icon" :alt="wallet.name + ' icon'" class="wallet-icon" />
             <span v-else>W</span>
           </div>
           <div class="profile-info">
@@ -98,7 +98,7 @@
   </div>
 </template>
 <script lang="ts" setup>
-import { WalletMultiButton } from "solana-wallets-vue";
+import { SolanaWalletButton, useWallet } from "@nosana/solana-vue";
 import { computed, ref, onMounted, onUnmounted, watch } from 'vue';
 import GoogleIcon from '@/assets/img/icons/google.svg?component';
 import TwitterIcon from '@/assets/img/icons/twitter.svg?component';
@@ -106,12 +106,20 @@ import UserIcon from '@/assets/img/icons/sidebar/user.svg?component';
 import SettingsIcon from '@/assets/img/icons/settings.svg?component';
 import LogoutIcon from '@/assets/img/icons/logout.svg?component';
 import { useRouter } from 'vue-router';
-import { useWallet } from 'solana-wallets-vue';
 
-const { nosana, prioFee } = useSDK();
+const { nosana, prioFee } = useKit();
 const { status, signOut, data: session, token } = useAuth();
 const router = useRouter();
-const { connected, publicKey, wallet, disconnect } = useWallet();
+const { connected, account, wallet, disconnect } = useWallet();
+
+// Compatibility: create publicKey-like object from account
+const publicKey = computed(() => {
+  if (!account.value?.address) return null;
+  return {
+    toString: () => account.value!.address,
+    toBase58: () => account.value!.address,
+  };
+});
 
 // Profile dropdown state  
 const showUserProfileDropdown = ref(false);
@@ -222,7 +230,8 @@ const fetchNosBalance = async (signal?: AbortSignal) => {
     // Note: SDK calls don't support AbortSignal directly, but we can check if aborted
     if (signal?.aborted) return;
     
-    nosBalance.value = await nosana.value.solana.getNosBalance(publicKey.value.toBase58());
+    const bal = await nosana.value.nos.getBalance(publicKey.value.toBase58());
+    nosBalance.value = bal !== null ? { uiAmount: bal } : null;
   } catch (error) {
     // Don't log errors for aborted requests
     if (!(error instanceof Error && error.name === 'AbortError') && !signal?.aborted) {
@@ -238,6 +247,10 @@ const fetchNosBalance = async (signal?: AbortSignal) => {
 const logout = async () => {
   showUserProfileDropdown.value = false;
   try {
+    // Clear wallet session cookie
+    const sessionCookie = useCookie('nosana-wallet-session');
+    sessionCookie.value = null;
+    
     if (connected.value) {
       await disconnect();
       await navigateTo('/');

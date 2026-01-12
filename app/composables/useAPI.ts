@@ -29,7 +29,7 @@ export const useAPI = (
       }
 
       return $fetch(url, {
-        baseURL: config.public.apiBase as string,
+        baseURL: config.public.backend_url as string,
         method: opts?.method || 'GET',
         headers,
         ...(opts?.body && { body: opts.body }),

@@ -16,6 +16,18 @@
       </template>
     </TopBar>
     <div class="container">
+      <AccountClaimModal
+        v-model="showInvitationModal"
+        type="invitation"
+        :token="invitationToken"
+        :invitation="invitation"
+        @claimed="handleFreeCreditsClaimed"
+      />
+      <AccountClaimModal
+        v-model="showFreeCreditsModal"
+        type="grant"
+        @claimed="handleFreeCreditsClaimed"
+      />
       <!-- Credit Invitation Section (shown when unauthenticated with invitation token) -->
       <div v-if="invitationToken && !canShowAccountData" class="section">
         <div class="columns is-centered">
@@ -38,9 +50,6 @@
               </div>
               
               <div v-else-if="invitation">
-                <span class="icon is-large has-text-success">
-                  <i class="fas fa-gift fa-2x"></i>
-                </span>
                 <h1 class="title is-3 mt-2">Credit Invitation</h1>
                 <p class="subtitle">
                   You've been invited to claim credits
@@ -91,37 +100,6 @@
                     <span>Sign In to Claim Credits</span>
                   </button>
                 </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Pending Invitation Claim (shown when authenticated with unclaimed invitation) -->
-      <div v-if="invitationToken && canShowAccountData && invitation && !invitation.isClaimed && !invitation.isExpired" class="section">
-        <div class="columns is-centered">
-          <div class="column is-half">
-            <div class="box has-text-centered has-background-success-light">
-              <div v-if="invitation.restrictedEmail && userData?.email !== invitation.restrictedEmail" class="notification is-warning">
-                <strong>Email Restriction</strong><br>
-                This invitation is restricted to another email address.
-              </div>
-              
-              <div v-else>
-                <span class="icon is-large has-text-success">
-                  <i class="fas fa-gift fa-2x"></i>
-                </span>
-                <h2 class="title is-4 mt-2">Ready to Claim!</h2>
-                
-                <button
-                  @click="claimInvitation"
-                  :disabled="claiming"
-                  :class="['button', 'is-dark', { 'is-loading': claiming }]"
-                >
-                  <span>
-                    {{ claiming ? 'Claiming...' : `Claim ${formatCredits(invitation.creditsAmount)} Credits` }}
-                  </span>
-                </button>
               </div>
             </div>
           </div>
@@ -305,7 +283,7 @@
 <script setup lang="ts">
 import DeploymentsTable from '~/components/DeploymentsTable/Table.vue';
 import JobList from '~/components/List/JobList.vue';
-import { useWallet } from 'solana-wallets-vue';
+import { useWallet } from '@nosana/solana-vue';
 import { useAPI } from '~/composables/useAPI';
 import { computed, ref, onMounted, watch } from 'vue';
 import CreditBalance from "~/components/Account/CreditBalance.vue";
@@ -315,8 +293,6 @@ import SupportIcon from '@/assets/img/icons/sidebar/support.svg?component';
 import ArrowUpIcon from '@/assets/img/icons/arrow-up.svg?component';
 import ArrowDownIcon from '@/assets/img/icons/arrow-down.svg?component';
 import { useToast } from "vue-toastification";
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-import { faPlus } from '@fortawesome/free-solid-svg-icons';
 import { Bar } from 'vue-chartjs';
 import {
   Chart as ChartJS,
@@ -329,6 +305,7 @@ import {
 } from 'chart.js';
 import { useRouter } from "vue-router";
 import ApiKeys from '~/components/Account/ApiKeys.vue';
+import AccountClaimModal from '~/components/Account/ClaimModal.vue';
 
 const config = useRuntimeConfig().public;
 ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale);
@@ -337,19 +314,77 @@ const { $colorMode } = useNuxtApp();
 const route = useRoute();
 const showSettingsModal = ref(false);
 const toast = useToast();
-const { connected, publicKey, wallet } = useWallet();
-const { nosana } = useSDK();
+const { connected, account, wallet } = useWallet();
+
+// Compatibility: create publicKey-like object from account
+const publicKey = computed(() => {
+  if (!account.value?.address) return null;
+  return {
+    toString: () => account.value!.address,
+    toBase58: () => account.value!.address,
+  };
+});
+const { nosana } = useKit();
 const claimingRewards = ref(false);
 const onboardingInProgress = ref(false);
 const creditBalanceRef = ref();
 const { triggerCreditRefresh } = useCreditRefresh();
 
+interface Invitation {
+  creditsAmount: number;
+  expirationDate: string | Date | null;
+  restrictedEmail: string | null;
+  isClaimed: boolean;
+  isExpired: boolean;
+}
+
 // Credit invitation variables
 const invitationToken = computed(() => route.query.token as string);
-const invitation = ref(null);
+const invitation = ref<Invitation | null>(null);
 const loadingInvitation = ref(false);
 const invitationError = ref('');
-const claiming = ref(false);
+
+const showFreeCreditsModal = ref(false);
+const showInvitationModal = ref(false);
+const checkedEligibility = ref(false);
+
+const checkFreeCreditsEligibility = async () => {
+  if (!token.value || status.value !== 'authenticated' || checkedEligibility.value) return;
+  
+  // If we have an invitation token, show that modal instead of checking for free credits
+  if (invitationToken.value && invitation.value && !invitation.value.isClaimed && !invitation.value.isExpired) {
+    if (!invitation.value.restrictedEmail || userData.value?.email === invitation.value.restrictedEmail) {
+      showInvitationModal.value = true;
+      return;
+    }
+  }
+
+  try {
+    const data = await $fetch<{ eligible: boolean }>(`${config.backend_url}/api/credits/request/eligibility`, {
+      headers: {
+        'Authorization': `Bearer ${token.value}`
+      }
+    });
+    
+    if (data && data.eligible) {
+      showFreeCreditsModal.value = true;
+    }
+    checkedEligibility.value = true;
+  } catch (error) {
+    console.error('Error checking free credits eligibility:', error);
+  }
+};
+
+const handleFreeCreditsClaimed = async () => {
+  if (creditBalanceRef.value?.fetchBalance) {
+    await creditBalanceRef.value.fetchBalance();
+  }
+  triggerCreditRefresh();
+  // If it was an invitation, reload it to show claimed state
+  if (showInvitationModal.value) {
+    await loadInvitation();
+  }
+};
 
 const totalDeployments = ref(0);
 
@@ -360,7 +395,7 @@ const fetchDeploymentsCount = async () => {
   }
 
   try {
-    const deployments = await nosana.value.deployments.list();
+    const deployments = await nosana.value.api.deployments.list();
     totalDeployments.value = deployments ? deployments.length : 0;
   } catch (error) {
     console.error('Error fetching deployments count:', error);
@@ -424,7 +459,8 @@ const checkBalances = async () => {
   loading.value = true;
   try {
     if (activeAddress.value) {
-      balance.value = await nosana.value.solana.getNosBalance(activeAddress.value);
+      const nosBalance = await nosana.value.nos.getBalance(activeAddress.value);
+      balance.value = { uiAmount: nosBalance };
       // Only fetch staking data for wallet connections
       if (addressSource.value === 'wallet') {
         try {
@@ -484,6 +520,7 @@ watch(
         checkBalances();
         refreshSpendingHistory();
         fetchDeploymentsCount();
+        checkFreeCreditsEligibility();
       }, 500);
     } else {
       // Update stable address if we have a valid one
@@ -500,6 +537,7 @@ onMounted(() => {
     checkBalances();
     refreshSpendingHistory();
     fetchDeploymentsCount();
+    checkFreeCreditsEligibility();
   }
   
   // Add CSS to improve text rendering
@@ -540,7 +578,7 @@ const {
   data: spendingHistory,
   pending: loadingSpending,
   refresh: _refreshSpendingHistory
-} = useAPI(() => spendingHistoryEndpoint.value || '', {
+} = useAPI(computed(() => spendingHistoryEndpoint.value || ''), {
   default: () => ({
     userAddress: '',
     startDate: '',
@@ -637,10 +675,11 @@ const GPU_COLORS: Record<string, string> = {
 const marketAddressToInfo = computed(() => {
   if (!marketsData.value) return {};
   return marketsData.value.reduce((acc: Record<string, { name: string, isCommunity: boolean }>, market: any) => {
-    if (market.slug?.toLowerCase().includes('nvidia')) {
+    // Include all markets, not just NVIDIA ones
+    if (market.address) {
       acc[market.address] = {
-        name: market.name.replace(' Community', ''), // Remove Community suffix
-        isCommunity: market.name.includes('Community')
+        name: market.name?.replace(' Community', '') || market.address.slice(0, 8) + '...', // Remove Community suffix or use truncated address
+        isCommunity: market.name?.includes('Community') || false
       };
     }
     return acc;
@@ -705,6 +744,7 @@ const chartData = computed(() => {
   (spendingHistory.value?.results || []).forEach((monthItem: MonthlyResult) => {
     monthItem.breakdown.forEach((b: any) => {
       const marketInfo = marketAddressToInfo.value[b.market];
+      // Include all markets, even if not in marketsData (custom markets)
       if (marketInfo) {
         const baseName = marketInfo.name;
         if (!marketGroups.has(baseName)) {
@@ -715,6 +755,16 @@ const chartData = computed(() => {
         // Note: Use total_usd from the *month* for ranking, not breakdown totalSpent
         // to handle cases where breakdown might be incomplete? Check API logic.
         // Let's stick to summing breakdown for now as it seems intended for usage calc.
+        gpuUsageCounts.set(baseName, (gpuUsageCounts.get(baseName) || 0) + b.totalSpent);
+      } else {
+        // Handle custom markets that aren't in marketsData
+        // Use truncated address as the name
+        const baseName = `Custom (${b.market.slice(0, 8)}...)`;
+        if (!marketGroups.has(baseName)) {
+          marketGroups.set(baseName, new Set());
+          gpuUsageCounts.set(baseName, 0);
+        }
+        marketGroups.get(baseName)?.add(b.market);
         gpuUsageCounts.set(baseName, (gpuUsageCounts.get(baseName) || 0) + b.totalSpent);
       }
     });
@@ -754,6 +804,9 @@ const chartData = computed(() => {
               } else {
                 premiumTotal += marketData.totalSpent;
               }
+            } else {
+              // Handle custom markets - treat as premium by default
+              premiumTotal += marketData.totalSpent;
             }
           }
         });
@@ -1001,12 +1054,13 @@ const logout = async () => {
 };
 
 // Credit invitation functions
-const formatCredits = (cents) => {
+const formatCredits = (cents: number) => {
   const amount = typeof cents === 'number' ? cents : 0;
   return `$${(amount / 1000).toFixed(2)}`;
 };
 
-const formatDate = (dateString) => {
+const formatDate = (dateString: string | Date | null) => {
+  if (!dateString) return '';
   return new Date(dateString).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
@@ -1023,7 +1077,7 @@ const loadInvitation = async () => {
     loadingInvitation.value = true;
     invitationError.value = '';
     
-    const response = await $fetch(`${config.apiBase}/api/credits/invitations/${invitationToken.value}`);
+    const response = await $fetch<Invitation>(`${config.backend_url}/api/credits/invitations/${invitationToken.value}`);
     invitation.value = response;
     
     if (response.isClaimed) {
@@ -1031,55 +1085,11 @@ const loadInvitation = async () => {
     } else if (response.isExpired) {
       invitationError.value = 'This credit invitation has expired.';
     }
-  } catch (err) {
+  } catch (err: any) {
     console.error('Error loading invitation:', err);
     invitationError.value = err.data?.message || 'Failed to load invitation details';
   } finally {
     loadingInvitation.value = false;
-  }
-};
-
-const claimInvitation = async () => {
-  if (!invitationToken.value || !token.value) return;
-  
-  try {
-    claiming.value = true;
-    
-    const response = await $fetch(`${config.apiBase}/api/credits/invitations/${invitationToken.value}/claim`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token.value}`
-      }
-    });
-    
-    toast.success(`Successfully claimed ${formatCredits(response.amount * 1000)} credits!`);
-    
-    // Refresh credit balance locally and globally
-    if (creditBalanceRef.value?.fetchBalance) {
-      await creditBalanceRef.value.fetchBalance();
-    }
-    
-    // Trigger global credit refresh to update all credit displays
-    triggerCreditRefresh();
-    
-    // Reload invitation to show it's claimed
-    await loadInvitation();
-    
-    try {
-      trackEvent('credit_claimed', {
-        amount: response.amount,
-        code: invitationToken.value,
-        user_id: userData.value?.generatedAddress,
-      });
-    } catch (error) {
-      console.warn("Error tracking credit invitation claimed:", error);
-    }
-    
-  } catch (err) {
-    console.error('Error claiming invitation:', err);
-    toast.error(err.data?.message || 'Failed to claim invitation');
-  } finally {
-    claiming.value = false;
   }
 };
 
