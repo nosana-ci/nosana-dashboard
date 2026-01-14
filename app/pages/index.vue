@@ -385,10 +385,21 @@ const handleWalletConnect = async () => {
       await signOut({ redirect: false });
     }
 
+
     if (wallets.value && wallets.value.length > 0) {
       showWalletModal.value = true;
     } else {
-      toast.error("No wallets found");
+      // Check if we're on mobile
+      const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const isAndroid = /Android/i.test(navigator.userAgent);
+      
+      if (isMobile && isAndroid) {
+        toast.error("No wallets found. Make sure you have a compatible Solana wallet app installed (e.g., Phantom Mobile, Solflare Mobile).");
+      } else if (isMobile) {
+        toast.error("Mobile Wallet Adapter is only available on Android devices.");
+      } else {
+        toast.error("No wallets found. Please install a Solana wallet browser extension (e.g., Phantom, Solflare).");
+      }
     }
   } catch (error) {
     console.error("Error preparing wallet selection:", error);
