@@ -237,6 +237,22 @@
           <div class="p-5">
             <!-- Overview Tab -->
             <div v-if="activeTab === 'overview'">
+              <!-- Error Warning -->
+              <div v-if="hasErrorInLastEvent" class="notification is-danger mb-5 is-light">
+                <div class="is-flex is-align-items-center is-justify-content-space-between">
+                  <div>
+                    <strong>Deployment Error Detected</strong>
+                    <p class="mt-1">An error occurred with this deployment. View the Events tab for more details.</p>
+                  </div>
+                  <button
+                    @click="switchTab('events')"
+                    class="button is-danger is-outlined ml-4"
+                  >
+                    View Events
+                  </button>
+                </div>
+              </div>
+
               <!-- Endpoints Section -->
               <div v-if="deploymentEndpoints.length > 0" class="mb-5">
                 <h2 class="title is-5 mb-3">Endpoints</h2>
@@ -1844,6 +1860,14 @@ const deploymentEndpoints = computed(() => {
 // All deployment events
 const deploymentEvents = computed((): DeploymentEvent[] => {
   return (deployment.value?.events as DeploymentEvent[]) || [];
+});
+
+// Check if last event contains ERROR
+const hasErrorInLastEvent = computed(() => {
+  const events = deploymentEvents.value;
+  if (events.length === 0) return false;
+  const lastEvent = events[0];
+  return lastEvent?.type.endsWith('ERROR') && lastEvent?.category.includes('Deployment');
 });
 
 // No vault actions in API mode

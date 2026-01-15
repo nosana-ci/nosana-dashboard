@@ -9,7 +9,11 @@
         <div class="header-left-section">
           <div class="is-flex is-align-items-center mb-2">
             <button
-              @click="router.push(`/deployments/${deploymentId}`)"
+              @click="
+                deploymentId
+                  ? router.push(`/deployments/${deploymentId}`)
+                  : router.push(`/deployments?tab=jobs`)
+              "
               class="button is-ghost back-button mr-4"
             >
               <span class="icon is-small">
