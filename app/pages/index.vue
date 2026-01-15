@@ -713,7 +713,7 @@ const authenticateTwitterLogin = async (
   border-radius: 16px;
   padding: 3rem;
   max-width: 500px;
-  width: 90%;
+  width: 100%;
   max-height: 90vh;
   overflow-y: auto;
   text-align: center;
