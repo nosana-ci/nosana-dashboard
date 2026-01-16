@@ -14,6 +14,7 @@ export default defineNuxtPlugin({
     // Note: Requires HTTPS (secure context) to work
     if (process.client && typeof window !== "undefined") {
       // Get app URI from current origin
+      // Important: Use the full origin including protocol for proper redirect handling
       const appUri = window.location.origin;
 
       useMobileWalletAdapter({
