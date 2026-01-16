@@ -425,6 +425,7 @@
                               {{ job.revision || "-" }}
                             </td>
                             <td>
+                              {{  }}
                               <JobStatus :status="job.state || 0" />
                             </td>
                             <td>
@@ -1814,12 +1815,31 @@ const getJobDuration = (jobId: string): number | null => {
   return null;
 };
 
+// Helper function to convert job state string to number
+const jobStateStringToNumber = (state: string | number | undefined): number => {
+  if (typeof state === 'number') return state;
+  if (!state) return 0;
+  
+  const stateUpper = String(state).toUpperCase();
+  const stateMap: Record<string, number> = {
+    'QUEUED': 0,
+    'RUNNING': 1,
+    'DONE': 2,
+    'STOPPED': 3,
+    'TIMEOUT': 4,
+    'ERROR': 5,
+  };
+  
+  return stateMap[stateUpper] ?? 0;
+};
+
 const activeJobs = computed((): DeploymentJob[] => {
   const jobs = (deployment.value?.jobs as DeploymentJob[]) || [];
   // Enrich jobs with fetched states
+  console.log("jobs", jobs);
   const enrichedJobs = jobs.map((job) => ({
     ...job,
-    state: jobStates.value[job.job] ?? 0,
+    state: jobStates.value[job.job] ?? jobStateStringToNumber(job.state),
   }));
 
   // Filter for running jobs (states: QUEUED=0, RUNNING=1)
@@ -1831,7 +1851,7 @@ const historicalJobs = computed((): DeploymentJob[] => {
   // Enrich jobs with fetched states
   const enrichedJobs = jobs.map((job) => ({
     ...job,
-    state: jobStates.value[job.job] ?? 0,
+    state: jobStates.value[job.job] ?? jobStateStringToNumber(job.state),
   }));
 
   // Filter for completed/stopped jobs (states: DONE=2, STOPPED=3, TIMEOUT=4, ERROR=5)
