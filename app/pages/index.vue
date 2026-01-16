@@ -92,7 +92,40 @@
 
               <!-- Wallet Connection Button -->
               <div class="wallet-section">
+                <!-- Connection Status -->
+                <div v-if="connected && account" class="wallet-connection-status">
+                  <div class="status-indicator">
+                    <span class="status-dot connected"></span>
+                    <span class="status-text">
+                      Connected: {{ getWalletName() || 'Unknown Wallet' }}
+                    </span>
+                  </div>
+                  <div v-if="account?.address" class="wallet-address">
+                    {{ account.address.substring(0, 8) }}...{{ account.address.substring(account.address.length - 6) }}
+                  </div>
+                  <div v-if="signingMessage" class="signing-status">
+                    <span class="status-dot signing"></span>
+                    Signing authentication message to login...
+                  </div>
+                  <div v-if="!signingMessage && !signMessageError && connected && account" class="sign-message-section">
+                    <button 
+                      class="sign-message-button" 
+                      @click="handleSignMessage"
+                      :disabled="signingMessage"
+                    >
+                      Sign Message to Login
+                    </button>
+                  </div>
+                  <div v-if="signMessageError && !signingMessage" class="signing-error">
+                    <span class="error-text">Signing failed</span>
+                    <button class="retry-button" @click="retrySignMessage" :disabled="signingMessage">
+                      Retry Signing
+                    </button>
+                  </div>
+                </div>
+                
                 <button
+                  v-if="!connected"
                   class="login-button wallet-button"
                   @click="handleWalletConnect"
                   :disabled="signingMessage"
@@ -102,6 +135,16 @@
                   {{
                     signingMessage ? "Signing Message..." : "Select Wallet"
                   }}
+                </button>
+                
+                <button
+                  v-else
+                  class="login-button wallet-button"
+                  @click="handleDisconnect"
+                  :disabled="signingMessage"
+                >
+                  <WalletIcon :size="20" />
+                  Disconnect Wallet
                 </button>
               </div>
             </template>
@@ -159,7 +202,7 @@ definePageMeta({
 const { connected, disconnect, connect, account } = useWallet();
 import { useSolanaWallets } from "@nosana/solana-vue";
 const { wallets } = useSolanaWallets();
-const { generateAuthHeaders } = useNosanaWallet();
+const { generateAuthHeaders, signMessageError } = useNosanaWallet();
 
 // Compatibility: create publicKey-like object from account
 const publicKey = computed(() => {
@@ -182,6 +225,84 @@ const codeVerifier = ref("");
 const loading = ref(false);
 const signingMessage = ref(false);
 const backgroundImageKey = ref(0);
+const currentWalletName = ref<string | null>(null);
+
+// Get wallet name from account or stored name
+const getWalletName = () => {
+  if (currentWalletName.value) {
+    return currentWalletName.value;
+  }
+  if (account.value) {
+    // Try to find wallet name from wallets list
+    const wallet = wallets.value?.find((w: any) => w.accounts?.some((acc: any) => acc.address === account.value?.address));
+    return wallet?.name || 'Connected Wallet';
+  }
+  return null;
+};
+
+// Handle disconnect
+const handleDisconnect = async () => {
+  try {
+    await disconnect();
+    currentWalletName.value = null;
+    toast.info('Wallet disconnected');
+  } catch (error) {
+    toast.error('Failed to disconnect wallet');
+  }
+};
+
+// Handle sign message button click (user gesture required for mobile wallets)
+const handleSignMessage = async () => {
+  if (!currentWalletName.value) {
+    toast.error('No wallet name stored. Please reconnect.');
+    return;
+  }
+  
+  if (!connected.value || !account.value) {
+    toast.error('Wallet not connected. Please reconnect.');
+    return;
+  }
+  
+  // Clear any previous error
+  if (signMessageError) {
+    signMessageError.value = false;
+  }
+  
+  await signAuthMessage(currentWalletName.value);
+};
+
+// Retry signing message
+const retrySignMessage = async () => {
+  if (!currentWalletName.value) {
+    toast.error('No wallet name stored. Please reconnect.');
+    return;
+  }
+  
+  // Clear error state
+  if (signMessageError) {
+    signMessageError.value = false;
+  }
+  
+  // Wait a moment before retrying (this seems to help with mobile wallets)
+      await new Promise(resolve => setTimeout(resolve, 500));
+  
+  await signAuthMessage(currentWalletName.value);
+};
+
+// Watch for auto-connect and set wallet name if not already set
+watch([connected, account, wallets], () => {
+  // Only set wallet name if connected, has account, and wallet name is not already set
+  if (connected.value && account.value && !currentWalletName.value && wallets.value && wallets.value.length > 0) {
+    // Find the wallet that matches the connected account
+    const wallet = wallets.value.find((w: any) => 
+      w.accounts?.some((acc: any) => acc.address === account.value?.address)
+    );
+    
+    if (wallet?.name) {
+      currentWalletName.value = wallet.name;
+    }
+  }
+}, { immediate: true });
 
 const isCampaignMode = computed(() => {
   // Check for specific campaign code, but only if not in an OAuth popup flow
@@ -203,14 +324,13 @@ watch(
 );
 
 // Check if user is already authenticated on mount
-onMounted(() => {
+onMounted(async () => {
   const urlParams = new URLSearchParams(window.location.search);
   const code = urlParams.get("code");
   const state = urlParams.get("state");
 
   if (code && window.opener) {
     // This is a popup window completing OAuth (Google or Twitter)
-    console.log("Popup detected, sending message to parent");
 
     // Check if this is Twitter (has state param) or Google
     if (state) {
@@ -235,6 +355,51 @@ onMounted(() => {
     }
     window.close();
     return;
+  }
+
+  // Check if we're returning from a mobile wallet connection
+  // Mobile Wallet Adapter uses Android Intents which may redirect back
+  // The auto-connect should handle this, but give it a moment to restore state
+  if (!connected.value && wallets.value && wallets.value.length > 0) {
+    // Wait a bit for auto-connect to restore connection state
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Check connection state after waiting
+    if (connected.value && account.value) {
+      // Ensure wallet name is set (watcher should handle this, but double-check here)
+      if (!currentWalletName.value && wallets.value && wallets.value.length > 0) {
+        const wallet = wallets.value.find((w: any) => 
+          w.accounts?.some((acc: any) => acc.address === account.value?.address)
+        );
+        if (wallet?.name) {
+          currentWalletName.value = wallet.name;
+        }
+      }
+      toast.success(`Wallet connected: ${account.value.address.substring(0, 8)}...`);
+    } else {
+      // Check if we have a mobile wallet in the list
+      const hasMobileWallet = wallets.value.some((w: any) => 
+        w.name?.toLowerCase().includes('mobile') || w.id?.toLowerCase().includes('mobile')
+      );
+      
+      if (hasMobileWallet) {
+        // Wait a bit more for mobile wallet connection
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        if (connected.value && account.value) {
+          // Ensure wallet name is set
+          if (!currentWalletName.value && wallets.value && wallets.value.length > 0) {
+            const wallet = wallets.value.find((w: any) => 
+              w.accounts?.some((acc: any) => acc.address === account.value?.address)
+            );
+            if (wallet?.name) {
+              currentWalletName.value = wallet.name;
+            }
+          }
+          toast.success(`Wallet connected: ${account.value.address.substring(0, 8)}...`);
+        }
+      }
+    }
   }
 
   if (status.value === "authenticated") {
@@ -282,7 +447,6 @@ const selectGoogleLogin = async () => {
       await disconnect();
     }
 
-    console.log("config.googleRedirectUri", config.googleRedirectUri);
 
     const query = {
       client_id: config.googleClientId as string,
@@ -412,7 +576,42 @@ const selectWallet = async (wallet: any) => {
   const walletName = wallet.name;
 
   try {
+    // Check if this is a mobile wallet adapter
+    const isMobileWallet = walletName?.toLowerCase().includes('mobile') || 
+                          wallet.id?.toLowerCase().includes('mobile');
+    
+    
     await connect(wallet);
+    
+    // For mobile wallets, the redirect might cause the page to reload
+    // If we're still here, wait a bit for the connection to be established
+    if (!isMobileWallet) {
+      await new Promise(resolve => setTimeout(resolve, 500));
+    } else {
+      // For mobile wallets, give it a moment before checking
+      // The redirect might happen, so this code may not execute
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+
+    // Check if connection was successful
+    // Note: For mobile wallets, if redirect happened, this code might not execute
+    // The connection will be restored by auto-connect on page reload
+    if (!connected.value || !account.value) {
+      // For mobile wallets, if we're not connected, it might be because
+      // the page is about to redirect or has redirected
+      if (isMobileWallet) {
+        // Don't show error yet, let the redirect happen
+        return;
+      }
+      
+      toast.error(`Failed to connect to ${walletName}. Please try again.`);
+      return;
+    }
+
+    // Store wallet name for retry functionality
+    currentWalletName.value = walletName;
+    
+    toast.success(`Connected to ${walletName}!`);
 
     try {
       trackEvent("wallet_connected", {
@@ -423,11 +622,41 @@ const selectWallet = async (wallet: any) => {
       console.warn("Error tracking wallet connected:", error);
     }
 
+    // For mobile wallets, don't auto-sign - Android requires user gesture to open apps
+    // Show a button instead that the user must click
+    const isMobileWalletAdapter = walletName?.toLowerCase().includes('mobile');
+    
+    if (isMobileWalletAdapter) {
+      toast.success('Wallet connected! Please click "Sign Message" to login.');
+      // Don't auto-sign - user must click the button (user gesture required)
+      return;
+    }
+    
+    // For non-mobile wallets, we can auto-sign
+    // After connecting, wait a moment for wallet to be fully ready before signing
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Check wallet is still connected before signing
+    if (!connected.value || !account.value) {
+      toast.warning('Wallet connection lost. Please reconnect.');
+      return;
+    }
+    
     // After connecting, trigger message signing
     await signAuthMessage(walletName);
   } catch (error) {
-    console.error("Error selecting wallet:", error);
-    toast.error(`Failed to connect to ${walletName}. Please try again.`);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    
+    // Don't show error for mobile wallets if it's a redirect-related error
+    const isRedirectError = errorMessage.includes('redirect') || 
+                           errorMessage.includes('navigation') ||
+                           errorMessage.includes('aborted');
+    
+    if (!isRedirectError) {
+      toast.error(`Failed to connect to ${walletName}: ${errorMessage}`);
+    } else {
+      toast.info('Redirecting to wallet app...');
+    }
   }
 };
 
@@ -436,7 +665,62 @@ const signAuthMessage = async (walletName: string) => {
   const sessionCookie = useCookie<{ authenticated: boolean; address: string; timestamp: number } | null>('nosana-wallet-session');
 
   try {
-    await generateAuthHeaders();
+    // Check if wallet is still connected before signing
+    if (!connected.value || !account.value) {
+      const errorMsg = 'Wallet disconnected before signing. Please reconnect.';
+      toast.error(errorMsg);
+      throw new Error(errorMsg);
+    }
+
+    // Check if this is a mobile wallet - they may need special handling
+    const isMobileWallet = walletName?.toLowerCase().includes('mobile');
+    
+    if (isMobileWallet) {
+      // Give mobile wallet a moment to be ready and ensure connection is stable
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Double-check wallet is still connected before signing
+      if (!connected.value || !account.value) {
+        const errorMsg = 'Wallet disconnected before signing. Please reconnect.';
+        toast.error(errorMsg);
+        throw new Error(errorMsg);
+      }
+    }
+    
+    try {
+      // For mobile wallets, signing might trigger another redirect to the wallet app
+      // The page might reload after signing, so we handle that gracefully
+      await generateAuthHeaders();
+      
+      // If we're still here (no redirect), signing was successful
+    } catch (signError: any) {
+      const errorMsg = signError?.message || String(signError);
+      
+      // Check if this is the mobile wallet protocol error
+      if (errorMsg.includes('mobile wallet protocol') || errorMsg.includes('no installed wallet')) {
+        toast.error('Mobile wallet not found for signing. This may happen if the wallet app closed. Please ensure Phantom/Jupiter is installed and try reconnecting.');
+        
+        // Check wallet state
+        if (!connected.value || !account.value) {
+          toast.warning('Wallet is disconnected. Please reconnect and try again.');
+        }
+      } else {
+        toast.error(`Failed to sign message: ${errorMsg}`);
+      }
+      
+      // Check if wallet is still connected after error
+      if (!connected.value || !account.value) {
+        toast.warning('Wallet disconnected during signing. This may be why the error occurred.');
+      }
+      // Don't throw - let the error be handled below so we can show retry button
+      signingMessage.value = false;
+      return; // Exit early, don't proceed with redirect
+    }
+    
+    // Clear any previous error on success
+    if (signMessageError) {
+      signMessageError.value = false;
+    }
     
     // Store wallet session in cookie for middleware to read
     // Middleware can't access WalletProvider context, so we use a cookie
@@ -447,6 +731,8 @@ const signAuthMessage = async (walletName: string) => {
         address: walletAddress,
         timestamp: Date.now()
       };
+    } else {
+      toast.warning('Wallet address not found after signing');
     }
 
     try {
@@ -463,15 +749,15 @@ const signAuthMessage = async (walletName: string) => {
     
     await navigateTo(redirect);
   } catch (error: any) {
-    console.error("Error signing auth message:", error);
-    toast.error(error.message || "Error signing message");
+    const errorMessage = error?.message || String(error);
+    toast.error(`Error: ${errorMessage}`);
 
-    // Disconnect wallet on signing failure so user can try again
+    // Don't disconnect automatically - let user retry
+    // Only clear session cookie
     try {
       sessionCookie.value = null;
-      await disconnect();
-    } catch (disconnectError) {
-      console.warn("Error disconnecting wallet:", disconnectError);
+    } catch (e) {
+      // Ignore
     }
   } finally {
     signingMessage.value = false;
@@ -910,6 +1196,138 @@ const authenticateTwitterLogin = async (
   font-size: 1rem;
   font-weight: 500;
   color: $black;
+}
+
+.wallet-connection-status {
+  background: $white-bis;
+  border: 1px solid $grey-light;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  text-align: left;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  
+  &.connected {
+    background: #10e80c;
+    box-shadow: 0 0 4px rgba(16, 232, 12, 0.5);
+  }
+  
+  &.signing {
+    background: #ffa500;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.status-text {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: $black;
+}
+
+.wallet-address {
+  font-size: 0.85rem;
+  color: $grey;
+  font-family: monospace;
+  margin-top: 0.25rem;
+}
+
+.signing-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid $grey-light;
+  font-size: 0.9rem;
+  color: $grey-dark;
+}
+
+.signing-error {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid $grey-light;
+}
+
+.error-text {
+  font-size: 0.9rem;
+  color: #d32f2f;
+  font-weight: 500;
+}
+
+.sign-message-section {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid $grey-light;
+}
+
+.sign-message-button {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: $primary;
+  color: $white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover:not(:disabled) {
+    background: darken($primary, 10%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.retry-button {
+  padding: 0.5rem 1rem;
+  background: $secondary;
+  color: $white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover:not(:disabled) {
+    background: darken($secondary, 10%);
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 }
 
 .hosts-stats {
