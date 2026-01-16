@@ -425,7 +425,6 @@
                               {{ job.revision || "-" }}
                             </td>
                             <td>
-                              {{  }}
                               <JobStatus :status="job.state || 0" />
                             </td>
                             <td>
@@ -1836,7 +1835,6 @@ const jobStateStringToNumber = (state: string | number | undefined): number => {
 const activeJobs = computed((): DeploymentJob[] => {
   const jobs = (deployment.value?.jobs as DeploymentJob[]) || [];
   // Enrich jobs with fetched states
-  console.log("jobs", jobs);
   const enrichedJobs = jobs.map((job) => ({
     ...job,
     state: jobStates.value[job.job] ?? jobStateStringToNumber(job.state),
