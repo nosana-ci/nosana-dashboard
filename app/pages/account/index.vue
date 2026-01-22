@@ -28,8 +28,8 @@
         type="grant"
         @claimed="handleFreeCreditsClaimed"
       />
-      <!-- Credit Invitation Section -->
-      <div v-if="invitationToken" class="section">
+      <!-- Credit Invitation Section - only show when there's an issue -->
+      <div v-if="invitationToken && (invitationError || (invitation && (invitation.isClaimed || invitation.isExpired || (invitation.restrictedEmail && userData?.email !== invitation.restrictedEmail))))" class="section">
         <div class="columns is-centered">
           <div class="column is-half">
             <div class="box has-text-centered">
@@ -38,23 +38,13 @@
                 <p class="mt-2">Loading invitation details...</p>
               </div>
               
-              <div v-else-if="invitationError" class="has-text-danger">
-                <span class="icon is-large">
-                  <i class="fas fa-exclamation-triangle fa-2x"></i>
-                </span>
+              <div v-else-if="invitationError" class="has-text-danger py-3">
                 <h1 class="title is-4">Invalid Invitation</h1>
                 <p>{{ invitationError }}</p>
               </div>
               
               <div v-else-if="invitation">
                 <h1 class="title is-3 mt-2">Credit Invitation</h1>
-                <p class="subtitle">
-                  You've been invited to claim credits
-                </p>
-                
-                <div class="credit-amount-display">
-                  {{ formatCredits(invitation.creditsAmount) }}
-                </div>
                 
                 <div v-if="invitation.expirationDate" class="invitation-meta">
                   <div v-if="invitation.expirationDate" class="meta-item">
@@ -85,18 +75,6 @@
                   <div v-if="invitation.restrictedEmail && userData?.email !== invitation.restrictedEmail" class="notification is-warning">
                     <strong>Email Restriction</strong><br>
                     This invitation is restricted to another email address.
-                  </div>
-                  
-                  <div v-else>
-                    <button
-                      @click="claimInvitation"
-                      :disabled="claiming"
-                      :class="['button', 'is-dark', { 'is-loading': claiming }]"
-                    >
-                      <span>
-                        {{ claiming ? 'Claiming...' : `Claim Credits` }}
-                      </span>
-                    </button>
                   </div>
                 </div>
               </div>
@@ -314,7 +292,6 @@ const route = useRoute();
 const showSettingsModal = ref(false);
 const toast = useToast();
 const { connected, account, wallet } = useWallet();
-const router = useRouter();
 
 // Compatibility: create publicKey-like object from account
 const publicKey = computed(() => {
@@ -385,9 +362,8 @@ const handleFreeCreditsClaimed = async () => {
     await creditBalanceRef.value.fetchBalance();
   }
   triggerCreditRefresh();
-  // If it was an invitation, reload it to show claimed state
   if (showInvitationModal.value) {
-    await loadInvitation();
+    navigateTo('/account', { replace: true });
   }
 };
 
@@ -1050,12 +1026,6 @@ const chartOptions = computed(() => {
   };
 });
 
-// Credit invitation functions
-const formatCredits = (cents: number) => {
-  const amount = typeof cents === 'number' ? cents : 0;
-  return `$${(amount / 1000).toFixed(2)}`;
-};
-
 const formatDate = (dateString: string | Date | null) => {
   if (!dateString) return '';
   return new Date(dateString).toLocaleDateString('en-US', {
@@ -1101,52 +1071,6 @@ const loadInvitation = async () => {
   
   return invitationLoadPromise;
 };
-
-const claimInvitation = async () => {
-  if (!invitationToken.value || !token.value) return;
-  
-  try {
-    claiming.value = true;
-    
-    const response = await $fetch(`${config.backend_url}/api/credits/invitations/${invitationToken.value}/claim`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token.value}`
-      }
-    });
-    
-    toast.success(`Successfully claimed ${formatCredits(response.amount * 1000)} credits!`);
-    
-    // Refresh credit balance locally and globally
-    if (creditBalanceRef.value?.fetchBalance) {
-      await creditBalanceRef.value.fetchBalance();
-    }
-    
-    // Trigger global credit refresh to update all credit displays
-    triggerCreditRefresh();
-    
-    // Reload invitation to show it's claimed
-    await loadInvitation();
-    
-    try {
-      trackEvent('credit_claimed', {
-        amount: response.amount,
-        code: invitationToken.value,
-        user_id: userData.value?.generatedAddress,
-      });
-    } catch (error) {
-      console.warn("Error tracking credit invitation claimed:", error);
-    }
-
-    router.push('/account');
-  } catch (err) {
-    console.error('Error claiming invitation:', err);
-    toast.error(err.data?.message || 'Failed to claim invitation');
-  } finally {
-    claiming.value = false;
-  }
-};
-
 
 // Watch for invitation token changes and authentication status
 watch([invitationToken, status], ([token, authStatus]) => {

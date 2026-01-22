@@ -164,7 +164,6 @@ const handleClaim = async () => {
   claiming.value = true;
   try {
     let url = "";
-    let method = "POST";
     let body = {};
 
     if (props.type === 'manual') {
@@ -176,31 +175,28 @@ const handleClaim = async () => {
       url = `${config.backend_url}/api/credits/invitations/${props.token}/claim`;
     }
 
-    const response = await fetch(url, {
-      method,
+    const response = await $fetch<{ amount: number }>(url, {
+      method: 'POST',
       headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        Authorization: authToken.value as string,
+        'Authorization': `Bearer ${authToken.value}`
       },
-      body: Object.keys(body).length ? JSON.stringify(body) : undefined,
+      body,
     });
-
-    const data = await response.json();
     
-    if (response.ok) {
-      toast.success(`Successfully claimed $${data.amount} in credits!`);
-      claimedSuccessfully.value = true;
-      emit('claimed', data.amount);
-      
+    toast.success(`Successfully claimed $${response.amount} in credits!`);
+    claimedSuccessfully.value = true;
+    
+    try {
       trackEvent('credit_claimed', {
-        amount: data.amount,
+        amount: response.amount,
         type: props.type,
         user_id: userData.value?.generatedAddress,
       });
-    } else {
-      toast.error(data.message || "Failed to claim credits");
+    } catch (error) {
+      console.warn("Error tracking credit claimed:", error);
     }
+
+    emit('claimed', response.amount);
   } catch (err) {
     console.error('Error claiming credits:', err);
     toast.error('Failed to claim credits');
