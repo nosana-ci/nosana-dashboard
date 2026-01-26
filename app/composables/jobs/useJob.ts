@@ -271,13 +271,20 @@ export function useJob(jobId: string) {
           jobResult.ipfsResult &&
           jobResult.ipfsResult !== "QmNLei78zWmzUdbeRB3CiUfAizWUrbeeZh5K1rhAQKCh51"
         ) {
-          const resultResponse = await getIpfs(jobResult.ipfsResult) as ResultsSection;
-          jobObject.hasResultsRegex = Array.isArray(resultResponse.opStates)
-            ? resultResponse.opStates.some((op) => (op as { results?: unknown }).results !== undefined)
-            : false;
-          jobObject.results = resultResponse;
+          const resultResponse = await getIpfs(jobResult.ipfsResult) as ResultsSection | undefined;
+          if (resultResponse && typeof resultResponse === 'object' && 'opStates' in resultResponse) {
+            jobObject.hasResultsRegex = Array.isArray(resultResponse.opStates)
+              ? resultResponse.opStates.some((op) => (op as { results?: unknown }).results !== undefined)
+              : false;
+            jobObject.results = resultResponse;
+          } else if (!resultResponse) {
+            console.warn(`[useJob] IPFS result unavailable for hash: ${jobResult.ipfsResult}`);
+          } else {
+            console.warn(`[useJob] IPFS result missing 'opStates' property for hash: ${jobResult.ipfsResult}`, resultResponse);
+          }
         }
       } catch (error) {
+        console.error(`[useJob] Error fetching IPFS result:`, error);
         toast.error(`Error fetching IPFS result: ${String(error)}`);
       }
 
