@@ -84,20 +84,26 @@
 
         <!-- Type: Invitation -->
         <template v-else-if="type === 'invitation'">
-          <h2 class="title is-3 mb-3">Welcome to Nosana!</h2>
+          <h2 class="title is-3 mb-3">Your Credits Are Ready</h2>
           <p class="subtitle is-6 has-text-grey mb-5" v-if="invitation">
-            {{ claimedSuccessfully ? 'Your invitation credits have been claimed.' : `You've been invited to claim $${(invitation.creditsAmount / 1000).toFixed(2)} in credits to start deploying.` }}
+            <template v-if="claimedSuccessfully">
+              Your invitation credits have been claimed.
+            </template>
+            <template v-else>
+              You can now add <strong class="has-text-success">
+                ${{(invitation.creditsAmount / 1000).toFixed(2)}}</strong> in compute credits to your account.
+            </template>
           </p>
           <div class="mt-5">
             <button
-              v-if="!claimedSuccessfully"
+              v-if="!claimedSuccessfully && invitation"
               @click="handleClaim"
               :disabled="claiming"
               class="button is-dark is-fullwidth is-medium"
               :class="{ 'is-loading': claiming }"
               style="border-radius: 8px;"
             >
-              Claim Invitation
+              Claim ${{ (invitation.creditsAmount / 1000).toFixed(2) }} Credits
             </button>
             <nuxt-link
               v-else
