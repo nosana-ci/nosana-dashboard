@@ -84,20 +84,26 @@
 
         <!-- Type: Invitation -->
         <template v-else-if="type === 'invitation'">
-          <h2 class="title is-3 mb-3">Welcome to Nosana!</h2>
+          <h2 class="title is-3 mb-3">Your Credits Are Ready</h2>
           <p class="subtitle is-6 has-text-grey mb-5" v-if="invitation">
-            {{ claimedSuccessfully ? 'Your invitation credits have been claimed.' : `You've been invited to claim $${(invitation.creditsAmount / 1000).toFixed(2)} in credits to start deploying.` }}
+            <template v-if="claimedSuccessfully">
+              Your invitation credits have been claimed.
+            </template>
+            <template v-else>
+              You can now add <strong class="has-text-success">
+                ${{(invitation.creditsAmount / 1000).toFixed(2)}}</strong> in compute credits to your account.
+            </template>
           </p>
           <div class="mt-5">
             <button
-              v-if="!claimedSuccessfully"
+              v-if="!claimedSuccessfully && invitation"
               @click="handleClaim"
               :disabled="claiming"
               class="button is-dark is-fullwidth is-medium"
               :class="{ 'is-loading': claiming }"
               style="border-radius: 8px;"
             >
-              Claim Invitation
+              Claim ${{ (invitation.creditsAmount / 1000).toFixed(2) }} Credits
             </button>
             <nuxt-link
               v-else
@@ -164,7 +170,6 @@ const handleClaim = async () => {
   claiming.value = true;
   try {
     let url = "";
-    let method = "POST";
     let body = {};
 
     if (props.type === 'manual') {
@@ -176,31 +181,28 @@ const handleClaim = async () => {
       url = `${config.backend_url}/api/credits/invitations/${props.token}/claim`;
     }
 
-    const response = await fetch(url, {
-      method,
+    const response = await $fetch<{ amount: number }>(url, {
+      method: 'POST',
       headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        Authorization: authToken.value as string,
+        'Authorization': `Bearer ${authToken.value}`
       },
-      body: Object.keys(body).length ? JSON.stringify(body) : undefined,
+      body,
     });
-
-    const data = await response.json();
     
-    if (response.ok) {
-      toast.success(`Successfully claimed $${data.amount} in credits!`);
-      claimedSuccessfully.value = true;
-      emit('claimed', data.amount);
-      
+    toast.success(`Successfully claimed $${response.amount} in credits!`);
+    claimedSuccessfully.value = true;
+    
+    try {
       trackEvent('credit_claimed', {
-        amount: data.amount,
+        amount: response.amount,
         type: props.type,
         user_id: userData.value?.generatedAddress,
       });
-    } else {
-      toast.error(data.message || "Failed to claim credits");
+    } catch (error) {
+      console.warn("Error tracking credit claimed:", error);
     }
+
+    emit('claimed', response.amount);
   } catch (err) {
     console.error('Error claiming credits:', err);
     toast.error('Failed to claim credits');

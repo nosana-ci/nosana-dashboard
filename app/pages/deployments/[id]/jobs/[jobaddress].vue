@@ -18,7 +18,7 @@
         </span>
       </button>
       <div class="notification">
-        <p>Job not found</p>
+        <p>Job not found or delisted</p>
       </div>
     </div>
 

@@ -237,6 +237,22 @@
           <div class="p-5">
             <!-- Overview Tab -->
             <div v-if="activeTab === 'overview'">
+              <!-- Error Warning -->
+              <div v-if="hasErrorInLastEvent" class="notification is-danger mb-5 is-light">
+                <div class="is-flex is-align-items-center is-justify-content-space-between">
+                  <div>
+                    <strong>Deployment Error Detected</strong>
+                    <p class="mt-1">An error occurred with this deployment. View the Events tab for more details.</p>
+                  </div>
+                  <button
+                    @click="switchTab('events')"
+                    class="button is-danger is-outlined ml-4"
+                  >
+                    View Events
+                  </button>
+                </div>
+              </div>
+
               <!-- Endpoints Section -->
               <div v-if="deploymentEndpoints.length > 0" class="mb-5">
                 <h2 class="title is-5 mb-3">Endpoints</h2>
@@ -1798,12 +1814,30 @@ const getJobDuration = (jobId: string): number | null => {
   return null;
 };
 
+// Helper function to convert job state string to number
+const jobStateStringToNumber = (state: string | number | undefined): number => {
+  if (typeof state === 'number') return state;
+  if (!state) return 0;
+  
+  const stateUpper = String(state).toUpperCase();
+  const stateMap: Record<string, number> = {
+    'QUEUED': 0,
+    'RUNNING': 1,
+    'DONE': 2,
+    'STOPPED': 3,
+    'TIMEOUT': 4,
+    'ERROR': 5,
+  };
+  
+  return stateMap[stateUpper] ?? 0;
+};
+
 const activeJobs = computed((): DeploymentJob[] => {
   const jobs = (deployment.value?.jobs as DeploymentJob[]) || [];
   // Enrich jobs with fetched states
   const enrichedJobs = jobs.map((job) => ({
     ...job,
-    state: jobStates.value[job.job] ?? 0,
+    state: jobStates.value[job.job] ?? jobStateStringToNumber(job.state),
   }));
 
   // Filter for running jobs (states: QUEUED=0, RUNNING=1)
@@ -1815,7 +1849,7 @@ const historicalJobs = computed((): DeploymentJob[] => {
   // Enrich jobs with fetched states
   const enrichedJobs = jobs.map((job) => ({
     ...job,
-    state: jobStates.value[job.job] ?? 0,
+    state: jobStates.value[job.job] ?? jobStateStringToNumber(job.state),
   }));
 
   // Filter for completed/stopped jobs (states: DONE=2, STOPPED=3, TIMEOUT=4, ERROR=5)
@@ -1844,6 +1878,14 @@ const deploymentEndpoints = computed(() => {
 // All deployment events
 const deploymentEvents = computed((): DeploymentEvent[] => {
   return (deployment.value?.events as DeploymentEvent[]) || [];
+});
+
+// Check if last event contains ERROR
+const hasErrorInLastEvent = computed(() => {
+  const events = deploymentEvents.value;
+  if (events.length === 0) return false;
+  const lastEvent = events[0];
+  return lastEvent?.type.endsWith('ERROR') && lastEvent?.category.includes('Deployment');
 });
 
 // No vault actions in API mode

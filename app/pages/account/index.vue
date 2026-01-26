@@ -28,8 +28,8 @@
         type="grant"
         @claimed="handleFreeCreditsClaimed"
       />
-      <!-- Credit Invitation Section (shown when unauthenticated with invitation token) -->
-      <div v-if="invitationToken && !canShowAccountData" class="section">
+      <!-- Credit Invitation Section - only show when there's an issue -->
+      <div v-if="invitationToken && (invitationError || (invitation && (invitation.isClaimed || invitation.isExpired || (invitation.restrictedEmail && userData?.email !== invitation.restrictedEmail))))" class="section">
         <div class="columns is-centered">
           <div class="column is-half">
             <div class="box has-text-centered">
@@ -38,38 +38,20 @@
                 <p class="mt-2">Loading invitation details...</p>
               </div>
               
-              <div v-else-if="invitationError" class="has-text-danger">
-                <span class="icon is-large">
-                  <i class="fas fa-exclamation-triangle fa-2x"></i>
-                </span>
-                <h1 class="title is-4 mt-2">Invalid Invitation</h1>
+              <div v-else-if="invitationError" class="has-text-danger py-3">
+                <h1 class="title is-4">Invalid Invitation</h1>
                 <p>{{ invitationError }}</p>
-                <button @click="$router.push({ path: '/', query: { redirect: $route.fullPath } })" class="button is-primary mt-3">
-                  Go to Login
-                </button>
               </div>
               
               <div v-else-if="invitation">
                 <h1 class="title is-3 mt-2">Credit Invitation</h1>
-                <p class="subtitle">
-                  You've been invited to claim credits
-                </p>
                 
-                <div class="credit-amount-display">
-                  {{ formatCredits(invitation.creditsAmount) }}
-                </div>
-                
-                <div v-if="invitation.expirationDate || invitation.restrictedEmail" class="invitation-meta">
+                <div v-if="invitation.expirationDate" class="invitation-meta">
                   <div v-if="invitation.expirationDate" class="meta-item">
                     <i class="fas fa-clock"></i>
                     <span :class="{ 'expired': invitation.isExpired }">
                       Expires {{ formatDate(invitation.expirationDate) }}
                     </span>
-                  </div>
-                  
-                  <div v-if="invitation.restrictedEmail" class="meta-item">
-                    <i class="fas fa-envelope"></i>
-                    <span>For {{ invitation.restrictedEmail }}</span>
                   </div>
                 </div>
                 
@@ -90,15 +72,10 @@
                 </div>
                 
                 <div v-else>
-                  <button 
-                    @click="$router.push({ path: '/', query: { redirect: $route.fullPath } })"
-                    class="button is-primary is-large"
-                  >
-                    <span class="icon">
-                      <i class="fas fa-sign-in-alt"></i>
-                    </span>
-                    <span>Sign In to Claim Credits</span>
-                  </button>
+                  <div v-if="invitation.restrictedEmail && userData?.email !== invitation.restrictedEmail" class="notification is-warning">
+                    <strong>Email Restriction</strong><br>
+                    This invitation is restricted to another email address.
+                  </div>
                 </div>
               </div>
             </div>
@@ -303,7 +280,7 @@ import {
   CategoryScale,
   LinearScale
 } from 'chart.js';
-import { useRouter } from "vue-router";
+import { useRouter, useRoute } from "vue-router";
 import ApiKeys from '~/components/Account/ApiKeys.vue';
 import AccountClaimModal from '~/components/Account/ClaimModal.vue';
 
@@ -325,8 +302,6 @@ const publicKey = computed(() => {
   };
 });
 const { nosana } = useKit();
-const claimingRewards = ref(false);
-const onboardingInProgress = ref(false);
 const creditBalanceRef = ref();
 const { triggerCreditRefresh } = useCreditRefresh();
 
@@ -343,6 +318,8 @@ const invitationToken = computed(() => route.query.token as string);
 const invitation = ref<Invitation | null>(null);
 const loadingInvitation = ref(false);
 const invitationError = ref('');
+const claiming = ref(false);
+let invitationLoadPromise: Promise<void> | null = null;
 
 const showFreeCreditsModal = ref(false);
 const showInvitationModal = ref(false);
@@ -350,6 +327,11 @@ const checkedEligibility = ref(false);
 
 const checkFreeCreditsEligibility = async () => {
   if (!token.value || status.value !== 'authenticated' || checkedEligibility.value) return;
+  
+  // If we have an invitation token, ensure it's loaded before checking eligibility
+  if (invitationToken.value) {
+    await loadInvitation();
+  }
   
   // If we have an invitation token, show that modal instead of checking for free credits
   if (invitationToken.value && invitation.value && !invitation.value.isClaimed && !invitation.value.isExpired) {
@@ -380,9 +362,8 @@ const handleFreeCreditsClaimed = async () => {
     await creditBalanceRef.value.fetchBalance();
   }
   triggerCreditRefresh();
-  // If it was an invitation, reload it to show claimed state
   if (showInvitationModal.value) {
-    await loadInvitation();
+    navigateTo('/account', { replace: true });
   }
 };
 
@@ -1045,20 +1026,6 @@ const chartOptions = computed(() => {
   };
 });
 
-const logout = async () => {
-  loading.value = true;
-  await signOut({
-    callbackUrl: '/',
-  });
-  loading.value = false;
-};
-
-// Credit invitation functions
-const formatCredits = (cents: number) => {
-  const amount = typeof cents === 'number' ? cents : 0;
-  return `$${(amount / 1000).toFixed(2)}`;
-};
-
 const formatDate = (dateString: string | Date | null) => {
   if (!dateString) return '';
   return new Date(dateString).toLocaleDateString('en-US', {
@@ -1073,24 +1040,36 @@ const formatDate = (dateString: string | Date | null) => {
 const loadInvitation = async () => {
   if (!invitationToken.value) return;
   
-  try {
-    loadingInvitation.value = true;
-    invitationError.value = '';
-    
-    const response = await $fetch<Invitation>(`${config.backend_url}/api/credits/invitations/${invitationToken.value}`);
-    invitation.value = response;
-    
-    if (response.isClaimed) {
-      invitationError.value = 'This credit invitation has already been claimed.';
-    } else if (response.isExpired) {
-      invitationError.value = 'This credit invitation has expired.';
-    }
-  } catch (err: any) {
-    console.error('Error loading invitation:', err);
-    invitationError.value = err.data?.message || 'Failed to load invitation details';
-  } finally {
-    loadingInvitation.value = false;
+  // If already loading, return the existing promise
+  if (invitationLoadPromise) {
+    return invitationLoadPromise;
   }
+  
+  // Create a new load promise
+  invitationLoadPromise = (async () => {
+    try {
+      loadingInvitation.value = true;
+      invitationError.value = '';
+      
+      const response = await $fetch<Invitation>(`${config.backend_url}/api/credits/invitations/${invitationToken.value}`);
+      invitation.value = response;
+      console.log('loaded invitation', invitation.value);
+      
+      if (response.isClaimed) {
+        invitationError.value = 'This credit invitation has already been claimed.';
+      } else if (response.isExpired) {
+        invitationError.value = 'This credit invitation has expired.';
+      }
+    } catch (err: any) {
+      console.error('Error loading invitation:', err);
+      invitationError.value = err.data?.message || 'Failed to load invitation details';
+    } finally {
+      loadingInvitation.value = false;
+      invitationLoadPromise = null;
+    }
+  })();
+  
+  return invitationLoadPromise;
 };
 
 // Watch for invitation token changes and authentication status
