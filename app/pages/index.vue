@@ -27,7 +27,7 @@
             </h1>
             <p class="login-subtitle">
               {{ isCampaignMode 
-                ? 'Sign in or create an account to receive $10 in free compute credits.' 
+                ? 'Sign in or create an account to receive $50 in free compute credits.' 
                 : 'Sign in or create an account to build with the Nosana AI Platform' 
               }}
             </p>
