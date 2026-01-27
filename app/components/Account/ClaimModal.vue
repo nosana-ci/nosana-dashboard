@@ -53,10 +53,10 @@
           <h1 class="title is-3 mb-3">{{ claimedSuccessfully ? 'Credits Added' : 'Your Credits Are Ready' }}</h1>
           <p class="subtitle is-6 has-text-grey mb-5">
             <template v-if="claimedSuccessfully">
-              <strong class="has-text-success">$10</strong> in compute credits have been added to your account.
+              <strong class="has-text-success">$50</strong> in compute credits have been added to your account.
             </template>
             <template v-else>
-              You can now add <strong class="has-text-success">$10</strong> in compute credits to your account.
+              You can now add <strong class="has-text-success">$50</strong> in compute credits to your account.
             </template>
           </p>
           <div class="mt-5">
@@ -68,7 +68,7 @@
               :class="{ 'is-loading': claiming }"
               style="border-radius: 8px;"
             >
-              Claim $10 Credits
+              Claim $50 Credits
             </button>
             <nuxt-link
               v-else
