@@ -61,7 +61,19 @@
                 <span class="clickable-row-cell-content"
                   >{{
                     Array.isArray(deployment.jobs) 
-                      ? deployment.jobs.filter(job => ['PENDING', 'RUNNING', 'QUEUED'].includes(job.status)).length 
+                      ? deployment.jobs.filter(job => {
+                          const state = (job as any).state;
+                          // Active jobs: QUEUED (0), RUNNING (1) - exclude STOPPED (3)
+                          // Can be string ('QUEUED', 'RUNNING') or number (0, 1)
+                          if (typeof state === 'number') {
+                            return state === 0 || state === 1;
+                          }
+                          if (typeof state === 'string') {
+                            const stateUpper = state.toUpperCase();
+                            return stateUpper === 'QUEUED' || stateUpper === 'RUNNING';
+                          }
+                          return false;
+                        }).length 
                       : 0
                   }}
                   Jobs</span

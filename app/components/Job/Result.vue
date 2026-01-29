@@ -27,6 +27,9 @@
             {{ `Exited with status ${opState.status} with code ${opState.exitCode
         } ` }}
           </div>
+          <div v-if="getOpError(opState)" class="row-count has-text-danger">
+            <span class="has-text-weight-bold">{{ getOpError(opState) }}</span>
+          </div>
 
         </div>
       </div>
@@ -108,6 +111,9 @@
             {{ `Exited with status ${opState.status} with code ${opState.exitCode
         } ` }}
           </div>
+          <div v-if="getOpError(opState)" class="row-count has-text-danger">
+            <span class="has-text-weight-bold">{{ getOpError(opState) }}</span>
+          </div>
         </div>
       </div>
       <div v-else-if="ipfsJob && ipfsJob.ops" class="is-family-monospace has-background-black has-text-white box result-box job-result-container fullscreen-viewer"
@@ -179,6 +185,7 @@ import FullscreenModal from '~/components/Common/FullscreenModal.vue';
 import FullscreenIcon from '@/assets/img/icons/fullscreen.svg?component';
 import { useModal } from '~/composables/jobs/useModal';
 import { escapeHtml } from '~/utils/htmlSanitization';
+import type { OpState } from '~/composables/jobs/types';
 
 defineProps({
   ipfsJob: {
@@ -194,6 +201,35 @@ defineProps({
 const resultContainer = ref<HTMLElement | null>(null);
 const fullscreenResultContainer = ref<HTMLElement | null>(null);
 const resultModal = useModal();
+
+// Extract meaningful error from diagnostics
+const getOpError = (opState: OpState): string | null => {
+  const diagnostics = opState.diagnostics;
+  if (!diagnostics) return null;
+  
+  // Check for error or message fields
+  if (diagnostics.error && typeof diagnostics.error === 'string' && diagnostics.error.trim()) {
+    return diagnostics.error;
+  }
+  if (diagnostics.message && typeof diagnostics.message === 'string' && diagnostics.message.trim()) {
+    return diagnostics.message;
+  }
+  
+  // Check if reason object has any true values (actual errors)
+  const reason = diagnostics.reason;
+  if (reason && typeof reason === 'object') {
+    const hasError = reason.hostShutDown || reason.jobStopped || reason.expired;
+    if (hasError) {
+      const reasons: string[] = [];
+      if (reason.hostShutDown) reasons.push('Host shut down');
+      if (reason.jobStopped) reasons.push('Job stopped');
+      if (reason.expired) reasons.push('Job expired');
+      return reasons.join(', ');
+    }
+  }
+  
+  return null;
+};
 
 
 const scrollToBottom = (container?: HTMLElement | null) => {

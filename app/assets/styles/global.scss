@@ -74,6 +74,15 @@
   font-weight: $weight-normal;
 }
 
+// Section headers (reusable for consistent styling)
+.section-header {
+  color: $grey;
+  font-size: $size-6;
+  letter-spacing: 0.5px;
+  font-weight: 500;
+  padding-bottom: 0.5rem;
+}
+
 .button {
   &.is-primary:not(.is-outlined):not(.is-inverted) {
     color: $primary-invert;
@@ -249,7 +258,7 @@
 // Action button styling (matching dropdown-item style)
 .action-btn,
 .group-action-btn {
-  padding: 0.5rem 1rem;
+  padding: 0.5rem 0.9rem;
   border-radius: $radius-small;
   border: 1px solid $grey-lighter;
   background: $white;
@@ -272,6 +281,10 @@
       display: block;
       flex-shrink: 0;
       filter: brightness(0) saturate(100%) invert(48%) sepia(9%) saturate(665%) hue-rotate(180deg) brightness(93%) contrast(87%);
+    }
+
+    & + span {
+      margin-left: 0.5rem;
     }
   }
 
@@ -1027,6 +1040,10 @@
   overflow: visible; /* let bubbles extend over the header edge */
   position: relative;
   z-index: auto !important; /* avoid creating stacking context above tooltips */
+  border-bottom: 1px solid $grey-lighter;
+}
+.modal-card-head + .modal-card-body {
+  padding-top: 1.5rem;
 }
 .modal-card-body {
   position: relative; /* create stacking context above header */
@@ -1434,6 +1451,10 @@ button[disabled][data-tooltip] {
 }
 
 html.dark-mode .deployment-header {
+  border-bottom-color: $grey-dark;
+}
+
+html.dark-mode .modal-card-head {
   border-bottom-color: $grey-dark;
 }
 

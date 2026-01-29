@@ -22,6 +22,7 @@ export interface JobData {
   state?: number | string;
   market?: string;
   usdRewardPerHour?: number;
+  price?: number;
 }
 
 /**
@@ -103,31 +104,73 @@ export function useJobPricing(
   const marketAddress = computed(() => jobData.value?.market || null);
   const { usdPricePerHour, isLoading } = useMarketUsdPrice(marketAddress, marketsData);
 
-  // Calculate job duration in hours (capped at timeout if set)
+  // Calculate job duration in hours
   const durationHours = computed(() => {
     const job = jobData.value;
     if (!job || !job.timeStart) return 0;
 
     const timeStart = job.timeStart;
     const timeEnd = job.timeEnd || Math.floor(Date.now() / 1000);
-    let duration = Math.max(0, timeEnd - timeStart);
-    
-    // Cap duration at timeout if set (timeout is in seconds)
-    if (job.timeout && duration > job.timeout) {
-      duration = job.timeout;
-    }
+    const duration = Math.max(0, timeEnd - timeStart);
     
     return duration / 3600; // Convert seconds to hours
   });
 
-  // Calculate total job cost
-  const totalCostUsd = computed(() => {
-    const hourlyRate = usdPricePerHour.value;
+  // Get base USD rate per hour (without network fee) - prefer job's usdRewardPerHour, fallback to market
+  const baseUsdPricePerHour = computed(() => {
+    const job = jobData.value;
+    // Use job's usdRewardPerHour if available (this is the base rate without network fee)
+    if (job?.usdRewardPerHour) {
+      return job.usdRewardPerHour;
+    }
+    // Fallback to market rate without network fee multiplier
+    if (usdPricePerHour.value) {
+      return usdPricePerHour.value / NETWORK_FEE_MULTIPLIER;
+    }
+    return null;
+  });
+
+  // Calculate host fee NOS (base amount without network fee)
+  const hostFeeNos = computed(() => {
+    const job = jobData.value;
+    if (!job?.price || !job?.timeStart) return 0;
+    
+    const timeStart = job.timeStart;
+    const timeEnd = job.timeEnd || Math.floor(Date.now() / 1000);
+    const runtime = Math.max(0, timeEnd - timeStart);
+    
+    // NOS = (price per second * runtime in seconds) / 1e6
+    return (job.price * runtime) / 1e6;
+  });
+
+  // Calculate network fee NOS (10% of host fee)
+  const networkFeeNos = computed(() => {
+    return hostFeeNos.value * 0.1;
+  });
+
+  // Calculate total NOS (host fee + network fee)
+  const totalNos = computed(() => {
+    return hostFeeNos.value + networkFeeNos.value;
+  });
+
+  // Calculate host fee USD (base rate * hours, without network fee)
+  const hostFeeUsd = computed(() => {
+    const baseRate = baseUsdPricePerHour.value;
     const hours = durationHours.value;
     
-    if (!hourlyRate || hours <= 0) return 0;
+    if (!baseRate || hours <= 0) return 0;
     
-    return hourlyRate * hours;
+    return baseRate * hours;
+  });
+
+  // Calculate network fee USD (10% of host fee)
+  const networkFeeUsd = computed(() => {
+    return hostFeeUsd.value * 0.1;
+  });
+
+  // Calculate total USD (host fee + network fee)
+  const totalCostUsd = computed(() => {
+    return hostFeeUsd.value + networkFeeUsd.value;
   });
 
   // Format price for display
@@ -150,12 +193,19 @@ export function useJobPricing(
 
   return {
     usdPricePerHour,
+    baseUsdPricePerHour,
     durationHours,
+    hostFeeNos,
+    networkFeeNos,
+    totalNos,
+    hostFeeUsd,
+    networkFeeUsd,
     totalCostUsd,
     formattedPrice,
     isLoading
   };
 }
+
 
 /**
  * Calculate estimated cost for a given duration and market

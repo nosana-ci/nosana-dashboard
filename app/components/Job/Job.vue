@@ -165,11 +165,9 @@
                       </a>
                     </td>
                   </tr>
-                  <tr v-if="!props.hideFields?.price">
+                  <tr v-if="!(props.hideFields?.price)">
                     <td>Price</td>
-                    <td
-                      v-html="formatPrice(props.job.price, props.nosPrice)"
-                    ></td>
+                    <td v-html="formatPrice(totalNos || 0, totalCostUsd || 0)"></td>
                   </tr>
                   <tr v-if="gpuSummary">
                     <td>GPU</td>
@@ -225,13 +223,13 @@
         </div>
       </div>
 
-      <!-- Job Definition Tab -->
-      <div v-if="activeTab === 'job-definition'">
+      <!-- Configuration Tab -->
+      <div v-if="activeTab === 'configuration'">
         <div v-if="jobDefinitionForTab">
           <JobDefinitionTab :job-definition="jobDefinitionForTab" />
         </div>
         <div v-else class="notification is-light has-text-centered">
-          <p class="has-text-grey">No job definition available</p>
+          <p class="has-text-grey">No job configuration available</p>
         </div>
       </div>
 
@@ -355,8 +353,8 @@ import { useFLogs } from "~/composables/jobs/useFLogs";
 import { useTemplates } from "~/composables/useTemplates";
 import { useToast } from "vue-toastification";
 import { useNosanaWallet } from "~/composables/useNosanaWallet";
-import { useAuthHeader } from "~/composables/useAuthHeader";
 import { useAPI } from "~/composables/useAPI";
+import { useJobPricing } from "~/composables/useMarketPricing";
 
 // Import icons as components
 import ChevronDownIcon from "@/assets/img/icons/chevron-down.svg?component";
@@ -500,8 +498,10 @@ interface Props {
 
 const props = defineProps<Props>();
 const { userBalances } = useNosanaWallet();
-const { hasAuth, ensureAuth } = useAuthHeader();
-const getAuth = async () => ensureAuth();
+const { getAuthHeader } = useDeploymentAuth();
+const getAuth = async () => {
+  return await getAuthHeader(props.deploymentId ?? undefined);
+};
 const { templates } = useTemplates();
 const { markets } = useMarkets();
 const { saveState } = useDeployPageState();
@@ -678,6 +678,7 @@ const jobDataForPriceComponent = computed(() => {
     timeStart: props.job.timeStart,
     timeEnd: props.job.timeEnd,
     timeout: props.job.timeout,
+    price: props.job.price,
     market:
       typeof props.job.market === "string"
         ? props.job.market
@@ -691,6 +692,10 @@ const jobDataForPriceComponent = computed(() => {
 const jobOptionsForPriceComponent = computed(() => {
   return { showPerHour: !props.job.isCompleted };
 });
+
+// Get accurate pricing using the same method as job list
+const marketsDataRef = computed(() => testgridMarkets.value);
+const { totalNos, totalCostUsd, usdPricePerHour } = useJobPricing(jobDataForPriceComponent, { showPerHour: false }, marketsDataRef);
 
 // Duration data for SecondsFormatter
 const jobDurationData = ref<{
@@ -723,14 +728,12 @@ const formatDateRelative = (timestamp: number) => {
   return date.toLocaleDateString();
 };
 
-// Helper function to format price
-const formatPrice = (price: number, nosPrice: number) => {
-  const timeout = props.job?.timeout ?? 0;
-  if (!price || !timeout) return "--";
-  const totalNos = (price * timeout) / 1e6;
-  if (!nosPrice) return `NOS: ${totalNos.toFixed(4)}`;
-  const usdPrice = (totalNos * nosPrice).toFixed(4);
-  return `NOS: ${totalNos.toFixed(4)} <br> USD: $${usdPrice}`;
+// Helper function to format price - show only totals
+const formatPrice = (nosAmount: number, usdAmount: number) => {
+  if (!nosAmount || nosAmount <= 0) return "--";
+  const nosDisplay = nosAmount.toFixed(3);
+  const usdDisplay = usdAmount > 0 ? usdAmount.toFixed(3) : "--";
+  return `NOS: ${nosDisplay} <br> USD: $${usdDisplay}`;
 };
 
 watch(
@@ -998,7 +1001,7 @@ const hasSystemLogs = computed(() => {
 const availableTabs = computed(() => {
   const tabs = ["overview"];
   if (props.jobInfo?.jobDefinition || props.job.jobDefinition) {
-    tabs.push("job-definition");
+    tabs.push("configuration");
   }
 
   if (hasContainerControls.value) {
@@ -1021,8 +1024,8 @@ const getTabLabel = (tab: string) => {
   switch (tab) {
     case "system-logs":
       return "Logs";
-    case "job-definition":
-      return "Definition";
+    case "configuration":
+      return "Configuration";
     case "container-controls":
       return "Containers";
     case "results":

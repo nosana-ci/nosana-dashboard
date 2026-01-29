@@ -22,6 +22,16 @@ export interface OpState {
   exitCode?: number;
   results?: unknown;
   logs?: Array<{ log?: string; type?: string } | string> | any[];
+  diagnostics?: {
+    reason?: {
+      hostShutDown?: boolean;
+      jobStopped?: boolean;
+      expired?: boolean;
+    };
+    error?: string;
+    message?: string;
+    [key: string]: unknown;
+  };
 }
 
 export interface OperationsInfo {
