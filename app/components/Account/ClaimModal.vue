@@ -199,7 +199,7 @@ const handleClaim = async () => {
         user_id: userData.value?.generatedAddress,
       });
     } catch (error) {
-      console.warn("Error tracking credit claimed:", error);
+      console.error("Error tracking credit claimed:", error);
     }
 
     emit('claimed', response.amount);

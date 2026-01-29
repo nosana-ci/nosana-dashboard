@@ -5,7 +5,7 @@ import type { Job, JobDefinition } from "@nosana/kit";
 import { getJobExposedServices } from "@nosana/kit";
 import type { JobInfo, JobViewModel, LiveEndpoints, ResultsSection} from "~/composables/jobs/types";
 import { normalizeEndpoints } from "~/composables/jobs/normalizeEndpoints";
-import { useAuthHeader } from "~/composables/useAuthHeader";
+import { useDeploymentAuth } from "~/composables/useDeploymentAuth";
 
 const DEFAULT_NODE_ADDRESS = "11111111111111111111111111111111";
 
@@ -27,6 +27,16 @@ interface DeploymentJobApiResultOpState {
   exitCode?: number;
   logs?: Array<{ type?: string; log?: string } | string>;
   results?: unknown;
+  diagnostics?: {
+    reason?: {
+      hostShutDown?: boolean;
+      jobStopped?: boolean;
+      expired?: boolean;
+    };
+    error?: string;
+    message?: string;
+    [key: string]: unknown;
+  };
 }
 
 interface DeploymentJobApiResult {
@@ -63,7 +73,6 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
   const { nosana } = useKit();
   const { status, data: userData, token } = useAuth();
   const { connected, account } = useWallet();
-  const { ensureAuth } = useAuthHeader();
 
   const isCreditUser = computed(() => status.value === "authenticated" && Boolean(userData.value?.generatedAddress));
 
@@ -72,6 +81,9 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
     if (connected.value && account.value?.address) return account.value.address;
     return null;
   });
+
+  // Use deployment auth composable for clean, reusable auth handling
+  const { getAuthHeader } = useDeploymentAuth();
 
   let eventSource: EventSourcePolyfill | null = null;
   let currentNodeAddress: string | null = null;
@@ -102,6 +114,7 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
         exitCode: op.exitCode,
         results: op.results,
         logs: op.logs ?? [],
+        diagnostics: op.diagnostics,
       })),
     };
   }
@@ -152,11 +165,13 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
             else setTimeout(() => job.value?.refresh(), 1000);
           } else {
             if (numericState === 0) {
-              await nosana.value.jobs.delist({ job: jobId });
+              const jobAddress = job.value.address as Parameters<typeof nosana.value.jobs.delist>[0]["job"];
+              await nosana.value.jobs.delist({ job: jobAddress });
               toast.success("Job successfully delisted (canceled) from queue!");
               setTimeout(() => navigateTo("/deploy"), 3000);
             } else if (numericState === 1) {
-              await nosana.value.jobs.end({ job: jobId });
+              const jobAddress = job.value.address as Parameters<typeof nosana.value.jobs.end>[0]["job"];
+              await nosana.value.jobs.end({ job: jobAddress });
               toast.success("Job successfully ended!");
               setTimeout(() => job.value?.refresh(), 1000);
             } else {
@@ -208,7 +223,8 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
             } else toast.success(`Job extended by ${extensionHours} hour${extensionHours !== 1 ? "s" : ""}!`);
             setTimeout(() => job.value?.refresh(), 1000);
           } else {
-            await nosana.value.jobs.extend({ job: jobId, timeout: extensionSeconds });
+            const jobAddress = job.value.address as Parameters<typeof nosana.value.jobs.extend>[0]["job"];
+            await nosana.value.jobs.extend({ job: jobAddress, timeout: extensionSeconds });
             toast.success(`Job extended by ${extensionHours} hour${extensionHours !== 1 ? "s" : ""}!`);
             setTimeout(() => job.value?.refresh(), 1000);
           }
@@ -272,7 +288,7 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
       const config = useRuntimeConfig();
       const nodeAddress = (job.value.node as unknown as { toString?: () => string })?.toString?.() || (job.value.node as unknown as string);
       if (!nodeAddress || nodeAddress === DEFAULT_NODE_ADDRESS) { hasFetchedFinalInfo = true; return; }
-      const authHeader = await ensureAuth({ deploymentId });
+      const authHeader = await getAuthHeader(deploymentId);
       const sseUrl = `https://${nodeAddress}.${config.public.nodeDomain}/job/${jobId}/info`;
 
       const sdkServices = job.value?.jobDefinition ? getJobExposedServices(job.value.jobDefinition, jobId) : [];
@@ -337,7 +353,7 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
     currentNodeAddress = nodeAddress;
     (async () => {
       try {
-        const authHeader = await ensureAuth({ deploymentId });
+        const authHeader = await getAuthHeader(deploymentId);
         const sseUrl = `https://${nodeAddress}.${config.public.nodeDomain}/job/${jobId}/info`;
         eventSource = new EventSourcePolyfill(sseUrl, { headers: { Authorization: authHeader } });
 

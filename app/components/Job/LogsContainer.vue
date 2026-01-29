@@ -53,11 +53,10 @@ onMounted(() => {
   pausePolling();
 });
 
-// Authentication setup (use DM header when deploymentId is provided)
-const { hasAuth, ensureAuth } = useAuthHeader();
+// Authentication setup using deployment auth composable
+const { getAuthHeader } = useDeploymentAuth();
 const getAuth = async () => {
-  if (props.deploymentId) return ensureAuth({ deploymentId: props.deploymentId });
-  return ensureAuth();
+  return await getAuthHeader(props.deploymentId);
 };
 
 // Check if user is job poster
