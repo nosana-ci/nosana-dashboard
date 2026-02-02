@@ -34,7 +34,7 @@
 
             <!-- Google Login Button -->
             <button
-              class="login-button google-button"
+              class="login-button google-button py-4"
               @click="selectGoogleLogin"
               :disabled="googleLoading"
               :class="{ 'is-loading': googleLoading }"
@@ -63,26 +63,6 @@
                 />
               </svg>
               Continue with Google
-            </button>
-
-            <button
-              class="login-button twitter-button"
-              @click="selectTwitterLogin"
-              :disabled="twitterLoading"
-              :class="{ 'is-loading': twitterLoading }"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  fill="currentColor"
-                  d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"
-                />
-              </svg>
-              Continue with X
             </button>
 
             <template v-if="!isCampaignMode">
@@ -219,7 +199,6 @@ const toast = useToast();
 const config = useRuntimeConfig().public;
 
 const googleLoading = ref(false);
-const twitterLoading = ref(false);
 const showWalletModal = ref(false);
 const codeVerifier = ref("");
 const loading = ref(false);
@@ -327,32 +306,17 @@ watch(
 onMounted(async () => {
   const urlParams = new URLSearchParams(window.location.search);
   const code = urlParams.get("code");
-  const state = urlParams.get("state");
 
   if (code && window.opener) {
-    // This is a popup window completing OAuth (Google or Twitter)
-
-    // Check if this is Twitter (has state param) or Google
-    if (state) {
-      // Twitter OAuth
-      window.opener.postMessage(
-        {
-          type: "TWITTER_AUTH_CODE",
-          code: code,
-          state: state,
-        },
-        window.location.origin
-      );
-    } else {
-      // Google OAuth
-      window.opener.postMessage(
-        {
-          type: "GOOGLE_AUTH_CODE",
-          code: code,
-        },
-        window.location.origin
-      );
-    }
+    // This is a popup window completing OAuth (Google)
+    // Google OAuth
+    window.opener.postMessage(
+      {
+        type: "GOOGLE_AUTH_CODE",
+        code: code,
+      },
+      window.location.origin
+    );
     window.close();
     return;
   }
@@ -765,127 +729,6 @@ const signAuthMessage = async (walletName: string) => {
 };
 
 // Removed immediate redirect - will handle after message signing
-
-// Twitter login logic
-const selectTwitterLogin = async () => {
-  twitterLoading.value = true;
-  let popup: Window | null = null;
-
-  try {
-    if (connected.value) {
-      await disconnect();
-    }
-
-    codeVerifier.value = generateCodeVerifier();
-    const codeChallenge = await generateCodeChallenge(codeVerifier.value);
-
-    const query = {
-      response_type: "code",
-      client_id: config.twitterClientId as string,
-      redirect_uri: config.twitterRedirectUri as string,
-      scope: "users.read users.email offline.access tweet.read",
-      state: crypto.randomUUID(),
-      code_challenge: codeChallenge,
-      code_challenge_method: "S256",
-    };
-
-    const url = new URL("https://twitter.com/i/oauth2/authorize");
-    url.search = new URLSearchParams(query).toString();
-
-    popup = window.open(
-      url.toString(),
-      "twitter-auth",
-      "width=500,height=600,scrollbars=yes,resizable=yes"
-    );
-
-    if (!popup) {
-      throw new Error("Popup blocked. Please allow popups for this site.");
-    }
-
-    // Use postMessage pattern like Google OAuth instead of polling
-    const handleMessage = (event: MessageEvent) => {
-      if (event.origin !== window.location.origin) return;
-
-      if (event.data.type === "TWITTER_AUTH_CODE" && event.data.code) {
-        window.removeEventListener("message", handleMessage);
-        popup?.close();
-        
-        // Force background image re-render to fix disappearing issue
-        backgroundImageKey.value++;
-        
-        authenticateTwitterLogin(
-          event.data.code,
-          event.data.state || "",
-          codeVerifier.value
-        );
-      }
-    };
-
-    window.addEventListener("message", handleMessage);
-  } catch (error) {
-    if (popup) popup.close();
-    toast.error("Error preparing Twitter login");
-    twitterLoading.value = false;
-  }
-};
-
-const authenticateTwitterLogin = async (
-  code: string,
-  state: string,
-  codeVerifier: string
-) => {
-  let originalEndpoint: any;
-
-  try {
-    const { signIn } = useAuth();
-
-    originalEndpoint = config.auth.provider.endpoints.signIn;
-    config.auth.provider.endpoints.signIn = {
-      path: "/api/auth/login/twitter",
-      method: "post",
-      propertyName: "token",
-    };
-
-    await signIn(
-      {
-        code,
-        state,
-        codeVerifier,
-      },
-      {
-        redirect: false,
-      }
-    );
-
-    config.auth.provider.endpoints.signIn = originalEndpoint;
-    twitterLoading.value = false;
-
-    try {
-      const isSignUp = checkIsSignUp(userData.value?.created_at);
-      const eventType = isSignUp ? "sign_up" : "login";
-
-      trackEvent(eventType, {
-        user_id: userData.value?.generatedAddress,
-        provider: "twitter",
-      });
-    } catch (error) {
-      console.warn("Error tracking Twitter login:", error);
-    }
-
-    const redirect =
-      (router.currentRoute.value.query.redirect as string) || "/account";
-    router.replace(redirect);
-  } catch (error) {
-    console.error("Authentication error in authenticateTwitterLogin:", error);
-
-    if (originalEndpoint) {
-      config.auth.provider.endpoints.signIn = originalEndpoint;
-    }
-
-    toast.error("Failed to authenticate with X. Please try again.");
-    twitterLoading.value = false;
-  }
-};
 </script>
 
 <style lang="scss" scoped>
@@ -1076,17 +919,6 @@ const authenticateTwitterLogin = async (
   }
 }
 
-.twitter-button {
-  background: $black;
-  color: $white;
-  border-color: $grey-dark;
-
-  &:hover:not(:disabled) {
-    background: $grey-darker;
-    border-color: $grey;
-  }
-}
-
 .divider {
   margin: 1.5rem 0;
   text-align: center;
@@ -1115,10 +947,6 @@ const authenticateTwitterLogin = async (
     border-radius: 50%;
     animation: button-loading-spinner 1.2s linear infinite;
   }
-}
-
-.twitter-button.is-loading::after {
-  border-color: $white transparent $white transparent !important;
 }
 
 @keyframes button-loading-spinner {

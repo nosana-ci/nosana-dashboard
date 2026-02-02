@@ -53,7 +53,6 @@
         <template v-if="isGoogleAuthenticated">
           <div class="profile-avatar auth-avatar">
             <GoogleIcon v-if="getAuthProvider() === 'google'" alt="Google icon" class="auth-icon" />
-            <TwitterIcon v-else-if="getAuthProvider() === 'twitter'" alt="Twitter icon" class="auth-icon" />
             <span v-else>{{ getUserInitials() }}</span>
           </div>
           <div class="profile-info">
@@ -101,7 +100,6 @@
 import { SolanaWalletButton, useWallet } from "@nosana/solana-vue";
 import { computed, ref, onMounted, onUnmounted, watch } from 'vue';
 import GoogleIcon from '@/assets/img/icons/google.svg?component';
-import TwitterIcon from '@/assets/img/icons/twitter.svg?component';
 import UserIcon from '@/assets/img/icons/sidebar/user.svg?component';
 import SettingsIcon from '@/assets/img/icons/settings.svg?component';
 import LogoutIcon from '@/assets/img/icons/logout.svg?component';
@@ -166,9 +164,6 @@ const getUserInitials = () => {
 };
 
 const getAuthProvider = () => {
-  if (session.value?.id?.startsWith('twitter_')) {
-    return 'twitter';
-  }
   return 'google';
 };
 
@@ -678,16 +673,5 @@ defineExpose({
   height: 24px;
   object-fit: contain;
   border-radius: 6px;
-}
-
-/* X (Twitter) icon specific styling */
-img[alt="Twitter icon"] {
-  background-color: $black;
-  border-radius: 6px;
-  padding: 4px;
-}
-
-.dark-mode img[alt="Twitter icon"] {
-  background-color: $black;
 }
 </style>

@@ -722,16 +722,6 @@
       }
     }
 
-    .twitter-button {
-      background: $black !important;
-      border-color: $grey-darker !important;
-
-      &:hover:not(:disabled) {
-        background: $grey-darker !important;
-        border-color: $grey-dark !important;
-      }
-    }
-
     .divider span {
       color: $grey-light !important;
     }
