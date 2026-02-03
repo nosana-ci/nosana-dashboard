@@ -8,6 +8,7 @@ import { useWallet } from "@nosana/solana-vue";
 import { EventSourcePolyfill } from "event-source-polyfill";
 import type { JobInfo, JobViewModel, LiveEndpoints, ResultsSection} from "~/composables/jobs/types";
 import { normalizeEndpoints } from "~/composables/jobs/normalizeEndpoints";
+import { useMyAsyncData } from "~/composables/useMyAsyncData";
 
 /**
  * Helper to convert job state to a number, normalizing "RUNNING", "QUEUED", etc.
@@ -36,13 +37,24 @@ export function useJob(jobId: string) {
 
   const toast = useToast();
   const { nosana, publicKey } = useKit();
-  const { getIpfs } = useIpfs();
   const { status, data: userData, token } = useAuth();
   const { connected } = useWallet();
-  const { ensureAuth } = useAuthHeader();
-  const { data, pending, refresh } = useAPI("/api/jobs/" + jobId, {
-    watch: false,
-  });
+  
+  // Use kit's API client instead of custom useAPI
+  const fetchJob = async () => {
+    try {
+      return await nosana.value.api.jobs.get(jobId);
+    } catch (error) {
+      console.error('Failed to fetch job:', error);
+      return null;
+    }
+  };
+
+  const { data, pending, refresh } = useMyAsyncData(
+    `job-${jobId}`,
+    fetchJob,
+    { watch: false }
+  );
 
   // Helper to detect if current user is a credit user
   const isCreditUser = computed(() => {
@@ -51,6 +63,10 @@ export function useJob(jobId: string) {
 
   const { pause: pauseJobPolling, resume: resumeJobPolling } = useIntervalFn(
     () => {
+      // Don't poll in deployment context - deployment polling handles job updates
+      if (isDeploymentContext.value) {
+        return;
+      }
       refresh();
     },
     10000,
@@ -60,12 +76,29 @@ export function useJob(jobId: string) {
   watch(
     data,
     async (jobResult: Job | undefined) => {
-      if (!jobResult) return;
+      // Handle error case: if jobResult is undefined but we have a previous job value,
+      // use it to determine polling state (especially important in deployment context)
+      if (!jobResult) {
+        // In deployment context, check if we should continue polling based on last known state
+        if (isDeploymentContext.value && job.value) {
+          const lastState = getStateNumber(job.value.state || -1);
+          const isRunningState = lastState === 1;
+          const hasNodeInfo = Boolean(job.value?.node && job.value?.project);
+          
+          // Continue polling only if RUNNING and missing node/project info
+          if (isRunningState && !hasNodeInfo) {
+            resumeJobPolling();
+          } else {
+            pauseJobPolling();
+          }
+        }
+        return;
+      }
 
       const state = getStateNumber(jobResult.state || -1);
 
       const jobObject: UseJob = {
-        ...(jobResult as JobViewModel),
+        ...jobResult,
         address: jobId,
         isRunning: state === 1,
         isActive: state === 0 || state === 1,
@@ -74,7 +107,7 @@ export function useJob(jobId: string) {
         refresh,
         stopJob: async () => {
           if (!job.value) {
-            toast.error('Job data not available yet.');
+            console.error('Job data not available yet.');
             return;
           }
 
@@ -111,28 +144,29 @@ export function useJob(jobId: string) {
                 setTimeout(() => refresh(), 1000);
               }
             } else {
-              // Use SDK for wallet users
+              // Use SDK for wallet users - use job address from jobResult
+              const currentJobAddress = job.value.address;
               try {
                 if (numericState === 0) {
-                  await nosana.value.jobs.delist({ job: jobId });
+                  await nosana.value.jobs.delist({ job: currentJobAddress as Parameters<typeof nosana.value.jobs.delist>[0]['job'] });
                   toast.success('Job successfully delisted (canceled) from queue!');
                   setTimeout(() => {
                     navigateTo('/deploy');
                   }, 3000);
                 } else if (numericState === 1) {
-                  await nosana.value.jobs.end({ job: jobId });
+                  await nosana.value.jobs.end({ job: currentJobAddress as Parameters<typeof nosana.value.jobs.end>[0]['job'] });
                   toast.success('Job successfully ended!');
                   setTimeout(() => refresh(), 1000);
                 } else {
-                  toast.error(`Job is not in QUEUED or RUNNING state (currently: ${numericState})`);
+                  console.error(`Job is not in QUEUED or RUNNING state (currently: ${numericState})`);
                   return;
                 }
-              } catch (sdkError: any) {
+              } catch (sdkError: unknown) {
                 console.error('SDK method failed:', sdkError);
                 throw sdkError;
               }
             }
-          } catch (e: any) {
+          } catch (e: unknown) {
             const errorMessage = e instanceof Error ? e.message : String(e);
             const fullError = String(e);
             
@@ -140,14 +174,15 @@ export function useJob(jobId: string) {
             
             // Handle API errors for credit users
             if (isCreditUser.value) {
-              if (e.status === 404) {
+              const apiError = e as { status?: number; data?: { message?: string } };
+              if (apiError.status === 404) {
                 toast.error('Job not found or you do not have permission to stop this job.');
-              } else if (e.status === 400) {
-                toast.error(e.data?.message || 'Invalid request. The job may not be stoppable.');
-              } else if (e.status === 401) {
+              } else if (apiError.status === 400) {
+                toast.error(apiError.data?.message || 'Invalid request. The job may not be stoppable.');
+              } else if (apiError.status === 401) {
                 toast.error('Authentication failed. Please log in again.');
               } else {
-                toast.error(`Failed to stop job: ${e.data?.message || errorMessage}`);
+                toast.error(`Failed to stop job: ${apiError.data?.message || errorMessage}`);
               }
               return;
             }
@@ -208,28 +243,30 @@ export function useJob(jobId: string) {
               }
               setTimeout(() => refresh(), 1000);
             } else {
-              // Use SDK for wallet users
-              await nosana.value.jobs.extend({ job: jobId, timeout: extensionSeconds });
+              // Use SDK for wallet users - use job address from job.value
+              const currentJobAddress = job.value.address;
+              await nosana.value.jobs.extend({ job: currentJobAddress as Parameters<typeof nosana.value.jobs.extend>[0]['job'], timeout: extensionSeconds });
               toast.success(`Job extended by ${extensionHours} hour${extensionHours !== 1 ? 's' : ''}!`);
               setTimeout(() => refresh(), 1000);
             }
-          } catch (e: any) {
+          } catch (e: unknown) {
             const errorMessage = e instanceof Error ? e.message : String(e);
             
             console.error('Extend job error:', e);
             
             // Handle API errors for credit users
             if (isCreditUser.value) {
-              if (e.status === 404) {
+              const apiError = e as { status?: number; data?: { message?: string } };
+              if (apiError.status === 404) {
                 toast.error('Job not found or you do not have permission to extend this job.');
-              } else if (e.status === 400) {
-                toast.error(e.data?.message || 'Invalid request. The job may not be extendable.');
-              } else if (e.status === 401) {
+              } else if (apiError.status === 400) {
+                toast.error(apiError.data?.message || 'Invalid request. The job may not be extendable.');
+              } else if (apiError.status === 401) {
                 toast.error('Authentication failed. Please log in again.');
-              } else if (e.status === 402) {
+              } else if (apiError.status === 402) {
                 toast.error('Insufficient credits to extend the job.');
               } else {
-                toast.error(`Failed to extend job: ${e.data?.message || errorMessage}`);
+                toast.error(`Failed to extend job: ${apiError.data?.message || errorMessage}`);
               }
               return;
             }
@@ -248,10 +285,23 @@ export function useJob(jobId: string) {
       };
 
 
-      if (state < 2) {
-        resumeJobPolling();
+      const hasNodeInfo = Boolean(job.value?.node && job.value?.project);
+      const isActiveState = state === 0 || state === 1 || state === 3;
+
+      // Don't poll in deployment context unless we still lack node/project info for an active job
+      if (!isDeploymentContext.value) {
+        if (state === 2) {
+          pauseJobPolling();
+        } else {
+          resumeJobPolling();
+        }
       } else {
-        pauseJobPolling();
+        const isRunningState = state === 1;
+        if (isRunningState && !hasNodeInfo) {
+          resumeJobPolling();
+        } else {
+          pauseJobPolling();
+        }
       }
 
       // Determine if current user is the job poster
@@ -271,7 +321,8 @@ export function useJob(jobId: string) {
           jobResult.ipfsResult &&
           jobResult.ipfsResult !== "QmNLei78zWmzUdbeRB3CiUfAizWUrbeeZh5K1rhAQKCh51"
         ) {
-          const resultResponse = await getIpfs(jobResult.ipfsResult) as ResultsSection | undefined;
+          // Use kit's IPFS retrieve method directly
+          const resultResponse = await nosana.value.ipfs.retrieve(jobResult.ipfsResult) as ResultsSection | undefined;
           if (resultResponse && typeof resultResponse === 'object' && 'opStates' in resultResponse) {
             jobObject.hasResultsRegex = Array.isArray(resultResponse.opStates)
               ? resultResponse.opStates.some((op) => (op as { results?: unknown }).results !== undefined)
@@ -386,7 +437,8 @@ export function useJob(jobId: string) {
         return;
       }
       const url = `https://${nodeAddr}.${nodeDomain}/job/${jobId}/job-definition`;
-      const authHeader = await ensureAuth();
+      const headers = await nosana.value.authorization.generateHeaders('nosana-auth', { key: 'Authorization', includeTime: false });
+      const authHeader = headers.get('Authorization') || headers.get('authorization') || '';
       const response = await $fetch<JobDefinition | string>(url, { method: 'GET', headers: { authorization: authHeader } });
       const parsed: JobDefinition = typeof response === 'string' ? JSON.parse(response) : response;
       if (parsed) {
@@ -458,7 +510,8 @@ export function useJob(jobId: string) {
           return;
         }
         
-        const authHeader = await ensureAuth();
+        const headers = await nosana.value.authorization.generateHeaders('nosana-auth', { key: 'Authorization', includeTime: false });
+        const authHeader = headers.get('Authorization') || headers.get('authorization') || '';
         const sseUrl = `https://${nodeAddress}.${config.public.nodeDomain}/job/${jobId}/info`;
         
         eventSource = new EventSourcePolyfill(sseUrl, {

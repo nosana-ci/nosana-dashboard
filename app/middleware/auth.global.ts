@@ -42,7 +42,7 @@ export default defineNuxtRouteMiddleware((to, from) => {
 
   const isPublicRoute = publicRoutes.some((route) => to.path === route);
 
-  // Check if user is authenticated (either via Google/Twitter or wallet)
+  // Check if user is authenticated (either via Google or wallet)
   const isAuthenticated = status.value === "authenticated" || walletAuthenticated;
 
   if (to.path === "/" && isAuthenticated) {

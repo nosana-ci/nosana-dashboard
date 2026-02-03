@@ -33,7 +33,7 @@
     "@chenfengyuan/vue-countdown": "^2.1.2",
     "@creativebulma/bulma-tooltip": "^1.2.0",
     "@fortawesome/vue-fontawesome": "^3.0.8",
-    "@nosana/kit": "^2.0.44",
+    "@nosana/kit": "^2.0.60",
     "@nosana/solana-vue": "^1.0.6",
     "@types/dompurify": "^3.0.5",
     "@vueuse/components": "^10.9.0",

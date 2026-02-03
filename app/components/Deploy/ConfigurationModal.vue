@@ -2,91 +2,88 @@
   <div>
     <div
       class="box"
-      :style="{ overflowY: 'scroll', border: 'none', height: 'auto', marginTop: '1.5rem' }"
+      :style="{ overflowY: 'scroll', border: 'none', height: 'auto' }"
     >
       <div>
           <h2 class="title is-5 mb-4">{{ title || 'Configure job definition' }}</h2>
+          <div class="field mb-3">
+            <p class="section-header">Deployment name</p>
+            <div class="control">
+              <input
+                class="input is-small is-size-6"
+                :class="{ 'has-text-grey-light': !deploymentNameLocal }"
+                type="text"
+                v-model="displayName"
+                placeholder="Enter deployment name"
+                @input="handleNameInput"
+                @focus="handleNameFocus"
+                @blur="handleNameBlur"
+              />
+            </div>
+          </div>
         <!-- START: New Template Info Box (above editor) -->
-        <div class="px-3 pt-0 pb-2" style="width: 100%; display: flex;">
-          <div class="is-flex is-align-items-start is-justify-content-space-between is-flex-direction-column-mobile" style="width: 100%;">
-            <!-- Left side: Icon + Title + README button grouped together -->
-            <div class="is-flex is-align-items-start" style="gap: 0.5rem;">
-              <div v-if="selectedTemplate && selectedTemplate.id !== 'custom'" class="is-flex is-align-items-start">
-                <img 
-                  v-if="selectedTemplate.icon || (selectedTemplate as any).avatar_url"
-                  :src="selectedTemplate.icon || (selectedTemplate as any).avatar_url"
-                  alt="Template Icon"
-                  class="mr-2" 
-                  style="height: 24px; width: 24px; border-radius: 4px; object-fit: contain; flex-shrink: 0; margin-top: 7px;"
-                />
-                <div>
-                  <div class="is-flex is-align-items-center">
-                    <h3 class="is-size-5 has-text-weight-semibold mb-0">
-                      {{ computedJobTitle }}
-                    </h3>
-                  </div>
-                  <p v-if="computedDockerImage" class="is-size-7 has-text-grey" style="line-height: 1; margin-top: 0; margin-bottom: 4px;">
-                    {{ computedDockerImage }}
-                  </p>
-                </div>
-              </div>
-              <div v-else>
-                <h3 class="is-size-5 has-text-weight-semibold mb-0">
-                  {{ computedJobTitle }}
-                </h3>
-                <p v-if="computedDockerImage" class="is-size-7 has-text-grey" style="line-height: 1; margin-top: 0; margin-bottom: 4px;">
-                  {{ computedDockerImage }}
-                </p>
-                 <p v-else class="is-size-7 has-text-grey" style="line-height: 1; margin-top: 0;">
-                  Configure job in editor
-                </p>
-              </div>
-              <!-- README button placed next to title, vertically centered -->
-              <div
-                v-if="selectedTemplate && selectedTemplate.readme"
-                style="align-self: center;"
-              >
+        <div style="width: 100%;">
+          <div class="field mb-3">
+            <p class="section-header">Deployment template</p>
+            <div class="control">
+              <div class="is-flex is-justify-content-space-between align-items-stretch is-flex-direction-column-mobile" style="width: 100%; gap:0.75rem;">
+                <div class="action-group is-flex" style="gap: 0.5rem;">
                 <button
-                  class="button is-light is-small"
-                  @click="openReadmeModal(selectedTemplate.readme!)"
-                  title="View template documentation"
+                  class="action-btn is-medium"
+                  @click="openEditorModal"
+                  title="Configure job definition"
                 >
                   <span class="icon is-small">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" fill="currentColor"/>
+                      <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="currentColor"/>
                     </svg>
                   </span>
-                  <span>README</span>
+                  <span>Configure</span>
                 </button>
-              </div>
-            </div>
-            <div class="is-flex is-align-items-start" style="margin-top: 6px;">
-              <!-- Select Template Button -->
-              <button
-                  class="button is-light is-small mr-2" 
+                <button
+                  class="action-btn is-medium"
                   @click="$emit('showTemplateModal')"
                   title="Select a template"
-              >
+                >
                   <span class="icon is-small">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M16 1H4C2.9 1 2 1.9 2 3V17H4V3H16V1ZM19 5H8C6.9 5 6 5.9 6 7V21C6 22.1 6.9 23 8 23H19C20.1 23 21 22.1 21 21V7C21 5.9 20.1 5 19 5ZM19 21H8V7H19V21Z" fill="currentColor"/>
                     </svg>
                   </span>
                   <span>Select Template</span>
-              </button>
-              <!-- Edit Job Definition Button -->
-              <button
-                  class="button is-light is-small"
-                  @click="openEditorModal"
-                  title="Edit job definition" 
-              >
-                  <span class="icon is-small">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="currentColor"/>
-                    </svg>
-                  </span>
-                  <span>Edit</span>
-              </button>
+                </button>
+              </div>
+              <div class="is-flex is-align-items-center" style="gap: 0.75rem;">
+                <div v-if="selectedTemplate && selectedTemplate.readme">
+                  <button
+                    class="action-btn is-medium"
+                    @click="openReadmeModal(selectedTemplate.readme!)"
+                    title="View template documentation"
+                  >
+                    <span class="icon is-small">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" fill="currentColor"/>
+                      </svg>
+                    </span>
+                    <span>README</span>
+                  </button>
+                </div>
+                <div class="template-meta is-flex is-align-items-center" style="gap: 0.5rem;">
+                  <div v-if="selectedTemplate && selectedTemplate.id !== 'custom'" class="template-icon-wrap">
+                    <img 
+                      v-if="selectedTemplate.icon || (selectedTemplate as any).avatar_url"
+                      :src="selectedTemplate.icon || (selectedTemplate as any).avatar_url"
+                      alt="Template Icon"
+                      class="template-icon"
+                    />
+                  </div>
+                  <div>
+                    <p class="is-size-6 has-text-weight-semibold mb-0">{{ computedJobTitle }}</p>
+                    <p v-if="computedDockerImage" class="is-size-7 has-text-grey mb-0">{{ computedDockerImage }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
             </div>
           </div>
         </div>
@@ -153,18 +150,54 @@
     <div class="modal" :class="{ 'is-active': showEditorModal }">
       <div class="modal-background" @click="handleCancel"></div>
       <div class="modal-card" style="width: 90%; max-width: 1200px;">
-        <header class="modal-card-head">
-          <p class="modal-card-title">Edit Job Definition</p>
+        <header class="modal-card-head deployment-header p-5">
+          <div class="deployment-tabs">
+            <button
+              type="button"
+              class="tab-button"
+              :class="{ 'is-active': modalTab === 'definition' }"
+              @click="modalTab = 'definition'"
+            >
+              Job Configuration
+            </button>
+            <button
+              type="button"
+              class="tab-button"
+              :class="{ 'is-active': modalTab === 'configuration' }"
+              @click="modalTab = 'configuration'"
+            >
+              Deployment Configuration
+            </button>
+          </div>
           <button class="delete" aria-label="close" @click="handleCancel"></button>
         </header>
-        <section class="modal-card-body" style="min-height: 500px;">
-          <div class="field full-height">
-            <div class="control full-height json-editor-container">
-              <CommonJsonEditor 
-                  ref="jobDefEditor"
-                  v-model="editingJobDefinition" 
-                  :validateJobDefinition="true"
-                  style="height: 500px;" />
+        <section class="modal-card-body">
+
+          <div class="tab-panel-wrapper" :style="tabWrapperStyle">
+            <div
+              v-if="modalTab === 'definition'"
+              class="tab-panel tab-panel--definition"
+              ref="podPanelRef"
+            >
+              <PodConfigurationTab ref="podTab" v-model="editingJobDefinition" />
+            </div>
+
+            <div
+              v-else
+              class="tab-panel tab-panel--configuration"
+            >
+            <DeploymentConfigurationTab
+              :strategy="strategyLocal"
+              :schedule="scheduleLocal"
+              :replicas="replicasLocal"
+              :timeout="timeoutLocal"
+              :isWalletMode="props.isWalletMode"
+              @update:strategy="strategyLocal = $event"
+              @update:schedule="scheduleLocal = $event"
+              @update:replicas="replicasLocal = $event"
+              @update:timeout="timeoutLocal = $event"
+              @update:modalSelectedVault="handleVaultSelect"
+            />
             </div>
           </div>
         </section>
@@ -184,9 +217,12 @@
 
 <script setup lang="ts">
   import type { JobDefinition, Market } from '@nosana/kit';
+  import { DeploymentStrategy } from '@nosana/kit';
   import type { Template } from '~/composables/useTemplates';
   import DeploySimpleGpuSelection from './SimpleGpuSelection.vue';
   import DeployAdvancedGpuSelection from './AdvancedGpuSelection.vue';
+  import PodConfigurationTab from './PodConfigurationTab.vue';
+  import DeploymentConfigurationTab from './DeploymentConfigurationTab.vue';
 
 // Define props
 interface Props {
@@ -194,6 +230,13 @@ interface Props {
   jobDefinition: JobDefinition | null | string;
   isEditorCollapsed: boolean;
   title?: string; // Optional title for the section
+  strategy: DeploymentStrategy;
+  schedule: string;
+  replicas: number;
+  timeout: number;
+  isWalletMode: boolean;
+  deploymentName: string;
+  modalSelectedVault: string | null;
     // GPU Selection props (optional - only for /deploy page)
     markets?: Market[] | null;
     testgridMarkets?: any;
@@ -219,6 +262,13 @@ const emit = defineEmits<{
   'update:isEditorCollapsed': [value: boolean];
   'update:jobDefinition': [value: JobDefinition | null];
   openReadme: [readme: string];
+    // Advanced deployment emits
+    'update:strategy': [strategy: DeploymentStrategy];
+    'update:schedule': [schedule: string];
+    'update:replicas': [replicas: number];
+    'update:timeout': [timeout: number];
+    'update:deploymentName': [name: string];
+    'update:modalSelectedVault': [vault: string | null | undefined];
     // GPU Selection emits
     selectedMarket: [market: Market | null];
     'update:activeFilter': [filter: string];
@@ -236,10 +286,7 @@ const props = defineProps<Props>();
 
 // Modal state
 const showEditorModal = ref(false);
-
-// Editor ref and validation
-const jobDefEditor = ref<{ hasErrors: boolean } | null>(null);
-const { canSave } = useJsonEditorValidation(jobDefEditor);
+const modalTab = ref<'definition' | 'configuration'>('definition');
 
 // Store original job definition for cancel functionality
 const originalJobDefinition = ref<JobDefinition | null | string>(null);
@@ -267,21 +314,154 @@ const jobDefinition = computed({
   }
 });
 
+const strategyLocal = computed({
+  get: () => props.strategy,
+  set: (value: DeploymentStrategy) => emit('update:strategy', value),
+});
+
+const scheduleLocal = computed({
+  get: () => props.schedule,
+  set: (value: string) => emit('update:schedule', value),
+});
+
+const deploymentNameLocal = computed({
+  get: () => props.deploymentName,
+  set: (value: string) => emit('update:deploymentName', value),
+});
+
+const clampNumber = (value: number, min: number, max: number) => {
+  const num = Number(value);
+  if (Number.isNaN(num)) return min;
+  return Math.min(max, Math.max(min, num));
+};
+
+const replicasLocal = computed({
+  get: () => props.replicas,
+  set: (value: number) =>
+    emit('update:replicas', clampNumber(value, 1, 100)),
+});
+
+const timeoutLocal = computed({
+  get: () => props.timeout,
+  set: (value: number) =>
+    emit('update:timeout', clampNumber(value, MIN_TIMEOUT_HOURS, MAX_TIMEOUT_HOURS)),
+});
+
+const handleVaultSelect = (vault: string | undefined | null) => {
+  emit('update:modalSelectedVault', vault ?? null);
+};
+
+const podPanelRef = ref<HTMLElement | null>(null);
+const tabMinHeight = ref(0);
+const tabWrapperStyle = computed(() =>
+  tabMinHeight.value ? { minHeight: `${tabMinHeight.value}px` } : {}
+);
+let heightObserver: ResizeObserver | null = null;
+
+const updateTabMinHeight = () => {
+  if (!podPanelRef.value) return;
+  const height = podPanelRef.value.offsetHeight;
+  if (height > tabMinHeight.value) {
+    tabMinHeight.value = height;
+  }
+};
+
+const startHeightObserver = () => {
+  if (typeof window === 'undefined' || !podPanelRef.value) return;
+  if ('ResizeObserver' in window) {
+    heightObserver?.disconnect();
+    heightObserver = new ResizeObserver(() => {
+      updateTabMinHeight();
+    });
+    heightObserver.observe(podPanelRef.value);
+  }
+  updateTabMinHeight();
+};
+
+const stopHeightObserver = () => {
+  heightObserver?.disconnect();
+  heightObserver = null;
+};
+
+watch(
+  () => modalTab.value,
+  (value) => {
+    if (value === 'definition') {
+      nextTick(() => {
+        startHeightObserver();
+      });
+    } else {
+      stopHeightObserver();
+    }
+  }
+);
+
+onMounted(() => {
+  nextTick(() => {
+    startHeightObserver();
+  });
+});
+
+onBeforeUnmount(() => {
+  stopHeightObserver();
+});
+
 // Computed properties for template info
 const computedJobTitle = computed(() => {
   if (props.selectedTemplate?.name) {
     return props.selectedTemplate.name;
   }
-  if (typeof props.jobDefinition !== 'string' && props.jobDefinition?.ops?.[0]?.args) {
+  if (typeof props.jobDefinition !== "string" && props.jobDefinition?.ops?.[0]?.args) {
     const args = props.jobDefinition.ops[0].args as any;
     if (args.image) {
       const image = args.image;
-      const parts = image.split('/');
-      return parts[parts.length - 1].split(':')[0];
+      const parts = image.split("/");
+      return parts[parts.length - 1].split(":")[0];
     }
   }
-  return 'Custom Configuration';
+  return "Custom Configuration";
 });
+
+const isNameFocused = ref(false);
+const displayName = ref(deploymentNameLocal.value || computedJobTitle.value);
+
+const handleNameInput = (event: Event) => {
+  const target = event.target as HTMLInputElement;
+  deploymentNameLocal.value = target.value;
+  displayName.value = target.value;
+};
+
+const handleNameFocus = () => {
+  isNameFocused.value = true;
+  displayName.value = deploymentNameLocal.value || "";
+};
+
+const handleNameBlur = () => {
+  isNameFocused.value = false;
+  if (!deploymentNameLocal.value) {
+    displayName.value = computedJobTitle.value;
+  }
+};
+
+watch(
+  () => deploymentNameLocal.value,
+  (value) => {
+    if (value) {
+      displayName.value = value;
+    } else if (!isNameFocused.value) {
+      displayName.value = computedJobTitle.value;
+    }
+  }
+);
+
+watch(
+  computedJobTitle,
+  (value) => {
+    if (!deploymentNameLocal.value && !isNameFocused.value) {
+      displayName.value = value;
+    }
+  }
+);
 
 const computedDockerImage = computed(() => {
   if ((props.jobDefinition as any)?.ops?.[0]?.args) {
@@ -290,7 +470,7 @@ const computedDockerImage = computed(() => {
       return args.image;
     }
   }
-  return '';
+  return "";
 });
 
 // Methods
@@ -306,10 +486,16 @@ const openEditorModal = () => {
 };
 
 // Handle save with validation
+const podTab = ref<{ canSave: () => boolean } | null>(null);
 const handleSaveChanges = () => {
-  if (!canSave()) return;
-  // Emit the edited job definition
-  emit('update:jobDefinition', editingJobDefinition.value as JobDefinition);
+  // If on definition tab, validate job definition
+  if (modalTab.value === 'definition') {
+    if (!podTab.value?.canSave?.()) return;
+    emit('update:jobDefinition', editingJobDefinition.value as JobDefinition);
+  }
+  // For configuration tab, values are already updated via computed setters
+  // (strategyLocal, scheduleLocal, replicasLocal, timeoutLocal)
+  // Just close the modal
   showEditorModal.value = false;
 };
 
@@ -322,6 +508,16 @@ const handleCancel = () => {
 </script>
 
 <style lang="scss" scoped>
+
+.modal-card-head.deployment-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.modal-card-head.deployment-header .deployment-tabs {
+  flex: 1;
+}
 
 .nav-tabs-item {
   border-top-left-radius: 6px;
@@ -361,6 +557,20 @@ html.dark-mode {
   }
 }
 
+
+.tab-panel-wrapper {
+  min-height: 520px;
+}
+
+.tab-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.tab-panel--configuration {
+  justify-content: flex-start;
+}
 
 .editor-wrapper {
   position: relative;
@@ -448,5 +658,23 @@ html.dark-mode {
   .expand-indicator {
     color: #ccc;
   }
+}
+
+.template-icon-wrap {
+  width: 32px;
+  height: 32px;
+  border-radius: 12px;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: $white;
+}
+
+.template-icon {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: inherit;
 }
 </style>

@@ -503,7 +503,7 @@ try {
     market: testgridMarkets.value.find(
       (tgm: any) => tgm.address === selectedMarket.value.address.toString())?.name || selectedMarket.value.address.toString()});
 } catch (error) {
-  console.warn("Error tracking GPU job created:", error);
+  console.error("Error tracking GPU job created:", error);
 }
   
   return testgridMarkets.value.find(
@@ -612,11 +612,11 @@ const createJob = async () => {
   
   // Double-check hours value is valid
   if (hours.value < MIN_TIMEOUT_HOURS) {
-    toast.error(`Auto-shutdown time must be at least ${MIN_TIMEOUT_HOURS} hours`);
+    console.error(`Auto-shutdown time must be at least ${MIN_TIMEOUT_HOURS} hours`);
     return;
   }
   if (hours.value > MAX_TIMEOUT_HOURS) {
-    toast.error(`Auto-shutdown time cannot exceed ${MAX_TIMEOUT_HOURS} hours`);
+    console.error(`Auto-shutdown time cannot exceed ${MAX_TIMEOUT_HOURS} hours`);
     return;
   }
   
@@ -671,7 +671,7 @@ const createJob = async () => {
             type: 'credit',
           });
         } catch (error) {
-          console.warn("Error tracking credit used:", error);
+          console.error("Error tracking credit used:", error);
         }
         setTimeout(() => {
         router.push('/jobs/' + job);
@@ -738,7 +738,7 @@ const createJob = async () => {
           type: 'wallet',
         });
       } catch (error) {
-        console.warn("Error tracking GPU job created:", error);
+        console.error("Error tracking GPU job created:", error);
       }
 
       // Clear saved deploy state after successful job creation
@@ -755,11 +755,11 @@ const createJob = async () => {
     if (error.toString().toLowerCase().includes('user rejected')) {
       toast.info('Transaction was cancelled.');
     } else if (error.toString().toLowerCase().includes('wallet is not ready')) {
-      toast.error('Wallet connection issue. Please disconnect and reconnect your wallet, then try again.');
+      console.error('Wallet connection issue. Please disconnect and reconnect your wallet, then try again.');
     } else if (error.toString().toLowerCase().includes('not connected')) {
-      toast.error('Wallet is not connected. Please connect your wallet and try again.');
+      console.error('Wallet is not connected. Please connect your wallet and try again.');
     } else {
-      toast.error(`Error creating job: ${error.toString()}`);
+      console.error(`Error creating job: ${error.toString()}`);
     }
   } finally {
     isCreatingJob.value = false;
@@ -973,7 +973,7 @@ const fetchGpuFilters = async (resetValues = true) => {
     await debouncedSearch();
   } catch (error) {
     console.error('Error fetching filters:', error);
-    toast.error('Could not load GPU filter options');
+    console.error('Could not load GPU filter options');
   } finally {
     loadingHosts.value = false;
   }
@@ -1049,7 +1049,7 @@ const debouncedSearch = useDebounceFn(async () => {
     }
   } catch (error) {
     console.error('Error fetching hosts:', error);
-    toast.error('Failed to fetch available GPUs');
+    console.error('Failed to fetch available GPUs');
     setTimeout(() => {
       availableHosts.value = [];
       loadingHosts.value = false;
@@ -1383,7 +1383,7 @@ const selectedTemplateImage = computed(() => {
       }
     }
   } catch (e) {
-    console.warn("Could not extract image from job definition", e);
+    console.error("Could not extract image from job definition", e);
   }
   return null; // Return null if not found or error
 });
@@ -1398,7 +1398,7 @@ const getTemplateImage = (template: Template): string | null => {
       }
     }
   } catch (e) {
-    console.warn("Could not extract image from template", e);
+    console.error("Could not extract image from template", e);
   }
   return null;
 };
@@ -1445,7 +1445,7 @@ const handleAdvancedMarketSelection = (marketInfo: any) => {
     if (matchingMarket) {
       selectedMarket.value = matchingMarket;
     } else {
-      console.warn('Could not find matching market for address:', marketInfo.market_address);
+      console.error('Could not find matching market for address:', marketInfo.market_address);
       // Don't set to null here - we might still be able to use the market_address directly
       // The job creation logic will handle finding the market when needed
     }

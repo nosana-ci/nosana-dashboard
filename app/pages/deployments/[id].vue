@@ -57,8 +57,8 @@
                   class="tab-button"
                 >
                   {{
-                    tab === "job-definition"
-                      ? "Definition"
+                    tab === "configuration"
+                      ? "Configuration"
                       : tab.charAt(0).toUpperCase() + tab.slice(1)
                   }}
                 </button>
@@ -306,14 +306,14 @@
                   <!-- Job Activity Tabs (only show if 5+ jobs) -->
                   <div v-if="totalJobs >= 5" class="deployment-tabs">
                     <button
-                      @click="jobActivityTab = 'running'"
+                      @click="jobActivityTab = 'active'; historicalJobsPage = 1"
                       class="tab-button is-small"
-                      :class="{ 'is-active': jobActivityTab === 'running' }"
+                      :class="{ 'is-active': jobActivityTab === 'active' }"
                     >
-                      Running
+                      Active
                     </button>
                     <button
-                      @click="jobActivityTab = 'history'"
+                      @click="jobActivityTab = 'history'; historicalJobsPage = 1"
                       class="tab-button is-small"
                       :class="{ 'is-active': jobActivityTab === 'history' }"
                     >
@@ -325,7 +325,7 @@
                 <!-- All Jobs (when tabs are hidden, < 5 jobs) -->
                 <div v-if="totalJobs < 5">
                   <div
-                    v-if="allJobs.length === 0"
+                    v-if="activeJobs.length === 0 && allHistoricalJobs.length === 0"
                     class="box has-text-centered p-6"
                   >
                     <p class="has-text-grey">
@@ -344,13 +344,12 @@
                             <th style="width: 25%;">Name</th>
                             <th style="width: 10%;">Revision</th>
                             <th style="width: 12%;">Status</th>
-                            <th style="width: 15%;">Duration</th>
                             <th style="width: 18%;">Created on</th>
                             <th style="width: 20%;">Navigation</th>
                           </tr>
                         </thead>
                         <tbody>
-                          <tr v-for="job in allJobs" :key="job.job">
+                          <tr v-for="job in [...activeJobs, ...allHistoricalJobs]" :key="job.job">
                             <td style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 0;">
                               <span class="is-family-monospace is-size-7">{{
                                 job.job
@@ -360,20 +359,12 @@
                               {{ job.revision || "-" }}
                             </td>
                             <td>
-                              <JobStatus :status="job.state || 0" />
-                            </td>
-                            <td>
-                              <span v-if="getJobDuration(job.job)">
-                                <SecondsFormatter
-                                  :seconds="getJobDuration(job.job)"
-                                  :showSeconds="true"
-                                />
-                              </span>
-                              <span v-else>-</span>
+                              <JobStatus :status="getJobStateNumber(job)" />
                             </td>
                             <td>{{ formatDate(job.created_at) }}</td>
                             <td>
-                              <NuxtLink
+                            <NuxtLink
+                                v-if="deployment"
                                 :to="`/deployments/${deployment.id}/jobs/${job.job}`"
                                 class="has-text-link"
                               >
@@ -387,8 +378,8 @@
                   </div>
                 </div>
 
-                <!-- Running Jobs (when tabs are shown, >= 5 jobs) -->
-                <div v-else-if="jobActivityTab === 'running'">
+                <!-- Active Jobs (when tabs are shown, >= 5 jobs) -->
+                <div v-else-if="jobActivityTab === 'active'">
                   <div
                     v-if="activeJobs.length === 0"
                     class="box has-text-centered p-6"
@@ -397,7 +388,7 @@
                       <span v-if="deployment.status === 'DRAFT'"
                         >Start deployment to create jobs</span
                       >
-                      <span v-else>No running jobs</span>
+                      <span v-else>No active jobs</span>
                     </p>
                   </div>
 
@@ -409,7 +400,6 @@
                             <th style="width: 25%;">Name</th>
                             <th style="width: 10%;">Revision</th>
                             <th style="width: 12%;">Status</th>
-                            <th style="width: 15%;">Duration</th>
                             <th style="width: 18%;">Created on</th>
                             <th style="width: 20%;">Navigation</th>
                           </tr>
@@ -425,20 +415,12 @@
                               {{ job.revision || "-" }}
                             </td>
                             <td>
-                              <JobStatus :status="job.state || 0" />
-                            </td>
-                            <td>
-                              <span v-if="getJobDuration(job.job)">
-                                <SecondsFormatter
-                                  :seconds="getJobDuration(job.job)"
-                                  :showSeconds="true"
-                                />
-                              </span>
-                              <span v-else>-</span>
+                              <JobStatus :status="getJobStateNumber(job)" />
                             </td>
                             <td>{{ formatDate(job.created_at) }}</td>
                             <td>
-                              <NuxtLink
+                            <NuxtLink
+                                v-if="deployment"
                                 :to="`/deployments/${deployment.id}/jobs/${job.job}`"
                                 class="has-text-link"
                               >
@@ -455,59 +437,70 @@
                 <!-- Historical Jobs -->
                 <div v-if="jobActivityTab === 'history'">
                   <div
-                    v-if="historicalJobs.length === 0"
+                    v-if="allHistoricalJobs.length === 0"
                     class="box has-text-centered p-6"
                   >
                     <p class="has-text-grey">No completed jobs yet</p>
                   </div>
 
-                  <div v-else class="box is-borderless">
-                    <div class="table-container">
-                      <table class="table is-fullwidth mb-0" style="table-layout: fixed;">
-                        <thead>
-                          <tr>
-                            <th style="width: 25%;">Name</th>
-                            <th style="width: 10%;">Revision</th>
-                            <th style="width: 12%;">Status</th>
-                            <th style="width: 15%;">Duration</th>
-                            <th style="width: 18%;">Created on</th>
-                            <th style="width: 20%;">Navigation</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr v-for="job in historicalJobs" :key="job.job">
-                            <td style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 0;">
-                              <span class="is-family-monospace is-size-7">{{
-                                job.job
-                              }}</span>
-                            </td>
-                            <td>
-                              {{ job.revision || "-" }}
-                            </td>
-                            <td>
-                              <JobStatus :status="job.state || 0" />
-                            </td>
-                            <td>
-                              <span v-if="getJobDuration(job.job)">
-                                <SecondsFormatter
-                                  :seconds="getJobDuration(job.job)"
-                                  :showSeconds="true"
-                                />
-                              </span>
-                              <span v-else>-</span>
-                            </td>
-                            <td>{{ formatDate(job.created_at) }}</td>
-                            <td>
+                  <div v-else>
+                    <div class="box is-borderless">
+                      <div class="table-container">
+                        <table class="table is-fullwidth mb-0" style="table-layout: fixed;">
+                          <thead>
+                            <tr>
+                              <th style="width: 25%;">Name</th>
+                              <th style="width: 10%;">Revision</th>
+                              <th style="width: 12%;">Status</th>
+                              <th style="width: 15%;">Duration</th>
+                              <th style="width: 18%;">Created on</th>
+                              <th style="width: 20%;">Navigation</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr v-for="job in historicalJobs" :key="job.job">
+                              <td style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 0;">
+                                <span class="is-family-monospace is-size-7">{{
+                                  job.job
+                                }}</span>
+                              </td>
+                              <td>
+                                {{ job.revision || "-" }}
+                              </td>
+                              <td>
+                                <JobStatus :status="job.state || 0" />
+                              </td>
+                              <td>
+                              <span v-if="getJobDuration(job.job) !== null">
+                                  <SecondsFormatter
+                                    :seconds="getJobDuration(job.job) as number"
+                                    :showSeconds="true"
+                                  />
+                                </span>
+                                <span v-else>-</span>
+                              </td>
+                              <td>{{ formatDate(job.created_at) }}</td>
+                              <td>
                               <NuxtLink
-                                :to="`/deployments/${deployment.id}/jobs/${job.job}`"
-                                class="has-text-link"
-                              >
-                                View job
-                              </NuxtLink>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
+                                  v-if="deployment"
+                                  :to="`/deployments/${deployment.id}/jobs/${job.job}`"
+                                  class="has-text-link"
+                                >
+                                  View job
+                                </NuxtLink>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                    <!-- Pagination for historical jobs -->
+                    <div v-if="historicalJobsTotalPages > 1" class="mt-4">
+                      <Pagination
+                        v-model="historicalJobsPage"
+                        :total-page="historicalJobsTotalPages"
+                        :max-page="historicalJobsTotalPages"
+                      />
                     </div>
                   </div>
                 </div>
@@ -528,10 +521,10 @@
                         />
                         <tr>
                           <td style="width: 25%;">Deployment strategy</td>
-                          <td style="width: 75%;">{{ deployment.strategy }}</td>
+                          <td style="width: 75%;">{{ formatStrategy(deployment.strategy) }}</td>
                         </tr>
                         <tr>
-                          <td style="width: 25%;">Replicas count</td>
+                          <td style="width: 25%;">Replicas</td>
                           <td style="width: 75%;">{{ deployment.replicas }}</td>
                         </tr>
                         <tr>
@@ -560,6 +553,7 @@
                           <td style="width: 25%;">Container timeout</td>
                           <td style="width: 75%;">
                             <SecondsFormatter
+                              v-if="deployment"
                               :seconds="deployment.timeout * 60"
                               :showSeconds="false"
                             />
@@ -598,12 +592,6 @@
                   </div>
                 </div>
               </div>
-
-              <!-- Logs Section (only show if single job) -->
-              <div v-if="activeJobs.length === 1 && activeLogsJobId" class="mb-5">
-                <h2 class="title is-5 mb-3">Logs</h2>
-                <JobLogsContainer :job-id="activeLogsJobId" :deployment-id="route.params.id as string" />
-              </div>
             </div>
 
             <!-- Events Tab -->
@@ -616,7 +604,7 @@
                   <h2 class="title is-5 mb-0">Upcoming Tasks</h2>
                   <button
                     class="button is-small"
-                    @click="loadTasks"
+                    @click="loadTasks()"
                     :class="{ 'is-loading': tasksLoading }"
                     :disabled="tasksLoading"
                     data-tooltip="Refresh upcoming tasks"
@@ -763,40 +751,74 @@
             <!-- Logs Tab -->
             <div v-if="activeTab === 'logs'" class="deployment-logs-container">
               <div
-                v-if="activeJobs.length === 0"
+                v-if="allJobsForLogs.length === 0"
                 class="notification is-light has-text-centered"
               >
-                <p class="has-text-grey">No running jobs to show logs for</p>
+                <p class="has-text-grey">No jobs to show logs for</p>
               </div>
               <div v-else class="deployment-logs-content">
-                <!-- Job Tabs (only show if more than one job) -->
-                <div v-if="activeJobs.length > 1" class="deployment-tabs mb-3">
+                <!-- Pagination for logs tab -->
+                <div v-if="logsJobsTotalPages > 1" class="mb-3">
+                  <Pagination
+                    v-model="logsJobsPage"
+                    :total-page="logsJobsTotalPages"
+                    :max-page="logsJobsTotalPages"
+                  />
+                </div>
+                <!-- Job Tabs (show if more than one job on current page) -->
+                <div v-if="allJobs.length > 1" class="deployment-tabs mb-3">
                   <button
-                    v-for="job in activeJobs"
+                    v-for="job in allJobs"
                     :key="job.job"
-                    @click="activeLogsJobId = job.job"
+                    @click="selectJobForLogs(job, true)"
                     :class="{ 'is-active': activeLogsJobId === job.job }"
                     class="tab-button"
                   >
                     {{ job.job.slice(0, 16) }}...
+                    <span v-if="getJobStateNumber(job) === 2" class="ml-2 is-size-7 has-text-grey">(completed)</span>
                   </button>
                 </div>
 
                 <!-- Selected Job Logs -->
-                <div v-if="activeLogsJobId" class="selected-job-logs">
-                  <JobLogsContainer :job-id="activeLogsJobId" :deployment-id="route.params.id" />
+                <div v-if="activeLogsJobId && deployment" class="selected-job-logs">
+                  <!-- Show logs for active jobs -->
+                  <div v-if="isActiveJob(activeLogsJobId)">
+                    <JobLogsContainer :job-id="activeLogsJobId" :deployment-id="deployment.id" />
+                  </div>
+                  <!-- Show results for completed jobs -->
+                  <div v-else-if="isCompletedJob(activeLogsJobId)" class="completed-job-results">
+                    <div v-if="loadingJobResults[activeLogsJobId]" class="has-text-centered p-4">
+                      <p class="has-text-grey">Loading results...</p>
+                    </div>
+                    <div v-else-if="completedJobResults[activeLogsJobId] && getJobData(activeLogsJobId)">
+                      <JobResult 
+                        :ipfs-result="completedJobResults[activeLogsJobId]!" 
+                        :ipfs-job="getJobData(activeLogsJobId)!"
+                      />
+                    </div>
+                    <div v-else-if="!loadingJobResults[activeLogsJobId]">
+                      <JobResult 
+                        :ipfs-result="null" 
+                        :ipfs-job="getJobData(activeLogsJobId) || null"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <!-- No job selected -->
+                <div v-else class="has-text-centered p-4">
+                  <p class="has-text-grey">Select a job to view logs</p>
                 </div>
               </div>
             </div>
 
-            <!-- Job Definition Tab -->
-            <div v-if="activeTab === 'job-definition'">
-              <!-- Current Job Definition Section -->
+            <!-- Configuration Tab -->
+            <div v-if="activeTab === 'configuration'">
+              <!-- Current Job Configuration Section -->
               <div class="mb-5">
                 <div
                   class="is-flex is-justify-content-space-between is-align-items-center mb-3"
                 >
-                  <h2 class="title is-5 mb-0">Current Job Definition</h2>
+                  <h2 class="title is-5 mb-0">Current Job Configuration</h2>
                   <div class="buttons" v-if="hasDefinitionChanged">
                     <button
                       @click="resetDefinition"
@@ -914,7 +936,7 @@
                                 @click="viewRevisionDefinition(revision)"
                                 class="button is-light is-small"
                               >
-                                View Definition
+                                View Configuration
                               </button>
                             </div>
                           </td>
@@ -1230,7 +1252,7 @@
         <div class="modal-card modal-card-wide">
           <header class="modal-card-head">
             <p class="modal-card-title">
-              Revision {{ viewingRevision.revision }} - Job Definition
+              Revision {{ viewingRevision.revision }} - Job Configuration
             </p>
             <button
               class="delete"
@@ -1265,6 +1287,7 @@
 
 <script setup lang="ts">
 import type { Deployment, JobDefinition } from "@nosana/kit";
+import type { DeploymentJob as ApiDeploymentJob } from "@nosana/api";
 import { useVaultModal } from "~/composables/useVaultModal";
 import { updateVaultBalance } from "~/composables/useDeploymentVault";
 import { useToast } from "vue-toastification";
@@ -1272,10 +1295,13 @@ import { useWallet } from "@nosana/solana-vue";
 import { useAuth } from "#imports";
 import JobStatus from "~/components/Job/Status.vue";
 import JobLogsContainer from "~/components/Job/LogsContainer.vue";
+import JobResult from "~/components/Job/Result.vue";
+import type { ResultsSection } from "~/composables/jobs/types";
 import SecondsFormatter from "~/components/SecondsFormatter.vue";
 import StatusTag from "~/components/Common/StatusTag.vue";
 import VaultModal from "~/components/Vault/Modal/VaultModal.vue";
 import VaultActions from "~/components/Vault/VaultActions.vue";
+import Pagination from "~/components/Pagination.vue";
 
 // Import icons as components
 import ArrowUpIcon from "@/assets/img/icons/arrow-up.svg?component";
@@ -1295,15 +1321,8 @@ import { parseCronExpression } from "~/utils/parseCronExpression";
 
 const colorMode = useColorMode();
 
-// Types
-interface DeploymentJob {
-  job: string;
-  tx: string;
-  created_at: string;
-  state?: number;
-  market?: string;
-  revision?: number;
-}
+// Types - use kit's types directly
+type DeploymentJob = NonNullable<Deployment['jobs']>[number];
 
 interface DeploymentRevision {
   revision: number;
@@ -1361,29 +1380,35 @@ const loading = ref(true);
 const error = ref<string | null>(null);
 const activeTab = ref("overview");
 
-// Available tabs - hide logs tab if only 1 job (shown in overview instead)
+// Available tabs - always show logs tab
 const availableTabs = computed(() => {
-  const tabs = ["overview", "logs", "events", "job-definition"];
-  if (activeJobs.value.length <= 1) {
-    return tabs.filter(t => t !== "logs");
-  }
-  return tabs;
+  return ["overview", "logs", "events", "configuration"];
 });
 
 // Initialize activeTab from URL query parameter
 const initialTab = route.query.tab?.toString();
-if (initialTab && ["overview", "logs", "events", "job-definition"].includes(initialTab)) {
+if (initialTab && ["overview", "logs", "events", "configuration"].includes(initialTab)) {
   activeTab.value = initialTab;
 }
 const activeLogsJobId = ref<string | null>(null);
-const jobActivityTab = ref("running");
+const userSelectedJob = ref<boolean>(false); // Track if user manually selected a job
+const jobActivityTab = ref("active");
+const completedJobResults = ref<Record<string, ResultsSection | null>>({});
+const loadingJobResults = ref<Record<string, boolean>>({});
+
+// Pagination for job activity
+const jobsPerPage = 10;
+const activeJobsPage = ref(1);
+const historicalJobsPage = ref(1);
+
+// Pagination for logs tab
+const logsJobsPage = ref(1);
 const actionLoading = ref(false);
 const newReplicaCount = ref<number | null>(null);
 const newTimeoutHours = ref<number | null>(null);
 const newSchedule = ref<string>("");
 const tasks = ref<any[]>([]);
 const tasksLoading = ref(false);
-const tasksPollingInterval = ref<NodeJS.Timeout | null>(null);
 const isActionsDropdownOpen = ref(false);
 const showReplicasModal = ref(false);
 const showTimeoutModal = ref(false);
@@ -1394,6 +1419,13 @@ const switchingRevision = ref<number | null>(null);
 const showRevisionDefinitionModal = ref(false);
 const viewingRevision = ref<any>(null);
 const actionsDropdown = ref<HTMLElement | null>(null);
+
+// Polling intervals and state
+const pollingTimeout = ref<NodeJS.Timeout | null>(null);
+const pollingConfig = {
+  normal: 10000,
+  fast: 2000,
+};
 
 // Available actions
 const availableActions = [
@@ -1507,6 +1539,11 @@ const formatDate = (dateString: string | Date) => {
   return new Date(dateString).toLocaleString();
 };
 
+const formatStrategy = (strategy: string | undefined | null): string => {
+  if (!strategy) return "-";
+  return strategy.toLowerCase().replace(/-/g, " ");
+};
+
 const jobDefinitionModel = ref<JobDefinition | null>(null);
 const loadingJobDefinition = ref(false);
 const originalDefinition = ref<JobDefinition | null>(null);
@@ -1614,7 +1651,7 @@ const makeRevision = async () => {
   }
 };
 
-const loadDeployment = async (silent = false, forceRefreshJobStates = false) => {
+const loadDeployment = async (silent = false) => {
   // Skip parent deployment fetch when on job subroute
   if ((route.params as any)?.jobaddress) {
     if (!silent) loading.value = false;
@@ -1650,9 +1687,20 @@ const loadDeployment = async (silent = false, forceRefreshJobStates = false) => 
     }
 
     const deploymentId = route.params.id as string;
+    if (preloadedDeployment.value && preloadedDeployment.value.id === deploymentId) {
+      applyDeploymentSnapshot(preloadedDeployment.value);
+      preloadedDeployment.value = null;
+      if (!silent) {
+        await loadJobDefinition();
+        await loadTasks();
+      }
+      // Watcher will handle fast polling when status becomes RUNNING
+      return;
+    }
+
     const data = await nosana.value.api.deployments.get(deploymentId);
 
-    deployment.value = data as Deployment;
+    applyDeploymentSnapshot(data as Deployment);
 
     // Only load job definition and tasks on initial load, not during polling
     // This prevents tasks loading state from being reset during background polling
@@ -1661,36 +1709,6 @@ const loadDeployment = async (silent = false, forceRefreshJobStates = false) => 
       await loadTasks();
     }
 
-    // Update job states for active jobs during polling
-    if (deployment.value.jobs && deployment.value.jobs.length > 0) {
-      for (const job of deployment.value.jobs) {
-        // If forceRefreshJobStates is true, always fetch state regardless of current state
-        // On initial load (!silent), fetch all jobs to get duration data
-        // During polling (silent), only fetch state for jobs that aren't already in a completed state
-        // Completed states: DONE=2, STOPPED=3, TIMEOUT=4, ERROR=5
-        const currentState = jobStates.value[job.job];
-        const hasJobData = allJobsData.value[job.job] !== undefined;
-        
-        // Skip completed jobs during polling if we already have their data
-        if (!forceRefreshJobStates && silent && currentState !== undefined && currentState >= 2 && hasJobData) {
-          // Job is already completed and we have data, skip fetching during polling
-          continue;
-        }
-
-        try {
-          const { data } = await useAPI(`/api/jobs/${job.job}`);
-          if (data.value?.state !== undefined) {
-            jobStates.value[job.job] = data.value.state;
-            allJobsData.value[job.job] = data.value;
-          }
-        } catch (err) {
-          // Silent polling shouldn't spam console warnings
-          if (!silent) {
-            console.warn(`Failed to fetch state for job ${job.job}`);
-          }
-        }
-      }
-    }
   } catch (err: any) {
     console.error("Error loading deployment:", err);
     // Only set error for non-silent operations
@@ -1749,14 +1767,29 @@ const deploymentVault = computed(() => {
 });
 
 // Job activity split
-// Note: Deployment jobs don't include state info, so we show all jobs
-// Users can click through to see individual job details
+// Job states and data extracted from deployment response
+// The deployment.jobs array includes state, time_start, and other job info
 const jobStates = ref<Record<string, number>>({});
 const allJobsData = ref<Record<string, any>>({});
+const preloadedDeployment = useState<Deployment | null>("preloadedDeployment", () => null);
 
-// Check if there are any queued (0) or running (1) jobs
+const applyDeploymentSnapshot = (dep: Deployment) => {
+  deployment.value = dep;
+  jobStates.value = {};
+  allJobsData.value = {};
+  if (dep.jobs) {
+    for (const job of dep.jobs) {
+      const stateNum = jobStateStringToNumber(job.state);
+      jobStates.value[job.job] = stateNum;
+      allJobsData.value[job.job] = job;
+    }
+  }
+};
+
+// Check if there are any active jobs (QUEUED=0, RUNNING=1, or STOPPED=3)
+// We keep polling for STOPPED jobs just like RUNNING jobs
 const hasActiveJobs = computed(() => {
-  return Object.values(jobStates.value).some(state => state === 0 || state === 1);
+  return Object.values(jobStates.value).some(state => state === 0 || state === 1 || state === 3);
 });
 
 
@@ -1769,26 +1802,22 @@ const firstRunningJobId = computed<string | null>(() => {
   return running ? running[0] : null;
 });
 
-const runningJobApiUrl = computed(() =>
-  firstRunningJobId.value ? `/api/jobs/${firstRunningJobId.value}` : ""
-);
-const { data: runningJobData } = useAPI(runningJobApiUrl, {
-  default: () => null,
-  watch: [runningJobApiUrl],
-});
 const nowTs = useTimestamp({ interval: 1000 });
 const runningJobDurationSeconds = computed<number | null>(() => {
-  const data = (runningJobData.value ?? null) as Record<string, unknown> | null;
-  const jsUnknown = data?.["timeStart"];
-  const stateUnknown = data?.["state"];
-  const js = typeof jsUnknown === "number" ? jsUnknown : 0;
-  if (!js || js === 0) return null;
-  const isRunning =
-    stateUnknown === 1 ||
-    (typeof stateUnknown === "string" &&
-      String(stateUnknown).toUpperCase() === "RUNNING");
+  const jobId = firstRunningJobId.value;
+  if (!jobId) return null;
+  
+  const jobData = allJobsData.value[jobId];
+  if (!jobData) return null;
+  
+  const timeStart = jobData.timeStart || jobData.time_start;
+  if (!timeStart || timeStart === 0) return null;
+  
+  const state = jobData.state;
+  const isRunning = state === 1 || (typeof state === "string" && String(state).toUpperCase() === "RUNNING");
   if (!isRunning) return null;
-  return Math.max(0, Math.floor(nowTs.value / 1000) - js);
+  
+  return Math.max(0, Math.floor(nowTs.value / 1000) - timeStart);
 });
 
 // Function to get duration for individual jobs
@@ -1796,13 +1825,13 @@ const getJobDuration = (jobId: string): number | null => {
   const jobState = jobStates.value[jobId];
   const jobData = allJobsData.value[jobId];
 
-  if (!jobData?.timeStart) return null;
+  const timeStart = jobData?.timeStart || jobData?.time_start;
+  if (!timeStart) return null;
 
-  const timeStart = jobData.timeStart;
-  const timeEnd = jobData.timeEnd || jobData.timeFinished;
+  const timeEnd = jobData?.timeEnd || jobData?.time_end || jobData?.timeFinished || jobData?.time_finished;
 
   // For completed jobs, use timeEnd - timeStart
-  if (timeEnd && jobState >= 2) {
+  if (timeEnd && jobState !== undefined && jobState >= 2) {
     return Math.max(0, timeEnd - timeStart);
   }
 
@@ -1823,44 +1852,131 @@ const jobStateStringToNumber = (state: string | number | undefined): number => {
   const stateMap: Record<string, number> = {
     'QUEUED': 0,
     'RUNNING': 1,
-    'DONE': 2,
+    'COMPLETED': 2,
     'STOPPED': 3,
-    'TIMEOUT': 4,
-    'ERROR': 5,
   };
   
   return stateMap[stateUpper] ?? 0;
 };
 
-const activeJobs = computed((): DeploymentJob[] => {
-  const jobs = (deployment.value?.jobs as DeploymentJob[]) || [];
-  // Enrich jobs with fetched states
-  const enrichedJobs = jobs.map((job) => ({
-    ...job,
-    state: jobStates.value[job.job] ?? jobStateStringToNumber(job.state),
-  }));
+// Helper to get numeric state from a job
+const getJobStateNumber = (job: DeploymentJob): number => {
+  return jobStateStringToNumber(job.state);
+};
 
-  // Filter for running jobs (states: QUEUED=0, RUNNING=1)
-  return enrichedJobs.filter((job) => job.state === 0 || job.state === 1);
+const activeJobs = computed((): DeploymentJob[] => {
+  const jobs = deployment.value?.jobs || [];
+  // Filter for active jobs (states: QUEUED=0, RUNNING=1) - exclude COMPLETED=2 and STOPPED=3
+  return jobs.filter((job) => {
+    const state = getJobStateNumber(job);
+    return state === 0 || state === 1;
+  });
 });
 
-const historicalJobs = computed((): DeploymentJob[] => {
-  const jobs = (deployment.value?.jobs as DeploymentJob[]) || [];
-  // Enrich jobs with fetched states
-  const enrichedJobs = jobs.map((job) => ({
-    ...job,
-    state: jobStates.value[job.job] ?? jobStateStringToNumber(job.state),
-  }));
+// All historical jobs (for pagination) - includes COMPLETED and STOPPED
+const allHistoricalJobs = computed((): DeploymentJob[] => {
+  const jobs = deployment.value?.jobs || [];
+  // Filter for completed and stopped jobs (state: COMPLETED=2, STOPPED=3)
+  return jobs.filter((job) => {
+    const state = getJobStateNumber(job);
+    return state === 2 || state === 3;
+  });
+});
 
-  // Filter for completed/stopped jobs (states: DONE=2, STOPPED=3, TIMEOUT=4, ERROR=5)
-  return enrichedJobs.filter((job) => job.state >= 2);
+// Paginated historical jobs
+const historicalJobs = computed((): DeploymentJob[] => {
+  const all = allHistoricalJobs.value;
+  const start = (historicalJobsPage.value - 1) * jobsPerPage;
+  const end = start + jobsPerPage;
+  return all.slice(start, end);
+});
+
+// Total pages for historical jobs
+const historicalJobsTotalPages = computed(() => {
+  return Math.ceil(allHistoricalJobs.value.length / jobsPerPage);
 });
 
 // Total jobs count for determining if tabs should be shown
-const totalJobs = computed(() => activeJobs.value.length + historicalJobs.value.length);
+const totalJobs = computed(() => activeJobs.value.length + allHistoricalJobs.value.length);
 
-// Combined jobs list (when tabs are hidden)
-const allJobs = computed(() => [...activeJobs.value, ...historicalJobs.value]);
+// All jobs for logs tab (paginated)
+const allJobsForLogs = computed(() => {
+  const all = [...activeJobs.value, ...allHistoricalJobs.value];
+  // Sort by created_at descending (most recent first)
+  return [...all].sort((a, b) => {
+    const aTime = (a as any).created_at ? new Date((a as any).created_at).getTime() : 0;
+    const bTime = (b as any).created_at ? new Date((b as any).created_at).getTime() : 0;
+    return bTime - aTime;
+  });
+});
+
+// Paginated jobs for logs tab
+const allJobs = computed(() => {
+  const all = allJobsForLogs.value;
+  const start = (logsJobsPage.value - 1) * jobsPerPage;
+  const end = start + jobsPerPage;
+  return all.slice(start, end);
+});
+
+// Total pages for logs tab
+const logsJobsTotalPages = computed(() => {
+  return Math.ceil(allJobsForLogs.value.length / jobsPerPage);
+});
+
+// Helper functions for job logs
+const isActiveJob = (jobId: string): boolean => {
+  return activeJobs.value.some(job => job.job === jobId);
+};
+
+const isCompletedJob = (jobId: string): boolean => {
+  return historicalJobs.value.some(job => job.job === jobId);
+};
+
+const getJobData = (jobId: string) => {
+  return allJobs.value.find(job => job.job === jobId);
+};
+
+// Fetch results for a completed job from the deployment manager (node)
+const fetchJobResults = async (jobId: string) => {
+  if (!isCompletedJob(jobId) || !deployment.value?.id || completedJobResults.value[jobId] !== undefined) return;
+  
+  loadingJobResults.value[jobId] = true;
+  try {
+    const dep = await nosana.value.api.deployments.get(deployment.value.id);
+    const jobResponse = await dep.getJob(jobId) as ApiDeploymentJob;
+    const jobResult = jobResponse?.jobResult;
+    
+    if (!jobResult) {
+      completedJobResults.value[jobId] = null;
+      return;
+    }
+    
+    // Use SDK types directly - no mapping needed
+    completedJobResults.value[jobId] = jobResult as ResultsSection;
+  } catch (error) {
+    console.error(`Failed to fetch results for job ${jobId}:`, error);
+    const errorDetails = error as { status?: number; statusText?: string; message?: string; data?: any; response?: any };
+    if (errorDetails.status === 500) {
+      console.error(`Backend returned 500 for job ${jobId}. This is a backend schema validation error - the jobResult doesn't match the expected schema. Error:`, errorDetails.message || errorDetails.data);
+    }
+    completedJobResults.value[jobId] = null;
+  } finally {
+    loadingJobResults.value[jobId] = false;
+  }
+};
+
+// Select job for logs display
+const selectJobForLogs = async (job: DeploymentJob, isUserSelection = false) => {
+  activeLogsJobId.value = job.job;
+  if (isUserSelection) {
+    userSelectedJob.value = true;
+  }
+  
+  // If it's a completed job, fetch its results
+  if (isCompletedJob(job.job)) {
+    await fetchJobResults(job.job);
+  }
+};
 
 // Deployment endpoints
 const deploymentEndpoints = computed(() => {
@@ -1975,7 +2091,7 @@ const stopDeployment = async () => {
   );
 
   // Force refresh job states to update running jobs to stopped state
-  await loadDeployment(true, true);
+  await loadDeployment(true);
 
   // Only stop job polling if there are no queued or running jobs
   if (!hasActiveJobs.value) {
@@ -2021,7 +2137,7 @@ const updateReplicas = async () => {
 
   const currentStatus = deployment.value?.status?.toUpperCase();
   await executeDeploymentAction(
-    () => deployment.value!.updateReplicaCount(newReplicaCount.value),
+    () => deployment.value!.updateReplicaCount(newReplicaCount.value as number),
     `Replica count updated to ${newReplicaCount.value}`
   );
 
@@ -2041,7 +2157,7 @@ const updateJobTimeout = async () => {
 
   const currentStatus = deployment.value?.status?.toUpperCase();
   await executeDeploymentAction(
-    () => deployment.value!.updateTimeout(Math.round(newTimeoutHours.value * 3600)),
+    () => deployment.value!.updateTimeout(Math.round((newTimeoutHours.value as number) * 3600)),
     `Job timeout updated to ${newTimeoutHours.value} hours`
   );
 
@@ -2166,26 +2282,27 @@ const isValidCronExpression = (cron: string): boolean => {
   const parts = cron.trim().split(/\s+/);
   if (parts.length !== 5) return false;
 
-  // Basic validation for each part
-  for (let i = 0; i < parts.length; i++) {
-    const part = parts[i];
+    // Basic validation for each part
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i];
+      if (!part) continue;
 
-    // Allow wildcard
-    if (part === "*") continue;
+      // Allow wildcard
+      if (part === "*") continue;
 
-    // Allow step values (*/n)
-    if (part.startsWith("*/")) {
-      const stepValue = parseInt(part.slice(2));
-      if (isNaN(stepValue) || stepValue <= 0) return false;
-      continue;
-    }
+      // Allow step values (*/n)
+      if (part.startsWith("*/")) {
+        const stepValue = parseInt(part.slice(2));
+        if (isNaN(stepValue) || stepValue <= 0) return false;
+        continue;
+      }
 
-    // Allow ranges (n-m) and lists (n,m,...)
-    if (part.includes("-") || part.includes(",")) continue;
+      // Allow ranges (n-m) and lists (n,m,...)
+      if (part.includes("-") || part.includes(",")) continue;
 
-    // Check if it's a valid number
-    const num = parseInt(part);
-    if (isNaN(num)) return false;
+      // Check if it's a valid number
+      const num = parseInt(part);
+      if (isNaN(num)) return false;
 
     // Validate ranges for each position
     switch (i) {
@@ -2222,163 +2339,103 @@ const loadTasks = async (silent = false) => {
     tasks.value = result || [];
   } catch (err: any) {
     console.error("Load tasks error:", err);
-    toast.error(`Failed to load tasks: ${err.message}`);
+    // Silent polling shouldn't spam toasts
+    if (!silent) {
+      console.error(`Failed to load tasks: ${err.message}`);
+    }
   } finally {
     tasksLoading.value = false;
   }
 };
 
-const startTasksPolling = () => {
-  if (tasksPollingInterval.value) {
-    clearInterval(tasksPollingInterval.value);
+const stopAllPolling = () => {
+  if (pollingTimeout.value) {
+    clearTimeout(pollingTimeout.value);
+    pollingTimeout.value = null;
   }
-
-  tasksPollingInterval.value = setInterval(async () => {
-    if (!deployment.value) return;
-    await loadTasks(true);
-  }, 5000);
+  pollingDebug.value.statusPollingActive = false;
+  pollingDebug.value.jobPollingActive = false;
 };
 
-const stopTasksPolling = () => {
-  if (tasksPollingInterval.value) {
-    clearInterval(tasksPollingInterval.value);
-    tasksPollingInterval.value = null;
-  }
-};
-
-const startDeploymentPolling = (intervalMs: number = 5000) => {
-  if (statusPollingInterval.value) {
-    clearInterval(statusPollingInterval.value);
-  }
+const startUnifiedPolling = (intervalMs = pollingConfig.normal) => {
+  stopAllPolling();
 
   pollingDebug.value.statusPollingActive = true;
+  pollingDebug.value.jobPollingActive = true;
 
-  statusPollingInterval.value = setInterval(async () => {
-    if (!deployment.value) return;
-
-    pollingDebug.value.lastStatusPoll = new Date();
-    await loadDeployment(true);
-
-    // Check if expected state transition occurred (adaptive polling)
-    const currentStatus = deployment.value?.status?.toUpperCase() || "";
-    if (adaptivePollingState.value.expectedStatus && 
-        currentStatus === adaptivePollingState.value.expectedStatus.toUpperCase()) {
-      // Expected state reached, switch back to normal polling
-      adaptivePollingState.value.isFastPolling = false;
-      adaptivePollingState.value.expectedStatus = undefined;
-      adaptivePollingState.value.fastPollStartTime = undefined;
-      stopDeploymentPolling();
-      startDeploymentPolling(5000); // Normal interval
+  const poll = async () => {
+    if (!deployment.value) {
+      pollingTimeout.value = setTimeout(poll, intervalMs);
       return;
     }
 
-    // Stop fast polling after 30 seconds if expected state not reached
+    pollingDebug.value.lastStatusPoll = new Date();
+    pollingDebug.value.lastJobPoll = new Date();
+
+    // Load deployment and jobs
+    await loadDeployment(true);
+    
+    // Also load tasks periodically
+    await loadTasks(true);
+
+    const currentStatus = (deployment.value?.status || "").toUpperCase();
+
+    // For fast polling: keep it active for at least 30 seconds
+    // This ensures we catch immediate changes even if status matches immediately
     if (adaptivePollingState.value.isFastPolling && 
-        adaptivePollingState.value.fastPollStartTime &&
-        Date.now() - adaptivePollingState.value.fastPollStartTime > 30000) {
-      adaptivePollingState.value.isFastPolling = false;
-      adaptivePollingState.value.expectedStatus = undefined;
-      adaptivePollingState.value.fastPollStartTime = undefined;
-      stopDeploymentPolling();
-      startDeploymentPolling(5000); // Fall back to normal interval
-      return;
+        adaptivePollingState.value.fastPollStartTime) {
+      const elapsed = Date.now() - adaptivePollingState.value.fastPollStartTime;
+      
+      // If expectedStatus is set and matches current status, wait at least 10 seconds
+      // If expectedStatus is undefined (already in desired state), wait 30 seconds
+      const minDuration = adaptivePollingState.value.expectedStatus ? 10000 : 30000;
+      
+      if (elapsed >= minDuration) {
+        // Check if expected state transition occurred (only if expectedStatus was set)
+        const expectedReached = adaptivePollingState.value.expectedStatus && 
+          currentStatus === adaptivePollingState.value.expectedStatus.toUpperCase();
+        
+        // Switch back to normal polling if min duration passed and (expected reached OR no expected status)
+        if (expectedReached || !adaptivePollingState.value.expectedStatus) {
+          adaptivePollingState.value.isFastPolling = false;
+          adaptivePollingState.value.expectedStatus = undefined;
+          adaptivePollingState.value.fastPollStartTime = undefined;
+          startUnifiedPolling(pollingConfig.normal);
+          return;
+        }
+      }
     }
 
     const finalStates = ["STOPPED", "ARCHIVED", "ERROR"];
-    if (finalStates.includes(currentStatus)) {
-      stopDeploymentPolling();
-      stopJobPolling();
-      stopTasksPolling();
-    }
-  }, intervalMs);
-};
-
-const stopDeploymentPolling = () => {
-  if (statusPollingInterval.value) {
-    clearInterval(statusPollingInterval.value);
-    statusPollingInterval.value = null;
-    pollingDebug.value.statusPollingActive = false;
-  }
-};
-
-const startJobPolling = (intervalMs: number = 5000) => {
-  if (jobPollingInterval.value) {
-    clearInterval(jobPollingInterval.value);
-  }
-
-  pollingDebug.value.jobPollingActive = true;
-
-  jobPollingInterval.value = setInterval(async () => {
-    if (!deployment.value) return;
-
-    pollingDebug.value.lastJobPoll = new Date();
-
-    const status = deployment.value?.status?.toUpperCase();
-    
-    // Only stop polling if deployment is not running/starting AND no queued/running jobs
-    if (status !== "RUNNING" && status !== "STARTING" && !hasActiveJobs.value) {
-      stopJobPolling();
+    if (finalStates.includes(currentStatus) && !hasActiveJobs.value) {
+      stopAllPolling();
       return;
     }
 
-    await loadDeployment(true);
+    // Schedule next poll if not stopped
+    pollingTimeout.value = setTimeout(poll, intervalMs);
+  };
 
-    // Check if expected state transition occurred (adaptive polling)
-    if (adaptivePollingState.value.expectedStatus && 
-        status === adaptivePollingState.value.expectedStatus.toUpperCase()) {
-      // Expected state reached, switch back to normal polling
-      adaptivePollingState.value.isFastPolling = false;
-      adaptivePollingState.value.expectedStatus = undefined;
-      adaptivePollingState.value.fastPollStartTime = undefined;
-      stopJobPolling();
-      startJobPolling(5000); // Normal interval
-      return;
-    }
-
-    // Stop fast polling after 30 seconds if expected state not reached
-    if (adaptivePollingState.value.isFastPolling && 
-        adaptivePollingState.value.fastPollStartTime &&
-        Date.now() - adaptivePollingState.value.fastPollStartTime > 30000) {
-      adaptivePollingState.value.isFastPolling = false;
-      adaptivePollingState.value.expectedStatus = undefined;
-      adaptivePollingState.value.fastPollStartTime = undefined;
-      stopJobPolling();
-      startJobPolling(5000); // Fall back to normal interval
-      return;
-    }
-  }, intervalMs);
+  pollingTimeout.value = setTimeout(poll, intervalMs);
 };
 
-const stopJobPolling = () => {
-  if (jobPollingInterval.value) {
-    clearInterval(jobPollingInterval.value);
-    jobPollingInterval.value = null;
-    pollingDebug.value.jobPollingActive = false;
-  }
-};
+// Legacy helpers for compatibility with existing watchers
+const startTasksPolling = () => startUnifiedPolling();
+const stopTasksPolling = () => {}; // Handled by stopAllPolling
+const startDeploymentPolling = (intervalMs?: number) => startUnifiedPolling(intervalMs);
+const stopDeploymentPolling = () => {}; // Handled by stopAllPolling
+const startJobPolling = (intervalMs?: number) => startUnifiedPolling(intervalMs);
+const stopJobPolling = () => {}; // Handled by stopAllPolling
 
 // Start fast polling after an action that expects a state change
-const startFastPolling = (expectedStatus: string) => {
+const startFastPolling = (expectedStatus?: string) => {
   adaptivePollingState.value = {
     isFastPolling: true,
     expectedStatus,
     fastPollStartTime: Date.now(),
   };
 
-  // Start fast polling at 1.5 second intervals
-  if (statusPollingInterval.value) {
-    stopDeploymentPolling();
-  }
-  startDeploymentPolling(1500);
-
-  // Also start fast job polling if deployment is running/starting
-  const currentStatus = deployment.value?.status?.toUpperCase();
-  if (currentStatus === "RUNNING" || currentStatus === "STARTING") {
-    if (jobPollingInterval.value) {
-      stopJobPolling();
-    }
-    startJobPolling(1500);
-  }
+  startUnifiedPolling(pollingConfig.fast);
 };
 
 // Click outside handler to close dropdown
@@ -2407,26 +2464,29 @@ onUnmounted(() => {
 
 // Stop all polling when navigating away from the page
 onBeforeRouteLeave(() => {
-  // Clean up all polling intervals to prevent them from continuing
-  stopDeploymentPolling();
-  stopJobPolling();
-  stopTasksPolling();
+  stopAllPolling();
 });
 
-// Auto-select job for logs display
+// Auto-select most recently posted job for logs display
 watch(
-  () => [activeTab.value, activeJobs.value],
-  ([newTab, jobs]) => {
-    if (jobs && jobs.length > 0) {
-      // Single job: always select for overview logs
-      if (jobs.length === 1) {
-        const first: any = (jobs as any)[0];
-        activeLogsJobId.value = (first?.job || first) as string;
-      }
-      // Multiple jobs: select when switching to logs tab
-      else if (newTab === "logs" && !activeLogsJobId.value) {
-        const first: any = (jobs as any)[0];
-        activeLogsJobId.value = (first?.job || first) as string;
+  () => [activeTab.value, allJobs.value],
+  async ([newTab, jobs]) => {
+    if (newTab === "logs" && jobs && Array.isArray(jobs) && jobs.length > 0) {
+      // Only auto-select if user hasn't manually selected a job
+      if (!userSelectedJob.value) {
+        // If no job is selected or selected job is not in current jobs list, select most recent
+        if (!activeLogsJobId.value || !jobs.some(j => j.job === activeLogsJobId.value)) {
+          // Sort by created_at descending (most recent first)
+          const sorted = [...jobs].sort((a, b) => {
+            const aTime = (a as any).created_at ? new Date((a as any).created_at).getTime() : 0;
+            const bTime = (b as any).created_at ? new Date((b as any).created_at).getTime() : 0;
+            return bTime - aTime;
+          });
+          const mostRecent = sorted[0];
+          if (mostRecent) {
+            await selectJobForLogs(mostRecent);
+          }
+        }
       }
     }
   },
@@ -2475,38 +2535,36 @@ watch(
 );
 
 // Watch deployment status to automatically manage polling for running deployments
+const prevDeploymentStatus = ref<string | null>(null);
+
 watch(
   () => deployment.value?.status,
-  (newStatus, oldStatus) => {
+  (newStatus) => {
     if (!newStatus) return;
 
     const status = newStatus.toUpperCase();
+    const prev = prevDeploymentStatus.value;
 
-    // Start job polling when deployment is running or starting
-    if (
+    // If transitioning to RUNNING, start fast polling (skip normal polling)
+    if (status === "RUNNING" && prev !== "RUNNING") {
+      const expectedStatus =
+        prev && prev !== "STARTING" && prev !== "RUNNING" ? "RUNNING" : undefined;
+      startFastPolling(expectedStatus);
+    }
+    // Start normal polling when deployment is active (but not if we just started fast polling)
+    else if (
       (status === "STARTING" || status === "RUNNING") &&
-      !jobPollingInterval.value
+      !pollingTimeout.value
     ) {
-      startJobPolling();
+      startUnifiedPolling();
     }
 
-    // Start tasks polling for all non-archived deployments (less frequent)
-    if (status !== "ARCHIVED" && !tasksPollingInterval.value) {
-      startTasksPolling();
+    // Stop polling when deployment reaches a final state and no active jobs
+    if (["STOPPED", "ARCHIVED", "ERROR"].includes(status) && !hasActiveJobs.value) {
+      stopAllPolling();
     }
 
-    // Stop job polling when deployment stops running, but only if no queued/running jobs
-    // Keep deployment polling if fast polling is active (waiting for expected state)
-    if (status !== "RUNNING" && status !== "STARTING") {
-      if (!hasActiveJobs.value) {
-        stopJobPolling();
-      }
-      // Don't stop deployment polling if we're in fast polling mode (waiting for expected state)
-      if (!adaptivePollingState.value.isFastPolling) {
-        stopDeploymentPolling();
-        stopTasksPolling();
-      }
-    }
+    prevDeploymentStatus.value = status;
   },
   { immediate: true }
 );
@@ -2514,6 +2572,10 @@ watch(
 // Switch tab and update URL
 const switchTab = (tab: string) => {
   activeTab.value = tab;
+  // Reset pagination when switching to logs tab
+  if (tab === 'logs') {
+    logsJobsPage.value = 1;
+  }
   router.replace({
     query: {
       ...route.query,

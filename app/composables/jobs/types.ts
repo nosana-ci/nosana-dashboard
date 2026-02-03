@@ -1,4 +1,5 @@
 import type { Job, JobDefinition } from "@nosana/kit";
+import type { DeploymentJob } from "@nosana/api";
 
 export type EndpointStatus = "ONLINE" | "OFFLINE" | "UNKNOWN";
 
@@ -14,15 +15,8 @@ export interface EndpointsSection {
   urls: Record<string, EndpointInfo>;
 }
 
-export interface OpState {
-  operationId: string;
-  status: string;
-  startTime?: number;
-  endTime?: number;
-  exitCode?: number;
-  results?: unknown;
-  logs?: Array<{ log?: string; type?: string } | string> | any[];
-}
+// Use SDK types directly from API response (DeploymentJob is from @nosana/api SDK)
+export type OpState = NonNullable<DeploymentJob['jobResult']>['opStates'][number];
 
 export interface OperationsInfo {
   all?: Record<string, string>;
@@ -31,12 +25,8 @@ export interface OperationsInfo {
   opStates: OpState[];
 }
 
-export interface ResultsSection {
-  status?: string;
-  startTime?: number;
-  endTime?: number;
-  opStates: OpState[];
-}
+// Use SDK types directly from API response (DeploymentJob is from @nosana/api SDK)
+export type ResultsSection = NonNullable<DeploymentJob['jobResult']>;
 
 export interface JobInfo {
   jobId: string;
