@@ -796,8 +796,11 @@
                         :ipfs-job="getJobData(activeLogsJobId)!"
                       />
                     </div>
-                    <div v-else class="has-text-centered p-4">
-                      <p class="has-text-grey">No results available for this job</p>
+                    <div v-else-if="!loadingJobResults[activeLogsJobId]">
+                      <JobResult 
+                        :ipfs-result="null" 
+                        :ipfs-job="getJobData(activeLogsJobId) || null"
+                      />
                     </div>
                   </div>
                 </div>
@@ -1284,6 +1287,7 @@
 
 <script setup lang="ts">
 import type { Deployment, JobDefinition } from "@nosana/kit";
+import type { DeploymentJob as ApiDeploymentJob } from "@nosana/api";
 import { useVaultModal } from "~/composables/useVaultModal";
 import { updateVaultBalance } from "~/composables/useDeploymentVault";
 import { useToast } from "vue-toastification";
@@ -1939,29 +1943,16 @@ const fetchJobResults = async (jobId: string) => {
   loadingJobResults.value[jobId] = true;
   try {
     const dep = await nosana.value.api.deployments.get(deployment.value.id);
-    const jobResponse = await (dep as any).getJob(jobId);
-    const jobResult = (jobResponse as any)?.jobResult;
+    const jobResponse = await dep.getJob(jobId) as ApiDeploymentJob;
+    const jobResult = jobResponse?.jobResult;
     
     if (!jobResult) {
       completedJobResults.value[jobId] = null;
       return;
     }
     
-    // Convert to ResultsSection format
-    completedJobResults.value[jobId] = {
-      status: jobResult.status ?? 'stopped',
-      startTime: jobResult.startTime ?? 0,
-      endTime: jobResult.endTime ?? 0,
-      opStates: (jobResult.opStates || []).map((op: any) => ({
-        operationId: op.operationId ?? '',
-        status: op.status ?? '',
-        startTime: op.startTime ?? 0,
-        endTime: op.endTime ?? 0,
-        exitCode: op.exitCode,
-        results: op.results,
-        logs: op.logs ?? [],
-      })),
-    };
+    // Use SDK types directly - no mapping needed
+    completedJobResults.value[jobId] = jobResult as ResultsSection;
   } catch (error) {
     console.error(`Failed to fetch results for job ${jobId}:`, error);
     const errorDetails = error as { status?: number; statusText?: string; message?: string; data?: any; response?: any };

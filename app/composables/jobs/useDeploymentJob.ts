@@ -3,6 +3,7 @@ import { useToast } from "vue-toastification";
 import { useWallet } from "@nosana/solana-vue";
 import type { Job, JobDefinition } from "@nosana/kit";
 import { getJobExposedServices } from "@nosana/kit";
+import type { DeploymentJob as ApiDeploymentJob } from "@nosana/api";
 import type { JobInfo, JobViewModel, LiveEndpoints, ResultsSection} from "~/composables/jobs/types";
 import { normalizeEndpoints } from "~/composables/jobs/normalizeEndpoints";
 import { useDeploymentAuth } from "~/composables/useDeploymentAuth";
@@ -17,51 +18,8 @@ function getStateNumber(stateVal: string | number | undefined): number {
   return -1;
 }
 
-interface DeploymentJobApiResultOpState {
-  providerId?: string;
-  operationId: string;
-  group?: string;
-  status?: string;
-  startTime?: number;
-  endTime?: number;
-  exitCode?: number;
-  logs?: Array<{ type?: string; log?: string } | string>;
-  results?: unknown;
-  diagnostics?: {
-    reason?: {
-      hostShutDown?: boolean;
-      jobStopped?: boolean;
-      expired?: boolean;
-    };
-    error?: string;
-    message?: string;
-    [key: string]: unknown;
-  };
-}
-
-interface DeploymentJobApiResult {
-  status?: string;
-  startTime?: number;
-  endTime?: number;
-  errors?: unknown[];
-  opStates: DeploymentJobApiResultOpState[];
-  secrets?: Record<string, unknown>;
-}
-
-interface DeploymentJobApiResponse {
-  confidential?: boolean;
-  revision?: number;
-  market?: string;
-  node?: string;
-  state: string | number;
-  jobStatus?: string;
-  jobDefinition?: JobDefinition;
-  jobResult?: DeploymentJobApiResult;
-  timeStart?: number;
-  timeEnd?: number;
-  listedAt?: number;
-  project?: string;
-}
+// Use SDK type directly
+type DeploymentJobApiResponse = ApiDeploymentJob;
 
 export function useDeploymentJob(deploymentId: string, jobId: string) {
   const job = ref<JobViewModel | null>(null);
@@ -91,32 +49,19 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
 
   async function fetchDeploymentJob(): Promise<DeploymentJobApiResponse | null> {
     try {
-      const dep = (await nosana.value.api.deployments.get(deploymentId)) as any;
+      const dep = await nosana.value.api.deployments.get(deploymentId);
       const response = await dep.getJob(jobId);
-      return response as unknown as DeploymentJobApiResponse;
+      return response as ApiDeploymentJob;
     } catch (e) {
       console.error("Failed to fetch deployment job:", e);
       return null;
     }
   }
 
-  function toResultsSection(result?: DeploymentJobApiResult): ResultsSection | null {
+  function toResultsSection(result?: ApiDeploymentJob['jobResult']): ResultsSection | null {
     if (!result) return null;
-    return {
-      status: result.status,
-      startTime: result.startTime,
-      endTime: result.endTime,
-      opStates: (result.opStates || []).map((op) => ({
-        operationId: op.operationId,
-        status: op.status ?? "",
-        startTime: op.startTime,
-        endTime: op.endTime,
-        exitCode: op.exitCode,
-        results: op.results,
-        logs: op.logs ?? [],
-        diagnostics: op.diagnostics,
-      })),
-    };
+    // Use SDK types directly - no mapping needed
+    return result as ResultsSection;
   }
 
   function buildViewModel(base: DeploymentJobApiResponse): JobViewModel {

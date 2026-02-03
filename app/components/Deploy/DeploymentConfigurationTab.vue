@@ -38,6 +38,7 @@
           v-model.number="replicasLocal"
           min="1"
           max="100"
+          @focus="(e) => (e.target as HTMLInputElement).select()"
         />
       </div>
     </div>
@@ -56,7 +57,9 @@
         <input
           class="input"
           type="number"
-          v-model.number="timeoutLocal"
+          v-model="timeoutInputValue"
+          @focus="(e) => (e.target as HTMLInputElement).select()"
+          @blur="handleTimeoutBlur"
           :min="MIN_TIMEOUT_HOURS"
           :max="MAX_TIMEOUT_HOURS"
           step="0.1"
@@ -72,6 +75,7 @@
 </template>
 
 <script setup lang="ts">
+import { ref, watch } from "vue";
 import { DeploymentStrategy } from "@nosana/kit";
 import { parseCronExpression } from "~/utils/parseCronExpression";
 import { MAX_TIMEOUT_HOURS, MIN_TIMEOUT_HOURS } from "~/composables/useTimeoutConstants";
@@ -114,10 +118,23 @@ const replicasLocal = computed({
   set: (value: number) => emit("update:replicas", clampNumber(value, 1, 100)),
 });
 
-const timeoutLocal = computed({
-  get: () => props.timeout,
-  set: (value: number) => emit("update:timeout", clampNumber(value, MIN_TIMEOUT_HOURS, MAX_TIMEOUT_HOURS)),
+const timeoutInputValue = ref<string | number>(props.timeout);
+
+watch(() => props.timeout, (newValue) => {
+  timeoutInputValue.value = newValue;
 });
+
+const handleTimeoutBlur = () => {
+  const num = Number(timeoutInputValue.value);
+  if (Number.isNaN(num) || num === 0) {
+    timeoutInputValue.value = MIN_TIMEOUT_HOURS;
+    emit("update:timeout", MIN_TIMEOUT_HOURS);
+  } else {
+    const clamped = clampNumber(num, MIN_TIMEOUT_HOURS, MAX_TIMEOUT_HOURS);
+    timeoutInputValue.value = clamped;
+    emit("update:timeout", clamped);
+  }
+};
 
 const handleVaultSelect = (vault: string | undefined | null) => {
   emit("update:modalSelectedVault", vault ?? null);

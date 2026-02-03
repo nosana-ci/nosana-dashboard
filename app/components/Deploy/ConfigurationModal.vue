@@ -488,8 +488,14 @@ const openEditorModal = () => {
 // Handle save with validation
 const podTab = ref<{ canSave: () => boolean } | null>(null);
 const handleSaveChanges = () => {
-  if (!podTab.value?.canSave?.()) return;
-  emit('update:jobDefinition', editingJobDefinition.value as JobDefinition);
+  // If on definition tab, validate job definition
+  if (modalTab.value === 'definition') {
+    if (!podTab.value?.canSave?.()) return;
+    emit('update:jobDefinition', editingJobDefinition.value as JobDefinition);
+  }
+  // For configuration tab, values are already updated via computed setters
+  // (strategyLocal, scheduleLocal, replicasLocal, timeoutLocal)
+  // Just close the modal
   showEditorModal.value = false;
 };
 
