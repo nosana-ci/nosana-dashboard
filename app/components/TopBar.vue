@@ -246,17 +246,30 @@ const logout = async () => {
     const sessionCookie = useCookie('nosana-wallet-session');
     sessionCookie.value = null;
     
+    // Try to sign out from SuperTokens if a session exists
+    try {
+      const Session = await import('supertokens-web-js/recipe/session');
+      if (await Session.default.doesSessionExist()) {
+        await Session.default.signOut();
+      }
+    } catch (e) {
+      // Ignore if SuperTokens not initialized
+    }
+    
     if (connected.value) {
       await disconnect();
-      await navigateTo('/');
+      await navigateTo('/login');
     } else if (status.value === 'authenticated') {
       await signOut({ redirect: false });
-      await navigateTo('/');
+      await navigateTo('/login');
+    } else {
+      await navigateTo('/login');
     }
   } catch (error) {
     console.error('Error logging out:', error);
   }
 };
+
 
 // Close dropdown when clicking outside (onMounted)
 
