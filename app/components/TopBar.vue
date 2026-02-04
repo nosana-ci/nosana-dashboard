@@ -258,12 +258,12 @@ const logout = async () => {
     
     if (connected.value) {
       await disconnect();
-      await navigateTo('/login');
+      await navigateTo('/');
     } else if (status.value === 'authenticated') {
       await signOut({ redirect: false });
-      await navigateTo('/login');
+      await navigateTo('/');
     } else {
-      await navigateTo('/login');
+      await navigateTo('/');
     }
   } catch (error) {
     console.error('Error logging out:', error);

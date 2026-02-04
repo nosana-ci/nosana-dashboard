@@ -42,7 +42,6 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
   // Public routes that don't require authentication
   const publicRoutes = [
     "/",
-    "/login",
     "/privacy-policy",
     "/tos",
     "/support"
@@ -58,15 +57,10 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
     return navigateTo("/account/");
   }
 
-  // Redirect authenticated users from login to account
-  if (to.path === "/login" && isAuthenticated) {
-    return navigateTo("/account/");
-  }
-
-  // If trying to access protected route without authentication, redirect to login
+  // If trying to access protected route without authentication, redirect to root (login page)
   if (!isPublicRoute && !isAuthenticated && status.value !== "loading") {
     return navigateTo({
-      path: "/login",
+      path: "/",
       query: { redirect: to.fullPath },
     });
   }
