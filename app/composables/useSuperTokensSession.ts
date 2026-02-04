@@ -1,6 +1,10 @@
 import { ref, readonly } from "vue";
 import Session from "supertokens-web-js/recipe/session";
 import EmailPassword from "supertokens-web-js/recipe/emailpassword";
+import {
+    getAuthorisationURLWithQueryParamsAndSetState,
+    signInAndUp
+} from "supertokens-web-js/recipe/thirdparty";
 
 const isAuthenticated = ref(false);
 const isLoading = ref(true);
@@ -63,6 +67,25 @@ export function useSuperTokensSession() {
         return response;
     };
 
+    const getThirdPartyAuthUrl = async (thirdPartyId: string, redirectUri: string): Promise<string> => {
+        const authUrl = await getAuthorisationURLWithQueryParamsAndSetState({
+            thirdPartyId,
+            frontendRedirectURI: redirectUri,
+        });
+        return authUrl;
+    };
+
+    const handleThirdPartyCallback = async () => {
+        const response = await signInAndUp();
+
+        if (response.status === "OK") {
+            isAuthenticated.value = true;
+            userId.value = response.user.id;
+        }
+
+        return response;
+    };
+
     const signOut = async () => {
         try {
             await Session.signOut();
@@ -92,5 +115,7 @@ export function useSuperTokensSession() {
         signUp,
         signOut,
         getAccessTokenPayload,
+        getThirdPartyAuthUrl,
+        handleThirdPartyCallback,
     };
 }

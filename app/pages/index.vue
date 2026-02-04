@@ -231,7 +231,7 @@ const { connected, disconnect, connect, account } = useWallet();
 import { useSolanaWallets } from "@nosana/solana-vue";
 const { wallets } = useSolanaWallets();
 const { generateAuthHeaders, signMessageError } = useNosanaWallet();
-const { signIn, signUp, checkSession, isAuthenticated: superTokensAuth } = useSuperTokensSession();
+const { signIn, signUp, checkSession, isAuthenticated: superTokensAuth, getThirdPartyAuthUrl } = useSuperTokensSession();
 
 // Compatibility: create publicKey-like object from account
 const publicKey = computed(() => {
@@ -455,96 +455,71 @@ const selectGoogleLogin = async () => {
       await disconnect();
     }
 
-    const query = {
-      client_id: config.googleClientId as string,
-      response_type: "code",
-      redirect_uri: config.googleRedirectUri as string,
-      scope:
-        "https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile",
-    };
-    const url = new URL("https://accounts.google.com/o/oauth2/v2/auth");
-    url.search = new URLSearchParams(query).toString();
-
+    const redirectUri = `${window.location.origin}/auth/callback/google`;
+    const authUrl = await getThirdPartyAuthUrl("google", redirectUri);
+    
+    // Open popup window at top right
+    const width = 500;
+    const height = 600;
+    const left = window.screen.width - width;
+    const top = 0;
+    
     popup = window.open(
-      url.toString(),
-      "google-auth",
-      "width=500,height=600,scrollbars=yes,resizable=yes"
+        authUrl,
+        "google-auth",
+        `width=${width},height=${height},top=${top},left=${left},scrollbars=yes,resizable=yes`
     );
 
     if (!popup) {
       throw new Error("Popup blocked. Please allow popups for this site.");
     }
 
-    const handleMessage = (event: MessageEvent) => {
+    // Listen for message from popup
+    const handleMessage = async (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return;
 
-      if (event.data.type === "GOOGLE_AUTH_CODE" && event.data.code) {
+      if (event.data.type === "SUPERTOKENS_AUTH_SUCCESS") {
         window.removeEventListener("message", handleMessage);
         popup?.close();
-        backgroundImageKey.value++;
-        authenticateLogin(event.data.code);
+        
+        await checkSession();
+        
+        toast.success("Signed in successfully!");
+        const redirect = (route.query.redirect as string) || "/account";
+        router.replace(redirect);
+      } else if (event.data.type === "SUPERTOKENS_AUTH_ERROR") {
+        window.removeEventListener("message", handleMessage);
+        popup?.close();
+        toast.error(event.data.error || "Authentication failed");
+        googleLoading.value = false;
       }
     };
 
     window.addEventListener("message", handleMessage);
-  } catch (error) {
+
+    // Check if popup was closed manually
+    const timer = setInterval(() => {
+        if (popup && popup.closed) {
+            clearInterval(timer);
+            window.removeEventListener("message", handleMessage);
+            if (googleLoading.value) {
+                googleLoading.value = false;
+            }
+        }
+    }, 1000);
+
+  } catch (error: any) {
     if (popup) popup.close();
-    toast.error("Error preparing Google login");
+    console.error("Error starting Google login:", error);
+    if (error.isSuperTokensGeneralError === true) {
+      toast.error(error.message);
+    } else {
+      toast.error("Error starting Google login");
+    }
     googleLoading.value = false;
   }
 };
 
-const authenticateLogin = async (code: string) => {
-  let originalEndpoint: any;
-
-  try {
-    const { signIn } = useAuth();
-    const authConfig = config.auth as any;
-
-    originalEndpoint = authConfig.provider.endpoints.signIn;
-    authConfig.provider.endpoints.signIn = {
-      path: "/api/auth/login/google",
-      method: "post",
-      propertyName: "token",
-    };
-
-    await signIn(
-      {
-        code: code,
-        redirectUri: config.googleRedirectUri as string,
-      },
-      {
-        redirect: false,
-      }
-    );
-
-    authConfig.provider.endpoints.signIn = originalEndpoint;
-    googleLoading.value = false;
-
-    try {
-      const isSignUp = checkIsSignUp(userData.value?.created_at);
-      const eventType = isSignUp ? "sign_up" : "login";
-      trackEvent(eventType, {
-        user_id: userData.value?.generatedAddress,
-        provider: "google",
-      });
-    } catch (error) {
-      console.warn("Error tracking Google login:", error);
-    }
-
-    const redirect = (route.query.redirect as string) || "/account";
-    router.replace(redirect);
-  } catch (error) {
-    console.error("Authentication error:", error);
-
-    if (originalEndpoint) {
-      (config.auth as any).provider.endpoints.signIn = originalEndpoint;
-    }
-
-    toast.error("Failed to authenticate. Please try again.");
-    googleLoading.value = false;
-  }
-};
 
 
 // Wallet connection logic

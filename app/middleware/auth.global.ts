@@ -47,7 +47,7 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
     "/support"
   ];
 
-  const isPublicRoute = publicRoutes.some((route) => to.path === route);
+  const isPublicRoute = publicRoutes.some((route) => to.path === route) || to.path.startsWith('/auth/callback/');
 
   // Check if user is authenticated (via Google, wallet, or SuperTokens)
   const isAuthenticated = status.value === "authenticated" || walletAuthenticated || superTokensAuthenticated;
