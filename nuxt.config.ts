@@ -84,42 +84,6 @@ export default defineNuxtConfig({
     enabled: process.env.NODE_ENV === "production",
     id: "G-HNDP62SH8M",
   },
-  auth: {
-    baseURL: process.env.NUXT_PUBLIC_BACKEND_URL,
-    provider: {
-      type: "local",
-      endpoints: {
-        signIn: {
-          path: "/api/auth/login",
-          method: "post",
-          propertyName: "token",
-        },
-        getSession: { path: "/api/auth/session", method: "get" },
-        signOut: false,
-      },
-      token: {
-        type: false,
-        maxAgeInSeconds: 60 * 60 * 24 * 3, // 3 days
-      },
-      session: {
-        dataType: {
-          id: "string",
-          name: "string",
-          email: "string",
-          address: "string",
-          generatedAddress: "string",
-          providerUsername: "string",
-          type: "string",
-          created_at: "string",
-        },
-      },
-    },
-    sessionRefresh: {
-      enablePeriodically: false, // Disable automatic session refresh
-      enableOnWindowFocus: true, // Enable refresh on window focus for cross-tab sync
-    },
-    globalAppMiddleware: false,
-  },
   vite: {
     esbuild: {
       target: "esnext",
