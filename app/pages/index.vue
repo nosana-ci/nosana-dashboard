@@ -238,7 +238,7 @@ import { useToast } from "vue-toastification";
 import { trackEvent } from "~/utils/analytics";
 import WalletIcon from "~/components/WalletIcon.vue";
 import { useNosanaWallet } from "~/composables/useNosanaWallet";
-import { useSuperTokensSession } from "~/composables/useSuperTokensSession";
+import { useSuperTokens } from "~/composables/useSuperTokens";
 
 definePageMeta({
   layout: false, // No sidebar/layout for login page
@@ -248,7 +248,7 @@ const { connected, disconnect, connect, account } = useWallet();
 import { useSolanaWallets } from "@nosana/solana-vue";
 const { wallets } = useSolanaWallets();
 const { generateAuthHeaders, signMessageError } = useNosanaWallet();
-const { signIn, signUp, checkSession, isAuthenticated: superTokensAuth, getThirdPartyAuthUrl } = useSuperTokensSession();
+const { signIn, signUp, checkSession, isAuthenticated: superTokensAuth, getThirdPartyAuthUrl } = useSuperTokens();
 
 // Compatibility: create publicKey-like object from account
 const publicKey = computed(() => {

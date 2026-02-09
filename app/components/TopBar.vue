@@ -106,7 +106,7 @@ import LogoutIcon from '@/assets/img/icons/logout.svg?component';
 import { useRouter } from 'vue-router';
 
 const { nosana, prioFee } = useKit();
-const { status, signOut, data: session, token } = useAuth();
+const { isAuthenticated, isLoading, signOut, userData } = useSuperTokens();
 const router = useRouter();
 const { connected, account, wallet, disconnect } = useWallet();
 
@@ -124,8 +124,7 @@ const showUserProfileDropdown = ref(false);
 
 // Memoized authentication state to prevent unnecessary template re-renders
 const isGoogleAuthenticated = computed(() => {
-  const currentStatus = status.value;
-  return currentStatus === 'authenticated' || currentStatus === 'loading';
+  return isAuthenticated.value || isLoading.value;
 });
 
 // Profile dropdown functions
@@ -155,7 +154,7 @@ const getWalletAddress = () => {
 
 
 const getUserName = () => {
-  return session.value?.email || session.value?.providerUsername || session.value?.name || 'User';
+  return userData.value?.email || userData.value?.providerUsername || userData.value?.name || 'User';
 };
 
 const getUserInitials = () => {
@@ -194,8 +193,8 @@ const getNosBalanceUSD = () => nosBalanceUSD.value;
 
 // Fetch credit balance
 const fetchCreditBalance = async (signal?: AbortSignal) => {
-  // Only fetch if user is authenticated AND has a valid token
-  if (status.value !== 'authenticated' || !token.value) {
+  // Only fetch if user is authenticated
+  if (!isAuthenticated.value) {
     return;
   }
   
@@ -259,8 +258,8 @@ const logout = async () => {
     if (connected.value) {
       await disconnect();
       await navigateTo('/');
-    } else if (status.value === 'authenticated') {
-      await signOut({ redirect: false });
+    } else if (isAuthenticated.value) {
+      await signOut();
       await navigateTo('/');
     } else {
       await navigateTo('/');
@@ -306,16 +305,14 @@ const debouncedFetchNosBalance = () => {
 };
 
 // Watch for authentication status and token changes (optimized)
-watch([status, token], async (newValues, oldValues) => {
-  const [newStatus, newToken] = newValues;
-  
+watch([isAuthenticated, isLoading], async ([newIsAuthenticated, newIsLoading], [oldIsAuthenticated, oldIsLoading]) => {
   // Skip loading state (session refresh in progress)
-  if (newStatus === 'loading') return;
+  if (newIsLoading) return;
   
   // Only fetch if authenticated AND haven't loaded yet
-  if (newStatus === 'authenticated' && newToken && !hasLoadedCreditBalance.value) {
+  if (newIsAuthenticated && !hasLoadedCreditBalance.value) {
     debouncedFetchCreditBalance();
-  } else if (newStatus === 'unauthenticated') {
+  } else if (!newIsAuthenticated && oldIsAuthenticated) {
     // Reset on logout so next login will fetch
     hasLoadedCreditBalance.value = false;
     creditBalance.value = 0;

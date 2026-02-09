@@ -327,8 +327,9 @@ import {
   faExclamationTriangle 
 } from '@fortawesome/free-solid-svg-icons';
 
+
 const config = useRuntimeConfig().public;
-const { status, data: userData, token } = useAuth();
+const { isAuthenticated, isLoading } = useSuperTokens();
 const toast = useToast();
 
 // State
@@ -345,43 +346,25 @@ const selectedKey = ref<any>(null);
 const editKeyName = ref('');
 const editKeyStatus = ref('active');
 
-// Initialize stable token immediately if already authenticated (prevents refetch on session refresh)
-const stableAuthToken = ref<string | null>(
-  status.value === 'authenticated' && token.value ? token.value : null
-);
-
-// Only update stable token on logout (to trigger refetch on next login)
-watch([() => status.value, token], ([newStatus, newToken]) => {
-  // Only clear on logout - don't update on every auth change
-  if (newStatus === 'unauthenticated') {
-    stableAuthToken.value = null;
-  }
-  if (newStatus === 'authenticated' && newToken && !stableAuthToken.value) {
-    // Only set if was null (after logout)
-    stableAuthToken.value = newToken;
-  }
-}, { immediate: false }); // Not immediate - we initialized above
+// Track if authenticated (to trigger refetch after login)
+const wasAuthenticated = ref(isAuthenticated.value);
 
 const {
   data: apiKeys,
   pending: loadingKeys,
   refresh: refreshKeys
 } = useMyAsyncData('api-keys', async () => {
-  if (status.value !== 'authenticated' || !token.value) {
+  if (!isAuthenticated.value) {
     return { keys: [], total: 0 };
   }
   
   return await $fetch(`${config.backend_url}/api/api-keys`, {
-    headers: {
-      'Authorization': `Bearer ${token.value}`
-    }
+    credentials: 'include'
   });
 }, {
   default: () => ({ keys: [], total: 0 }),
-  watch: [stableAuthToken]
+  watch: [isAuthenticated]
 });
-
-// (debug watchers removed)
 
 // Mark first successful resolution to keep UI stable on later refreshes
 watch(loadingKeys, (isPending) => {
@@ -391,7 +374,7 @@ watch(loadingKeys, (isPending) => {
 }, { immediate: true })
 
 const createKey = async () => {
-  if (!newKeyName.value || !token.value) return;
+  if (!newKeyName.value || !isAuthenticated.value) return;
   
   try {
     creatingKey.value = true;
@@ -402,8 +385,8 @@ const createKey = async () => {
     
     const response = await $fetch(`${config.backend_url}/api/api-keys`, {
       method: 'POST',
+      credentials: 'include',
       headers: {
-        'Authorization': `Bearer ${token.value}`,
         'Content-Type': 'application/json'
       },
       body: payload
@@ -440,15 +423,15 @@ const editKey = (keyData: any) => {
 };
 
 const updateKey = async () => {
-  if (!selectedKey.value || !editKeyName.value || !token.value) return;
+  if (!selectedKey.value || !editKeyName.value || !isAuthenticated.value) return;
   
   try {
     updatingKey.value = true;
     
     await $fetch(`${config.backend_url}/api/api-keys/${selectedKey.value.id}/update`, {
       method: 'POST',
+      credentials: 'include',
       headers: {
-        'Authorization': `Bearer ${token.value}`,
         'Content-Type': 'application/json'
       },
       body: {
@@ -475,16 +458,14 @@ const deleteKey = async (keyData: any) => {
     return;
   }
   
-  if (!token.value) return;
+  if (!isAuthenticated.value) return;
   
   try {
     deletingKeyId.value = keyData.id;
     
     await $fetch(`${config.backend_url}/api/api-keys/${keyData.id}/delete`, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token.value}`
-      }
+      credentials: 'include'
     });
     
     toast.success('API key deleted successfully!');

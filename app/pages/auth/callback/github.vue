@@ -11,15 +11,15 @@
 </template>
 
 <script setup lang="ts">
-import { useSuperTokensSession } from "~/composables/useSuperTokensSession";
-import { trackEvent } from "~/utils/analytics";
+import { useSuperTokens } from "~/composables/useSuperTokens";
+import { trackEvent } from "~/utils/analytics"; 
 import Loader from "~/components/Loader.vue";
 
 definePageMeta({
   layout: false,
 });
 
-const { handleThirdPartyCallback } = useSuperTokensSession();
+const { handleThirdPartyCallback } = useSuperTokens();
 const error = ref<string | null>(null);
 
 onMounted(async () => {

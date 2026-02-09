@@ -1,7 +1,7 @@
 <template>
   <div>
     <TopBar 
-      :title="(status === 'authenticated' || status === 'loading') && userData?.email ? 'Hi ' + (userData.email || userData.name || 'User') : 'My Account'"
+      :title="(isAuthenticated || isLoading) && userData?.email ? 'Hi ' + (userData.email || userData.name || 'User') : 'My Account'"
       :subtitle="'Your personal overview'" 
       ref="topBar"
       v-model="showSettingsModal"
@@ -97,7 +97,7 @@
             </div>
           </div>
           <!-- Credit Balance for Google Auth Users Only (keep mounted during loading to prevent refetch) -->
-          <div class="column is-3" v-if="status === 'authenticated' || status === 'loading'">
+          <div class="column is-3" v-if="isAuthenticated || isLoading">
             <CreditBalance ref="creditBalanceRef" />
           </div>
           <!-- NOS Balance for Wallet Users Only -->
@@ -114,8 +114,8 @@
         </div>
         
         <!-- API Tokens Section (keep mounted during loading to prevent refetch) -->
-        <ApiKeys class="pb-5" v-if="status === 'authenticated' || status === 'loading'" />
-        
+        <ApiKeys class="pb-5" v-if="isAuthenticated || isLoading" />
+
         <div class="columns mt-6">
           <div class="column is-4">
             <h3 class="title is-4 mb-0">Welcome to Nosana</h3>
@@ -286,7 +286,7 @@ import AccountClaimModal from '~/components/Account/ClaimModal.vue';
 
 const config = useRuntimeConfig().public;
 ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale);
-const { status, data: userData, signOut, token } = useAuth();
+const { isAuthenticated, isLoading, userData, signOut } = useSuperTokens();
 const { $colorMode } = useNuxtApp();
 const route = useRoute();
 const showSettingsModal = ref(false);
@@ -326,7 +326,7 @@ const showInvitationModal = ref(false);
 const checkedEligibility = ref(false);
 
 const checkFreeCreditsEligibility = async () => {
-  if (!token.value || status.value !== 'authenticated' || checkedEligibility.value) return;
+  if (!isAuthenticated.value || checkedEligibility.value) return;
   
   // If we have an invitation token, ensure it's loaded before checking eligibility
   if (invitationToken.value) {
@@ -343,9 +343,7 @@ const checkFreeCreditsEligibility = async () => {
 
   try {
     const data = await $fetch<{ eligible: boolean }>(`${config.backend_url}/api/credits/request/eligibility`, {
-      headers: {
-        'Authorization': `Bearer ${token.value}`
-      }
+      credentials: 'include'
     });
     
     if (data && data.eligible) {
@@ -388,7 +386,7 @@ const fetchDeploymentsCount = async () => {
 
 
 const activeAddress = computed(() => {
-  if (status.value === 'authenticated' && userData.value?.generatedAddress) {
+  if (isAuthenticated.value && userData.value?.generatedAddress) {
     return userData.value.generatedAddress;
   }
   if (connected.value && publicKey.value) {
@@ -398,7 +396,7 @@ const activeAddress = computed(() => {
 });
 
 const addressSource = computed(() => {
-  if (status.value === 'authenticated' && userData.value?.generatedAddress) {
+  if (isAuthenticated.value && userData.value?.generatedAddress) {
     return 'generated';
   }
   if (connected.value && publicKey.value) {
@@ -413,7 +411,7 @@ const canShowAccountData = computed(() => {
     // During loading, check if we have any indication of authentication
     return userData.value?.generatedAddress || connected.value;
   }
-  return status.value === 'authenticated' || connected.value;
+  return isAuthenticated.value || connected.value;
 });
 
 // (debug canShowAccountData watcher removed)
@@ -468,11 +466,11 @@ let lastStableAddress: string | null = null;
 watch(
   [
     () => activeAddress.value,
-    () => status.value,
+    () => isLoading.value,
     () => userData.value?.generatedAddress
   ],
   (newValues, oldValues) => {
-    const [newAddress, newStatus, newGenerated] = newValues;
+    const [newAddress, newLoading, newGenerated] = newValues;
     const [oldAddress, oldStatus, oldGenerated] = oldValues || [null, null, null];
     
     // Clear any pending refresh
@@ -482,12 +480,12 @@ watch(
     }
     
     // Skip if authentication is loading (temporary state during tab switches)
-    if (newStatus === 'loading') {
+    if (newLoading) {
       return;
     }
     
     // Skip if address is temporarily null during loading but we have a stable address
-    if (!newAddress && lastStableAddress && newStatus === 'loading') {
+    if (!newAddress && lastStableAddress && newLoading) {
       return;
     }
     
@@ -1073,7 +1071,7 @@ const loadInvitation = async () => {
 };
 
 // Watch for invitation token changes and authentication status
-watch([invitationToken, status], ([token, authStatus]) => {
+watch([invitationToken, isAuthenticated], ([token, authenticated]) => {
   if (token) {
     loadInvitation();
   }
