@@ -145,21 +145,17 @@ const emit = defineEmits<{
 const deployments = ref<Deployment[]>([]);
 const currentPage = ref(1);
 const hasLoadedOnce = ref(false);
-const { status, token } = useAuth();
+const { isAuthenticated, isLoading } = useSuperTokens();
 const { connected } = useWallet();
 const router = useRouter();
 const route = useRoute();
 
-const isAuthenticated = computed(() => {
-  return status.value === "authenticated" && token.value;
+const hasAnyAuth = computed(() => {
+  return isAuthenticated.value || connected.value;
 });
 
 const isWalletMode = computed(() => {
-  return connected.value && !token.value;
-});
-
-const hasAnyAuth = computed(() => {
-  return isAuthenticated.value || isWalletMode.value;
+  return connected.value && !isAuthenticated.value;
 });
 
 const { nosana } = useKit();
@@ -242,40 +238,26 @@ const deploymentLink = (id: string) => {
   return `/deployments/${id}`;
 };
 
-// Debounced redirect to prevent flicker during session refresh
-let redirectTimer: NodeJS.Timeout | null = null;
+// Watch for authentication changes
 watch(
-  status,
-  (authStatus) => {
-    if (redirectTimer) {
-      clearTimeout(redirectTimer);
-    }
-
-    if (authStatus === "unauthenticated" && !connected.value) {
-      // Add small delay to prevent redirect during quick session refresh
-      redirectTimer = setTimeout(() => {
-        if (status.value === "unauthenticated" && !connected.value) {
-          router.push("/account");
-        }
-      }, 500);
-    }
-  },
-  { immediate: true }
-);
-
-watch(
-  [status, connected],
-  ([newStatus, newConnected], [oldStatus, oldConnected]) => {
+  [isAuthenticated, isLoading, connected],
+  ([isAuth, isLoad, newConnected]) => {
     // Skip loading state (session refresh in progress)
-    if (newStatus === 'loading') return;
+    if (isLoad) return;
     
-    const isAuth = newStatus === 'authenticated' || newConnected;
+    const hasAuth = isAuth || newConnected;
     
+    // Auto-redirect if unauthenticated
+    if (!hasAuth && !isLoad) {
+      router.push("/account");
+      return;
+    }
+
     // Only fetch if authenticated AND haven't loaded yet
-    if (isAuth && !hasLoadedOnce.value) {
+    if (hasAuth && !hasLoadedOnce.value) {
       refreshDeployments();
-    } else if (newStatus === 'unauthenticated' && !newConnected) {
-      // Clear on logout (definitive unauthenticated state)
+    } else if (!hasAuth) {
+      // Clear on logout
       deployments.value = [];
       hasLoadedOnce.value = false; // Reset so next login will fetch
     }

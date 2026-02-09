@@ -147,7 +147,7 @@ const props = defineProps<{
 const emit = defineEmits(['update:modelValue', 'claimed']);
 
 const config = useRuntimeConfig().public;
-const { token: authToken, data: userData } = useAuth();
+const { isAuthenticated, userData } = useSuperTokens();
 const toast = useToast();
 const claiming = ref(false);
 const claimedSuccessfully = ref(false);
@@ -165,7 +165,7 @@ const closeModal = () => {
 };
 
 const handleClaim = async () => {
-  if (!authToken.value) return;
+  if (!isAuthenticated.value) return;
   
   claiming.value = true;
   try {
@@ -183,9 +183,7 @@ const handleClaim = async () => {
 
     const response = await $fetch<{ amount: number }>(url, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${authToken.value}`
-      },
+      credentials: 'include',
       body,
     });
     

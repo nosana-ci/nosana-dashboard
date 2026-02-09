@@ -93,7 +93,7 @@
 
       <div class="is-flex is-align-items-center">
         <!-- Simple mobile user avatar -->
-        <div v-if="connected || status === 'authenticated' || status === 'loading'" class="dropdown mobile-avatar-dropdown mr-3" :class="{ 'is-active': showMobileDropdown }">
+        <div v-if="connected || isAuthenticated || isLoading" class="dropdown mobile-avatar-dropdown mr-3" :class="{ 'is-active': showMobileDropdown }">
           <div class="dropdown-trigger">
             <span class="mobile-avatar-trigger" @click="showMobileDropdown = !showMobileDropdown">
               <template v-if="connected && wallet">
@@ -101,14 +101,14 @@
                 <span v-else>W</span>
               </template>
               <template v-else>
-                {{ (data?.email && data.email.charAt(0).toUpperCase()) || 'U' }}
+                {{ (userData?.email && userData.email.charAt(0).toUpperCase()) || 'U' }}
               </template>
             </span>
           </div>
           <div class="dropdown-menu">
             <div class="dropdown-content">
               <div class="dropdown-item">
-                <p class="is-size-7 has-text-grey mb-0">{{ connected ? getWalletAddress() : (data?.email || '') }}</p>
+                <p class="is-size-7 has-text-grey mb-0">{{ connected ? getWalletAddress() : (userData?.email || '') }}</p>
               </div>
               <hr class="dropdown-divider">
               <a class="dropdown-item logout-item" @click="handleLogout">
@@ -160,7 +160,7 @@ const publicKey = computed(() => {
     toBase58: () => account.value!.address,
   };
 });
-const { status, signOut, data } = useAuth();
+const { isAuthenticated, isLoading, userData, signOut: superTokensSignOut } = useSuperTokens();
 const route = useRoute();
 const router = useRouter();
 
@@ -176,7 +176,7 @@ const deployRoute = computed(() => {
 
 // Check if the current route is an explorer page
 const isExplorerPage = computed(() => {
-  return route.path === '/explorer' || route.path.includes('/markets') || (route.path === '/account/host' && status.value !== 'authenticated') || route.path === '/stake';
+  return route.path === '/explorer' || route.path.includes('/markets') || (route.path === '/account/host' && !isAuthenticated.value) || route.path === '/stake';
 });
 
 // Update dropdown states based on the current route
@@ -215,21 +215,11 @@ const handleLogout = async () => {
     const sessionCookie = useCookie('nosana-wallet-session');
     sessionCookie.value = null;
     
-    // Try to sign out from SuperTokens if a session exists
-    try {
-      const Session = await import('supertokens-web-js/recipe/session');
-      if (await Session.default.doesSessionExist()) {
-        await Session.default.signOut();
-      }
-    } catch (e) {
-      // Ignore if SuperTokens not initialized
-    }
-    
     if (connected.value) {
       await disconnect();
       await navigateTo('/');
-    } else if (status.value === 'authenticated') {
-      await signOut({ redirect: false });
+    } else if (isAuthenticated.value) {
+      await superTokensSignOut();
       await navigateTo('/');
     } else {
       await navigateTo('/');

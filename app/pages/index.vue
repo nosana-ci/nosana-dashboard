@@ -248,7 +248,7 @@ const { connected, disconnect, connect, account } = useWallet();
 import { useSolanaWallets } from "@nosana/solana-vue";
 const { wallets } = useSolanaWallets();
 const { generateAuthHeaders, signMessageError } = useNosanaWallet();
-const { signIn, signUp, checkSession, isAuthenticated: superTokensAuth, getThirdPartyAuthUrl } = useSuperTokens();
+const { signIn, signUp, signOut, checkSession, isAuthenticated: superTokensAuth, getThirdPartyAuthUrl } = useSuperTokens();
 
 // Compatibility: create publicKey-like object from account
 const publicKey = computed(() => {
@@ -258,7 +258,6 @@ const publicKey = computed(() => {
     toBase58: () => account.value!.address,
   };
 });
-const { status, signOut, data: userData } = useAuth();
 const router = useRouter();
 const route = useRoute();
 const toast = useToast();
@@ -398,7 +397,7 @@ onMounted(async () => {
   
   // Check if user is already authenticated
   const walletAuthenticated = checkWalletAuth();
-  const isAuthenticated = status.value === "authenticated" || walletAuthenticated || hasSession;
+  const isAuthenticated = superTokensAuth.value || walletAuthenticated || hasSession;
 
   if (isAuthenticated) {
     const redirect = (route.query.redirect as string) || "/account";
@@ -621,8 +620,8 @@ const selectGithubLogin = async () => {
 // Wallet connection logic
 const handleWalletConnect = async () => {
   try {
-    if (status.value === "authenticated") {
-      await signOut({ redirect: false });
+    if (superTokensAuth.value) {
+      await signOut();
     }
 
     if (wallets.value && wallets.value.length > 0) {

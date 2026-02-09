@@ -6,7 +6,7 @@ import { useModal } from "./useModal";
 
 export function useJobPage(id: string) {
   const { connected, account } = useWallet();
-  const { status, data: userData } = useAuth();
+  const { isAuthenticated: superTokensAuth, userData } = useSuperTokens();
 
   const { job, endpoints, loading, jobInfo } = useJob(id);
   const modal = useModal();
@@ -14,7 +14,7 @@ export function useJobPage(id: string) {
 
   // Get the active address - either generated address (for credit users) or wallet address
   const activeAddress = computed(() => {
-    if (status.value === 'authenticated' && userData.value?.generatedAddress) {
+    if (superTokensAuth.value && userData.value?.generatedAddress) {
       return userData.value.generatedAddress;
     }
     if (connected.value && account.value?.address) {
