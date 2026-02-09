@@ -1,10 +1,10 @@
 import { useWallet } from "@nosana/solana-vue";
-import { useAuth } from '#imports';
+import { useSuperTokens } from "~/composables/useSuperTokens";
 
 export function useRedirect() {
   const { connected, account } = useWallet();
-  const { status } = useAuth();
-  
+  const { isAuthenticated: superTokensAuth } = useSuperTokens();
+
   // Compatibility: create publicKey-like object from account
   const publicKey = computed(() => {
     if (!account.value?.address) return null;
@@ -13,10 +13,10 @@ export function useRedirect() {
       toBase58: () => account.value!.address,
     };
   });
-  
+
   // Check if user is authenticated (either Google or wallet)
   const isAuthenticated = computed(() => {
-    return status.value === 'authenticated' || connected.value;
+    return superTokensAuth.value || connected.value;
   });
 
   return {

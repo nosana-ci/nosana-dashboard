@@ -1,4 +1,4 @@
-import { ref, readonly } from "vue";
+import { ref, readonly, watch } from "vue";
 import Session from "supertokens-web-js/recipe/session";
 import EmailPassword from "supertokens-web-js/recipe/emailpassword";
 import {
@@ -6,13 +6,61 @@ import {
     signInAndUp
 } from "supertokens-web-js/recipe/thirdparty";
 
+export interface User {
+    id: string;
+    email: string;
+    name: string | null;
+    providerUsername: string | null;
+    generatedAddress: string;
+}
+
+
+// Global state shared across all instances
 const isAuthenticated = ref(false);
 const isLoading = ref(true);
 const userId = ref<string | null>(null);
+const userData = ref<User | null>(null);
 
-export function useSuperTokensSession() {
+// Track if we've done initial load
+let initialCheckDone = false;
+let checkSessionPromise: Promise<boolean> | null = null;
+let fetchUserPromise: Promise<void> | null = null;
 
-    const checkSession = async (): Promise<boolean> => {
+// Fetch user profile
+const fetchUserData = async () => {
+    if (fetchUserPromise) return fetchUserPromise;
+
+    fetchUserPromise = (async () => {
+        if (!isAuthenticated.value) {
+            userData.value = null;
+            return;
+        }
+
+        try {
+            const config = useRuntimeConfig().public;
+            const response = await $fetch<User>(`${config.identity_manager_url}/user/profile`, {
+                credentials: 'include'
+            });
+
+            if (response && response.id) {
+                userData.value = response;
+            }
+        } catch (error) {
+            console.error("Error fetching user profile:", error);
+            userData.value = null;
+        } finally {
+            fetchUserPromise = null;
+        }
+    })();
+
+    return fetchUserPromise;
+};
+
+// Check session and fetch user data
+const checkSession = async (): Promise<boolean> => {
+    if (checkSessionPromise) return checkSessionPromise;
+
+    checkSessionPromise = (async () => {
         try {
             isLoading.value = true;
             const exists = await Session.doesSessionExist();
@@ -20,8 +68,10 @@ export function useSuperTokensSession() {
 
             if (exists) {
                 userId.value = await Session.getUserId();
+                await fetchUserData();
             } else {
                 userId.value = null;
+                userData.value = null;
             }
 
             return exists;
@@ -29,12 +79,27 @@ export function useSuperTokensSession() {
             console.error("Error checking SuperTokens session:", error);
             isAuthenticated.value = false;
             userId.value = null;
+            userData.value = null;
             return false;
         } finally {
             isLoading.value = false;
+            checkSessionPromise = null;
         }
-    };
+    })();
 
+    return checkSessionPromise;
+};
+
+// Global watcher
+if (import.meta.client) {
+    watch(isAuthenticated, async (newValue) => {
+        if (newValue && !userData.value) {
+            await fetchUserData();
+        }
+    });
+}
+
+export function useSuperTokens() {
     const signIn = async (email: string, password: string) => {
         const response = await EmailPassword.signIn({
             formFields: [
@@ -46,6 +111,7 @@ export function useSuperTokensSession() {
         if (response.status === "OK") {
             isAuthenticated.value = true;
             userId.value = response.user.id;
+            await fetchUserData();
         }
 
         return response;
@@ -62,6 +128,7 @@ export function useSuperTokensSession() {
         if (response.status === "OK") {
             isAuthenticated.value = true;
             userId.value = response.user.id;
+            await fetchUserData();
         }
 
         return response;
@@ -81,6 +148,7 @@ export function useSuperTokensSession() {
         if (response.status === "OK") {
             isAuthenticated.value = true;
             userId.value = response.user.id;
+            await fetchUserData();
         }
 
         return response;
@@ -91,6 +159,7 @@ export function useSuperTokensSession() {
             await Session.signOut();
             isAuthenticated.value = false;
             userId.value = null;
+            userData.value = null;
         } catch (error) {
             console.error("Error signing out:", error);
             throw error;
@@ -106,10 +175,17 @@ export function useSuperTokensSession() {
         }
     };
 
+    // Do initial check on first use
+    if (import.meta.client && !initialCheckDone) {
+        initialCheckDone = true;
+        checkSession();
+    }
+
     return {
         isAuthenticated: readonly(isAuthenticated),
         isLoading: readonly(isLoading),
         userId: readonly(userId),
+        userData: readonly(userData) as Readonly<Ref<User | null>>,
         checkSession,
         signIn,
         signUp,
@@ -117,5 +193,6 @@ export function useSuperTokensSession() {
         getAccessTokenPayload,
         getThirdPartyAuthUrl,
         handleThirdPartyCallback,
+        refresh: checkSession,
     };
 }

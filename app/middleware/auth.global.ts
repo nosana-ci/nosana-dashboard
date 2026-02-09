@@ -1,12 +1,17 @@
-import Session from "supertokens-web-js/recipe/session";
+import { useSuperTokens } from "~/composables/useSuperTokens";
 
 export default defineNuxtRouteMiddleware(async (to, from) => {
-  const { status } = useAuth();
+  const { isLoading, isAuthenticated: superTokensAuth, checkSession } = useSuperTokens();
   const config = useRuntimeConfig();
+
+  // On client, wait for session check if it's currently loading
+  if (import.meta.client && isLoading.value) {
+    await checkSession();
+  }
 
   // Check for wallet authentication
   let walletAuthenticated = false;
-  if (process.client) {
+  if (import.meta.client) {
     try {
       const sessionCookie = useCookie('nosana-wallet-session');
       if (sessionCookie.value) {
@@ -29,15 +34,7 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
   }
 
   // Check for SuperTokens session
-  let superTokensAuthenticated = false;
-  if (process.client) {
-    try {
-      superTokensAuthenticated = await Session.doesSessionExist();
-    } catch (error) {
-      // SuperTokens not initialized yet or error checking session
-      console.warn("Error checking SuperTokens session:", error);
-    }
-  }
+  const superTokensAuthenticated = superTokensAuth.value;
 
   // Public routes that don't require authentication
   const publicRoutes = [
@@ -50,7 +47,7 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
   const isPublicRoute = publicRoutes.some((route) => to.path === route) || to.path.startsWith('/auth/callback/');
 
   // Check if user is authenticated (via Google, wallet, or SuperTokens)
-  const isAuthenticated = status.value === "authenticated" || walletAuthenticated || superTokensAuthenticated;
+  const isAuthenticated = walletAuthenticated || superTokensAuthenticated;
 
   // Redirect authenticated users from root to account
   if (to.path === "/" && isAuthenticated) {
@@ -58,7 +55,8 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
   }
 
   // If trying to access protected route without authentication, redirect to root (login page)
-  if (!isPublicRoute && !isAuthenticated && status.value !== "loading") {
+  // Only redirect if we are not in a loading state
+  if (!isPublicRoute && !isAuthenticated && !isLoading.value) {
     return navigateTo({
       path: "/",
       query: { redirect: to.fullPath },
