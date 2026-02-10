@@ -46,7 +46,6 @@ export default defineNuxtConfig({
     "@nuxtjs/google-fonts",
     "@vueuse/nuxt",
     "@nuxtjs/color-mode",
-    "@sidebase/nuxt-auth",
     "nuxt-gtag",
     "@vite-pwa/nuxt",
   ],
