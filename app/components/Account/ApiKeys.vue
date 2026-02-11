@@ -358,7 +358,7 @@ const {
     return { keys: [], total: 0 };
   }
   
-  return await $fetch(`${config.backend_url}/api/api-keys`, {
+  return await $fetch(`${config.client_manager_url}/api-keys`, {
     credentials: 'include'
   });
 }, {
@@ -383,7 +383,7 @@ const createKey = async () => {
       payload.expiresIn = parseInt(newKeyExpiration.value);
     }
     
-    const response = await $fetch(`${config.backend_url}/api/api-keys`, {
+    const response = await $fetch(`${config.client_manager_url}/api-keys`, {
       method: 'POST',
       credentials: 'include',
       headers: {
@@ -428,7 +428,7 @@ const updateKey = async () => {
   try {
     updatingKey.value = true;
     
-    await $fetch(`${config.backend_url}/api/api-keys/${selectedKey.value.id}/update`, {
+    await $fetch(`${config.client_manager_url}/api-keys/${selectedKey.value.id}/update`, {
       method: 'POST',
       credentials: 'include',
       headers: {
@@ -463,7 +463,7 @@ const deleteKey = async (keyData: any) => {
   try {
     deletingKeyId.value = keyData.id;
     
-    await $fetch(`${config.backend_url}/api/api-keys/${keyData.id}/delete`, {
+    await $fetch(`${config.client_manager_url}/api-keys/${keyData.id}/delete`, {
       method: 'POST',
       credentials: 'include'
     });

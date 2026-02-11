@@ -9,7 +9,7 @@ export default defineNuxtPlugin(() => {
     SuperTokens.init({
         appInfo: {
             appName: "Nosana Deploy",
-            apiDomain: config.public.identity_manager_url as string,
+            apiDomain: config.public.client_manager_url as string,
             apiBasePath: "/auth",
         },
         recipeList: [
