@@ -1,7 +1,11 @@
 import { useSuperTokens } from "~/composables/useSuperTokens";
 
 export default defineNuxtRouteMiddleware(async (to, from) => {
-  const { isLoading, isAuthenticated: superTokensAuth, checkSession } = useSuperTokens();
+  const {
+    isLoading,
+    isAuthenticated: superTokensAuth,
+    checkSession,
+  } = useSuperTokens();
   const config = useRuntimeConfig();
 
   // On client, wait for session check if it's currently loading
@@ -13,12 +17,13 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
   let walletAuthenticated = false;
   if (import.meta.client) {
     try {
-      const sessionCookie = useCookie('nosana-wallet-session');
+      const sessionCookie = useCookie("nosana-wallet-session");
       if (sessionCookie.value) {
         const authTime = (sessionCookie.value as any).timestamp || 0;
         const now = Date.now();
         const maxAge = 24 * 60 * 60 * 1000; // 24 hours
-        walletAuthenticated = (sessionCookie.value as any).authenticated && (now - authTime < maxAge);
+        walletAuthenticated =
+          (sessionCookie.value as any).authenticated && now - authTime < maxAge;
       }
 
       if (!walletAuthenticated && (sessionCookie.value as any)?.address) {
@@ -41,10 +46,13 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
     "/",
     "/privacy-policy",
     "/tos",
-    "/support"
+    "/support",
+    "/auth/reset-password",
   ];
 
-  const isPublicRoute = publicRoutes.some((route) => to.path === route) || to.path.startsWith('/auth/callback/');
+  const isPublicRoute =
+    publicRoutes.some((route) => to.path === route) ||
+    to.path.startsWith("/auth/callback/");
 
   // Check if user is authenticated (via Google, wallet, or SuperTokens)
   const isAuthenticated = walletAuthenticated || superTokensAuthenticated;

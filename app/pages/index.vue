@@ -4,7 +4,12 @@
     <div class="content-wrapper">
       <!-- World Map Background -->
       <div class="world-map-background">
-        <img :key="backgroundImageKey" src="/img/worldmap.png" alt="" class="world-map-image" />
+        <img
+          :key="backgroundImageKey"
+          src="/img/worldmap.png"
+          alt=""
+          class="world-map-image"
+        />
       </div>
       <!-- Center Login Card -->
       <div class="login-card-container">
@@ -23,12 +28,15 @@
           <!-- Main Login Content -->
           <div class="login-content">
             <h1 class="login-title">
-              {{ isCampaignMode ? 'Claim your Free Credits' : 'Build with Nosana' }}
+              {{
+                isCampaignMode ? "Claim your Free Credits" : "Build with Nosana"
+              }}
             </h1>
             <p class="login-subtitle">
-              {{ isCampaignMode 
-                ? 'Sign in or create an account to receive $50 in free compute credits.' 
-                : 'Sign in or create an account to build with the Nosana AI Platform' 
+              {{
+                isCampaignMode
+                  ? "Sign in or create an account to receive $50 in free compute credits."
+                  : "Sign in or create an account to build with the Nosana AI Platform"
               }}
             </p>
 
@@ -55,6 +63,9 @@
                   minlength="8"
                 />
               </div>
+              <div class="forgot-password-link" v-if="!isSignUpMode">
+                <NuxtLink to="/auth/reset-password">Forgot password?</NuxtLink>
+              </div>
               <div v-if="authError" class="auth-error">
                 {{ authError }}
               </div>
@@ -65,7 +76,7 @@
                   :disabled="emailLoading"
                   :class="{ 'is-loading': emailLoading }"
                 >
-                  {{ isSignUpMode ? 'Create Account' : 'Sign In' }}
+                  {{ isSignUpMode ? "Create Account" : "Sign In" }}
                 </button>
               </div>
               <div class="form-toggle">
@@ -142,37 +153,57 @@
               <!-- Wallet Connection Button -->
               <div class="wallet-section">
                 <!-- Connection Status -->
-                <div v-if="connected && account" class="wallet-connection-status">
+                <div
+                  v-if="connected && account"
+                  class="wallet-connection-status"
+                >
                   <div class="status-indicator">
                     <span class="status-dot connected"></span>
                     <span class="status-text">
-                      Connected: {{ getWalletName() || 'Unknown Wallet' }}
+                      Connected: {{ getWalletName() || "Unknown Wallet" }}
                     </span>
                   </div>
                   <div v-if="account?.address" class="wallet-address">
-                    {{ account.address.substring(0, 8) }}...{{ account.address.substring(account.address.length - 6) }}
+                    {{ account.address.substring(0, 8) }}...{{
+                      account.address.substring(account.address.length - 6)
+                    }}
                   </div>
                   <div v-if="signingMessage" class="signing-status">
                     <span class="status-dot signing"></span>
                     Signing authentication message to login...
                   </div>
-                  <div v-if="!signingMessage && !signMessageError && connected && account" class="sign-message-section">
-                    <button 
-                      class="sign-message-button" 
+                  <div
+                    v-if="
+                      !signingMessage &&
+                      !signMessageError &&
+                      connected &&
+                      account
+                    "
+                    class="sign-message-section"
+                  >
+                    <button
+                      class="sign-message-button"
                       @click="handleSignMessage"
                       :disabled="signingMessage"
                     >
                       Sign Message to Login
                     </button>
                   </div>
-                  <div v-if="signMessageError && !signingMessage" class="signing-error">
+                  <div
+                    v-if="signMessageError && !signingMessage"
+                    class="signing-error"
+                  >
                     <span class="error-text">Signing failed</span>
-                    <button class="retry-button" @click="retrySignMessage" :disabled="signingMessage">
+                    <button
+                      class="retry-button"
+                      @click="retrySignMessage"
+                      :disabled="signingMessage"
+                    >
                       Retry Signing
                     </button>
                   </div>
                 </div>
-                
+
                 <button
                   v-if="!connected"
                   class="login-button wallet-button"
@@ -181,11 +212,9 @@
                   :class="{ 'is-loading': signingMessage }"
                 >
                   <WalletIcon :size="20" />
-                  {{
-                    signingMessage ? "Signing Message..." : "Connect Wallet"
-                  }}
+                  {{ signingMessage ? "Signing Message..." : "Connect Wallet" }}
                 </button>
-                
+
                 <button
                   v-else
                   class="login-button wallet-button"
@@ -248,7 +277,14 @@ const { connected, disconnect, connect, account } = useWallet();
 import { useSolanaWallets } from "@nosana/solana-vue";
 const { wallets } = useSolanaWallets();
 const { generateAuthHeaders, signMessageError } = useNosanaWallet();
-const { signIn, signUp, signOut, checkSession, isAuthenticated: superTokensAuth, getThirdPartyAuthUrl } = useSuperTokens();
+const {
+  signIn,
+  signUp,
+  signOut,
+  checkSession,
+  isAuthenticated: superTokensAuth,
+  getThirdPartyAuthUrl,
+} = useSuperTokens();
 
 // Compatibility: create publicKey-like object from account
 const publicKey = computed(() => {
@@ -282,8 +318,10 @@ const getWalletName = () => {
     return currentWalletName.value;
   }
   if (account.value) {
-    const wallet = wallets.value?.find((w: any) => w.accounts?.some((acc: any) => acc.address === account.value?.address));
-    return wallet?.name || 'Connected Wallet';
+    const wallet = wallets.value?.find((w: any) =>
+      w.accounts?.some((acc: any) => acc.address === account.value?.address),
+    );
+    return wallet?.name || "Connected Wallet";
   }
   return null;
 };
@@ -293,61 +331,75 @@ const handleDisconnect = async () => {
   try {
     await disconnect();
     currentWalletName.value = null;
-    toast.info('Wallet disconnected');
+    toast.info("Wallet disconnected");
   } catch (error) {
-    toast.error('Failed to disconnect wallet');
+    toast.error("Failed to disconnect wallet");
   }
 };
 
 // Handle sign message button click (user gesture required for mobile wallets)
 const handleSignMessage = async () => {
   if (!currentWalletName.value) {
-    toast.error('No wallet name stored. Please reconnect.');
+    toast.error("No wallet name stored. Please reconnect.");
     return;
   }
-  
+
   if (!connected.value || !account.value) {
-    toast.error('Wallet not connected. Please reconnect.');
+    toast.error("Wallet not connected. Please reconnect.");
     return;
   }
-  
+
   if (signMessageError) {
     signMessageError.value = false;
   }
-  
+
   await signAuthMessage(currentWalletName.value);
 };
 
 // Retry signing message
 const retrySignMessage = async () => {
   if (!currentWalletName.value) {
-    toast.error('No wallet name stored. Please reconnect.');
+    toast.error("No wallet name stored. Please reconnect.");
     return;
   }
-  
+
   if (signMessageError) {
     signMessageError.value = false;
   }
-  
-  await new Promise(resolve => setTimeout(resolve, 500));
+
+  await new Promise((resolve) => setTimeout(resolve, 500));
   await signAuthMessage(currentWalletName.value);
 };
 
 // Watch for auto-connect and set wallet name if not already set
-watch([connected, account, wallets], () => {
-  if (connected.value && account.value && !currentWalletName.value && wallets.value && wallets.value.length > 0) {
-    const wallet = wallets.value.find((w: any) => 
-      w.accounts?.some((acc: any) => acc.address === account.value?.address)
-    );
-    
-    if (wallet?.name) {
-      currentWalletName.value = wallet.name;
+watch(
+  [connected, account, wallets],
+  () => {
+    if (
+      connected.value &&
+      account.value &&
+      !currentWalletName.value &&
+      wallets.value &&
+      wallets.value.length > 0
+    ) {
+      const wallet = wallets.value.find((w: any) =>
+        w.accounts?.some((acc: any) => acc.address === account.value?.address),
+      );
+
+      if (wallet?.name) {
+        currentWalletName.value = wallet.name;
+      }
     }
-  }
-}, { immediate: true });
+  },
+  { immediate: true },
+);
 
 const isCampaignMode = computed(() => {
-  return route.query.context === 'get-started' && (typeof window !== 'undefined' && !window.opener);
+  return (
+    route.query.context === "get-started" &&
+    typeof window !== "undefined" &&
+    !window.opener
+  );
 });
 
 const colorMode = useColorMode();
@@ -359,13 +411,17 @@ const handleEmailSubmit = async () => {
   emailLoading.value = true;
 
   try {
-    const response = isSignUpMode.value 
+    const response = isSignUpMode.value
       ? await signUp(email.value, password.value)
       : await signIn(email.value, password.value);
 
     if (response.status === "OK") {
-      toast.success(isSignUpMode.value ? "Account created successfully!" : "Signed in successfully!");
-      
+      toast.success(
+        isSignUpMode.value
+          ? "Account created successfully!"
+          : "Signed in successfully!",
+      );
+
       trackEvent(isSignUpMode.value ? "sign_up" : "login", {
         provider: "email",
       });
@@ -375,7 +431,9 @@ const handleEmailSubmit = async () => {
     } else if (response.status === "WRONG_CREDENTIALS_ERROR") {
       authError.value = "Invalid email or password";
     } else if (response.status === "FIELD_ERROR") {
-      const fieldErrors = response.formFields.map((f: any) => f.error).join(", ");
+      const fieldErrors = response.formFields
+        .map((f: any) => f.error)
+        .join(", ");
       authError.value = fieldErrors || "Please check your input";
     } else if (response.status === "SIGN_UP_NOT_ALLOWED") {
       authError.value = "Sign up is not allowed. Please contact support.";
@@ -394,10 +452,11 @@ const handleEmailSubmit = async () => {
 onMounted(async () => {
   // Check SuperTokens session
   const hasSession = await checkSession();
-  
+
   // Check if user is already authenticated
   const walletAuthenticated = checkWalletAuth();
-  const isAuthenticated = superTokensAuth.value || walletAuthenticated || hasSession;
+  const isAuthenticated =
+    superTokensAuth.value || walletAuthenticated || hasSession;
 
   if (isAuthenticated) {
     const redirect = (route.query.redirect as string) || "/account";
@@ -415,7 +474,7 @@ onMounted(async () => {
         type: "GOOGLE_AUTH_CODE",
         code: code,
       },
-      window.location.origin
+      window.location.origin,
     );
     window.close();
     return;
@@ -423,16 +482,18 @@ onMounted(async () => {
 
   // Wait for wallet auto-connect
   if (!connected.value && wallets.value && wallets.value.length > 0) {
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
     if (connected.value && account.value && !currentWalletName.value) {
-      const wallet = wallets.value.find((w: any) => 
-        w.accounts?.some((acc: any) => acc.address === account.value?.address)
+      const wallet = wallets.value.find((w: any) =>
+        w.accounts?.some((acc: any) => acc.address === account.value?.address),
       );
       if (wallet?.name) {
         currentWalletName.value = wallet.name;
       }
-      toast.success(`Wallet connected: ${account.value.address.substring(0, 8)}...`);
+      toast.success(
+        `Wallet connected: ${account.value.address.substring(0, 8)}...`,
+      );
     }
   }
 });
@@ -440,12 +501,14 @@ onMounted(async () => {
 // Helper to check wallet authentication cookie
 const checkWalletAuth = () => {
   try {
-    const sessionCookie = useCookie('nosana-wallet-session');
+    const sessionCookie = useCookie("nosana-wallet-session");
     if (sessionCookie.value) {
       const authTime = (sessionCookie.value as any).timestamp || 0;
       const now = Date.now();
       const maxAge = 24 * 60 * 60 * 1000; // 24 hours
-      return (sessionCookie.value as any).authenticated && (now - authTime < maxAge);
+      return (
+        (sessionCookie.value as any).authenticated && now - authTime < maxAge
+      );
     }
   } catch (error) {
     // Ignore cookie errors
@@ -473,17 +536,17 @@ const selectGoogleLogin = async () => {
 
     const redirectUri = `${window.location.origin}/auth/callback/google`;
     const authUrl = await getThirdPartyAuthUrl("google", redirectUri);
-    
+
     // Open popup window at top right
     const width = 500;
     const height = 600;
     const left = window.screen.width - width;
     const top = 0;
-    
+
     popup = window.open(
-        authUrl,
-        "google-auth",
-        `width=${width},height=${height},top=${top},left=${left},scrollbars=yes,resizable=yes`
+      authUrl,
+      "google-auth",
+      `width=${width},height=${height},top=${top},left=${left},scrollbars=yes,resizable=yes`,
     );
 
     if (!popup) {
@@ -497,9 +560,9 @@ const selectGoogleLogin = async () => {
       if (event.data.type === "SUPERTOKENS_AUTH_SUCCESS") {
         window.removeEventListener("message", handleMessage);
         popup?.close();
-        
+
         await checkSession();
-        
+
         toast.success("Signed in successfully!");
         const redirect = (route.query.redirect as string) || "/account";
         router.replace(redirect);
@@ -515,18 +578,17 @@ const selectGoogleLogin = async () => {
 
     // Check if popup was closed manually
     const timer = setInterval(() => {
-        if (popup && popup.closed) {
-            clearInterval(timer);
-            window.removeEventListener("message", handleMessage);
-            if (googleLoading.value) {
-                googleLoading.value = false;
-            }
-            if (githubLoading.value) {
-                githubLoading.value = false;
-            }
+      if (popup && popup.closed) {
+        clearInterval(timer);
+        window.removeEventListener("message", handleMessage);
+        if (googleLoading.value) {
+          googleLoading.value = false;
         }
+        if (githubLoading.value) {
+          githubLoading.value = false;
+        }
+      }
     }, 1000);
-
   } catch (error: any) {
     if (popup) popup.close();
     console.error("Error starting Google login:", error);
@@ -553,17 +615,17 @@ const selectGithubLogin = async () => {
 
     const redirectUri = `${window.location.origin}/auth/callback/github`;
     const authUrl = await getThirdPartyAuthUrl("github", redirectUri);
-    
+
     // Open popup window at top right
     const width = 500;
     const height = 600;
     const left = window.screen.width - width;
     const top = 0;
-    
+
     popup = window.open(
-        authUrl,
-        "github-auth",
-        `width=${width},height=${height},top=${top},left=${left},scrollbars=yes,resizable=yes`
+      authUrl,
+      "github-auth",
+      `width=${width},height=${height},top=${top},left=${left},scrollbars=yes,resizable=yes`,
     );
 
     if (!popup) {
@@ -577,9 +639,9 @@ const selectGithubLogin = async () => {
       if (event.data.type === "SUPERTOKENS_AUTH_SUCCESS") {
         window.removeEventListener("message", handleMessage);
         popup?.close();
-        
+
         await checkSession();
-        
+
         toast.success("Signed in successfully!");
         const redirect = (route.query.redirect as string) || "/account";
         router.replace(redirect);
@@ -594,15 +656,14 @@ const selectGithubLogin = async () => {
     window.addEventListener("message", handleMessage);
 
     const timer = setInterval(() => {
-        if (popup && popup.closed) {
-            clearInterval(timer);
-            window.removeEventListener("message", handleMessage);
-            if (githubLoading.value) {
-                githubLoading.value = false;
-            }
+      if (popup && popup.closed) {
+        clearInterval(timer);
+        window.removeEventListener("message", handleMessage);
+        if (githubLoading.value) {
+          githubLoading.value = false;
         }
+      }
     }, 1000);
-
   } catch (error: any) {
     if (popup) popup.close();
     console.error("Error starting GitHub login:", error);
@@ -615,8 +676,6 @@ const selectGithubLogin = async () => {
   }
 };
 
-
-
 // Wallet connection logic
 const handleWalletConnect = async () => {
   try {
@@ -627,15 +686,24 @@ const handleWalletConnect = async () => {
     if (wallets.value && wallets.value.length > 0) {
       showWalletModal.value = true;
     } else {
-      const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const isMobile =
+        /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+          navigator.userAgent,
+        );
       const isAndroid = /Android/i.test(navigator.userAgent);
-      
+
       if (isMobile && isAndroid) {
-        toast.error("No wallets found. Make sure you have a compatible Solana wallet app installed.");
+        toast.error(
+          "No wallets found. Make sure you have a compatible Solana wallet app installed.",
+        );
       } else if (isMobile) {
-        toast.error("Mobile Wallet Adapter is only available on Android devices.");
+        toast.error(
+          "Mobile Wallet Adapter is only available on Android devices.",
+        );
       } else {
-        toast.error("No wallets found. Please install a Solana wallet browser extension.");
+        toast.error(
+          "No wallets found. Please install a Solana wallet browser extension.",
+        );
       }
     }
   } catch (error) {
@@ -649,15 +717,16 @@ const selectWallet = async (wallet: any) => {
   const walletName = wallet.name;
 
   try {
-    const isMobileWallet = walletName?.toLowerCase().includes('mobile') || 
-                          wallet.id?.toLowerCase().includes('mobile');
-    
+    const isMobileWallet =
+      walletName?.toLowerCase().includes("mobile") ||
+      wallet.id?.toLowerCase().includes("mobile");
+
     await connect(wallet);
-    
+
     if (!isMobileWallet) {
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500));
     } else {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
     }
 
     if (!connected.value || !account.value) {
@@ -680,91 +749,104 @@ const selectWallet = async (wallet: any) => {
       console.warn("Error tracking wallet connected:", error);
     }
 
-    const isMobileWalletAdapter = walletName?.toLowerCase().includes('mobile');
-    
+    const isMobileWalletAdapter = walletName?.toLowerCase().includes("mobile");
+
     if (isMobileWalletAdapter) {
       toast.success('Wallet connected! Please click "Sign Message" to login.');
       return;
     }
-    
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
+
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
     if (!connected.value || !account.value) {
-      toast.warning('Wallet connection lost. Please reconnect.');
+      toast.warning("Wallet connection lost. Please reconnect.");
       return;
     }
-    
+
     await signAuthMessage(walletName);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    
-    const isRedirectError = errorMessage.includes('redirect') || 
-                           errorMessage.includes('navigation') ||
-                           errorMessage.includes('aborted');
-    
+
+    const isRedirectError =
+      errorMessage.includes("redirect") ||
+      errorMessage.includes("navigation") ||
+      errorMessage.includes("aborted");
+
     if (!isRedirectError) {
       toast.error(`Failed to connect to ${walletName}: ${errorMessage}`);
     } else {
-      toast.info('Redirecting to wallet app...');
+      toast.info("Redirecting to wallet app...");
     }
   }
 };
 
 const signAuthMessage = async (walletName: string) => {
   signingMessage.value = true;
-  const sessionCookie = useCookie<{ authenticated: boolean; address: string; timestamp: number } | null>('nosana-wallet-session');
+  const sessionCookie = useCookie<{
+    authenticated: boolean;
+    address: string;
+    timestamp: number;
+  } | null>("nosana-wallet-session");
 
   try {
     if (!connected.value || !account.value) {
-      const errorMsg = 'Wallet disconnected before signing. Please reconnect.';
+      const errorMsg = "Wallet disconnected before signing. Please reconnect.";
       toast.error(errorMsg);
       throw new Error(errorMsg);
     }
 
-    const isMobileWallet = walletName?.toLowerCase().includes('mobile');
-    
+    const isMobileWallet = walletName?.toLowerCase().includes("mobile");
+
     if (isMobileWallet) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
       if (!connected.value || !account.value) {
-        const errorMsg = 'Wallet disconnected before signing. Please reconnect.';
+        const errorMsg =
+          "Wallet disconnected before signing. Please reconnect.";
         toast.error(errorMsg);
         throw new Error(errorMsg);
       }
     }
-    
+
     try {
       await generateAuthHeaders();
     } catch (signError: any) {
       const errorMsg = signError?.message || String(signError);
-      
-      if (errorMsg.includes('mobile wallet protocol') || errorMsg.includes('no installed wallet')) {
-        toast.error('Mobile wallet not found for signing. Please ensure Phantom/Jupiter is installed and try reconnecting.');
-        
+
+      if (
+        errorMsg.includes("mobile wallet protocol") ||
+        errorMsg.includes("no installed wallet")
+      ) {
+        toast.error(
+          "Mobile wallet not found for signing. Please ensure Phantom/Jupiter is installed and try reconnecting.",
+        );
+
         if (!connected.value || !account.value) {
-          toast.warning('Wallet is disconnected. Please reconnect and try again.');
+          toast.warning(
+            "Wallet is disconnected. Please reconnect and try again.",
+          );
         }
       } else {
         toast.error(`Failed to sign message: ${errorMsg}`);
       }
-      
+
       if (!connected.value || !account.value) {
-        toast.warning('Wallet disconnected during signing.');
+        toast.warning("Wallet disconnected during signing.");
       }
       signingMessage.value = false;
       return;
     }
-    
+
     if (signMessageError) {
       signMessageError.value = false;
     }
-    
+
     const walletAddress = publicKey.value?.toString();
     if (walletAddress) {
       sessionCookie.value = {
         authenticated: true,
         address: walletAddress,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
     }
 
@@ -944,7 +1026,9 @@ const signAuthMessage = async (walletName: string) => {
   background: $white;
   color: $black;
   font-size: 1rem;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 
   &:focus {
     outline: none;
@@ -973,6 +1057,23 @@ const signAuthMessage = async (walletName: string) => {
 
 .form-actions {
   margin-bottom: 1rem;
+}
+
+.forgot-password-link {
+  text-align: right;
+  margin-bottom: 1rem;
+  margin-top: -0.5rem;
+
+  a {
+    font-size: 0.875rem;
+    color: $grey;
+    text-decoration: none;
+
+    &:hover {
+      color: $primary;
+      text-decoration: underline;
+    }
+  }
 }
 
 .form-toggle {
@@ -1183,12 +1284,12 @@ const signAuthMessage = async (walletName: string) => {
   height: 8px;
   border-radius: 50%;
   display: inline-block;
-  
+
   &.connected {
     background: #10e80c;
     box-shadow: 0 0 4px rgba(16, 232, 12, 0.5);
   }
-  
+
   &.signing {
     background: #ffa500;
     animation: pulse 1.5s ease-in-out infinite;
@@ -1196,7 +1297,8 @@ const signAuthMessage = async (walletName: string) => {
 }
 
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {
@@ -1260,13 +1362,13 @@ const signAuthMessage = async (walletName: string) => {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  
+
   &:hover:not(:disabled) {
     background: darken($primary, 10%);
     transform: translateY(-1px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
   }
-  
+
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
@@ -1283,11 +1385,11 @@ const signAuthMessage = async (walletName: string) => {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
-  
+
   &:hover:not(:disabled) {
     background: darken($secondary, 10%);
   }
-  
+
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
