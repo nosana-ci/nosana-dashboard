@@ -9,8 +9,23 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
   } = useSuperTokens();
   const config = useRuntimeConfig();
 
+  // Public routes that don't require authentication
+  const publicRoutes = [
+    "/",
+    "/privacy-policy",
+    "/tos",
+    "/support",
+    "/auth/reset-password",
+    "/auth/verify-email",
+  ];
+
+  const isPublicRoute =
+    publicRoutes.some((route) => to.path === route) ||
+    to.path.startsWith("/auth/callback/");
+
   // On client, wait for session check if it's currently loading
-  if (import.meta.client && isLoading.value) {
+  // Skip for public routes to avoid unnecessary API calls when not authenticated
+  if (import.meta.client && isLoading.value && !isPublicRoute) {
     await checkSession();
   }
 
@@ -42,20 +57,6 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
   // Check for SuperTokens session
   const superTokensAuthenticated = superTokensAuth.value;
 
-  // Public routes that don't require authentication
-  const publicRoutes = [
-    "/",
-    "/privacy-policy",
-    "/tos",
-    "/support",
-    "/auth/reset-password",
-    "/auth/verify-email",
-  ];
-
-  const isPublicRoute =
-    publicRoutes.some((route) => to.path === route) ||
-    to.path.startsWith("/auth/callback/");
-
   // Check if user is authenticated (via Google, wallet, or SuperTokens)
   const isAuthenticated = walletAuthenticated || superTokensAuthenticated;
 
@@ -65,12 +66,16 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
   }
 
   // If user is authenticated but email is not verified, redirect to verification page
-  // Skip this check for the verification page itself, callback pages, and the login page
+  // ONLY for protected routes - allow access to public routes regardless of verification status
+  if (isPublicRoute) {
+    return;
+  }
+
   if (isAuthenticated && isEmailVerified.value === false) {
     if (
-      to.path !== "/" &&
       !to.path.startsWith("/auth/verify-email") &&
-      !to.path.startsWith("/auth/callback/")
+      !to.path.startsWith("/auth/callback/") &&
+      !to.path.startsWith("/auth/reset-password")
     ) {
       return navigateTo("/auth/verify-email");
     }

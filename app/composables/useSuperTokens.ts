@@ -73,10 +73,6 @@ const checkSession = async (shouldFetchUserData = true): Promise<boolean> => {
       if (exists) {
         userId.value = await Session.getUserId();
 
-        if (shouldFetchUserData) {
-          await fetchUserData();
-        }
-
         try {
           const verificationResponse =
             await EmailVerification.isEmailVerified();
@@ -84,6 +80,10 @@ const checkSession = async (shouldFetchUserData = true): Promise<boolean> => {
             verificationResponse.status === "OK" &&
             verificationResponse.isVerified;
           isEmailVerified.value = verified;
+
+          if (verified && shouldFetchUserData) {
+            await fetchUserData();
+          }
         } catch (e) {
           console.error("Error checking email verification:", e);
           isEmailVerified.value = false;
@@ -241,10 +241,19 @@ export function useSuperTokens() {
     }
   };
 
-  // Do initial check on first use
   if (import.meta.client && !initialCheckDone) {
     initialCheckDone = true;
-    checkSession();
+    const cookies = document.cookie.split(";");
+    const hasSessionCookie = cookies.some(
+      (c) =>
+        c.trim().startsWith("sIdBucket=") ||
+        c.trim().startsWith("sAccessToken="),
+    );
+    if (hasSessionCookie) {
+      checkSession();
+    } else {
+      isLoading.value = false;
+    }
   }
 
   return {

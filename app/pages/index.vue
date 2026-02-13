@@ -556,7 +556,8 @@ onMounted(async () => {
   const isAuthenticated =
     superTokensAuth.value || walletAuthenticated || hasSession;
 
-  if (isAuthenticated) {
+  // Only redirect to account if authenticated AND email is verified
+  if (isAuthenticated && isEmailVerified.value !== false) {
     const redirect = (route.query.redirect as string) || "/account";
     router.replace(redirect);
     return;
