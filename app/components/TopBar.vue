@@ -52,8 +52,7 @@
         <!-- Google Auth User -->
         <template v-if="isGoogleAuthenticated">
           <div class="profile-avatar auth-avatar">
-            <GoogleIcon v-if="getAuthProvider() === 'google'" alt="Google icon" class="auth-icon" />
-            <span v-else>{{ getUserInitials() }}</span>
+            <UserIcon class="auth-icon has-text-grey" />
           </div>
           <div class="profile-info">
             <span class="profile-name">{{ getUserName() }}</span>
@@ -477,7 +476,7 @@ defineExpose({
 
 
 .profile-avatar {
-  width: 40px;
+  width: 32px;
   height: 32px;
   border-radius: 8px;
   background: $grey;

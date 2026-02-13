@@ -14,7 +14,7 @@
     <div v-else class="columns is-multiline">
       <div class="column is-9-fullhd is-12">
         <!-- Job Definition and GPU Selection -->
-        <DeployJobDefinition
+        <DeployConfigurationModal
           title="Configure job"
           :selectedTemplate="selectedTemplate"
           v-model:jobDefinition="jobDefinition"
@@ -300,9 +300,9 @@ const isLocked = useScrollLock(scrollLockTarget);
 // State
 const config = useRuntimeConfig();
 const gpuTab = ref<"simple" | "advanced">("simple");
-// Show all markets on devnet, only premium on mainnet
-const gpuTypeCheckbox = ref<string[]>(config.public.network === 'devnet' ? ["PREMIUM", "COMMUNITY"] : ["PREMIUM"]);
-const activeFilter = ref(config.public.network === 'devnet' ? "ALL" : "PREMIUM");
+// Show all markets
+const gpuTypeCheckbox = ref<string[]>(["PREMIUM", "COMMUNITY"]);
+const activeFilter = ref("ALL");
 const selectedMarket = ref<Market | null>(null);
 const selectedTemplate = ref<Template | null>(null);
 const hours = ref(1);
@@ -335,7 +335,7 @@ const userBalances = ref({
 
 // Advanced GPU selection state
 const selectedGpuGroup = ref<string>('all');
-const selectedMarketType = ref<'all' | 'premium' | 'community'>('premium');
+const selectedMarketType = ref<'all' | 'premium' | 'community'>('all');
 const gpuFilters = ref<any>(null);
 const availableHosts = ref<HostInterface[]>([]);
 const loadingHosts = ref(false);
