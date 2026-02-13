@@ -283,7 +283,9 @@ const {
   signOut,
   checkSession,
   isAuthenticated: superTokensAuth,
+  isEmailVerified,
   getThirdPartyAuthUrl,
+  sendVerificationEmail,
 } = useSuperTokens();
 
 // Compatibility: create publicKey-like object from account
@@ -425,6 +427,25 @@ const handleEmailSubmit = async () => {
       trackEvent(isSignUpMode.value ? "sign_up" : "login", {
         provider: "email",
       });
+
+      // Check if email is verified, redirect to verification if not
+      await checkSession(false);
+      if (isEmailVerified.value === false) {
+        // Send verification email on signup
+        if (isSignUpMode.value) {
+          try {
+            await sendVerificationEmail();
+          } catch (e) {
+            console.error("Failed to send verification email:", e);
+          }
+          router.replace(
+            `/auth/verify-email?email=${encodeURIComponent(email.value)}`,
+          );
+          return;
+        }
+        router.replace("/auth/verify-email");
+        return;
+      }
 
       const redirect = (route.query.redirect as string) || "/account";
       router.replace(redirect);

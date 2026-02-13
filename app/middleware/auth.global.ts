@@ -4,6 +4,7 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
   const {
     isLoading,
     isAuthenticated: superTokensAuth,
+    isEmailVerified,
     checkSession,
   } = useSuperTokens();
   const config = useRuntimeConfig();
@@ -48,6 +49,7 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
     "/tos",
     "/support",
     "/auth/reset-password",
+    "/auth/verify-email",
   ];
 
   const isPublicRoute =
@@ -57,9 +59,21 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
   // Check if user is authenticated (via Google, wallet, or SuperTokens)
   const isAuthenticated = walletAuthenticated || superTokensAuthenticated;
 
-  // Redirect authenticated users from root to account
-  if (to.path === "/" && isAuthenticated) {
+  // Redirect authenticated users from root to account (only if email is verified)
+  if (to.path === "/" && isAuthenticated && isEmailVerified.value !== false) {
     return navigateTo("/account/");
+  }
+
+  // If user is authenticated but email is not verified, redirect to verification page
+  // Skip this check for the verification page itself, callback pages, and the login page
+  if (isAuthenticated && isEmailVerified.value === false) {
+    if (
+      to.path !== "/" &&
+      !to.path.startsWith("/auth/verify-email") &&
+      !to.path.startsWith("/auth/callback/")
+    ) {
+      return navigateTo("/auth/verify-email");
+    }
   }
 
   // If trying to access protected route without authentication, redirect to root (login page)

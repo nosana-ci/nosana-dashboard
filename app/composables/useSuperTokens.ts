@@ -1,6 +1,7 @@
 import { ref, readonly, watch } from "vue";
 import Session from "supertokens-web-js/recipe/session";
 import EmailPassword from "supertokens-web-js/recipe/emailpassword";
+import EmailVerification from "supertokens-web-js/recipe/emailverification";
 import {
   getAuthorisationURLWithQueryParamsAndSetState,
   signInAndUp,
@@ -17,6 +18,7 @@ export interface User {
 // Global state shared across all instances
 const isAuthenticated = ref(false);
 const isLoading = ref(true);
+const isEmailVerified = ref<boolean | null>(null);
 const userId = ref<string | null>(null);
 const userData = ref<User | null>(null);
 
@@ -59,7 +61,7 @@ const fetchUserData = async () => {
 };
 
 // Check session and fetch user data
-const checkSession = async (): Promise<boolean> => {
+const checkSession = async (shouldFetchUserData = true): Promise<boolean> => {
   if (checkSessionPromise) return checkSessionPromise;
 
   checkSessionPromise = (async () => {
@@ -70,10 +72,26 @@ const checkSession = async (): Promise<boolean> => {
 
       if (exists) {
         userId.value = await Session.getUserId();
-        await fetchUserData();
+
+        if (shouldFetchUserData) {
+          await fetchUserData();
+        }
+
+        try {
+          const verificationResponse =
+            await EmailVerification.isEmailVerified();
+          const verified =
+            verificationResponse.status === "OK" &&
+            verificationResponse.isVerified;
+          isEmailVerified.value = verified;
+        } catch (e) {
+          console.error("Error checking email verification:", e);
+          isEmailVerified.value = false;
+        }
       } else {
         userId.value = null;
         userData.value = null;
+        isEmailVerified.value = null;
       }
 
       return exists;
@@ -82,6 +100,7 @@ const checkSession = async (): Promise<boolean> => {
       isAuthenticated.value = false;
       userId.value = null;
       userData.value = null;
+      isEmailVerified.value = null;
       return false;
     } finally {
       isLoading.value = false;
@@ -91,15 +110,6 @@ const checkSession = async (): Promise<boolean> => {
 
   return checkSessionPromise;
 };
-
-// Global watcher
-if (import.meta.client) {
-  watch(isAuthenticated, async (newValue) => {
-    if (newValue && !userData.value) {
-      await fetchUserData();
-    }
-  });
-}
 
 export function useSuperTokens() {
   const signIn = async (email: string, password: string) => {
@@ -130,7 +140,6 @@ export function useSuperTokens() {
     if (response.status === "OK") {
       isAuthenticated.value = true;
       userId.value = response.user.id;
-      await fetchUserData();
     }
 
     return response;
@@ -185,6 +194,44 @@ export function useSuperTokens() {
     return response;
   };
 
+  const checkEmailVerification = async (): Promise<boolean> => {
+    try {
+      const response = await EmailVerification.isEmailVerified();
+      const verified = response.status === "OK" && response.isVerified;
+      isEmailVerified.value = verified;
+      return verified;
+    } catch (error) {
+      console.error("Error checking email verification:", error);
+      isEmailVerified.value = false;
+      return false;
+    }
+  };
+
+  const sendVerificationEmail = async () => {
+    try {
+      const response = await EmailVerification.sendVerificationEmail();
+      return response;
+    } catch (error) {
+      console.error("Error sending verification email:", error);
+      throw error;
+    }
+  };
+
+  const verifyEmail = async () => {
+    try {
+      const response = await EmailVerification.verifyEmail();
+      if (response.status === "OK") {
+        isEmailVerified.value = true;
+        // Fetch user data after successful verification
+        await fetchUserData();
+      }
+      return response;
+    } catch (error) {
+      console.error("Error verifying email:", error);
+      throw error;
+    }
+  };
+
   const getAccessTokenPayload = async () => {
     try {
       return await Session.getAccessTokenPayloadSecurely();
@@ -203,6 +250,7 @@ export function useSuperTokens() {
   return {
     isAuthenticated: readonly(isAuthenticated),
     isLoading: readonly(isLoading),
+    isEmailVerified: readonly(isEmailVerified),
     userId: readonly(userId),
     userData: readonly(userData) as Readonly<Ref<User | null>>,
     checkSession,
@@ -214,6 +262,9 @@ export function useSuperTokens() {
     handleThirdPartyCallback,
     sendPasswordResetEmail,
     resetPassword,
+    checkEmailVerification,
+    sendVerificationEmail,
+    verifyEmail,
     refresh: checkSession,
   };
 }

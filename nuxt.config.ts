@@ -4,6 +4,9 @@ import { nodePolyfills } from "vite-plugin-node-polyfills";
 // https://nuxt.com/docs/api/configuration/nuxt-config
 
 export default defineNuxtConfig({
+  devServer: {
+    port: 3003,
+  },
   devtools: { enabled: true },
   ssr: false,
   css: [
