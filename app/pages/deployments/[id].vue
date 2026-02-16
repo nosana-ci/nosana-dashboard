@@ -1292,7 +1292,7 @@ import { useVaultModal } from "~/composables/useVaultModal";
 import { updateVaultBalance } from "~/composables/useDeploymentVault";
 import { useToast } from "vue-toastification";
 import { useWallet } from "@nosana/solana-vue";
-import { useAuth } from "#imports";
+import { useSuperTokens } from "~/composables/useSuperTokens";
 import JobStatus from "~/components/Job/Status.vue";
 import JobLogsContainer from "~/components/Job/LogsContainer.vue";
 import JobResult from "~/components/Job/Result.vue";
@@ -1352,7 +1352,7 @@ const route = useRoute();
 const router = useRouter();
 const toast = useToast();
 const { open: openVaultModal, state: vaultModalState } = useVaultModal();
-const { status, token } = useAuth();
+const { isAuthenticated: superTokensAuth } = useSuperTokens();
 const { connected, account } = useWallet();
 
 // Compatibility: create publicKey-like object from account
@@ -1365,10 +1365,10 @@ const publicKey = computed(() => {
 });
 
 const isAuthenticated = computed(
-  () => status.value === "authenticated" && token.value
+  () => superTokensAuth.value
 );
 const isWalletMode = computed(
-  () => connected.value && account.value?.address && !token.value
+  () => connected.value && account.value?.address && !superTokensAuth.value
 );
 const hasAnyAuth = computed(() => isAuthenticated.value || isWalletMode.value);
 const { getIpfs } = useIpfs();

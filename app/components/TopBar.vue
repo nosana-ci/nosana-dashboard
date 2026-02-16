@@ -52,8 +52,7 @@
         <!-- Google Auth User -->
         <template v-if="isGoogleAuthenticated">
           <div class="profile-avatar auth-avatar">
-            <GoogleIcon v-if="getAuthProvider() === 'google'" alt="Google icon" class="auth-icon" />
-            <span v-else>{{ getUserInitials() }}</span>
+            <UserIcon class="auth-icon has-text-grey" />
           </div>
           <div class="profile-info">
             <span class="profile-name">{{ getUserName() }}</span>
@@ -106,7 +105,7 @@ import LogoutIcon from '@/assets/img/icons/logout.svg?component';
 import { useRouter } from 'vue-router';
 
 const { nosana, prioFee } = useKit();
-const { status, signOut, data: session, token } = useAuth();
+const { isAuthenticated, isLoading, signOut, userData } = useSuperTokens();
 const router = useRouter();
 const { connected, account, wallet, disconnect } = useWallet();
 
@@ -124,8 +123,7 @@ const showUserProfileDropdown = ref(false);
 
 // Memoized authentication state to prevent unnecessary template re-renders
 const isGoogleAuthenticated = computed(() => {
-  const currentStatus = status.value;
-  return currentStatus === 'authenticated' || currentStatus === 'loading';
+  return isAuthenticated.value || isLoading.value;
 });
 
 // Profile dropdown functions
@@ -155,7 +153,7 @@ const getWalletAddress = () => {
 
 
 const getUserName = () => {
-  return session.value?.email || session.value?.providerUsername || session.value?.name || 'User';
+  return userData.value?.email || userData.value?.providerUsername || userData.value?.name || 'User';
 };
 
 const getUserInitials = () => {
@@ -194,8 +192,8 @@ const getNosBalanceUSD = () => nosBalanceUSD.value;
 
 // Fetch credit balance
 const fetchCreditBalance = async (signal?: AbortSignal) => {
-  // Only fetch if user is authenticated AND has a valid token
-  if (status.value !== 'authenticated' || !token.value) {
+  // Only fetch if user is authenticated
+  if (!isAuthenticated.value) {
     return;
   }
   
@@ -246,17 +244,30 @@ const logout = async () => {
     const sessionCookie = useCookie('nosana-wallet-session');
     sessionCookie.value = null;
     
+    // Try to sign out from SuperTokens if a session exists
+    try {
+      const Session = await import('supertokens-web-js/recipe/session');
+      if (await Session.default.doesSessionExist()) {
+        await Session.default.signOut();
+      }
+    } catch (e) {
+      // Ignore if SuperTokens not initialized
+    }
+    
     if (connected.value) {
       await disconnect();
       await navigateTo('/');
-    } else if (status.value === 'authenticated') {
-      await signOut({ redirect: false });
+    } else if (isAuthenticated.value) {
+      await signOut();
+      await navigateTo('/');
+    } else {
       await navigateTo('/');
     }
   } catch (error) {
     console.error('Error logging out:', error);
   }
 };
+
 
 // Close dropdown when clicking outside (onMounted)
 
@@ -293,16 +304,14 @@ const debouncedFetchNosBalance = () => {
 };
 
 // Watch for authentication status and token changes (optimized)
-watch([status, token], async (newValues, oldValues) => {
-  const [newStatus, newToken] = newValues;
-  
+watch([isAuthenticated, isLoading], async ([newIsAuthenticated, newIsLoading], [oldIsAuthenticated, oldIsLoading]) => {
   // Skip loading state (session refresh in progress)
-  if (newStatus === 'loading') return;
+  if (newIsLoading) return;
   
   // Only fetch if authenticated AND haven't loaded yet
-  if (newStatus === 'authenticated' && newToken && !hasLoadedCreditBalance.value) {
+  if (newIsAuthenticated && !hasLoadedCreditBalance.value) {
     debouncedFetchCreditBalance();
-  } else if (newStatus === 'unauthenticated') {
+  } else if (!newIsAuthenticated && oldIsAuthenticated) {
     // Reset on logout so next login will fetch
     hasLoadedCreditBalance.value = false;
     creditBalance.value = 0;
@@ -467,7 +476,7 @@ defineExpose({
 
 
 .profile-avatar {
-  width: 40px;
+  width: 32px;
   height: 32px;
   border-radius: 8px;
   background: $grey;

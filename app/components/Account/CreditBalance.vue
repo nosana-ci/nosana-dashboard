@@ -1,5 +1,5 @@
 <template>
-  <div v-if="token" class="box has-text-centered equal-height-box">
+  <div v-if="isAuthenticated" class="box has-text-centered equal-height-box">
     <p class="heading">Credit Balance</p>
     <p class="title is-4 mb-1" v-if="!loading">
       ${{ creditBalance.toFixed(2) }}
@@ -31,7 +31,7 @@ import { ref, onMounted, watch } from "vue";
 import AccountClaimModal from "./ClaimModal.vue";
 
 const config = useRuntimeConfig().public;
-const { status, token } = useAuth();
+const { isAuthenticated, isLoading } = useSuperTokens();
 const { nosana } = useKit();
 
 // State
@@ -43,8 +43,8 @@ const showClaimModal = ref(false);
 
 // Fetch credit balance
 const fetchBalance = async () => {
-  // Only fetch if user has auth token (credit system authentication)
-  if (!token.value) {
+  // Only fetch if user is authenticated
+  if (!isAuthenticated.value) {
     creditBalance.value = 0;
     reservedCredits.value = 0;
     return;
@@ -69,19 +69,22 @@ const fetchBalance = async () => {
 
 // Initialize - only fetch if not already loaded
 onMounted(() => {
-  if (token.value && !hasLoadedOnce.value) {
+  if (isAuthenticated.value && !hasLoadedOnce.value) {
     fetchBalance();
   }
 });
 
 // Watch for auth changes - only fetch if not already loaded
-watch([() => status.value, token], ([newStatus, newToken]) => {
+watch([isAuthenticated, isLoading], ([newIsAuthenticated, newIsLoading], [oldIsAuthenticated]) => {
+  // Skip if still loading
+  if (newIsLoading) return;
+  
   // Only fetch if authenticated AND haven't loaded yet
-  if (newToken && newStatus === 'authenticated' && !hasLoadedOnce.value) {
+  if (newIsAuthenticated && !hasLoadedOnce.value) {
     fetchBalance();
   }
   // Reset on logout
-  if (newStatus === 'unauthenticated') {
+  if (!newIsAuthenticated && oldIsAuthenticated) {
     creditBalance.value = 0;
     reservedCredits.value = 0;
     hasLoadedOnce.value = false;

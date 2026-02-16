@@ -199,10 +199,10 @@ import { useStatus } from "~/composables/useStatus";
 const router = useRouter();
 const { account: walletAccount } = useWallet();
 const { templates } = useTemplates();
-const { status, data: userData } = useAuth();
+const { isAuthenticated, userData } = useSuperTokens();
 
 const activeAddress = computed(() => {
-  if (status.value === "authenticated" && userData.value?.generatedAddress) {
+  if (isAuthenticated.value && userData.value?.generatedAddress) {
     return userData.value.generatedAddress;
   }
   if (walletAccount.value?.address) {

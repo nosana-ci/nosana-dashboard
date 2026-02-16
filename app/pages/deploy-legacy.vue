@@ -14,7 +14,7 @@
     <div v-else class="columns is-multiline">
       <div class="column is-9-fullhd is-12">
         <!-- Job Definition and GPU Selection -->
-        <DeployJobDefinition
+        <DeployConfigurationModal
           title="Configure job"
           :selectedTemplate="selectedTemplate"
           v-model:jobDefinition="jobDefinition"
@@ -99,7 +99,7 @@
             <ClientOnly>
               <!-- Show login button when not authenticated -->
               <button
-                v-if="!connected && status !== 'authenticated'"
+                v-if="!connected && !superTokensAuth"
                 class="button is-secondary is-fullwidth"
                 @click="handleLoginClick"
               >
@@ -115,7 +115,7 @@
               </button>
               <!-- Show insufficient credits message for Google users -->
               <div
-                v-else-if="status === 'authenticated' && !canPostJob && selectedMarket"
+                v-else-if="superTokensAuth && !canPostJob && selectedMarket"
                 class="has-text-centered"
               >
                 <p class="has-text-grey is-size-7 mb-2">
@@ -127,7 +127,7 @@
               </div>
               <!-- Show deploy button if any authentication method allows job creation -->
               <button
-                v-else-if="canCreateJob && (connected || status === 'authenticated')"
+                v-else-if="canCreateJob && (connected || superTokensAuth)"
                 class="button is-secondary is-fullwidth"
                 @click="createJob"
               >
@@ -275,7 +275,8 @@ const publicKey = computed(() => {
     toBase58: () => account.value!.address,
   };
 });
-const { status, data: userData, token } = useAuth();
+import { useSuperTokens } from "~/composables/useSuperTokens";
+const { isAuthenticated: superTokensAuth, userData } = useSuperTokens();
 const loading = ref(false);
 
 // Initialize redirect composable for authentication flow
@@ -299,9 +300,9 @@ const isLocked = useScrollLock(scrollLockTarget);
 // State
 const config = useRuntimeConfig();
 const gpuTab = ref<"simple" | "advanced">("simple");
-// Show all markets on devnet, only premium on mainnet
-const gpuTypeCheckbox = ref<string[]>(config.public.network === 'devnet' ? ["PREMIUM", "COMMUNITY"] : ["PREMIUM"]);
-const activeFilter = ref(config.public.network === 'devnet' ? "ALL" : "PREMIUM");
+// Show all markets
+const gpuTypeCheckbox = ref<string[]>(["PREMIUM", "COMMUNITY"]);
+const activeFilter = ref("ALL");
 const selectedMarket = ref<Market | null>(null);
 const selectedTemplate = ref<Template | null>(null);
 const hours = ref(1);
@@ -334,7 +335,7 @@ const userBalances = ref({
 
 // Advanced GPU selection state
 const selectedGpuGroup = ref<string>('all');
-const selectedMarketType = ref<'all' | 'premium' | 'community'>('premium');
+const selectedMarketType = ref<'all' | 'premium' | 'community'>('all');
 const gpuFilters = ref<any>(null);
 const availableHosts = ref<HostInterface[]>([]);
 const loadingHosts = ref(false);
@@ -545,7 +546,7 @@ const canPostJob = computed(() => {
     return (balance.value || 0) >= requiredNos.value;
   }
   // For Google authenticated users: check credit balance using centralized pricing
-  if (status.value === 'authenticated') {
+  if (superTokensAuth.value) {
     const costUSD = estimatedCost.value || 0;
     return creditBalance.value >= costUSD;
   }
@@ -554,7 +555,7 @@ const canPostJob = computed(() => {
 
 // Check if user is authenticated via any method
 const isAuthenticated = computed(() => {
-  return connected.value || status.value === 'authenticated';
+  return connected.value || superTokensAuth.value;
 });
 
 const canCreateJob = computed(() => 
@@ -626,7 +627,7 @@ const createJob = async () => {
     const ipfsHash = await nosana.value.ipfs.pin(jobDefinition.value);
     
     // Check authentication method and use appropriate posting method
-    if (status.value === 'authenticated') {
+    if (superTokensAuth.value) {
       // Credit-based posting for Google authenticated users
       // Determine market address (with fallback for advanced mode)
       let marketAddress = selectedMarket.value?.address?.toString();
@@ -1256,7 +1257,7 @@ const refreshAllBalances = async () => {
 
 // Refresh credit balance for Google authenticated users
 const refreshCreditBalance = async () => {
-  if (status.value !== 'authenticated' || !token.value) return;
+  if (!superTokensAuth.value) return;
   
   loadingCreditBalance.value = true;
   
@@ -1283,8 +1284,8 @@ watch([connected, wallet], ([isConnected, walletInstance]) => {
 }, { immediate: true });
 
 // Watch for Google authentication changes
-watch([status, token], async () => {
-  if (status.value === 'authenticated' && token.value) {
+watch(superTokensAuth, async (isAuthenticated) => {
+  if (isAuthenticated) {
     await refreshCreditBalance();
   }
 }, { immediate: true });

@@ -32,14 +32,15 @@ import { faPlus } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import DeploymentsTable from "~/components/DeploymentsTable/Table.vue";
 
-const { status } = useAuth();
+import { useSuperTokens } from "~/composables/useSuperTokens";
+const { isAuthenticated: superTokensAuth, isLoading } = useSuperTokens();
 const { connected } = useWallet();
 const router = useRouter();
 
 watch(
-  status,
-  (authStatus) => {
-    if (authStatus === "unauthenticated" && !connected.value) {
+  [superTokensAuth, isLoading, connected],
+  ([auth, loading, conn]) => {
+    if (!loading && !auth && !conn) {
       router.push("/");
     }
   },
