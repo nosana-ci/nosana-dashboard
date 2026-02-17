@@ -132,7 +132,7 @@
                   />
                 </div>
                 <div class="forgot-password-link">
-                  <NuxtLink to="/auth/reset-password"
+                  <NuxtLink to="/st-auth/reset-password"
                     >Forgot password?</NuxtLink
                   >
                 </div>
@@ -516,11 +516,11 @@ const handleEmailSubmit = async () => {
             console.error("Failed to send verification email:", e);
           }
           router.replace(
-            `/auth/verify-email?email=${encodeURIComponent(email.value)}`,
+            `/st-auth/verify-email?email=${encodeURIComponent(email.value)}`,
           );
           return;
         }
-        router.replace("/auth/verify-email");
+        router.replace("/st-auth/verify-email");
         return;
       }
 
@@ -633,7 +633,7 @@ const selectGoogleLogin = async () => {
       await disconnect();
     }
 
-    const redirectUri = `${window.location.origin}/auth/callback/google`;
+    const redirectUri = `${window.location.origin}/st-auth/callback/google`;
     const authUrl = await getThirdPartyAuthUrl("google", redirectUri);
 
     // Open popup window at top right
@@ -710,7 +710,7 @@ const selectGithubLogin = async () => {
       await disconnect();
     }
 
-    const redirectUri = `${window.location.origin}/auth/callback/github`;
+    const redirectUri = `${window.location.origin}/st-auth/callback/github`;
     const authUrl = await getThirdPartyAuthUrl("github", redirectUri);
 
     // Open popup window at top right
