@@ -15,13 +15,13 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
     "/privacy-policy",
     "/tos",
     "/support",
-    "/auth/reset-password",
-    "/auth/verify-email",
+    "/st-auth/reset-password",
+    "/st-auth/verify-email",
   ];
 
   const isPublicRoute =
     publicRoutes.some((route) => to.path === route) ||
-    to.path.startsWith("/auth/callback/");
+    to.path.startsWith("/st-auth/callback/");
 
   // On client, wait for session check if it's currently loading
   // Skip for public routes to avoid unnecessary API calls when not authenticated
@@ -73,11 +73,11 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
 
   if (isAuthenticated && isEmailVerified.value === false) {
     if (
-      !to.path.startsWith("/auth/verify-email") &&
-      !to.path.startsWith("/auth/callback/") &&
-      !to.path.startsWith("/auth/reset-password")
+      !to.path.startsWith("/st-auth/verify-email") &&
+      !to.path.startsWith("/st-auth/callback/") &&
+      !to.path.startsWith("/st-auth/reset-password")
     ) {
-      return navigateTo("/auth/verify-email");
+      return navigateTo("/st-auth/verify-email");
     }
   }
 
