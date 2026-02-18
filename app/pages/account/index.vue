@@ -1231,6 +1231,9 @@ const loadInvitation = async () => {
 
       const response = await $fetch<Invitation>(
         `${config.backend_url}/api/credits/invitations/${invitationToken.value}`,
+        {
+          credentials: "include",
+        },
       );
       invitation.value = response;
       console.log("loaded invitation", invitation.value);
