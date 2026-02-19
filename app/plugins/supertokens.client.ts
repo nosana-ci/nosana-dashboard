@@ -14,11 +14,12 @@ export default defineNuxtPlugin(() => {
       apiBasePath: "/auth",
     },
     recipeList: [
-        Session.init({
-            ...(config.public.cookie_domain && {
-              sessionTokenBackendDomain: config.public.cookie_domain,
-            }),
-          }),
+        Session.init(),
+        // Session.init({
+        //     ...(config.public.cookie_domain && {
+        //       sessionTokenBackendDomain: config.public.cookie_domain,
+        //     }),
+        //   }),
       EmailPassword.init(),
       ThirdParty.init(),
       EmailVerification.init(),
