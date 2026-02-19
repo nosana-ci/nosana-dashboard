@@ -98,7 +98,7 @@ export function useKit() {
         clientConfig.wallet = walletAdapter;
       }
 
-      if (isAuthenticated) {
+      if (isAuthenticated.value) {
         clientConfig.api = { ...clientConfig.api, include_credentials: true };
       }
 
@@ -106,7 +106,7 @@ export function useKit() {
         network,
         clientConfig
       );
-      
+
       // Set wallet directly on client to ensure reactive updates
       if (!apiKey && walletAdapter && account.value?.address) {
         client.wallet = walletAdapter;
