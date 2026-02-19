@@ -10,15 +10,15 @@ export default defineNuxtPlugin(() => {
   SuperTokens.init({
     appInfo: {
       appName: "Nosana Deploy",
-      apiDomain: config.public.client_manager_url as string,
+      apiDomain: config.public.client_manager_url,
       apiBasePath: "/auth",
     },
     recipeList: [
-      Session.init({
-        sessionTokenBackendDomain: config.public.cookie_domain as
-          | string
-          | undefined,
-      }),
+        Session.init({
+            ...(config.public.cookie_domain && {
+              sessionTokenBackendDomain: config.public.cookie_domain,
+            }),
+          }),
       EmailPassword.init(),
       ThirdParty.init(),
       EmailVerification.init(),
