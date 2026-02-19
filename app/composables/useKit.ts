@@ -98,8 +98,14 @@ export function useKit() {
         clientConfig.wallet = walletAdapter;
       }
 
-      const client = createNosanaClient(network, Object.keys(clientConfig).length > 0 ? clientConfig : undefined);
-
+      const client = createNosanaClient(
+        network, 
+        {
+          ...(Object.keys(clientConfig).length > 0 ? clientConfig : {}),
+          ...(isAuthenticated ? { include_credentials: true } : {})
+        }
+      );
+      
       // Set wallet directly on client to ensure reactive updates
       if (!apiKey && walletAdapter && account.value?.address) {
         client.wallet = walletAdapter;
