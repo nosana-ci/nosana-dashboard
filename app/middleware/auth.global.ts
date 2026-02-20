@@ -21,18 +21,9 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
 
   const isPublicRoute =
     publicRoutes.some((route) => to.path === route) ||
-    to.path.startsWith("/st-auth/callback/");
-
-  console.log(
-    "[AUTH MIDDLEWARE] path:",
-    to.path,
-    "isPublicRoute:",
-    isPublicRoute,
-    "isLoading:",
-    isLoading.value,
-    "superTokensAuth:",
-    superTokensAuth.value,
-  );
+    to.path.startsWith("/st-auth/callback/") ||
+    to.path.startsWith("/st-auth/verify-email") ||
+    to.path.startsWith("/st-auth/reset-password");
 
   // On client, wait for session check if it's currently loading
   // Skip for public routes to avoid unnecessary API calls when not authenticated
