@@ -63,7 +63,7 @@
                 >
               </td>
               <VaultOverviewRows
-                v-if="true === true"
+                v-if="isWalletMode === true"
                 :isTableRow="false"
                 :deployment="deployment"
               />
