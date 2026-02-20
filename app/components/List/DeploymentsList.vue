@@ -22,20 +22,20 @@
               Failed to load deployments: {{ deploymentsError }}
             </td>
           </tr>
-          <tr v-else-if="!displayedDeployments.length">
+          <tr v-else-if="!deployments.length">
             <td :colspan="isWalletMode ? 5 : 4" class="has-text-centered">
               No deployments found
             </td>
           </tr>
           <template v-else>
             <tr
-              v-for="deployment in displayedDeployments"
+              v-for="deployment in deployments"
               :key="deployment.id"
               class="clickable-row"
             >
               <td>
                 <NuxtLink
-                  :to="deploymentLink(deployment.id)"
+                  :to="`/deployments/${deployment.id}`"
                   class="clickable-row-link"
                 >
                   <div class="clickable-row-cell-content">
@@ -59,28 +59,11 @@
               </td>
               <td>
                 <span class="clickable-row-cell-content"
-                  >{{
-                    Array.isArray(deployment.jobs) 
-                      ? deployment.jobs.filter(job => {
-                          const state = (job as any).state;
-                          // Active jobs: QUEUED (0), RUNNING (1) - exclude STOPPED (3)
-                          // Can be string ('QUEUED', 'RUNNING') or number (0, 1)
-                          if (typeof state === 'number') {
-                            return state === 0 || state === 1;
-                          }
-                          if (typeof state === 'string') {
-                            const stateUpper = state.toUpperCase();
-                            return stateUpper === 'QUEUED' || stateUpper === 'RUNNING';
-                          }
-                          return false;
-                        }).length 
-                      : 0
-                  }}
-                  Jobs</span
+                  >{{ deployment.active_jobs || 0 }} Jobs</span
                 >
               </td>
               <VaultOverviewRows
-                v-if="isWalletMode === true"
+                v-if="true === true"
                 :isTableRow="false"
                 :deployment="deployment"
               />
@@ -99,7 +82,7 @@
     </div>
   </div>
 
-  <Pagination
+  <!-- <Pagination
     v-if="showPagination && totalPages > 1"
     v-model="currentPage"
     class="pagination is-centered mt-4"
@@ -111,7 +94,7 @@
       <span>See all</span>
       <span class="icon"> &#8250; </span>
     </nuxt-link>
-  </div>
+  </div> -->
 </template>
 
 <script setup lang="ts">
@@ -120,21 +103,26 @@ import VaultOverviewRows from "@/components/Vault/VaultOverviewRows.vue";
 
 import { useWallet } from "@nosana/solana-vue";
 import { useKit } from "~/composables/useKit";
-import type { Deployment } from "@nosana/kit";
+import type { ApiDeploymentListResult } from "@nosana/api";
 import { formatDate } from "~/utils/formatDate";
+
+const { isAuthenticated, isLoading } = useSuperTokens();
+const { connected } = useWallet();
+
+const isWalletMode = computed(() => {
+  return connected.value && !isAuthenticated.value;
+});
 
 // Props
 const props = withDefaults(
   defineProps<{
     itemsPerPage?: number;
-    limit?: number;
     showPagination?: boolean;
   }>(),
   {
     itemsPerPage: 10,
-    limit: undefined,
     showPagination: true,
-  }
+  },
 );
 
 // Emits
@@ -142,21 +130,10 @@ const emit = defineEmits<{
   "update:total-deployments": [count: number];
 }>();
 
-const deployments = ref<Deployment[]>([]);
+const deployments = ref<ApiDeploymentListResult["deployments"]>([]);
 const currentPage = ref(1);
 const hasLoadedOnce = ref(false);
-const { isAuthenticated, isLoading } = useSuperTokens();
-const { connected } = useWallet();
 const router = useRouter();
-const route = useRoute();
-
-const hasAnyAuth = computed(() => {
-  return isAuthenticated.value || connected.value;
-});
-
-const isWalletMode = computed(() => {
-  return connected.value && !isAuthenticated.value;
-});
 
 const { nosana } = useKit();
 const loading = ref(false);
@@ -164,10 +141,15 @@ const deploymentsError = ref<string | null>(null);
 
 const refreshDeployments = async () => {
   try {
-    deploymentsError.value = null;
     loading.value = true;
-    const items = await nosana.value.api.deployments.list();
-    deployments.value = items || [];
+
+    const items = await nosana.value.api.deployments.list({
+      // @ts-expect-error need to fix this type error as number should be ok
+      limit: props.itemsPerPage,
+    });
+
+    deploymentsError.value = null;
+    deployments.value = items.deployments || [];
   } catch (e: any) {
     deploymentsError.value = e?.message || "Failed to load deployments";
     deployments.value = [];
@@ -177,110 +159,12 @@ const refreshDeployments = async () => {
   }
 };
 
-const currentState = computed(() =>
-  router.currentRoute.value.query.filter?.toString()
-);
-
-// Computed properties
-const filteredDeployments = computed(() => {
-  let filtered = deployments.value;
-
-  // Apply status filter
-  if (currentState.value) {
-    filtered = filtered.filter((d) => d.status === currentState.value);
-  }
-
-  // Apply search filter
-  const searchQuery = router.currentRoute.value.query.search?.toString() as
-    | string
-    | undefined;
-  if (searchQuery) {
-    const query = searchQuery.toLowerCase();
-    filtered = filtered.filter(
-      (d) =>
-        d.name.toLowerCase().includes(query) ||
-        d.id.toLowerCase().includes(query)
-    );
-  }
-
-  return filtered;
-});
-
-// Create a computed property for the deployments actually displayed in the table
-const displayedDeployments = computed(() => {
-  // Compact mode: show only first N and hide pagination
-  if (!props.showPagination) {
-    const max = props.limit ?? props.itemsPerPage;
-    return filteredDeployments.value.slice(0, max);
-  }
-
-  // Paginated mode
-  const start = (currentPage.value - 1) * props.itemsPerPage;
-  const end = start + props.itemsPerPage;
-  return filteredDeployments.value.slice(start, end);
-});
-
-const totalDeployments = computed(() => filteredDeployments.value.length);
-
-const totalPages = computed(() =>
-  Math.ceil(totalDeployments.value / props.itemsPerPage)
-);
-
-// More indicator for compact mode
-const hasMore = computed(() => {
-  if (props.showPagination) return false;
-  const max = props.limit ?? props.itemsPerPage;
-  return filteredDeployments.value.length > max;
-});
-
-// Build nuxt-link target
-const deploymentLink = (id: string) => {
-  return `/deployments/${id}`;
-};
-
-// Watch for authentication changes
 watch(
-  [isAuthenticated, isLoading, connected],
-  ([isAuth, isLoad, newConnected]) => {
-    // Skip loading state (session refresh in progress)
-    if (isLoad) return;
-    
-    const hasAuth = isAuth || newConnected;
-    
-    // Auto-redirect if unauthenticated
-    if (!hasAuth && !isLoad) {
-      router.push("/account");
-      return;
-    }
-
-    // Only fetch if authenticated AND haven't loaded yet
-    if (hasAuth && !hasLoadedOnce.value) {
-      refreshDeployments();
-    } else if (!hasAuth) {
-      // Clear on logout
-      deployments.value = [];
-      hasLoadedOnce.value = false; // Reset so next login will fetch
-    }
-  },
-  { immediate: true }
-);
-
-// Emit total deployments count
-watch(
-  totalDeployments,
-  (count) => {
-    emit("update:total-deployments", count);
-  },
-  { immediate: true }
-);
-
-// Add watcher for status filter changes
-watch(
-  () => currentState.value,
+  () => [currentPage.value, props.itemsPerPage],
   () => {
-    currentPage.value = 1;
+    refreshDeployments();
   },
-  { immediate: false }
+  { immediate: true },
 );
 </script>
 
