@@ -78,8 +78,6 @@ export default defineNuxtConfig({
       network: process.env.NETWORK || "mainnet",
       nodeDomain: process.env.NODE_DOMAIN,
       frpServer: process.env.FRP_SERVER || "node.k8s.prd.nos.ci",
-      googleRedirectUri: process.env.GOOGLE_REDIRECT_URI,
-      googleClientId: process.env.GOOGLE_CLIENT_ID,
       cookie_domain: process.env.NUXT_PUBLIC_COOKIE_DOMAIN,
     },
   },
