@@ -238,11 +238,19 @@
             <!-- Overview Tab -->
             <div v-if="activeTab === 'overview'">
               <!-- Error Warning -->
-              <div v-if="hasErrorInLastEvent" class="notification is-danger mb-5 is-light">
-                <div class="is-flex is-align-items-center is-justify-content-space-between">
+              <div
+                v-if="hasErrorInLastEvent"
+                class="notification is-danger mb-5 is-light"
+              >
+                <div
+                  class="is-flex is-align-items-center is-justify-content-space-between"
+                >
                   <div>
                     <strong>Deployment Error Detected</strong>
-                    <p class="mt-1">An error occurred with this deployment. View the Events tab for more details.</p>
+                    <p class="mt-1">
+                      An error occurred with this deployment. View the Events
+                      tab for more details.
+                    </p>
                   </div>
                   <button
                     @click="switchTab('events')"
@@ -258,37 +266,58 @@
                 <h2 class="title is-5 mb-3">Endpoints</h2>
                 <div class="box is-borderless">
                   <div class="table-container">
-                    <table class="table is-fullwidth mb-0" style="table-layout: fixed;">
+                    <table
+                      class="table is-fullwidth mb-0"
+                      style="table-layout: fixed"
+                    >
                       <thead>
                         <tr>
-                          <th style="width: 25%;">Operation</th>
-                          <th style="width: 10%;">Port</th>
-                          <th style="width: 12%;">Status</th>
-                          <th style="width: 53%;">URL</th>
+                          <th style="width: 25%">Operation</th>
+                          <th style="width: 10%">Port</th>
+                          <th style="width: 12%">Status</th>
+                          <th style="width: 53%">URL</th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr
                           v-for="endpoint in deploymentEndpoints"
                           :key="`${endpoint.opId}-${endpoint.port}`"
-                          :style="{ opacity: deployment.status !== 'RUNNING' && deployment.status !== 'STARTING' ? '0.5' : '1' }"
+                          :style="{
+                            opacity:
+                              deployment.status !== 'RUNNING' &&
+                              deployment.status !== 'STARTING'
+                                ? '0.5'
+                                : '1',
+                          }"
                         >
                           <td>{{ endpoint.opId }}</td>
                           <td>{{ endpoint.port }}</td>
                           <td>
                             <StatusTag
-                              :status="deployment.status === 'RUNNING' || deployment.status === 'STARTING' ? 'ACTIVE' : 'INACTIVE'"
+                              :status="
+                                deployment.status === 'RUNNING' ||
+                                deployment.status === 'STARTING'
+                                  ? 'ACTIVE'
+                                  : 'INACTIVE'
+                              "
                             />
                           </td>
                           <td>
                             <a
-                              v-if="deployment.status === 'RUNNING' || deployment.status === 'STARTING'"
+                              v-if="
+                                deployment.status === 'RUNNING' ||
+                                deployment.status === 'STARTING'
+                              "
                               :href="endpoint.url"
                               target="_blank"
                               class="has-text-link endpoint-url"
                               >{{ endpoint.url }} ↗</a
                             >
-                            <span v-else class="has-text-grey-light" style="text-decoration: line-through;">
+                            <span
+                              v-else
+                              class="has-text-grey-light"
+                              style="text-decoration: line-through"
+                            >
                               {{ endpoint.url }}
                             </span>
                           </td>
@@ -306,14 +335,20 @@
                   <!-- Job Activity Tabs (only show if 5+ jobs) -->
                   <div v-if="totalJobs >= 5" class="deployment-tabs">
                     <button
-                      @click="jobActivityTab = 'active'; historicalJobsPage = 1"
+                      @click="
+                        jobActivityTab = 'active';
+                        historicalJobsPage = 1;
+                      "
                       class="tab-button is-small"
                       :class="{ 'is-active': jobActivityTab === 'active' }"
                     >
                       Active
                     </button>
                     <button
-                      @click="jobActivityTab = 'history'; historicalJobsPage = 1"
+                      @click="
+                        jobActivityTab = 'history';
+                        historicalJobsPage = 1;
+                      "
                       class="tab-button is-small"
                       :class="{ 'is-active': jobActivityTab === 'history' }"
                     >
@@ -325,7 +360,9 @@
                 <!-- All Jobs (when tabs are hidden, < 5 jobs) -->
                 <div v-if="totalJobs < 5">
                   <div
-                    v-if="activeJobs.length === 0 && allHistoricalJobs.length === 0"
+                    v-if="
+                      activeJobs.length === 0 && allHistoricalJobs.length === 0
+                    "
                     class="box has-text-centered p-6"
                   >
                     <p class="has-text-grey">
@@ -338,19 +375,32 @@
 
                   <div v-else class="box is-borderless">
                     <div class="table-container">
-                      <table class="table is-fullwidth mb-0" style="table-layout: fixed;">
+                      <table
+                        class="table is-fullwidth mb-0"
+                        style="table-layout: fixed"
+                      >
                         <thead>
                           <tr>
-                            <th style="width: 25%;">Name</th>
-                            <th style="width: 10%;">Revision</th>
-                            <th style="width: 12%;">Status</th>
-                            <th style="width: 18%;">Created on</th>
-                            <th style="width: 20%;">Navigation</th>
+                            <th style="width: 25%">Name</th>
+                            <th style="width: 10%">Revision</th>
+                            <th style="width: 12%">Status</th>
+                            <th style="width: 18%">Created on</th>
+                            <th style="width: 20%">Navigation</th>
                           </tr>
                         </thead>
                         <tbody>
-                          <tr v-for="job in [...activeJobs, ...allHistoricalJobs]" :key="job.job">
-                            <td style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 0;">
+                          <tr
+                            v-for="job in [...activeJobs, ...allHistoricalJobs]"
+                            :key="job.job"
+                          >
+                            <td
+                              style="
+                                overflow: hidden;
+                                text-overflow: ellipsis;
+                                white-space: nowrap;
+                                max-width: 0;
+                              "
+                            >
                               <span class="is-family-monospace is-size-7">{{
                                 job.job
                               }}</span>
@@ -363,7 +413,7 @@
                             </td>
                             <td>{{ formatDate(job.created_at) }}</td>
                             <td>
-                            <NuxtLink
+                              <NuxtLink
                                 v-if="deployment"
                                 :to="`/deployments/${deployment.id}/jobs/${job.job}`"
                                 class="has-text-link"
@@ -394,19 +444,29 @@
 
                   <div v-else class="box is-borderless">
                     <div class="table-container">
-                      <table class="table is-fullwidth mb-0" style="table-layout: fixed;">
+                      <table
+                        class="table is-fullwidth mb-0"
+                        style="table-layout: fixed"
+                      >
                         <thead>
                           <tr>
-                            <th style="width: 25%;">Name</th>
-                            <th style="width: 10%;">Revision</th>
-                            <th style="width: 12%;">Status</th>
-                            <th style="width: 18%;">Created on</th>
-                            <th style="width: 20%;">Navigation</th>
+                            <th style="width: 25%">Name</th>
+                            <th style="width: 10%">Revision</th>
+                            <th style="width: 12%">Status</th>
+                            <th style="width: 18%">Created on</th>
+                            <th style="width: 20%">Navigation</th>
                           </tr>
                         </thead>
                         <tbody>
                           <tr v-for="job in activeJobs" :key="job.job">
-                            <td style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 0;">
+                            <td
+                              style="
+                                overflow: hidden;
+                                text-overflow: ellipsis;
+                                white-space: nowrap;
+                                max-width: 0;
+                              "
+                            >
                               <span class="is-family-monospace is-size-7">{{
                                 job.job
                               }}</span>
@@ -419,7 +479,7 @@
                             </td>
                             <td>{{ formatDate(job.created_at) }}</td>
                             <td>
-                            <NuxtLink
+                              <NuxtLink
                                 v-if="deployment"
                                 :to="`/deployments/${deployment.id}/jobs/${job.job}`"
                                 class="has-text-link"
@@ -446,20 +506,30 @@
                   <div v-else>
                     <div class="box is-borderless">
                       <div class="table-container">
-                        <table class="table is-fullwidth mb-0" style="table-layout: fixed;">
+                        <table
+                          class="table is-fullwidth mb-0"
+                          style="table-layout: fixed"
+                        >
                           <thead>
                             <tr>
-                              <th style="width: 25%;">Name</th>
-                              <th style="width: 10%;">Revision</th>
-                              <th style="width: 12%;">Status</th>
-                              <th style="width: 15%;">Duration</th>
-                              <th style="width: 18%;">Created on</th>
-                              <th style="width: 20%;">Navigation</th>
+                              <th style="width: 25%">Name</th>
+                              <th style="width: 10%">Revision</th>
+                              <th style="width: 12%">Status</th>
+                              <th style="width: 15%">Duration</th>
+                              <th style="width: 18%">Created on</th>
+                              <th style="width: 20%">Navigation</th>
                             </tr>
                           </thead>
                           <tbody>
                             <tr v-for="job in historicalJobs" :key="job.job">
-                              <td style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 0;">
+                              <td
+                                style="
+                                  overflow: hidden;
+                                  text-overflow: ellipsis;
+                                  white-space: nowrap;
+                                  max-width: 0;
+                                "
+                              >
                                 <span class="is-family-monospace is-size-7">{{
                                   job.job
                                 }}</span>
@@ -471,7 +541,7 @@
                                 <JobStatus :status="job.state || 0" />
                               </td>
                               <td>
-                              <span v-if="getJobDuration(job.job) !== null">
+                                <span v-if="getJobDuration(job.job) !== null">
                                   <SecondsFormatter
                                     :seconds="getJobDuration(job.job) as number"
                                     :showSeconds="true"
@@ -481,7 +551,7 @@
                               </td>
                               <td>{{ formatDate(job.created_at) }}</td>
                               <td>
-                              <NuxtLink
+                                <NuxtLink
                                   v-if="deployment"
                                   :to="`/deployments/${deployment.id}/jobs/${job.job}`"
                                   class="has-text-link"
@@ -511,7 +581,10 @@
                 <h2 class="title is-5 mb-3">Deployment details</h2>
                 <div class="box is-borderless">
                   <div class="table-container">
-                    <table class="table is-fullwidth mb-0" style="table-layout: fixed;">
+                    <table
+                      class="table is-fullwidth mb-0"
+                      style="table-layout: fixed"
+                    >
                       <tbody>
                         <!-- Vault Details Section -->
                         <VaultOverviewRows
@@ -520,29 +593,34 @@
                           :deployment="deployment"
                         />
                         <tr>
-                          <td style="width: 25%;">Deployment strategy</td>
-                          <td style="width: 75%;">{{ formatStrategy(deployment.strategy) }}</td>
+                          <td style="width: 25%">Deployment strategy</td>
+                          <td style="width: 75%">
+                            {{ formatStrategy(deployment.strategy) }}
+                          </td>
                         </tr>
                         <tr>
-                          <td style="width: 25%;">Replicas</td>
-                          <td style="width: 75%;">{{ deployment.replicas }}</td>
+                          <td style="width: 25%">Replicas</td>
+                          <td style="width: 75%">{{ deployment.replicas }}</td>
                         </tr>
                         <tr>
-                          <td style="width: 25%;">GPU</td>
-                          <td style="width: 75%;" v-if="deployment && deployment.market">
+                          <td style="width: 25%">GPU</td>
+                          <td
+                            style="width: 75%"
+                            v-if="deployment && deployment.market"
+                          >
                             <span
                               v-if="
                                 testgridMarkets &&
                                 testgridMarkets.find(
                                   (tgm: any) =>
-                                    tgm.address === deployment?.market
+                                    tgm.address === deployment?.market,
                                 )
                               "
                             >
                               {{
                                 testgridMarkets.find(
                                   (tgm: any) =>
-                                    tgm.address === deployment?.market
+                                    tgm.address === deployment?.market,
                                 ).name
                               }}
                             </span>
@@ -550,8 +628,8 @@
                           </td>
                         </tr>
                         <tr>
-                          <td style="width: 25%;">Container timeout</td>
-                          <td style="width: 75%;">
+                          <td style="width: 25%">Container timeout</td>
+                          <td style="width: 75%">
                             <SecondsFormatter
                               v-if="deployment"
                               :seconds="deployment.timeout * 60"
@@ -567,8 +645,8 @@
                               'SCHEDULED' && deploymentSchedule
                           "
                         >
-                          <td style="width: 25%;">Schedule</td>
-                          <td style="width: 75%;">
+                          <td style="width: 25%">Schedule</td>
+                          <td style="width: 75%">
                             <div class="is-flex is-flex-direction-column">
                               <span class="is-family-monospace">{{
                                 deploymentSchedule
@@ -580,12 +658,16 @@
                           </td>
                         </tr>
                         <tr>
-                          <td style="width: 25%;">Created on</td>
-                          <td style="width: 75%;">{{ formatDate(deployment.created_at) }}</td>
+                          <td style="width: 25%">Created on</td>
+                          <td style="width: 75%">
+                            {{ formatDate(deployment.created_at) }}
+                          </td>
                         </tr>
                         <tr>
-                          <td style="width: 25%;">Last updated on</td>
-                          <td style="width: 75%;">{{ formatDate(deployment.updated_at) }}</td>
+                          <td style="width: 25%">Last updated on</td>
+                          <td style="width: 75%">
+                            {{ formatDate(deployment.updated_at) }}
+                          </td>
                         </tr>
                       </tbody>
                     </table>
@@ -649,8 +731,12 @@
                         </tr>
                         <tr
                           v-else
-                          v-for="task in tasks"
-                          :key="task.deploymentId + task.created_at"
+                          v-for="(task, index) in tasks"
+                          :key="
+                            task.deploymentId
+                              ? `${task.deploymentId}-${task.created_at}`
+                              : `task-${index}`
+                          "
                         >
                           <td>
                             <StatusTag status="QUEUED" />
@@ -775,30 +861,51 @@
                     class="tab-button"
                   >
                     {{ job.job.slice(0, 16) }}...
-                    <span v-if="getJobStateNumber(job) === 2" class="ml-2 is-size-7 has-text-grey">(completed)</span>
+                    <span
+                      v-if="getJobStateNumber(job) === 2"
+                      class="ml-2 is-size-7 has-text-grey"
+                      >(completed)</span
+                    >
                   </button>
                 </div>
 
                 <!-- Selected Job Logs -->
-                <div v-if="activeLogsJobId && deployment" class="selected-job-logs">
+                <div
+                  v-if="activeLogsJobId && deployment"
+                  class="selected-job-logs"
+                >
                   <!-- Show logs for active jobs -->
                   <div v-if="isActiveJob(activeLogsJobId)">
-                    <JobLogsContainer :job-id="activeLogsJobId" :deployment-id="deployment.id" />
+                    <JobLogsContainer
+                      :job-id="activeLogsJobId"
+                      :deployment-id="deployment.id"
+                    />
                   </div>
                   <!-- Show results for completed jobs -->
-                  <div v-else-if="isCompletedJob(activeLogsJobId)" class="completed-job-results">
-                    <div v-if="loadingJobResults[activeLogsJobId]" class="has-text-centered p-4">
+                  <div
+                    v-else-if="isCompletedJob(activeLogsJobId)"
+                    class="completed-job-results"
+                  >
+                    <div
+                      v-if="loadingJobResults[activeLogsJobId]"
+                      class="has-text-centered p-4"
+                    >
                       <p class="has-text-grey">Loading results...</p>
                     </div>
-                    <div v-else-if="completedJobResults[activeLogsJobId] && getJobData(activeLogsJobId)">
-                      <JobResult 
-                        :ipfs-result="completedJobResults[activeLogsJobId]!" 
+                    <div
+                      v-else-if="
+                        completedJobResults[activeLogsJobId] &&
+                        getJobData(activeLogsJobId)
+                      "
+                    >
+                      <JobResult
+                        :ipfs-result="completedJobResults[activeLogsJobId]!"
                         :ipfs-job="getJobData(activeLogsJobId)!"
                       />
                     </div>
                     <div v-else-if="!loadingJobResults[activeLogsJobId]">
-                      <JobResult 
-                        :ipfs-result="null" 
+                      <JobResult
+                        :ipfs-result="null"
                         :ipfs-job="getJobData(activeLogsJobId) || null"
                       />
                     </div>
@@ -869,9 +976,7 @@
               <div class="mb-4">
                 <h2 class="title is-5 mb-3">Deployment Revisions</h2>
                 <div
-                  v-if="
-                    deployment?.revisions && deployment.revisions.length > 0
-                  "
+                  v-if="deploymentRevisions && deploymentRevisions.length > 0"
                   class="box is-borderless"
                 >
                   <div class="table-container">
@@ -1176,17 +1281,17 @@
               </div>
             </div>
           </section>
-            <footer class="modal-card-foot is-justify-content-flex-end">
-              <button class="button" @click="showScheduleModal = false">
-                Cancel
-              </button>
-              <button
-                class="button is-success"
-                @click="
-                  updateSchedule();
-                  showScheduleModal = false;
-                "
-                :class="{ 'is-loading': actionLoading }"
+          <footer class="modal-card-foot is-justify-content-flex-end">
+            <button class="button" @click="showScheduleModal = false">
+              Cancel
+            </button>
+            <button
+              class="button is-success"
+              @click="
+                updateSchedule();
+                showScheduleModal = false;
+              "
+              :class="{ 'is-loading': actionLoading }"
               :disabled="
                 actionLoading ||
                 !newSchedule ||
@@ -1287,7 +1392,13 @@
 
 <script setup lang="ts">
 import type { Deployment, JobDefinition } from "@nosana/kit";
-import type { DeploymentJob as ApiDeploymentJob } from "@nosana/api";
+import type {
+  DeploymentJob as ApiDeploymentJob,
+  DeploymentJobItem,
+  DeploymentEventItem,
+  DeploymentRevisionItem,
+  DeploymentTaskItem,
+} from "@nosana/api";
 import { useVaultModal } from "~/composables/useVaultModal";
 import { updateVaultBalance } from "~/composables/useDeploymentVault";
 import { useToast } from "vue-toastification";
@@ -1321,10 +1432,9 @@ import { parseCronExpression } from "~/utils/parseCronExpression";
 
 const colorMode = useColorMode();
 
-// Types - use kit's types directly
-type DeploymentJob = NonNullable<Deployment['jobs']>[number];
+type DeploymentJob = DeploymentJobItem;
 
-interface DeploymentRevision {
+interface DeploymentRevisionLocal {
   revision: number;
   created_at: string;
   job_definition?: JobDefinition;
@@ -1336,16 +1446,7 @@ interface DeploymentEndpoint {
   url: string;
 }
 
-// Use SDK Deployment as-is; access extra fields via guarded indexing
-
-interface DeploymentEvent {
-  type: string;
-  category: string;
-  message: string;
-  created_at: string;
-  deploymentId: string;
-  tx?: string;
-}
+type DeploymentEvent = DeploymentEventItem;
 
 // Composables
 const route = useRoute();
@@ -1364,11 +1465,9 @@ const publicKey = computed(() => {
   };
 });
 
-const isAuthenticated = computed(
-  () => superTokensAuth.value
-);
+const isAuthenticated = computed(() => superTokensAuth.value);
 const isWalletMode = computed(
-  () => connected.value && account.value?.address && !superTokensAuth.value
+  () => connected.value && account.value?.address && !superTokensAuth.value,
 );
 const hasAnyAuth = computed(() => isAuthenticated.value || isWalletMode.value);
 const { getIpfs } = useIpfs();
@@ -1387,7 +1486,10 @@ const availableTabs = computed(() => {
 
 // Initialize activeTab from URL query parameter
 const initialTab = route.query.tab?.toString();
-if (initialTab && ["overview", "logs", "events", "configuration"].includes(initialTab)) {
+if (
+  initialTab &&
+  ["overview", "logs", "events", "configuration"].includes(initialTab)
+) {
   activeTab.value = initialTab;
 }
 const activeLogsJobId = ref<string | null>(null);
@@ -1409,6 +1511,12 @@ const newTimeoutHours = ref<number | null>(null);
 const newSchedule = ref<string>("");
 const tasks = ref<any[]>([]);
 const tasksLoading = ref(false);
+const deploymentJobs = ref<DeploymentJobItem[]>([]);
+const deploymentEventsData = ref<DeploymentEventItem[]>([]);
+const deploymentRevisions = ref<DeploymentRevisionItem[]>([]);
+const jobsLoading = ref(false);
+const eventsLoading = ref(false);
+const revisionsLoading = ref(false);
 const isActionsDropdownOpen = ref(false);
 const showReplicasModal = ref(false);
 const showTimeoutModal = ref(false);
@@ -1476,7 +1584,7 @@ watch(
       }
     }
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 const attachSmilDebugListeners = (svgEl: SVGElement, label: string) => {
@@ -1498,14 +1606,14 @@ const instrumentHeaderIcon = () => {
   if (!svg || !deployment.value) return;
   attachSmilDebugListeners(
     svg,
-    `dep=${deployment.value.id} status=${deployment.value.status}`
+    `dep=${deployment.value.id} status=${deployment.value.status}`,
   );
 };
 
 watch(
   () => deployment.value?.status,
   () => nextTick(instrumentHeaderIcon),
-  { immediate: true }
+  { immediate: true },
 );
 const statusPollingInterval = ref<NodeJS.Timeout | null>(null);
 const jobPollingInterval = ref<NodeJS.Timeout | null>(null);
@@ -1527,12 +1635,8 @@ const pollingDebug = ref({
   lastJobPoll: null as Date | null,
 });
 
-// Computed properties for revisions
-const sortedRevisions = computed<DeploymentRevision[]>(() => {
-  const dep = deployment.value as unknown as {
-    revisions?: DeploymentRevision[];
-  } | null;
-  return Array.isArray(dep?.revisions) ? dep!.revisions! : [];
+const sortedRevisions = computed<DeploymentRevisionLocal[]>(() => {
+  return deploymentRevisions.value || [];
 });
 
 const formatDate = (dateString: string | Date) => {
@@ -1551,31 +1655,30 @@ const originalDefinition = ref<JobDefinition | null>(null);
 // Editor refs and validation
 const currentJobDefEditor = ref<{ hasErrors: boolean } | null>(null);
 const revisionJobDefEditor = ref<{ hasErrors: boolean } | null>(null);
-const { canSave: canSaveCurrent } = useJsonEditorValidation(currentJobDefEditor);
-const { canSave: canSaveRevision } = useJsonEditorValidation(revisionJobDefEditor);
+const { canSave: canSaveCurrent } =
+  useJsonEditorValidation(currentJobDefEditor);
+const { canSave: canSaveRevision } =
+  useJsonEditorValidation(revisionJobDefEditor);
 
 const loadJobDefinition = async () => {
-  // Try to get job definition from deployment revisions first
-  const d = deployment.value as unknown as {
-    revisions?: DeploymentRevision[];
-    active_revision?: number;
-  } | null;
-  if (Array.isArray(d?.revisions) && d!.revisions!.length > 0) {
+  if (
+    Array.isArray(deploymentRevisions.value) &&
+    deploymentRevisions.value.length > 0
+  ) {
     const activeRevision =
-      d!.revisions!.find(
-        (r: DeploymentRevision) => r.revision === d!.active_revision
-      ) || d!.revisions![d!.revisions!.length - 1];
+      deploymentRevisions.value.find(
+        (r) => r.revision === deployment.value?.active_revision,
+      ) || deploymentRevisions.value[deploymentRevisions.value.length - 1];
 
     if (activeRevision?.job_definition) {
       jobDefinitionModel.value = activeRevision.job_definition;
       originalDefinition.value = JSON.parse(
-        JSON.stringify(activeRevision.job_definition)
+        JSON.stringify(activeRevision.job_definition),
       );
       return;
     }
   }
 
-  // Fallback to IPFS if no job definition in revisions
   const ipfsHash = (
     deployment.value as unknown as { ipfs_definition_hash?: string } | null
   )?.ipfs_definition_hash;
@@ -1589,7 +1692,7 @@ const loadJobDefinition = async () => {
     const definition = await getIpfs(ipfsHash);
     jobDefinitionModel.value = definition as JobDefinition;
     originalDefinition.value = JSON.parse(
-      JSON.stringify(definition)
+      JSON.stringify(definition),
     ) as JobDefinition;
   } catch (err: any) {
     console.error("Error loading job definition:", err);
@@ -1615,7 +1718,7 @@ const hasDefinitionChanged = computed(() => {
 const resetDefinition = () => {
   if (originalDefinition.value) {
     jobDefinitionModel.value = JSON.parse(
-      JSON.stringify(originalDefinition.value)
+      JSON.stringify(originalDefinition.value),
     );
   }
 };
@@ -1623,31 +1726,27 @@ const resetDefinition = () => {
 const makeRevision = async () => {
   if (!deployment.value || !hasDefinitionChanged.value) return;
 
-  // Check for validation errors
-  if (!canSaveCurrent('Cannot create revision: Please fix the errors in the job definition')) {
+  if (
+    !canSaveCurrent(
+      "Cannot create revision: Please fix the errors in the job definition",
+    )
+  ) {
     return;
   }
 
   try {
-    const { data } = await useAPI(
-      `/api/deployments/${deployment.value.id}/revisions`,
-      {
-        method: "POST",
-        body: { job_definition: jobDefinitionModel.value },
-        auth: true,
-      }
+    actionLoading.value = true;
+    await deployment.value.createRevision(jobDefinitionModel.value!);
+    toast.success("Revision created successfully!");
+    await loadDeployment();
+    originalDefinition.value = JSON.parse(
+      JSON.stringify(jobDefinitionModel.value),
     );
-
-    if (data.value) {
-      toast.success("Revision created successfully!");
-      await loadDeployment();
-      originalDefinition.value = JSON.parse(
-        JSON.stringify(jobDefinitionModel.value)
-      );
-    }
   } catch (err: any) {
     console.error("Error creating revision:", err);
     toast.error(`Failed to create revision: ${err.message}`);
+  } finally {
+    actionLoading.value = false;
   }
 };
 
@@ -1667,7 +1766,7 @@ const loadDeployment = async (silent = false) => {
   if (isWalletMode.value && !nosana.value.wallet) {
     // Wait for the SDK watch to set the wallet - try multiple times
     for (let i = 0; i < 10; i++) {
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
       if (nosana.value.wallet) {
         break;
       }
@@ -1675,7 +1774,7 @@ const loadDeployment = async (silent = false) => {
     // If still not ready, wait for next tick
     if (!nosana.value.wallet) {
       await nextTick();
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
     }
   }
 
@@ -1687,11 +1786,17 @@ const loadDeployment = async (silent = false) => {
     }
 
     const deploymentId = route.params.id as string;
-    if (preloadedDeployment.value && preloadedDeployment.value.id === deploymentId) {
+    if (
+      preloadedDeployment.value &&
+      preloadedDeployment.value.id === deploymentId
+    ) {
       applyDeploymentSnapshot(preloadedDeployment.value);
       preloadedDeployment.value = null;
       if (!silent) {
         await loadJobDefinition();
+        await loadJobs();
+        await loadEvents();
+        await loadRevisions();
         await loadTasks();
       }
       // Watcher will handle fast polling when status becomes RUNNING
@@ -1706,9 +1811,11 @@ const loadDeployment = async (silent = false) => {
     // This prevents tasks loading state from being reset during background polling
     if (!silent) {
       await loadJobDefinition();
+      await loadJobs();
+      await loadEvents();
+      await loadRevisions();
       await loadTasks();
     }
-
   } catch (err: any) {
     console.error("Error loading deployment:", err);
     // Only set error for non-silent operations
@@ -1722,7 +1829,7 @@ const loadDeployment = async (silent = false) => {
 
 // Action button visibility
 const deploymentStatus = computed(() =>
-  deployment.value?.status?.toUpperCase()
+  deployment.value?.status?.toUpperCase(),
 );
 
 const canStart = computed(() => {
@@ -1740,7 +1847,7 @@ const canArchive = computed(
     deploymentStatus.value !== "ARCHIVED" &&
     deploymentStatus.value !== "RUNNING" &&
     deploymentStatus.value !== "STOPPING" &&
-    deploymentStatus.value !== "DRAFT"
+    deploymentStatus.value !== "DRAFT",
 );
 
 const hasAnyActions = computed(() => {
@@ -1771,14 +1878,17 @@ const deploymentVault = computed(() => {
 // The deployment.jobs array includes state, time_start, and other job info
 const jobStates = ref<Record<string, number>>({});
 const allJobsData = ref<Record<string, any>>({});
-const preloadedDeployment = useState<Deployment | null>("preloadedDeployment", () => null);
+const preloadedDeployment = useState<Deployment | null>(
+  "preloadedDeployment",
+  () => null,
+);
 
 const applyDeploymentSnapshot = (dep: Deployment) => {
   deployment.value = dep;
   jobStates.value = {};
   allJobsData.value = {};
-  if (dep.jobs) {
-    for (const job of dep.jobs) {
+  if (deploymentJobs.value) {
+    for (const job of deploymentJobs.value) {
       const stateNum = jobStateStringToNumber(job.state);
       jobStates.value[job.job] = stateNum;
       allJobsData.value[job.job] = job;
@@ -1789,11 +1899,10 @@ const applyDeploymentSnapshot = (dep: Deployment) => {
 // Check if there are any active jobs (QUEUED=0, RUNNING=1, or STOPPED=3)
 // We keep polling for STOPPED jobs just like RUNNING jobs
 const hasActiveJobs = computed(() => {
-  return Object.values(jobStates.value).some(state => state === 0 || state === 1 || state === 3);
+  return Object.values(jobStates.value).some(
+    (state) => state === 0 || state === 1 || state === 3,
+  );
 });
-
-
-
 
 // Running job duration (for concise timeout row suffix)
 const firstRunningJobId = computed<string | null>(() => {
@@ -1806,17 +1915,19 @@ const nowTs = useTimestamp({ interval: 1000 });
 const runningJobDurationSeconds = computed<number | null>(() => {
   const jobId = firstRunningJobId.value;
   if (!jobId) return null;
-  
+
   const jobData = allJobsData.value[jobId];
   if (!jobData) return null;
-  
+
   const timeStart = jobData.timeStart || jobData.time_start;
   if (!timeStart || timeStart === 0) return null;
-  
+
   const state = jobData.state;
-  const isRunning = state === 1 || (typeof state === "string" && String(state).toUpperCase() === "RUNNING");
+  const isRunning =
+    state === 1 ||
+    (typeof state === "string" && String(state).toUpperCase() === "RUNNING");
   if (!isRunning) return null;
-  
+
   return Math.max(0, Math.floor(nowTs.value / 1000) - timeStart);
 });
 
@@ -1828,7 +1939,11 @@ const getJobDuration = (jobId: string): number | null => {
   const timeStart = jobData?.timeStart || jobData?.time_start;
   if (!timeStart) return null;
 
-  const timeEnd = jobData?.timeEnd || jobData?.time_end || jobData?.timeFinished || jobData?.time_finished;
+  const timeEnd =
+    jobData?.timeEnd ||
+    jobData?.time_end ||
+    jobData?.timeFinished ||
+    jobData?.time_finished;
 
   // For completed jobs, use timeEnd - timeStart
   if (timeEnd && jobState !== undefined && jobState >= 2) {
@@ -1845,17 +1960,17 @@ const getJobDuration = (jobId: string): number | null => {
 
 // Helper function to convert job state string to number
 const jobStateStringToNumber = (state: string | number | undefined): number => {
-  if (typeof state === 'number') return state;
+  if (typeof state === "number") return state;
   if (!state) return 0;
-  
+
   const stateUpper = String(state).toUpperCase();
   const stateMap: Record<string, number> = {
-    'QUEUED': 0,
-    'RUNNING': 1,
-    'COMPLETED': 2,
-    'STOPPED': 3,
+    QUEUED: 0,
+    RUNNING: 1,
+    COMPLETED: 2,
+    STOPPED: 3,
   };
-  
+
   return stateMap[stateUpper] ?? 0;
 };
 
@@ -1865,18 +1980,15 @@ const getJobStateNumber = (job: DeploymentJob): number => {
 };
 
 const activeJobs = computed((): DeploymentJob[] => {
-  const jobs = deployment.value?.jobs || [];
-  // Filter for active jobs (states: QUEUED=0, RUNNING=1) - exclude COMPLETED=2 and STOPPED=3
+  const jobs = deploymentJobs.value || [];
   return jobs.filter((job) => {
     const state = getJobStateNumber(job);
     return state === 0 || state === 1;
   });
 });
 
-// All historical jobs (for pagination) - includes COMPLETED and STOPPED
 const allHistoricalJobs = computed((): DeploymentJob[] => {
-  const jobs = deployment.value?.jobs || [];
-  // Filter for completed and stopped jobs (state: COMPLETED=2, STOPPED=3)
+  const jobs = deploymentJobs.value || [];
   return jobs.filter((job) => {
     const state = getJobStateNumber(job);
     return state === 2 || state === 3;
@@ -1897,15 +2009,21 @@ const historicalJobsTotalPages = computed(() => {
 });
 
 // Total jobs count for determining if tabs should be shown
-const totalJobs = computed(() => activeJobs.value.length + allHistoricalJobs.value.length);
+const totalJobs = computed(
+  () => activeJobs.value.length + allHistoricalJobs.value.length,
+);
 
 // All jobs for logs tab (paginated)
 const allJobsForLogs = computed(() => {
   const all = [...activeJobs.value, ...allHistoricalJobs.value];
   // Sort by created_at descending (most recent first)
   return [...all].sort((a, b) => {
-    const aTime = (a as any).created_at ? new Date((a as any).created_at).getTime() : 0;
-    const bTime = (b as any).created_at ? new Date((b as any).created_at).getTime() : 0;
+    const aTime = (a as any).created_at
+      ? new Date((a as any).created_at).getTime()
+      : 0;
+    const bTime = (b as any).created_at
+      ? new Date((b as any).created_at).getTime()
+      : 0;
     return bTime - aTime;
   });
 });
@@ -1925,39 +2043,53 @@ const logsJobsTotalPages = computed(() => {
 
 // Helper functions for job logs
 const isActiveJob = (jobId: string): boolean => {
-  return activeJobs.value.some(job => job.job === jobId);
+  return activeJobs.value.some((job) => job.job === jobId);
 };
 
 const isCompletedJob = (jobId: string): boolean => {
-  return historicalJobs.value.some(job => job.job === jobId);
+  return historicalJobs.value.some((job) => job.job === jobId);
 };
 
 const getJobData = (jobId: string) => {
-  return allJobs.value.find(job => job.job === jobId);
+  return allJobs.value.find((job) => job.job === jobId);
 };
 
 // Fetch results for a completed job from the deployment manager (node)
 const fetchJobResults = async (jobId: string) => {
-  if (!isCompletedJob(jobId) || !deployment.value?.id || completedJobResults.value[jobId] !== undefined) return;
-  
+  if (
+    !isCompletedJob(jobId) ||
+    !deployment.value?.id ||
+    completedJobResults.value[jobId] !== undefined
+  )
+    return;
+
   loadingJobResults.value[jobId] = true;
   try {
     const dep = await nosana.value.api.deployments.get(deployment.value.id);
-    const jobResponse = await dep.getJob(jobId) as ApiDeploymentJob;
+    const jobResponse = (await dep.getJob(jobId)) as ApiDeploymentJob;
     const jobResult = jobResponse?.jobResult;
-    
+
     if (!jobResult) {
       completedJobResults.value[jobId] = null;
       return;
     }
-    
+
     // Use SDK types directly - no mapping needed
     completedJobResults.value[jobId] = jobResult as ResultsSection;
   } catch (error) {
     console.error(`Failed to fetch results for job ${jobId}:`, error);
-    const errorDetails = error as { status?: number; statusText?: string; message?: string; data?: any; response?: any };
+    const errorDetails = error as {
+      status?: number;
+      statusText?: string;
+      message?: string;
+      data?: any;
+      response?: any;
+    };
     if (errorDetails.status === 500) {
-      console.error(`Backend returned 500 for job ${jobId}. This is a backend schema validation error - the jobResult doesn't match the expected schema. Error:`, errorDetails.message || errorDetails.data);
+      console.error(
+        `Backend returned 500 for job ${jobId}. This is a backend schema validation error - the jobResult doesn't match the expected schema. Error:`,
+        errorDetails.message || errorDetails.data,
+      );
     }
     completedJobResults.value[jobId] = null;
   } finally {
@@ -1966,12 +2098,15 @@ const fetchJobResults = async (jobId: string) => {
 };
 
 // Select job for logs display
-const selectJobForLogs = async (job: DeploymentJob, isUserSelection = false) => {
+const selectJobForLogs = async (
+  job: DeploymentJob,
+  isUserSelection = false,
+) => {
   activeLogsJobId.value = job.job;
   if (isUserSelection) {
     userSelectedJob.value = true;
   }
-  
+
   // If it's a completed job, fetch its results
   if (isCompletedJob(job.job)) {
     await fetchJobResults(job.job);
@@ -1981,19 +2116,19 @@ const selectJobForLogs = async (job: DeploymentJob, isUserSelection = false) => 
 // Deployment endpoints
 const deploymentEndpoints = computed(() => {
   if (!deployment.value?.endpoints) return [];
-  
+
   return (deployment.value.endpoints as DeploymentEndpoint[]).map(
     (endpoint: DeploymentEndpoint) => ({
       opId: endpoint.opId,
       port: endpoint.port,
       url: endpoint.url,
-    })
+    }),
   );
 });
 
 // All deployment events
 const deploymentEvents = computed((): DeploymentEvent[] => {
-  return (deployment.value?.events as DeploymentEvent[]) || [];
+  return deploymentEventsData.value || [];
 });
 
 // Check if last event contains ERROR
@@ -2001,7 +2136,10 @@ const hasErrorInLastEvent = computed(() => {
   const events = deploymentEvents.value;
   if (events.length === 0) return false;
   const lastEvent = events[0];
-  return lastEvent?.type.endsWith('ERROR') && lastEvent?.category.includes('Deployment');
+  return (
+    lastEvent?.type.endsWith("ERROR") &&
+    lastEvent?.category.includes("Deployment")
+  );
 });
 
 // No vault actions in API mode
@@ -2010,7 +2148,7 @@ const hasErrorInLastEvent = computed(() => {
 const executeDeploymentAction = async (
   action: () => Promise<void>,
   successMessage: string,
-  shouldRedirect = false
+  shouldRedirect = false,
 ) => {
   if (!deployment.value || !hasAnyAuth.value) {
     toast.error("Please log in or connect wallet to perform this action");
@@ -2028,7 +2166,6 @@ const executeDeploymentAction = async (
       // Wait a moment for backend to process, then refresh
       await new Promise((resolve) => setTimeout(resolve, 500));
       await loadDeployment(true);
-
     }
   } catch (err: any) {
     console.error("Deployment action error:", err);
@@ -2046,22 +2183,28 @@ const startDeployment = async () => {
     toast.error("Deployment is not loaded yet");
     return;
   }
-  
+
   // Check vault balance before starting deployment (wallet mode only)
   if (isWalletMode.value && deployment.value.vault) {
     try {
       const vaultBalance = await deployment.value.vault.getBalance();
       const hasSol = vaultBalance.SOL > 0;
       const hasNos = vaultBalance.NOS > 0;
-      
+
       if (!hasSol && !hasNos) {
-        toast.error("Vault has no balance. Please top up your vault with both SOL and NOS before starting the deployment.");
+        toast.error(
+          "Vault has no balance. Please top up your vault with both SOL and NOS before starting the deployment.",
+        );
         return;
       } else if (!hasSol) {
-        toast.error("Vault needs SOL for transaction fees. Please top up your vault with SOL before starting the deployment.");
+        toast.error(
+          "Vault needs SOL for transaction fees. Please top up your vault with SOL before starting the deployment.",
+        );
         return;
       } else if (!hasNos) {
-        toast.error("Vault needs NOS for job costs. Please top up your vault with NOS before starting the deployment.");
+        toast.error(
+          "Vault needs NOS for job costs. Please top up your vault with NOS before starting the deployment.",
+        );
         return;
       }
     } catch (error) {
@@ -2070,10 +2213,10 @@ const startDeployment = async () => {
       return;
     }
   }
-  
+
   await executeDeploymentAction(
     () => deployment.value!.start(),
-    "Deployment started successfully"
+    "Deployment started successfully",
   );
 
   // Start fast polling expecting RUNNING status
@@ -2087,7 +2230,7 @@ const stopDeployment = async () => {
   }
   await executeDeploymentAction(
     () => deployment.value!.stop(),
-    "Deployment stopped successfully"
+    "Deployment stopped successfully",
   );
 
   // Force refresh job states to update running jobs to stopped state
@@ -2105,7 +2248,7 @@ const stopDeployment = async () => {
 const archiveDeployment = async () => {
   if (
     !confirm(
-      "Are you sure you want to archive this deployment? This action cannot be undone."
+      "Are you sure you want to archive this deployment? This action cannot be undone.",
     )
   ) {
     return;
@@ -2117,7 +2260,7 @@ const archiveDeployment = async () => {
   await executeDeploymentAction(
     () => deployment.value!.archive(),
     "Deployment archived successfully",
-    true
+    true,
   );
 };
 
@@ -2125,7 +2268,7 @@ const withdrawVault = async () => {
   if (!deployment.value) return;
   await executeDeploymentAction(
     () => (deployment.value as any).vault.withdraw(),
-    "Vault withdrawn to your wallet"
+    "Vault withdrawn to your wallet",
   );
 };
 
@@ -2138,7 +2281,7 @@ const updateReplicas = async () => {
   const currentStatus = deployment.value?.status?.toUpperCase();
   await executeDeploymentAction(
     () => deployment.value!.updateReplicaCount(newReplicaCount.value as number),
-    `Replica count updated to ${newReplicaCount.value}`
+    `Replica count updated to ${newReplicaCount.value}`,
   );
 
   newReplicaCount.value = null;
@@ -2157,8 +2300,11 @@ const updateJobTimeout = async () => {
 
   const currentStatus = deployment.value?.status?.toUpperCase();
   await executeDeploymentAction(
-    () => deployment.value!.updateTimeout(Math.round((newTimeoutHours.value as number) * 3600)),
-    `Job timeout updated to ${newTimeoutHours.value} hours`
+    () =>
+      deployment.value!.updateTimeout(
+        Math.round((newTimeoutHours.value as number) * 3600),
+      ),
+    `Job timeout updated to ${newTimeoutHours.value} hours`,
   );
 
   newTimeoutHours.value = null;
@@ -2186,7 +2332,7 @@ const updateSchedule = async () => {
     await deployment.value.updateSchedule(newSchedule.value);
 
     toast.success(
-      `Schedule updated to: ${newSchedule.value} (${parseCronExpression(newSchedule.value)})`
+      `Schedule updated to: ${newSchedule.value} (${parseCronExpression(newSchedule.value)})`,
     );
 
     // Wait a moment for backend to process, then refresh
@@ -2216,7 +2362,11 @@ const createRevision = async () => {
   }
 
   // Check for validation errors
-  if (!canSaveRevision('Cannot create revision: Please fix the errors in the job definition')) {
+  if (
+    !canSaveRevision(
+      "Cannot create revision: Please fix the errors in the job definition",
+    )
+  ) {
     return;
   }
 
@@ -2282,27 +2432,27 @@ const isValidCronExpression = (cron: string): boolean => {
   const parts = cron.trim().split(/\s+/);
   if (parts.length !== 5) return false;
 
-    // Basic validation for each part
-    for (let i = 0; i < parts.length; i++) {
-      const part = parts[i];
-      if (!part) continue;
+  // Basic validation for each part
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
+    if (!part) continue;
 
-      // Allow wildcard
-      if (part === "*") continue;
+    // Allow wildcard
+    if (part === "*") continue;
 
-      // Allow step values (*/n)
-      if (part.startsWith("*/")) {
-        const stepValue = parseInt(part.slice(2));
-        if (isNaN(stepValue) || stepValue <= 0) return false;
-        continue;
-      }
+    // Allow step values (*/n)
+    if (part.startsWith("*/")) {
+      const stepValue = parseInt(part.slice(2));
+      if (isNaN(stepValue) || stepValue <= 0) return false;
+      continue;
+    }
 
-      // Allow ranges (n-m) and lists (n,m,...)
-      if (part.includes("-") || part.includes(",")) continue;
+    // Allow ranges (n-m) and lists (n,m,...)
+    if (part.includes("-") || part.includes(",")) continue;
 
-      // Check if it's a valid number
-      const num = parseInt(part);
-      if (isNaN(num)) return false;
+    // Check if it's a valid number
+    const num = parseInt(part);
+    if (isNaN(num)) return false;
 
     // Validate ranges for each position
     switch (i) {
@@ -2336,15 +2486,65 @@ const loadTasks = async (silent = false) => {
 
   try {
     const result = await deployment.value.getTasks();
-    tasks.value = result || [];
+    tasks.value = result?.tasks || [];
   } catch (err: any) {
     console.error("Load tasks error:", err);
-    // Silent polling shouldn't spam toasts
     if (!silent) {
       console.error(`Failed to load tasks: ${err.message}`);
     }
   } finally {
     tasksLoading.value = false;
+  }
+};
+
+const loadJobs = async (silent = false) => {
+  if (!deployment.value) return;
+  if (silent !== true) jobsLoading.value = true;
+
+  try {
+    const result = await deployment.value.getJobs();
+    deploymentJobs.value = result?.jobs || [];
+  } catch (err: any) {
+    console.error("Load jobs error:", err);
+    if (!silent) {
+      console.error(`Failed to load jobs: ${err.message}`);
+    }
+  } finally {
+    jobsLoading.value = false;
+  }
+};
+
+const loadEvents = async (silent = false) => {
+  if (!deployment.value) return;
+  if (silent !== true) eventsLoading.value = true;
+
+  try {
+    const result = await deployment.value.getEvents();
+    deploymentEventsData.value = result?.events || [];
+  } catch (err: any) {
+    console.error("Load events error:", err);
+    if (!silent) {
+      console.error(`Failed to load events: ${err.message}`);
+    }
+  } finally {
+    eventsLoading.value = false;
+  }
+};
+
+const loadRevisions = async (silent = false) => {
+  if (!deployment.value) return;
+  if (silent !== true) revisionsLoading.value = true;
+
+  try {
+    const result = await deployment.value.getRevisions();
+    deploymentRevisions.value = result?.revisions || [];
+  } catch (err: any) {
+    console.error("Load revisions error:", err);
+    if (!silent) {
+      console.error(`Failed to load revisions: ${err.message}`);
+    }
+  } finally {
+    revisionsLoading.value = false;
   }
 };
 
@@ -2372,29 +2572,34 @@ const startUnifiedPolling = (intervalMs = pollingConfig.normal) => {
     pollingDebug.value.lastStatusPoll = new Date();
     pollingDebug.value.lastJobPoll = new Date();
 
-    // Load deployment and jobs
     await loadDeployment(true);
-    
-    // Also load tasks periodically
+    await loadJobs(true);
+    await loadEvents(true);
     await loadTasks(true);
 
     const currentStatus = (deployment.value?.status || "").toUpperCase();
 
     // For fast polling: keep it active for at least 30 seconds
     // This ensures we catch immediate changes even if status matches immediately
-    if (adaptivePollingState.value.isFastPolling && 
-        adaptivePollingState.value.fastPollStartTime) {
+    if (
+      adaptivePollingState.value.isFastPolling &&
+      adaptivePollingState.value.fastPollStartTime
+    ) {
       const elapsed = Date.now() - adaptivePollingState.value.fastPollStartTime;
-      
+
       // If expectedStatus is set and matches current status, wait at least 10 seconds
       // If expectedStatus is undefined (already in desired state), wait 30 seconds
-      const minDuration = adaptivePollingState.value.expectedStatus ? 10000 : 30000;
-      
+      const minDuration = adaptivePollingState.value.expectedStatus
+        ? 10000
+        : 30000;
+
       if (elapsed >= minDuration) {
         // Check if expected state transition occurred (only if expectedStatus was set)
-        const expectedReached = adaptivePollingState.value.expectedStatus && 
-          currentStatus === adaptivePollingState.value.expectedStatus.toUpperCase();
-        
+        const expectedReached =
+          adaptivePollingState.value.expectedStatus &&
+          currentStatus ===
+            adaptivePollingState.value.expectedStatus.toUpperCase();
+
         // Switch back to normal polling if min duration passed and (expected reached OR no expected status)
         if (expectedReached || !adaptivePollingState.value.expectedStatus) {
           adaptivePollingState.value.isFastPolling = false;
@@ -2422,9 +2627,11 @@ const startUnifiedPolling = (intervalMs = pollingConfig.normal) => {
 // Legacy helpers for compatibility with existing watchers
 const startTasksPolling = () => startUnifiedPolling();
 const stopTasksPolling = () => {}; // Handled by stopAllPolling
-const startDeploymentPolling = (intervalMs?: number) => startUnifiedPolling(intervalMs);
+const startDeploymentPolling = (intervalMs?: number) =>
+  startUnifiedPolling(intervalMs);
 const stopDeploymentPolling = () => {}; // Handled by stopAllPolling
-const startJobPolling = (intervalMs?: number) => startUnifiedPolling(intervalMs);
+const startJobPolling = (intervalMs?: number) =>
+  startUnifiedPolling(intervalMs);
 const stopJobPolling = () => {}; // Handled by stopAllPolling
 
 // Start fast polling after an action that expects a state change
@@ -2475,11 +2682,18 @@ watch(
       // Only auto-select if user hasn't manually selected a job
       if (!userSelectedJob.value) {
         // If no job is selected or selected job is not in current jobs list, select most recent
-        if (!activeLogsJobId.value || !jobs.some(j => j.job === activeLogsJobId.value)) {
+        if (
+          !activeLogsJobId.value ||
+          !jobs.some((j) => j.job === activeLogsJobId.value)
+        ) {
           // Sort by created_at descending (most recent first)
           const sorted = [...jobs].sort((a, b) => {
-            const aTime = (a as any).created_at ? new Date((a as any).created_at).getTime() : 0;
-            const bTime = (b as any).created_at ? new Date((b as any).created_at).getTime() : 0;
+            const aTime = (a as any).created_at
+              ? new Date((a as any).created_at).getTime()
+              : 0;
+            const bTime = (b as any).created_at
+              ? new Date((b as any).created_at).getTime()
+              : 0;
             return bTime - aTime;
           });
           const mostRecent = sorted[0];
@@ -2490,7 +2704,7 @@ watch(
       }
     }
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 // Debounced authentication watcher to prevent flickering
@@ -2531,7 +2745,7 @@ watch(
       }
     }, 2000); // 2 second delay to allow auth to re-establish
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 // Watch deployment status to automatically manage polling for running deployments
@@ -2548,7 +2762,9 @@ watch(
     // If transitioning to RUNNING, start fast polling (skip normal polling)
     if (status === "RUNNING" && prev !== "RUNNING") {
       const expectedStatus =
-        prev && prev !== "STARTING" && prev !== "RUNNING" ? "RUNNING" : undefined;
+        prev && prev !== "STARTING" && prev !== "RUNNING"
+          ? "RUNNING"
+          : undefined;
       startFastPolling(expectedStatus);
     }
     // Start normal polling when deployment is active (but not if we just started fast polling)
@@ -2560,27 +2776,30 @@ watch(
     }
 
     // Stop polling when deployment reaches a final state and no active jobs
-    if (["STOPPED", "ARCHIVED", "ERROR"].includes(status) && !hasActiveJobs.value) {
+    if (
+      ["STOPPED", "ARCHIVED", "ERROR"].includes(status) &&
+      !hasActiveJobs.value
+    ) {
       stopAllPolling();
     }
 
     prevDeploymentStatus.value = status;
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 // Switch tab and update URL
 const switchTab = (tab: string) => {
   activeTab.value = tab;
   // Reset pagination when switching to logs tab
-  if (tab === 'logs') {
+  if (tab === "logs") {
     logsJobsPage.value = 1;
   }
   router.replace({
     query: {
       ...route.query,
-      tab: tab === 'overview' ? undefined : tab // Don't include tab=overview in URL for cleaner URLs
-    }
+      tab: tab === "overview" ? undefined : tab, // Don't include tab=overview in URL for cleaner URLs
+    },
   });
 };
 
@@ -2591,9 +2810,13 @@ const switchAction = (action: string) => {
   else if (action === "update-timeout") showTimeoutModal.value = true;
   else if (action === "update-schedule") showScheduleModal.value = true;
   else if (action === "topup" && deploymentVault.value) {
-    openVaultModal(deploymentVault.value, "topup", () => updateVaultBalance(deploymentVault.value!));
+    openVaultModal(deploymentVault.value, "topup", () =>
+      updateVaultBalance(deploymentVault.value!),
+    );
   } else if (action === "withdraw" && deploymentVault.value) {
-    openVaultModal(deploymentVault.value, "withdraw", () => updateVaultBalance(deploymentVault.value!));
+    openVaultModal(deploymentVault.value, "withdraw", () =>
+      updateVaultBalance(deploymentVault.value!),
+    );
   }
 
   router.replace({
@@ -2625,7 +2848,7 @@ watch(
         clearAction();
       }
     }
-  }
+  },
 );
 
 // Watch other modals to clear URL when closed
@@ -2646,25 +2869,35 @@ watch(
   deploymentVault,
   (vault) => {
     const action = route.query.action?.toString();
-    if (vault && (action === "topup" || action === "withdraw") && !vaultModalState.value.modalType) {
+    if (
+      vault &&
+      (action === "topup" || action === "withdraw") &&
+      !vaultModalState.value.modalType
+    ) {
       openVaultModal(vault, action, () => updateVaultBalance(vault));
     }
   },
-  { immediate: true }
+  { immediate: true },
 );
 
-watch(() => vaultModalState.value.modalType, (modalType) => {
-  if (!modalType && (route.query.action === "topup" || route.query.action === "withdraw")) {
-    clearAction();
-  }
-});
+watch(
+  () => vaultModalState.value.modalType,
+  (modalType) => {
+    if (
+      !modalType &&
+      (route.query.action === "topup" || route.query.action === "withdraw")
+    ) {
+      clearAction();
+    }
+  },
+);
 
 // Head
 useHead({
   title: computed(() =>
     deployment.value
       ? `${deployment.value.name} - Deployment`
-      : "Loading Deployment"
+      : "Loading Deployment",
   ),
 });
 </script>
