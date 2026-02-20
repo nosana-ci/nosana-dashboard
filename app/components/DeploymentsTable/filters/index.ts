@@ -5,11 +5,9 @@ type Filters = Record<string, Option[] | undefined>;
 export const filters: Filters = {
   deployments: [
     { label: "All", value: null },
+    { label: "Draft", value: "DRAFT" as string },
     { label: "Running", value: "RUNNING" as string },
     { label: "Stopped", value: "STOPPED" as string },
-    { label: "Starting", value: "STARTING" as string },
-    { label: "Stopping", value: "STOPPING" as string },
-    { label: "Draft", value: "DRAFT" as string },
     { label: "Error", value: "ERROR" as string },
     { label: "Archived", value: "ARCHIVED" as string },
   ],

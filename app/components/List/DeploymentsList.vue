@@ -82,19 +82,30 @@
     </div>
   </div>
 
-  <!-- <Pagination
-    v-if="showPagination && totalPages > 1"
-    v-model="currentPage"
-    class="pagination is-centered mt-4"
-    :total-page="totalPages"
-    :max-page="6"
-  />
-  <div v-if="!showPagination && hasMore" class="has-text-right mt-2">
-    <nuxt-link to="/deployments" class="button is-text">
-      <span>See all</span>
-      <span class="icon"> &#8250; </span>
-    </nuxt-link>
-  </div> -->
+  <div v-if="showPagination" class="pagination-buttons mt-4">
+    <button
+      class="button"
+      :class="{ 'is-disabled': !prevPage }"
+      :disabled="!prevPage || loading"
+      @click="refreshDeployments(prevPage)"
+    >
+      <span class="icon">
+        <span>&#8249;</span>
+      </span>
+      <span>Previous</span>
+    </button>
+    <button
+      class="button"
+      :class="{ 'is-disabled': !nextPage }"
+      :disabled="!nextPage || loading"
+      @click="refreshDeployments(nextPage)"
+    >
+      <span>Next</span>
+      <span class="icon">
+        <span>&#8250;</span>
+      </span>
+    </button>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -135,34 +146,65 @@ const currentPage = ref(1);
 const hasLoadedOnce = ref(false);
 const router = useRouter();
 
+const nextPage = ref<(() => Promise<ApiDeploymentListResult>) | null>(null);
+const prevPage = ref<(() => Promise<ApiDeploymentListResult>) | null>(null);
+
 const { nosana } = useKit();
 const loading = ref(false);
 const deploymentsError = ref<string | null>(null);
 
-const refreshDeployments = async () => {
+const searchQuery = computed(
+  () => router.currentRoute.value.query.search?.toString() || "",
+);
+
+const statusQuery = computed(
+  () => router.currentRoute.value.query.filter?.toString() || "",
+);
+
+const refreshDeployments = async (
+  pageFunc?: (() => Promise<ApiDeploymentListResult>) | null,
+) => {
   try {
     loading.value = true;
 
-    const items = await nosana.value.api.deployments.list({
-      // @ts-expect-error need to fix this type error as number should be ok
-      limit: props.itemsPerPage,
-    });
+    let items;
+    if (pageFunc) {
+      items = await pageFunc();
+    } else {
+      items = await nosana.value.api.deployments.list({
+        search: searchQuery.value || undefined,
+        status: statusQuery.value || undefined,
+        // @ts-ignore - API client types need to be updated to reflect new pagination params1
+        limit: props.itemsPerPage,
+      });
+    }
 
     deploymentsError.value = null;
     deployments.value = items.deployments || [];
+    nextPage.value = items.nextPage || null;
+    prevPage.value = items.previousPage || null;
   } catch (e: any) {
     deploymentsError.value = e?.message || "Failed to load deployments";
     deployments.value = [];
+    nextPage.value = null;
+    prevPage.value = null;
   } finally {
     loading.value = false;
     hasLoadedOnce.value = true;
   }
 };
 
+const debouncedRefresh = useDebounceFn(refreshDeployments, 500);
+
 watch(
-  () => [currentPage.value, props.itemsPerPage],
+  () => [
+    currentPage.value,
+    props.itemsPerPage,
+    searchQuery.value,
+    statusQuery.value,
+  ],
   () => {
-    refreshDeployments();
+    debouncedRefresh();
   },
   { immediate: true },
 );
@@ -225,6 +267,21 @@ watch(
 /* Fix for option key type error */
 select option {
   value: any;
+}
+
+.pagination-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.pagination-buttons .button {
+  min-width: 120px;
+}
+
+.pagination-buttons .button.is-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* Match deployment detail page responsive tab styling */

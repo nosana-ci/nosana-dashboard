@@ -31,7 +31,6 @@
           <option value="10">10 per page</option>
           <option value="25">25 per page</option>
           <option value="50">50 per page</option>
-          <option value="all">All</option>
         </select>
       </div>
       <div v-if="filtersOptions" class="select status-select ml-2">
@@ -58,7 +57,7 @@ const { connected } = useWallet();
 const { currentRoute, push, replace } = useRouter();
 
 const currentTab = computed(
-  () => currentRoute.value.query.tab?.toString() || "deployments"
+  () => currentRoute.value.query.tab?.toString() || "deployments",
 );
 
 const filtersOptions = computed(() => {
