@@ -157,7 +157,7 @@
                     <td>Market</td>
                     <td>
                       <a
-                        :href="`https://explorer.nosana.com/markets/${props.job.market}`"
+                        :href="`https://explore.nosana.com/markets/${props.job.market}`"
                         target="_blank"
                         class="has-text-link is-family-monospace"
                       >
