@@ -25,9 +25,10 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
     to.path.startsWith("/st-auth/verify-email") ||
     to.path.startsWith("/st-auth/reset-password");
 
-  // On client, wait for session check if it's currently loading
-  // Skip for public routes to avoid unnecessary API calls when not authenticated
-  if (import.meta.client && isLoading.value && !isPublicRoute) {
+  // On client, always check session for protected routes
+  // SuperTokens cookies are HttpOnly so we can't check them via JS
+  // Instead we make an async call to verify the session
+  if (import.meta.client && !isPublicRoute) {
     await checkSession();
   }
 
