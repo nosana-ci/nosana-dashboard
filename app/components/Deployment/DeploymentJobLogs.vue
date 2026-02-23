@@ -117,6 +117,13 @@ defineEmits<{
     margin-top: 0.2rem;
   }
 
+  .deployment-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    padding-bottom: 0.25rem;
+  }
+
   .selected-job-logs {
     min-height: 25rem;
   }
