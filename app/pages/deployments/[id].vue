@@ -2574,8 +2574,10 @@ const startUnifiedPolling = (intervalMs = pollingConfig.normal) => {
 
     await loadDeployment(true);
     await loadJobs(true);
-    await loadEvents(true);
-    await loadTasks(true);
+    if (activeTab.value === "events") {
+      await loadEvents(true);
+      await loadTasks(true);
+    }
 
     const currentStatus = (deployment.value?.status || "").toUpperCase();
 
@@ -2794,6 +2796,11 @@ const switchTab = (tab: string) => {
   // Reset pagination when switching to logs tab
   if (tab === "logs") {
     logsJobsPage.value = 1;
+  }
+  // Immediately refresh events and tasks when switching to the events tab
+  if (tab === "events") {
+    loadEvents(true);
+    loadTasks(true);
   }
   router.replace({
     query: {
