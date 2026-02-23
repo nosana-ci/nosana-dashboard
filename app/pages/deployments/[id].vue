@@ -1793,10 +1793,10 @@ const loadDeployment = async (silent = false) => {
       applyDeploymentSnapshot(preloadedDeployment.value);
       preloadedDeployment.value = null;
       if (!silent) {
+        await loadRevisions();
         await loadJobDefinition();
         await loadJobs();
         await loadEvents();
-        await loadRevisions();
         await loadTasks();
       }
       // Watcher will handle fast polling when status becomes RUNNING
@@ -1810,10 +1810,10 @@ const loadDeployment = async (silent = false) => {
     // Only load job definition and tasks on initial load, not during polling
     // This prevents tasks loading state from being reset during background polling
     if (!silent) {
+      await loadRevisions();
       await loadJobDefinition();
       await loadJobs();
       await loadEvents();
-      await loadRevisions();
       await loadTasks();
     }
   } catch (err: any) {
