@@ -1,5 +1,5 @@
 <template>
-  <div :class="{ 'min-height-container': !hasLoadedOnce && loading }">
+  <div :class="{ 'min-height-container': !hasLoadedOnce }">
     <div class="table-container">
       <table class="table is-fullwidth is-striped is-hoverable">
         <thead>
@@ -12,17 +12,17 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-if="!hasLoadedOnce && loading">
+          <tr v-if="!hasLoadedOnce">
             <td :colspan="isWalletMode ? 5 : 4" class="has-text-centered py-6">
               Loading deployments...
             </td>
           </tr>
-          <tr v-else-if="deploymentsError">
+          <tr v-else-if="hasLoadedOnce && deploymentsError">
             <td colspan="4" class="has-text-centered has-text-danger">
               Failed to load deployments: {{ deploymentsError }}
             </td>
           </tr>
-          <tr v-else-if="!deployments.length">
+          <tr v-else-if="hasLoadedOnce && !deployments.length">
             <td :colspan="isWalletMode ? 5 : 4" class="has-text-centered">
               No deployments found
             </td>
