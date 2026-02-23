@@ -72,6 +72,7 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
     public: {
+      maintenance: process.env.NUXT_PUBLIC_MAINTENANCE === "true",
       rpcUrl: process.env.RPC_URL,
       backend_url: process.env.NUXT_PUBLIC_BACKEND_URL,
       client_manager_url: process.env.NUXT_PUBLIC_CLIENT_MANAGER_URL,
