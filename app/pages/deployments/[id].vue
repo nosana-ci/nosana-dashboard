@@ -1391,23 +1391,19 @@
 </template>
 
 <script setup lang="ts">
-import type { Deployment, JobDefinition } from "@nosana/kit";
-import type {
-  DeploymentJob as ApiDeploymentJob,
-  DeploymentJobItem,
-  DeploymentEventItem,
-  DeploymentRevisionItem,
-  DeploymentTaskItem,
-} from "@nosana/api";
+import type { JobDefinition } from "@nosana/kit";
 import { useVaultModal } from "~/composables/useVaultModal";
 import { updateVaultBalance } from "~/composables/useDeploymentVault";
-import { useToast } from "vue-toastification";
 import { useWallet } from "@nosana/solana-vue";
 import { useSuperTokens } from "~/composables/useSuperTokens";
+import { useDeploymentDetail } from "~/composables/useDeploymentDetail";
+import { useDeploymentJobs } from "~/composables/useDeploymentJobs";
+import { useDeploymentActions } from "~/composables/useDeploymentActions";
+import { useDeploymentPolling } from "~/composables/useDeploymentPolling";
+import { useDeploymentJobDefinition } from "~/composables/useDeploymentJobDefinition";
 import JobStatus from "~/components/Job/Status.vue";
 import JobLogsContainer from "~/components/Job/LogsContainer.vue";
 import JobResult from "~/components/Job/Result.vue";
-import type { ResultsSection } from "~/composables/jobs/types";
 import SecondsFormatter from "~/components/SecondsFormatter.vue";
 import StatusTag from "~/components/Common/StatusTag.vue";
 import VaultModal from "~/components/Vault/Modal/VaultModal.vue";
@@ -1426,60 +1422,25 @@ import CalendarIcon from "@/assets/img/icons/calendar.svg?component";
 import EditIcon from "@/assets/img/icons/edit.svg?component";
 import RefreshIcon from "@/assets/img/icons/refresh.svg?component";
 import InfoCircleIcon from "@/assets/img/icons/info-circle.svg?component";
-import { useTimestamp } from "@vueuse/core";
-import { useKit } from "~/composables/useKit";
 import { parseCronExpression } from "~/utils/parseCronExpression";
 
 const colorMode = useColorMode();
 
-type DeploymentJob = DeploymentJobItem;
-
-interface DeploymentRevisionLocal {
-  revision: number;
-  created_at: string;
-  job_definition?: JobDefinition;
-}
-
-interface DeploymentEndpoint {
-  opId: string;
-  port: number | string;
-  url: string;
-}
-
-type DeploymentEvent = DeploymentEventItem;
-
-// Composables
+// --- Auth setup ---
 const route = useRoute();
 const router = useRouter();
-const toast = useToast();
 const { open: openVaultModal, state: vaultModalState } = useVaultModal();
 const { isAuthenticated: superTokensAuth } = useSuperTokens();
 const { connected, account } = useWallet();
-
-// Compatibility: create publicKey-like object from account
-const publicKey = computed(() => {
-  if (!account.value?.address) return null;
-  return {
-    toString: () => account.value!.address,
-    toBase58: () => account.value!.address,
-  };
-});
 
 const isAuthenticated = computed(() => superTokensAuth.value);
 const isWalletMode = computed(
   () => connected.value && account.value?.address && !superTokensAuth.value,
 );
 const hasAnyAuth = computed(() => isAuthenticated.value || isWalletMode.value);
-const { getIpfs } = useIpfs();
-const { nosana } = useKit();
 
-// State
-const deployment = ref<Deployment | null>(null);
-const loading = ref(true);
-const error = ref<string | null>(null);
+// --- Tab state ---
 const activeTab = ref("overview");
-
-// Available tabs - always show logs tab
 const availableTabs = computed(() => {
   return ["overview", "logs", "events", "configuration"];
 });
@@ -1492,50 +1453,165 @@ if (
 ) {
   activeTab.value = initialTab;
 }
-const activeLogsJobId = ref<string | null>(null);
-const userSelectedJob = ref<boolean>(false); // Track if user manually selected a job
-const jobActivityTab = ref("active");
-const completedJobResults = ref<Record<string, ResultsSection | null>>({});
-const loadingJobResults = ref<Record<string, boolean>>({});
 
-// Pagination for job activity
-const jobsPerPage = 10;
-const activeJobsPage = ref(1);
-const historicalJobsPage = ref(1);
+// --- Composables ---
+const detail = useDeploymentDetail({
+  hasAnyAuth,
+  isWalletMode,
+  activeTab,
+});
 
-// Pagination for logs tab
-const logsJobsPage = ref(1);
-const actionLoading = ref(false);
-const newReplicaCount = ref<number | null>(null);
-const newTimeoutHours = ref<number | null>(null);
-const newSchedule = ref<string>("");
-const tasks = ref<any[]>([]);
-const tasksLoading = ref(false);
-const deploymentJobs = ref<DeploymentJobItem[]>([]);
-const deploymentEventsData = ref<DeploymentEventItem[]>([]);
-const deploymentRevisions = ref<DeploymentRevisionItem[]>([]);
-const jobsLoading = ref(false);
-const eventsLoading = ref(false);
-const revisionsLoading = ref(false);
+const {
+  deployment,
+  loading,
+  error,
+  deploymentJobs,
+  deploymentEventsData,
+  deploymentRevisions,
+  tasks,
+  jobsLoading,
+  eventsLoading,
+  revisionsLoading,
+  tasksLoading,
+  jobStates,
+  allJobsData,
+  jobStateStringToNumber,
+  deploymentStatus,
+  hasVault,
+  deploymentVault,
+  deploymentSchedule,
+  hasActiveJobs,
+  loadDeployment,
+  loadJobs,
+  loadEvents,
+  loadRevisions,
+  loadTasks,
+} = detail;
+
+const jobs = useDeploymentJobs({
+  deployment,
+  deploymentJobs,
+  deploymentEventsData,
+  jobStates,
+  allJobsData,
+  jobStateStringToNumber,
+});
+
+const {
+  activeJobsPage,
+  historicalJobsPage,
+  logsJobsPage,
+  activeLogsJobId,
+  userSelectedJob,
+  jobActivityTab,
+  completedJobResults,
+  loadingJobResults,
+  getJobDuration,
+  getJobStateNumber,
+  activeJobs,
+  allHistoricalJobs,
+  historicalJobs,
+  historicalJobsTotalPages,
+  totalJobs,
+  allJobsForLogs,
+  allJobs,
+  logsJobsTotalPages,
+  isActiveJob,
+  isCompletedJob,
+  getJobData,
+  selectJobForLogs,
+  deploymentEndpoints,
+  deploymentEvents,
+  hasErrorInLastEvent,
+} = jobs;
+
+const polling = useDeploymentPolling({
+  deployment,
+  activeTab,
+  hasActiveJobs,
+  loadDeployment,
+  loadJobs,
+  loadEvents,
+  loadTasks,
+});
+
+const {
+  pollingTimeout,
+  stopAllPolling,
+  startUnifiedPolling,
+  startFastPolling,
+  stopJobPolling,
+} = polling;
+
+const actions = useDeploymentActions({
+  deployment,
+  hasAnyAuth,
+  isWalletMode,
+  deploymentStatus,
+  hasActiveJobs,
+  loadDeployment,
+  startFastPolling,
+  stopJobPolling,
+});
+
+const {
+  actionLoading,
+  showReplicasModal,
+  showTimeoutModal,
+  showScheduleModal,
+  showRevisionModal,
+  showRevisionDefinitionModal,
+  newReplicaCount,
+  newTimeoutHours,
+  newSchedule,
+  revisionJobDefinition,
+  switchingRevision,
+  viewingRevision,
+  canStart,
+  canStop,
+  canArchive,
+  hasAnyActions,
+  startDeployment,
+  stopDeployment,
+  archiveDeployment,
+  updateReplicas,
+  updateJobTimeout,
+  updateSchedule,
+  createRevision,
+  switchToRevision,
+  viewRevisionDefinition,
+  isValidCronExpression,
+} = actions;
+
+const jobDef = useDeploymentJobDefinition({
+  deployment,
+  deploymentRevisions,
+  actionLoading,
+  loadDeployment,
+});
+
+const {
+  jobDefinitionModel,
+  loadingJobDefinition,
+  currentJobDefEditor,
+  revisionJobDefEditor,
+  canSaveRevision,
+  loadJobDefinition,
+  hasDefinitionChanged,
+  resetDefinition,
+  makeRevision,
+} = jobDef;
+
+// Wire up the circular dependency: loadDeployment needs loadJobDefinition
+detail.setLoadJobDefinition(loadJobDefinition);
+
+// --- Remaining page-level state ---
 const isActionsDropdownOpen = ref(false);
-const showReplicasModal = ref(false);
-const showTimeoutModal = ref(false);
-const showScheduleModal = ref(false);
-const showRevisionModal = ref(false);
-const revisionJobDefinition = ref<JobDefinition | null>(null);
-const switchingRevision = ref<number | null>(null);
-const showRevisionDefinitionModal = ref(false);
-const viewingRevision = ref<any>(null);
 const actionsDropdown = ref<HTMLElement | null>(null);
+const headerIconRef = ref<HTMLElement | null>(null);
+const { data: testgridMarkets } = useAPI("/api/markets", { default: () => [] });
 
-// Polling intervals and state
-const pollingTimeout = ref<NodeJS.Timeout | null>(null);
-const pollingConfig = {
-  normal: 10000,
-  fast: 2000,
-};
-
-// Available actions
+// Available actions for URL-based modal opening
 const availableActions = [
   "create-revision",
   "update-replicas",
@@ -1552,19 +1628,46 @@ if (initialAction && availableActions.includes(initialAction)) {
   else if (initialAction === "update-replicas") showReplicasModal.value = true;
   else if (initialAction === "update-timeout") showTimeoutModal.value = true;
   else if (initialAction === "update-schedule") showScheduleModal.value = true;
-  // Vault actions will be handled when deploymentVault loads
 }
-// Debug instrumentation for page header icon
-const headerIconRef = ref<HTMLElement | null>(null);
-const { data: testgridMarkets } = useAPI("/api/markets", { default: () => [] });
-// Safe accessors for optional DM fields
-const deploymentSchedule = computed<string | null>(() => {
-  const d = deployment.value as unknown as { schedule?: string } | null;
-  return d?.schedule ?? null;
+
+// --- Formatters ---
+const sortedRevisions = computed(() => {
+  return deploymentRevisions.value || [];
 });
 
-// Use API-provided deployment.status as-is for display
-// Auto-start deployments when status is DRAFT
+const formatDate = (dateString: string | Date) => {
+  return new Date(dateString).toLocaleString();
+};
+
+const formatStrategy = (strategy: string | undefined | null): string => {
+  if (!strategy) return "-";
+  return strategy.toLowerCase().replace(/-/g, " ");
+};
+
+// --- Debug instrumentation ---
+const attachSmilDebugListeners = (svgEl: SVGElement, _label: string) => {
+  try {
+    const animations = svgEl.querySelectorAll("animateTransform");
+    animations.forEach((anim: any) => {
+      if (anim.__dbg) return;
+      anim.addEventListener("beginEvent", () => {});
+      anim.addEventListener("repeatEvent", () => {});
+      anim.addEventListener("endEvent", () => {});
+      anim.__dbg = true;
+    });
+  } catch {}
+};
+
+const instrumentHeaderIcon = () => {
+  const svg = headerIconRef.value?.querySelector("svg") as SVGElement | null;
+  if (!svg || !deployment.value) return;
+  attachSmilDebugListeners(
+    svg,
+    `dep=${deployment.value.id} status=${deployment.value.status}`,
+  );
+};
+
+// --- Auto-start DRAFT deployments ---
 const autostartTriggered = ref(false);
 watch(
   () => deployment.value?.status,
@@ -1587,1067 +1690,13 @@ watch(
   { immediate: true },
 );
 
-const attachSmilDebugListeners = (svgEl: SVGElement, label: string) => {
-  try {
-    const animations = svgEl.querySelectorAll("animateTransform");
-    animations.forEach((anim: any) => {
-      if (anim.__dbg) return;
-      // attach to initialise timeline without logging
-      anim.addEventListener("beginEvent", () => {});
-      anim.addEventListener("repeatEvent", () => {});
-      anim.addEventListener("endEvent", () => {});
-      anim.__dbg = true;
-    });
-  } catch {}
-};
-
-const instrumentHeaderIcon = () => {
-  const svg = headerIconRef.value?.querySelector("svg") as SVGElement | null;
-  if (!svg || !deployment.value) return;
-  attachSmilDebugListeners(
-    svg,
-    `dep=${deployment.value.id} status=${deployment.value.status}`,
-  );
-};
-
 watch(
   () => deployment.value?.status,
   () => nextTick(instrumentHeaderIcon),
   { immediate: true },
 );
-const statusPollingInterval = ref<NodeJS.Timeout | null>(null);
-const jobPollingInterval = ref<NodeJS.Timeout | null>(null);
 
-// Adaptive polling state tracking
-const adaptivePollingState = ref<{
-  isFastPolling: boolean;
-  expectedStatus?: string;
-  fastPollStartTime?: number;
-}>({
-  isFastPolling: false,
-});
-
-// Add debugging for polling state
-const pollingDebug = ref({
-  statusPollingActive: false,
-  jobPollingActive: false,
-  lastStatusPoll: null as Date | null,
-  lastJobPoll: null as Date | null,
-});
-
-const sortedRevisions = computed<DeploymentRevisionLocal[]>(() => {
-  return deploymentRevisions.value || [];
-});
-
-const formatDate = (dateString: string | Date) => {
-  return new Date(dateString).toLocaleString();
-};
-
-const formatStrategy = (strategy: string | undefined | null): string => {
-  if (!strategy) return "-";
-  return strategy.toLowerCase().replace(/-/g, " ");
-};
-
-const jobDefinitionModel = ref<JobDefinition | null>(null);
-const loadingJobDefinition = ref(false);
-const originalDefinition = ref<JobDefinition | null>(null);
-
-// Editor refs and validation
-const currentJobDefEditor = ref<{ hasErrors: boolean } | null>(null);
-const revisionJobDefEditor = ref<{ hasErrors: boolean } | null>(null);
-const { canSave: canSaveCurrent } =
-  useJsonEditorValidation(currentJobDefEditor);
-const { canSave: canSaveRevision } =
-  useJsonEditorValidation(revisionJobDefEditor);
-
-const loadJobDefinition = async () => {
-  if (
-    Array.isArray(deploymentRevisions.value) &&
-    deploymentRevisions.value.length > 0
-  ) {
-    const activeRevision =
-      deploymentRevisions.value.find(
-        (r) => r.revision === deployment.value?.active_revision,
-      ) || deploymentRevisions.value[deploymentRevisions.value.length - 1];
-
-    if (activeRevision?.job_definition) {
-      jobDefinitionModel.value = activeRevision.job_definition;
-      originalDefinition.value = JSON.parse(
-        JSON.stringify(activeRevision.job_definition),
-      );
-      return;
-    }
-  }
-
-  const ipfsHash = (
-    deployment.value as unknown as { ipfs_definition_hash?: string } | null
-  )?.ipfs_definition_hash;
-  if (!ipfsHash) {
-    jobDefinitionModel.value = null;
-    return;
-  }
-
-  try {
-    loadingJobDefinition.value = true;
-    const definition = await getIpfs(ipfsHash);
-    jobDefinitionModel.value = definition as JobDefinition;
-    originalDefinition.value = JSON.parse(
-      JSON.stringify(definition),
-    ) as JobDefinition;
-  } catch (err: any) {
-    console.error("Error loading job definition:", err);
-    jobDefinitionModel.value = null;
-  } finally {
-    loadingJobDefinition.value = false;
-  }
-};
-
-const hasDefinitionChanged = computed(() => {
-  if (!originalDefinition.value) return false;
-  try {
-    // Ensure both are valid objects before comparing
-    const original = JSON.stringify(originalDefinition.value);
-    const current = JSON.stringify(jobDefinitionModel.value);
-    return original !== current;
-  } catch (err) {
-    // If JSON.stringify fails, there are changes (invalid JSON)
-    return true;
-  }
-});
-
-const resetDefinition = () => {
-  if (originalDefinition.value) {
-    jobDefinitionModel.value = JSON.parse(
-      JSON.stringify(originalDefinition.value),
-    );
-  }
-};
-
-const makeRevision = async () => {
-  if (!deployment.value || !hasDefinitionChanged.value) return;
-
-  if (
-    !canSaveCurrent(
-      "Cannot create revision: Please fix the errors in the job definition",
-    )
-  ) {
-    return;
-  }
-
-  try {
-    actionLoading.value = true;
-    await deployment.value.createRevision(jobDefinitionModel.value!);
-    toast.success("Revision created successfully!");
-    await loadDeployment();
-    originalDefinition.value = JSON.parse(
-      JSON.stringify(jobDefinitionModel.value),
-    );
-  } catch (err: any) {
-    console.error("Error creating revision:", err);
-    toast.error(`Failed to create revision: ${err.message}`);
-  } finally {
-    actionLoading.value = false;
-  }
-};
-
-const loadDeployment = async (silent = false) => {
-  // Skip parent deployment fetch when on job subroute
-  if ((route.params as any)?.jobaddress) {
-    if (!silent) loading.value = false;
-    return;
-  }
-  if (!hasAnyAuth.value) {
-    error.value = "Please log in or connect wallet to view deployments";
-    if (!silent) loading.value = false;
-    return;
-  }
-
-  // Wait for SDK to be ready (wallet set for wallet users)
-  if (isWalletMode.value && !nosana.value.wallet) {
-    // Wait for the SDK watch to set the wallet - try multiple times
-    for (let i = 0; i < 10; i++) {
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      if (nosana.value.wallet) {
-        break;
-      }
-    }
-    // If still not ready, wait for next tick
-    if (!nosana.value.wallet) {
-      await nextTick();
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    }
-  }
-
-  try {
-    // Only show loading for non-silent operations (initial load, user actions)
-    if (!silent) {
-      loading.value = true;
-      error.value = null;
-    }
-
-    const deploymentId = route.params.id as string;
-    if (
-      preloadedDeployment.value &&
-      preloadedDeployment.value.id === deploymentId
-    ) {
-      applyDeploymentSnapshot(preloadedDeployment.value);
-      preloadedDeployment.value = null;
-      if (!silent) {
-        await loadRevisions();
-        await loadJobDefinition();
-        await loadJobs();
-        await loadEvents();
-        await loadTasks();
-      }
-      // Watcher will handle fast polling when status becomes RUNNING
-      return;
-    }
-
-    const data = await nosana.value.api.deployments.get(deploymentId);
-
-    applyDeploymentSnapshot(data as Deployment);
-
-    // Only load job definition and tasks on initial load, not during polling
-    // This prevents tasks loading state from being reset during background polling
-    if (!silent) {
-      await loadRevisions();
-      await loadJobDefinition();
-      await loadJobs();
-      await loadEvents();
-      await loadTasks();
-    }
-  } catch (err: any) {
-    console.error("Error loading deployment:", err);
-    // Only set error for non-silent operations
-    if (!silent) {
-      error.value = `Failed to load deployment: ${err.message}`;
-    }
-  } finally {
-    if (!silent) loading.value = false;
-  }
-};
-
-// Action button visibility
-const deploymentStatus = computed(() =>
-  deployment.value?.status?.toUpperCase(),
-);
-
-const canStart = computed(() => {
-  const status = deploymentStatus.value;
-  return status === "DRAFT" || status === "STOPPED" || status === "ERROR";
-});
-
-const canStop = computed(() => {
-  const status = deploymentStatus.value;
-  return status === "RUNNING" || status === "STARTING";
-});
-
-const canArchive = computed(
-  () =>
-    deploymentStatus.value !== "ARCHIVED" &&
-    deploymentStatus.value !== "RUNNING" &&
-    deploymentStatus.value !== "STOPPING" &&
-    deploymentStatus.value !== "DRAFT",
-);
-
-const hasAnyActions = computed(() => {
-  const status = deploymentStatus.value;
-  const hasMainActions = canStart.value || canStop.value || canArchive.value;
-  const hasConfigActions = status !== "ARCHIVED";
-  return hasMainActions || hasConfigActions;
-});
-
-// Show withdraw only when deployment exposes a vault with withdraw (wallet mode)
-const hasVault = computed(() => {
-  if (!deployment.value || typeof deployment.value !== "object") return false;
-  return "vault" in deployment.value;
-});
-
-const deploymentVault = computed(() => {
-  if (
-    !hasVault.value ||
-    !deployment.value ||
-    typeof deployment.value.vault !== "object"
-  )
-    return null;
-  return (deployment.value as any).vault;
-});
-
-// Job activity split
-// Job states and data extracted from deployment response
-// The deployment.jobs array includes state, time_start, and other job info
-const jobStates = ref<Record<string, number>>({});
-const allJobsData = ref<Record<string, any>>({});
-const preloadedDeployment = useState<Deployment | null>(
-  "preloadedDeployment",
-  () => null,
-);
-
-const applyDeploymentSnapshot = (dep: Deployment) => {
-  deployment.value = dep;
-  jobStates.value = {};
-  allJobsData.value = {};
-  if (deploymentJobs.value) {
-    for (const job of deploymentJobs.value) {
-      const stateNum = jobStateStringToNumber(job.state);
-      jobStates.value[job.job] = stateNum;
-      allJobsData.value[job.job] = job;
-    }
-  }
-};
-
-// Check if there are any active jobs (QUEUED=0, RUNNING=1, or STOPPED=3)
-// We keep polling for STOPPED jobs just like RUNNING jobs
-const hasActiveJobs = computed(() => {
-  return Object.values(jobStates.value).some(
-    (state) => state === 0 || state === 1 || state === 3,
-  );
-});
-
-// Running job duration (for concise timeout row suffix)
-const firstRunningJobId = computed<string | null>(() => {
-  const entries = Object.entries(jobStates.value || {});
-  const running = entries.find(([id, st]) => st === 1);
-  return running ? running[0] : null;
-});
-
-const nowTs = useTimestamp({ interval: 1000 });
-const runningJobDurationSeconds = computed<number | null>(() => {
-  const jobId = firstRunningJobId.value;
-  if (!jobId) return null;
-
-  const jobData = allJobsData.value[jobId];
-  if (!jobData) return null;
-
-  const timeStart = jobData.timeStart || jobData.time_start;
-  if (!timeStart || timeStart === 0) return null;
-
-  const state = jobData.state;
-  const isRunning =
-    state === 1 ||
-    (typeof state === "string" && String(state).toUpperCase() === "RUNNING");
-  if (!isRunning) return null;
-
-  return Math.max(0, Math.floor(nowTs.value / 1000) - timeStart);
-});
-
-// Function to get duration for individual jobs
-const getJobDuration = (jobId: string): number | null => {
-  const jobState = jobStates.value[jobId];
-  const jobData = allJobsData.value[jobId];
-
-  const timeStart = jobData?.timeStart || jobData?.time_start;
-  if (!timeStart) return null;
-
-  const timeEnd =
-    jobData?.timeEnd ||
-    jobData?.time_end ||
-    jobData?.timeFinished ||
-    jobData?.time_finished;
-
-  // For completed jobs, use timeEnd - timeStart
-  if (timeEnd && jobState !== undefined && jobState >= 2) {
-    return Math.max(0, timeEnd - timeStart);
-  }
-
-  // For running jobs, use current time - timeStart
-  if (jobState === 1) {
-    return Math.max(0, Math.floor(nowTs.value / 1000) - timeStart);
-  }
-
-  return null;
-};
-
-// Helper function to convert job state string to number
-const jobStateStringToNumber = (state: string | number | undefined): number => {
-  if (typeof state === "number") return state;
-  if (!state) return 0;
-
-  const stateUpper = String(state).toUpperCase();
-  const stateMap: Record<string, number> = {
-    QUEUED: 0,
-    RUNNING: 1,
-    COMPLETED: 2,
-    STOPPED: 3,
-  };
-
-  return stateMap[stateUpper] ?? 0;
-};
-
-// Helper to get numeric state from a job
-const getJobStateNumber = (job: DeploymentJob): number => {
-  return jobStateStringToNumber(job.state);
-};
-
-const activeJobs = computed((): DeploymentJob[] => {
-  const jobs = deploymentJobs.value || [];
-  return jobs.filter((job) => {
-    const state = getJobStateNumber(job);
-    return state === 0 || state === 1;
-  });
-});
-
-const allHistoricalJobs = computed((): DeploymentJob[] => {
-  const jobs = deploymentJobs.value || [];
-  return jobs.filter((job) => {
-    const state = getJobStateNumber(job);
-    return state === 2 || state === 3;
-  });
-});
-
-// Paginated historical jobs
-const historicalJobs = computed((): DeploymentJob[] => {
-  const all = allHistoricalJobs.value;
-  const start = (historicalJobsPage.value - 1) * jobsPerPage;
-  const end = start + jobsPerPage;
-  return all.slice(start, end);
-});
-
-// Total pages for historical jobs
-const historicalJobsTotalPages = computed(() => {
-  return Math.ceil(allHistoricalJobs.value.length / jobsPerPage);
-});
-
-// Total jobs count for determining if tabs should be shown
-const totalJobs = computed(
-  () => activeJobs.value.length + allHistoricalJobs.value.length,
-);
-
-// All jobs for logs tab (paginated)
-const allJobsForLogs = computed(() => {
-  const all = [...activeJobs.value, ...allHistoricalJobs.value];
-  // Sort by created_at descending (most recent first)
-  return [...all].sort((a, b) => {
-    const aTime = (a as any).created_at
-      ? new Date((a as any).created_at).getTime()
-      : 0;
-    const bTime = (b as any).created_at
-      ? new Date((b as any).created_at).getTime()
-      : 0;
-    return bTime - aTime;
-  });
-});
-
-// Paginated jobs for logs tab
-const allJobs = computed(() => {
-  const all = allJobsForLogs.value;
-  const start = (logsJobsPage.value - 1) * jobsPerPage;
-  const end = start + jobsPerPage;
-  return all.slice(start, end);
-});
-
-// Total pages for logs tab
-const logsJobsTotalPages = computed(() => {
-  return Math.ceil(allJobsForLogs.value.length / jobsPerPage);
-});
-
-// Helper functions for job logs
-const isActiveJob = (jobId: string): boolean => {
-  return activeJobs.value.some((job) => job.job === jobId);
-};
-
-const isCompletedJob = (jobId: string): boolean => {
-  return historicalJobs.value.some((job) => job.job === jobId);
-};
-
-const getJobData = (jobId: string) => {
-  return allJobs.value.find((job) => job.job === jobId);
-};
-
-// Fetch results for a completed job from the deployment manager (node)
-const fetchJobResults = async (jobId: string) => {
-  if (
-    !isCompletedJob(jobId) ||
-    !deployment.value?.id ||
-    completedJobResults.value[jobId] !== undefined
-  )
-    return;
-
-  loadingJobResults.value[jobId] = true;
-  try {
-    const dep = await nosana.value.api.deployments.get(deployment.value.id);
-    const jobResponse = (await dep.getJob(jobId)) as ApiDeploymentJob;
-    const jobResult = jobResponse?.jobResult;
-
-    if (!jobResult) {
-      completedJobResults.value[jobId] = null;
-      return;
-    }
-
-    // Use SDK types directly - no mapping needed
-    completedJobResults.value[jobId] = jobResult as ResultsSection;
-  } catch (error) {
-    console.error(`Failed to fetch results for job ${jobId}:`, error);
-    const errorDetails = error as {
-      status?: number;
-      statusText?: string;
-      message?: string;
-      data?: any;
-      response?: any;
-    };
-    if (errorDetails.status === 500) {
-      console.error(
-        `Backend returned 500 for job ${jobId}. This is a backend schema validation error - the jobResult doesn't match the expected schema. Error:`,
-        errorDetails.message || errorDetails.data,
-      );
-    }
-    completedJobResults.value[jobId] = null;
-  } finally {
-    loadingJobResults.value[jobId] = false;
-  }
-};
-
-// Select job for logs display
-const selectJobForLogs = async (
-  job: DeploymentJob,
-  isUserSelection = false,
-) => {
-  activeLogsJobId.value = job.job;
-  if (isUserSelection) {
-    userSelectedJob.value = true;
-  }
-
-  // If it's a completed job, fetch its results
-  if (isCompletedJob(job.job)) {
-    await fetchJobResults(job.job);
-  }
-};
-
-// Deployment endpoints
-const deploymentEndpoints = computed(() => {
-  if (!deployment.value?.endpoints) return [];
-
-  return (deployment.value.endpoints as DeploymentEndpoint[]).map(
-    (endpoint: DeploymentEndpoint) => ({
-      opId: endpoint.opId,
-      port: endpoint.port,
-      url: endpoint.url,
-    }),
-  );
-});
-
-// All deployment events
-const deploymentEvents = computed((): DeploymentEvent[] => {
-  return deploymentEventsData.value || [];
-});
-
-// Check if last event contains ERROR
-const hasErrorInLastEvent = computed(() => {
-  const events = deploymentEvents.value;
-  if (events.length === 0) return false;
-  const lastEvent = events[0];
-  return (
-    lastEvent?.type.endsWith("ERROR") &&
-    lastEvent?.category.includes("Deployment")
-  );
-});
-
-// No vault actions in API mode
-
-// Generic deployment action handler (credit system via API)
-const executeDeploymentAction = async (
-  action: () => Promise<void>,
-  successMessage: string,
-  shouldRedirect = false,
-) => {
-  if (!deployment.value || !hasAnyAuth.value) {
-    toast.error("Please log in or connect wallet to perform this action");
-    return;
-  }
-
-  try {
-    actionLoading.value = true;
-    await action();
-    toast.success(successMessage);
-
-    if (shouldRedirect) {
-      setTimeout(() => router.push("/deployments"), 2000);
-    } else {
-      // Wait a moment for backend to process, then refresh
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      await loadDeployment(true);
-    }
-  } catch (err: any) {
-    console.error("Deployment action error:", err);
-    toast.error(`Failed: ${err.message || err.toString()}`);
-  } finally {
-    if (!shouldRedirect) {
-      actionLoading.value = false;
-    }
-  }
-};
-
-// Deployment action methods
-const startDeployment = async () => {
-  if (!deployment.value) {
-    toast.error("Deployment is not loaded yet");
-    return;
-  }
-
-  // Check vault balance before starting deployment (wallet mode only)
-  if (isWalletMode.value && deployment.value.vault) {
-    try {
-      const vaultBalance = await deployment.value.vault.getBalance();
-      const hasSol = vaultBalance.SOL > 0;
-      const hasNos = vaultBalance.NOS > 0;
-
-      if (!hasSol && !hasNos) {
-        toast.error(
-          "Vault has no balance. Please top up your vault with both SOL and NOS before starting the deployment.",
-        );
-        return;
-      } else if (!hasSol) {
-        toast.error(
-          "Vault needs SOL for transaction fees. Please top up your vault with SOL before starting the deployment.",
-        );
-        return;
-      } else if (!hasNos) {
-        toast.error(
-          "Vault needs NOS for job costs. Please top up your vault with NOS before starting the deployment.",
-        );
-        return;
-      }
-    } catch (error) {
-      console.error("Error checking vault balance:", error);
-      toast.error("Failed to check vault balance. Please try again.");
-      return;
-    }
-  }
-
-  await executeDeploymentAction(
-    () => deployment.value!.start(),
-    "Deployment started successfully",
-  );
-
-  // Start fast polling expecting RUNNING status
-  startFastPolling("RUNNING");
-};
-
-const stopDeployment = async () => {
-  if (!deployment.value) {
-    toast.error("Deployment is not loaded yet");
-    return;
-  }
-  await executeDeploymentAction(
-    () => deployment.value!.stop(),
-    "Deployment stopped successfully",
-  );
-
-  // Force refresh job states to update running jobs to stopped state
-  await loadDeployment(true);
-
-  // Only stop job polling if there are no queued or running jobs
-  if (!hasActiveJobs.value) {
-    stopJobPolling();
-  }
-
-  // Start fast polling expecting STOPPED status
-  startFastPolling("STOPPED");
-};
-
-const archiveDeployment = async () => {
-  if (
-    !confirm(
-      "Are you sure you want to archive this deployment? This action cannot be undone.",
-    )
-  ) {
-    return;
-  }
-  if (!deployment.value) {
-    toast.error("Deployment is not loaded yet");
-    return;
-  }
-  await executeDeploymentAction(
-    () => deployment.value!.archive(),
-    "Deployment archived successfully",
-    true,
-  );
-};
-
-const withdrawVault = async () => {
-  if (!deployment.value) return;
-  await executeDeploymentAction(
-    () => (deployment.value as any).vault.withdraw(),
-    "Vault withdrawn to your wallet",
-  );
-};
-
-const updateReplicas = async () => {
-  if (!newReplicaCount.value || newReplicaCount.value < 1) {
-    toast.error("Replica count must be at least 1");
-    return;
-  }
-
-  const currentStatus = deployment.value?.status?.toUpperCase();
-  await executeDeploymentAction(
-    () => deployment.value!.updateReplicaCount(newReplicaCount.value as number),
-    `Replica count updated to ${newReplicaCount.value}`,
-  );
-
-  newReplicaCount.value = null;
-
-  // Start fast polling if deployment is running (jobs will change)
-  if (currentStatus === "RUNNING" || currentStatus === "STARTING") {
-    startFastPolling("RUNNING");
-  }
-};
-
-const updateJobTimeout = async () => {
-  if (!newTimeoutHours.value || newTimeoutHours.value < 0.0167) {
-    toast.error("Timeout must be at least 1 minute (0.0167 hours)");
-    return;
-  }
-
-  const currentStatus = deployment.value?.status?.toUpperCase();
-  await executeDeploymentAction(
-    () =>
-      deployment.value!.updateTimeout(
-        Math.round((newTimeoutHours.value as number) * 3600),
-      ),
-    `Job timeout updated to ${newTimeoutHours.value} hours`,
-  );
-
-  newTimeoutHours.value = null;
-
-  // Start fast polling if deployment is running (jobs might change)
-  if (currentStatus === "RUNNING" || currentStatus === "STARTING") {
-    startFastPolling("RUNNING");
-  }
-};
-
-const updateSchedule = async () => {
-  if (!newSchedule.value || !isValidCronExpression(newSchedule.value)) {
-    toast.error("Please enter a valid cron expression");
-    return;
-  }
-
-  if (!deployment.value || !hasAnyAuth.value) {
-    toast.error("Please log in or connect wallet to perform this action");
-    return;
-  }
-
-  const currentStatus = deployment.value?.status?.toUpperCase();
-  try {
-    actionLoading.value = true;
-    await deployment.value.updateSchedule(newSchedule.value);
-
-    toast.success(
-      `Schedule updated to: ${newSchedule.value} (${parseCronExpression(newSchedule.value)})`,
-    );
-
-    // Wait a moment for backend to process, then refresh
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    await loadDeployment(true);
-
-    // Start fast polling if deployment is running (jobs might change)
-    if (currentStatus === "RUNNING" || currentStatus === "STARTING") {
-      startFastPolling("RUNNING");
-    }
-
-    newSchedule.value = "";
-  } catch (error: any) {
-    console.error("Update schedule error:", error);
-    const errorMessage =
-      error.data?.message || error.message || "Failed to update schedule";
-    toast.error(`Error updating schedule: ${errorMessage}`);
-  } finally {
-    actionLoading.value = false;
-  }
-};
-
-const createRevision = async () => {
-  if (!revisionJobDefinition.value) {
-    toast.error("Please provide a valid job definition");
-    return;
-  }
-
-  // Check for validation errors
-  if (
-    !canSaveRevision(
-      "Cannot create revision: Please fix the errors in the job definition",
-    )
-  ) {
-    return;
-  }
-
-  if (!deployment.value || !hasAnyAuth.value) {
-    toast.error("Please log in or connect wallet to perform this action");
-    return;
-  }
-
-  try {
-    actionLoading.value = true;
-    await deployment.value.createRevision(revisionJobDefinition.value);
-
-    toast.success("New revision created successfully!");
-    showRevisionModal.value = false;
-
-    // Wait a moment for backend to process, then refresh
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    await loadDeployment(true);
-  } catch (error: any) {
-    console.error("Create revision error:", error);
-    const errorMessage =
-      error.data?.message || error.message || "Failed to create revision";
-    toast.error(`Error creating revision: ${errorMessage}`);
-  } finally {
-    actionLoading.value = false;
-  }
-};
-
-// Switch to a different revision
-const switchToRevision = async (revisionNumber: number) => {
-  if (!deployment.value || !hasAnyAuth.value) {
-    toast.error("Please log in or connect wallet to perform this action");
-    return;
-  }
-
-  try {
-    switchingRevision.value = revisionNumber;
-    await deployment.value.updateActiveRevision(revisionNumber);
-
-    toast.success(`Switched to revision ${revisionNumber} successfully!`);
-
-    // Refresh deployment data
-    await loadDeployment(true);
-  } catch (error: any) {
-    console.error("Switch revision error:", error);
-    const errorMessage =
-      error.data?.message || error.message || "Failed to switch revision";
-    toast.error(`Error switching revision: ${errorMessage}`);
-  } finally {
-    switchingRevision.value = null;
-  }
-};
-
-// View a revision's job definition
-const viewRevisionDefinition = (revision: any) => {
-  viewingRevision.value = revision;
-  showRevisionDefinitionModal.value = true;
-};
-
-const isValidCronExpression = (cron: string): boolean => {
-  if (!cron) return false;
-
-  const parts = cron.trim().split(/\s+/);
-  if (parts.length !== 5) return false;
-
-  // Basic validation for each part
-  for (let i = 0; i < parts.length; i++) {
-    const part = parts[i];
-    if (!part) continue;
-
-    // Allow wildcard
-    if (part === "*") continue;
-
-    // Allow step values (*/n)
-    if (part.startsWith("*/")) {
-      const stepValue = parseInt(part.slice(2));
-      if (isNaN(stepValue) || stepValue <= 0) return false;
-      continue;
-    }
-
-    // Allow ranges (n-m) and lists (n,m,...)
-    if (part.includes("-") || part.includes(",")) continue;
-
-    // Check if it's a valid number
-    const num = parseInt(part);
-    if (isNaN(num)) return false;
-
-    // Validate ranges for each position
-    switch (i) {
-      case 0: // minute (0-59)
-        if (num < 0 || num > 59) return false;
-        break;
-      case 1: // hour (0-23)
-        if (num < 0 || num > 23) return false;
-        break;
-      case 2: // day of month (1-31)
-        if (num < 1 || num > 31) return false;
-        break;
-      case 3: // month (1-12)
-        if (num < 1 || num > 12) return false;
-        break;
-      case 4: // day of week (0-7, where 0 and 7 are Sunday)
-        if (num < 0 || num > 7) return false;
-        break;
-    }
-  }
-
-  return true;
-};
-
-const loadTasks = async (silent = false) => {
-  if (!deployment.value) {
-    return;
-  }
-
-  if (silent !== true) tasksLoading.value = true;
-
-  try {
-    const result = await deployment.value.getTasks();
-    tasks.value = result?.tasks || [];
-  } catch (err: any) {
-    console.error("Load tasks error:", err);
-    if (!silent) {
-      console.error(`Failed to load tasks: ${err.message}`);
-    }
-  } finally {
-    tasksLoading.value = false;
-  }
-};
-
-const loadJobs = async (silent = false) => {
-  if (!deployment.value) return;
-  if (silent !== true) jobsLoading.value = true;
-
-  try {
-    const result = await deployment.value.getJobs();
-    deploymentJobs.value = result?.jobs || [];
-  } catch (err: any) {
-    console.error("Load jobs error:", err);
-    if (!silent) {
-      console.error(`Failed to load jobs: ${err.message}`);
-    }
-  } finally {
-    jobsLoading.value = false;
-  }
-};
-
-const loadEvents = async (silent = false) => {
-  if (!deployment.value) return;
-  if (silent !== true) eventsLoading.value = true;
-
-  try {
-    const result = await deployment.value.getEvents();
-    deploymentEventsData.value = result?.events || [];
-  } catch (err: any) {
-    console.error("Load events error:", err);
-    if (!silent) {
-      console.error(`Failed to load events: ${err.message}`);
-    }
-  } finally {
-    eventsLoading.value = false;
-  }
-};
-
-const loadRevisions = async (silent = false) => {
-  if (!deployment.value) return;
-  if (silent !== true) revisionsLoading.value = true;
-
-  try {
-    const result = await deployment.value.getRevisions();
-    deploymentRevisions.value = result?.revisions || [];
-  } catch (err: any) {
-    console.error("Load revisions error:", err);
-    if (!silent) {
-      console.error(`Failed to load revisions: ${err.message}`);
-    }
-  } finally {
-    revisionsLoading.value = false;
-  }
-};
-
-const stopAllPolling = () => {
-  if (pollingTimeout.value) {
-    clearTimeout(pollingTimeout.value);
-    pollingTimeout.value = null;
-  }
-  pollingDebug.value.statusPollingActive = false;
-  pollingDebug.value.jobPollingActive = false;
-};
-
-const startUnifiedPolling = (intervalMs = pollingConfig.normal) => {
-  stopAllPolling();
-
-  pollingDebug.value.statusPollingActive = true;
-  pollingDebug.value.jobPollingActive = true;
-
-  const poll = async () => {
-    if (!deployment.value) {
-      pollingTimeout.value = setTimeout(poll, intervalMs);
-      return;
-    }
-
-    pollingDebug.value.lastStatusPoll = new Date();
-    pollingDebug.value.lastJobPoll = new Date();
-
-    await loadDeployment(true);
-    await loadJobs(true);
-    if (activeTab.value === "events") {
-      await loadEvents(true);
-      await loadTasks(true);
-    }
-
-    const currentStatus = (deployment.value?.status || "").toUpperCase();
-
-    // For fast polling: keep it active for at least 30 seconds
-    // This ensures we catch immediate changes even if status matches immediately
-    if (
-      adaptivePollingState.value.isFastPolling &&
-      adaptivePollingState.value.fastPollStartTime
-    ) {
-      const elapsed = Date.now() - adaptivePollingState.value.fastPollStartTime;
-
-      // If expectedStatus is set and matches current status, wait at least 10 seconds
-      // If expectedStatus is undefined (already in desired state), wait 30 seconds
-      const minDuration = adaptivePollingState.value.expectedStatus
-        ? 10000
-        : 30000;
-
-      if (elapsed >= minDuration) {
-        // Check if expected state transition occurred (only if expectedStatus was set)
-        const expectedReached =
-          adaptivePollingState.value.expectedStatus &&
-          currentStatus ===
-            adaptivePollingState.value.expectedStatus.toUpperCase();
-
-        // Switch back to normal polling if min duration passed and (expected reached OR no expected status)
-        if (expectedReached || !adaptivePollingState.value.expectedStatus) {
-          adaptivePollingState.value.isFastPolling = false;
-          adaptivePollingState.value.expectedStatus = undefined;
-          adaptivePollingState.value.fastPollStartTime = undefined;
-          startUnifiedPolling(pollingConfig.normal);
-          return;
-        }
-      }
-    }
-
-    const finalStates = ["STOPPED", "ARCHIVED", "ERROR"];
-    if (finalStates.includes(currentStatus) && !hasActiveJobs.value) {
-      stopAllPolling();
-      return;
-    }
-
-    // Schedule next poll if not stopped
-    pollingTimeout.value = setTimeout(poll, intervalMs);
-  };
-
-  pollingTimeout.value = setTimeout(poll, intervalMs);
-};
-
-// Legacy helpers for compatibility with existing watchers
-const startTasksPolling = () => startUnifiedPolling();
-const stopTasksPolling = () => {}; // Handled by stopAllPolling
-const startDeploymentPolling = (intervalMs?: number) =>
-  startUnifiedPolling(intervalMs);
-const stopDeploymentPolling = () => {}; // Handled by stopAllPolling
-const startJobPolling = (intervalMs?: number) =>
-  startUnifiedPolling(intervalMs);
-const stopJobPolling = () => {}; // Handled by stopAllPolling
-
-// Start fast polling after an action that expects a state change
-const startFastPolling = (expectedStatus?: string) => {
-  adaptivePollingState.value = {
-    isFastPolling: true,
-    expectedStatus,
-    fastPollStartTime: Date.now(),
-  };
-
-  startUnifiedPolling(pollingConfig.fast);
-};
-
-// Click outside handler to close dropdown
+// --- Click outside handler ---
 const handleClickOutside = (event: MouseEvent) => {
   if (
     actionsDropdown.value &&
@@ -2661,35 +1710,39 @@ onMounted(() => {
   document.addEventListener("click", handleClickOutside);
 });
 
+// --- Auth timeout cleanup ---
+let authTimeout: NodeJS.Timeout | null = null;
+
 onUnmounted(() => {
   document.removeEventListener("click", handleClickOutside);
-
-  // Clear any timeout from auth debouncing
   if (authTimeout) {
     clearTimeout(authTimeout);
     authTimeout = null;
   }
 });
 
-// Stop all polling when navigating away from the page
 onBeforeRouteLeave(() => {
   stopAllPolling();
 });
 
+// --- Watchers ---
+
 // Auto-select most recently posted job for logs display
 watch(
   () => [activeTab.value, allJobs.value],
-  async ([newTab, jobs]) => {
-    if (newTab === "logs" && jobs && Array.isArray(jobs) && jobs.length > 0) {
-      // Only auto-select if user hasn't manually selected a job
+  async ([newTab, jobsList]) => {
+    if (
+      newTab === "logs" &&
+      jobsList &&
+      Array.isArray(jobsList) &&
+      jobsList.length > 0
+    ) {
       if (!userSelectedJob.value) {
-        // If no job is selected or selected job is not in current jobs list, select most recent
         if (
           !activeLogsJobId.value ||
-          !jobs.some((j) => j.job === activeLogsJobId.value)
+          !jobsList.some((j) => j.job === activeLogsJobId.value)
         ) {
-          // Sort by created_at descending (most recent first)
-          const sorted = [...jobs].sort((a, b) => {
+          const sorted = [...jobsList].sort((a, b) => {
             const aTime = (a as any).created_at
               ? new Date((a as any).created_at).getTime()
               : 0;
@@ -2709,48 +1762,38 @@ watch(
   { immediate: true },
 );
 
-// Debounced authentication watcher to prevent flickering
-let authTimeout: NodeJS.Timeout | null = null;
-
+// Debounced authentication watcher
 watch(
   hasAnyAuth,
   (authed) => {
-    // Clear any existing timeout
     if (authTimeout) {
       clearTimeout(authTimeout);
     }
 
-    // If authenticated, load deployment if we don't have one
     if (authed) {
-      // Clear any error state
       if (
         error.value === "Please log in or connect wallet to view deployments"
       ) {
         error.value = null;
       }
-      // Only load if deployment doesn't exist yet
       if (!deployment.value) {
         loadDeployment();
       }
       return;
     }
 
-    // If not authenticated, only show error after a delay and only if we don't have a deployment
-    // This prevents the error from showing during temporary auth interruptions (tab switching, session refresh)
     authTimeout = setTimeout(() => {
       if (!hasAnyAuth.value) {
-        // Only show login error if we don't already have deployment data
-        // This preserves the deployment during temporary auth interruptions
         if (!deployment.value) {
           error.value = "Please log in or connect wallet to view deployments";
         }
       }
-    }, 2000); // 2 second delay to allow auth to re-establish
+    }, 2000);
   },
   { immediate: true },
 );
 
-// Watch deployment status to automatically manage polling for running deployments
+// Watch deployment status to manage polling
 const prevDeploymentStatus = ref<string | null>(null);
 
 watch(
@@ -2761,23 +1804,19 @@ watch(
     const status = newStatus.toUpperCase();
     const prev = prevDeploymentStatus.value;
 
-    // If transitioning to RUNNING, start fast polling (skip normal polling)
     if (status === "RUNNING" && prev !== "RUNNING") {
       const expectedStatus =
         prev && prev !== "STARTING" && prev !== "RUNNING"
           ? "RUNNING"
           : undefined;
       startFastPolling(expectedStatus);
-    }
-    // Start normal polling when deployment is active (but not if we just started fast polling)
-    else if (
+    } else if (
       (status === "STARTING" || status === "RUNNING") &&
       !pollingTimeout.value
     ) {
       startUnifiedPolling();
     }
 
-    // Stop polling when deployment reaches a final state and no active jobs
     if (
       ["STOPPED", "ARCHIVED", "ERROR"].includes(status) &&
       !hasActiveJobs.value
@@ -2790,14 +1829,12 @@ watch(
   { immediate: true },
 );
 
-// Switch tab and update URL
+// --- Tab & action URL sync ---
 const switchTab = (tab: string) => {
   activeTab.value = tab;
-  // Reset pagination when switching to logs tab
   if (tab === "logs") {
     logsJobsPage.value = 1;
   }
-  // Immediately refresh events and tasks when switching to the events tab
   if (tab === "events") {
     loadEvents(true);
     loadTasks(true);
@@ -2805,12 +1842,11 @@ const switchTab = (tab: string) => {
   router.replace({
     query: {
       ...route.query,
-      tab: tab === "overview" ? undefined : tab, // Don't include tab=overview in URL for cleaner URLs
+      tab: tab === "overview" ? undefined : tab,
     },
   });
 };
 
-// Switch action and update URL
 const switchAction = (action: string) => {
   if (action === "create-revision") showRevisionModal.value = true;
   else if (action === "update-replicas") showReplicasModal.value = true;
@@ -2834,7 +1870,6 @@ const switchAction = (action: string) => {
   });
 };
 
-// Clear action from URL
 const clearAction = () => {
   if (route.query.action) {
     const { action, ...query } = route.query;
@@ -2842,7 +1877,7 @@ const clearAction = () => {
   }
 };
 
-// Watch revision modal to initialize job definition and clear URL when closed
+// --- Modal watchers ---
 watch(
   [() => showRevisionModal.value, () => jobDefinitionModel.value],
   ([isOpen, definition]) => {
@@ -2858,7 +1893,6 @@ watch(
   },
 );
 
-// Watch other modals to clear URL when closed
 watch(showReplicasModal, (isOpen) => {
   if (!isOpen && route.query.action === "update-replicas") clearAction();
 });
@@ -2871,7 +1905,6 @@ watch(showScheduleModal, (isOpen) => {
   if (!isOpen && route.query.action === "update-schedule") clearAction();
 });
 
-// Watch for vault becoming available and open modal if URL has vault action
 watch(
   deploymentVault,
   (vault) => {
