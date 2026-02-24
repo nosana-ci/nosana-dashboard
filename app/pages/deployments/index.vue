@@ -53,7 +53,7 @@ watch(
     if (!loading && (auth || conn)) {
       try {
         // @ts-ignore
-        const result = await nosana.value.api.deployments.list({ limit: 1 });
+        const result = await nosana.value.api.deployments.list({ limit: 10 });
         if (!result.deployments || result.deployments.length === 0) {
           router.replace("/deployments/create");
           return;
