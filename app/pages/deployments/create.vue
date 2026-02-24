@@ -398,8 +398,7 @@ const { nosana } = useKit();
 const router = useRouter();
 const route = useRoute();
 const toast = useToast();
-
-const { isAuthenticated: superTokensAuth } = useSuperTokens();
+const { status, token } = useAuth();
 const { connected, account } = useWallet();
 
 // Compatibility: create publicKey-like object from account
@@ -654,7 +653,7 @@ const requiredNos = computed(() => {
 
 // Check if user can post job based on authentication and credits
 const canPostJob = computed(() => {
-  if (superTokensAuth.value) {
+  if (status.value === "authenticated") {
     const costUSD = hourlyPrice.value * replicas.value * timeout.value || 0;
     return creditBalance.value >= costUSD;
   }
@@ -663,11 +662,11 @@ const canPostJob = computed(() => {
 
 // Authentication mode detection
 const isWalletMode = computed(() => {
-  return Boolean(connected.value && publicKey.value && !superTokensAuth.value);
+  return Boolean(connected.value && publicKey.value && !token.value);
 });
 
 const isCreditMode = computed(() => {
-  return superTokensAuth.value;
+  return status.value === "authenticated" && token.value;
 });
 
 const canCreateDeployment = computed(() => {
@@ -696,7 +695,7 @@ const activeFilterKey = computed(
 
 // Credit balance fetch (SDK API)
 const refreshCreditBalance = async () => {
-  if (!superTokensAuth.value) return;
+  if (status.value !== "authenticated" || !token.value) return;
   loadingCreditBalance.value = true;
   try {
     const data = await nosana.value.api.credits.balance();
@@ -935,7 +934,7 @@ onMounted(async () => {
 
 // React to auth changes to keep credit balance fresh
 watch(
-  superTokensAuth,
+  [status, token],
   async () => {
     if (isCreditMode.value) {
       await refreshCreditBalance();

@@ -3,7 +3,19 @@
     <div
       class="is-flex is-align-items-center is-justify-content-space-between is-flex-wrap-nowrap mb-4"
     >
-      <div class="control has-icons-left">
+      <div class="deployment-tabs">
+        <template v-for="button in buttons" :key="button.tab">
+          <button
+            class="tab-button"
+            :class="{ 'is-active': currentTab === button.tab }"
+            v-if="button.tab !== 'vaults' || connected"
+            @click="push({ query: { tab: button.tab } })"
+          >
+            {{ button.label }}
+          </button>
+        </template>
+      </div>
+      <div class="control has-icons-left ml-auto">
         <input
           class="input"
           type="text"
@@ -14,23 +26,12 @@
           <GreenDownChevron />
         </span>
       </div>
-      <div v-if="buttons.length > 1" class="deployment-tabs ml-4">
-        <template v-for="button in buttons" :key="button.tab">
-          <button
-            class="tab-button"
-            :class="{ 'is-active': currentTab === button.tab }"
-            @click="push({ query: { tab: button.tab } })"
-          >
-            {{ button.label }}
-          </button>
-        </template>
-      </div>
-      <div class="is-flex-grow-1"></div>
-      <div class="select page-size-select">
+      <div class="select page-size-select ml-2">
         <select v-model="pageSizeValue">
           <option value="10">10 per page</option>
           <option value="25">25 per page</option>
           <option value="50">50 per page</option>
+          <option value="all">All</option>
         </select>
       </div>
       <div v-if="filtersOptions" class="select status-select ml-2">
@@ -54,28 +55,21 @@ import GreenDownChevron from "@/assets/img/icons/green-down-chevron.svg?componen
 import { filters } from "./filters";
 
 const { connected } = useWallet();
-const { isAuthenticated } = useSuperTokens();
 const { currentRoute, push, replace } = useRouter();
 
 const currentTab = computed(
-  () => currentRoute.value.query.tab?.toString() || "deployments",
+  () => currentRoute.value.query.tab?.toString() || "deployments"
 );
 
 const filtersOptions = computed(() => {
   return filters[currentTab.value];
 });
 
-const buttons = computed(() => {
-  if (isAuthenticated.value) {
-    // Credit users: deployments only, no tab switcher
-    return [{ label: "Deployments", tab: "deployments" }];
-  }
-  // Wallet users: deployments + vaults, no jobs
-  return [
-    { label: "Deployments", tab: "deployments" },
-    ...(connected.value ? [{ label: "Vaults", tab: "vaults" }] : []),
-  ];
-});
+const buttons = computed(() => [
+  { label: "Deployments", tab: "deployments" },
+  { label: "Jobs", tab: "jobs" },
+  ...(connected ? [{ label: "Vaults", tab: "vaults" }] : []),
+]);
 
 const searchText = computed({
   get() {

@@ -4,7 +4,7 @@ import { useWallet } from "@nosana/solana-vue";
 import type { Job, JobDefinition } from "@nosana/kit";
 import { getJobExposedServices } from "@nosana/kit";
 import type { DeploymentJob as ApiDeploymentJob } from "@nosana/api";
-import type { JobInfo, JobViewModel, LiveEndpoints, ResultsSection } from "~/composables/jobs/types";
+import type { JobInfo, JobViewModel, LiveEndpoints, ResultsSection} from "~/composables/jobs/types";
 import { normalizeEndpoints } from "~/composables/jobs/normalizeEndpoints";
 import { useDeploymentAuth } from "~/composables/useDeploymentAuth";
 
@@ -29,13 +29,13 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
 
   const toast = useToast();
   const { nosana } = useKit();
-  const { isAuthenticated: superTokensAuth, userData } = useSuperTokens();
+  const { status, data: userData, token } = useAuth();
   const { connected, account } = useWallet();
 
-  const isCreditUser = computed(() => superTokensAuth.value);
+  const isCreditUser = computed(() => status.value === "authenticated" && Boolean(userData.value?.generatedAddress));
 
   const activeAddress = computed(() => {
-    if (superTokensAuth.value && userData.value?.generatedAddress) return userData.value.generatedAddress as string;
+    if (status.value === "authenticated" && userData.value?.generatedAddress) return userData.value.generatedAddress as string;
     if (connected.value && account.value?.address) return account.value.address;
     return null;
   });
@@ -102,7 +102,7 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
             const resp = await $fetch<{ message: string; creditRefund?: number; delisted?: boolean }>(`${config.public.backend_url}/api/jobs/stop-with-credits`, {
               method: "POST",
               body: { jobAddress: jobId },
-              credentials: "include",
+              headers: { Authorization: `Bearer ${token.value}` },
             });
             if (resp.creditRefund && resp.creditRefund > 0) toast.success(`Job stopped successfully! ${resp.creditRefund} credits refunded.`);
             else toast.success("Job stopped successfully!");
@@ -160,7 +160,7 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
             const resp = await $fetch<{ message: string; newTimeout?: number; creditsUsed?: number }>(`${config.public.backend_url}/api/jobs/extend-with-credits`, {
               method: "POST",
               body: { jobAddress: jobId, extensionSeconds },
-              credentials: "include",
+              headers: { Authorization: `Bearer ${token.value}` },
             });
             if (resp.creditsUsed) {
               const dollarAmount = (resp.creditsUsed / 1000).toFixed(2);
@@ -213,14 +213,14 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
         if (jobInfo.value) {
           jobInfo.value = { ...jobInfo.value, jobDefinition: vm.jobDefinition };
         }
-      } catch { }
+      } catch {}
     }
 
 
     if (stateNum === 2 || stateNum === 3) {
       fetchFinalInfoOnce();
       if (eventSource) {
-        try { eventSource.close(); } catch { }
+        try { eventSource.close(); } catch {}
         eventSource = null;
       }
     }
@@ -243,7 +243,7 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
       }
 
       const finalEs = new EventSourcePolyfill(sseUrl, { headers: { Authorization: authHeader } });
-      const closeFinal = () => { try { (finalEs as unknown as EventSource).close?.(); } catch { } hasFetchedFinalInfo = true; };
+      const closeFinal = () => { try { (finalEs as unknown as EventSource).close?.(); } catch {} hasFetchedFinalInfo = true; };
 
       const handleOnce = (event: MessageEvent) => {
         try {
@@ -269,12 +269,12 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
               ? sseResults.opStates.some((op) => (op as { results?: unknown }).results !== undefined)
               : false;
           }
-        } catch { }
+        } catch {}
         closeFinal();
       };
 
-      try { (finalEs as unknown as EventSource).addEventListener?.("message", handleOnce as EventListener); } catch { }
-      try { (finalEs as unknown as EventSource).addEventListener?.("flow:updated", handleOnce as EventListener); } catch { }
+      try { (finalEs as unknown as EventSource).addEventListener?.("message", handleOnce as EventListener); } catch {}
+      try { (finalEs as unknown as EventSource).addEventListener?.("flow:updated", handleOnce as EventListener); } catch {}
       finalEs.onerror = () => { closeFinal(); };
       setTimeout(() => { closeFinal(); }, 2500);
     } catch {
@@ -292,7 +292,7 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
     }
     if (eventSource && currentNodeAddress === nodeAddress) return;
     if (eventSource) {
-      try { eventSource.close(); } catch { }
+      try { eventSource.close(); } catch {}
       eventSource = null;
     }
     currentNodeAddress = nodeAddress;
@@ -319,7 +319,7 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
             if (!job.value?.jobDefinition && info.jobDefinition) {
               try {
                 job.value = { ...(job.value as JobViewModel), jobDefinition: info.jobDefinition };
-              } catch { }
+              } catch {}
             }
 
             const normalized = normalizeEndpoints(info, jobId, metaByPort);
@@ -348,8 +348,8 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
           }
         };
 
-        try { (eventSource as unknown as EventSource).addEventListener?.("message", handleInfo as EventListener); } catch { }
-        try { (eventSource as unknown as EventSource).addEventListener?.("flow:updated", handleInfo as EventListener); } catch { }
+        try { (eventSource as unknown as EventSource).addEventListener?.("message", handleInfo as EventListener); } catch {}
+        try { (eventSource as unknown as EventSource).addEventListener?.("flow:updated", handleInfo as EventListener); } catch {}
 
         eventSource.onerror = () => {
           loading.value = false;
@@ -378,7 +378,7 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
   }
 
   onMounted(() => { init(); });
-  onBeforeUnmount(() => { if (eventSource) { try { eventSource.close(); } catch { } eventSource = null; } });
+  onBeforeUnmount(() => { if (eventSource) { try { eventSource.close(); } catch {} eventSource = null; } });
 
   return {
     job,
