@@ -2,12 +2,16 @@
   <div class="modal" :class="{ 'is-active': modelValue }">
     <div class="modal-background" @click="closeModal"></div>
     <div class="modal-content" style="max-width: 450px; width: 100%">
-      <div class="box has-text-centered p-6" style="border-radius: 16px;">
+      <div class="box has-text-centered p-6" style="border-radius: 16px">
         <!-- Type: Manual Code -->
         <template v-if="type === 'manual'">
           <h3 class="title is-4 mb-2">Redeem Code</h3>
           <p class="subtitle is-6 has-text-grey mb-5">
-            {{ claimedSuccessfully ? 'Your credits have been added to your balance.' : 'Enter your voucher code to add credits to your balance.' }}
+            {{
+              claimedSuccessfully
+                ? "Your credits have been added to your balance."
+                : "Enter your voucher code to add credits to your balance."
+            }}
           </p>
           <div class="field" v-if="!claimedSuccessfully">
             <div class="control has-icons-left">
@@ -18,7 +22,7 @@
                 v-model="claimCode"
                 :disabled="claiming"
                 @keyup.enter="handleClaim"
-                style="border-radius: 8px;"
+                style="border-radius: 8px"
               />
               <span class="icon is-left">
                 <i class="fas fa-ticket-alt"></i>
@@ -32,7 +36,7 @@
               @click="handleClaim"
               :disabled="!claimCode.trim() || claiming"
               :class="{ 'is-loading': claiming }"
-              style="border-radius: 8px;"
+              style="border-radius: 8px"
             >
               Redeem Credits
             </button>
@@ -40,7 +44,7 @@
               v-else
               to="/deployments/create"
               class="button is-dark is-fullwidth is-medium"
-              style="border-radius: 8px;"
+              style="border-radius: 8px"
               @click="closeModal"
             >
               Start Deploying
@@ -50,13 +54,19 @@
 
         <!-- Type: Automatic Grant -->
         <template v-else-if="type === 'grant'">
-          <h1 class="title is-3 mb-3">{{ claimedSuccessfully ? 'Credits Added' : 'Your Credits Are Ready' }}</h1>
+          <h1 class="title is-3 mb-3">
+            {{
+              claimedSuccessfully ? "Credits Added" : "Your Credits Are Ready"
+            }}
+          </h1>
           <p class="subtitle is-6 has-text-grey mb-5">
             <template v-if="claimedSuccessfully">
-              <strong class="has-text-success">$50</strong> in compute credits have been added to your account.
+              <strong class="has-text-success">$50</strong> in compute credits
+              have been added to your account.
             </template>
             <template v-else>
-              You can now add <strong class="has-text-success">$50</strong> in compute credits to your account.
+              You can now add <strong class="has-text-success">$50</strong> in
+              compute credits to your account.
             </template>
           </p>
           <div class="mt-5">
@@ -66,7 +76,7 @@
               :disabled="claiming"
               class="button is-dark is-fullwidth is-medium"
               :class="{ 'is-loading': claiming }"
-              style="border-radius: 8px;"
+              style="border-radius: 8px"
             >
               Claim $50 Credits
             </button>
@@ -74,7 +84,7 @@
               v-else
               to="/deployments/create"
               class="button is-dark is-fullwidth is-medium"
-              style="border-radius: 8px;"
+              style="border-radius: 8px"
               @click="closeModal"
             >
               Start Deploying
@@ -90,8 +100,11 @@
               Your invitation credits have been claimed.
             </template>
             <template v-else>
-              You can now add <strong class="has-text-success">
-                ${{(invitation.creditsAmount / 1000).toFixed(2)}}</strong> in compute credits to your account.
+              You can now add
+              <strong class="has-text-success">
+                ${{ (invitation.creditsAmount / 1000).toFixed(2) }}</strong
+              >
+              in compute credits to your account.
             </template>
           </p>
           <div class="mt-5">
@@ -101,7 +114,7 @@
               :disabled="claiming"
               class="button is-dark is-fullwidth is-medium"
               :class="{ 'is-loading': claiming }"
-              style="border-radius: 8px;"
+              style="border-radius: 8px"
             >
               Claim ${{ (invitation.creditsAmount / 1000).toFixed(2) }} Credits
             </button>
@@ -109,7 +122,7 @@
               v-else
               to="/deployments/create"
               class="button is-dark is-fullwidth is-medium"
-              style="border-radius: 8px;"
+              style="border-radius: 8px"
               @click="closeModal"
             >
               Start Deploying
@@ -118,18 +131,25 @@
         </template>
 
         <div class="mt-4" v-if="!claiming">
-          <a @click="closeModal" class="has-text-grey-light is-size-7 is-clickable is-block">
+          <a
+            @click="closeModal"
+            class="has-text-grey-light is-size-7 is-clickable is-block"
+          >
             Maybe later
           </a>
         </div>
       </div>
     </div>
-    <button class="modal-close is-large" aria-label="close" @click="closeModal"></button>
+    <button
+      class="modal-close is-large"
+      aria-label="close"
+      @click="closeModal"
+    ></button>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, watch, nextTick } from "vue";
 import { useToast } from "vue-toastification";
 import { trackEvent } from "~/utils/analytics";
 
@@ -139,12 +159,12 @@ interface Invitation {
 
 const props = defineProps<{
   modelValue: boolean;
-  type: 'manual' | 'grant' | 'invitation';
+  type: "manual" | "grant" | "invitation";
   invitation?: Invitation | null;
   token?: string;
 }>();
 
-const emit = defineEmits(['update:modelValue', 'claimed']);
+const emit = defineEmits(["update:modelValue", "claimed"]);
 
 const config = useRuntimeConfig().public;
 const { isAuthenticated, userData } = useSuperTokens();
@@ -153,9 +173,24 @@ const claiming = ref(false);
 const claimedSuccessfully = ref(false);
 const claimCode = ref("");
 
+// Guard against the modal-background receiving a stale click event from the
+// same tick the modal was opened (e.g. a propagating click that made it open).
+const justOpened = ref(false);
+watch(
+  () => props.modelValue,
+  (val) => {
+    if (val) {
+      justOpened.value = true;
+      nextTick(() => {
+        justOpened.value = false;
+      });
+    }
+  },
+);
+
 const closeModal = () => {
-  if (!claiming.value) {
-    emit('update:modelValue', false);
+  if (!claiming.value && !justOpened.value) {
+    emit("update:modelValue", false);
     // Reset state after a small delay so it doesn't flicker while closing
     setTimeout(() => {
       claimedSuccessfully.value = false;
@@ -166,32 +201,32 @@ const closeModal = () => {
 
 const handleClaim = async () => {
   if (!isAuthenticated.value) return;
-  
+
   claiming.value = true;
   try {
     let url = "";
     let body = {};
 
-    if (props.type === 'manual') {
+    if (props.type === "manual") {
       url = `${config.backend_url}/api/credits/claim`;
       body = { code: claimCode.value.trim() };
-    } else if (props.type === 'grant') {
+    } else if (props.type === "grant") {
       url = `${config.backend_url}/api/credits/request`;
-    } else if (props.type === 'invitation') {
+    } else if (props.type === "invitation") {
       url = `${config.backend_url}/api/credits/invitations/${props.token}/claim`;
     }
 
     const response = await $fetch<{ amount: number }>(url, {
-      method: 'POST',
-      credentials: 'include',
+      method: "POST",
+      credentials: "include",
       body,
     });
-    
+
     toast.success(`Successfully claimed $${response.amount} in credits!`);
     claimedSuccessfully.value = true;
-    
+
     try {
-      trackEvent('credit_claimed', {
+      trackEvent("credit_claimed", {
         amount: response.amount,
         type: props.type,
         user_id: userData.value?.generatedAddress,
@@ -200,10 +235,10 @@ const handleClaim = async () => {
       console.error("Error tracking credit claimed:", error);
     }
 
-    emit('claimed', response.amount);
+    emit("claimed", response.amount);
   } catch (err) {
-    console.error('Error claiming credits:', err);
-    toast.error('Failed to claim credits');
+    console.error("Error claiming credits:", err);
+    toast.error("Failed to claim credits");
   } finally {
     claiming.value = false;
   }
