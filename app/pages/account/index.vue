@@ -19,7 +19,7 @@
         </div>
       </template>
     </TopBar>
-    <div class="container">
+    <div>
       <AccountClaimModal
         v-model="showInvitationModal"
         type="invitation"
@@ -30,6 +30,11 @@
       <AccountClaimModal
         v-model="showFreeCreditsModal"
         type="grant"
+        @claimed="handleFreeCreditsClaimed"
+      />
+      <AccountClaimModal
+        v-model="showClaimModal"
+        type="manual"
         @claimed="handleFreeCreditsClaimed"
       />
       <!-- Credit Invitation Section - only show when there's an issue -->
@@ -110,51 +115,155 @@
         </div>
       </div>
 
-      <div v-if="canShowAccountData">
-        <h3 class="title is-4 mb-0">Status</h3>
-        <div class="mb-4"></div>
-        <div class="columns is-multiline mb-4">
-          <div class="column is-3">
-            <div class="box has-text-centered equal-height-box">
-              <p class="heading">Deployments</p>
-              <p
-                class="title is-flex is-align-items-center is-justify-content-center"
-              >
-                <RocketIcon
-                  style="
-                    width: 16px;
-                    height: 16px;
-                    fill: #10e80c;
-                    margin-right: 0.5rem;
-                  "
-                />
-                {{ totalDeployments }}
-              </p>
-            </div>
-          </div>
-          <!-- Credit Balance for Google Auth Users Only (keep mounted during loading to prevent refetch) -->
-          <div class="column is-3" v-if="isAuthenticated || isLoading">
-            <CreditBalance ref="creditBalanceRef" />
-          </div>
-          <!-- NOS Balance for Wallet Users Only -->
-          <div class="column is-3" v-if="connected && publicKey">
-            <div class="box has-text-centered equal-height-box">
-              <p class="heading">NOS Balance</p>
-              <p class="title" v-if="balance && nosPrice">
-                {{ balance.uiAmount.toFixed(2) }} NOS
-                <span class="has-text-grey is-size-6"
-                  >(${{ (balance.uiAmount * nosPrice).toFixed(2) }})</span
-                >
-              </p>
-              <p class="title" v-else>-</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- API Tokens Section (keep mounted during loading to prevent refetch) -->
-        <ApiKeys class="pb-5" v-if="isAuthenticated || isLoading" />
-
+      <Loader v-if="isLoading && !canShowAccountData" />
+      <div v-else-if="canShowAccountData">
         <div class="columns mt-6">
+          <div class="column is-4">
+            <h3 class="title is-4 mb-0">Cost and Usage</h3>
+            <div class="mb-4"></div>
+            <div class="box cost-and-usage-box">
+              <!-- Credit / NOS balance at the top -->
+              <div v-if="isAuthenticated" class="balance-section">
+                <CreditBalance />
+              </div>
+              <div
+                v-else-if="connected && publicKey && nosBalance"
+                class="balance-section has-text-centered"
+              >
+                <p
+                  class="heading mb-1"
+                  style="
+                    font-size: 0.7rem;
+                    text-transform: uppercase;
+                    font-weight: 600;
+                    color: #7a7a7a;
+                  "
+                >
+                  NOS Balance
+                </p>
+                <p class="title is-4 mb-1">
+                  {{ nosBalance.uiAmount.toFixed(2) }} NOS
+                  <span class="has-text-grey is-size-6"
+                    >${{ (nosBalance.uiAmount * nosPrice).toFixed(2) }}</span
+                  >
+                </p>
+              </div>
+              <div class="usage-divider"></div>
+
+              <!-- This month + forecast side by side -->
+              <div class="columns is-mobile mb-0">
+                <div class="column">
+                  <p class="heading mb-1" style="font-size: 0.7rem">
+                    This months cost
+                  </p>
+                  <p
+                    class="title is-4 mb-1"
+                    v-if="!loadingSpending || hasLoadedSpendingOnce"
+                  >
+                    ${{ spentThisMonth.toFixed(2) }}
+                  </p>
+                  <p class="title is-4 mb-1" v-else>-</p>
+                  <p
+                    class="has-text-grey is-size-7 mb-0"
+                    v-if="pctChangeSoFar != null"
+                  >
+                    <ArrowUpIcon
+                      v-if="pctChangeSoFar >= 0"
+                      class="icon is-small mr-1"
+                      style="width: 10px; height: 10px; fill: #48c78e"
+                    />
+                    <ArrowDownIcon
+                      v-else
+                      class="icon is-small mr-1"
+                      style="width: 10px; height: 10px; fill: #f14668"
+                    />
+                    {{ pctChangeSoFar.toFixed(2) }}% vs last month
+                  </p>
+                </div>
+                <div class="column">
+                  <p class="heading mb-1" style="font-size: 0.7rem">
+                    Forecasted cost
+                  </p>
+                  <p
+                    class="title is-4 mb-1"
+                    v-if="!loadingSpending || hasLoadedSpendingOnce"
+                  >
+                    ${{ forecastAmount.toFixed(2) }}
+                  </p>
+                  <p class="title is-4 mb-1" v-else>-</p>
+                  <p
+                    class="has-text-grey is-size-7 mb-0"
+                    v-if="pctChangeForecastFromLastMonth != null"
+                  >
+                    <ArrowUpIcon
+                      v-if="pctChangeForecastFromLastMonth >= 0"
+                      class="icon is-small mr-1"
+                      style="width: 10px; height: 10px; fill: #48c78e"
+                    />
+                    <ArrowDownIcon
+                      v-else
+                      class="icon is-small mr-1"
+                      style="width: 10px; height: 10px; fill: #f14668"
+                    />
+                    {{ pctChangeForecastFromLastMonth.toFixed(2) }}% vs last
+                    month
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="column is-4">
+            <h3 class="title is-4 mb-0">Monthly History</h3>
+            <div class="mb-4"></div>
+            <div class="box" style="height: 100%; position: relative">
+              <div class="content" style="height: 100%">
+                <div
+                  class="field is-grouped is-justify-content-end"
+                  style="position: absolute; top: 12px; right: 12px; z-index: 1"
+                >
+                  <div class="control">
+                    <div class="buttons has-addons">
+                      <button
+                        v-for="period in ['3', '6', '12']"
+                        :key="period"
+                        class="button is-small"
+                        :class="{ 'is-primary': selectedMonths === period }"
+                        @click="
+                          () => {
+                            selectedMonths = period as '3' | '6' | '12';
+                            refreshSpendingHistory();
+                          }
+                        "
+                      >
+                        {{ `${period}M` }}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <progress
+                  v-if="loadingHistory && !hasLoadedHistoryOnce"
+                  class="progress is-small is-info"
+                  max="100"
+                ></progress>
+                <div
+                  v-else-if="
+                    hasLoadedHistoryOnce || (!loadingHistory && monthlyHistory)
+                  "
+                  style="height: 315px; position: relative"
+                >
+                  <Bar
+                    v-if="chartData && chartData.labels.length"
+                    :data="chartData"
+                    :options="chartOptions"
+                    style="padding-top: 10px"
+                  />
+                  <p v-else-if="!loadingHistory">No historic data.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div class="column is-4">
             <h3 class="title is-4 mb-0">Welcome to Nosana</h3>
             <div class="mb-4"></div>
@@ -239,138 +348,12 @@
               </nuxt-link>
             </div>
           </div>
-
-          <div class="column is-4">
-            <h3 class="title is-4 mb-0">Cost and Usage</h3>
-            <div class="mb-4"></div>
-            <div class="box" style="height: 100%">
-              <div
-                class="content is-flex is-flex-direction-column is-justify-content-center"
-                style="height: 100%"
-              >
-                <div
-                  class="is-flex is-flex-direction-column"
-                  style="flex: 1; display: flex; justify-content: center"
-                >
-                  <p class="heading mb-1" style="font-size: 0.7rem">
-                    Current month cost
-                  </p>
-                  <p class="title is-4 mb-1" v-if="!loadingSpending">
-                    ${{ spentThisMonth.toFixed(2) }}
-                  </p>
-                  <p class="title is-4 mb-1" v-else>-</p>
-
-                  <p
-                    class="has-text-grey is-size-7 mb-0"
-                    v-if="pctChangeSoFar != null"
-                  >
-                    <ArrowUpIcon
-                      v-if="pctChangeSoFar >= 0"
-                      class="icon is-small mr-1"
-                      style="width: 10px; height: 10px; fill: #48c78e"
-                    />
-                    <ArrowDownIcon
-                      v-else
-                      class="icon is-small mr-1"
-                      style="width: 10px; height: 10px; fill: #f14668"
-                    />
-                    {{ pctChangeSoFar.toFixed(2) }}% compared to last month for
-                    same period
-                  </p>
-                </div>
-
-                <div class="is-flex is-justify-content-center my-3">
-                  <div
-                    style="width: 100%; height: 1px; background-color: #dbdbdb"
-                  ></div>
-                </div>
-
-                <div
-                  class="is-flex is-flex-direction-column"
-                  style="flex: 1; display: flex; justify-content: center"
-                >
-                  <p class="heading mb-1" style="font-size: 0.7rem">
-                    Forecasted month end cost
-                  </p>
-                  <p class="title is-4 mb-1" v-if="!loadingSpending">
-                    ${{ forecastAmount.toFixed(2) }}
-                  </p>
-                  <p class="title is-4 mb-1" v-else>-</p>
-
-                  <p
-                    class="has-text-grey is-size-7 mb-0"
-                    v-if="pctChangeForecastFromLastMonth != null"
-                  >
-                    <ArrowUpIcon
-                      v-if="pctChangeForecastFromLastMonth >= 0"
-                      class="icon is-small mr-1"
-                      style="width: 10px; height: 10px; fill: #48c78e"
-                    />
-                    <ArrowDownIcon
-                      v-else
-                      class="icon is-small mr-1"
-                      style="width: 10px; height: 10px; fill: #f14668"
-                    />
-                    {{ pctChangeForecastFromLastMonth.toFixed(2) }}% compared to
-                    last month's total cost
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="column is-4">
-            <h3 class="title is-4 mb-0">Monthly History</h3>
-            <div class="mb-4"></div>
-            <div class="box" style="height: 100%; position: relative">
-              <div class="content" style="height: 100%">
-                <div
-                  class="field is-grouped is-justify-content-end"
-                  style="position: absolute; top: 12px; right: 12px; z-index: 1"
-                >
-                  <div class="control">
-                    <div class="buttons has-addons">
-                      <button
-                        v-for="period in ['3', '6', '12']"
-                        :key="period"
-                        class="button is-small"
-                        :class="{ 'is-primary': selectedMonths === period }"
-                        @click="
-                          () => {
-                            selectedMonths = period as '3' | '6' | '12';
-                            refreshSpendingHistory();
-                          }
-                        "
-                      >
-                        {{ `${period}M` }}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-                <div
-                  v-if="!loadingHistory && monthlyHistory"
-                  style="height: 315px"
-                >
-                  <Bar
-                    v-if="chartData && chartData.labels.length"
-                    :data="chartData"
-                    :options="chartOptions"
-                    style="padding-top: 10px"
-                  />
-                </div>
-                <progress
-                  v-else-if="loadingHistory"
-                  class="progress is-small is-info"
-                  max="100"
-                ></progress>
-                <p v-else>No historic data.</p>
-              </div>
-            </div>
-          </div>
         </div>
+
+        <!-- API Keys Section -->
+        <ApiKeys class="pt-6" v-if="canShowAccountData" />
       </div>
     </div>
-    <Loader v-if="loading" />
   </div>
 </template>
 
@@ -380,7 +363,6 @@ import JobList from "~/components/List/JobList.vue";
 import { useWallet } from "@nosana/solana-vue";
 import { useAPI } from "~/composables/useAPI";
 import { computed, ref, onMounted, watch } from "vue";
-import CreditBalance from "~/components/Account/CreditBalance.vue";
 import RocketIcon from "@/assets/img/icons/rocket.svg?component";
 import ExplorerIcon from "@/assets/img/icons/sidebar/explorer.svg?component";
 import SupportIcon from "@/assets/img/icons/sidebar/support.svg?component";
@@ -400,6 +382,7 @@ import {
 import { useRouter, useRoute } from "vue-router";
 import ApiKeys from "~/components/Account/ApiKeys.vue";
 import AccountClaimModal from "~/components/Account/ClaimModal.vue";
+import CreditBalance from "~/components/Account/CreditBalance.vue";
 
 const config = useRuntimeConfig().public;
 ChartJS.register(
@@ -427,8 +410,29 @@ const publicKey = computed(() => {
   };
 });
 const { nosana } = useKit();
-const creditBalanceRef = ref();
 const { triggerCreditRefresh } = useCreditRefresh();
+
+// NOS balance (wallet users)
+const nosBalance = ref<{ uiAmount: number } | null>(null);
+const { data: stats } = useAPI("/api/stats");
+const nosPrice = computed(() => stats.value?.price || 0);
+
+watch(
+  [connected, publicKey],
+  async ([newConnected, newPublicKey]) => {
+    if (newConnected && newPublicKey) {
+      try {
+        const bal = await nosana.value.nos.getBalance(newPublicKey.toBase58());
+        nosBalance.value = bal !== null ? { uiAmount: bal } : null;
+      } catch {
+        nosBalance.value = null;
+      }
+    } else {
+      nosBalance.value = null;
+    }
+  },
+  { immediate: true },
+);
 
 interface Invitation {
   creditsAmount: number;
@@ -448,10 +452,16 @@ let invitationLoadPromise: Promise<void> | null = null;
 
 const showFreeCreditsModal = ref(false);
 const showInvitationModal = ref(false);
+const showClaimModal = ref(false);
 const checkedEligibility = ref(false);
 
 const checkFreeCreditsEligibility = async () => {
-  if (!isAuthenticated.value || checkedEligibility.value) return;
+  if (!isAuthenticated.value || checkedEligibility.value) {
+    return;
+  }
+
+  // Mark in-flight immediately so a concurrent call can't slip through
+  checkedEligibility.value = true;
 
   // If we have an invitation token, ensure it's loaded before checking eligibility
   if (invitationToken.value) {
@@ -485,40 +495,18 @@ const checkFreeCreditsEligibility = async () => {
     if (data && data.eligible) {
       showFreeCreditsModal.value = true;
     }
-    checkedEligibility.value = true;
   } catch (error) {
+    checkedEligibility.value = false; // allow retry on network error
     console.error("Error checking free credits eligibility:", error);
   }
 };
 
 const handleFreeCreditsClaimed = async () => {
-  if (creditBalanceRef.value?.fetchBalance) {
-    await creditBalanceRef.value.fetchBalance();
-  }
   triggerCreditRefresh();
   if (showInvitationModal.value) {
     navigateTo("/account", { replace: true });
   }
 };
-
-const totalDeployments = ref(0);
-
-const fetchDeploymentsCount = async () => {
-  if (!canShowAccountData.value || !activeAddress.value) {
-    totalDeployments.value = 0;
-    return;
-  }
-
-  try {
-    const deployments = await nosana.value.api.deployments.list();
-    totalDeployments.value = deployments ? deployments.length : 0;
-  } catch (error) {
-    console.error("Error fetching deployments count:", error);
-    totalDeployments.value = 0;
-  }
-};
-
-// (debug status watcher removed)
 
 const activeAddress = computed(() => {
   if (isAuthenticated.value && userData.value?.generatedAddress) {
@@ -530,26 +518,16 @@ const activeAddress = computed(() => {
   return null;
 });
 
-const addressSource = computed(() => {
-  if (isAuthenticated.value && userData.value?.generatedAddress) {
-    return "generated";
-  }
-  if (connected.value && publicKey.value) {
-    return "wallet";
-  }
-  return null;
-});
-
-const canShowAccountData = computed(() => {
-  // Don't hide account data during loading states - only hide if truly unauthenticated
-  if (status.value === "loading") {
-    // During loading, check if we have any indication of authentication
-    return userData.value?.generatedAddress || connected.value;
-  }
-  return isAuthenticated.value || connected.value;
-});
-
-// (debug canShowAccountData watcher removed)
+// Latching ref: once true, never goes back to false — prevents flicker when
+// isLoading briefly toggles true/false after mount while isAuthenticated stays true.
+const canShowAccountData = ref(false);
+watch(
+  () => isAuthenticated.value || connected.value,
+  (val) => {
+    if (val) canShowAccountData.value = true;
+  },
+  { immediate: true },
+);
 
 // Define type for spending history results item
 interface MonthlyResult {
@@ -559,44 +537,11 @@ interface MonthlyResult {
   daily_breakdown?: Record<string, Record<string, number>>;
 }
 
-// Get balances
-const balance = ref<any | null>(null);
-const nosStaked = ref<any | null>(null);
-const loading = ref(false);
-
-// Get NOS price
-const { data: stats } = useAPI("/api/stats");
-const nosPrice = computed(() => stats.value?.price || null);
-
-// Fetch balances
-const checkBalances = async () => {
-  loading.value = true;
-  try {
-    if (activeAddress.value) {
-      const nosBalance = await nosana.value.nos.getBalance(activeAddress.value);
-      balance.value = { uiAmount: nosBalance };
-      // Only fetch staking data for wallet connections
-      if (addressSource.value === "wallet") {
-        try {
-          nosStaked.value = await nosana.value.stake.get(activeAddress.value);
-        } catch (error) {
-          nosStaked.value = null;
-        }
-      } else {
-        // Reset staking data for authenticated users
-        nosStaked.value = null;
-      }
-    }
-  } catch (error) {
-    console.error("Error fetching balances:", error);
-    balance.value = null;
-  }
-  loading.value = false;
-};
-
 // Add debouncing to prevent excessive API calls during tab switches
 let refreshTimeout: NodeJS.Timeout | null = null;
-let lastStableAddress: string | null = null;
+// Initialize from current activeAddress so the watcher doesn't treat the
+// initial isLoading transition as a genuine address change.
+let lastStableAddress: string | null = activeAddress.value;
 
 watch(
   [
@@ -605,12 +550,7 @@ watch(
     () => userData.value?.generatedAddress,
   ],
   (newValues, oldValues) => {
-    const [newAddress, newLoading, newGenerated] = newValues;
-    const [oldAddress, oldStatus, oldGenerated] = oldValues || [
-      null,
-      null,
-      null,
-    ];
+    const [newAddress, newLoading] = newValues;
 
     // Clear any pending refresh
     if (refreshTimeout) {
@@ -623,22 +563,15 @@ watch(
       return;
     }
 
-    // Skip if address is temporarily null during loading but we have a stable address
-    if (!newAddress && lastStableAddress && newLoading) {
-      return;
-    }
-
     // Only refresh if we have a meaningful address change (not just loading states)
     const addressReallyChanged = newAddress && newAddress !== lastStableAddress;
 
     if (addressReallyChanged) {
       lastStableAddress = newAddress;
 
-      refreshTimeout = setTimeout(() => {
-        checkBalances();
+      refreshTimeout = setTimeout(async () => {
+        await checkFreeCreditsEligibility();
         refreshSpendingHistory();
-        fetchDeploymentsCount();
-        checkFreeCreditsEligibility();
       }, 500);
     } else {
       // Update stable address if we have a valid one
@@ -654,11 +587,11 @@ onMounted(async () => {
   await checkSession(true);
 
   if (canShowAccountData.value && activeAddress.value) {
-    lastStableAddress = activeAddress.value; // Initialize stable address
-    checkBalances();
+    lastStableAddress = activeAddress.value; // Keep stable address in sync after checkSession
+    // Wait for eligibility check first — opening the modal while other async
+    // fetches are in-flight causes navigations that close it prematurely.
+    await checkFreeCreditsEligibility();
     refreshSpendingHistory();
-    fetchDeploymentsCount();
-    checkFreeCreditsEligibility();
   }
 
   // Add CSS to improve text rendering
@@ -767,6 +700,14 @@ watch(
 // Pass monthly history data to chart
 const monthlyHistory = computed(() => spendingHistory.value);
 const loadingHistory = computed(() => loadingSpending.value);
+const hasLoadedHistoryOnce = ref(false);
+const hasLoadedSpendingOnce = ref(false);
+watch(loadingHistory, (val) => {
+  if (!val) {
+    hasLoadedHistoryOnce.value = true;
+    hasLoadedSpendingOnce.value = true;
+  }
+});
 
 // Get markets data for name mapping
 const { data: marketsData } = useAPI("/api/markets", { default: () => [] });
@@ -1236,7 +1177,6 @@ const loadInvitation = async () => {
         },
       );
       invitation.value = response;
-      console.log("loaded invitation", invitation.value);
 
       if (response.isClaimed) {
         invitationError.value =
@@ -1270,12 +1210,6 @@ watch(
 </script>
 
 <style scoped>
-.container {
-  max-width: 1200px;
-  margin: 0 auto 0 0;
-  padding: 1.5rem;
-}
-
 .heading {
   text-transform: uppercase;
   font-size: 0.8rem;
@@ -1288,7 +1222,30 @@ watch(
   height: 100%;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
+}
+
+.usage-divider {
+  width: 100%;
+  height: 1px;
+  background-color: #dbdbdb;
+  margin: 1rem 0;
+}
+
+.balance-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.cost-and-usage-box {
+  justify-content: space-evenly;
+}
+
+.buttons.has-addons .button:focus,
+.buttons.has-addons .button:focus-visible {
+  outline: none;
+  box-shadow: none;
 }
 
 .equal-height-box {

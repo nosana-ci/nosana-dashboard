@@ -7,86 +7,153 @@
       </h3>
     </div>
     <div class="modal" :class="{ 'is-active': modelValue }">
-      <div class="modal-background" @click="updateShowSettingsModal(false)"></div>
+      <div
+        class="modal-background"
+        @click="updateShowSettingsModal(false)"
+      ></div>
       <div class="modal-content">
         <div class="box">
           <h2 class="title mb-5 has-text-weight-bold">Settings</h2>
-          <h3 class="title is-5">Global Priority Fee Level</h3>
+          <h3 class="title is-5">Global Prio-fee Level</h3>
           <p class="subtitle is-size-5">
             These fees apply across Nosana's entire product suite, such as
             staking actions, posting jobs etc.
           </p>
           <div class="field has-addons">
             <p class="control">
-              <button class="button is-medium is-primary" @click="setPrioFeeConfig('low')"
-                :class="{ 'is-outlined': prioFee.strategy !== 'low' }">
+              <button
+                class="button is-medium is-primary"
+                @click="setPrioFeeConfig('low')"
+                :class="{ 'is-outlined': prioFee.strategy !== 'low' }"
+              >
                 <span>Slow</span>
               </button>
             </p>
             <p class="control">
-              <button class="button is-medium is-primary" @click="setPrioFeeConfig('medium')"
-                :class="{ 'is-outlined': prioFee.strategy !== 'medium' }">
+              <button
+                class="button is-medium is-primary"
+                @click="setPrioFeeConfig('medium')"
+                :class="{ 'is-outlined': prioFee.strategy !== 'medium' }"
+              >
                 <span>Medium</span>
               </button>
             </p>
             <p class="control">
-              <button class="button is-medium is-primary" @click="setPrioFeeConfig('high')"
-                :class="{ 'is-outlined': prioFee.strategy !== 'high' }">
+              <button
+                class="button is-medium is-primary"
+                @click="setPrioFeeConfig('high')"
+                :class="{ 'is-outlined': prioFee.strategy !== 'high' }"
+              >
                 <span>Fast</span>
               </button>
             </p>
             <p class="control">
-              <button class="button is-medium is-primary" @click="setPrioFeeConfig('veryHigh')"
-                :class="{ 'is-outlined': prioFee.strategy !== 'veryHigh' }">
+              <button
+                class="button is-medium is-primary"
+                @click="setPrioFeeConfig('veryHigh')"
+                :class="{ 'is-outlined': prioFee.strategy !== 'veryHigh' }"
+              >
                 <span>Ultra</span>
               </button>
             </p>
           </div>
         </div>
       </div>
-      <button class="modal-close is-large" @click="updateShowSettingsModal(false)" aria-label="close"></button>
+      <button
+        class="modal-close is-large"
+        @click="updateShowSettingsModal(false)"
+        aria-label="close"
+      ></button>
     </div>
     <!-- Profile Section -->
-    <div v-if="(isGoogleAuthenticated || connected) && !hideButtons" class="profile-dropdown" :class="{ 'sticky-profile': $route.path === '/deploy' }">
+    <div
+      v-if="(isGoogleAuthenticated || connected) && !hideButtons"
+      class="profile-dropdown"
+      :class="{ 'sticky-profile': $route.path === '/deploy' }"
+    >
       <div class="profile-button" @click="toggleUserProfileDropdown">
         <!-- Google Auth User -->
         <template v-if="isGoogleAuthenticated">
+          <span class="profile-balance"
+            >${{ getCreditBalance().toFixed(2) }}</span
+          >
           <div class="profile-avatar auth-avatar">
             <UserIcon class="auth-icon has-text-grey" />
-          </div>
-          <div class="profile-info">
-            <span class="profile-name">{{ getUserName() }}</span>
-            <span class="profile-balance">${{ getCreditBalance().toFixed(2) }}</span>
           </div>
         </template>
         <!-- Wallet User -->
         <template v-else-if="connected && wallet">
           <div class="profile-avatar wallet-avatar">
-            <img v-if="wallet.icon" :src="wallet.icon" :alt="wallet.name + ' icon'" class="wallet-icon" />
+            <img
+              v-if="wallet.icon"
+              :src="wallet.icon"
+              :alt="wallet.name + ' icon'"
+              class="wallet-icon"
+            />
             <span v-else>W</span>
           </div>
           <div class="profile-info">
-            <span class="profile-name">{{ getWalletAddress() }}</span>
-            <span class="profile-balance">${{ getNosBalanceUSD().toFixed(2) }}</span>
+            <span class="profile-name">{{ getUserName() }}</span>
+            <span class="profile-balance">${{ nosBalanceUSD.toFixed(2) }}</span>
           </div>
         </template>
-        <svg class="dropdown-arrow" :class="{ 'is-flipped': showUserProfileDropdown }" width="12" height="12" viewBox="0 0 12 12" fill="none">
-          <path d="M7.5 3L4.5 6L7.5 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <svg
+          class="dropdown-arrow"
+          :class="{ 'is-flipped': showUserProfileDropdown }"
+          width="12"
+          height="12"
+          viewBox="0 0 12 12"
+          fill="none"
+        >
+          <path
+            d="M7.5 3L4.5 6L7.5 9"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
         </svg>
       </div>
-      
+
       <div v-if="showUserProfileDropdown" class="dropdown-menu-simple">
         <!-- Account button for credit users -->
-        <button v-if="isGoogleAuthenticated" class="dropdown-item-simple" @click.stop="goToAccount">
+        <button
+          v-if="isGoogleAuthenticated"
+          class="dropdown-item-simple"
+          @click.stop="goToAccount"
+        >
+          <span class="dropdown-item-text">{{ getUserName() }}</span>
           <UserIcon class="dropdown-icon" />
-          Account
         </button>
         <!-- Priority Fee Settings for wallet users -->
-        <button v-else class="dropdown-item-simple" @click.stop="openPriorityFeeSettings">
+        <button
+          v-else
+          class="dropdown-item-simple"
+          @click.stop="openPriorityFeeSettings"
+        >
           <SettingsIcon class="dropdown-icon" />
-          Priority Fee Settings
+          Prio-fee
         </button>
-        <hr class="dropdown-divider">
+        <hr class="dropdown-divider" />
+        <div class="dropdown-theme-toggle">
+          <button
+            class="theme-toggle-btn"
+            :class="{ 'is-active': $colorMode.value === 'light' }"
+            @click.stop="useColorMode().preference = 'light'"
+            title="Light Mode"
+          >
+            <SunIcon class="dropdown-icon" />
+          </button>
+          <button
+            class="theme-toggle-btn"
+            :class="{ 'is-active': $colorMode.value === 'dark' }"
+            @click.stop="useColorMode().preference = 'dark'"
+            title="Dark Mode"
+          >
+            <MoonIcon class="dropdown-icon" />
+          </button>
+        </div>
+        <hr class="dropdown-divider" />
         <button class="dropdown-item-simple logout-item" @click.stop="logout">
           <LogoutIcon class="dropdown-icon" />
           Log out
@@ -97,12 +164,14 @@
 </template>
 <script lang="ts" setup>
 import { SolanaWalletButton, useWallet } from "@nosana/solana-vue";
-import { computed, ref, onMounted, onUnmounted, watch } from 'vue';
-import GoogleIcon from '@/assets/img/icons/google.svg?component';
-import UserIcon from '@/assets/img/icons/sidebar/user.svg?component';
-import SettingsIcon from '@/assets/img/icons/settings.svg?component';
-import LogoutIcon from '@/assets/img/icons/logout.svg?component';
-import { useRouter } from 'vue-router';
+import { computed, ref, onMounted, onUnmounted, watch } from "vue";
+import GoogleIcon from "@/assets/img/icons/google.svg?component";
+import UserIcon from "@/assets/img/icons/sidebar/user.svg?component";
+import SettingsIcon from "@/assets/img/icons/settings.svg?component";
+import LogoutIcon from "@/assets/img/icons/logout.svg?component";
+import SunIcon from "@/assets/img/icons/sun.svg?component";
+import MoonIcon from "@/assets/img/icons/moon.svg?component";
+import { useRouter } from "vue-router";
 
 const { nosana, prioFee } = useKit();
 const { isAuthenticated, isLoading, signOut, userData } = useSuperTokens();
@@ -118,7 +187,7 @@ const publicKey = computed(() => {
   };
 });
 
-// Profile dropdown state  
+// Profile dropdown state
 const showUserProfileDropdown = ref(false);
 
 // Memoized authentication state to prevent unnecessary template re-renders
@@ -141,34 +210,57 @@ const openPriorityFeeSettings = () => {
 
 const goToAccount = () => {
   showUserProfileDropdown.value = false;
-  router.push('/account');
+  router.push("/account");
 };
 
 // Wallet address formatting
 const getWalletAddress = () => {
-  if (!publicKey.value) return '';
+  if (!publicKey.value) return "";
   const address = publicKey.value.toBase58();
   return `${address.slice(0, 4)}..${address.slice(-4)}`;
 };
 
-
 const getUserName = () => {
-  return userData.value?.email || userData.value?.providerUsername || userData.value?.name || 'User';
+  if (
+    userData.value?.email ||
+    userData.value?.providerUsername ||
+    userData.value?.name
+  ) {
+    return (
+      userData.value.email ||
+      userData.value.providerUsername ||
+      userData.value.name
+    );
+  }
+  // Wallet user: show truncated address
+  const addr = account.value?.address;
+  if (addr) {
+    return addr.slice(0, 4) + "..." + addr.slice(-4);
+  }
+  return "";
 };
 
 const getUserInitials = () => {
   const name = getUserName();
-  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 };
 
 const getAuthProvider = () => {
-  return 'google';
+  return "google";
 };
 
 // Credit balance state - using useState to persist across navigation
-const creditBalance = useState('topbar-credit-balance', () => 0);
+const creditBalance = useState("topbar-credit-balance", () => 0);
 const loadingCreditBalance = ref(false);
-const hasLoadedCreditBalance = useState('topbar-has-loaded-balance', () => false);
+const hasLoadedCreditBalance = useState(
+  "topbar-has-loaded-balance",
+  () => false,
+);
 
 // NOS balance state
 const nosBalance = ref<any | null>(null);
@@ -179,7 +271,7 @@ const getCreditBalance = () => {
 };
 
 // Get NOS price from stats API with memoization
-const { data: stats } = useAPI('/api/stats');
+const { data: stats } = useAPI("/api/stats");
 const nosPrice = computed(() => stats.value?.price || 0);
 
 // Memoized NOS balance in USD to prevent recalculation on every render
@@ -196,7 +288,7 @@ const fetchCreditBalance = async (signal?: AbortSignal) => {
   if (!isAuthenticated.value) {
     return;
   }
-  
+
   loadingCreditBalance.value = true;
   try {
     const data = await nosana.value.api.credits.balance();
@@ -206,7 +298,7 @@ const fetchCreditBalance = async (signal?: AbortSignal) => {
     hasLoadedCreditBalance.value = true;
   } catch (error) {
     // Don't log errors for aborted requests
-    if (error instanceof Error && error.name !== 'AbortError') {
+    if (error instanceof Error && error.name !== "AbortError") {
       console.error("Error fetching credit balance:", error);
     }
   } finally {
@@ -217,17 +309,20 @@ const fetchCreditBalance = async (signal?: AbortSignal) => {
 // Fetch NOS balance
 const fetchNosBalance = async (signal?: AbortSignal) => {
   if (!connected.value || !publicKey.value) return;
-  
+
   loadingNosBalance.value = true;
   try {
     // Note: SDK calls don't support AbortSignal directly, but we can check if aborted
     if (signal?.aborted) return;
-    
+
     const bal = await nosana.value.nos.getBalance(publicKey.value.toBase58());
     nosBalance.value = bal !== null ? { uiAmount: bal } : null;
   } catch (error) {
     // Don't log errors for aborted requests
-    if (!(error instanceof Error && error.name === 'AbortError') && !signal?.aborted) {
+    if (
+      !(error instanceof Error && error.name === "AbortError") &&
+      !signal?.aborted
+    ) {
       console.error("Error fetching NOS balance:", error);
     }
     nosBalance.value = null;
@@ -241,33 +336,32 @@ const logout = async () => {
   showUserProfileDropdown.value = false;
   try {
     // Clear wallet session cookie
-    const sessionCookie = useCookie('nosana-wallet-session');
+    const sessionCookie = useCookie("nosana-wallet-session");
     sessionCookie.value = null;
-    
+
     // Try to sign out from SuperTokens if a session exists
     try {
-      const Session = await import('supertokens-web-js/recipe/session');
+      const Session = await import("supertokens-web-js/recipe/session");
       if (await Session.default.doesSessionExist()) {
         await Session.default.signOut();
       }
     } catch (e) {
       // Ignore if SuperTokens not initialized
     }
-    
+
     if (connected.value) {
       await disconnect();
-      await navigateTo('/');
+      await navigateTo("/");
     } else if (isAuthenticated.value) {
       await signOut();
-      await navigateTo('/');
+      await navigateTo("/");
     } else {
-      await navigateTo('/');
+      await navigateTo("/");
     }
   } catch (error) {
-    console.error('Error logging out:', error);
+    console.error("Error logging out:", error);
   }
 };
-
 
 // Close dropdown when clicking outside (onMounted)
 
@@ -282,7 +376,7 @@ const debouncedFetchCreditBalance = () => {
   if (creditBalanceController) {
     creditBalanceController.abort();
   }
-  
+
   if (creditBalanceTimeout) clearTimeout(creditBalanceTimeout);
   creditBalanceTimeout = setTimeout(() => {
     creditBalanceController = new AbortController();
@@ -295,7 +389,7 @@ const debouncedFetchNosBalance = () => {
   if (nosBalanceController) {
     nosBalanceController.abort();
   }
-  
+
   if (nosBalanceTimeout) clearTimeout(nosBalanceTimeout);
   nosBalanceTimeout = setTimeout(() => {
     nosBalanceController = new AbortController();
@@ -304,36 +398,50 @@ const debouncedFetchNosBalance = () => {
 };
 
 // Watch for authentication status and token changes (optimized)
-watch([isAuthenticated, isLoading], async ([newIsAuthenticated, newIsLoading], [oldIsAuthenticated, oldIsLoading]) => {
-  // Skip loading state (session refresh in progress)
-  if (newIsLoading) return;
-  
-  // Only fetch if authenticated AND haven't loaded yet
-  if (newIsAuthenticated && !hasLoadedCreditBalance.value) {
-    debouncedFetchCreditBalance();
-  } else if (!newIsAuthenticated && oldIsAuthenticated) {
-    // Reset on logout so next login will fetch
-    hasLoadedCreditBalance.value = false;
-    creditBalance.value = 0;
-  }
-}, { immediate: true });
+watch(
+  [isAuthenticated, isLoading],
+  async (
+    [newIsAuthenticated, newIsLoading],
+    [oldIsAuthenticated, oldIsLoading],
+  ) => {
+    // Skip loading state (session refresh in progress)
+    if (newIsLoading) return;
+
+    // Only fetch if authenticated AND haven't loaded yet
+    if (newIsAuthenticated && !hasLoadedCreditBalance.value) {
+      debouncedFetchCreditBalance();
+    } else if (!newIsAuthenticated && oldIsAuthenticated) {
+      // Reset on logout so next login will fetch
+      hasLoadedCreditBalance.value = false;
+      creditBalance.value = 0;
+    }
+  },
+  { immediate: true },
+);
 
 // Watch for wallet connection changes (optimized)
-watch([connected, publicKey], async (newValues, oldValues) => {
-  const [newConnected, newPublicKey] = newValues;
-  const [oldConnected, oldPublicKey] = oldValues || [];
-  
-  // Only fetch if wallet actually connected or changed
-  if (newConnected && newPublicKey && 
-      (!oldConnected || oldPublicKey?.toBase58() !== newPublicKey?.toBase58())) {
-    debouncedFetchNosBalance();
-  }
-}, { immediate: true });
+watch(
+  [connected, publicKey],
+  async (newValues, oldValues) => {
+    const [newConnected, newPublicKey] = newValues;
+    const [oldConnected, oldPublicKey] = oldValues || [];
+
+    // Only fetch if wallet actually connected or changed
+    if (
+      newConnected &&
+      newPublicKey &&
+      (!oldConnected || oldPublicKey?.toBase58() !== newPublicKey?.toBase58())
+    ) {
+      debouncedFetchNosBalance();
+    }
+  },
+  { immediate: true },
+);
 
 // Watch for credit refresh events
 const { onCreditRefresh } = useCreditRefresh();
 onCreditRefresh(async () => {
-  if (status.value === 'authenticated') {
+  if (status.value === "authenticated") {
     await fetchCreditBalance();
   }
 });
@@ -345,12 +453,12 @@ onMounted(() => {
   if (process.client) {
     clickHandler = (e: Event) => {
       const target = e.target as HTMLElement;
-      const dropdown = target?.closest?.('.profile-dropdown');
+      const dropdown = target?.closest?.(".profile-dropdown");
       if (!dropdown && showUserProfileDropdown.value) {
         showUserProfileDropdown.value = false;
       }
     };
-    document.addEventListener('click', clickHandler);
+    document.addEventListener("click", clickHandler);
   }
 });
 
@@ -364,7 +472,7 @@ onUnmounted(() => {
     clearTimeout(nosBalanceTimeout);
     nosBalanceTimeout = null;
   }
-  
+
   // Abort any pending requests
   if (creditBalanceController) {
     creditBalanceController.abort();
@@ -374,16 +482,16 @@ onUnmounted(() => {
     nosBalanceController.abort();
     nosBalanceController = null;
   }
-  
+
   // Clean up event listener
   if (clickHandler && process.client) {
-    document.removeEventListener('click', clickHandler);
+    document.removeEventListener("click", clickHandler);
     clickHandler = null;
   }
 });
 
 interface PrioFeeConfig {
-  strategy: 'low' | 'medium' | 'high' | 'veryHigh';
+  strategy: "low" | "medium" | "high" | "veryHigh";
   staticFee: number;
   dynamicPriorityFee: boolean;
   maxPriorityFee: number;
@@ -392,29 +500,29 @@ interface PrioFeeConfig {
 // Priority fee configuration mapping
 const PRIO_FEE_CONFIGS: Record<string, PrioFeeConfig> = {
   low: {
-    strategy: 'low',
+    strategy: "low",
     staticFee: 10000,
     dynamicPriorityFee: true,
-    maxPriorityFee: 1000000
+    maxPriorityFee: 1000000,
   },
   medium: {
-    strategy: 'medium',
+    strategy: "medium",
     staticFee: 100000,
     dynamicPriorityFee: true,
-    maxPriorityFee: 15000000
+    maxPriorityFee: 15000000,
   },
   high: {
-    strategy: 'high',
+    strategy: "high",
     staticFee: 100000,
     dynamicPriorityFee: true,
-    maxPriorityFee: 15000000
+    maxPriorityFee: 15000000,
   },
   veryHigh: {
-    strategy: 'veryHigh',
+    strategy: "veryHigh",
     staticFee: 100000,
     dynamicPriorityFee: true,
-    maxPriorityFee: 15000000
-  }
+    maxPriorityFee: 15000000,
+  },
 };
 
 const setPrioFeeConfig = (level: keyof typeof PRIO_FEE_CONFIGS) => {
@@ -433,24 +541,24 @@ const props = defineProps({
   },
   hideButtons: {
     type: Boolean,
-    default: false
+    default: false,
   },
   modelValue: {
     type: Boolean,
-    default: false
-  }
+    default: false,
+  },
 });
 
-const emit = defineEmits(['update:modelValue']);
+const emit = defineEmits(["update:modelValue"]);
 
 const updateShowSettingsModal = (value: boolean) => {
-  emit('update:modelValue', value);
+  emit("update:modelValue", value);
 };
 
 // Expose functions for parent components to call
 defineExpose({
   fetchCreditBalance,
-  fetchNosBalance
+  fetchNosBalance,
 });
 </script>
 
@@ -473,7 +581,6 @@ defineExpose({
   transition: background-color 0.2s ease;
   background: $box-background-color;
 }
-
 
 .profile-avatar {
   width: 32px;
@@ -522,10 +629,9 @@ defineExpose({
   font-size: 0.75rem;
   font-weight: 600;
   color: $text;
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
-  width: 100%;
+  display: flex;
+  align-items: center;
 }
 
 .dropdown-arrow {
@@ -550,7 +656,6 @@ defineExpose({
   width: 100%;
 }
 
-
 .dropdown-item-simple {
   width: 100%;
   padding: 0.75rem 1rem;
@@ -570,14 +675,20 @@ defineExpose({
   background-color: $grey-lightest;
 }
 
+.dropdown-item-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
 .dropdown-item-simple.logout-item {
-  color: $danger;
+  color: $text;
 }
 
 .dropdown-item-simple.logout-item:hover {
-  background-color: rgba($danger, 0.08);
+  background-color: $grey-lightest;
 }
-
 
 .dropdown-icon {
   flex-shrink: 0;
@@ -585,21 +696,64 @@ defineExpose({
   width: 16px;
   height: 16px;
 }
-
 .logout-item .dropdown-icon {
-  color: $danger;
+  color: $grey;
 }
 
 .dropdown-divider {
-
-
   border: none;
   margin: 0;
+}
+
+.dropdown-theme-toggle {
+  display: flex;
+  gap: 0;
+  padding: 0;
+}
+
+.theme-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  padding: 0.4rem 1rem;
+  border: none;
+  border-radius: 0;
+  background: none;
+  cursor: pointer;
+  color: $grey;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.theme-toggle-btn:hover {
+  background-color: $grey-lightest;
+  color: $text;
+}
+
+.theme-toggle-btn.is-active {
+  background-color: $grey-lightest;
+  color: $text;
 }
 
 /* Dark mode styles */
 .dark-mode .profile-button {
   background: $box-background-color-dark;
+}
+
+.dark-mode .theme-toggle-btn {
+  color: $grey-light;
+}
+
+.dark-mode .theme-toggle-btn:hover {
+  background-color: color.adjust($box-background-color-dark, $lightness: -5%);
+  color: $white;
+}
+
+.dark-mode .theme-toggle-btn.is-active {
+  background-color: color.adjust($box-background-color-dark, $lightness: -5%);
+  color: $white;
 }
 
 .dark-mode .profile-name {
@@ -625,11 +779,11 @@ defineExpose({
 }
 
 .dark-mode .dropdown-item-simple.logout-item {
-  color: $danger;
+  color: $white;
 }
 
 .dark-mode .dropdown-item-simple.logout-item:hover {
-  background-color: rgba($danger, 0.12);
+  background-color: color.adjust($box-background-color-dark, $lightness: -5%);
 }
 
 .dark-mode .dropdown-divider {
@@ -641,7 +795,7 @@ defineExpose({
 }
 
 .dark-mode .logout-item .dropdown-icon {
-  color: $danger;
+  color: $grey-light;
 }
 
 .dark-mode .profile-avatar {
