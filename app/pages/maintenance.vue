@@ -14,6 +14,12 @@
 definePageMeta({
   layout: "empty",
 });
+
+onMounted(() => {
+  if (typeof localStorage !== "undefined" && localStorage.getItem("skipMaintenance")) {
+    navigateTo("/", { replace: true });
+  }
+});
 </script>
 
 <style lang="scss" scoped>

@@ -6,7 +6,11 @@ import EmailVerification from "supertokens-web-js/recipe/emailverification";
 
 export default defineNuxtPlugin(() => {
   const config = useRuntimeConfig();
-  if (config.public.maintenance) {
+  if (
+    config.public.maintenance &&
+    typeof localStorage !== "undefined" &&
+    !localStorage.getItem("skipMaintenance")
+  ) {
     return;
   }
   SuperTokens.init({
