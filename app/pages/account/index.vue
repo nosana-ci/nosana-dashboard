@@ -1,8 +1,12 @@
 <template>
   <div>
-    <TopBar 
-      :title="(status === 'authenticated' || status === 'loading') && userData?.email ? 'Hi ' + (userData.email || userData.name || 'User') : 'My Account'"
-      :subtitle="'Your personal overview'" 
+    <TopBar
+      :title="
+        (isAuthenticated || isLoading) && userData?.email
+          ? 'Hi ' + (userData.email || userData.name || 'User')
+          : 'My Account'
+      "
+      :subtitle="'Your personal overview'"
       ref="topBar"
       v-model="showSettingsModal"
     >
@@ -15,7 +19,7 @@
         </div>
       </template>
     </TopBar>
-    <div class="container">
+    <div>
       <AccountClaimModal
         v-model="showInvitationModal"
         type="invitation"
@@ -28,8 +32,24 @@
         type="grant"
         @claimed="handleFreeCreditsClaimed"
       />
+      <AccountClaimModal
+        v-model="showClaimModal"
+        type="manual"
+        @claimed="handleFreeCreditsClaimed"
+      />
       <!-- Credit Invitation Section - only show when there's an issue -->
-      <div v-if="invitationToken && (invitationError || (invitation && (invitation.isClaimed || invitation.isExpired || (invitation.restrictedEmail && userData?.email !== invitation.restrictedEmail))))" class="section">
+      <div
+        v-if="
+          invitationToken &&
+          (invitationError ||
+            (invitation &&
+              (invitation.isClaimed ||
+                invitation.isExpired ||
+                (invitation.restrictedEmail &&
+                  userData?.email !== invitation.restrictedEmail))))
+        "
+        class="section"
+      >
         <div class="columns is-centered">
           <div class="column is-half">
             <div class="box has-text-centered">
@@ -37,43 +57,55 @@
                 <div class="loader is-loading"></div>
                 <p class="mt-2">Loading invitation details...</p>
               </div>
-              
+
               <div v-else-if="invitationError" class="has-text-danger py-3">
                 <h1 class="title is-4">Invalid Invitation</h1>
                 <p>{{ invitationError }}</p>
               </div>
-              
+
               <div v-else-if="invitation">
                 <h1 class="title is-3 mt-2">Credit Invitation</h1>
-                
+
                 <div v-if="invitation.expirationDate" class="invitation-meta">
                   <div v-if="invitation.expirationDate" class="meta-item">
                     <i class="fas fa-clock"></i>
-                    <span :class="{ 'expired': invitation.isExpired }">
+                    <span :class="{ expired: invitation.isExpired }">
                       Expires {{ formatDate(invitation.expirationDate) }}
                     </span>
                   </div>
                 </div>
-                
-                <div v-if="invitation.isClaimed" class="notification is-warning">
+
+                <div
+                  v-if="invitation.isClaimed"
+                  class="notification is-warning"
+                >
                   <span class="icon">
                     <i class="fas fa-clock"></i>
                   </span>
-                  <strong>Already Claimed</strong><br>
+                  <strong>Already Claimed</strong><br />
                   This credit invitation has already been claimed.
                 </div>
-                
-                <div v-else-if="invitation.isExpired" class="notification is-danger">
+
+                <div
+                  v-else-if="invitation.isExpired"
+                  class="notification is-danger"
+                >
                   <span class="icon">
                     <i class="fas fa-clock"></i>
                   </span>
-                  <strong>Expired</strong><br>
+                  <strong>Expired</strong><br />
                   This credit invitation has expired.
                 </div>
-                
+
                 <div v-else>
-                  <div v-if="invitation.restrictedEmail && userData?.email !== invitation.restrictedEmail" class="notification is-warning">
-                    <strong>Email Restriction</strong><br>
+                  <div
+                    v-if="
+                      invitation.restrictedEmail &&
+                      userData?.email !== invitation.restrictedEmail
+                    "
+                    class="notification is-warning"
+                  >
+                    <strong>Email Restriction</strong><br />
                     This invitation is restricted to another email address.
                   </div>
                 </div>
@@ -83,194 +115,261 @@
         </div>
       </div>
 
-      <div v-if="canShowAccountData">
-        <h3 class="title is-4 mb-0">Status</h3>
-        <div class="mb-4"></div>
-        <div class="columns is-multiline mb-4">
-          <div class="column is-3">
-            <div class="box has-text-centered equal-height-box">
-              <p class="heading">Deployments</p>
-              <p class="title is-flex is-align-items-center is-justify-content-center">
-                <RocketIcon style="width: 16px; height: 16px; fill: #10E80C; margin-right: 0.5rem;" />
-                {{ totalDeployments }}
-              </p>
-            </div>
-          </div>
-          <!-- Credit Balance for Google Auth Users Only (keep mounted during loading to prevent refetch) -->
-          <div class="column is-3" v-if="status === 'authenticated' || status === 'loading'">
-            <CreditBalance ref="creditBalanceRef" />
-          </div>
-          <!-- NOS Balance for Wallet Users Only -->
-          <div class="column is-3" v-if="connected && publicKey">
-            <div class="box has-text-centered equal-height-box">
-              <p class="heading">NOS Balance</p>
-              <p class="title" v-if="balance && nosPrice">
-                {{ balance.uiAmount.toFixed(2) }} NOS
-                <span class="has-text-grey is-size-6">(${{ (balance.uiAmount * nosPrice).toFixed(2) }})</span>
-              </p>
-              <p class="title" v-else>-</p>
-            </div>
-          </div>
-        </div>
-        
-        <!-- API Tokens Section (keep mounted during loading to prevent refetch) -->
-        <ApiKeys class="pb-5" v-if="status === 'authenticated' || status === 'loading'" />
-        
+      <Loader v-if="isLoading && !canShowAccountData" />
+      <div v-else-if="canShowAccountData">
         <div class="columns mt-6">
-          <div class="column is-4">
-            <h3 class="title is-4 mb-0">Welcome to Nosana</h3>
-            <div class="mb-4"></div>
-            <div class="equal-height-boxes">
-              <nuxt-link to="/deployments/create" class="box has-text-black p-2 mb-2 is-block">
-                <div class="is-flex is-align-items-start" style="margin: 8px 8px 0 8px;">
-                  <RocketIcon style="width: 16px; height: 16px; fill: #10E80C; margin-right: 0.5rem; margin-top: 4px;" />
-                  <div>
-                    <h4 class="title is-6 mb-0">Getting Started</h4>
-                    <p class="is-size-6 mb-0" style="line-height: 1.2;">Start your journey by deploying your first AI model on Nosana.</p>
-                  </div>
-                </div>
-              </nuxt-link>
-
-              <a href="https://learn.nosana.com/" target="_blank" class="box has-text-black p-2 mb-2 is-block">
-                <div class="is-flex is-align-items-start" style="margin: 8px 8px 0 8px;">
-                  <ExplorerIcon class="nosana-icon" style="width: 16px; height: 16px; margin-right: 0.5rem; margin-top: 4px;" />
-                  <div>
-                    <h4 class="title is-6 mb-0">Documentation</h4>
-                    <p class="is-size-6 mb-0" style="line-height: 1.2;">Explore our comprehensive guides and how the network works.</p>
-                  </div>
-                </div>
-              </a>
-
-              <nuxt-link to="/support" class="box has-text-black p-2 is-block">
-                <div class="is-flex is-align-items-start" style="margin: 8px 8px 0 8px;">
-                  <SupportIcon class="nosana-icon" style="width: 16px; height: 16px; margin-right: 0.5rem; margin-top: 4px;" />
-                  <div>
-                    <h4 class="title is-6 mb-0">Help and Support</h4>
-                    <p class="is-size-6 mb-0" style="line-height: 1.2;">Connect with our community and support team for assistance.</p>
-                  </div>
-                </div>
-              </nuxt-link>
-            </div>
-          </div>
-          
           <div class="column is-4">
             <h3 class="title is-4 mb-0">Cost and Usage</h3>
             <div class="mb-4"></div>
-            <div class="box" style="height: 100%;">
-              <div class="content is-flex is-flex-direction-column is-justify-content-center" style="height: 100%;">
-                <div class="is-flex is-flex-direction-column" style="flex: 1; display: flex; justify-content: center;">
-                  <p class="heading mb-1" style="font-size: 0.7rem;">Current month cost</p>
-                  <p class="title is-4 mb-1" v-if="!loadingSpending">
+            <div class="box cost-and-usage-box">
+              <!-- Credit / NOS balance at the top -->
+              <div v-if="isAuthenticated" class="balance-section">
+                <CreditBalance />
+              </div>
+              <div
+                v-else-if="connected && publicKey && nosBalance"
+                class="balance-section has-text-centered"
+              >
+                <p
+                  class="heading mb-1"
+                  style="
+                    font-size: 0.7rem;
+                    text-transform: uppercase;
+                    font-weight: 600;
+                    color: #7a7a7a;
+                  "
+                >
+                  NOS Balance
+                </p>
+                <p class="title is-4 mb-1">
+                  {{ nosBalance.uiAmount.toFixed(2) }} NOS
+                  <span class="has-text-grey is-size-6"
+                    >${{ (nosBalance.uiAmount * nosPrice).toFixed(2) }}</span
+                  >
+                </p>
+              </div>
+              <div class="usage-divider"></div>
+
+              <!-- This month + forecast side by side -->
+              <div class="columns is-mobile mb-0">
+                <div class="column">
+                  <p class="heading mb-1" style="font-size: 0.7rem">
+                    This months cost
+                  </p>
+                  <p
+                    class="title is-4 mb-1"
+                    v-if="!loadingSpending || hasLoadedSpendingOnce"
+                  >
                     ${{ spentThisMonth.toFixed(2) }}
                   </p>
                   <p class="title is-4 mb-1" v-else>-</p>
-
-                  <p class="has-text-grey is-size-7 mb-0" v-if="pctChangeSoFar != null">
+                  <p
+                    class="has-text-grey is-size-7 mb-0"
+                    v-if="pctChangeSoFar != null"
+                  >
                     <ArrowUpIcon
                       v-if="pctChangeSoFar >= 0"
                       class="icon is-small mr-1"
-                      style="width: 10px; height: 10px; fill: #48c78e;"
+                      style="width: 10px; height: 10px; fill: #48c78e"
                     />
                     <ArrowDownIcon
                       v-else
                       class="icon is-small mr-1"
-                      style="width: 10px; height: 10px; fill: #f14668;"
+                      style="width: 10px; height: 10px; fill: #f14668"
                     />
-                    {{ pctChangeSoFar.toFixed(2) }}% compared to last month for same period
+                    {{ pctChangeSoFar.toFixed(2) }}% vs last month
                   </p>
                 </div>
-
-                <div class="is-flex is-justify-content-center my-3">
-                  <div style="width: 100%; height: 1px; background-color: #dbdbdb;"></div>
-                </div>
-
-                <div class="is-flex is-flex-direction-column" style="flex: 1; display: flex; justify-content: center;">
-                  <p class="heading mb-1" style="font-size: 0.7rem;">Forecasted month end cost</p>
-                  <p class="title is-4 mb-1" v-if="!loadingSpending">
+                <div class="column">
+                  <p class="heading mb-1" style="font-size: 0.7rem">
+                    Forecasted cost
+                  </p>
+                  <p
+                    class="title is-4 mb-1"
+                    v-if="!loadingSpending || hasLoadedSpendingOnce"
+                  >
                     ${{ forecastAmount.toFixed(2) }}
                   </p>
                   <p class="title is-4 mb-1" v-else>-</p>
-
-                  <p class="has-text-grey is-size-7 mb-0" v-if="pctChangeForecastFromLastMonth != null">
+                  <p
+                    class="has-text-grey is-size-7 mb-0"
+                    v-if="pctChangeForecastFromLastMonth != null"
+                  >
                     <ArrowUpIcon
                       v-if="pctChangeForecastFromLastMonth >= 0"
                       class="icon is-small mr-1"
-                      style="width: 10px; height: 10px; fill: #48c78e;"
+                      style="width: 10px; height: 10px; fill: #48c78e"
                     />
                     <ArrowDownIcon
                       v-else
                       class="icon is-small mr-1"
-                      style="width: 10px; height: 10px; fill: #f14668;"
+                      style="width: 10px; height: 10px; fill: #f14668"
                     />
-                    {{ pctChangeForecastFromLastMonth.toFixed(2) }}% compared to last month's total cost
+                    {{ pctChangeForecastFromLastMonth.toFixed(2) }}% vs last
+                    month
                   </p>
                 </div>
               </div>
             </div>
           </div>
-          
+
           <div class="column is-4">
             <h3 class="title is-4 mb-0">Monthly History</h3>
             <div class="mb-4"></div>
-            <div class="box" style="height: 100%; position: relative;">
-              <div class="content" style="height: 100%;">
-                <div class="field is-grouped is-justify-content-end" style="position: absolute; top: 12px; right: 12px; z-index: 1;">
+            <div class="box" style="height: 100%; position: relative">
+              <div class="content" style="height: 100%">
+                <div
+                  class="field is-grouped is-justify-content-end"
+                  style="position: absolute; top: 12px; right: 12px; z-index: 1"
+                >
                   <div class="control">
                     <div class="buttons has-addons">
-                      <button 
-                        v-for="period in ['3', '6', '12']" 
+                      <button
+                        v-for="period in ['3', '6', '12']"
                         :key="period"
                         class="button is-small"
                         :class="{ 'is-primary': selectedMonths === period }"
-                        @click="() => {
-                          selectedMonths = period as '3' | '6' | '12';
-                          refreshSpendingHistory();
-                        }"
+                        @click="
+                          () => {
+                            selectedMonths = period as '3' | '6' | '12';
+                            refreshSpendingHistory();
+                          }
+                        "
                       >
                         {{ `${period}M` }}
                       </button>
                     </div>
                   </div>
                 </div>
-                <div v-if="!loadingHistory && monthlyHistory" style="height: 315px;">
+                <progress
+                  v-if="loadingHistory && !hasLoadedHistoryOnce"
+                  class="progress is-small is-info"
+                  max="100"
+                ></progress>
+                <div
+                  v-else-if="
+                    hasLoadedHistoryOnce || (!loadingHistory && monthlyHistory)
+                  "
+                  style="height: 315px; position: relative"
+                >
                   <Bar
                     v-if="chartData && chartData.labels.length"
                     :data="chartData"
                     :options="chartOptions"
                     style="padding-top: 10px"
                   />
+                  <p v-else-if="!loadingHistory">No historic data.</p>
                 </div>
-                <progress
-                  v-else-if="loadingHistory"
-                  class="progress is-small is-info"
-                  max="100"
-                >
-                </progress>
-                <p v-else>No historic data.</p>
               </div>
             </div>
           </div>
+
+          <div class="column is-4">
+            <h3 class="title is-4 mb-0">Welcome to Nosana</h3>
+            <div class="mb-4"></div>
+            <div class="equal-height-boxes">
+              <nuxt-link
+                to="/deployments/create"
+                class="box has-text-black p-2 mb-2 is-block"
+              >
+                <div
+                  class="is-flex is-align-items-start"
+                  style="margin: 8px 8px 0 8px"
+                >
+                  <RocketIcon
+                    style="
+                      width: 16px;
+                      height: 16px;
+                      fill: #10e80c;
+                      margin-right: 0.5rem;
+                      margin-top: 4px;
+                    "
+                  />
+                  <div>
+                    <h4 class="title is-6 mb-0">Getting Started</h4>
+                    <p class="is-size-6 mb-0" style="line-height: 1.2">
+                      Start your journey by deploying your first AI model on
+                      Nosana.
+                    </p>
+                  </div>
+                </div>
+              </nuxt-link>
+
+              <a
+                href="https://learn.nosana.com/"
+                target="_blank"
+                class="box has-text-black p-2 mb-2 is-block"
+              >
+                <div
+                  class="is-flex is-align-items-start"
+                  style="margin: 8px 8px 0 8px"
+                >
+                  <ExplorerIcon
+                    class="nosana-icon"
+                    style="
+                      width: 16px;
+                      height: 16px;
+                      margin-right: 0.5rem;
+                      margin-top: 4px;
+                    "
+                  />
+                  <div>
+                    <h4 class="title is-6 mb-0">Documentation</h4>
+                    <p class="is-size-6 mb-0" style="line-height: 1.2">
+                      Explore our comprehensive guides and how the network
+                      works.
+                    </p>
+                  </div>
+                </div>
+              </a>
+
+              <nuxt-link to="/support" class="box has-text-black p-2 is-block">
+                <div
+                  class="is-flex is-align-items-start"
+                  style="margin: 8px 8px 0 8px"
+                >
+                  <SupportIcon
+                    class="nosana-icon"
+                    style="
+                      width: 16px;
+                      height: 16px;
+                      margin-right: 0.5rem;
+                      margin-top: 4px;
+                    "
+                  />
+                  <div>
+                    <h4 class="title is-6 mb-0">Help and Support</h4>
+                    <p class="is-size-6 mb-0" style="line-height: 1.2">
+                      Connect with our community and support team for
+                      assistance.
+                    </p>
+                  </div>
+                </div>
+              </nuxt-link>
+            </div>
+          </div>
         </div>
+
+        <!-- API Keys Section -->
+        <ApiKeys class="pt-6" v-if="canShowAccountData" />
       </div>
     </div>
-    <Loader v-if="loading" />
   </div>
 </template>
 
 <script setup lang="ts">
-import DeploymentsTable from '~/components/DeploymentsTable/Table.vue';
-import JobList from '~/components/List/JobList.vue';
-import { useWallet } from '@nosana/solana-vue';
-import { useAPI } from '~/composables/useAPI';
-import { computed, ref, onMounted, watch } from 'vue';
-import CreditBalance from "~/components/Account/CreditBalance.vue";
-import RocketIcon from '@/assets/img/icons/rocket.svg?component';
-import ExplorerIcon from '@/assets/img/icons/sidebar/explorer.svg?component';
-import SupportIcon from '@/assets/img/icons/sidebar/support.svg?component';
-import ArrowUpIcon from '@/assets/img/icons/arrow-up.svg?component';
-import ArrowDownIcon from '@/assets/img/icons/arrow-down.svg?component';
+import DeploymentsTable from "~/components/DeploymentsTable/Table.vue";
+import JobList from "~/components/List/JobList.vue";
+import { useWallet } from "@nosana/solana-vue";
+import { useAPI } from "~/composables/useAPI";
+import { computed, ref, onMounted, watch } from "vue";
+import RocketIcon from "@/assets/img/icons/rocket.svg?component";
+import ExplorerIcon from "@/assets/img/icons/sidebar/explorer.svg?component";
+import SupportIcon from "@/assets/img/icons/sidebar/support.svg?component";
+import ArrowUpIcon from "@/assets/img/icons/arrow-up.svg?component";
+import ArrowDownIcon from "@/assets/img/icons/arrow-down.svg?component";
 import { useToast } from "vue-toastification";
-import { Bar } from 'vue-chartjs';
+import { Bar } from "vue-chartjs";
 import {
   Chart as ChartJS,
   Title,
@@ -278,15 +377,24 @@ import {
   Legend,
   BarElement,
   CategoryScale,
-  LinearScale
-} from 'chart.js';
+  LinearScale,
+} from "chart.js";
 import { useRouter, useRoute } from "vue-router";
-import ApiKeys from '~/components/Account/ApiKeys.vue';
-import AccountClaimModal from '~/components/Account/ClaimModal.vue';
+import ApiKeys from "~/components/Account/ApiKeys.vue";
+import AccountClaimModal from "~/components/Account/ClaimModal.vue";
+import CreditBalance from "~/components/Account/CreditBalance.vue";
 
 const config = useRuntimeConfig().public;
-ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale);
-const { status, data: userData, signOut, token } = useAuth();
+ChartJS.register(
+  Title,
+  Tooltip,
+  Legend,
+  BarElement,
+  CategoryScale,
+  LinearScale,
+);
+const { isAuthenticated, isLoading, userData, signOut, checkSession } =
+  useSuperTokens();
 const { $colorMode } = useNuxtApp();
 const route = useRoute();
 const showSettingsModal = ref(false);
@@ -302,8 +410,29 @@ const publicKey = computed(() => {
   };
 });
 const { nosana } = useKit();
-const creditBalanceRef = ref();
 const { triggerCreditRefresh } = useCreditRefresh();
+
+// NOS balance (wallet users)
+const nosBalance = ref<{ uiAmount: number } | null>(null);
+const { data: stats } = useAPI("/api/stats");
+const nosPrice = computed(() => stats.value?.price || 0);
+
+watch(
+  [connected, publicKey],
+  async ([newConnected, newPublicKey]) => {
+    if (newConnected && newPublicKey) {
+      try {
+        const bal = await nosana.value.nos.getBalance(newPublicKey.toBase58());
+        nosBalance.value = bal !== null ? { uiAmount: bal } : null;
+      } catch {
+        nosBalance.value = null;
+      }
+    } else {
+      nosBalance.value = null;
+    }
+  },
+  { immediate: true },
+);
 
 interface Invitation {
   creditsAmount: number;
@@ -317,78 +446,70 @@ interface Invitation {
 const invitationToken = computed(() => route.query.token as string);
 const invitation = ref<Invitation | null>(null);
 const loadingInvitation = ref(false);
-const invitationError = ref('');
+const invitationError = ref("");
 const claiming = ref(false);
 let invitationLoadPromise: Promise<void> | null = null;
 
 const showFreeCreditsModal = ref(false);
 const showInvitationModal = ref(false);
+const showClaimModal = ref(false);
 const checkedEligibility = ref(false);
 
 const checkFreeCreditsEligibility = async () => {
-  if (!token.value || status.value !== 'authenticated' || checkedEligibility.value) return;
-  
+  if (!isAuthenticated.value || checkedEligibility.value) {
+    return;
+  }
+
+  // Mark in-flight immediately so a concurrent call can't slip through
+  checkedEligibility.value = true;
+
   // If we have an invitation token, ensure it's loaded before checking eligibility
   if (invitationToken.value) {
     await loadInvitation();
   }
-  
+
   // If we have an invitation token, show that modal instead of checking for free credits
-  if (invitationToken.value && invitation.value && !invitation.value.isClaimed && !invitation.value.isExpired) {
-    if (!invitation.value.restrictedEmail || userData.value?.email === invitation.value.restrictedEmail) {
+  if (
+    invitationToken.value &&
+    invitation.value &&
+    !invitation.value.isClaimed &&
+    !invitation.value.isExpired
+  ) {
+    if (
+      !invitation.value.restrictedEmail ||
+      userData.value?.email === invitation.value.restrictedEmail
+    ) {
       showInvitationModal.value = true;
       return;
     }
   }
 
   try {
-    const data = await $fetch<{ eligible: boolean }>(`${config.backend_url}/api/credits/request/eligibility`, {
-      headers: {
-        'Authorization': `Bearer ${token.value}`
-      }
-    });
-    
+    const data = await $fetch<{ eligible: boolean }>(
+      `${config.backend_url}/api/credits/request/eligibility`,
+      {
+        credentials: "include",
+      },
+    );
+
     if (data && data.eligible) {
       showFreeCreditsModal.value = true;
     }
-    checkedEligibility.value = true;
   } catch (error) {
-    console.error('Error checking free credits eligibility:', error);
+    checkedEligibility.value = false; // allow retry on network error
+    console.error("Error checking free credits eligibility:", error);
   }
 };
 
 const handleFreeCreditsClaimed = async () => {
-  if (creditBalanceRef.value?.fetchBalance) {
-    await creditBalanceRef.value.fetchBalance();
-  }
   triggerCreditRefresh();
   if (showInvitationModal.value) {
-    navigateTo('/account', { replace: true });
+    navigateTo("/account", { replace: true });
   }
 };
-
-const totalDeployments = ref(0);
-
-const fetchDeploymentsCount = async () => {
-  if (!canShowAccountData.value || !activeAddress.value) {
-    totalDeployments.value = 0;
-    return;
-  }
-
-  try {
-    const deployments = await nosana.value.api.deployments.list();
-    totalDeployments.value = deployments ? deployments.length : 0;
-  } catch (error) {
-    console.error('Error fetching deployments count:', error);
-    totalDeployments.value = 0;
-  }
-};
-
-// (debug status watcher removed)
-
 
 const activeAddress = computed(() => {
-  if (status.value === 'authenticated' && userData.value?.generatedAddress) {
+  if (isAuthenticated.value && userData.value?.generatedAddress) {
     return userData.value.generatedAddress;
   }
   if (connected.value && publicKey.value) {
@@ -397,26 +518,16 @@ const activeAddress = computed(() => {
   return null;
 });
 
-const addressSource = computed(() => {
-  if (status.value === 'authenticated' && userData.value?.generatedAddress) {
-    return 'generated';
-  }
-  if (connected.value && publicKey.value) {
-    return 'wallet';
-  }
-  return null;
-});
-
-const canShowAccountData = computed(() => {
-  // Don't hide account data during loading states - only hide if truly unauthenticated
-  if (status.value === 'loading') {
-    // During loading, check if we have any indication of authentication
-    return userData.value?.generatedAddress || connected.value;
-  }
-  return status.value === 'authenticated' || connected.value;
-});
-
-// (debug canShowAccountData watcher removed)
+// Latching ref: once true, never goes back to false — prevents flicker when
+// isLoading briefly toggles true/false after mount while isAuthenticated stays true.
+const canShowAccountData = ref(false);
+watch(
+  () => isAuthenticated.value || connected.value,
+  (val) => {
+    if (val) canShowAccountData.value = true;
+  },
+  { immediate: true },
+);
 
 // Define type for spending history results item
 interface MonthlyResult {
@@ -426,82 +537,41 @@ interface MonthlyResult {
   daily_breakdown?: Record<string, Record<string, number>>;
 }
 
-// Get balances
-const balance = ref<any | null>(null);
-const nosStaked = ref<any | null>(null);
-const loading = ref(false);
-
-// Get NOS price
-const { data: stats } = useAPI('/api/stats');
-const nosPrice = computed(() => stats.value?.price || null);
-
-// Fetch balances
-const checkBalances = async () => {
-  loading.value = true;
-  try {
-    if (activeAddress.value) {
-      const nosBalance = await nosana.value.nos.getBalance(activeAddress.value);
-      balance.value = { uiAmount: nosBalance };
-      // Only fetch staking data for wallet connections
-      if (addressSource.value === 'wallet') {
-        try {
-          nosStaked.value = await nosana.value.stake.get(activeAddress.value);
-        } catch (error) {
-          nosStaked.value = null;
-        }
-      } else {
-        // Reset staking data for authenticated users
-        nosStaked.value = null;
-      }
-    }
-  } catch (error) {
-    console.error("Error fetching balances:", error);
-    balance.value = null;
-  }
-  loading.value = false;
-};
-
 // Add debouncing to prevent excessive API calls during tab switches
 let refreshTimeout: NodeJS.Timeout | null = null;
-let lastStableAddress: string | null = null;
+// Initialize from current activeAddress so the watcher doesn't treat the
+// initial isLoading transition as a genuine address change.
+let lastStableAddress: string | null = activeAddress.value;
 
 watch(
   [
     () => activeAddress.value,
-    () => status.value,
-    () => userData.value?.generatedAddress
+    () => isLoading.value,
+    () => userData.value?.generatedAddress,
   ],
   (newValues, oldValues) => {
-    const [newAddress, newStatus, newGenerated] = newValues;
-    const [oldAddress, oldStatus, oldGenerated] = oldValues || [null, null, null];
-    
+    const [newAddress, newLoading] = newValues;
+
     // Clear any pending refresh
     if (refreshTimeout) {
       clearTimeout(refreshTimeout);
       refreshTimeout = null;
     }
-    
+
     // Skip if authentication is loading (temporary state during tab switches)
-    if (newStatus === 'loading') {
+    if (newLoading) {
       return;
     }
-    
-    // Skip if address is temporarily null during loading but we have a stable address
-    if (!newAddress && lastStableAddress && newStatus === 'loading') {
-      return;
-    }
-    
+
     // Only refresh if we have a meaningful address change (not just loading states)
     const addressReallyChanged = newAddress && newAddress !== lastStableAddress;
-    
+
     if (addressReallyChanged) {
       lastStableAddress = newAddress;
 
-      refreshTimeout = setTimeout(() => {
-        checkBalances();
+      refreshTimeout = setTimeout(async () => {
+        await checkFreeCreditsEligibility();
         refreshSpendingHistory();
-        fetchDeploymentsCount();
-        checkFreeCreditsEligibility();
       }, 500);
     } else {
       // Update stable address if we have a valid one
@@ -509,20 +579,23 @@ watch(
         lastStableAddress = newAddress;
       }
     }
-  }
+  },
 );
 
-onMounted(() => {
+onMounted(async () => {
+  // Explicitly fetch user data for the account page
+  await checkSession(true);
+
   if (canShowAccountData.value && activeAddress.value) {
-    lastStableAddress = activeAddress.value; // Initialize stable address
-    checkBalances();
+    lastStableAddress = activeAddress.value; // Keep stable address in sync after checkSession
+    // Wait for eligibility check first — opening the modal while other async
+    // fetches are in-flight causes navigations that close it prematurely.
+    await checkFreeCreditsEligibility();
     refreshSpendingHistory();
-    fetchDeploymentsCount();
-    checkFreeCreditsEligibility();
   }
-  
+
   // Add CSS to improve text rendering
-  const style = document.createElement('style');
+  const style = document.createElement("style");
   style.textContent = `
     canvas {
       text-rendering: optimizeLegibility;
@@ -534,43 +607,46 @@ onMounted(() => {
 });
 
 // Modify API calls to use a single endpoint
-const selectedMonths = ref<'3' | '6' | '12'>('3');
+const selectedMonths = ref<"3" | "6" | "12">("3");
 
 const spendingHistoryEndpoint = computed(() => {
   if (!activeAddress.value) return null;
-  
+
   // Create date based on selected months
   const today = new Date();
   let startDate: Date;
-  
+
   // Use the selected number of months
   const monthsAgo = parseInt(selectedMonths.value);
   startDate = new Date(today.getFullYear(), today.getMonth() - monthsAgo, 1);
-  
+
   // Format date as YYYY-MM-DD
   const formatDate = (date: Date) => {
-    return date.toISOString().split('T')[0];
+    return date.toISOString().split("T")[0];
   };
-  
+
   return `/api/stats/spending-history?address=${activeAddress.value}&start_date=${formatDate(startDate)}&group_by=month`;
 });
 
 const {
   data: spendingHistory,
   pending: loadingSpending,
-  refresh: _refreshSpendingHistory
-} = useAPI(computed(() => spendingHistoryEndpoint.value || ''), {
-  default: () => ({
-    userAddress: '',
-    startDate: '',
-    endDate: '',
-    groupBy: '',
-    results: [],
-    forecast: 0,
-    comparison: null,
-    sameDayComparison: null
-  })
-});
+  refresh: _refreshSpendingHistory,
+} = useAPI(
+  computed(() => spendingHistoryEndpoint.value || ""),
+  {
+    default: () => ({
+      userAddress: "",
+      startDate: "",
+      endDate: "",
+      groupBy: "",
+      results: [],
+      forecast: 0,
+      comparison: null,
+      sameDayComparison: null,
+    }),
+  },
+);
 
 // Wrapper function
 const refreshSpendingHistory = () => {
@@ -584,11 +660,13 @@ const spentThisMonth = computed(() => {
   const today = new Date();
   const currentYear = today.getFullYear();
   // getMonth() is 0-indexed, so add 1. Pad with '0' if needed.
-  const currentMonthFormatted = (today.getMonth() + 1).toString().padStart(2, '0');
+  const currentMonthFormatted = (today.getMonth() + 1)
+    .toString()
+    .padStart(2, "0");
   const currentPeriod = `${currentYear}-${currentMonthFormatted}`; // Format: "YYYY-MM"
 
   const currentMonthData = spendingHistory.value.results.find(
-    (item: any) => item.period === currentPeriod
+    (item: any) => item.period === currentPeriod,
   );
 
   return currentMonthData ? currentMonthData.total_usd : 0;
@@ -616,55 +694,71 @@ watch(
   () => selectedMonths.value,
   () => {
     refreshSpendingHistory();
-  }
+  },
 );
 
 // Pass monthly history data to chart
 const monthlyHistory = computed(() => spendingHistory.value);
 const loadingHistory = computed(() => loadingSpending.value);
+const hasLoadedHistoryOnce = ref(false);
+const hasLoadedSpendingOnce = ref(false);
+watch(loadingHistory, (val) => {
+  if (!val) {
+    hasLoadedHistoryOnce.value = true;
+    hasLoadedSpendingOnce.value = true;
+  }
+});
 
 // Get markets data for name mapping
-const { data: marketsData } = useAPI('/api/markets', { default: () => [] });
+const { data: marketsData } = useAPI("/api/markets", { default: () => [] });
 
 // Predefined colors for different GPU types with distinct color scheme
 const GPU_COLORS: Record<string, string> = {
   // 3000 Series
-  'NVIDIA 3060':     '#16C47F',
-  'NVIDIA 3070':     '#FFD65A',
-  'NVIDIA 3080':     '#FF9D23',
-  'NVIDIA 3090':     '#F93827',
+  "NVIDIA 3060": "#16C47F",
+  "NVIDIA 3070": "#FFD65A",
+  "NVIDIA 3080": "#FF9D23",
+  "NVIDIA 3090": "#F93827",
   // 4000 Series
-  'NVIDIA 4060':     '#26355D',
-  'NVIDIA 4070':     '#AF47D2',
-  'NVIDIA 4080':     '#FF8F00',
-  'NVIDIA 4090':     '#FFDB00',
+  "NVIDIA 4060": "#26355D",
+  "NVIDIA 4070": "#AF47D2",
+  "NVIDIA 4080": "#FF8F00",
+  "NVIDIA 4090": "#FFDB00",
   // 5000 Series
-  'NVIDIA 5070':     '#6420AA',
-  'NVIDIA 5080':     '#FF3EA5',
-  'NVIDIA 5090':     '#FF7ED4',
+  "NVIDIA 5070": "#6420AA",
+  "NVIDIA 5080": "#FF3EA5",
+  "NVIDIA 5090": "#FF7ED4",
   // Professional Series
-  'NVIDIA 4000/A4000':  '#3F0071',
-  'NVIDIA 5000/A5000':  '#FB2576',
-  'NVIDIA 6000/A6000':  '#332FD0',
-  'NVIDIA A40':       '#00FFAB',
-  'NVIDIA A100 40GB':  '#14C38E',
-  'NVIDIA A100 80GB':  '#B8F1B0',
-  'NVIDIA H100':      '#E3FCBF',
+  "NVIDIA 4000/A4000": "#3F0071",
+  "NVIDIA 5000/A5000": "#FB2576",
+  "NVIDIA 6000/A6000": "#332FD0",
+  "NVIDIA A40": "#00FFAB",
+  "NVIDIA A100 40GB": "#14C38E",
+  "NVIDIA A100 80GB": "#B8F1B0",
+  "NVIDIA H100": "#E3FCBF",
 };
 
 // Create a mapping of market addresses to names and group info
 const marketAddressToInfo = computed(() => {
   if (!marketsData.value) return {};
-  return marketsData.value.reduce((acc: Record<string, { name: string, isCommunity: boolean }>, market: any) => {
-    // Include all markets, not just NVIDIA ones
-    if (market.address) {
-      acc[market.address] = {
-        name: market.name?.replace(' Community', '') || market.address.slice(0, 8) + '...', // Remove Community suffix or use truncated address
-        isCommunity: market.name?.includes('Community') || false
-      };
-    }
-    return acc;
-  }, {});
+  return marketsData.value.reduce(
+    (
+      acc: Record<string, { name: string; isCommunity: boolean }>,
+      market: any,
+    ) => {
+      // Include all markets, not just NVIDIA ones
+      if (market.address) {
+        acc[market.address] = {
+          name:
+            market.name?.replace(" Community", "") ||
+            market.address.slice(0, 8) + "...", // Remove Community suffix or use truncated address
+          isCommunity: market.name?.includes("Community") || false,
+        };
+      }
+      return acc;
+    },
+    {},
+  );
 });
 
 // Remove duplicate watcher - already handled in main watcher above
@@ -689,8 +783,12 @@ const chartData = computed(() => {
 
   // Calculate start date based on selection
   const monthsAgo = parseInt(selectedMonths.value);
-  chartStartDate = new Date(today.getFullYear(), today.getMonth() - monthsAgo + 1, 1); // +1 because we want *inclusive* months
-  
+  chartStartDate = new Date(
+    today.getFullYear(),
+    today.getMonth() - monthsAgo + 1,
+    1,
+  ); // +1 because we want *inclusive* months
+
   const allMonthLabels: string[] = [];
   const periodToIndexMap: { [key: string]: number } = {};
   let currentDate = new Date(chartStartDate);
@@ -699,16 +797,19 @@ const chartData = computed(() => {
   // Ensure loop ends correctly by comparing month and year
   while (
     currentDate.getFullYear() < today.getFullYear() ||
-    (currentDate.getFullYear() === today.getFullYear() && currentDate.getMonth() <= today.getMonth())
+    (currentDate.getFullYear() === today.getFullYear() &&
+      currentDate.getMonth() <= today.getMonth())
   ) {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth(); // 0-indexed
 
     // Remove year from the label
-    const label = currentDate.toLocaleDateString('en-US', { month: 'short' }).replace(',', '');
+    const label = currentDate
+      .toLocaleDateString("en-US", { month: "short" })
+      .replace(",", "");
     allMonthLabels.push(label);
 
-    const periodKey = `${year}-${(month + 1).toString().padStart(2, '0')}`; // YYYY-MM
+    const periodKey = `${year}-${(month + 1).toString().padStart(2, "0")}`; // YYYY-MM
     periodToIndexMap[periodKey] = index;
 
     // Move to the next month
@@ -716,7 +817,6 @@ const chartData = computed(() => {
     index++;
   }
   // --- End Generate Full Date Range Labels ---
-
 
   // Group markets and calculate usage (same as before)
   const marketGroups = new Map<string, Set<string>>();
@@ -736,7 +836,10 @@ const chartData = computed(() => {
         // Note: Use total_usd from the *month* for ranking, not breakdown totalSpent
         // to handle cases where breakdown might be incomplete? Check API logic.
         // Let's stick to summing breakdown for now as it seems intended for usage calc.
-        gpuUsageCounts.set(baseName, (gpuUsageCounts.get(baseName) || 0) + b.totalSpent);
+        gpuUsageCounts.set(
+          baseName,
+          (gpuUsageCounts.get(baseName) || 0) + b.totalSpent,
+        );
       } else {
         // Handle custom markets that aren't in marketsData
         // Use truncated address as the name
@@ -746,7 +849,10 @@ const chartData = computed(() => {
           gpuUsageCounts.set(baseName, 0);
         }
         marketGroups.get(baseName)?.add(b.market);
-        gpuUsageCounts.set(baseName, (gpuUsageCounts.get(baseName) || 0) + b.totalSpent);
+        gpuUsageCounts.set(
+          baseName,
+          (gpuUsageCounts.get(baseName) || 0) + b.totalSpent,
+        );
       }
     });
   });
@@ -767,54 +873,59 @@ const chartData = computed(() => {
     const premiumDataPoints = new Array(allMonthLabels.length).fill(0);
 
     // Iterate through API results and place data in the correct index
-    (spendingHistory.value?.results || []).forEach((monthItem: MonthlyResult) => {
-      const monthIndex = periodToIndexMap[monthItem.period];
-      // Only process if the period from API is within our generated range
-      if (monthIndex !== undefined) {
-        let communityTotal = 0;
-        let premiumTotal = 0;
+    (spendingHistory.value?.results || []).forEach(
+      (monthItem: MonthlyResult) => {
+        const monthIndex = periodToIndexMap[monthItem.period];
+        // Only process if the period from API is within our generated range
+        if (monthIndex !== undefined) {
+          let communityTotal = 0;
+          let premiumTotal = 0;
 
-        addresses.forEach(market => {
-          const marketData = monthItem.breakdown.find((b: any) => b.market === market);
-          if (marketData) {
-            const marketInfo = marketAddressToInfo.value[market];
-            // Ensure marketInfo exists before accessing properties
-            if (marketInfo) {
-              if (marketInfo.isCommunity) {
-                communityTotal += marketData.totalSpent;
+          addresses.forEach((market) => {
+            const marketData = monthItem.breakdown.find(
+              (b: any) => b.market === market,
+            );
+            if (marketData) {
+              const marketInfo = marketAddressToInfo.value[market];
+              // Ensure marketInfo exists before accessing properties
+              if (marketInfo) {
+                if (marketInfo.isCommunity) {
+                  communityTotal += marketData.totalSpent;
+                } else {
+                  premiumTotal += marketData.totalSpent;
+                }
               } else {
+                // Handle custom markets - treat as premium by default
                 premiumTotal += marketData.totalSpent;
               }
-            } else {
-              // Handle custom markets - treat as premium by default
-              premiumTotal += marketData.totalSpent;
             }
-          }
-        });
+          });
 
-        // Update the data arrays at the calculated index
-        dataPoints[monthIndex] = communityTotal + premiumTotal;
-        communityDataPoints[monthIndex] = communityTotal;
-        premiumDataPoints[monthIndex] = premiumTotal;
-      }
-    });
+          // Update the data arrays at the calculated index
+          dataPoints[monthIndex] = communityTotal + premiumTotal;
+          communityDataPoints[monthIndex] = communityTotal;
+          premiumDataPoints[monthIndex] = premiumTotal;
+        }
+      },
+    );
 
     // Create the dataset object (same as before, but uses the full-length data arrays)
     const formattedName = baseName.toUpperCase();
     datasetArray.push({
       label: baseName,
       data: dataPoints,
-      backgroundColor: GPU_COLORS[formattedName] || getColorForMarket(baseName, true),
-      stack: 'totalSpent',
+      backgroundColor:
+        GPU_COLORS[formattedName] || getColorForMarket(baseName, true),
+      stack: "totalSpent",
       communityData: communityDataPoints,
       premiumData: premiumDataPoints,
       showInLegend: top3GPUs.includes(baseName),
       borderWidth: 1,
-      borderColor: 'rgba(255, 255, 255, 0.7)',
-      hoverBorderColor: 'white',
-      hoverBackgroundColor: GPU_COLORS[formattedName] ? 
-        makeColorBrighter(GPU_COLORS[formattedName]) :
-        makeColorBrighter(getColorForMarket(baseName, true))
+      borderColor: "rgba(255, 255, 255, 0.7)",
+      hoverBorderColor: "white",
+      hoverBackgroundColor: GPU_COLORS[formattedName]
+        ? makeColorBrighter(GPU_COLORS[formattedName])
+        : makeColorBrighter(getColorForMarket(baseName, true)),
     });
   });
 
@@ -823,7 +934,7 @@ const chartData = computed(() => {
 
   return {
     labels: allMonthLabels, // Use the generated full list of labels
-    datasets: datasetArray
+    datasets: datasetArray,
   };
 });
 
@@ -834,14 +945,14 @@ function getColorForMarket(market: string, vibrant = false): string {
   const hashVal = Array.from(market)
     .map((char) => char.charCodeAt(0))
     .reduce((acc, cur) => acc + cur, 0);
-  
+
   const hue = hashVal % 360;
-  
+
   // More vibrant colors with higher saturation
   if (vibrant) {
     return `hsl(${hue}, 70%, 55%)`;
   }
-  
+
   // Original color version
   return `hsl(${hue}, 50%, 50%)`;
 }
@@ -849,244 +960,256 @@ function getColorForMarket(market: string, vibrant = false): string {
 // Helper function to make colors more vibrant for hover state
 function makeColorBrighter(color: string): string {
   // For HSL colors
-  if (color.startsWith('hsl')) {
+  if (color.startsWith("hsl")) {
     // Extract the hue, saturation, and lightness values
     const match = color.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
     if (match) {
       const h = parseInt(match[1]);
       const s = parseInt(match[2]);
       const l = parseInt(match[3]);
-      
+
       // Increase lightness for hover (max 65% to avoid washing out)
       const newL = Math.min(l + 10, 65);
       return `hsl(${h}, ${s}%, ${newL}%)`;
     }
   }
-  
+
   // For hex colors - fallback to original if can't process
   return color;
 }
 
 const chartOptions = computed(() => {
-  const isDark = $colorMode?.value === 'dark';
-  const textColor = isDark ? '#ffffff' : '#000000';
-  const gridColor = isDark ? '#444444' : '#e5e5e5';
-  const tooltipBg = isDark ? 'rgba(55, 65, 81, 0.95)' : 'rgba(0, 0, 0, 0.8)';
+  const isDark = $colorMode?.value === "dark";
+  const textColor = isDark ? "#ffffff" : "#000000";
+  const gridColor = isDark ? "#444444" : "#e5e5e5";
+  const tooltipBg = isDark ? "rgba(55, 65, 81, 0.95)" : "rgba(0, 0, 0, 0.8)";
 
   return {
-  responsive: true,
-  maintainAspectRatio: false,
-  devicePixelRatio: 2,
-  layout: {
-    padding: {
-      left: 5,
-      right: 10,
-      top: 20,
-      bottom: 5
-    }
-  },
-  plugins: {
-    legend: {
-      display: true,
-      position: 'bottom' as const,
-      align: 'start' as const,
-      labels: {
-        boxWidth: 10,
-        boxHeight: 10,
-        padding: 15,
-        usePointStyle: true,
-        pointStyle: 'circle',
-        font: {
-          family: "'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif",
-          size: 12,
-          weight: 'normal' as const,
-          lineHeight: 1.2
-        },
-        color: textColor,
-        filter: (legendItem: any) => {
-          return legendItem.datasetIndex !== undefined && 
-                 chartData.value.datasets[legendItem.datasetIndex]?.showInLegend;
-        }
-      }
+    responsive: true,
+    maintainAspectRatio: false,
+    devicePixelRatio: 2,
+    layout: {
+      padding: {
+        left: 5,
+        right: 10,
+        top: 20,
+        bottom: 5,
+      },
     },
-    tooltip: {
-      backgroundColor: tooltipBg,
-      titleFont: {
-        family: "'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif",
-        size: 14,
-        weight: 'normal' as const,
-        lineHeight: 1.4
-      },
-      titleColor: '#ffffff',
-      bodyFont: {
-        family: "'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif",
-        size: 13,
-        lineHeight: 1.4
-      },
-      bodyColor: '#ffffff',
-      padding: 12,
-      cornerRadius: 4,
-      displayColors: true,
-      boxPadding: 4,
-      callbacks: {
-        title: function(tooltipItems: any) {
-          const index = tooltipItems[0].dataIndex;
-          const labels = chartData.value.labels;
-          // Calculate the total for this month
-          let monthTotal = 0;
-          chartData.value.datasets.forEach((dataset: any) => {
-            monthTotal += dataset.data[index] || 0;
-          });
-          
-          const formattedTotal = '$' + monthTotal.toFixed(2);
-          return `${labels[index]} - Total: ${formattedTotal}`;
-        },
-        label: function(context: any) {
-          const dataset = context.dataset;
-          const index = context.dataIndex;
-          const total = dataset.data[index];
-          
-          // Only return the GPU name and total amount, no premium/community breakdown
-          return `${dataset.label}: $${total.toFixed(2)}`;
-        }
-      }
-    },
-    title: {
-      display: false
-    }
-  },
-  scales: {
-    x: {
-      stacked: true,
-      grid: {
-        display: false
-      },
-      ticks: {
-        font: {
-          family: "'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif",
-          size: 13,
-          weight: 'normal' as const,
-          lineHeight: 1.2
-        },
-        color: textColor,
-        padding: 8
-      },
-      border: {
-        width: 0,
-        color: 'transparent'
-      }
-    },
-    y: {
-      stacked: true,
-      grid: {
-        color: gridColor,
-        drawBorder: false,
-        lineWidth: 0.5,
-        tickLength: 4,
+    plugins: {
+      legend: {
         display: true,
-        drawTicks: true,
-        drawOnChartArea: true,
-        count: 5
-      },
-      border: {
-        width: 0,
-        color: 'transparent'
-      },
-      ticks: {
-        callback: function(value: any) {
-          return '$' + value;
+        position: "bottom" as const,
+        align: "start" as const,
+        labels: {
+          boxWidth: 10,
+          boxHeight: 10,
+          padding: 15,
+          usePointStyle: true,
+          pointStyle: "circle",
+          font: {
+            family:
+              "'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif",
+            size: 12,
+            weight: "normal" as const,
+            lineHeight: 1.2,
+          },
+          color: textColor,
+          filter: (legendItem: any) => {
+            return (
+              legendItem.datasetIndex !== undefined &&
+              chartData.value.datasets[legendItem.datasetIndex]?.showInLegend
+            );
+          },
         },
-        font: {
-          family: "'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif",
-          size: 12,
-          weight: 'normal' as const,
-          lineHeight: 1.2
+      },
+      tooltip: {
+        backgroundColor: tooltipBg,
+        titleFont: {
+          family:
+            "'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif",
+          size: 14,
+          weight: "normal" as const,
+          lineHeight: 1.4,
         },
-        color: textColor,
-        maxTicksLimit: 5,
-        padding: 10
-      }
-    }
-  },
-  elements: {
-    bar: {
-      borderRadius: 4,
-      borderSkipped: false,
-      borderWidth: 1
-    }
-  },
-  barPercentage: 0.95,
-  categoryPercentage: 0.95,
-  animation: {
-    duration: 800
-  },
-  font: {
-    family: "'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif"
-  }
+        titleColor: "#ffffff",
+        bodyFont: {
+          family:
+            "'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif",
+          size: 13,
+          lineHeight: 1.4,
+        },
+        bodyColor: "#ffffff",
+        padding: 12,
+        cornerRadius: 4,
+        displayColors: true,
+        boxPadding: 4,
+        callbacks: {
+          title: function (tooltipItems: any) {
+            const index = tooltipItems[0].dataIndex;
+            const labels = chartData.value.labels;
+            // Calculate the total for this month
+            let monthTotal = 0;
+            chartData.value.datasets.forEach((dataset: any) => {
+              monthTotal += dataset.data[index] || 0;
+            });
+
+            const formattedTotal = "$" + monthTotal.toFixed(2);
+            return `${labels[index]} - Total: ${formattedTotal}`;
+          },
+          label: function (context: any) {
+            const dataset = context.dataset;
+            const index = context.dataIndex;
+            const total = dataset.data[index];
+
+            // Only return the GPU name and total amount, no premium/community breakdown
+            return `${dataset.label}: $${total.toFixed(2)}`;
+          },
+        },
+      },
+      title: {
+        display: false,
+      },
+    },
+    scales: {
+      x: {
+        stacked: true,
+        grid: {
+          display: false,
+        },
+        ticks: {
+          font: {
+            family:
+              "'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif",
+            size: 13,
+            weight: "normal" as const,
+            lineHeight: 1.2,
+          },
+          color: textColor,
+          padding: 8,
+        },
+        border: {
+          width: 0,
+          color: "transparent",
+        },
+      },
+      y: {
+        stacked: true,
+        grid: {
+          color: gridColor,
+          drawBorder: false,
+          lineWidth: 0.5,
+          tickLength: 4,
+          display: true,
+          drawTicks: true,
+          drawOnChartArea: true,
+          count: 5,
+        },
+        border: {
+          width: 0,
+          color: "transparent",
+        },
+        ticks: {
+          callback: function (value: any) {
+            return "$" + value;
+          },
+          font: {
+            family:
+              "'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif",
+            size: 12,
+            weight: "normal" as const,
+            lineHeight: 1.2,
+          },
+          color: textColor,
+          maxTicksLimit: 5,
+          padding: 10,
+        },
+      },
+    },
+    elements: {
+      bar: {
+        borderRadius: 4,
+        borderSkipped: false,
+        borderWidth: 1,
+      },
+    },
+    barPercentage: 0.95,
+    categoryPercentage: 0.95,
+    animation: {
+      duration: 800,
+    },
+    font: {
+      family:
+        "'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif",
+    },
   };
 });
 
 const formatDate = (dateString: string | Date | null) => {
-  if (!dateString) return '';
-  return new Date(dateString).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
+  if (!dateString) return "";
+  return new Date(dateString).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 };
 
 const loadInvitation = async () => {
   if (!invitationToken.value) return;
-  
+
   // If already loading, return the existing promise
   if (invitationLoadPromise) {
     return invitationLoadPromise;
   }
-  
+
   // Create a new load promise
   invitationLoadPromise = (async () => {
     try {
       loadingInvitation.value = true;
-      invitationError.value = '';
-      
-      const response = await $fetch<Invitation>(`${config.backend_url}/api/credits/invitations/${invitationToken.value}`);
+      invitationError.value = "";
+
+      const response = await $fetch<Invitation>(
+        `${config.backend_url}/api/credits/invitations/${invitationToken.value}`,
+        {
+          credentials: "include",
+        },
+      );
       invitation.value = response;
-      console.log('loaded invitation', invitation.value);
-      
+
       if (response.isClaimed) {
-        invitationError.value = 'This credit invitation has already been claimed.';
+        invitationError.value =
+          "This credit invitation has already been claimed.";
       } else if (response.isExpired) {
-        invitationError.value = 'This credit invitation has expired.';
+        invitationError.value = "This credit invitation has expired.";
       }
     } catch (err: any) {
-      console.error('Error loading invitation:', err);
-      invitationError.value = err.data?.message || 'Failed to load invitation details';
+      console.error("Error loading invitation:", err);
+      invitationError.value =
+        err.data?.message || "Failed to load invitation details";
     } finally {
       loadingInvitation.value = false;
       invitationLoadPromise = null;
     }
   })();
-  
+
   return invitationLoadPromise;
 };
 
 // Watch for invitation token changes and authentication status
-watch([invitationToken, status], ([token, authStatus]) => {
-  if (token) {
-    loadInvitation();
-  }
-}, { immediate: true });
+watch(
+  [invitationToken, isAuthenticated],
+  ([token, authenticated]) => {
+    if (token) {
+      loadInvitation();
+    }
+  },
+  { immediate: true },
+);
 </script>
 
 <style scoped>
-.container {
-  max-width: 1200px;
-  margin: 0 auto 0 0;
-  padding: 1.5rem;
-}
-
 .heading {
   text-transform: uppercase;
   font-size: 0.8rem;
@@ -1095,12 +1218,34 @@ watch([invitationToken, status], ([token, authStatus]) => {
   margin-bottom: 0.5rem;
 }
 
-
 .box {
   height: 100%;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
+}
+
+.usage-divider {
+  width: 100%;
+  height: 1px;
+  background-color: #dbdbdb;
+  margin: 1rem 0;
+}
+
+.balance-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.cost-and-usage-box {
+  justify-content: space-evenly;
+}
+
+.buttons.has-addons .button:focus,
+.buttons.has-addons .button:focus-visible {
+  outline: none;
+  box-shadow: none;
 }
 
 .equal-height-box {
@@ -1109,7 +1254,6 @@ watch([invitationToken, status], ([token, authStatus]) => {
   flex-direction: column;
   justify-content: center;
 }
-
 
 /* Special handling for Cost and Usage and Monthly History boxes */
 .column.is-4 .box:not(.equal-height-boxes .box) {
@@ -1163,19 +1307,19 @@ watch([invitationToken, status], ([token, authStatus]) => {
 }
 
 .dark-mode .container-icon:hover {
-  border-color: #10E80C !important;
+  border-color: #10e80c !important;
 }
 
 .dark-mode .container-icon:hover svg {
-  fill: #10E80C !important;
+  fill: #10e80c !important;
 }
 
 .nosana-icon {
-  color: #10E80C;
+  color: #10e80c;
 }
 
 .nosana-icon :deep(path) {
-  fill: #10E80C;
+  fill: #10e80c;
 }
 
 .equal-height-boxes {
@@ -1201,11 +1345,11 @@ watch([invitationToken, status], ([token, authStatus]) => {
 }
 
 .container-icon:hover {
-  border-color: #10E80C !important;
+  border-color: #10e80c !important;
 }
 
 .container-icon:hover svg {
-  fill: #10E80C !important;
+  fill: #10e80c !important;
 }
 
 .container-icon svg {
@@ -1224,11 +1368,11 @@ watch([invitationToken, status], ([token, authStatus]) => {
 .credit-amount-display {
   font-size: 3rem;
   font-weight: 800;
-  color: #10E80C;
+  color: #10e80c;
   text-align: center;
   margin: 2rem 0;
   text-shadow: 0 2px 4px rgba(16, 232, 12, 0.2);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
@@ -1255,7 +1399,7 @@ watch([invitationToken, status], ([token, authStatus]) => {
 }
 
 .meta-item i {
-  color: #10E80C;
+  color: #10e80c;
   width: 16px;
 }
 
@@ -1268,4 +1412,4 @@ watch([invitationToken, status], ([token, authStatus]) => {
     font-size: 2.5rem;
   }
 }
-</style> 
+</style>

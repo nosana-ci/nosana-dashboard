@@ -8,8 +8,15 @@
           v-if="currentTab === 'deployments'"
           :items-per-page="itemsPerPage"
         />
-        <JobsList v-if="currentTab === 'jobs'" :items-per-page="itemsPerPage" :status-filter="filterValue" />
-        <VaultsList v-if="currentTab === 'vaults'" :items-per-page="itemsPerPage" />
+        <JobsList
+          v-if="currentTab === 'jobs'"
+          :items-per-page="itemsPerPage"
+          :status-filter="filterValue"
+        />
+        <VaultsList
+          v-if="currentTab === 'vaults'"
+          :items-per-page="itemsPerPage"
+        />
       </div>
     </div>
   </div>
@@ -25,23 +32,19 @@ import TableHeader from "~/components/DeploymentsTable/TableHeader.vue";
 const { currentRoute } = useRouter();
 
 const currentTab = computed(
-  () => currentRoute.value.query.tab?.toString() || "deployments"
+  () => currentRoute.value.query.tab?.toString() || "deployments",
 );
 
 const filterValue = computed(
-  () => currentRoute.value.query.filter?.toString() || null
+  () => currentRoute.value.query.filter?.toString() || null,
 );
 
 const pageSizeValue = computed(
-  () => currentRoute.value.query.size?.toString() || "10"
+  () => currentRoute.value.query.size?.toString() || "10",
 );
 
 const itemsPerPage = computed(() => {
   const size = pageSizeValue.value;
-  if (size === "all") {
-    // For "all" option, use a large number for jobs API, deployments handle this client-side
-    return currentTab.value === "jobs" ? 1000 : 1000;
-  }
   return parseInt(size) || 10;
 });
 </script>

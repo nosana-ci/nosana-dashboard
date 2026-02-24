@@ -4,6 +4,9 @@ import { nodePolyfills } from "vite-plugin-node-polyfills";
 // https://nuxt.com/docs/api/configuration/nuxt-config
 
 export default defineNuxtConfig({
+  devServer: {
+    port: 3003,
+  },
   devtools: { enabled: true },
   ssr: false,
   css: [
@@ -46,7 +49,6 @@ export default defineNuxtConfig({
     "@nuxtjs/google-fonts",
     "@vueuse/nuxt",
     "@nuxtjs/color-mode",
-    "@sidebase/nuxt-auth",
     "nuxt-gtag",
     "@vite-pwa/nuxt",
   ],
@@ -70,54 +72,19 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
     public: {
+      maintenance: process.env.NUXT_PUBLIC_MAINTENANCE === "true",
       rpcUrl: process.env.RPC_URL,
       backend_url: process.env.NUXT_PUBLIC_BACKEND_URL,
+      client_manager_url: process.env.NUXT_PUBLIC_CLIENT_MANAGER_URL,
       network: process.env.NETWORK || "mainnet",
       nodeDomain: process.env.NODE_DOMAIN,
       frpServer: process.env.FRP_SERVER || "node.k8s.prd.nos.ci",
-      googleRedirectUri: process.env.GOOGLE_REDIRECT_URI,
-      googleClientId: process.env.GOOGLE_CLIENT_ID,
+      cookie_domain: process.env.NUXT_PUBLIC_COOKIE_DOMAIN,
     },
   },
   gtag: {
     enabled: process.env.NODE_ENV === "production",
     id: "G-HNDP62SH8M",
-  },
-  auth: {
-    baseURL: process.env.NUXT_PUBLIC_BACKEND_URL,
-    provider: {
-      type: "local",
-      endpoints: {
-        signIn: {
-          path: "/api/auth/login",
-          method: "post",
-          propertyName: "token",
-        },
-        getSession: { path: "/api/auth/session", method: "get" },
-        signOut: false,
-      },
-      token: {
-        type: false,
-        maxAgeInSeconds: 60 * 60 * 24 * 3, // 3 days
-      },
-      session: {
-        dataType: {
-          id: "string",
-          name: "string",
-          email: "string",
-          address: "string",
-          generatedAddress: "string",
-          providerUsername: "string",
-          type: "string",
-          created_at: "string",
-        },
-      },
-    },
-    sessionRefresh: {
-      enablePeriodically: false, // Disable automatic session refresh
-      enableOnWindowFocus: true, // Enable refresh on window focus for cross-tab sync
-    },
-    globalAppMiddleware: false,
   },
   vite: {
     esbuild: {
