@@ -1,14 +1,16 @@
 import { useSuperTokens } from "~/composables/useSuperTokens";
 
 export default defineNuxtRouteMiddleware(async (to, from) => {
+  const config = useRuntimeConfig();
+  if (config.public.maintenance) {
+    return;
+  }
   const {
     isLoading,
     isAuthenticated: superTokensAuth,
     isEmailVerified,
     checkSession,
   } = useSuperTokens();
-  const config = useRuntimeConfig();
-
   // Public routes that don't require authentication
   const publicRoutes = [
     "/",
@@ -92,4 +94,5 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
       query: { redirect: to.fullPath },
     });
   }
+
 });

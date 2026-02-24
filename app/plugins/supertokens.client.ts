@@ -6,7 +6,9 @@ import EmailVerification from "supertokens-web-js/recipe/emailverification";
 
 export default defineNuxtPlugin(() => {
   const config = useRuntimeConfig();
-
+  if (config.public.maintenance) {
+    return;
+  }
   SuperTokens.init({
     appInfo: {
       appName: "Nosana Deploy",
