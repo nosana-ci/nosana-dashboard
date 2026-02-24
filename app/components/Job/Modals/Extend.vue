@@ -66,7 +66,7 @@ interface Props {
 let { job, nosPrice, userBalances, closeExtendModal } = defineProps<Props>();
 
 const toast = useToast();
-const { status, data: userData } = useAuth();
+const { isAuthenticated, userData } = useSuperTokens();
 const { triggerCreditRefresh } = useCreditRefresh();
 
 const extendTime = ref<number>(1); // Default to 1 hour
@@ -74,7 +74,7 @@ const loadingExtend = ref<boolean>(false);
 
 // Helper to detect if current user is a credit user
 const isCreditUser = computed(() => {
-  return status.value === 'authenticated' && userData.value?.generatedAddress;
+  return isAuthenticated.value && userData.value?.generatedAddress;
 });
 
 // Use centralized pricing system for extension costs

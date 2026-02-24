@@ -11,8 +11,6 @@ export const useAPI = (
   opts?: APIOptions
 ) => {
   const config = useRuntimeConfig();
-  const { token } = useAuth();
-
   return useMyAsyncData(
     toValue(request).toString(),
     async () => {
@@ -24,14 +22,11 @@ export const useAPI = (
         ...(opts?.headers || {}),
       };
 
-      if (opts?.auth && token.value) {
-        headers.Authorization = token.value as string;
-      }
-
       return $fetch(url, {
         baseURL: config.public.backend_url as string,
         method: opts?.method || 'GET',
         headers,
+        credentials: 'include',
         ...(opts?.body && { body: opts.body }),
       });
     },

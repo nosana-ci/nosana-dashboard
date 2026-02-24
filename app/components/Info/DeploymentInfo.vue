@@ -70,7 +70,7 @@
         <span class="quick-detail-value">
           <a
             class="address is-family-monospace"
-            :href="`https://explorer.nosana.com/markets/${props.job.market}`"
+            :href="`https://explore.nosana.com/markets/${props.job.market}`"
             target="_blank"
           >
             <span
@@ -163,7 +163,7 @@
         <span class="quick-detail-value">
           <a
             class="address is-family-monospace"
-            :href="`https://explorer.nosana.com/markets/${props.job.market}`"
+            :href="`https://explore.nosana.com/markets/${props.job.market}`"
             target="_blank"
           >
             <span

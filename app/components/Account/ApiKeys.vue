@@ -1,34 +1,11 @@
 <template>
   <div class="api-keys-section">
-    <div class="is-flex is-justify-content-space-between is-align-items-center mb-4">
+    <div
+      class="is-flex is-justify-content-space-between is-align-items-center mb-4"
+    >
       <h3 class="title is-4 mb-0">API Keys</h3>
-      <button 
-        @click="showCreateKeyModal = true" 
-        class="button is-dark"
-      >
-        <span class="icon">
-          <FontAwesomeIcon :icon="faPlus" />
-        </span>
-        <span>Create Key</span>
-      </button>
-    </div>
-    
-    <div v-if="!hasLoadedOnce && loadingKeys" class="box">
-      <progress class="progress is-small is-grey" max="100"></progress>
-      <p class="has-text-centered">Loading API keys...</p>
-    </div>
-    
-    <div v-else-if="apiKeys?.keys?.length === 0" class="box has-text-centered">
-      <div class="content">
-        <span class="icon is-large has-text-grey-light">
-          <FontAwesomeIcon :icon="faKey" size="2x" />
-        </span>
-        <h5 class="title is-5">No API Keys</h5>
-        <p class="subtitle">Create your first API key to access the Nosana API.</p>
-        <button 
-          @click="showCreateKeyModal = true" 
-          class="button is-dark"
-        >
+      <div class="is-flex is-align-items-center" style="gap: 0.5rem">
+        <button @click="showCreateKeyModal = true" class="button is-dark">
           <span class="icon">
             <FontAwesomeIcon :icon="faPlus" />
           </span>
@@ -36,7 +13,30 @@
         </button>
       </div>
     </div>
-    
+
+    <div v-if="!hasLoadedOnce && loadingKeys" class="box">
+      <progress class="progress is-small is-grey" max="100"></progress>
+      <p class="has-text-centered">Loading API keys...</p>
+    </div>
+
+    <div v-else-if="apiKeys?.keys?.length === 0" class="box has-text-centered">
+      <div class="content">
+        <span class="icon is-large has-text-grey-light">
+          <FontAwesomeIcon :icon="faKey" size="2x" />
+        </span>
+        <h5 class="title is-5">No API Keys</h5>
+        <p class="subtitle">
+          Create your first API key to access the Nosana API.
+        </p>
+        <button @click="showCreateKeyModal = true" class="button is-dark">
+          <span class="icon">
+            <FontAwesomeIcon :icon="faPlus" />
+          </span>
+          <span>Create Key</span>
+        </button>
+      </div>
+    </div>
+
     <div v-else class="box">
       <div class="table-container">
         <table class="table is-fullwidth is-hoverable">
@@ -59,24 +59,24 @@
                 <code class="is-family-monospace">{{ maskKey(key.key) }}</code>
               </td>
               <td>
-                <span 
-                  class="tag" 
+                <span
+                  class="tag"
                   :class="{
                     'is-success': key.status === 'active',
                     'is-warning': key.status === 'disabled',
-                    'is-danger': key.status === 'expired'
+                    'is-danger': key.status === 'expired',
                   }"
                 >
                   {{ key.status }}
                 </span>
               </td>
               <td>{{ formatDate(key.createdAt) }}</td>
-              <td>{{ key.expiresAt ? formatDate(key.expiresAt) : 'Never' }}</td>
+              <td>{{ key.expiresAt ? formatDate(key.expiresAt) : "Never" }}</td>
               <td>
                 <div class="field is-grouped">
                   <p class="control">
-                    <button 
-                      @click="viewKey(key)" 
+                    <button
+                      @click="viewKey(key)"
                       class="button is-small is-light"
                       title="View Key"
                     >
@@ -86,8 +86,8 @@
                     </button>
                   </p>
                   <p class="control">
-                    <button 
-                      @click="editKey(key)" 
+                    <button
+                      @click="editKey(key)"
                       class="button is-small is-light"
                       title="Edit Key"
                     >
@@ -97,8 +97,8 @@
                     </button>
                   </p>
                   <p class="control">
-                    <button 
-                      @click="deleteKey(key)" 
+                    <button
+                      @click="deleteKey(key)"
                       class="button is-small is-light has-text-danger"
                       title="Delete Key"
                       :disabled="deletingKeyId === key.id"
@@ -129,17 +129,17 @@
           <div class="field">
             <label class="label">Key Name</label>
             <div class="control">
-              <input 
-                v-model="newKeyName" 
-                class="input" 
-                type="text" 
+              <input
+                v-model="newKeyName"
+                class="input"
+                type="text"
                 placeholder="e.g., My App Key"
                 maxlength="100"
-              >
+              />
             </div>
             <p class="help">A descriptive name to identify this key</p>
           </div>
-          
+
           <div class="field">
             <label class="label">Expiration</label>
             <div class="control">
@@ -157,15 +157,17 @@
           </div>
         </section>
         <footer class="modal-card-foot">
-          <button 
-            @click="createKey" 
+          <button
+            @click="createKey"
             class="button is-dark"
             :disabled="!newKeyName || creatingKey"
             :class="{ 'is-loading': creatingKey }"
           >
             Create Key
           </button>
-          <button @click="showCreateKeyModal = false" class="button">Cancel</button>
+          <button @click="showCreateKeyModal = false" class="button">
+            Cancel
+          </button>
         </footer>
       </div>
     </div>
@@ -186,20 +188,20 @@
                 <strong>{{ selectedKey.name }}</strong>
               </p>
             </div>
-            
+
             <div class="field">
               <label class="label">API Key</label>
               <div class="control">
                 <div class="is-flex">
-                  <input 
-                    :value="maskKey(selectedKey.key)" 
-                    class="input is-family-monospace" 
-                    type="text" 
+                  <input
+                    :value="maskKey(selectedKey.key)"
+                    class="input is-family-monospace"
+                    type="text"
                     readonly
-                    style="flex: 1;"
-                  >
-                  <button 
-                    @click="copyKey(selectedKey.key)" 
+                    style="flex: 1"
+                  />
+                  <button
+                    @click="copyKey(selectedKey.key)"
                     class="button is-light ml-2"
                     title="Copy to clipboard"
                   >
@@ -214,17 +216,17 @@
                 Keep this key secure!
               </p>
             </div>
-            
+
             <div class="columns">
               <div class="column">
                 <div class="field">
                   <label class="label">Status</label>
-                  <span 
-                    class="tag" 
+                  <span
+                    class="tag"
                     :class="{
                       'is-success': selectedKey.status === 'active',
                       'is-warning': selectedKey.status === 'disabled',
-                      'is-danger': selectedKey.status === 'expired'
+                      'is-danger': selectedKey.status === 'expired',
                     }"
                   >
                     {{ selectedKey.status }}
@@ -238,25 +240,39 @@
                 </div>
               </div>
             </div>
-            
+
             <div class="columns">
               <div class="column">
                 <div class="field">
                   <label class="label">Last Used</label>
-                  <p>{{ selectedKey.lastUsedAt ? formatDate(selectedKey.lastUsedAt) : 'Never' }}</p>
+                  <p>
+                    {{
+                      selectedKey.lastUsedAt
+                        ? formatDate(selectedKey.lastUsedAt)
+                        : "Never"
+                    }}
+                  </p>
                 </div>
               </div>
               <div class="column">
                 <div class="field">
                   <label class="label">Expires</label>
-                  <p>{{ selectedKey.expiresAt ? formatDate(selectedKey.expiresAt) : 'Never' }}</p>
+                  <p>
+                    {{
+                      selectedKey.expiresAt
+                        ? formatDate(selectedKey.expiresAt)
+                        : "Never"
+                    }}
+                  </p>
                 </div>
               </div>
             </div>
           </div>
         </section>
         <footer class="modal-card-foot">
-          <button @click="showViewKeyModal = false" class="button">Close</button>
+          <button @click="showViewKeyModal = false" class="button">
+            Close
+          </button>
         </footer>
       </div>
     </div>
@@ -274,16 +290,16 @@
             <div class="field">
               <label class="label">Key Name</label>
               <div class="control">
-                <input 
-                  v-model="editKeyName" 
-                  class="input" 
-                  type="text" 
+                <input
+                  v-model="editKeyName"
+                  class="input"
+                  type="text"
                   placeholder="Key name"
                   maxlength="100"
-                >
+                />
               </div>
             </div>
-            
+
             <div class="field">
               <label class="label">Status</label>
               <div class="control">
@@ -299,15 +315,17 @@
           </div>
         </section>
         <footer class="modal-card-foot">
-          <button 
-            @click="updateKey" 
+          <button
+            @click="updateKey"
             class="button is-dark"
             :disabled="!editKeyName || updatingKey"
             :class="{ 'is-loading': updatingKey }"
           >
             Update Key
           </button>
-          <button @click="showEditKeyModal = false" class="button">Cancel</button>
+          <button @click="showEditKeyModal = false" class="button">
+            Cancel
+          </button>
         </footer>
       </div>
     </div>
@@ -316,112 +334,101 @@
 
 <script setup lang="ts">
 import { useToast } from "vue-toastification";
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-import { 
-  faPlus, 
-  faKey, 
-  faEye, 
-  faEdit, 
-  faTrash, 
-  faCopy, 
-  faExclamationTriangle 
-} from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
+import {
+  faPlus,
+  faKey,
+  faEye,
+  faEdit,
+  faTrash,
+  faCopy,
+  faExclamationTriangle,
+} from "@fortawesome/free-solid-svg-icons";
 
 const config = useRuntimeConfig().public;
-const { status, data: userData, token } = useAuth();
+const { isAuthenticated, isLoading } = useSuperTokens();
 const toast = useToast();
 
 // State
-const hasLoadedOnce = ref(false)
+const hasLoadedOnce = ref(false);
 const showCreateKeyModal = ref(false);
 const showViewKeyModal = ref(false);
 const showEditKeyModal = ref(false);
-const newKeyName = ref('');
-const newKeyExpiration = ref('');
+const newKeyName = ref("");
+const newKeyExpiration = ref("");
 const creatingKey = ref(false);
 const updatingKey = ref(false);
 const deletingKeyId = ref<string | null>(null);
 const selectedKey = ref<any>(null);
-const editKeyName = ref('');
-const editKeyStatus = ref('active');
+const editKeyName = ref("");
+const editKeyStatus = ref("active");
 
-// Initialize stable token immediately if already authenticated (prevents refetch on session refresh)
-const stableAuthToken = ref<string | null>(
-  status.value === 'authenticated' && token.value ? token.value : null
-);
-
-// Only update stable token on logout (to trigger refetch on next login)
-watch([() => status.value, token], ([newStatus, newToken]) => {
-  // Only clear on logout - don't update on every auth change
-  if (newStatus === 'unauthenticated') {
-    stableAuthToken.value = null;
-  }
-  if (newStatus === 'authenticated' && newToken && !stableAuthToken.value) {
-    // Only set if was null (after logout)
-    stableAuthToken.value = newToken;
-  }
-}, { immediate: false }); // Not immediate - we initialized above
+// Track if authenticated (to trigger refetch after login)
+const wasAuthenticated = ref(isAuthenticated.value);
 
 const {
   data: apiKeys,
   pending: loadingKeys,
-  refresh: refreshKeys
-} = useMyAsyncData('api-keys', async () => {
-  if (status.value !== 'authenticated' || !token.value) {
-    return { keys: [], total: 0 };
-  }
-  
-  return await $fetch(`${config.backend_url}/api/api-keys`, {
-    headers: {
-      'Authorization': `Bearer ${token.value}`
+  refresh: refreshKeys,
+} = useMyAsyncData(
+  "api-keys",
+  async () => {
+    if (!isAuthenticated.value) {
+      return { keys: [], total: 0 };
     }
-  });
-}, {
-  default: () => ({ keys: [], total: 0 }),
-  watch: [stableAuthToken]
-});
 
-// (debug watchers removed)
+    return await $fetch(`${config.client_manager_url}/api-keys`, {
+      credentials: "include",
+    });
+  },
+  {
+    default: () => ({ keys: [], total: 0 }),
+    watch: [isAuthenticated],
+  },
+);
 
 // Mark first successful resolution to keep UI stable on later refreshes
-watch(loadingKeys, (isPending) => {
-  if (!isPending) {
-    hasLoadedOnce.value = true
-  }
-}, { immediate: true })
+watch(
+  loadingKeys,
+  (isPending) => {
+    if (!isPending) {
+      hasLoadedOnce.value = true;
+    }
+  },
+  { immediate: true },
+);
 
 const createKey = async () => {
-  if (!newKeyName.value || !token.value) return;
-  
+  if (!newKeyName.value || !isAuthenticated.value) return;
+
   try {
     creatingKey.value = true;
     const payload: any = { name: newKeyName.value };
     if (newKeyExpiration.value) {
       payload.expiresIn = parseInt(newKeyExpiration.value);
     }
-    
-    const response = await $fetch(`${config.backend_url}/api/api-keys`, {
-      method: 'POST',
+
+    const response = await $fetch(`${config.client_manager_url}/api-keys`, {
+      method: "POST",
+      credentials: "include",
       headers: {
-        'Authorization': `Bearer ${token.value}`,
-        'Content-Type': 'application/json'
+        "Content-Type": "application/json",
       },
-      body: payload
+      body: payload,
     });
-    
-    toast.success('API key created successfully!');
-    
+
+    toast.success("API key created successfully!");
+
     selectedKey.value = response;
     showCreateKeyModal.value = false;
     showViewKeyModal.value = true;
-    
-    newKeyName.value = '';
-    newKeyExpiration.value = '';
+
+    newKeyName.value = "";
+    newKeyExpiration.value = "";
     await refreshKeys();
-    
   } catch (error: any) {
-    console.error('Error creating key:', error);
-    toast.error(error.data?.message || 'Failed to create API key');
+    console.error("Error creating key:", error);
+    toast.error(error.data?.message || "Failed to create API key");
   } finally {
     creatingKey.value = false;
   }
@@ -440,60 +447,64 @@ const editKey = (keyData: any) => {
 };
 
 const updateKey = async () => {
-  if (!selectedKey.value || !editKeyName.value || !token.value) return;
-  
+  if (!selectedKey.value || !editKeyName.value || !isAuthenticated.value)
+    return;
+
   try {
     updatingKey.value = true;
-    
-    await $fetch(`${config.backend_url}/api/api-keys/${selectedKey.value.id}/update`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token.value}`,
-        'Content-Type': 'application/json'
+
+    await $fetch(
+      `${config.client_manager_url}/api-keys/${selectedKey.value.id}/update`,
+      {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: {
+          name: editKeyName.value,
+          status: editKeyStatus.value,
+        },
       },
-      body: {
-        name: editKeyName.value,
-        status: editKeyStatus.value
-      }
-    });
-    
-    toast.success('API key updated successfully!');
+    );
+
+    toast.success("API key updated successfully!");
     showEditKeyModal.value = false;
-    
+
     await refreshKeys();
-    
   } catch (error: any) {
-    console.error('Error updating key:', error);
-    toast.error(error.data?.message || 'Failed to update API key');
+    console.error("Error updating key:", error);
+    toast.error(error.data?.message || "Failed to update API key");
   } finally {
     updatingKey.value = false;
   }
 };
 
 const deleteKey = async (keyData: any) => {
-  if (!confirm(`Are you sure you want to delete the key "${keyData.name}"? The key will no longer work after deletion. This action cannot be undone.`)) {
+  if (
+    !confirm(
+      `Are you sure you want to delete the key "${keyData.name}"? The key will no longer work after deletion. This action cannot be undone.`,
+    )
+  ) {
     return;
   }
-  
-  if (!token.value) return;
-  
+
+  if (!isAuthenticated.value) return;
+
   try {
     deletingKeyId.value = keyData.id;
-    
-    await $fetch(`${config.backend_url}/api/api-keys/${keyData.id}/delete`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token.value}`
-      }
+
+    await $fetch(`${config.client_manager_url}/api-keys/${keyData.id}/delete`, {
+      method: "POST",
+      credentials: "include",
     });
-    
-    toast.success('API key deleted successfully!');
-    
+
+    toast.success("API key deleted successfully!");
+
     await refreshKeys();
-    
   } catch (error: any) {
-    console.error('Error deleting key:', error);
-    toast.error(error.data?.message || 'Failed to delete API key');
+    console.error("Error deleting key:", error);
+    toast.error(error.data?.message || "Failed to delete API key");
   } finally {
     deletingKeyId.value = null;
   }
@@ -502,37 +513,36 @@ const deleteKey = async (keyData: any) => {
 const copyKey = async (keyValue: string) => {
   try {
     await navigator.clipboard.writeText(keyValue);
-    toast.success('Key copied to clipboard!');
+    toast.success("Key copied to clipboard!");
   } catch (error) {
-    console.error('Error copying key:', error);
-    toast.error('Failed to copy key to clipboard');
+    console.error("Error copying key:", error);
+    toast.error("Failed to copy key to clipboard");
   }
 };
 
 const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
+  return new Date(dateString).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 };
 
 const maskKey = (key: string) => {
-  if (!key) return '';
+  if (!key) return "";
   if (key.length <= 8) return key;
-  
+
   const start = key.substring(0, 4);
   const end = key.substring(key.length - 4);
-  const masked = '•'.repeat(Math.min(key.length - 8, 20));
-  
+  const masked = "•".repeat(Math.min(key.length - 8, 20));
+
   return `${start}${masked}${end}`;
 };
 </script>
 
 <style scoped>
-
 .table-container {
   max-height: 400px;
   overflow-y: auto;
@@ -544,7 +554,7 @@ const maskKey = (key: string) => {
 }
 
 .is-family-monospace {
-  font-family: 'Courier New', Courier, monospace;
+  font-family: "Courier New", Courier, monospace;
   font-size: 0.9rem;
 }
 
@@ -552,12 +562,13 @@ const maskKey = (key: string) => {
   .table-container {
     overflow-x: auto;
   }
-  
+
   .table {
     font-size: 0.85rem;
   }
-  
-  .table td, .table th {
+
+  .table td,
+  .table th {
     padding: 0.5rem;
   }
 }
