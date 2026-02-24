@@ -6,7 +6,7 @@ import {
 import { useToast } from "vue-toastification";
 import { useWallet } from "@nosana/solana-vue";
 import { EventSourcePolyfill } from "event-source-polyfill";
-import type { JobInfo, JobViewModel, LiveEndpoints, ResultsSection } from "~/composables/jobs/types";
+import type { JobInfo, JobViewModel, LiveEndpoints, ResultsSection} from "~/composables/jobs/types";
 import { normalizeEndpoints } from "~/composables/jobs/normalizeEndpoints";
 import { useMyAsyncData } from "~/composables/useMyAsyncData";
 
@@ -37,9 +37,9 @@ export function useJob(jobId: string) {
 
   const toast = useToast();
   const { nosana, publicKey } = useKit();
-  const { isAuthenticated: superTokensAuth, userData } = useSuperTokens();
+  const { status, data: userData, token } = useAuth();
   const { connected } = useWallet();
-
+  
   // Use kit's API client instead of custom useAPI
   const fetchJob = async () => {
     try {
@@ -58,7 +58,7 @@ export function useJob(jobId: string) {
 
   // Helper to detect if current user is a credit user
   const isCreditUser = computed(() => {
-    return superTokensAuth.value;
+    return status.value === 'authenticated' && userData.value?.generatedAddress;
   });
 
   const { pause: pauseJobPolling, resume: resumeJobPolling } = useIntervalFn(
@@ -84,7 +84,7 @@ export function useJob(jobId: string) {
           const lastState = getStateNumber(job.value.state || -1);
           const isRunningState = lastState === 1;
           const hasNodeInfo = Boolean(job.value?.node && job.value?.project);
-
+          
           // Continue polling only if RUNNING and missing node/project info
           if (isRunningState && !hasNodeInfo) {
             resumeJobPolling();
@@ -125,9 +125,11 @@ export function useJob(jobId: string) {
               const response = await $fetch<{ message: string; creditRefund?: number; delisted?: boolean }>(`${config.public.backend_url}/api/jobs/stop-with-credits`, {
                 method: 'POST',
                 body: { jobAddress: jobId },
-                credentials: 'include',
+                headers: {
+                  Authorization: `Bearer ${token.value}`,
+                },
               });
-
+              
               if (response.creditRefund && response.creditRefund > 0) {
                 toast.success(`Job stopped successfully! ${response.creditRefund} credits refunded.`);
               } else {
@@ -167,9 +169,9 @@ export function useJob(jobId: string) {
           } catch (e: unknown) {
             const errorMessage = e instanceof Error ? e.message : String(e);
             const fullError = String(e);
-
+            
             console.error('Stop/Delist job error:', e);
-
+            
             // Handle API errors for credit users
             if (isCreditUser.value) {
               const apiError = e as { status?: number; data?: { message?: string } };
@@ -184,14 +186,14 @@ export function useJob(jobId: string) {
               }
               return;
             }
-
+            
             // Handle SDK errors for wallet users
-            if (errorMessage.includes('TransactionExpiredTimeoutError') ||
-              fullError.includes('Transaction was not confirmed in') ||
-              fullError.includes('TimeoutError')) {
+            if (errorMessage.includes('TransactionExpiredTimeoutError') || 
+                fullError.includes('Transaction was not confirmed in') ||
+                fullError.includes('TimeoutError')) {
               toast.error('Solana is congested, try again or with a higher fee (Turbo/Ultra)');
-            } else if (errorMessage.includes('Unknown action') ||
-              fullError.includes('Unknown action')) {
+            } else if (errorMessage.includes('Unknown action') || 
+                      fullError.includes('Unknown action')) {
               toast.error('Not enough NOS balance for the transaction');
             } else if (errorMessage.includes('job cannot be delisted except when in queue')) {
               toast.error('Job cannot be delisted, it might have already started.');
@@ -224,13 +226,15 @@ export function useJob(jobId: string) {
               const config = useRuntimeConfig();
               const response = await $fetch<{ message: string; newTimeout?: number; creditsUsed?: number }>(`${config.public.backend_url}/api/jobs/extend-with-credits`, {
                 method: 'POST',
-                body: {
+                body: { 
                   jobAddress: jobId,
-                  extensionSeconds
+                  extensionSeconds 
                 },
-                credentials: 'include',
+                headers: {
+                  Authorization: `Bearer ${token.value}`,
+                },
               });
-
+              
               if (response.creditsUsed) {
                 const dollarAmount = (response.creditsUsed / 1000).toFixed(2);
                 toast.success(`Job extended by ${extensionHours} hour${extensionHours !== 1 ? 's' : ''}! $${dollarAmount} used.`);
@@ -247,9 +251,9 @@ export function useJob(jobId: string) {
             }
           } catch (e: unknown) {
             const errorMessage = e instanceof Error ? e.message : String(e);
-
+            
             console.error('Extend job error:', e);
-
+            
             // Handle API errors for credit users
             if (isCreditUser.value) {
               const apiError = e as { status?: number; data?: { message?: string } };
@@ -266,10 +270,10 @@ export function useJob(jobId: string) {
               }
               return;
             }
-
+            
             // Handle SDK errors for wallet users
-            if (errorMessage.includes('TransactionExpiredTimeoutError') ||
-              errorMessage.includes('Transaction was not confirmed in')) {
+            if (errorMessage.includes('TransactionExpiredTimeoutError') || 
+                errorMessage.includes('Transaction was not confirmed in')) {
               toast.error('Solana is congested, try again or with a higher fee (Turbo/Ultra)');
             } else if (errorMessage.includes('Unknown action')) {
               toast.error('Not enough NOS balance for the transaction');
@@ -302,7 +306,7 @@ export function useJob(jobId: string) {
 
       // Determine if current user is the job poster
       const activeAddress = computed(() => {
-        if (superTokensAuth.value && (userData.value as any)?.generatedAddress) {
+        if (status.value === 'authenticated' && (userData.value as any)?.generatedAddress) {
           return (userData.value as any).generatedAddress as string;
         }
         if (connected.value && publicKey.value) {
@@ -342,7 +346,7 @@ export function useJob(jobId: string) {
         if (!jobObject.hasResultsRegex && job.value?.hasResultsRegex) {
           jobObject.hasResultsRegex = job.value.hasResultsRegex;
         }
-
+        
       } catch (error) {
         console.error(`[useJob] Error in data processing:`, error);
       }
@@ -397,12 +401,12 @@ export function useJob(jobId: string) {
         if (job.value) job.value.jobDefinition = maybeJd;
         if (jobInfo.value) jobInfo.value = { ...jobInfo.value, jobDefinition: maybeJd } as JobInfo;
       }
-    } catch { }
+    } catch {}
   }
 
   // Check if an address matches the current user (credit user or wallet)
   const isCurrentUser = (address: string): boolean => {
-    if (superTokensAuth.value && userData.value?.generatedAddress) {
+    if (status.value === 'authenticated' && userData.value?.generatedAddress) {
       return userData.value.generatedAddress === address;
     }
     if (connected.value && publicKey.value) {
@@ -467,9 +471,9 @@ export function useJob(jobId: string) {
 
     const config = useRuntimeConfig();
     const nodeAddress = (currentJob.node as any)?.toString?.() || (currentJob.node as any);
-
+    
     if (isCompleted) {
-      if (eventSource) { try { eventSource.close(); } catch { } eventSource = null; }
+      if (eventSource) { try { eventSource.close(); } catch {} eventSource = null; }
       loading.value = false;
       return;
     }
@@ -489,37 +493,37 @@ export function useJob(jobId: string) {
     if (eventSource && currentNodeAddress === nodeAddress && (eventSource as any).readyState !== 2) {
       return;
     }
-
+    
     if (eventSource) {
       eventSource.close();
       eventSource = null;
     }
-
+    
     currentNodeAddress = nodeAddress;
 
     (async () => {
       try {
         const nodeAddress = (currentJob.node as any)?.toString?.() || (currentJob.node as any);
-
+        
         if (!nodeAddress || nodeAddress === '11111111111111111111111111111111') {
           loading.value = false;
           return;
         }
-
+        
         const headers = await nosana.value.authorization.generateHeaders('nosana-auth', { key: 'Authorization', includeTime: false });
         const authHeader = headers.get('Authorization') || headers.get('authorization') || '';
         const sseUrl = `https://${nodeAddress}.${config.public.nodeDomain}/job/${jobId}/info`;
-
+        
         eventSource = new EventSourcePolyfill(sseUrl, {
           headers: {
             'Authorization': authHeader
           }
         });
-
+        
         const handleInfo = (event: MessageEvent) => {
           try {
             const info = JSON.parse(event.data) as JobInfo;
-
+            
             const previousJobDefinition = jobInfo.value?.jobDefinition;
             jobInfo.value = { ...info, jobDefinition: previousJobDefinition ?? info.jobDefinition } as JobInfo;
 
@@ -531,7 +535,7 @@ export function useJob(jobId: string) {
               }
               endpoints.value = newEndpoints;
             }
-
+            
             try {
               const sseResults = (info as unknown as { results?: ResultsSection }).results;
               if (sseResults && job.value) {
@@ -540,24 +544,24 @@ export function useJob(jobId: string) {
                   ? sseResults.opStates.some((op) => (op as { results?: unknown }).results !== undefined)
                   : false;
               }
-            } catch { }
-
+            } catch {}
+            
             loading.value = false;
           } catch (parseError) {
             console.error('Failed to parse SSE message:', parseError);
           }
         };
 
-        try { (eventSource as unknown as EventSource).addEventListener?.('message', handleInfo as EventListener); } catch { }
-        try { (eventSource as unknown as EventSource).addEventListener?.('flow:updated', handleInfo as EventListener); } catch { }
-
+        try { (eventSource as unknown as EventSource).addEventListener?.('message', handleInfo as EventListener); } catch {}
+        try { (eventSource as unknown as EventSource).addEventListener?.('flow:updated', handleInfo as EventListener); } catch {}
+        
         eventSource.onerror = (error) => {
           console.error('SSE connection error:', error);
 
           loading.value = false;
 
         };
-
+        
         eventSource.onopen = () => {
           loading.value = false;
         };

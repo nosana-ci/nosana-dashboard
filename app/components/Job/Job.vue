@@ -157,7 +157,7 @@
                     <td>Market</td>
                     <td>
                       <a
-                        :href="`https://explore.nosana.com/markets/${props.job.market}`"
+                        :href="`https://explorer.nosana.com/markets/${props.job.market}`"
                         target="_blank"
                         class="has-text-link is-family-monospace"
                       >
@@ -165,11 +165,9 @@
                       </a>
                     </td>
                   </tr>
-                  <tr v-if="!props.hideFields?.price">
+                  <tr v-if="!(props.hideFields?.price)">
                     <td>Price</td>
-                    <td
-                      v-html="formatPrice(totalNos || 0, totalCostUsd || 0)"
-                    ></td>
+                    <td v-html="formatPrice(totalNos || 0, totalCostUsd || 0)"></td>
                   </tr>
                   <tr v-if="gpuSummary">
                     <td>GPU</td>
@@ -209,7 +207,7 @@
                         formatNetwork(
                           combinedSpecs?.download,
                           combinedSpecs?.upload,
-                          combinedSpecs?.ping,
+                          combinedSpecs?.ping
                         )
                       "
                     ></td>
@@ -542,12 +540,12 @@ onUnmounted(() => {
 // Single boolean to drive connection
 const hasRealNode = computed<boolean>(() =>
   Boolean(
-    props.job.node && props.job.node !== "11111111111111111111111111111111",
-  ),
+    props.job.node && props.job.node !== "11111111111111111111111111111111"
+  )
 );
 // Do not gate on hasAuth; auth will be ensured during WS open
 const shouldConnect = computed(
-  () => props.isJobPoster && props.job.isRunning && hasRealNode.value,
+  () => props.isJobPoster && props.job.isRunning && hasRealNode.value
 );
 
 // No local WS watchers; lifecycle handled inside useJobLogs
@@ -634,7 +632,7 @@ const templateForJob = computed(() => {
   return templates.value.find(
     (t) =>
       JSON.stringify(t.jobDefinition) ===
-      JSON.stringify(props.job.jobDefinition),
+      JSON.stringify(props.job.jobDefinition)
   );
 });
 
@@ -644,16 +642,16 @@ const isGHCR = (image: string) => {
 
 // Get host specs for actual GPU info (skip when node is placeholder)
 const nodeSpecsUrl = computed(() =>
-  hasRealNode.value ? `/api/nodes/${props.job.node}/specs` : "",
+  hasRealNode.value ? `/api/nodes/${props.job.node}/specs` : ""
 );
 const { data: nodeSpecs, pending: loadingNodeSpecs } = useAPI<NodeSpecs | null>(
-  nodeSpecsUrl,
+  nodeSpecsUrl
 );
 
 const nodeInfoUrl = computed(() =>
   hasRealNode.value
     ? `https://${props.job.node}.${useRuntimeConfig().public.nodeDomain}/node/info`
-    : "",
+    : ""
 );
 const { data: nodeInfo } = useAPI<NodeInfoResponse | null>(nodeInfoUrl);
 
@@ -671,7 +669,7 @@ const { data: jobNodeReport, pending: loadingJobNodeReport } = useAPI(
   {
     default: () => null,
     watch: [jobNodeReportUrl],
-  },
+  }
 );
 
 const jobDataForPriceComponent = computed(() => {
@@ -697,11 +695,7 @@ const jobOptionsForPriceComponent = computed(() => {
 
 // Get accurate pricing using the same method as job list
 const marketsDataRef = computed(() => testgridMarkets.value);
-const { totalNos, totalCostUsd, usdPricePerHour } = useJobPricing(
-  jobDataForPriceComponent,
-  { showPerHour: false },
-  marketsDataRef,
-);
+const { totalNos, totalCostUsd, usdPricePerHour } = useJobPricing(jobDataForPriceComponent, { showPerHour: false }, marketsDataRef);
 
 // Duration data for SecondsFormatter
 const jobDurationData = ref<{
@@ -783,7 +777,7 @@ watch(
       jobDurationData.value = data;
     }
   },
-  { immediate: true, deep: true },
+  { immediate: true, deep: true }
 );
 
 const gpuSummary = computed(() => {
@@ -967,7 +961,7 @@ const hasContainerControls = computed(() => {
         ...(Array.isArray(liveOpStates) ? liveOpStates : []),
       ];
       return allStates.some(
-        (s: OpState) => Array.isArray(s?.logs) && s.logs.length > 0,
+        (s: OpState) => Array.isArray(s?.logs) && s.logs.length > 0
       );
     } catch {
       return false;
@@ -991,7 +985,7 @@ const hasSystemLogs = computed(() => {
   const hasLiveLogs = (() => {
     const hasSystem = flogSystemLogs.value.length > 0;
     const hasOps = Array.from(flogLogsByOp.value.values()).some(
-      (logs) => logs && logs.length > 0,
+      (logs) => logs && logs.length > 0
     );
     return hasSystem || hasOps;
   })();
@@ -1078,7 +1072,7 @@ function repostJob() {
   // Find the matching market object
   const selectedMarket =
     markets.value?.find(
-      (m) => m.address.toString() === props.job.market.toString(),
+      (m) => m.address.toString() === props.job.market.toString()
     ) || null;
 
   // Find the matching template
@@ -1086,7 +1080,7 @@ function repostJob() {
     templates.value?.find(
       (t) =>
         JSON.stringify(t.jobDefinition) ===
-        JSON.stringify(props.job.jobDefinition),
+        JSON.stringify(props.job.jobDefinition)
     ) || null;
 
   // Save job data using unified state persistence
@@ -1119,7 +1113,7 @@ const hasOpenaiEndpoint = computed(() => {
       if (args.expose && Array.isArray(args.expose)) {
         const exposedPorts = args.expose.filter(
           (e): e is ExposedPort =>
-            typeof e === "object" && e !== null && "health_checks" in e,
+            typeof e === "object" && e !== null && "health_checks" in e
         );
         for (const exposedPort of exposedPorts) {
           if (exposedPort.health_checks) {
@@ -1164,7 +1158,7 @@ const isConfidential = computed<boolean>(() => {
     return Boolean(
       jd &&
         "logistics" in jd &&
-        (jd as JobDefinition & { logistics?: unknown }).logistics,
+        (jd as JobDefinition & { logistics?: unknown }).logistics
     );
   } catch {
     return false;
@@ -1186,7 +1180,7 @@ const {
   props.job.address,
   computed(() => props.job.node),
   shouldConnect,
-  getAuth,
+  getAuth
 );
 
 // Expose flog progress bars (directly from useFLogs)
@@ -1210,7 +1204,7 @@ watchEffect(() => {
         if (args.expose && Array.isArray(args.expose)) {
           const exposedPorts = args.expose.filter(
             (e): e is ExposedPort =>
-              typeof e === "object" && e !== null && "health_checks" in e,
+              typeof e === "object" && e !== null && "health_checks" in e
           );
           for (const exposedPort of exposedPorts) {
             if (exposedPort.health_checks) {
@@ -1288,7 +1282,7 @@ watch(
       isChatServiceReady.value = false;
     }
   },
-  { deep: true },
+  { deep: true }
 ); // deep true for endpoints map
 
 function activateChatAndClosePopup() {
@@ -1318,7 +1312,7 @@ watch(
       hasAutoSwitchedToLogs.value = true;
     }
   },
-  { immediate: false },
+  { immediate: false }
 );
 
 // Watch for changes in available tabs and ensure active tab is valid
@@ -1332,7 +1326,7 @@ watch(
         : newTabs[0] || "overview";
     }
   },
-  { immediate: true },
+  { immediate: true }
 );
 const jobTabsRef = ref<JobTabsComponent | null>(null); // Ref for the JobTabs component
 
@@ -1427,7 +1421,7 @@ const marketName = computed(() => {
   const address = marketAddress.value;
   if (!address || !testgridMarkets.value?.length) return null;
   const market = testgridMarkets.value.find(
-    (m: TestgridMarket) => String(m.address).trim() === address,
+    (m: TestgridMarket) => String(m.address).trim() === address
   );
   return market?.name ?? null;
 });
@@ -1581,6 +1575,10 @@ onUnmounted(() => {
 
 html.dark-mode .job-header {
   border-bottom-color: $grey-dark;
+}
+
+.box.is-borderless {
+  padding: 0 !important;
 }
 
 // Remove old grid styling - now using tables

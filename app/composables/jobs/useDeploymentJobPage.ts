@@ -5,14 +5,14 @@ import { useModal } from "~/composables/jobs/useModal";
 
 export function useDeploymentJobPage(deploymentId: string, jobId: string) {
   const { connected, account } = useWallet();
-  const { isAuthenticated: superTokensAuth, userData } = useSuperTokens();
+  const { status, data: userData } = useAuth();
 
   const { job, endpoints, loading, jobInfo } = useDeploymentJob(deploymentId, jobId);
   const modal = useModal();
   const nosPrice = useNosPrice();
 
   const activeAddress = computed(() => {
-    if (superTokensAuth.value && userData.value?.generatedAddress) {
+    if (status.value === 'authenticated' && userData.value?.generatedAddress) {
       return userData.value.generatedAddress as string;
     }
     if (connected.value && account.value?.address) {

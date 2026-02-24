@@ -1,52 +1,27 @@
-import { useSuperTokens } from "~/composables/useSuperTokens";
-
-export default defineNuxtRouteMiddleware(async (to, from) => {
-  const {
-    isLoading,
-    isAuthenticated: superTokensAuth,
-    isEmailVerified,
-    checkSession,
-  } = useSuperTokens();
+export default defineNuxtRouteMiddleware((to, from) => {
+  const { status } = useAuth();
   const config = useRuntimeConfig();
-
-  // Public routes that don't require authentication
-  const publicRoutes = [
-    "/",
-    "/privacy-policy",
-    "/tos",
-    "/support",
-    "/st-auth/reset-password",
-    "/st-auth/verify-email",
-  ];
-
-  const isPublicRoute =
-    publicRoutes.some((route) => to.path === route) ||
-    to.path.startsWith("/st-auth/callback/") ||
-    to.path.startsWith("/st-auth/verify-email") ||
-    to.path.startsWith("/st-auth/reset-password");
-
-  // On client, always check session for protected routes
-  // SuperTokens cookies are HttpOnly so we can't check them via JS
-  // Instead we make an async call to verify the session
-  if (import.meta.client && !isPublicRoute) {
-    await checkSession();
-  }
-
+  
   // Check for wallet authentication
+  // The wallet context isn't available in middleware (runs before WalletProvider mounts)
+  // So we check for auth cookies set after message signing
   let walletAuthenticated = false;
-  if (import.meta.client) {
+  if (process.client) {
     try {
-      const sessionCookie = useCookie("nosana-wallet-session");
+      // Check the session cookie we set after wallet auth
+      const sessionCookie = useCookie('nosana-wallet-session');
       if (sessionCookie.value) {
-        const authTime = (sessionCookie.value as any).timestamp || 0;
+        // Check if auth is still valid (within 24 hours)
+        const authTime = sessionCookie.value.timestamp || 0;
         const now = Date.now();
         const maxAge = 24 * 60 * 60 * 1000; // 24 hours
-        walletAuthenticated =
-          (sessionCookie.value as any).authenticated && now - authTime < maxAge;
+        walletAuthenticated = sessionCookie.value.authenticated && (now - authTime < maxAge);
       }
-
-      if (!walletAuthenticated && (sessionCookie.value as any)?.address) {
-        const authCookieKey = `nosana_auth_${config.public.network}_${(sessionCookie.value as any).address}`;
+      
+      // Also check if there's a valid auth cookie for any wallet address
+      // by checking if the wallet's stored address has an auth cookie
+      if (!walletAuthenticated && sessionCookie.value?.address) {
+        const authCookieKey = `nosana_auth_${config.public.network}_${sessionCookie.value.address}`;
         const authCookie = useCookie(authCookieKey);
         if (authCookie.value) {
           walletAuthenticated = true;
@@ -57,36 +32,25 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
     }
   }
 
-  // Check for SuperTokens session
-  const superTokensAuthenticated = superTokensAuth.value;
+  // Public routes that don't require authentication
+  const publicRoutes = [
+    "/", // Login page is now at root
+    "/privacy-policy",
+    "/tos",
+    "/support"
+  ];
 
-  // Check if user is authenticated (via Google, wallet, or SuperTokens)
-  const isAuthenticated = walletAuthenticated || superTokensAuthenticated;
+  const isPublicRoute = publicRoutes.some((route) => to.path === route);
 
-  // Redirect authenticated users from root to account (only if email is verified)
-  if (to.path === "/" && isAuthenticated && isEmailVerified.value !== false) {
+  // Check if user is authenticated (either via Google or wallet)
+  const isAuthenticated = status.value === "authenticated" || walletAuthenticated;
+
+  if (to.path === "/" && isAuthenticated) {
     return navigateTo("/account/");
   }
 
-  // If user is authenticated but email is not verified, redirect to verification page
-  // ONLY for protected routes - allow access to public routes regardless of verification status
-  if (isPublicRoute) {
-    return;
-  }
-
-  if (isAuthenticated && isEmailVerified.value === false) {
-    if (
-      !to.path.startsWith("/st-auth/verify-email") &&
-      !to.path.startsWith("/st-auth/callback/") &&
-      !to.path.startsWith("/st-auth/reset-password")
-    ) {
-      return navigateTo("/st-auth/verify-email");
-    }
-  }
-
-  // If trying to access protected route without authentication, redirect to root (login page)
-  // Only redirect if we are not in a loading state
-  if (!isPublicRoute && !isAuthenticated && !isLoading.value) {
+  // If trying to access protected route without authentication, redirect to root (login)
+  if (!isPublicRoute && !isAuthenticated && status.value !== "loading") {
     return navigateTo({
       path: "/",
       query: { redirect: to.fullPath },

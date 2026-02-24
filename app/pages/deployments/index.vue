@@ -1,31 +1,28 @@
 <template>
   <div>
-    <Loader v-if="checkingDeployments" />
-    <template v-else>
-      <TopBar
-        title="Deployments"
-        subtitle="Find information about your deployments here"
-      />
+    <TopBar
+      title="Deployments"
+      subtitle="Find information about your deployments here"
+    />
 
-      <div class="level mb-4">
-        <div class="level-left"></div>
-        <div class="level-right">
-          <div class="level-item">
-            <button
-              class="button is-dark"
-              @click="$router.push('/deployments/create')"
-            >
-              <span class="icon">
-                <FontAwesomeIcon :icon="faPlus" />
-              </span>
-              <span>Create Deployment</span>
-            </button>
-          </div>
+    <div class="level mb-4">
+      <div class="level-left"></div>
+      <div class="level-right">
+        <div class="level-item">
+          <button
+            class="button is-dark"
+            @click="$router.push('/deployments/create')"
+          >
+            <span class="icon">
+              <FontAwesomeIcon :icon="faPlus" />
+            </span>
+            <span>Create Deployment</span>
+          </button>
         </div>
       </div>
+    </div>
 
-      <DeploymentsTable :items-per-page="20" />
-    </template>
+    <DeploymentsTable :items-per-page="20" />
   </div>
 </template>
 
@@ -35,36 +32,18 @@ import { faPlus } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import DeploymentsTable from "~/components/DeploymentsTable/Table.vue";
 
-import { useSuperTokens } from "~/composables/useSuperTokens";
-const { isAuthenticated: superTokensAuth, isLoading } = useSuperTokens();
+const { status } = useAuth();
 const { connected } = useWallet();
 const router = useRouter();
-const { nosana } = useKit();
-
-const checkingDeployments = ref(true);
 
 watch(
-  [superTokensAuth, isLoading, connected],
-  async ([auth, loading, conn]) => {
-    if (!loading && !auth && !conn) {
+  status,
+  (authStatus) => {
+    if (authStatus === "unauthenticated" && !connected.value) {
       router.push("/");
-      return;
-    }
-    if (!loading && (auth || conn)) {
-      try {
-        // @ts-ignore
-        const result = await nosana.value.api.deployments.list({ limit: 1 });
-        if (!result.deployments || result.deployments.length === 0) {
-          router.replace("/deployments/create");
-          return;
-        }
-      } catch {
-        // On error, just show the list page
-      }
-      checkingDeployments.value = false;
     }
   },
-  { immediate: true },
+  { immediate: true }
 );
 </script>
 

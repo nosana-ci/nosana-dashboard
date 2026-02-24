@@ -1,6 +1,6 @@
-import { useSuperTokens } from "~/composables/useSuperTokens";
-import { useWallet } from "@nosana/solana-vue";
 import { useKit } from "~/composables/useKit";
+import { useAuth } from "#imports";
+import { useWallet } from "@nosana/solana-vue";
 
 /**
  * Composable for getting authentication headers in deployment contexts.
@@ -8,7 +8,7 @@ import { useKit } from "~/composables/useKit";
  */
 export function useDeploymentAuth() {
   const { nosana } = useKit();
-  const { isAuthenticated: superTokensAuth } = useSuperTokens();
+  const { status, data: userData } = useAuth();
   const { connected } = useWallet();
 
   /**
@@ -25,7 +25,7 @@ export function useDeploymentAuth() {
    */
   const getAuthHeader = async (deploymentId?: string): Promise<string> => {
     // If deploymentId is provided, use DM-signed header (works for both credit and wallet users)
-    if (deploymentId && superTokensAuth.value) {
+    if (deploymentId && status.value === 'authenticated') {
       try {
         const dep = await nosana.value.api.deployments.get(deploymentId);
         return await (dep as any).generateAuthHeader();
@@ -35,13 +35,19 @@ export function useDeploymentAuth() {
       }
     }
 
+    // Credit users: use credit header
+    const creditHeader = (userData.value as any)?.authenticationHeader as string | undefined;
+    if (creditHeader && status.value === 'authenticated') {
+      return creditHeader;
+    }
+
     // Wallet users: use wallet signing
     if (!connected.value) {
       throw new Error('No authentication available - wallet not connected');
     }
-    const headers = await nosana.value.authorization.generateHeaders('nosana-auth', {
-      key: 'Authorization',
-      includeTime: false
+    const headers = await nosana.value.authorization.generateHeaders('nosana-auth', { 
+      key: 'Authorization', 
+      includeTime: false 
     });
     const authHeader = headers.get('Authorization') || headers.get('authorization');
     if (!authHeader) {
