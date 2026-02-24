@@ -2,7 +2,12 @@ import { useSuperTokens } from "~/composables/useSuperTokens";
 
 export default defineNuxtRouteMiddleware(async (to, from) => {
   const config = useRuntimeConfig();
-  if (config.public.maintenance) {
+  const inMaintenanceBypass =
+    config.public.maintenance &&
+    import.meta.client &&
+    typeof localStorage !== "undefined" &&
+    localStorage.getItem("skipMaintenance");
+  if (config.public.maintenance && !inMaintenanceBypass) {
     return;
   }
   const {
