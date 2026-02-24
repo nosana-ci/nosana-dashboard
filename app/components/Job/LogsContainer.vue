@@ -60,7 +60,7 @@ const getAuth = async () => {
 };
 
 // Check if user is job poster
-const { status, data: userData } = useAuth();
+const { isAuthenticated, userData } = useSuperTokens();
 const { connected, account } = useWallet();
 
 // Consider DM-vault auth on deployment page equivalent to poster for viewing logs
@@ -68,7 +68,7 @@ const isJobPoster = computed(() => {
   if (!job.value) return false;
   
   // Check for credit users
-  if (status.value === 'authenticated' && userData.value?.generatedAddress) {
+  if (isAuthenticated.value && userData.value?.generatedAddress) {
     return userData.value.generatedAddress === job.value.project?.toString();
   }
   

@@ -13,15 +13,15 @@
       <ul class="menu-list is-size-5">
         <li>
           <nuxt-link
-            :to="deployRoute"
+            to="/deployments"
             active-class="is-active"
             @click="showMenu = false"
             style="padding-left: 1.1rem"
           >
             <span class="icon is-small mr-4">
-              <JobBuilderIcon  />
+              <ListIcon />
             </span>
-            <span>Deploy</span>
+            <span>Deployments</span>
           </nuxt-link>
         </li>
         <li>
@@ -35,19 +35,6 @@
               <UserIcon />
             </span>
             <span>Account</span>
-          </nuxt-link>
-        </li>
-        <li>
-          <nuxt-link
-            to="/deployments"
-            active-class="is-active"
-            @click="showMenu = false"
-            style="padding-left: 1.1rem"
-          >
-            <span class="icon is-small mr-4">
-              <ListIcon />
-            </span>
-            <span>Deployments</span>
           </nuxt-link>
         </li>
         <li>
@@ -68,24 +55,47 @@
     <div
       class="is-flex is-justify-content-space-between is-align-items-center mt-auto"
     >
-      <a href="https://nosana.statuspage.io" target="_blank" rel="noopener" @click="showMenu = false" class="status-link">
+      <a
+        href="https://nosana.statuspage.io"
+        target="_blank"
+        rel="noopener"
+        @click="showMenu = false"
+        class="status-link"
+      >
         <div class="status-dot dot-online"></div>
         Status
       </a>
-      <button 
+      <button
         class="sidebar-theme-toggle"
         @click="toggleDarkMode"
-        :title="$colorMode.value === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'"
+        :title="
+          $colorMode.value === 'dark'
+            ? 'Switch to Light Mode'
+            : 'Switch to Dark Mode'
+        "
       >
         <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
-          <path v-if="$colorMode.value === 'dark'" fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd" fill="currentColor"/>
-          <path v-else d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" fill="currentColor"/>
+          <path
+            v-if="$colorMode.value === 'dark'"
+            fill-rule="evenodd"
+            d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"
+            clip-rule="evenodd"
+            fill="currentColor"
+          />
+          <path
+            v-else
+            d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"
+            fill="currentColor"
+          />
         </svg>
       </button>
     </div>
   </aside>
   <nav class="navbar is-hidden-desktop is-fixed-top has-shadow">
-    <div class="navbar-brand is-flex is-align-items-center is-justify-content-space-between" style="width: 100%;">
+    <div
+      class="navbar-brand is-flex is-align-items-center is-justify-content-space-between"
+      style="width: 100%"
+    >
       <nuxt-link to="/" class="navbar-item" @click="showMenu = false">
         <logo width="135px" :animated="true" class="light-only" />
         <logo width="135px" :white="true" class="dark-only" :animated="true" />
@@ -93,27 +103,56 @@
 
       <div class="is-flex is-align-items-center">
         <!-- Simple mobile user avatar -->
-        <div v-if="connected || status === 'authenticated' || status === 'loading'" class="dropdown mobile-avatar-dropdown mr-3" :class="{ 'is-active': showMobileDropdown }">
+        <div
+          v-if="connected || isAuthenticated || isLoading"
+          class="dropdown mobile-avatar-dropdown mr-3"
+          :class="{ 'is-active': showMobileDropdown }"
+        >
           <div class="dropdown-trigger">
-            <span class="mobile-avatar-trigger" @click="showMobileDropdown = !showMobileDropdown">
+            <span
+              class="mobile-avatar-trigger"
+              @click="showMobileDropdown = !showMobileDropdown"
+            >
               <template v-if="connected && wallet">
-                <img v-if="wallet.icon" :src="wallet.icon" :alt="wallet.name + ' icon'" class="wallet-icon" />
+                <img
+                  v-if="wallet.icon"
+                  :src="wallet.icon"
+                  :alt="wallet.name + ' icon'"
+                  class="wallet-icon"
+                />
                 <span v-else>W</span>
               </template>
               <template v-else>
-                {{ (data?.email && data.email.charAt(0).toUpperCase()) || 'U' }}
+                {{
+                  (userData?.email && userData.email.charAt(0).toUpperCase()) ||
+                  "U"
+                }}
               </template>
             </span>
           </div>
           <div class="dropdown-menu">
             <div class="dropdown-content">
               <div class="dropdown-item">
-                <p class="is-size-7 has-text-grey mb-0">{{ connected ? getWalletAddress() : (data?.email || '') }}</p>
+                <p class="is-size-7 has-text-grey mb-0">
+                  {{ connected ? getWalletAddress() : userData?.email || "" }}
+                </p>
               </div>
-              <hr class="dropdown-divider">
+              <hr class="dropdown-divider" />
               <a class="dropdown-item logout-item" @click="handleLogout">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" class="dropdown-icon">
-                  <path d="M6 2H3C2.44772 2 2 2.44772 2 3V13C2 13.5523 2.44772 14 3 14H6M10 6L14 10M14 10L10 14M14 10H6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  class="dropdown-icon"
+                >
+                  <path
+                    d="M6 2H3C2.44772 2 2 2.44772 2 3V13C2 13.5523 2.44772 14 3 14H6M10 6L14 10M14 10L10 14M14 10H6"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
                 </svg>
                 Log out
               </a>
@@ -141,7 +180,6 @@ const showMenu = ref(false);
 const showExplorerDropdown = ref(false);
 const connectingFromSidebar = ref(false);
 const showMobileDropdown = ref(false);
-import JobBuilderIcon from "@/assets/img/icons/sidebar/job-builder.svg?component";
 import ListIcon from "@/assets/img/icons/sidebar/list.svg?component";
 import ExplorerIcon from "@/assets/img/icons/sidebar/explorer.svg?component";
 import UserIcon from "@/assets/img/icons/sidebar/user.svg?component";
@@ -160,23 +198,25 @@ const publicKey = computed(() => {
     toBase58: () => account.value!.address,
   };
 });
-const { status, signOut, data } = useAuth();
+const {
+  isAuthenticated,
+  isLoading,
+  userData,
+  signOut: superTokensSignOut,
+} = useSuperTokens();
 const route = useRoute();
 const router = useRouter();
 
 // removed auth-based gating in navigation; keep links visible
 
-// Computed property for deploy route - now unified to deployments/create
-const deployRoute = computed(() => {
-  // Direct all users to deployments/create for unified experience
-  // The page will handle wallet auth detection with a banner
-  return '/deployments/create';
-});
-
-
 // Check if the current route is an explorer page
 const isExplorerPage = computed(() => {
-  return route.path === '/explorer' || route.path.includes('/markets') || (route.path === '/account/host' && status.value !== 'authenticated') || route.path === '/stake';
+  return (
+    route.path === "/explorer" ||
+    route.path.includes("/markets") ||
+    (route.path === "/account/host" && !isAuthenticated.value) ||
+    route.path === "/stake"
+  );
 });
 
 // Update dropdown states based on the current route
@@ -190,16 +230,19 @@ onMounted(() => {
 });
 
 // Watch for route changes to update dropdown states
-watch(() => route.path, () => {
-  updateDropdownStates();
-});
+watch(
+  () => route.path,
+  () => {
+    updateDropdownStates();
+  },
+);
 
 // Navigate to account page only when connecting from sidebar
 watch(connected, (isConnected, prevConnected) => {
   if (isConnected && !prevConnected && connectingFromSidebar.value) {
-    router.push('/account');
-    showMenu.value = false;  // Close mobile menu if open
-    connectingFromSidebar.value = false;  // Reset the flag
+    router.push("/account");
+    showMenu.value = false; // Close mobile menu if open
+    connectingFromSidebar.value = false; // Reset the flag
   }
 });
 
@@ -212,33 +255,35 @@ const handleLogout = async () => {
   showMobileDropdown.value = false;
   try {
     // Clear wallet session cookie
-    const sessionCookie = useCookie('nosana-wallet-session');
+    const sessionCookie = useCookie("nosana-wallet-session");
     sessionCookie.value = null;
-    
+
     if (connected.value) {
       await disconnect();
-      await navigateTo('/');
-    } else if (status.value === 'authenticated') {
-      await signOut({ redirect: false });
-      await navigateTo('/');
+      await navigateTo("/");
+    } else if (isAuthenticated.value) {
+      await superTokensSignOut();
+      await navigateTo("/");
+    } else {
+      await navigateTo("/");
     }
   } catch (error) {
-    console.error('Error logging out:', error);
+    console.error("Error logging out:", error);
   }
 };
 
 // Toggle dark mode
 const toggleDarkMode = () => {
-  useColorMode().preference = useColorMode().value === 'dark' ? 'light' : 'dark';
+  useColorMode().preference =
+    useColorMode().value === "dark" ? "light" : "dark";
 };
 
 // Format wallet address for display
 const getWalletAddress = () => {
-  if (!publicKey?.value) return '';
+  if (!publicKey?.value) return "";
   const address = publicKey.value.toBase58();
   return `${address.slice(0, 4)}..${address.slice(-4)}`;
 };
-
 </script>
 
 <style lang="scss" scoped>
@@ -279,12 +324,12 @@ const getWalletAddress = () => {
   a.is-active {
     background-color: $menu-item-hover-background-color;
     color: $text !important;
-    
+
     .icon {
       color: $text;
       opacity: 1;
     }
-    
+
     span {
       color: $text !important;
     }
@@ -321,7 +366,7 @@ const getWalletAddress = () => {
 
     &.is-active {
       background-color: $menu-item-hover-background-color;
-      
+
       div {
         opacity: 1;
         color: inherit;
@@ -392,27 +437,27 @@ const getWalletAddress = () => {
     a {
       background-color: transparent !important;
       color: $grey-lighter;
-      
+
       &:hover {
         background-color: $grey-darker !important;
       }
     }
-    
+
     a.is-active {
       background-color: $grey-darker !important;
       color: $white !important;
-      
-      .icon, 
+
+      .icon,
       span {
         color: $white !important;
       }
-      
+
       span.icon:first-of-type {
         color: $white !important;
       }
     }
   }
-  
+
   .sidebar-link {
     color: $grey-lighter;
 
@@ -422,12 +467,12 @@ const getWalletAddress = () => {
 
     &.is-active {
       background-color: $grey-darker;
-      
-      .icon, 
+
+      .icon,
       span {
         color: $white !important;
       }
-      
+
       span.icon:first-of-type {
         color: $white !important;
       }
@@ -455,7 +500,7 @@ const getWalletAddress = () => {
   .submenu-link {
     color: $grey-lighter !important;
     background-color: transparent !important;
-    
+
     &:hover {
       opacity: 1 !important;
       background-color: $grey-darker !important;
@@ -617,7 +662,7 @@ const getWalletAddress = () => {
 
 /* Dark mode styles */
 .dark-mode .profile-button {
-  background: #0A0A0A;
+  background: #0a0a0a;
 }
 
 .dark-mode .profile-name {

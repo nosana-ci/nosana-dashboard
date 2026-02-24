@@ -7,7 +7,7 @@
         class="column has-navbar-fixed-top-mobile is-flex is-flex-direction-column ultrawide-centered"
       >
         <div class="section">
-          <div>
+          <div class="page-content">
             <slot />
           </div>
         </div>
@@ -29,7 +29,7 @@ onMounted(() => {
         type: "GOOGLE_AUTH_CODE",
         code: code,
       },
-      window.location.origin
+      window.location.origin,
     );
     window.close();
   }
@@ -41,6 +41,11 @@ onMounted(() => {
   min-height: 100vh;
   max-width: 1600px;
   min-width: 0;
+}
+
+.page-content {
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
 /* Ultrawide screen centering - center main content while keeping sidebar fixed */
