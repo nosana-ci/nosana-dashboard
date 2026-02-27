@@ -487,6 +487,10 @@ const handleEmailSubmit = async () => {
     return;
   }
 
+  trackEvent("auth_start", {
+    auth_method: "email",
+  });
+
   emailLoading.value = true;
 
   try {
@@ -501,8 +505,8 @@ const handleEmailSubmit = async () => {
           : "Signed in successfully!",
       );
 
-      trackEvent(isSignUpMode.value ? "sign_up" : "login", {
-        provider: "email",
+      trackEvent("auth_success", {
+        auth_method: "email",
       });
 
       // Check if email is verified, redirect to verification if not
@@ -595,6 +599,12 @@ onMounted(async () => {
       );
     }
   }
+
+  if (isCampaignMode && isCampaignMode.value) {
+    trackEvent("credits_page_view", {
+      page_location: typeof window !== "undefined" ? window.location.href : "",
+    });
+  }
 });
 
 // Helper to check wallet authentication cookie
@@ -615,20 +625,16 @@ const checkWalletAuth = () => {
   return false;
 };
 
-// used for event tracking
-const checkIsSignUp = (createdAt: string | undefined): boolean => {
-  if (!createdAt) return false;
-  const createdAtTime = new Date(createdAt).getTime();
-  const now = Date.now();
-  return now - createdAtTime <= 10000;
-};
-
 // Google login logic
 const selectGoogleLogin = async () => {
   googleLoading.value = true;
   let popup: Window | null = null;
 
   try {
+    trackEvent("auth_start", {
+      auth_method: "google",
+    });
+
     if (connected.value) {
       await disconnect();
     }
@@ -661,6 +667,10 @@ const selectGoogleLogin = async () => {
         popup?.close();
 
         await checkSession();
+
+        trackEvent("auth_success", {
+          auth_method: "google",
+        });
 
         toast.success("Signed in successfully!");
         const redirect = (route.query.redirect as string) || "/account";
@@ -738,6 +748,10 @@ const selectGithubLogin = async () => {
         popup?.close();
 
         await checkSession();
+
+        trackEvent("auth_success", {
+          auth_method: "github",
+        });
 
         toast.success("Signed in successfully!");
         const redirect = (route.query.redirect as string) || "/account";

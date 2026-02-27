@@ -399,7 +399,7 @@ const router = useRouter();
 const route = useRoute();
 const toast = useToast();
 
-const { isAuthenticated: superTokensAuth } = useSuperTokens();
+const { isAuthenticated: superTokensAuth, userData } = useSuperTokens();
 const { connected, account } = useWallet();
 
 // Compatibility: create publicKey-like object from account
@@ -777,6 +777,11 @@ const createDeployment = async () => {
       preloadedDeployment.value = deployment;
     }
 
+    trackEvent("workload_created", {
+      user_id: userData.value?.generatedAddress,
+      auth_method: userData.value?.loginMethod,
+    });
+
     router.push(`/deployments/${deployment.id}`);
   } catch (error: any) {
     console.error("Deployment creation error:", error);
@@ -931,6 +936,11 @@ onMounted(async () => {
   if (isCreditMode.value) {
     await refreshCreditBalance();
   }
+
+  trackEvent("workload_create_start", {
+    user_id: userData.value?.generatedAddress,
+    auth_method: userData.value?.loginMethod,
+  });
 });
 
 // React to auth changes to keep credit balance fresh
