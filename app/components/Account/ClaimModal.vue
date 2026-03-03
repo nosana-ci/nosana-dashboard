@@ -211,6 +211,10 @@ const handleClaim = async () => {
       url = `${config.backend_url}/api/credits/claim`;
       body = { code: claimCode.value.trim() };
     } else if (props.type === "grant") {
+      trackEvent("credits_claim_click", {
+        user_id: userData.value?.generatedAddress,
+        auth_method: userData.value?.loginMethod,
+      });
       url = `${config.backend_url}/api/credits/request`;
     } else if (props.type === "invitation") {
       url = `${config.backend_url}/api/credits/invitations/${props.token}/claim`;
@@ -225,14 +229,13 @@ const handleClaim = async () => {
     toast.success(`Successfully claimed $${response.amount} in credits!`);
     claimedSuccessfully.value = true;
 
-    try {
-      trackEvent("credit_claimed", {
-        amount: response.amount,
+    if (props.type === "grant") {
+      trackEvent("credits_claim_success", {
+        credits_amount: response.amount,
         type: props.type,
         user_id: userData.value?.generatedAddress,
+        auth_method: userData.value?.loginMethod,
       });
-    } catch (error) {
-      console.error("Error tracking credit claimed:", error);
     }
 
     emit("claimed", response.amount);

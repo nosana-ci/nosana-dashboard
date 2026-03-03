@@ -494,6 +494,9 @@ const checkFreeCreditsEligibility = async () => {
 
     if (data && data.eligible) {
       showFreeCreditsModal.value = true;
+      trackEvent("credits_claim_cta_view", {
+        user_id: userData.value?.generatedAddress,
+      });
     }
   } catch (error) {
     checkedEligibility.value = false; // allow retry on network error
@@ -501,9 +504,14 @@ const checkFreeCreditsEligibility = async () => {
   }
 };
 
-const handleFreeCreditsClaimed = async () => {
+const handleFreeCreditsClaimed = async (amount: number) => {
   triggerCreditRefresh();
   if (showInvitationModal.value) {
+    trackEvent("credits_claim_success", {
+      user_id: userData.value?.generatedAddress,
+      auth_method: userData.value?.loginMethod,
+      credits_amount: amount,
+    });
     navigateTo("/account", { replace: true });
   }
 };

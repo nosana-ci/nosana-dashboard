@@ -13,6 +13,7 @@ export interface User {
   name: string | null;
   providerUsername: string | null;
   generatedAddress: string;
+  loginMethod?: string;
 }
 
 // Global state shared across all instances
