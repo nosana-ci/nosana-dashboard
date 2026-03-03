@@ -714,6 +714,10 @@ const selectGithubLogin = async () => {
   let popup: Window | null = null;
 
   try {
+    trackEvent("auth_start", {
+      auth_method: "github",
+    });
+
     if (connected.value) {
       await disconnect();
     }
