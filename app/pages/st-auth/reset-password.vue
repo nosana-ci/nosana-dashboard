@@ -19,12 +19,12 @@
           <div class="login-content">
             <!-- State 1: Request Reset Form (no token) -->
             <template v-if="!hasToken">
-              <h1 class="login-title">Reset your password</h1>
-              <p class="login-subtitle">
-                Enter your email and we'll send you a reset link
-              </p>
-
               <template v-if="!emailSent">
+                <h1 class="login-title">Reset your password</h1>
+                <p class="login-subtitle">
+                  Enter your email and we'll send you a reset link
+                </p>
+
                 <form @submit.prevent="handleSendResetLink" class="email-form">
                   <div class="form-field">
                     <input
@@ -57,34 +57,11 @@
 
               <template v-else>
                 <div class="success-message">
-                  <div class="success-icon">
-                    <svg
-                      width="48"
-                      height="48"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <circle
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        fill="#10E80C"
-                        fill-opacity="0.1"
-                      />
-                      <path
-                        d="M7 13L10 16L17 9"
-                        stroke="#10E80C"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      />
-                    </svg>
-                  </div>
-                  <p class="success-text">Check your inbox</p>
+                  <p class="success-text">Check your email</p>
                   <p class="success-subtext">
-                    We've sent a password reset link to
-                    <strong>{{ email }}</strong>
+                    If there is an account associated with
+                    <strong>{{ email }}</strong>, you&apos;ll receive a password
+                    reset email shortly.
                   </p>
                   <div class="form-toggle">
                     <a href="/" @click.prevent="goToLogin">Back to Sign In</a>
@@ -335,12 +312,39 @@ const handleResetPassword = async () => {
     .form-toggle {
       color: $grey-light;
       a {
-        color: $primary;
+        color: $white !important;
+
+        &:hover {
+          color: $primary;
+        }
       }
     }
 
     .success-text {
       color: $white;
+    }
+
+    .login-subtitle {
+      color: $grey-light;
+    }
+
+    .success-subtext {
+      color: $grey-light;
+
+      strong {
+        color: $white;
+      }
+    }
+
+    .login-button {
+      background: $black-ter;
+      border-color: $grey-dark;
+      color: $white;
+
+      &:hover:not(:disabled) {
+        background: lighten($black-ter, 5%);
+        border-color: $grey;
+      }
     }
   }
 }

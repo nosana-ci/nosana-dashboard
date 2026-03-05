@@ -714,6 +714,10 @@ const selectGithubLogin = async () => {
   let popup: Window | null = null;
 
   try {
+    trackEvent("auth_start", {
+      auth_method: "github",
+    });
+
     if (connected.value) {
       await disconnect();
     }
@@ -1025,7 +1029,11 @@ const signAuthMessage = async (walletName: string) => {
     .form-toggle {
       color: $grey-light;
       a {
-        color: $primary;
+        color: $white !important;
+
+        &:hover {
+          color: $primary;
+        }
       }
     }
   }
@@ -1226,6 +1234,53 @@ const signAuthMessage = async (walletName: string) => {
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+  }
+}
+
+/* Dark mode refinements */
+.login-page.dark-mode {
+  .login-subtitle {
+    color: $grey-light;
+  }
+
+  .forgot-password-link {
+    a {
+      color: $grey-light;
+
+      &:hover {
+        color: $primary;
+      }
+    }
+  }
+
+  .divider span {
+    color: $grey-light;
+  }
+
+  .login-button {
+    background: $black-ter;
+    border-color: $grey-dark;
+    color: $white;
+
+    &:hover:not(:disabled) {
+      background: color.scale($black-ter, $lightness: 5%);
+      border-color: $grey;
+    }
+  }
+
+  .google-button,
+  .wallet-button {
+    background: $black-ter;
+    border-color: $grey-dark;
+
+    &:hover:not(:disabled) {
+      background: color.scale($black-ter, $lightness: 5%);
+      border-color: $grey;
+    }
+  }
+
+  .github-button {
+    border-color: #24292e;
   }
 }
 

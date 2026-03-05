@@ -293,12 +293,39 @@ const handleVerifyEmail = async () => {
     .form-toggle {
       color: $grey-light;
       a {
-        color: $primary;
+        color: $white !important;
+
+        &:hover {
+          color: $primary;
+        }
       }
     }
 
     .success-text {
       color: $white;
+    }
+
+    .login-subtitle {
+      color: $grey-light;
+    }
+
+    .success-subtext {
+      color: $grey-light;
+
+      strong {
+        color: $white;
+      }
+    }
+
+    .login-button {
+      background: $black-ter;
+      border-color: $grey-dark;
+      color: $white;
+
+      &:hover:not(:disabled) {
+        background: lighten($black-ter, 5%);
+        border-color: $grey;
+      }
     }
   }
 }
