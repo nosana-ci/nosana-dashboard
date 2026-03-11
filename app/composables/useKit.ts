@@ -1,8 +1,16 @@
-import { createNosanaClient, type NosanaClient, NosanaNetwork, type AuthorizationStore, type GenerateOptions, type Wallet, type PartialClientConfig } from "@nosana/kit";
-import { useWalletAccountPartialSigner, useWallet } from "@nosana/solana-vue";
+import {
+  createNosanaClient,
+  type NosanaClient,
+  NosanaNetwork,
+  type AuthorizationStore,
+  type GenerateOptions,
+  type Wallet,
+  type PartialClientConfig,
+} from "@nosana/kit";
+import { useWalletAccountModifyingSigner, useWallet } from "@nosana/solana-vue";
 import { computed, ref, watch, type Ref } from "vue";
-import { useCookies } from '@vueuse/integrations/useCookies';
-import type { CookieSetOptions } from 'universal-cookie';
+import { useCookies } from "@vueuse/integrations/useCookies";
+import type { CookieSetOptions } from "universal-cookie";
 import { createAuthCookiesKey } from "~/utils/createAuthCookiesKey";
 import { useSuperTokens } from "~/composables/useSuperTokens";
 
@@ -19,18 +27,18 @@ const AUTH_COOKIE_MAX_AGE_SECONDS = 1200; // 20 minutes
 
 const cookieOptions: CookieSetOptions = {
   maxAge: AUTH_COOKIE_MAX_AGE_SECONDS,
-  sameSite: 'strict',
-  path: '/',
-  secure: typeof location !== 'undefined' && location.protocol === 'https:',
+  sameSite: "strict",
+  path: "/",
+  secure: typeof location !== "undefined" && location.protocol === "https:",
 };
 
-const network = config.public.network === "devnet"
-  ? NosanaNetwork.DEVNET
-  : NosanaNetwork.MAINNET;
+const network =
+  config.public.network === "devnet"
+    ? NosanaNetwork.DEVNET
+    : NosanaNetwork.MAINNET;
 
-const currentChain = config.public.network === "devnet"
-  ? "solana:devnet"
-  : "solana:mainnet";
+const currentChain =
+  config.public.network === "devnet" ? "solana:devnet" : "solana:mainnet";
 
 export function useKit() {
   const { isAuthenticated } = useSuperTokens();
@@ -42,13 +50,20 @@ export function useKit() {
   const creditAuthToken = ref<string | null>(null);
 
   // retrieve Wallet from UiWalletAccount.
-  const wallet: Ref<Wallet | null> = useWalletAccountPartialSigner(account, currentChain);
+  const wallet: Ref<Wallet | null> = useWalletAccountModifyingSigner(
+    account,
+    currentChain,
+  );
 
-  const connected = computed(() => walletConnected.value && account.value !== null);
+  const connected = computed(
+    () => walletConnected.value && account.value !== null,
+  );
 
   const nosana = ref<NosanaClient>(createNosanaClient(network));
 
-  const createAuthorizationStore = (): AuthorizationStore['actions'] | undefined => {
+  const createAuthorizationStore = ():
+    | AuthorizationStore["actions"]
+    | undefined => {
     if (!account.value?.address || process.server) {
       return undefined;
     }
@@ -56,11 +71,18 @@ export function useKit() {
     const cookies = useCookies();
 
     return {
-      get: (identifier: string, options: Omit<GenerateOptions, "store">): Promise<string | undefined> | string | undefined => {
+      get: (
+        identifier: string,
+        options: Omit<GenerateOptions, "store">,
+      ): Promise<string | undefined> | string | undefined => {
         const value = cookies.get(createAuthCookiesKey(identifier));
         return value || undefined;
       },
-      set: (identifier: string, options: Omit<GenerateOptions, "store">, value: string | undefined): void => {
+      set: (
+        identifier: string,
+        options: Omit<GenerateOptions, "store">,
+        value: string | undefined,
+      ): void => {
         const cookieKey = createAuthCookiesKey(identifier);
         if (value) {
           cookies.set(cookieKey, value, cookieOptions);
@@ -76,7 +98,10 @@ export function useKit() {
     ([apiKey, walletAdapter]) => {
       const backendUrl = config.public.backend_url as string | undefined;
       const rpcUrl = config.public.rpcUrl as string | undefined;
-      const store = !apiKey && account.value?.address ? createAuthorizationStore() : undefined;
+      const store =
+        !apiKey && account.value?.address
+          ? createAuthorizationStore()
+          : undefined;
 
       const clientConfig: PartialClientConfig = {};
 
@@ -102,10 +127,7 @@ export function useKit() {
         clientConfig.api = { ...clientConfig.api, include_credentials: true };
       }
 
-      const client = createNosanaClient(
-        network,
-        clientConfig
-      );
+      const client = createNosanaClient(network, clientConfig);
 
       // Set wallet directly on client to ensure reactive updates
       if (!apiKey && walletAdapter && account.value?.address) {
@@ -114,7 +136,7 @@ export function useKit() {
 
       nosana.value = client;
     },
-    { immediate: true }
+    { immediate: true },
   );
 
   const publicKey = computed(() => {
