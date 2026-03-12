@@ -1,6 +1,8 @@
 <template>
   <footer class="footer has-text-centered">
     <div class="is-size-6 is-flex is-justify-content-center mb-2" style="gap: 10px">
+        <a href="https://deploy.nosana.com/" class="has-text-black has-text-weight-bold">Deploy</a>
+        <span class="has-text-grey">|</span>
         <a href="https://explore.nosana.com/" target="_blank" class="has-text-grey">Explore</a>
         <span class="has-text-grey">|</span>
         <a href="https://host.nosana.com/" target="_blank" class="has-text-grey">Host</a>
