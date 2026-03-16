@@ -239,9 +239,20 @@ const handleClaim = async () => {
     }
 
     emit("claimed", response.amount);
-  } catch (err) {
+  } catch (err: unknown) {
     console.error("Error claiming credits:", err);
-    toast.error("Failed to claim credits");
+    type FetchError = { status?: number; data?: { message?: string }; response?: { status?: number; _data?: { message?: string } } };
+    const e = err as FetchError;
+    const status = e?.status ?? e?.response?.status;
+    const message = e?.data?.message ?? e?.response?._data?.message;
+
+    if (status === 429) {
+      toast.error(message ?? "Too many requests. Please come back later to claim your credits.");
+    } else if ((status === 400 || status === 403) && message) {
+      toast.error(message);
+    } else {
+      toast.error(message ?? "Failed to claim credits");
+    }
   } finally {
     claiming.value = false;
   }
