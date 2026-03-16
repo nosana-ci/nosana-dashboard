@@ -485,7 +485,7 @@ const checkFreeCreditsEligibility = async () => {
   }
 
   try {
-    const data = await $fetch<{ eligible: boolean }>(
+    const data = await $fetch<{ eligible: boolean; message?: string }>(
       `${config.backend_url}/api/credits/request/eligibility`,
       {
         credentials: "include",
@@ -498,9 +498,18 @@ const checkFreeCreditsEligibility = async () => {
         user_id: userData.value?.generatedAddress,
       });
     }
-  } catch (error) {
-    checkedEligibility.value = false; // allow retry on network error
-    console.error("Error checking free credits eligibility:", error);
+  } catch (error: unknown) {
+    type FetchError = { status?: number; data?: { message?: string } };
+    const e = error as FetchError;
+    if (e?.status === 429) {
+      // Global rate limit hit — credits temporarily unavailable
+      toast.error(
+        e?.data?.message ?? "Credits are temporarily unavailable. Please try again in a few minutes."
+      );
+    } else {
+      checkedEligibility.value = false; // allow retry on network/other error
+      console.error("Error checking free credits eligibility:", error);
+    }
   }
 };
 

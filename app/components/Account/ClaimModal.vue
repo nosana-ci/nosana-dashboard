@@ -56,7 +56,7 @@
         <template v-else-if="type === 'grant'">
           <h1 class="title is-3 mb-3">
             {{
-              claimedSuccessfully ? "Credits Added" : "Your Credits Are Ready"
+              claimedSuccessfully ? "Credits Added" : "Claim Free Credits"
             }}
           </h1>
           <p class="subtitle is-6 has-text-grey mb-5">
@@ -65,8 +65,8 @@
               have been added to your account.
             </template>
             <template v-else>
-              You can now add <strong class="has-text-success">$50</strong> in
-              compute credits to your account.
+              Get started with <strong class="has-text-success">$50</strong> in
+              free compute credits.
             </template>
           </p>
           <div class="mt-5">
