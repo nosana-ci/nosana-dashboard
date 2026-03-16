@@ -130,12 +130,38 @@ export function useSuperTokens() {
     return response;
   };
 
-  const signUp = async (email: string, password: string) => {
+  const signUp = async (
+    email: string,
+    password: string,
+    captchaToken?: string,
+  ) => {
     const response = await EmailPassword.signUp({
       formFields: [
         { id: "email", value: email },
         { id: "password", value: password },
       ],
+      ...(captchaToken
+        ? {
+            options: {
+              preAPIHook: async ({ url, requestInit }) => {
+                const rawBody =
+                  typeof requestInit.body === "string" ? requestInit.body : "{}";
+                const parsedBody = JSON.parse(rawBody) as Record<string, unknown>;
+
+                return {
+                  url,
+                  requestInit: {
+                    ...requestInit,
+                    body: JSON.stringify({
+                      ...parsedBody,
+                      captchaToken,
+                    }),
+                  },
+                };
+              },
+            },
+          }
+        : {}),
     });
 
     if (response.status === "OK") {
