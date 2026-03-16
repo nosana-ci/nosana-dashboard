@@ -126,6 +126,12 @@
                     : "Sign in or create an account to build with the Nosana AI Platform"
                 }}
               </p>
+              <div
+                v-if="isCampaignMode && freeCreditsEnabled === false"
+                class="notification is-warning is-light"
+              >
+                Free Credits are maxed out for this epoch. Please check back again soon.
+              </div>
 
               <!-- Email/Password Form -->
               <form @submit.prevent="handleEmailSubmit" class="email-form">
@@ -376,6 +382,7 @@ import { trackEvent } from "~/utils/analytics";
 import WalletIcon from "~/components/WalletIcon.vue";
 import { useNosanaWallet } from "~/composables/useNosanaWallet";
 import { useSuperTokens } from "~/composables/useSuperTokens";
+import { useAPI } from "~/composables/useAPI";
 
 declare global {
   interface Window {
@@ -437,6 +444,18 @@ const showWalletModal = ref(false);
 const signingMessage = ref(false);
 const backgroundImageKey = ref(0);
 const currentWalletName = ref<string | null>(null);
+const freeCreditsEnabled = ref<boolean | null>(null);
+
+const { data: freeCreditsConfig } = useAPI("/api/credits/admin/request/config");
+
+watch(
+  freeCreditsConfig,
+  (val) => {
+    freeCreditsEnabled.value =
+      typeof val?.enabled === "boolean" ? val.enabled : null;
+  },
+  { immediate: true },
+);
 
 // Get wallet name from account or stored name
 const getWalletName = () => {
@@ -1317,6 +1336,10 @@ const signAuthMessage = async (walletName: string) => {
     color: inherit;
     text-decoration: underline;
   }
+}
+
+:global(.grecaptcha-badge) {
+  visibility: hidden;
 }
 
 .form-actions {
