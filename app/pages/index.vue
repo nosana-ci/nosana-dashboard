@@ -70,6 +70,25 @@
                 <div v-if="authError" class="auth-error">
                   {{ authError }}
                 </div>
+                <p v-if="isSignupCaptchaEnabled" class="captcha-notice">
+                  This site is protected by reCAPTCHA and the Google
+                  <a
+                    href="https://policies.google.com/privacy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Privacy Policy
+                  </a>
+                  and
+                  <a
+                    href="https://policies.google.com/terms"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Terms of Service
+                  </a>
+                  apply.
+                </p>
                 <div class="form-actions">
                   <button
                     type="submit"
@@ -107,6 +126,12 @@
                     : "Sign in or create an account to build with the Nosana AI Platform"
                 }}
               </p>
+              <div
+                v-if="isCampaignMode && freeCreditsEnabled === false"
+                class="notification is-warning is-light"
+              >
+                Free Credits are maxed out for this epoch. Please check back again soon.
+              </div>
 
               <!-- Email/Password Form -->
               <form @submit.prevent="handleEmailSubmit" class="email-form">
@@ -357,6 +382,19 @@ import { trackEvent } from "~/utils/analytics";
 import WalletIcon from "~/components/WalletIcon.vue";
 import { useNosanaWallet } from "~/composables/useNosanaWallet";
 import { useSuperTokens } from "~/composables/useSuperTokens";
+import { useAPI } from "~/composables/useAPI";
+
+declare global {
+  interface Window {
+    grecaptcha?: {
+      ready: (callback: () => void) => void;
+      execute: (
+        siteKey: string,
+        options: { action: string },
+      ) => Promise<string>;
+    };
+  }
+}
 
 definePageMeta({
   layout: false, // No sidebar/layout for login page
@@ -389,6 +427,8 @@ const router = useRouter();
 const route = useRoute();
 const toast = useToast();
 const config = useRuntimeConfig().public;
+const recaptchaSiteKey = config.recaptcha_site_key as string | undefined;
+const isSignupCaptchaEnabled = computed(() => Boolean(recaptchaSiteKey));
 
 // Email/Password form state
 const email = ref("");
@@ -404,6 +444,18 @@ const showWalletModal = ref(false);
 const signingMessage = ref(false);
 const backgroundImageKey = ref(0);
 const currentWalletName = ref<string | null>(null);
+const freeCreditsEnabled = ref<boolean | null>(null);
+
+const { data: freeCreditsConfig } = useAPI("/api/credits/admin/request/config");
+
+watch(
+  freeCreditsConfig,
+  (val) => {
+    freeCreditsEnabled.value =
+      typeof val?.enabled === "boolean" ? val.enabled : null;
+  },
+  { immediate: true },
+);
 
 // Get wallet name from account or stored name
 const getWalletName = () => {
@@ -498,6 +550,51 @@ const isCampaignMode = computed(() => {
 const colorMode = useColorMode();
 const isDarkMode = computed(() => colorMode.value === "dark");
 
+useHead(() => ({
+  script: isSignupCaptchaEnabled.value
+    ? [
+        {
+          src: `https://www.google.com/recaptcha/api.js?render=${encodeURIComponent(recaptchaSiteKey ?? "")}`,
+          async: true,
+          defer: true,
+        },
+      ]
+    : [],
+}));
+
+const waitForRecaptcha = async () => {
+  if (!import.meta.client) {
+    throw new Error("reCAPTCHA is only available in the browser");
+  }
+
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    if (window.grecaptcha?.ready) {
+      return;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+
+  throw new Error("reCAPTCHA failed to load");
+};
+
+const getSignupCaptchaToken = async () => {
+  if (!isSignupCaptchaEnabled.value) {
+    return undefined;
+  }
+
+  await waitForRecaptcha();
+
+  return await new Promise<string>((resolve, reject) => {
+    window.grecaptcha?.ready(() => {
+      window.grecaptcha
+        ?.execute(recaptchaSiteKey!, { action: "signup" })
+        .then(resolve)
+        .catch(() => reject(new Error("Captcha verification failed")));
+    });
+  });
+};
+
 // Handle email/password form submission
 const handleEmailSubmit = async () => {
   authError.value = "";
@@ -514,9 +611,17 @@ const handleEmailSubmit = async () => {
   emailLoading.value = true;
 
   try {
+    console.log('isSignUpMode.value', isSignUpMode.value)
+    const captchaToken = isSignUpMode.value
+      ? await getSignupCaptchaToken()
+      : undefined;
+    console.log('captchaToken', captchaToken)
+
     const response = isSignUpMode.value
-      ? await signUp(email.value, password.value)
+      ? await signUp(email.value, password.value, captchaToken)
       : await signIn(email.value, password.value);
+
+    console.log('signIn response', response)
 
     if (response.status === "OK") {
       toast.success(
@@ -563,8 +668,16 @@ const handleEmailSubmit = async () => {
       authError.value = "An error occurred. Please try again.";
     }
   } catch (error: any) {
-    console.error("Email auth error:", error);
-    authError.value = error?.message || "An error occurred. Please try again.";
+    if (error instanceof Response) {
+    const data = await error
+      .clone()
+      .json()
+      .catch(async () => ({ message: await error.clone().text() }));
+
+    authError.value = data?.message || `Request failed (${error.status})`;
+    return;
+  }
+  authError.value = error?.message || "An error occurred. Please try again.";
   } finally {
     emailLoading.value = false;
   }
@@ -1211,6 +1324,22 @@ const signAuthMessage = async (walletName: string) => {
   padding: 0.5rem;
   background: rgba(#d32f2f, 0.1);
   border-radius: 6px;
+}
+
+.captcha-notice {
+  margin-bottom: 1rem;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: $grey;
+
+  a {
+    color: inherit;
+    text-decoration: underline;
+  }
+}
+
+:global(.grecaptcha-badge) {
+  visibility: hidden;
 }
 
 .form-actions {
