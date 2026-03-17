@@ -441,7 +441,7 @@ watch(
 // Watch for credit refresh events
 const { onCreditRefresh } = useCreditRefresh();
 onCreditRefresh(async () => {
-  if (status.value === "authenticated") {
+  if (isAuthenticated.value) {
     await fetchCreditBalance();
   }
 });

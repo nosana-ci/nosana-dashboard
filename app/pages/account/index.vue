@@ -30,6 +30,7 @@
       <AccountClaimModal
         v-model="showFreeCreditsModal"
         type="grant"
+        :amount="freeCreditsAmount"
         @claimed="handleFreeCreditsClaimed"
       />
       <AccountClaimModal
@@ -454,6 +455,7 @@ const showFreeCreditsModal = ref(false);
 const showInvitationModal = ref(false);
 const showClaimModal = ref(false);
 const checkedEligibility = ref(false);
+const freeCreditsAmount = ref<number | null>(null);
 
 const checkFreeCreditsEligibility = async () => {
   if (!isAuthenticated.value || checkedEligibility.value) {
@@ -485,7 +487,7 @@ const checkFreeCreditsEligibility = async () => {
   }
 
   try {
-    const data = await $fetch<{ eligible: boolean; message?: string }>(
+    const data = await $fetch<{ eligible: boolean; amount?: number; message?: string }>(
       `${config.backend_url}/api/credits/request/eligibility`,
       {
         credentials: "include",
@@ -493,6 +495,7 @@ const checkFreeCreditsEligibility = async () => {
     );
 
     if (data && data.eligible) {
+      freeCreditsAmount.value = data.amount ?? null;
       showFreeCreditsModal.value = true;
       trackEvent("credits_claim_cta_view", {
         user_id: userData.value?.generatedAddress,

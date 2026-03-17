@@ -61,11 +61,11 @@
           </h1>
           <p class="subtitle is-6 has-text-grey mb-5">
             <template v-if="claimedSuccessfully">
-              <strong class="has-text-success">$50</strong> in compute credits
+              <strong class="has-text-success">${{ amount != null ? (amount / 1000).toFixed(2) : '...' }}</strong> in compute credits
               have been added to your account.
             </template>
             <template v-else>
-              Get started with <strong class="has-text-success">$50</strong> in
+              Get started with <strong class="has-text-success">${{ amount != null ? (amount / 1000).toFixed(2) : '...' }}</strong> in
               free compute credits.
             </template>
           </p>
@@ -78,7 +78,7 @@
               :class="{ 'is-loading': claiming }"
               style="border-radius: 8px"
             >
-              Claim $50 Credits
+              Claim ${{ amount != null ? (amount / 1000).toFixed(2) : '...' }} Credits
             </button>
             <nuxt-link
               v-else
@@ -162,6 +162,7 @@ const props = defineProps<{
   type: "manual" | "grant" | "invitation";
   invitation?: Invitation | null;
   token?: string;
+  amount?: number | null;
 }>();
 
 const emit = defineEmits(["update:modelValue", "claimed"]);
