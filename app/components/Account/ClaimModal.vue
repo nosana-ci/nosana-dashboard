@@ -56,17 +56,17 @@
         <template v-else-if="type === 'grant'">
           <h1 class="title is-3 mb-3">
             {{
-              claimedSuccessfully ? "Credits Added" : "Your Credits Are Ready"
+              claimedSuccessfully ? "Credits Added" : "Claim Free Credits"
             }}
           </h1>
           <p class="subtitle is-6 has-text-grey mb-5">
             <template v-if="claimedSuccessfully">
-              <strong class="has-text-success">$50</strong> in compute credits
+              <strong class="has-text-success">${{ amount != null ? (amount / 1000).toFixed(2) : '...' }}</strong> in compute credits
               have been added to your account.
             </template>
             <template v-else>
-              You can now add <strong class="has-text-success">$50</strong> in
-              compute credits to your account.
+              Get started with <strong class="has-text-success">${{ amount != null ? (amount / 1000).toFixed(2) : '...' }}</strong> in
+              free compute credits.
             </template>
           </p>
           <div class="mt-5">
@@ -78,7 +78,7 @@
               :class="{ 'is-loading': claiming }"
               style="border-radius: 8px"
             >
-              Claim $50 Credits
+              Claim ${{ amount != null ? (amount / 1000).toFixed(2) : '...' }} Credits
             </button>
             <nuxt-link
               v-else
@@ -162,6 +162,7 @@ const props = defineProps<{
   type: "manual" | "grant" | "invitation";
   invitation?: Invitation | null;
   token?: string;
+  amount?: number | null;
 }>();
 
 const emit = defineEmits(["update:modelValue", "claimed"]);
@@ -239,9 +240,20 @@ const handleClaim = async () => {
     }
 
     emit("claimed", response.amount);
-  } catch (err) {
+  } catch (err: unknown) {
     console.error("Error claiming credits:", err);
-    toast.error("Failed to claim credits");
+    type FetchError = { status?: number; data?: { message?: string }; response?: { status?: number; _data?: { message?: string } } };
+    const e = err as FetchError;
+    const status = e?.status ?? e?.response?.status;
+    const message = e?.data?.message ?? e?.response?._data?.message;
+
+    if (status === 429) {
+      toast.error(message ?? "Too many requests. Please come back later to claim your credits.");
+    } else if ((status === 400 || status === 403) && message) {
+      toast.error(message);
+    } else {
+      toast.error(message ?? "Failed to claim credits");
+    }
   } finally {
     claiming.value = false;
   }
