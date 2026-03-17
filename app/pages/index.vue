@@ -611,17 +611,13 @@ const handleEmailSubmit = async () => {
   emailLoading.value = true;
 
   try {
-    console.log('isSignUpMode.value', isSignUpMode.value)
     const captchaToken = isSignUpMode.value
       ? await getSignupCaptchaToken()
       : undefined;
-    console.log('captchaToken', captchaToken)
 
     const response = isSignUpMode.value
       ? await signUp(email.value, password.value, captchaToken)
       : await signIn(email.value, password.value);
-
-    console.log('signIn response', response)
 
     if (response.status === "OK") {
       toast.success(
