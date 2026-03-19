@@ -132,12 +132,6 @@
                   Sign in with GitHub or Google to get{{ freeCreditsFormatted ? ` ${freeCreditsFormatted} in` : '' }} free credits.
                 </template>
               </p>
-              <div
-                v-if="isCampaignMode && freeCreditsEnabled === false"
-                class="notification is-warning is-light"
-              >
-                You can still create an account to get started with Nosana.
-              </div>
 
               <!-- Email/Password Form -->
               <form @submit.prevent="handleEmailSubmit" class="email-form">
