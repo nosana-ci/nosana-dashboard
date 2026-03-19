@@ -31,7 +31,9 @@
             <template v-if="isSignUpMode">
               <h1 class="login-title">Create Your Account</h1>
               <p class="login-subtitle">
-                Sign up to build with the Nosana AI Platform
+                Sign up to build with the Nosana AI Platform.<template v-if="freeCreditsEnabled !== false">
+                  Sign in with GitHub or Google to get{{ freeCreditsFormatted ? ` ${freeCreditsFormatted} in` : '' }} free credits.
+                </template>
               </p>
 
               <form @submit.prevent="handleEmailSubmit" class="email-form">
@@ -115,22 +117,26 @@
               <h1 class="login-title">
                 {{
                   isCampaignMode
-                    ? "Claim your Free Credits"
+                    ? (freeCreditsEnabled === false ? "Free Credits Unavailable" : "Claim your Free Credits")
                     : "Build with Nosana"
                 }}
               </h1>
               <p class="login-subtitle">
-                {{
-                  isCampaignMode
-                    ? "Sign in or create an account to receive $50 in free compute credits."
+                <template v-if="freeCreditsEnabled === false">
+                  {{ isCampaignMode
+                    ? "Free credits are currently unavailable. Please check back soon."
                     : "Sign in or create an account to build with the Nosana AI Platform"
-                }}
+                  }}
+                </template>
+                <template v-else>
+                  Sign in with GitHub or Google to get{{ freeCreditsFormatted ? ` ${freeCreditsFormatted} in` : '' }} free credits.
+                </template>
               </p>
               <div
                 v-if="isCampaignMode && freeCreditsEnabled === false"
                 class="notification is-warning is-light"
               >
-                Free Credits are maxed out for this epoch. Please check back again soon.
+                You can still create an account to get started with Nosana.
               </div>
 
               <!-- Email/Password Form -->
@@ -445,14 +451,24 @@ const signingMessage = ref(false);
 const backgroundImageKey = ref(0);
 const currentWalletName = ref<string | null>(null);
 const freeCreditsEnabled = ref<boolean | null>(null);
+const freeCreditsAmount = ref<number | null>(null);
 
 const { data: freeCreditsConfig } = useAPI("/api/credits/admin/request/config");
+
+const freeCreditsFormatted = computed(() => {
+  if (freeCreditsAmount.value != null) {
+    return `$${(freeCreditsAmount.value / 1000).toFixed(0)}`;
+  }
+  return null;
+});
 
 watch(
   freeCreditsConfig,
   (val) => {
     freeCreditsEnabled.value =
       typeof val?.enabled === "boolean" ? val.enabled : null;
+    freeCreditsAmount.value =
+      typeof val?.amount === "number" ? val.amount : null;
   },
   { immediate: true },
 );
