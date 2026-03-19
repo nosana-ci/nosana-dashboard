@@ -56,17 +56,17 @@
         <template v-else-if="type === 'grant'">
           <h1 class="title is-3 mb-3">
             {{
-              claimedSuccessfully ? "Credits Added" : "Claim Free Credits"
+              claimedSuccessfully ? "Credits Added" : "Free Credits"
             }}
           </h1>
           <p class="subtitle is-6 has-text-grey mb-5">
             <template v-if="claimedSuccessfully">
-              <strong class="has-text-success">${{ amount != null ? (amount / 1000).toFixed(2) : '...' }}</strong> in compute credits
+              <strong class="has-text-success">{{ formattedAmount }}</strong> in credits
               have been added to your account.
             </template>
             <template v-else>
-              Get started with <strong class="has-text-success">${{ amount != null ? (amount / 1000).toFixed(2) : '...' }}</strong> in
-              free compute credits.
+              Claim <strong class="has-text-success">{{ formattedAmount }}</strong> in
+              free credits to get started.
             </template>
           </p>
           <div class="mt-5">
@@ -78,7 +78,7 @@
               :class="{ 'is-loading': claiming }"
               style="border-radius: 8px"
             >
-              Claim ${{ amount != null ? (amount / 1000).toFixed(2) : '...' }} Credits
+              Claim {{ formattedAmount }} Credits
             </button>
             <nuxt-link
               v-else
@@ -100,11 +100,11 @@
               Your invitation credits have been claimed.
             </template>
             <template v-else>
-              You can now add
+              Claim
               <strong class="has-text-success">
-                ${{ (invitation.creditsAmount / 1000).toFixed(2) }}</strong
+                {{ formattedInvitationAmount }}</strong
               >
-              in compute credits to your account.
+              in credits to get started.
             </template>
           </p>
           <div class="mt-5">
@@ -116,7 +116,7 @@
               :class="{ 'is-loading': claiming }"
               style="border-radius: 8px"
             >
-              Claim ${{ (invitation.creditsAmount / 1000).toFixed(2) }} Credits
+              Claim {{ formattedInvitationAmount }} Credits
             </button>
             <nuxt-link
               v-else
@@ -149,7 +149,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick } from "vue";
+import { ref, computed, watch, nextTick } from "vue";
 import { useToast } from "vue-toastification";
 import { trackEvent } from "~/utils/analytics";
 
@@ -173,6 +173,22 @@ const toast = useToast();
 const claiming = ref(false);
 const claimedSuccessfully = ref(false);
 const claimCode = ref("");
+
+const formattedAmount = computed(() => {
+  if (props.amount != null) {
+    const dollars = props.amount / 1000;
+    return `$${dollars % 1 === 0 ? dollars.toFixed(0) : dollars.toFixed(2)}`;
+  }
+  return '$...';
+});
+
+const formattedInvitationAmount = computed(() => {
+  if (props.invitation?.creditsAmount != null) {
+    const dollars = props.invitation.creditsAmount / 1000;
+    return `$${dollars % 1 === 0 ? dollars.toFixed(0) : dollars.toFixed(2)}`;
+  }
+  return '$...';
+});
 
 // Guard against the modal-background receiving a stale click event from the
 // same tick the modal was opened (e.g. a propagating click that made it open).
