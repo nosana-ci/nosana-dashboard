@@ -21,11 +21,16 @@ export interface FLogEntry {
   html: true;
 }
 
+export interface FLogOptions {
+  onEntry?: (entry: FLogEntry, opId: string) => void;
+}
+
 export function useFLogs(
   jobAddress: string,
   host: string | Ref<string>,
   shouldConnect: ComputedRef<boolean>,
-  getAuth: () => Promise<string | Headers>
+  getAuth: () => Promise<string | Headers>,
+  options?: FLogOptions,
 ) {
   const ansi = new AnsiUp();
   ansi.use_classes = true;
@@ -259,6 +264,8 @@ export function useFLogs(
 
     // remember fingerprint after successful add
     remember(fp);
+
+    options?.onEntry?.(entry, msg.opId);
   }
 
   function capArray<T>(arr: T[], max: number) {

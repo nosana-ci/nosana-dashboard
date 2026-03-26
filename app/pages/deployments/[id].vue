@@ -43,6 +43,14 @@
                 @viewEvents="switchTab('events')"
               />
 
+              <DeploymentDetails
+                :deployment="deployment"
+                :hasVault="hasVault"
+                :deploymentVault="deploymentVault"
+                :deploymentSchedule="deploymentSchedule"
+                :testgridMarkets="testgridMarkets || []"
+              />
+
               <DeploymentEndpoints
                 :endpoints="deploymentEndpoints"
                 :isActiveOrStarting="
@@ -66,14 +74,6 @@
                 @update:jobActivityTab="jobActivityTab = $event"
                 @update:historicalJobsPage="historicalJobsPage = $event"
               />
-
-              <DeploymentDetails
-                :deployment="deployment"
-                :hasVault="hasVault"
-                :deploymentVault="deploymentVault"
-                :deploymentSchedule="deploymentSchedule"
-                :testgridMarkets="testgridMarkets || []"
-              />
             </div>
 
             <!-- Events Tab -->
@@ -89,21 +89,9 @@
 
             <!-- Logs Tab -->
             <div v-if="activeTab === 'logs'">
-              <DeploymentJobLogs
+              <DeploymentLogCollector
                 :deploymentId="deployment.id"
-                :allJobsForLogs="allJobsForLogs"
-                :allJobs="allJobs"
-                :logsJobsPage="logsJobsPage"
-                :logsJobsTotalPages="logsJobsTotalPages"
-                :activeLogsJobId="activeLogsJobId"
-                :completedJobResults="completedJobResults"
-                :loadingJobResults="loadingJobResults"
-                :getJobStateNumber="getJobStateNumber"
-                :isActiveJob="isActiveJob"
-                :isCompletedJob="isCompletedJob"
-                :getJobData="getJobData"
-                @update:logsJobsPage="logsJobsPage = $event"
-                @selectJob="selectJobForLogs($event, true)"
+                :jobs="deploymentJobs"
               />
             </div>
 
@@ -259,12 +247,7 @@ const jobs = useDeploymentJobs({
 
 const {
   historicalJobsPage,
-  logsJobsPage,
-  activeLogsJobId,
-  userSelectedJob,
   jobActivityTab,
-  completedJobResults,
-  loadingJobResults,
   getJobDuration,
   getJobStateNumber,
   activeJobs,
@@ -272,13 +255,6 @@ const {
   historicalJobs,
   historicalJobsTotalPages,
   totalJobs,
-  allJobsForLogs,
-  allJobs,
-  logsJobsTotalPages,
-  isActiveJob,
-  isCompletedJob,
-  getJobData,
-  selectJobForLogs,
   deploymentEndpoints,
   deploymentEvents,
   hasErrorInLastEvent,
@@ -451,40 +427,6 @@ onBeforeRouteLeave(() => {
 
 // --- Watchers ---
 
-// Auto-select most recently posted job for logs display
-watch(
-  () => [activeTab.value, allJobs.value],
-  async ([newTab, jobsList]) => {
-    if (
-      newTab === "logs" &&
-      jobsList &&
-      Array.isArray(jobsList) &&
-      jobsList.length > 0
-    ) {
-      if (!userSelectedJob.value) {
-        if (
-          !activeLogsJobId.value ||
-          !jobsList.some((j) => j.job === activeLogsJobId.value)
-        ) {
-          const sorted = [...jobsList].sort((a, b) => {
-            const aTime = (a as any).created_at
-              ? new Date((a as any).created_at).getTime()
-              : 0;
-            const bTime = (b as any).created_at
-              ? new Date((b as any).created_at).getTime()
-              : 0;
-            return bTime - aTime;
-          });
-          const mostRecent = sorted[0];
-          if (mostRecent) {
-            await selectJobForLogs(mostRecent);
-          }
-        }
-      }
-    }
-  },
-  { immediate: true },
-);
 
 // Debounced authentication watcher
 watch(
@@ -556,9 +498,6 @@ watch(
 // --- Tab & action URL sync ---
 const switchTab = (tab: string) => {
   activeTab.value = tab;
-  if (tab === "logs") {
-    logsJobsPage.value = 1;
-  }
   if (tab === "events") {
     loadEvents(true);
     loadTasks(true);

@@ -535,6 +535,7 @@ const isCacheValid = () => {
 const { data: priceData } = await useAPI(
   "https://api.coingecko.com/api/v3/simple/price?ids=nosana,solana,usd-coin,tether&vs_currencies=usd",
   {
+    credentials: false,
     default: () => ({
       nosana: { usd: 0 },
       solana: { usd: 0 },

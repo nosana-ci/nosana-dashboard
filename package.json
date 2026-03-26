@@ -34,6 +34,7 @@
     "@fortawesome/vue-fontawesome": "^3.0.8",
     "@nosana/kit": "^2.1.8",
     "@nosana/solana-vue": "^1.0.6",
+    "@tanstack/vue-virtual": "^3.13.23",
     "@types/dompurify": "^3.0.5",
     "@vueuse/components": "^10.9.0",
     "@vueuse/integrations": "^10.9.0",

@@ -3,6 +3,7 @@ interface ApiFetchOptions {
   body?: any;
   headers?: Record<string, string>;
   auth?: boolean;
+  credentials?: boolean; // Send cookies with request (default: true)
 }
 
 export const useApiFetch = async <T = any>(
@@ -20,7 +21,7 @@ export const useApiFetch = async <T = any>(
     baseURL: config.public.backend_url as string,
     method: opts?.method || 'GET',
     headers,
-    credentials: 'include',
+    ...(opts?.credentials !== false ? { credentials: 'include' as const } : {}),
     ...(opts?.body && { body: opts.body }),
   });
 };
