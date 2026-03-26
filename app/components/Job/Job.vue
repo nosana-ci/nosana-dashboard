@@ -223,6 +223,20 @@
             </div>
           </div>
         </div>
+        <div
+          class="mt-6"
+          v-if="
+            props.isJobPoster &&
+            props.job.isRunning &&
+            props.job.jobDefinition?.ops
+          "
+        >
+          <SystemUsageCharts
+            :jobAddress="props.job.address"
+            :node="props.job.node"
+            :opIds="props.job.jobDefinition.ops.map((op) => op.id)"
+          />
+        </div>
       </div>
 
       <!-- Configuration Tab -->
@@ -389,8 +403,8 @@ import type {
   OperationArgsMap,
   HttpHealthCheck,
 } from "@nosana/kit";
-import type { FLogEntry } from "~/composables/jobs/useFLogs";
 import type { ProgressBar } from "~/composables/jobs/logTypes";
+import SystemUsageCharts from "./SystemUsageCharts.vue";
 
 // Type definitions
 interface TestgridMarket {
@@ -655,7 +669,7 @@ const nodeInfoUrl = computed(() =>
     ? `https://${props.job.node}.${useRuntimeConfig().public.nodeDomain}/node/info`
     : "",
 );
-const { data: nodeInfo } = useAPI<NodeInfoResponse | null>(nodeInfoUrl);
+const { data: nodeInfo } = useAPI<NodeInfoResponse | null>(nodeInfoUrl, { credentials: false });
 
 // Get node report
 const jobNodeReportUrl = computed(() => {
@@ -1306,20 +1320,6 @@ function activateChatAndClosePopup() {
 }
 
 const activeTab = ref("system-logs");
-
-const hasAutoSwitchedToLogs = ref(false);
-watch(
-  () => hasSystemLogs.value,
-  (canShowLogsNow) => {
-    if (canShowLogsNow && !hasAutoSwitchedToLogs.value) {
-      if (activeTab.value !== "system-logs" && activeTab.value === "overview") {
-        activeTab.value = "system-logs";
-      }
-      hasAutoSwitchedToLogs.value = true;
-    }
-  },
-  { immediate: false },
-);
 
 // Watch for changes in available tabs and ensure active tab is valid
 watch(

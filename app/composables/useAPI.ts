@@ -4,6 +4,7 @@ interface APIOptions extends Record<string, any> {
   headers?: Record<string, string>;
   auth?: boolean; // Add auth header if true
   default?: () => any;
+  credentials?: boolean; // Send cookies with request (default: true)
 }
 
 export const useAPI = (
@@ -26,7 +27,7 @@ export const useAPI = (
         baseURL: config.public.backend_url as string,
         method: opts?.method || 'GET',
         headers,
-        credentials: 'include',
+        ...(opts?.credentials !== false ? { credentials: 'include' as const } : {}),
         ...(opts?.body && { body: opts.body }),
       });
     },

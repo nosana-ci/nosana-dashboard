@@ -282,7 +282,8 @@ const timeAgo = computed(() => {
 const { data: nodeSpecs } = useAPI(`/api/nodes/${props.job.node}/specs`);
 
 const { data: nodeInfo } = useAPI(
-  `https://${props.job.node}.${useRuntimeConfig().public.nodeDomain}/node/info`
+  `https://${props.job.node}.${useRuntimeConfig().public.nodeDomain}/node/info`,
+  { credentials: false }
 );
 
 const { data: apiMarkets, pending: loadingMarkets } = useAPI("/api/markets", { default: () => [] });

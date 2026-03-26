@@ -209,6 +209,7 @@ const { data: nodeInfo } = useAPI(
   {
     // @ts-ignore
     disableToastOnError: true,
+    credentials: false,
   }
 );
 
