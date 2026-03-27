@@ -352,7 +352,7 @@
         </div>
 
         <!-- API Keys Section -->
-        <ApiKeys class="pt-6" v-if="canShowAccountData" />
+        <ApiKeys class="pt-6" v-if="canShowAccountData && isAuthenticated" />
       </div>
     </div>
   </div>
