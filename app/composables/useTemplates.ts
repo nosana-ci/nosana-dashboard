@@ -19,12 +19,14 @@ export type TemplateVariant = {
   id: string;
   variant_id: string;
   name: string;
+  description?: string;
   jobDefinition: JobDefinition;
 }
 
 export type Template = {
   id: number | string;
   name: string;
+  description?: string;
   jobDefinition?: JobDefinition; // Optional for parent templates
   category: string;
   icon: string;
@@ -34,6 +36,61 @@ export type Template = {
   is_variant_template?: boolean;
   parent_template_id?: string;
   selectedVariant?: TemplateVariant; // For UI state tracking
+}
+
+type GroupedTemplatesResponse = Record<string, any[]>
+type TemplatesResponse =
+  | Template[]
+  | { data?: Template[] }
+  | GroupedTemplatesResponse
+  | null
+  | undefined
+
+const buildGroupedTemplate = (group: any[]): Template[] => {
+  const parentTemplate = group.find((template) => !template?.is_variant_template) ?? group[0]
+
+  if (!parentTemplate?.variants?.length) {
+    return parentTemplate ? [parentTemplate] : []
+  }
+
+  const templatesById = Object.fromEntries(group.map((template) => [template.id, template]))
+
+  return [{
+    ...parentTemplate,
+    variants: parentTemplate.variants
+      .map((variant: any) => {
+        const variantTemplate = templatesById[`${parentTemplate.id}-${variant.id}`]
+
+        if (!variantTemplate?.jobDefinition) {
+          return null
+        }
+
+        return {
+          id: variantTemplate.id,
+          variant_id: variant.id,
+          name: variant.name,
+          description: variant.description,
+          jobDefinition: variantTemplate.jobDefinition,
+        }
+      })
+      .filter((variant: TemplateVariant | null): variant is TemplateVariant => Boolean(variant)),
+  }]
+}
+
+const normalizeTemplates = (value: TemplatesResponse, grouped = false): Template[] => {
+  if (Array.isArray(value)) {
+    return value
+  }
+
+  if (Array.isArray(value?.data)) {
+    return value.data
+  }
+
+  if (grouped && value) {
+    return Object.values(value).flatMap(buildGroupedTemplate)
+  }
+
+  return []
 }
 
 // Keep original templates endpoint for backward compatibility
@@ -46,30 +103,8 @@ const { data: rawGroupedTemplates, pending: loadingGroupedTemplates } = useAPI('
   immediate: true
 });
 
-const normalizeTemplatesResponse = (value: unknown): Template[] => {
-  if (Array.isArray(value)) return value as Template[];
-  if (!value || typeof value !== "object") return [];
-
-  const record = value as Record<string, unknown>;
-
-  if (Array.isArray(record.templates)) return record.templates as Template[];
-  if (Array.isArray(record.items)) return record.items as Template[];
-
-  if (record.data) {
-    if (Array.isArray(record.data)) return record.data as Template[];
-
-    if (typeof record.data === "object" && record.data !== null) {
-      const nestedData = record.data as Record<string, unknown>;
-      if (Array.isArray(nestedData.templates)) return nestedData.templates as Template[];
-      if (Array.isArray(nestedData.items)) return nestedData.items as Template[];
-    }
-  }
-
-  return [];
-};
-
-const templates = computed<Template[]>(() => normalizeTemplatesResponse(rawTemplates.value));
-const groupedTemplates = computed<Template[]>(() => normalizeTemplatesResponse(rawGroupedTemplates.value));
+const templates = computed(() => normalizeTemplates(rawTemplates.value))
+const groupedTemplates = computed(() => normalizeTemplates(rawGroupedTemplates.value, true))
 
 export const useTemplates = (): {
   templates: Ref<Template[]>, 
