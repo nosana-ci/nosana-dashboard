@@ -365,7 +365,7 @@
     <!-- Template Selection Modal -->
     <DeployTemplateModal
       v-model:showModal="showTemplateModal"
-      :templates="availableTemplates"
+      :templates="groupedTemplates || []"
       @select-template="selectTemplateFromModal"
     />
   </div>
@@ -597,18 +597,6 @@ const computedDeploymentName = computed(() => {
     return jobDefinition.value.ops[0].id;
   }
   return "Custom Deployment";
-});
-
-const availableTemplates = computed<Template[]>(() => {
-  if (Array.isArray(groupedTemplates.value) && groupedTemplates.value.length > 0) {
-    return groupedTemplates.value;
-  }
-
-  if (Array.isArray(templates.value) && templates.value.length > 0) {
-    return templates.value;
-  }
-
-  return [];
 });
 
 const templateNames = computed(() => {
@@ -881,8 +869,8 @@ watch(
         });
       }
     } else {
-      if (availableTemplates.value.length > 0) {
-        const templateMatchingJobDef = availableTemplates.value.find(
+      if (groupedTemplates.value) {
+        const templateMatchingJobDef = groupedTemplates.value.find(
           (t: Template) =>
             t.jobDefinition &&
             JSON.stringify(t.jobDefinition) === JSON.stringify(newJobDef) &&
@@ -900,7 +888,7 @@ watch(
 
 // Auto-select PyTorch template when grouped templates load
 watch(
-  () => availableTemplates.value,
+  () => groupedTemplates.value,
   (newTemplates) => {
     if (
       Array.isArray(newTemplates) &&
