@@ -128,6 +128,7 @@ export function useVaultModal() {
       // Start polling vault balance - will call updateFn when balance changes
       pollVaultBalance(vault, baseline, updateFn);
     } catch (error: any) {
+      console.log("Error during withdraw:", error);
       state.value.error = error.message || "Failed to withdraw from vault";
     } finally {
       state.value.loading = false;
