@@ -7,7 +7,11 @@ import {
   type Wallet,
   type PartialClientConfig,
 } from "@nosana/kit";
-import { useWalletAccountModifyingSigner, useWallet } from "@nosana/solana-vue";
+import {
+  useWalletAccountPartialSigner,
+  useWalletAccountModifyingSigner,
+  useWallet,
+} from "@nosana/solana-vue";
 import { computed, ref, watch, type Ref } from "vue";
 import { useCookies } from "@vueuse/integrations/useCookies";
 import type { CookieSetOptions } from "universal-cookie";
@@ -50,10 +54,20 @@ export function useKit() {
   const creditAuthToken = ref<string | null>(null);
 
   // retrieve Wallet from UiWalletAccount.
-  const wallet: Ref<Wallet | null> = useWalletAccountModifyingSigner(
+  // We combine both signers so that:
+  // - modifyAndSignTransactions is available for topup (Phantom modifies the tx)
+  // - signTransactions is available for vault withdraw (isTransactionPartialSigner check)
+  const modifyingSigner = useWalletAccountModifyingSigner(
     account,
     currentChain,
   );
+  const partialSigner = useWalletAccountPartialSigner(account, currentChain);
+  const wallet: ComputedRef<Wallet | null> = computed(() => {
+    const m = modifyingSigner.value;
+    const p = partialSigner.value;
+    if (!m || !p) return null;
+    return { ...m, ...p, address: m.address };
+  });
 
   const connected = computed(
     () => walletConnected.value && account.value !== null,
