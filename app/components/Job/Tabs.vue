@@ -76,13 +76,6 @@ import type { JobInfo } from "~/composables/jobs/types";
 type AnyLogEntry = { id: number; content: string; timestamp: number; html?: boolean };
 import type { ProgressBar } from "~/composables/jobs/useJobLogs";
 
-// Define NodeReport interface if not already globally available
-interface NodeReportData {
-  node: string;
-  participationRate: number;
-  uptimePercentage: number;
-}
-
 interface Props {
   job: UseJob;
   endpoints: Endpoints;
@@ -114,7 +107,6 @@ interface Props {
 
   // Props for HostSpecifications (to be passed from Job.vue)
   jobCombinedSpecs: any | null;
-  jobNodeReport: NodeReportData | null;
   loadingJobNodeSpecs: boolean;
   isQueuedJob: boolean;
   
@@ -197,58 +189,6 @@ onMounted(() => {
 
 // Expose logsView ref for parent component to call scrollToBottomOnOpen
 defineExpose({ logsView });
-
-// Host specifications data
-const { data: nodeSpecs } = useAPI(`/api/nodes/${props.job.node}/specs`, {
-  // @ts-ignore
-  disableToastOnError: true,
-});
-
-const { data: nodeInfo } = useAPI(
-  `https://${props.job.node}.${useRuntimeConfig().public.nodeDomain}/node/info`,
-  {
-    // @ts-ignore
-    disableToastOnError: true,
-    credentials: false,
-  }
-);
-
-const hostSpecs = computed(() => {
-  if (!nodeSpecs.value) return null;
-  const nodeInfoData = nodeInfo.value?.info;
-
-  return {
-    gpus: nodeInfoData?.gpus?.devices
-      ? nodeInfoData.gpus.devices.map((gpu: any) => ({
-          gpu: gpu.name,
-          memory: gpu.memory?.total_mb,
-          architecture: `${gpu.network_architecture?.major}.${gpu.network_architecture?.minor}`,
-        }))
-      : nodeSpecs.value.gpus,
-    cpu: nodeInfoData?.cpu?.model ?? nodeSpecs.value.cpu,
-    ram: nodeInfoData?.ram_mb
-      ? Math.round(nodeInfoData.ram_mb)
-      : Math.round(Number(nodeSpecs.value.ram)),
-    diskSpace: nodeInfoData?.disk_gb
-      ? Math.round(Number(nodeInfoData.disk_gb))
-      : Math.round(Number(nodeSpecs.value.diskSpace)),
-    country: nodeInfoData?.country ?? nodeSpecs.value.country,
-    cudaVersion: nodeInfoData?.gpus?.cuda_driver_version ?? nodeSpecs.value.cudaVersion,
-    nvmlVersion: nodeInfoData?.gpus?.nvml_driver_version ?? nodeSpecs.value.nvmlVersion,
-    nodeVersion: nodeInfoData?.version ?? nodeSpecs.value.nodeVersion,
-    systemEnvironment: nodeInfoData?.system_environment
-      ? nodeInfoData.system_environment.toLowerCase().includes("wsl")
-        ? "WSL"
-        : nodeInfoData.system_environment
-          ? "Linux"
-          : null
-      : nodeSpecs.value.systemEnvironment
-        ? nodeSpecs.value.systemEnvironment.toLowerCase().includes("wsl")
-          ? "WSL"
-          : "Linux"
-        : null,
-  };
-});
 
 // Get market data for GPU pool names
 const { data: apiMarkets } = useAPI("/api/markets", { default: () => [] });

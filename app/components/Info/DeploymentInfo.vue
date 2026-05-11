@@ -221,10 +221,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
-import { PublicKey } from "@solana/web3.js";
+import { computed } from "vue";
 import JobPrice from "~/components/Job/Price.vue";
-import SecondsFormatter from "~/components/SecondsFormatter.vue";
 import type { UseJob } from "~/composables/jobs/useJob";
 
 const props = defineProps<{
@@ -279,14 +277,7 @@ const timeAgo = computed(() => {
   }
 });
 
-const { data: nodeSpecs } = useAPI(`/api/nodes/${props.job.node}/specs`);
-
-const { data: nodeInfo } = useAPI(
-  `https://${props.job.node}.${useRuntimeConfig().public.nodeDomain}/node/info`,
-  { credentials: false }
-);
-
-const { data: apiMarkets, pending: loadingMarkets } = useAPI("/api/markets", { default: () => [] });
+const { data: apiMarkets } = useAPI("/api/markets", { default: () => [] });
 
 const jobDataForPrice = computed(() => {
   return {

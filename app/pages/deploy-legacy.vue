@@ -887,7 +887,7 @@ watch(() => selectedMarket.value, (newMarket) => {
 const fetchGpuFilters = async (resetValues = true) => {
   try {
     loadingHosts.value = true;
-    const response = await fetch(`${config.public.backend_url}/api/markets/filters?market_type=${selectedMarketType.value}`, {
+    const response = await fetch(`${config.public.apiBase}/api/markets/filters?market_type=${selectedMarketType.value}`, {
       credentials: 'include',
     });
     const data = await response.json();
@@ -1015,7 +1015,7 @@ const debouncedSearch = useDebounceFn(async () => {
     });
     
     // Fetch available hosts
-    const response = await fetch(`${config.public.backend_url}/api/markets/hosts?${queryParams}`, {
+    const response = await fetch(`${config.public.apiBase}/api/markets/hosts?${queryParams}`, {
       credentials: 'include',
     });
     const data = await response.json();

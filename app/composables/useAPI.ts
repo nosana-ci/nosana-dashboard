@@ -24,7 +24,7 @@ export const useAPI = (
       };
 
       return $fetch(url, {
-        baseURL: config.public.backend_url as string,
+        baseURL: config.public.apiBase as string,
         method: opts?.method || 'GET',
         headers,
         ...(opts?.credentials !== false ? { credentials: 'include' as const } : {}),
