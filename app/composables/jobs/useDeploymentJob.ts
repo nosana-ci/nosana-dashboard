@@ -99,7 +99,7 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
         try {
           if (isCreditUser.value) {
             const config = useRuntimeConfig();
-            const resp = await $fetch<{ message: string; creditRefund?: number; delisted?: boolean }>(`${config.public.backend_url}/api/jobs/stop-with-credits`, {
+            const resp = await $fetch<{ message: string; creditRefund?: number; delisted?: boolean }>(`${config.public.apiBase}/api/jobs/stop-with-credits`, {
               method: "POST",
               body: { jobAddress: jobId },
               credentials: "include",
@@ -157,7 +157,7 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
           const extensionSeconds = extensionHours * 3600;
           if (isCreditUser.value) {
             const config = useRuntimeConfig();
-            const resp = await $fetch<{ message: string; newTimeout?: number; creditsUsed?: number }>(`${config.public.backend_url}/api/jobs/extend-with-credits`, {
+            const resp = await $fetch<{ message: string; newTimeout?: number; creditsUsed?: number }>(`${config.public.apiBase}/api/jobs/extend-with-credits`, {
               method: "POST",
               body: { jobAddress: jobId, extensionSeconds },
               credentials: "include",

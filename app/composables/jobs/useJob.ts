@@ -122,7 +122,7 @@ export function useJob(jobId: string) {
             // Use credit API for authenticated users with generated addresses
             if (isCreditUser.value) {
               const config = useRuntimeConfig();
-              const response = await $fetch<{ message: string; creditRefund?: number; delisted?: boolean }>(`${config.public.backend_url}/api/jobs/stop-with-credits`, {
+              const response = await $fetch<{ message: string; creditRefund?: number; delisted?: boolean }>(`${config.public.apiBase}/api/jobs/stop-with-credits`, {
                 method: 'POST',
                 body: { jobAddress: jobId },
                 credentials: 'include',
@@ -222,7 +222,7 @@ export function useJob(jobId: string) {
             // Use credit API for authenticated users with generated addresses
             if (isCreditUser.value) {
               const config = useRuntimeConfig();
-              const response = await $fetch<{ message: string; newTimeout?: number; creditsUsed?: number }>(`${config.public.backend_url}/api/jobs/extend-with-credits`, {
+              const response = await $fetch<{ message: string; newTimeout?: number; creditsUsed?: number }>(`${config.public.apiBase}/api/jobs/extend-with-credits`, {
                 method: 'POST',
                 body: {
                   jobAddress: jobId,
