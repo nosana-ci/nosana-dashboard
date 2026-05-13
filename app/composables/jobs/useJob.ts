@@ -122,17 +122,12 @@ export function useJob(jobId: string) {
             // Use credit API for authenticated users with generated addresses
             if (isCreditUser.value) {
               const config = useRuntimeConfig();
-              const response = await $fetch<{ message: string; creditRefund?: number; delisted?: boolean }>(`${config.public.apiBase}/api/jobs/stop-with-credits`, {
+              const response = await $fetch<{ tx: string; job: string; delisted: boolean }>(`${config.public.apiBase}/api/jobs/${jobId}/stop`, {
                 method: 'POST',
-                body: { jobAddress: jobId },
                 credentials: 'include',
               });
 
-              if (response.creditRefund && response.creditRefund > 0) {
-                toast.success(`Job stopped successfully! ${response.creditRefund} credits refunded.`);
-              } else {
-                toast.success('Job stopped successfully!');
-              }
+              toast.success('Job stopped successfully!');
 
               if (response.delisted) {
                 setTimeout(() => {
@@ -222,21 +217,15 @@ export function useJob(jobId: string) {
             // Use credit API for authenticated users with generated addresses
             if (isCreditUser.value) {
               const config = useRuntimeConfig();
-              const response = await $fetch<{ message: string; newTimeout?: number; creditsUsed?: number }>(`${config.public.apiBase}/api/jobs/extend-with-credits`, {
+              await $fetch<{ tx: string; job: string; credits: { creditsUsed: number } }>(`${config.public.apiBase}/api/jobs/${jobId}/extend`, {
                 method: 'POST',
                 body: {
-                  jobAddress: jobId,
-                  extensionSeconds
+                  seconds: extensionSeconds
                 },
                 credentials: 'include',
               });
 
-              if (response.creditsUsed) {
-                const dollarAmount = (response.creditsUsed / 1000).toFixed(2);
-                toast.success(`Job extended by ${extensionHours} hour${extensionHours !== 1 ? 's' : ''}! $${dollarAmount} used.`);
-              } else {
-                toast.success(`Job extended by ${extensionHours} hour${extensionHours !== 1 ? 's' : ''}!`);
-              }
+              toast.success(`Job extended by ${extensionHours} hour${extensionHours !== 1 ? 's' : ''}!`);
               setTimeout(() => refresh(), 1000);
             } else {
               // Use SDK for wallet users - use job address from job.value
