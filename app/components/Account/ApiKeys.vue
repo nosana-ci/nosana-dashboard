@@ -377,7 +377,7 @@ const {
       return { keys: [], total: 0 };
     }
 
-    return await $fetch(`${config.apiBase}/api-keys`, {
+    return await $fetch(`${config.apiBase}/api/api-keys`, {
       credentials: "include",
     });
   },
@@ -408,7 +408,7 @@ const createKey = async () => {
       payload.expiresIn = parseInt(newKeyExpiration.value);
     }
 
-    const response = await $fetch(`${config.apiBase}/api-keys`, {
+    const response = await $fetch(`${config.apiBase}/api/api-keys`, {
       method: "POST",
       credentials: "include",
       headers: {
@@ -454,7 +454,7 @@ const updateKey = async () => {
     updatingKey.value = true;
 
     await $fetch(
-      `${config.apiBase}/api-keys/${selectedKey.value.id}/update`,
+      `${config.apiBase}/api/api-keys/${selectedKey.value.id}/update`,
       {
         method: "POST",
         credentials: "include",
@@ -494,7 +494,7 @@ const deleteKey = async (keyData: any) => {
   try {
     deletingKeyId.value = keyData.id;
 
-    await $fetch(`${config.apiBase}/api-keys/${keyData.id}/delete`, {
+    await $fetch(`${config.apiBase}/api/api-keys/${keyData.id}/delete`, {
       method: "POST",
       credentials: "include",
     });
