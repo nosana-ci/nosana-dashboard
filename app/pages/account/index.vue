@@ -1192,9 +1192,7 @@ const loadInvitation = async () => {
 
       const response = await $fetch<Invitation>(
         `${config.apiBase}/api/credits/invitations/${invitationToken.value}`,
-        {
-          credentials: "include",
-        },
+        {},
       );
       invitation.value = response;
 
