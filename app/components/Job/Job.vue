@@ -171,52 +171,12 @@
                       v-html="formatPrice(totalNos || 0, totalCostUsd || 0)"
                     ></td>
                   </tr>
-                  <tr v-if="gpuSummary">
-                    <td>GPU</td>
-                    <td>{{ gpuSummary }}</td>
-                  </tr>
-                  <tr v-if="combinedSpecs?.cpu">
-                    <td>CPU</td>
-                    <td>{{ combinedSpecs.cpu }}</td>
-                  </tr>
-                  <tr v-if="combinedSpecs?.ram">
-                    <td>RAM</td>
-                    <td>{{ formatRam(combinedSpecs.ram) }}</td>
-                  </tr>
-                  <tr v-if="combinedSpecs?.diskSpace">
-                    <td>Diskspace</td>
-                    <td>{{ combinedSpecs.diskSpace }} GB</td>
-                  </tr>
-                  <tr v-if="combinedSpecs?.country || isQueuedJob">
-                    <td>Country</td>
-                    <td>
-                      <span v-if="combinedSpecs?.country">{{
-                        formatCountry(combinedSpecs.country)
-                      }}</span>
-                      <span v-else class="has-text-grey">--</span>
-                    </td>
-                  </tr>
                   <tr
-                    v-if="
-                      combinedSpecs?.download ||
-                      combinedSpecs?.upload ||
-                      combinedSpecs?.ping
-                    "
+                    v-for="field in resolvedMetricFields"
+                    :key="field.key"
                   >
-                    <td>Network</td>
-                    <td
-                      v-html="
-                        formatNetwork(
-                          combinedSpecs?.download,
-                          combinedSpecs?.upload,
-                          combinedSpecs?.ping,
-                        )
-                      "
-                    ></td>
-                  </tr>
-                  <tr>
-                    <td>OS</td>
-                    <td>{{ combinedSpecs?.systemEnvironment || "--" }}</td>
+                    <td>{{ field.label }}</td>
+                    <td>{{ field.displayValue }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -287,7 +247,6 @@
             :chatServiceUrl="chatServiceUrl"
             :chatApiConfig="chatApiConfig"
             :jobCombinedSpecs="combinedSpecs"
-            :jobNodeReport="jobNodeReport"
             :loadingJobNodeSpecs="loadingNodeSpecs"
             :isQueuedJob="isQueuedJob"
             :activeLogs="flogActiveLogs"
@@ -363,6 +322,10 @@ import JobResult from "~/components/Job/Result.vue";
 import JobDefinitionTab from "~/components/Job/Tabs/JobDefinition.vue";
 import SecondsFormatter from "~/components/SecondsFormatter.vue";
 import StatusTag from "~/components/Common/StatusTag.vue";
+import {
+  resolveMetricFields,
+  type MetricField,
+} from "~/components/UI/AdaptiveMetricsGrid.vue";
 
 import LogSubscription from "./LogSubscription.vue";
 import { useFLogs } from "~/composables/jobs/useFLogs";
@@ -444,26 +407,6 @@ interface NodeInfoData {
 
 interface NodeInfoResponse {
   info?: NodeInfoData;
-}
-
-interface NodeSpecs {
-  marketAddress?: string;
-  ram?: string | number;
-  diskSpace?: string | number;
-  cpu?: string;
-  country?: string;
-  avgDownload10?: number;
-  avgUpload10?: number;
-  avgPing10?: number;
-  gpus?: Array<{
-    gpu?: string;
-    memory?: number;
-    architecture?: string;
-  }>;
-  cudaVersion?: string;
-  nvmlVersion?: string;
-  nodeVersion?: string;
-  systemEnvironment?: string;
 }
 
 interface CombinedSpecs {
@@ -658,9 +601,9 @@ const isGHCR = (image: string) => {
 
 // Get host specs for actual GPU info (skip when node is placeholder)
 const nodeSpecsUrl = computed(() =>
-  hasRealNode.value ? `/api/nodes/${props.job.node}/specs` : "",
+  hasRealNode.value ? `/api/nodes/${props.job.node}/metrics` : "",
 );
-const { data: nodeSpecs, pending: loadingNodeSpecs } = useAPI<NodeSpecs | null>(
+const { data: nodeMetrics, pending: loadingNodeSpecs } = useAPI(
   nodeSpecsUrl,
 );
 
@@ -670,23 +613,6 @@ const nodeInfoUrl = computed(() =>
     : "",
 );
 const { data: nodeInfo } = useAPI<NodeInfoResponse | null>(nodeInfoUrl, { credentials: false });
-
-// Get node report
-const jobNodeReportUrl = computed(() => {
-  if (
-    !props.job.node ||
-    props.job.node.toString() === "11111111111111111111111111111111"
-  )
-    return "";
-  return `/api/benchmarks/node-report?node=${props.job.node.toString()}`;
-});
-const { data: jobNodeReport, pending: loadingJobNodeReport } = useAPI(
-  jobNodeReportUrl,
-  {
-    default: () => null,
-    watch: [jobNodeReportUrl],
-  },
-);
 
 const jobDataForPriceComponent = computed(() => {
   return {
@@ -800,49 +726,25 @@ watch(
   { immediate: true, deep: true },
 );
 
+const formatPing = (ping?: number) => {
+  if (typeof ping !== "number" || Number.isNaN(ping)) return null;
+  return `${Math.round(ping)} ms`;
+};
+
 const gpuSummary = computed(() => {
-  const model = combinedSpecs.value?.gpu || "";
+  const model = combinedSpecs.value?.gpu;
   if (!model) return null;
+
   let shortModel = model;
   if (shortModel.startsWith("NVIDIA GeForce ")) {
     shortModel = "Nvidia " + shortModel.substring("NVIDIA GeForce ".length);
   } else if (/^NVIDIA /i.test(shortModel)) {
     shortModel = shortModel.replace(/^NVIDIA /i, "Nvidia ");
   }
+
   const cuda = combinedSpecs.value?.cudaVersion;
   return cuda ? `${shortModel} (CUDA ${cuda})` : shortModel;
 });
-
-const formatRam = (mb?: number) => {
-  if (typeof mb !== "number" || isNaN(mb)) return "--";
-  return `${Math.round(mb / 1024)} GB`;
-};
-
-const formatCountry = (countryCode?: string) => {
-  if (!countryCode) return "-";
-  try {
-    return (
-      new Intl.DisplayNames(["en"], { type: "region" }).of(countryCode) ||
-      countryCode
-    );
-  } catch {
-    return countryCode;
-  }
-};
-
-const formatNetwork = (download?: number, upload?: number, ping?: number) => {
-  const parts: string[] = [];
-  if (typeof download === "number" && !isNaN(download)) {
-    parts.push(`Download: ${Math.round(download)} Mbps`);
-  }
-  if (typeof upload === "number" && !isNaN(upload)) {
-    parts.push(`Upload: ${Math.round(upload)} Mbps`);
-  }
-  if (typeof ping === "number" && !isNaN(ping)) {
-    parts.push(`Ping: ${Math.round(ping)} ms`);
-  }
-  return parts.length ? parts.join(" <br>") : "--";
-};
 
 // Format time started
 const timeStartFormatted = computed(() => {
@@ -879,9 +781,10 @@ const timeAgo = computed(() => {
 
 // Combined node specs
 const combinedSpecs = computed<CombinedSpecs | null>(() => {
-  if (!nodeSpecs.value) return null;
-
+  const metrics = nodeMetrics.value?.metrics;
   const nodeInfoData = nodeInfo.value?.info;
+
+  if (!metrics && !nodeInfoData) return null;
 
   const gpusArray = nodeInfoData?.gpus?.devices
     ? nodeInfoData.gpus.devices.map((gpu: GpuDevice) => ({
@@ -889,43 +792,135 @@ const combinedSpecs = computed<CombinedSpecs | null>(() => {
         memory: gpu.memory?.total_mb,
         architecture: `${gpu.network_architecture?.major}.${gpu.network_architecture?.minor}`,
       }))
-    : (nodeSpecs.value.gpus ?? []);
+    : ((metrics?.gpu?.devices ?? []).map((gpu: any) => ({
+        gpu: gpu?.name,
+        memory: gpu?.vram_total_mb,
+        architecture:
+          gpu?.network_architecture?.major !== undefined &&
+          gpu?.network_architecture?.minor !== undefined
+            ? `${gpu.network_architecture.major}.${gpu.network_architecture.minor}`
+            : undefined,
+      })));
 
   const firstGpu = gpusArray.length > 0 ? gpusArray[0] : undefined;
-
-  const cpuModel = nodeInfoData?.cpu?.model ?? nodeSpecs.value.cpu;
+  const cpuModel = nodeInfoData?.cpu?.model ?? metrics?.cpu?.cpu_model;
+  const metricRamMb =
+    typeof metrics?.ram_mb === "number"
+      ? metrics.ram_mb
+      : typeof metrics?.ram_gb === "number"
+        ? metrics.ram_gb * 1024
+        : undefined;
+  const metricDiskGb =
+    typeof metrics?.disk_gb === "number" ? metrics.disk_gb : undefined;
+  const metricCountry = metrics?.network?.country ?? metrics?.country;
+  const metricDownload =
+    metrics?.network?.download_mbps ?? metrics?.download_mbps;
+  const metricUpload =
+    metrics?.network?.upload_mbps ?? metrics?.upload_mbps;
+  const metricPing = metrics?.network?.ping_ms ?? metrics?.ping_ms;
+  const metricCudaVersion =
+    nodeInfoData?.gpus?.cuda_driver_version ??
+    metrics?.gpu?.cuda_driver_version ??
+    metrics?.gpu?.runtime_version ??
+    metrics?.cuda_driver_version ??
+    metrics?.cuda_runtime_version;
+  const metricSystemEnvironment =
+    nodeInfoData?.system_environment ?? metrics?.system_environment;
 
   return {
     ram: nodeInfoData?.ram_mb
       ? Math.round(nodeInfoData.ram_mb)
-      : Math.round(Number(nodeSpecs.value.ram)),
+      : Math.round(Number(metricRamMb)),
     diskSpace: nodeInfoData?.disk_gb
       ? Math.round(Number(nodeInfoData.disk_gb))
-      : Math.round(Number(nodeSpecs.value.diskSpace)),
+      : Math.round(Number(metricDiskGb)),
     cpu: cpuModel,
-    country: nodeInfoData?.country ?? nodeSpecs.value.country,
-    download:
-      nodeSpecs.value.avgDownload10 ??
-      (jobNodeReport.value as any)?.avgDownload10,
-    upload:
-      nodeSpecs.value.avgUpload10 ?? (jobNodeReport.value as any)?.avgUpload10,
-    ping: nodeSpecs.value.avgPing10 ?? (jobNodeReport.value as any)?.avgPing10,
+    country: nodeInfoData?.country ?? metricCountry,
+    download: metricDownload,
+    upload: metricUpload,
+    ping: metricPing,
     gpu: firstGpu?.gpu,
-    cudaVersion:
-      nodeInfoData?.gpus?.cuda_driver_version ?? nodeSpecs.value.cudaVersion,
-    systemEnvironment: nodeInfoData?.system_environment
-      ? nodeInfoData.system_environment.toLowerCase().includes("wsl")
+    cudaVersion: metricCudaVersion ? String(metricCudaVersion) : undefined,
+    systemEnvironment: metricSystemEnvironment
+      ? metricSystemEnvironment.toLowerCase().includes("wsl")
         ? "WSL"
-        : nodeInfoData.system_environment
+        : metricSystemEnvironment
           ? "Linux"
           : null
-      : nodeSpecs.value.systemEnvironment
-        ? nodeSpecs.value.systemEnvironment.toLowerCase().includes("wsl")
-          ? "WSL"
-          : "Linux"
-        : null,
+      : null,
   };
 });
+
+const metricFields: MetricField[] = [
+  {
+    key: "gpu",
+    label: "GPU",
+    paths: ["derived.gpuSummary", "derived.gpuName"],
+  },
+  {
+    key: "cpu",
+    label: "CPU",
+    paths: ["nodeInfo.info.cpu.model", "metrics.cpu.cpu_model"],
+  },
+  {
+    key: "ram",
+    label: "RAM",
+    paths: ["nodeInfo.info.ram_mb", "metrics.ram_gb", "metrics.ram_mb"],
+    transformPaths: {
+      "metrics.ram_gb": "gbToMb",
+    },
+    formatter: "mb",
+  },
+  {
+    key: "diskSpace",
+    label: "Disk Space",
+    paths: ["nodeInfo.info.disk_gb", "metrics.disk_gb"],
+    formatter: "gb",
+  },
+  {
+    key: "country",
+    label: "Country",
+    paths: ["nodeInfo.info.country", "metrics.network.country", "metrics.country"],
+    formatter: "country",
+  },
+  {
+    key: "download",
+    label: "Download Speed",
+    paths: ["metrics.network.download_mbps", "metrics.download_mbps"],
+    formatter: "mbps",
+  },
+  {
+    key: "upload",
+    label: "Upload Speed",
+    paths: ["metrics.network.upload_mbps", "metrics.upload_mbps"],
+    formatter: "mbps",
+  },
+  {
+    key: "ping",
+    label: "Ping",
+    paths: ["derived.ping"],
+  },
+  {
+    key: "os",
+    label: "OS",
+    paths: ["derived.systemEnvironment", "metrics.system_environment"],
+  },
+];
+
+const metricSources = computed(() => ({
+  nodeInfo: nodeInfo.value,
+  metrics: nodeMetrics.value?.metrics,
+  derived: {
+    gpuName: combinedSpecs.value?.gpu,
+    gpuSummary: gpuSummary.value,
+    ping: formatPing(combinedSpecs.value?.ping),
+    systemEnvironment: combinedSpecs.value?.systemEnvironment,
+  },
+}));
+
+const resolvedMetricFields = computed(() =>
+  resolveMetricFields(metricFields, metricSources.value).secondary,
+);
 
 // Check if the job is queued (state 0 and no start time, or placeholder node)
 const isQueuedJob = computed(() => {

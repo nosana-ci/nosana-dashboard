@@ -225,16 +225,16 @@ const handleClaim = async () => {
     let body = {};
 
     if (props.type === "manual") {
-      url = `${config.backend_url}/api/credits/claim`;
+      url = `${config.apiBase}/api/credits/claim`;
       body = { code: claimCode.value.trim() };
     } else if (props.type === "grant") {
       trackEvent("credits_claim_click", {
         user_id: userData.value?.generatedAddress,
         auth_method: userData.value?.loginMethod,
       });
-      url = `${config.backend_url}/api/credits/request`;
+      url = `${config.apiBase}/api/credits/request`;
     } else if (props.type === "invitation") {
-      url = `${config.backend_url}/api/credits/invitations/${props.token}/claim`;
+      url = `${config.apiBase}/api/credits/invitations/${props.token}/claim`;
     }
 
     const response = await $fetch<{ amount: number }>(url, {

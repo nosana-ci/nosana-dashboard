@@ -99,13 +99,11 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
         try {
           if (isCreditUser.value) {
             const config = useRuntimeConfig();
-            const resp = await $fetch<{ message: string; creditRefund?: number; delisted?: boolean }>(`${config.public.backend_url}/api/jobs/stop-with-credits`, {
+            const resp = await $fetch<{ tx: string; job: string; delisted: boolean }>(`${config.public.apiBase}/api/jobs/${jobId}/stop`, {
               method: "POST",
-              body: { jobAddress: jobId },
               credentials: "include",
             });
-            if (resp.creditRefund && resp.creditRefund > 0) toast.success(`Job stopped successfully! ${resp.creditRefund} credits refunded.`);
-            else toast.success("Job stopped successfully!");
+            toast.success("Job stopped successfully!");
             if (resp.delisted) setTimeout(() => navigateTo("/deploy"), 3000);
             else setTimeout(() => job.value?.refresh(), 1000);
           } else {
@@ -157,15 +155,12 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
           const extensionSeconds = extensionHours * 3600;
           if (isCreditUser.value) {
             const config = useRuntimeConfig();
-            const resp = await $fetch<{ message: string; newTimeout?: number; creditsUsed?: number }>(`${config.public.backend_url}/api/jobs/extend-with-credits`, {
+            await $fetch<{ tx: string; job: string; credits: { creditsUsed: number } }>(`${config.public.apiBase}/api/jobs/${jobId}/extend`, {
               method: "POST",
-              body: { jobAddress: jobId, extensionSeconds },
+              body: { seconds: extensionSeconds },
               credentials: "include",
             });
-            if (resp.creditsUsed) {
-              const dollarAmount = (resp.creditsUsed / 1000).toFixed(2);
-              toast.success(`Job extended by ${extensionHours} hour${extensionHours !== 1 ? "s" : ""}! $${dollarAmount} used.`);
-            } else toast.success(`Job extended by ${extensionHours} hour${extensionHours !== 1 ? "s" : ""}!`);
+            toast.success(`Job extended by ${extensionHours} hour${extensionHours !== 1 ? "s" : ""}!`);
             setTimeout(() => job.value?.refresh(), 1000);
           } else {
             const jobAddress = job.value.address as Parameters<typeof nosana.value.jobs.extend>[0]["job"];

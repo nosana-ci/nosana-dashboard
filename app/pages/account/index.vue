@@ -488,7 +488,7 @@ const checkFreeCreditsEligibility = async () => {
 
   try {
     const data = await $fetch<{ eligible: boolean; amount?: number; message?: string }>(
-      `${config.backend_url}/api/credits/request/eligibility`,
+      `${config.apiBase}/api/credits/request/eligibility`,
       {
         credentials: "include",
       },
@@ -1191,10 +1191,8 @@ const loadInvitation = async () => {
       invitationError.value = "";
 
       const response = await $fetch<Invitation>(
-        `${config.backend_url}/api/credits/invitations/${invitationToken.value}`,
-        {
-          credentials: "include",
-        },
+        `${config.apiBase}/api/credits/invitations/${invitationToken.value}`,
+        {},
       );
       invitation.value = response;
 

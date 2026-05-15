@@ -16,6 +16,7 @@ import { computed, ref, watch, type Ref } from "vue";
 import { useCookies } from "@vueuse/integrations/useCookies";
 import type { CookieSetOptions } from "universal-cookie";
 import { createAuthCookiesKey } from "~/utils/createAuthCookiesKey";
+import { buildNosanaApiConfig } from "~/utils/buildNosanaApiConfig";
 import { useSuperTokens } from "~/composables/useSuperTokens";
 
 const config = useRuntimeConfig();
@@ -110,7 +111,7 @@ export function useKit() {
   watch(
     [creditAuthToken, wallet, account, isAuthenticated],
     ([apiKey, walletAdapter]) => {
-      const backendUrl = config.public.backend_url as string | undefined;
+      const apiBase = config.public.apiBase as string | undefined;
       const rpcUrl = config.public.rpcUrl as string | undefined;
       const store =
         !apiKey && account.value?.address
@@ -118,11 +119,14 @@ export function useKit() {
           : undefined;
 
       const clientConfig: PartialClientConfig = {};
+      const apiConfig = buildNosanaApiConfig({
+        apiBase,
+        apiKey,
+        includeCredentials: isAuthenticated.value,
+      });
 
-      if (apiKey || backendUrl) {
-        clientConfig.api = {};
-        if (apiKey) clientConfig.api.apiKey = apiKey;
-        if (backendUrl) clientConfig.api.backend_url = backendUrl;
+      if (apiConfig) {
+        clientConfig.api = apiConfig;
       }
 
       if (store) {
@@ -135,10 +139,6 @@ export function useKit() {
 
       if (!apiKey && walletAdapter && account.value?.address) {
         clientConfig.wallet = walletAdapter;
-      }
-
-      if (isAuthenticated.value) {
-        clientConfig.api = { ...clientConfig.api, include_credentials: true };
       }
 
       const client = createNosanaClient(network, clientConfig);

@@ -41,7 +41,7 @@ const fetchUserData = async () => {
     try {
       const config = useRuntimeConfig().public;
       const response = await $fetch<User>(
-        `${config.client_manager_url}/user/profile`,
+        `${config.apiBase}/api/user/profile`,
         {
           credentials: "include",
         },

@@ -4,7 +4,7 @@ interface APIOptions extends Record<string, any> {
   headers?: Record<string, string>;
   auth?: boolean; // Add auth header if true
   default?: () => any;
-  credentials?: boolean; // Send cookies with request (default: true)
+  credentials?: boolean; // Send cookies with request (default: false)
 }
 
 export const useAPI = (
@@ -24,10 +24,10 @@ export const useAPI = (
       };
 
       return $fetch(url, {
-        baseURL: config.public.backend_url as string,
+        baseURL: config.public.apiBase as string,
         method: opts?.method || 'GET',
         headers,
-        ...(opts?.credentials !== false ? { credentials: 'include' as const } : {}),
+        ...(opts?.credentials ? { credentials: 'include' as const } : {}),
         ...(opts?.body && { body: opts.body }),
       });
     },

@@ -74,8 +74,7 @@ export default defineNuxtConfig({
     public: {
       maintenance: process.env.NUXT_PUBLIC_MAINTENANCE === "true",
       rpcUrl: process.env.RPC_URL,
-      backend_url: process.env.NUXT_PUBLIC_BACKEND_URL,
-      client_manager_url: process.env.NUXT_PUBLIC_CLIENT_MANAGER_URL,
+      apiBase: process.env.NUXT_PUBLIC_API_BASE,
       recaptcha_site_key: process.env.NUXT_PUBLIC_RECAPTCHA_SITE_KEY,
       network: process.env.NETWORK || "mainnet",
       nodeDomain: process.env.NODE_DOMAIN,

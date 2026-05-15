@@ -102,8 +102,8 @@
               </td>
               <td>
                 <span class="clickable-row-cell-content">
-                  <span v-if="nodeSpecs[job.node]">{{
-                    formatCountry(nodeSpecs[job.node].country)
+                  <span v-if="nodeCountries[job.node]">{{
+                    formatCountry(nodeCountries[job.node])
                   }}</span>
                   <span v-else>-</span>
                 </span>
@@ -385,8 +385,8 @@ const getStatusIconComponent = (state: number) => {
   }
 };
 
-// Store node specifications
-const nodeSpecs = ref<Record<string, any>>({});
+// Store node countries for the list view.
+const nodeCountries = ref<Record<string, string>>({});
 
 // Helper function to format country code to full name
 const formatCountry = (countryCode: string) => {
@@ -401,19 +401,19 @@ const formatCountry = (countryCode: string) => {
   }
 };
 
-// Helper function to fetch node specs
-const fetchNodeSpecs = async (nodeAddress: string) => {
+// Helper function to fetch the country shown in the list.
+const fetchNodeCountry = async (nodeAddress: string) => {
   if (!nodeAddress || nodeAddress === "11111111111111111111111111111111")
     return null;
 
   try {
-    const { data } = await useAPI(`/api/nodes/${nodeAddress}/specs`);
+    const { data } = await useAPI(`/api/nodes/${nodeAddress}/metrics`);
     if (data.value) {
-      return data.value;
+      return data.value?.metrics?.network?.country ?? data.value?.metrics?.country ?? null;
     }
     return null;
   } catch (error) {
-    console.error(`Error fetching specs for node ${nodeAddress}:`, error);
+    console.error(`Error fetching country for node ${nodeAddress}:`, error);
     return null;
   }
 };
@@ -424,22 +424,22 @@ watch(
   async ([jobs]) => {
     if (!jobs) return;
 
-    // Get unique node addresses that we haven't fetched yet
+    // Get unique node addresses that we haven't fetched yet.
     const nodeAddresses = [...new Set(jobs.map((job) => job.node))].filter(
       (address) =>
-        !nodeSpecs.value[address as string] &&
+        !nodeCountries.value[address as string] &&
         address !== "11111111111111111111111111111111"
     );
 
-    // Fetch specs for each node in parallel
-    const specsPromises = nodeAddresses.map(async (nodeAddress) => {
-      const specs = await fetchNodeSpecs(nodeAddress as string);
-      if (specs) {
-        nodeSpecs.value[nodeAddress as string] = specs;
+    // Fetch countries for each node in parallel.
+    const countryPromises = nodeAddresses.map(async (nodeAddress) => {
+      const country = await fetchNodeCountry(nodeAddress as string);
+      if (country) {
+        nodeCountries.value[nodeAddress as string] = country;
       }
     });
 
-    await Promise.all(specsPromises);
+    await Promise.all(countryPromises);
   },
   { immediate: true }
 );
