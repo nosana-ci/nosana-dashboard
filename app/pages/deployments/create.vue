@@ -646,12 +646,10 @@ const { estimatedCost, formattedCost, formattedHourlyRate, usdPricePerHour } =
 const hourlyPrice = computed(() => usdPricePerHour.value || 0);
 
 const requiredNos = computed(() => {
-  if (!selectedMarket.value || !timeout.value) return 0;
+  if (!selectedMarket.value) return 0;
 
   if (usdPricePerHour.value && nosPrice.value) {
-    return (
-      (usdPricePerHour.value * timeout.value * replicas.value) / nosPrice.value
-    );
+    return (usdPricePerHour.value * replicas.value) / nosPrice.value;
   }
 
   return 0;
