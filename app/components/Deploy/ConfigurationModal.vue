@@ -223,6 +223,7 @@
   import DeployAdvancedGpuSelection from './AdvancedGpuSelection.vue';
   import PodConfigurationTab from './PodConfigurationTab.vue';
   import DeploymentConfigurationTab from './DeploymentConfigurationTab.vue';
+  import { MIN_INFINITE_TIMEOUT_HOURS } from '~/composables/useTimeoutConstants';
 
 // Define props
 interface Props {
@@ -341,10 +342,16 @@ const replicasLocal = computed({
     emit('update:replicas', clampNumber(value, 1, 100)),
 });
 
+const effectiveMinTimeout = computed(() =>
+  props.strategy === DeploymentStrategy.INFINITE
+    ? MIN_INFINITE_TIMEOUT_HOURS
+    : MIN_TIMEOUT_HOURS,
+);
+
 const timeoutLocal = computed({
   get: () => props.timeout,
   set: (value: number) =>
-    emit('update:timeout', clampNumber(value, MIN_TIMEOUT_HOURS, MAX_TIMEOUT_HOURS)),
+    emit('update:timeout', clampNumber(value, effectiveMinTimeout.value, MAX_TIMEOUT_HOURS)),
 });
 
 const handleVaultSelect = (vault: string | undefined | null) => {

@@ -389,7 +389,11 @@ import Loader from "~/components/Loader.vue";
 import VaultSelector from "~/components/Vault/VaultSelector.vue";
 import ConfigurationModal from "~/components/Deploy/ConfigurationModal.vue";
 import { parseCronExpression } from "~/utils/parseCronExpression";
-import { MAX_TIMEOUT_HOURS, MIN_TIMEOUT_HOURS } from "~/composables/useTimeoutConstants";
+import {
+  MAX_TIMEOUT_HOURS,
+  MIN_TIMEOUT_HOURS,
+  MIN_INFINITE_TIMEOUT_HOURS,
+} from "~/composables/useTimeoutConstants";
 
 // Setup composables
 const { markets, getMarkets, loadingMarkets } = useMarkets();
@@ -730,8 +734,12 @@ const createDeployment = async () => {
     toast.error("Number of replicas cannot exceed 100");
     return;
   }
-  if (timeout.value < MIN_TIMEOUT_HOURS) {
-    toast.error(`Timeout must be at least ${MIN_TIMEOUT_HOURS} hours`);
+  const effectiveMinTimeout =
+    strategy.value === DeploymentStrategy.INFINITE
+      ? MIN_INFINITE_TIMEOUT_HOURS
+      : MIN_TIMEOUT_HOURS;
+  if (timeout.value < effectiveMinTimeout) {
+    toast.error(`Timeout must be at least ${effectiveMinTimeout} hour${effectiveMinTimeout === 1 ? "" : "s"}`);
     return;
   }
   if (timeout.value > MAX_TIMEOUT_HOURS) {

@@ -218,7 +218,7 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
     await executeDeploymentAction(
       () =>
         deps.deployment.value!.updateTimeout(
-          Math.round((newTimeoutHours.value as number) * 3600),
+          Math.round((newTimeoutHours.value as number) * 60),
         ),
       `Job timeout updated to ${newTimeoutHours.value} hours`,
     );
