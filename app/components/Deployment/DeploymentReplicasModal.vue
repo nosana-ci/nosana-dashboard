@@ -34,12 +34,14 @@
                   Number(($event.target as HTMLInputElement).value),
                 )
               "
-              min="1"
+              min="0"
               max="100"
               :placeholder="currentReplicas.toString()"
             />
           </div>
-          <p class="help">Current: {{ currentReplicas }}</p>
+          <p class="help">
+            Current: {{ currentReplicas }}. Set to 0 to pause the deployment.
+          </p>
         </div>
       </section>
       <footer class="modal-card-foot is-justify-content-flex-end">
@@ -53,7 +55,9 @@
             $emit('update:modelValue', false);
           "
           :class="{ 'is-loading': actionLoading }"
-          :disabled="actionLoading || !replicaCount || replicaCount < 1"
+          :disabled="
+            actionLoading || replicaCount === null || replicaCount < 0
+          "
         >
           Update
         </button>

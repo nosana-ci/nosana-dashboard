@@ -31,6 +31,7 @@
             :deploymentVault="deploymentVault"
             @switchTab="switchTab"
             @action="switchAction"
+            @rename="updateName"
             @navigateBack="router.push('/deployments')"
           />
 
@@ -309,6 +310,7 @@ const {
   startDeployment,
   stopDeployment,
   archiveDeployment,
+  updateName,
   updateReplicas,
   updateJobTimeout,
   updateSchedule,

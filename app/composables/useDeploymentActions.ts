@@ -186,9 +186,31 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
     );
   };
 
+  const updateName = async (name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      toast.error("Deployment name cannot be empty");
+      return;
+    }
+
+    if (trimmed === deps.deployment.value?.name) {
+      return;
+    }
+
+    await executeDeploymentAction(
+      () =>
+        (
+          deps.deployment.value! as Deployment & {
+            updateName: (name: string) => Promise<void>;
+          }
+        ).updateName(trimmed),
+      "Deployment name updated",
+    );
+  };
+
   const updateReplicas = async () => {
-    if (!newReplicaCount.value || newReplicaCount.value < 1) {
-      toast.error("Replica count must be at least 1");
+    if (newReplicaCount.value === null || newReplicaCount.value < 0) {
+      toast.error("Replica count cannot be negative");
       return;
     }
 
@@ -413,6 +435,7 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
     stopDeployment,
     archiveDeployment,
     withdrawVault,
+    updateName,
     updateReplicas,
     updateJobTimeout,
     updateSchedule,

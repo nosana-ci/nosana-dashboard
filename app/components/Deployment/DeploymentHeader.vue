@@ -14,9 +14,40 @@
             </span>
           </button>
           <div class="header-title-section">
-            <h1 class="title is-5 has-text-weight-normal mb-1">
-              {{ deployment.name || "Deployment" }}
-            </h1>
+            <div
+              v-if="!isEditingName"
+              class="is-flex is-align-items-center name-display mb-1"
+              :class="{ 'is-editable': canRename }"
+              @click="startEditingName"
+            >
+              <h1 class="title is-5 has-text-weight-normal mb-0">
+                {{ deployment.name || "Deployment" }}
+              </h1>
+              <span
+                v-if="canRename"
+                class="icon is-small has-text-grey ml-2 edit-name-icon"
+                title="Rename deployment"
+              >
+                <EditIcon class="icon-14" />
+              </span>
+            </div>
+            <form
+              v-else
+              class="name-edit mb-1"
+              @submit.prevent="commitNameEdit"
+            >
+              <input
+                ref="nameInputRef"
+                v-model="nameDraft"
+                class="input is-small name-edit-input"
+                type="text"
+                maxlength="100"
+                :disabled="actionLoading"
+                placeholder="Deployment name"
+                @keydown.esc.prevent="cancelNameEdit"
+                @blur="commitNameEdit"
+              />
+            </form>
             <p
               v-if="deployment.name"
               class="subtitle is-7 has-text-grey is-family-monospace mb-0"
@@ -200,7 +231,7 @@ import ClockIcon from "@/assets/img/icons/clock.svg?component";
 import CalendarIcon from "@/assets/img/icons/calendar.svg?component";
 import EditIcon from "@/assets/img/icons/edit.svg?component";
 
-defineProps<{
+const props = defineProps<{
   deployment: Deployment;
   activeTab: string;
   availableTabs: string[];
@@ -217,7 +248,43 @@ const emit = defineEmits<{
   switchTab: [tab: string];
   action: [action: string];
   navigateBack: [];
+  rename: [name: string];
 }>();
+
+const isEditingName = ref(false);
+const nameDraft = ref("");
+const nameInputRef = ref<HTMLInputElement | null>(null);
+
+const canRename = computed(
+  () => props.deployment.status?.toUpperCase() !== "ARCHIVED",
+);
+
+const startEditingName = async () => {
+  if (!canRename.value || props.actionLoading) return;
+  nameDraft.value = props.deployment.name || "";
+  isEditingName.value = true;
+  await nextTick();
+  nameInputRef.value?.focus();
+  nameInputRef.value?.select();
+};
+
+const cancelNameEdit = () => {
+  isEditingName.value = false;
+  nameDraft.value = "";
+};
+
+const commitNameEdit = () => {
+  if (!isEditingName.value) return;
+  const next = nameDraft.value.trim();
+  const current = props.deployment.name || "";
+  isEditingName.value = false;
+  if (!next || next === current) {
+    nameDraft.value = "";
+    return;
+  }
+  emit("rename", next);
+  nameDraft.value = "";
+};
 
 const isDropdownOpen = ref(false);
 const dropdownRef = ref<HTMLElement | null>(null);
@@ -268,6 +335,37 @@ onUnmounted(() => {
 .header-title-section .title {
   display: block !important;
   margin-bottom: 0.25rem !important;
+}
+
+.name-display {
+  border-radius: 4px;
+  padding: 2px 4px;
+  margin-left: -4px;
+}
+
+.name-display.is-editable {
+  cursor: text;
+}
+
+.name-display .edit-name-icon {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.name-display.is-editable:hover {
+  background: rgba($black, 0.04);
+}
+
+.name-display.is-editable:hover .edit-name-icon {
+  opacity: 1;
+}
+
+html.dark-mode .name-display.is-editable:hover {
+  background: rgba($white, 0.06);
+}
+
+.name-edit-input {
+  max-width: 340px;
 }
 
 .header-title-section .subtitle {
