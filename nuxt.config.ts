@@ -80,6 +80,7 @@ export default defineNuxtConfig({
       nodeDomain: process.env.NODE_DOMAIN,
       frpServer: process.env.FRP_SERVER || "node.k8s.prd.nos.ci",
       cookie_domain: process.env.NUXT_PUBLIC_COOKIE_DOMAIN,
+      stripe_publishable_key: process.env.NUXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
     },
   },
   gtag: {

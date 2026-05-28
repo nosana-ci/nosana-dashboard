@@ -22,12 +22,15 @@
       >
         (${{ reservedCredits.toFixed(2) }} reserved in running/queued jobs)
       </p>
+      <NuxtLink to="/account/payments" class="button is-primary is-fullwidth mb-2" :class="{ 'is-loading': loading }">
+        Buy Credits
+      </NuxtLink>
       <button
-        class="button is-dark"
+        class="button is-ghost is-small has-text-grey"
         @click="showClaimModal = true"
         :disabled="loading"
       >
-        Claim Code
+        Have a code? Claim it
       </button>
     </div>
 

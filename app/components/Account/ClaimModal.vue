@@ -64,14 +64,28 @@
               <strong class="has-text-success">{{ formattedAmount }}</strong> in credits
               have been added to your account.
             </template>
+            <template v-else-if="verificationRequired">
+              Please verify a payment method before claiming free credits. Your
+              card is used for identity verification only and will not be
+              charged.
+            </template>
             <template v-else>
               Claim <strong class="has-text-success">{{ formattedAmount }}</strong> in
               free credits to get started.
             </template>
           </p>
           <div class="mt-5">
+            <nuxt-link
+              v-if="verificationRequired && !claimedSuccessfully"
+              to="/account/payments?source=free-credits"
+              class="button is-dark is-fullwidth is-medium"
+              style="border-radius: 8px"
+              @click="closeModal"
+            >
+              Verify payment method
+            </nuxt-link>
             <button
-              v-if="!claimedSuccessfully"
+              v-else-if="!claimedSuccessfully"
               @click="handleClaim"
               :disabled="claiming"
               class="button is-dark is-fullwidth is-medium"
@@ -173,6 +187,10 @@ const toast = useToast();
 const claiming = ref(false);
 const claimedSuccessfully = ref(false);
 const claimCode = ref("");
+const verificationRequired = ref(false);
+
+const isVerificationRequiredMessage = (message?: string) =>
+  !!message?.includes("Verify a payment method");
 
 const formattedAmount = computed(() => {
   if (props.amount != null) {
@@ -198,6 +216,7 @@ watch(
   (val) => {
     if (val) {
       justOpened.value = true;
+      verificationRequired.value = false;
       nextTick(() => {
         justOpened.value = false;
       });
@@ -212,6 +231,7 @@ const closeModal = () => {
     setTimeout(() => {
       claimedSuccessfully.value = false;
       claimCode.value = "";
+      verificationRequired.value = false;
     }, 300);
   }
 };
@@ -264,7 +284,13 @@ const handleClaim = async () => {
     const message = e?.data?.message ?? e?.response?._data?.message;
 
     if (status === 429) {
-      toast.error(message ?? "Too many requests. Please come back later to claim your credits.");
+      if (props.type === "grant" && isVerificationRequiredMessage(message)) {
+        verificationRequired.value = true;
+      } else {
+        toast.error(message ?? "Too many requests. Please come back later to claim your credits.");
+      }
+    } else if (status === 403 && props.type === "grant" && isVerificationRequiredMessage(message)) {
+      verificationRequired.value = true;
     } else if ((status === 400 || status === 403) && message) {
       toast.error(message);
     } else {
