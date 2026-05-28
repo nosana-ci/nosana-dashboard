@@ -32,7 +32,7 @@
               <h1 class="login-title">Create Your Account</h1>
               <p class="login-subtitle">
                 Sign up to build with the Nosana AI Platform.<template v-if="freeCreditsEnabled !== false">
-                  Sign in with GitHub or Google to get{{ freeCreditsFormatted ? ` ${freeCreditsFormatted} in` : '' }} free credits.
+                  Sign in with GitHub or Google, verify a payment method (not charged), and get{{ freeCreditsFormatted ? ` ${freeCreditsFormatted} in` : '' }} free credits.
                 </template>
               </p>
 
@@ -129,7 +129,7 @@
                   }}
                 </template>
                 <template v-else>
-                  Sign in with GitHub or Google to get{{ freeCreditsFormatted ? ` ${freeCreditsFormatted} in` : '' }} free credits.
+                  Sign in with GitHub or Google, verify a payment method (not charged), and get{{ freeCreditsFormatted ? ` ${freeCreditsFormatted} in` : '' }} free credits.
                 </template>
               </p>
 

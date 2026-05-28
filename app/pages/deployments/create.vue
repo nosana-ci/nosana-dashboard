@@ -275,11 +275,17 @@
                       (hourlyPrice * replicas * timeout).toFixed(3)
                     }}, have ${{ creditBalance.toFixed(2) }}
                   </p>
+                  <NuxtLink
+                    to="/account/payments"
+                    class="button is-dark is-fullwidth mb-2"
+                  >
+                    Buy Credits
+                  </NuxtLink>
                   <button
-                    class="button is-small is-outlined is-fullwidth"
+                    class="button is-outlined is-fullwidth has-text-grey"
                     @click="goToClaimCredits"
                   >
-                    Claim Credit Codes
+                    Have a code? Claim it
                   </button>
                 </div>
               </div>

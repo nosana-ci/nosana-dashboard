@@ -38,6 +38,11 @@
         type="manual"
         @claimed="handleFreeCreditsClaimed"
       />
+      <AccountFreeCreditsVerifyModal
+        v-model="showFreeCreditsVerifyModal"
+        :amount="freeCreditsAmount"
+        @dismissed="handleFreeCreditsVerifyDismissed"
+      />
       <!-- Credit Invitation Section - only show when there's an issue -->
       <div
         v-if="
@@ -270,6 +275,33 @@
             <div class="mb-4"></div>
             <div class="equal-height-boxes">
               <nuxt-link
+                v-if="pendingFreeCreditsVerification"
+                to="/account/payments?source=free-credits"
+                class="box has-text-black p-2 mb-2 is-block free-credits-verify-box"
+              >
+                <div
+                  class="is-flex is-align-items-start"
+                  style="margin: 8px 8px 0 8px"
+                >
+                  <CoinsIcon
+                    style="
+                      width: 16px;
+                      height: 16px;
+                      fill: #10e80c;
+                      margin-right: 0.5rem;
+                      margin-top: 4px;
+                    "
+                  />
+                  <div>
+                    <h4 class="title is-6 mb-0">Claim free credits</h4>
+                    <p class="is-size-6 mb-0" style="line-height: 1.2">
+                      Verify your payment method to unlock free credits.
+                    </p>
+                  </div>
+                </div>
+              </nuxt-link>
+
+              <nuxt-link
                 to="/deployments/create"
                 class="box has-text-black p-2 mb-2 is-block"
               >
@@ -367,6 +399,7 @@ import { computed, ref, onMounted, watch } from "vue";
 import RocketIcon from "@/assets/img/icons/rocket.svg?component";
 import ExplorerIcon from "@/assets/img/icons/sidebar/explorer.svg?component";
 import SupportIcon from "@/assets/img/icons/sidebar/support.svg?component";
+import CoinsIcon from "@/assets/img/icons/sidebar/coins.svg?component";
 import ArrowUpIcon from "@/assets/img/icons/arrow-up.svg?component";
 import ArrowDownIcon from "@/assets/img/icons/arrow-down.svg?component";
 import { useToast } from "vue-toastification";
@@ -383,7 +416,13 @@ import {
 import { useRouter, useRoute } from "vue-router";
 import ApiKeys from "~/components/Account/ApiKeys.vue";
 import AccountClaimModal from "~/components/Account/ClaimModal.vue";
+import AccountFreeCreditsVerifyModal from "~/components/Account/FreeCreditsVerifyModal.vue";
 import CreditBalance from "~/components/Account/CreditBalance.vue";
+import {
+  isFreeCreditsVerifyDismissed,
+  setFreeCreditsVerifyDismissed,
+  clearFreeCreditsVerifyDismissed,
+} from "~/utils/freeCreditsVerifyDismissal";
 
 const config = useRuntimeConfig().public;
 ChartJS.register(
@@ -452,18 +491,24 @@ const claiming = ref(false);
 let invitationLoadPromise: Promise<void> | null = null;
 
 const showFreeCreditsModal = ref(false);
+const showFreeCreditsVerifyModal = ref(false);
 const showInvitationModal = ref(false);
 const showClaimModal = ref(false);
 const checkedEligibility = ref(false);
 const freeCreditsAmount = ref<number | null>(null);
+const pendingFreeCreditsVerification = ref(false);
 
-const checkFreeCreditsEligibility = async () => {
-  if (!isAuthenticated.value || checkedEligibility.value) {
+const isVerificationRequiredMessage = (message?: string) =>
+  !!message?.includes("Verify a payment method");
+
+const checkFreeCreditsEligibility = async (force = false) => {
+  if (!isAuthenticated.value || (checkedEligibility.value && !force)) {
     return;
   }
 
   // Mark in-flight immediately so a concurrent call can't slip through
   checkedEligibility.value = true;
+  pendingFreeCreditsVerification.value = false;
 
   // If we have an invitation token, ensure it's loaded before checking eligibility
   if (invitationToken.value) {
@@ -487,19 +532,37 @@ const checkFreeCreditsEligibility = async () => {
   }
 
   try {
-    const data = await $fetch<{ eligible: boolean; amount?: number; message?: string }>(
-      `${config.apiBase}/api/credits/request/eligibility`,
-      {
-        credentials: "include",
-      },
-    );
+    const [data, paymentMethods] = await Promise.all([
+      $fetch<{ eligible: boolean; amount?: number; message?: string }>(
+        `${config.apiBase}/api/credits/request/eligibility`,
+        { credentials: "include" },
+      ),
+      $fetch<{ methods: unknown[]; paymentVerified: boolean }>(
+        `${config.apiBase}/api/payments/methods`,
+        { credentials: "include" },
+      ),
+    ]);
 
     if (data && data.eligible) {
+      clearFreeCreditsVerifyDismissed(userData.value?.id);
       freeCreditsAmount.value = data.amount ?? null;
       showFreeCreditsModal.value = true;
       trackEvent("credits_claim_cta_view", {
         user_id: userData.value?.generatedAddress,
       });
+    } else if (
+      data &&
+      !data.eligible &&
+      !paymentMethods.paymentVerified &&
+      isVerificationRequiredMessage(data.message)
+    ) {
+      pendingFreeCreditsVerification.value = true;
+      if (!force && !isFreeCreditsVerifyDismissed(userData.value?.id)) {
+        showFreeCreditsVerifyModal.value = true;
+        trackEvent("credits_verify_cta_view", {
+          user_id: userData.value?.generatedAddress,
+        });
+      }
     }
   } catch (error: unknown) {
     type FetchError = { status?: number; data?: { message?: string } };
@@ -516,17 +579,37 @@ const checkFreeCreditsEligibility = async () => {
   }
 };
 
+const handleFreeCreditsVerifyDismissed = () => {
+  setFreeCreditsVerifyDismissed(userData.value?.id);
+};
+
 const handleFreeCreditsClaimed = async (amount: number) => {
   triggerCreditRefresh();
+  pendingFreeCreditsVerification.value = false;
+  showFreeCreditsVerifyModal.value = false;
+
   if (showInvitationModal.value) {
     trackEvent("credits_claim_success", {
       user_id: userData.value?.generatedAddress,
       auth_method: userData.value?.loginMethod,
       credits_amount: amount,
     });
+  }
+
+  if (route.query.source === "free-credits" || showInvitationModal.value) {
     navigateTo("/account", { replace: true });
   }
 };
+
+watch(
+  () => route.query.source,
+  (source) => {
+    if (source === "free-credits" && isAuthenticated.value && !isLoading.value) {
+      checkedEligibility.value = false;
+      checkFreeCreditsEligibility(true);
+    }
+  },
+);
 
 const activeAddress = computed(() => {
   if (isAuthenticated.value && userData.value?.generatedAddress) {
@@ -610,7 +693,7 @@ onMounted(async () => {
     lastStableAddress = activeAddress.value; // Keep stable address in sync after checkSession
     // Wait for eligibility check first — opening the modal while other async
     // fetches are in-flight causes navigations that close it prematurely.
-    await checkFreeCreditsEligibility();
+    await checkFreeCreditsEligibility(route.query.source === "free-credits");
     refreshSpendingHistory();
   }
 
@@ -1241,6 +1324,11 @@ watch(
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
+}
+
+.free-credits-verify-box {
+  border: 1px solid #10e80c;
+  background-color: #f6fff5;
 }
 
 .usage-divider {
