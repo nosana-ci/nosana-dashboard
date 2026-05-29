@@ -189,9 +189,6 @@ const claimedSuccessfully = ref(false);
 const claimCode = ref("");
 const verificationRequired = ref(false);
 
-const isVerificationRequiredMessage = (message?: string) =>
-  !!message?.includes("Verify a payment method");
-
 const formattedAmount = computed(() => {
   if (props.amount != null) {
     const dollars = props.amount / 1000;
@@ -284,12 +281,21 @@ const handleClaim = async () => {
     const message = e?.data?.message ?? e?.response?._data?.message;
 
     if (status === 429) {
-      if (props.type === "grant" && isVerificationRequiredMessage(message)) {
+      if (
+        props.type === "grant" &&
+        message?.includes("Verify a payment method") &&
+        !message?.includes("already requested free credits")
+      ) {
         verificationRequired.value = true;
       } else {
         toast.error(message ?? "Too many requests. Please come back later to claim your credits.");
       }
-    } else if (status === 403 && props.type === "grant" && isVerificationRequiredMessage(message)) {
+    } else if (
+      status === 403 &&
+      props.type === "grant" &&
+      message?.includes("Verify a payment method") &&
+      !message?.includes("already requested free credits")
+    ) {
       verificationRequired.value = true;
     } else if ((status === 400 || status === 403) && message) {
       toast.error(message);

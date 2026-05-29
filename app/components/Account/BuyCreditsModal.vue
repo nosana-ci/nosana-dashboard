@@ -448,3 +448,38 @@ const formatMethodLabel = (method: SavedPaymentMethod | null) =>
   background-color: #fafafa;
 }
 </style>
+
+<style lang="scss">
+html.dark-mode {
+  .buy-credits-modal {
+    .payment-method-trigger,
+    .payment-method-menu {
+      border-color: #4a4a4a;
+      background-color: #1a1a1a;
+      color: #f5f5f5;
+    }
+
+    .payment-method-option {
+      color: #f5f5f5;
+
+      &:hover {
+        background-color: #2a2a2a;
+      }
+
+      &.is-selected {
+        background-color: #1e2e1e;
+      }
+    }
+
+    .no-card-notice {
+      border-color: #4a4a4a;
+      background-color: #1a1a1a;
+      color: #dbdbdb;
+    }
+
+    .no-card-notice a {
+      color: #10e80c !important;
+    }
+  }
+}
+</style>

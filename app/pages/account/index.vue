@@ -277,7 +277,7 @@
               <nuxt-link
                 v-if="pendingFreeCreditsVerification"
                 to="/account/payments?source=free-credits"
-                class="box has-text-black p-2 mb-2 is-block free-credits-verify-box"
+                class="box p-2 mb-2 is-block free-credits-verify-box"
               >
                 <div
                   class="is-flex is-align-items-start"
@@ -498,9 +498,6 @@ const checkedEligibility = ref(false);
 const freeCreditsAmount = ref<number | null>(null);
 const pendingFreeCreditsVerification = ref(false);
 
-const isVerificationRequiredMessage = (message?: string) =>
-  !!message?.includes("Verify a payment method");
-
 const checkFreeCreditsEligibility = async (force = false) => {
   if (!isAuthenticated.value || (checkedEligibility.value && !force)) {
     return;
@@ -553,8 +550,9 @@ const checkFreeCreditsEligibility = async (force = false) => {
     } else if (
       data &&
       !data.eligible &&
+      !data.message?.includes("already requested free credits") &&
       !paymentMethods.paymentVerified &&
-      isVerificationRequiredMessage(data.message)
+      data.message?.includes("Verify a payment method")
     ) {
       pendingFreeCreditsVerification.value = true;
       if (!force && !isFreeCreditsVerifyDismissed(userData.value?.id)) {
@@ -1329,6 +1327,12 @@ watch(
 .free-credits-verify-box {
   border: 1px solid #10e80c;
   background-color: #f6fff5;
+  color: #363636;
+}
+
+.dark-mode .free-credits-verify-box {
+  background-color: #1e2e1e;
+  color: #f5f5f5;
 }
 
 .usage-divider {

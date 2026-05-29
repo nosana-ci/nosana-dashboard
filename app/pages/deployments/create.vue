@@ -275,12 +275,13 @@
                       (hourlyPrice * replicas * timeout).toFixed(3)
                     }}, have ${{ creditBalance.toFixed(2) }}
                   </p>
-                  <NuxtLink
-                    to="/account/payments"
-                    class="button is-dark is-fullwidth mb-2"
+                  <button
+                    type="button"
+                    class="button is-primary is-fullwidth mb-2"
+                    @click="openBuyCreditsModal"
                   >
                     Buy Credits
-                  </NuxtLink>
+                  </button>
                   <button
                     class="button is-outlined is-fullwidth has-text-grey"
                     @click="goToClaimCredits"
@@ -411,6 +412,7 @@ const toast = useToast();
 
 const { isAuthenticated: superTokensAuth, userData } = useSuperTokens();
 const { connected, account } = useWallet();
+const { openBuyCreditsModal } = useBuyCreditsModal();
 
 // Compatibility: create publicKey-like object from account
 const publicKey = computed(() => {

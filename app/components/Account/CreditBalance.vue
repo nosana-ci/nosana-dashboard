@@ -22,9 +22,15 @@
       >
         (${{ reservedCredits.toFixed(2) }} reserved in running/queued jobs)
       </p>
-      <NuxtLink to="/account/payments" class="button is-primary is-fullwidth mb-2" :class="{ 'is-loading': loading }">
+      <button
+        type="button"
+        class="button is-primary is-fullwidth mb-2"
+        :class="{ 'is-loading': loading }"
+        :disabled="loading"
+        @click="openBuyCreditsModal"
+      >
         Buy Credits
-      </NuxtLink>
+      </button>
       <button
         class="button is-ghost is-small has-text-grey"
         @click="showClaimModal = true"
@@ -48,6 +54,7 @@ import AccountClaimModal from "./ClaimModal.vue";
 
 const { isAuthenticated, isLoading } = useSuperTokens();
 const { nosana } = useKit();
+const { openBuyCreditsModal } = useBuyCreditsModal();
 
 const creditBalance = ref(0);
 const reservedCredits = ref(0);

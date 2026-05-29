@@ -7,7 +7,7 @@
     <Loader v-else-if="isLoading" />
     <div v-else class="mt-6">
       <div class="is-flex is-justify-content-flex-end mb-5">
-        <button class="button is-dark" @click="showBuyModal = true">
+        <button class="button is-primary" @click="openBuyCreditsModal">
           Buy Credits
         </button>
       </div>
@@ -85,7 +85,7 @@
               <p v-if="addCardError" class="help is-danger mb-2">{{ addCardError }}</p>
               <div class="is-flex" style="gap: 0.5rem">
                 <button
-                  class="button is-dark is-small"
+                  class="button is-primary is-small"
                   :disabled="!addCardReady || addingCard"
                   :class="{ 'is-loading': addingCard }"
                   style="border-radius: 6px"
@@ -150,7 +150,6 @@
       </div>
     </div>
 
-    <AccountBuyCreditsModal v-model="showBuyModal" @purchased="onPurchased" />
     <AccountClaimModal
       v-model="showFreeCreditsModal"
       type="grant"
@@ -161,7 +160,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, nextTick, computed } from "vue";
+import { ref, onMounted, nextTick, computed, watch } from "vue";
 import { loadStripe } from "@stripe/stripe-js";
 import type { Stripe, StripeCardElement } from "@stripe/stripe-js";
 import { useToast } from "vue-toastification";
@@ -175,8 +174,8 @@ const route = useRoute();
 const router = useRouter();
 const { isAuthenticated, isLoading, userData } = useSuperTokens();
 const { triggerCreditRefresh } = useCreditRefresh();
-
-const showBuyModal = ref(false);
+const { openBuyCreditsModal, purchasedTick } = useBuyCreditsModal();
+const colorMode = useColorMode();
 const showFreeCreditsModal = ref(false);
 const freeCreditsAmount = ref<number | null>(null);
 const isFreeCreditsFlow = computed(() => route.query.source === "free-credits");
@@ -203,7 +202,7 @@ const setDefault = async (id: string) => {
 
 const tryOpenFreeCreditsClaimModal = async () => {
   try {
-    const data = await $fetch<{ eligible: boolean; amount?: number }>(
+    const data = await $fetch<{ eligible: boolean; amount?: number; message?: string }>(
       `${config.apiBase}/api/credits/request/eligibility`,
       { credentials: "include" },
     );
@@ -211,6 +210,14 @@ const tryOpenFreeCreditsClaimModal = async () => {
       clearFreeCreditsVerifyDismissed(userData.value?.id);
       freeCreditsAmount.value = data.amount ?? null;
       showFreeCreditsModal.value = true;
+      return;
+    }
+    if (data?.message) {
+      if (data.message.includes("already requested free credits")) {
+        toast.info(data.message);
+      } else {
+        toast.error(data.message);
+      }
     }
   } catch {
     // User may be ineligible for reasons other than verification
@@ -258,28 +265,7 @@ const openAddCard = async () => {
     stripe = await loadStripe(config.stripe_publishable_key as string);
   }
   if (!stripe || !addCardElementRef.value) return;
-  if (addCardElement) {
-    addCardElement.destroy();
-    addCardElement = null;
-  }
-  const elements = stripe.elements();
-  addCardElement = elements.create("card", {
-    hidePostalCode: true,
-    style: {
-      base: {
-        fontSize: "16px",
-        fontFamily:
-          "'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif",
-        "::placeholder": { color: "#aab7c4" },
-      },
-      invalid: { color: "#f14668" },
-    },
-  });
-  addCardElement.mount(addCardElementRef.value);
-  addCardElement.on("change", (e) => {
-    addCardError.value = e.error ? e.error.message : "";
-    addCardReady.value = e.complete;
-  });
+  mountStripeCardElement();
 };
 
 const cancelAddCard = () => {
@@ -362,14 +348,59 @@ const fetchPurchases = async () => {
   }
 };
 
-const onPurchased = () => {
+watch(purchasedTick, () => {
   fetchPurchases();
+});
+
+const mountStripeCardElement = () => {
+  if (!stripe || !addCardElementRef.value) return;
+  if (addCardElement) {
+    addCardElement.destroy();
+    addCardElement = null;
+  }
+  const elements = stripe.elements();
+  const isDark = colorMode.value === "dark";
+  addCardElement = elements.create("card", {
+    hidePostalCode: true,
+    style: {
+      base: {
+        fontSize: "16px",
+        fontFamily:
+          "'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif",
+        color: isDark ? "#ffffff" : "#32325d",
+        iconColor: isDark ? "#aab7c4" : "#666ee8",
+        "::placeholder": { color: isDark ? "#6b7280" : "#aab7c4" },
+      },
+      invalid: { color: "#f14668" },
+    },
+  });
+  addCardElement.mount(addCardElementRef.value);
+  addCardElement.on("change", (e) => {
+    addCardError.value = e.error ? e.error.message : "";
+    addCardReady.value = e.complete;
+  });
 };
+
+watch(
+  () => colorMode.value,
+  async () => {
+    if (showAddCard.value) {
+      await nextTick();
+      mountStripeCardElement();
+    }
+  },
+);
 
 onMounted(async () => {
   if (isAuthenticated.value) {
     await fetchPaymentMethods();
     fetchPurchases();
+    if (route.query.buy === "credits") {
+      openBuyCreditsModal();
+      const query = { ...route.query };
+      delete query.buy;
+      await router.replace({ path: "/account/payments", query });
+    }
     if (isFreeCreditsFlow.value && paymentVerified.value) {
       await tryOpenFreeCreditsClaimModal();
     }
@@ -403,5 +434,18 @@ const formatDate = (dateStr: string) =>
 
 .stripe-card-element:focus-within {
   border-color: #10e80c;
+}
+</style>
+
+<style lang="scss">
+html.dark-mode {
+  .stripe-card-element {
+    border-color: #4a4a4a;
+    background-color: #1a1a1a;
+  }
+
+  .saved-card {
+    border-color: #4a4a4a;
+  }
 }
 </style>
