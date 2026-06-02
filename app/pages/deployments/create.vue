@@ -724,6 +724,13 @@ const refreshCreditBalance = async () => {
   }
 };
 
+const { onCreditRefresh } = useCreditRefresh();
+onCreditRefresh(() => {
+  if (superTokensAuth.value) {
+    refreshCreditBalance();
+  }
+});
+
 const createDeployment = async () => {
   if (!canCreateDeployment.value) return;
 

@@ -130,7 +130,7 @@
                 <tr>
                   <th class="px-5 py-4">Date</th>
                   <th class="px-5 py-4">Amount</th>
-                  <th class="px-5 py-4">Reference</th>
+                  <th class="px-5 py-4">Card</th>
                 </tr>
               </thead>
               <tbody>
@@ -139,8 +139,20 @@
                   <td class="px-5 py-4">
                     <strong>${{ purchase.amountUsd.toFixed(2) }}</strong>
                   </td>
-                  <td class="px-5 py-4 is-size-7 is-family-monospace has-text-grey">
-                    {{ purchase.referenceId ?? "—" }}
+                  <td class="px-5 py-4">
+                    <div
+                      v-if="purchase.cardLast4"
+                      class="is-flex is-align-items-center"
+                    >
+                      <AccountCardBrandIcon
+                        :brand="purchase.cardBrand"
+                        class="mr-2"
+                      />
+                      <span class="is-family-monospace is-size-7">
+                        &bull;&bull;&bull;&bull; {{ purchase.cardLast4 }}
+                      </span>
+                    </div>
+                    <span v-else class="has-text-grey is-size-7">Unknown</span>
                   </td>
                 </tr>
               </tbody>
@@ -210,17 +222,9 @@ const tryOpenFreeCreditsClaimModal = async () => {
       clearFreeCreditsVerifyDismissed(userData.value?.id);
       freeCreditsAmount.value = data.amount ?? null;
       showFreeCreditsModal.value = true;
-      return;
-    }
-    if (data?.message) {
-      if (data.message.includes("already requested free credits")) {
-        toast.info(data.message);
-      } else {
-        toast.error(data.message);
-      }
     }
   } catch {
-    // User may be ineligible for reasons other than verification
+    // Ineligible or request failed — no UI feedback
   }
 };
 
@@ -232,6 +236,16 @@ const handleFreeCreditsClaimed = async () => {
 };
 
 const deleteMethod = async (id: string) => {
+  const method = methods.value.find((m) => m.id === id);
+  const cardLabel = method?.last4 ? `card ending in ${method.last4}` : "this card";
+  if (
+    !confirm(
+      `Remove ${cardLabel} from your account? You will need to add a card again to buy credits or claim free credits.`,
+    )
+  ) {
+    return;
+  }
+
   deletingId.value = id;
   try {
     await $fetch(`${config.apiBase}/api/payments/methods/${id}`, {
@@ -328,6 +342,8 @@ interface Purchase {
   amountUsd: number;
   createdAt: string;
   referenceId: string | null;
+  cardBrand: string | null;
+  cardLast4: string | null;
 }
 
 const purchases = ref<Purchase[]>([]);

@@ -55,6 +55,7 @@ import AccountClaimModal from "./ClaimModal.vue";
 const { isAuthenticated, isLoading } = useSuperTokens();
 const { nosana } = useKit();
 const { openBuyCreditsModal } = useBuyCreditsModal();
+const { onCreditRefresh } = useCreditRefresh();
 
 const creditBalance = ref(0);
 const reservedCredits = ref(0);
@@ -85,6 +86,12 @@ const fetchBalance = async () => {
     loading.value = false;
   }
 };
+
+onCreditRefresh(() => {
+  if (isAuthenticated.value) {
+    fetchBalance();
+  }
+});
 
 onMounted(() => {
   if (isAuthenticated.value && !hasLoadedOnce.value) {
