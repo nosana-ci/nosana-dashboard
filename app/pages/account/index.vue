@@ -42,6 +42,7 @@
         v-model="showFreeCreditsVerifyModal"
         :amount="freeCreditsAmount"
         @dismissed="handleFreeCreditsVerifyDismissed"
+        @verified="handleFreeCreditsVerified"
       />
       <!-- Credit Invitation Section - only show when there's an issue -->
       <div
@@ -579,6 +580,24 @@ const checkFreeCreditsEligibility = async (force = false) => {
 
 const handleFreeCreditsVerifyDismissed = () => {
   setFreeCreditsVerifyDismissed(userData.value?.id);
+};
+
+const handleFreeCreditsVerified = async () => {
+  pendingFreeCreditsVerification.value = false;
+  clearFreeCreditsVerifyDismissed(userData.value?.id);
+
+  try {
+    const data = await $fetch<{ eligible: boolean; amount?: number }>(
+      `${config.apiBase}/api/credits/request/eligibility`,
+      { credentials: "include" },
+    );
+    if (data?.eligible) {
+      freeCreditsAmount.value = data.amount ?? null;
+      showFreeCreditsModal.value = true;
+    }
+  } catch {
+    // User can claim from account later
+  }
 };
 
 const handleFreeCreditsClaimed = async (amount: number) => {

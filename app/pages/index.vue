@@ -31,9 +31,7 @@
             <template v-if="isSignUpMode">
               <h1 class="login-title">Create Your Account</h1>
               <p class="login-subtitle">
-                Sign up to build with the Nosana AI Platform.<template v-if="freeCreditsEnabled !== false">
-                  Sign in with GitHub or Google, verify a payment method (not charged), and get{{ freeCreditsFormatted ? ` ${freeCreditsFormatted} in` : '' }} free credits.
-                </template>
+                Sign up to build with the Nosana AI Platform
               </p>
 
               <form @submit.prevent="handleEmailSubmit" class="email-form">
@@ -122,14 +120,11 @@
                 }}
               </h1>
               <p class="login-subtitle">
-                <template v-if="freeCreditsEnabled === false">
-                  {{ isCampaignMode
-                    ? "Free credits are currently unavailable. Please check back soon."
-                    : "Sign in or create an account to build with the Nosana AI Platform"
-                  }}
+                <template v-if="isCampaignMode && freeCreditsEnabled === false">
+                  Free credits are currently unavailable. Please check back soon.
                 </template>
                 <template v-else>
-                  Sign in with GitHub or Google, verify a payment method (not charged), and get{{ freeCreditsFormatted ? ` ${freeCreditsFormatted} in` : '' }} free credits.
+                  Sign in or create an account to build with the Nosana AI Platform
                 </template>
               </p>
 
@@ -445,24 +440,14 @@ const signingMessage = ref(false);
 const backgroundImageKey = ref(0);
 const currentWalletName = ref<string | null>(null);
 const freeCreditsEnabled = ref<boolean | null>(null);
-const freeCreditsAmount = ref<number | null>(null);
 
 const { data: freeCreditsConfig } = useAPI("/api/credits/admin/request/config");
-
-const freeCreditsFormatted = computed(() => {
-  if (freeCreditsAmount.value != null) {
-    return `$${(freeCreditsAmount.value / 1000).toFixed(0)}`;
-  }
-  return null;
-});
 
 watch(
   freeCreditsConfig,
   (val) => {
     freeCreditsEnabled.value =
       typeof val?.enabled === "boolean" ? val.enabled : null;
-    freeCreditsAmount.value =
-      typeof val?.amount === "number" ? val.amount : null;
   },
   { immediate: true },
 );
