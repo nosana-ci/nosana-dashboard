@@ -227,17 +227,6 @@
         </div>
       </div>
 
-      <!-- Terminal Tab -->
-      <div v-if="activeTab === 'terminal'">
-        <ClientOnly>
-          <JobTerminal
-            :jobAddress="props.job.address"
-            :node="String(props.job.node)"
-            :canConnect="hasTerminal"
-          />
-        </ClientOnly>
-      </div>
-
       <!-- System Logs Tab -->
       <div v-if="activeTab === 'system-logs'">
         <div v-if="props.job.jobDefinition">
@@ -329,7 +318,6 @@ import JobPrice from "~/components/Job/Price.vue";
 import ExtendModal from "~/components/Job/Modals/Extend.vue";
 import JobTabs from "~/components/Job/Tabs.vue";
 import JobOverview from "~/components/Job/Tabs/Overview.vue";
-import JobTerminal from "~/components/Job/Tabs/Terminal.vue";
 import JobResult from "~/components/Job/Result.vue";
 import JobDefinitionTab from "~/components/Job/Tabs/JobDefinition.vue";
 import SecondsFormatter from "~/components/SecondsFormatter.vue";
@@ -1003,13 +991,9 @@ const hasContainerControls = computed(() => {
   return operationTabs.length > 0 && hasOperationLogs;
 });
 
-// Interactive web terminal is available to the job poster while the job runs.
-const hasTerminal = computed<boolean>(
-  () => props.isJobPoster && props.job.isRunning && hasRealNode.value,
-);
-
 // Check if system logs tab should be available
-const hasSystemLogs = computed(() => {  if (!props.job.jobDefinition) return false;
+const hasSystemLogs = computed(() => {
+  if (!props.job.jobDefinition) return false;
 
   if (props.job.isCompleted) return false;
 
@@ -1039,10 +1023,6 @@ const availableTabs = computed(() => {
     tabs.push("container-controls");
   }
 
-  if (hasTerminal.value) {
-    tabs.push("terminal");
-  }
-
   if (hasSystemLogs.value) {
     tabs.push("system-logs");
   }
@@ -1063,8 +1043,6 @@ const getTabLabel = (tab: string) => {
       return "Configuration";
     case "container-controls":
       return "Containers";
-    case "terminal":
-      return "Terminal";
     case "results":
       return "Results";
     default:
