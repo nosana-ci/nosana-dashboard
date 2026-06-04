@@ -71,7 +71,11 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
   const isAuthenticated = walletAuthenticated || superTokensAuthenticated;
 
   // Redirect authenticated users from root to account (only if email is verified)
-  if (to.path === "/" && isAuthenticated && isEmailVerified.value !== false) {
+  if (
+    to.path === "/" &&
+    (walletAuthenticated ||
+      (superTokensAuthenticated && isEmailVerified.value !== false))
+  ) {
     return navigateTo("/account/");
   }
 
@@ -81,7 +85,7 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
     return;
   }
 
-  if (isAuthenticated && isEmailVerified.value === false) {
+  if (superTokensAuthenticated && isEmailVerified.value === false) {
     if (
       !to.path.startsWith("/st-auth/verify-email") &&
       !to.path.startsWith("/st-auth/callback/") &&

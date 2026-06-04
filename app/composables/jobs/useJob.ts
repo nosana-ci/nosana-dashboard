@@ -9,6 +9,7 @@ import { EventSourcePolyfill } from "event-source-polyfill";
 import type { JobInfo, JobViewModel, LiveEndpoints, ResultsSection } from "~/composables/jobs/types";
 import { normalizeEndpoints } from "~/composables/jobs/normalizeEndpoints";
 import { useMyAsyncData } from "~/composables/useMyAsyncData";
+import { useDeploymentAuth } from "~/composables/useDeploymentAuth";
 
 /**
  * Helper to convert job state to a number, normalizing "RUNNING", "QUEUED", etc.
@@ -39,6 +40,7 @@ export function useJob(jobId: string) {
   const { nosana, publicKey } = useKit();
   const { isAuthenticated: superTokensAuth, userData } = useSuperTokens();
   const { connected } = useWallet();
+  const { getAuthHeader } = useDeploymentAuth();
 
   // Use kit's API client instead of custom useAPI
   const fetchJob = async () => {
@@ -422,8 +424,7 @@ export function useJob(jobId: string) {
         return;
       }
       const url = `https://${nodeAddr}.${nodeDomain}/job/${jobId}/job-definition`;
-      const headers = await nosana.value.authorization.generateHeaders('nosana-auth', { key: 'Authorization', includeTime: false });
-      const authHeader = headers.get('Authorization') || headers.get('authorization') || '';
+      const authHeader = await getAuthHeader(jobId);
       const response = await $fetch<JobDefinition | string>(url, { method: 'GET', headers: { authorization: authHeader } });
       const parsed: JobDefinition = typeof response === 'string' ? JSON.parse(response) : response;
       if (parsed) {
@@ -495,8 +496,7 @@ export function useJob(jobId: string) {
           return;
         }
 
-        const headers = await nosana.value.authorization.generateHeaders('nosana-auth', { key: 'Authorization', includeTime: false });
-        const authHeader = headers.get('Authorization') || headers.get('authorization') || '';
+        const authHeader = await getAuthHeader(jobId);
         const sseUrl = `https://${nodeAddress}.${config.public.nodeDomain}/job/${jobId}/info`;
 
         eventSource = new EventSourcePolyfill(sseUrl, {

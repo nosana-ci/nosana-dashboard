@@ -18,14 +18,22 @@ let inFlight: Promise<string> | null = null;
 export function useDeploymentAuth() {
   const { nosana } = useKit();
   const { connected } = useWallet();
-  const { isAuthenticated: superTokensAuth } = useSuperTokens();
+  const {
+    isAuthenticated: superTokensAuth,
+    isLoading: superTokensLoading,
+    checkSession,
+  } = useSuperTokens();
 
-  const getAuthHeader = async (): Promise<string> => {
+  const getAuthHeader = async (_scope?: string): Promise<string> => {
     if (inFlight) return inFlight;
 
     const signOptions = ["nosana-auth", { includeTime: false }] as const;
 
     inFlight = (async () => {
+      if (superTokensLoading.value) {
+        await checkSession(false);
+      }
+
       if (superTokensAuth.value) {
         const message = await nosana.value.api.auth.signMessage(...signOptions);
         return `${signOptions[0]}:${message}`;

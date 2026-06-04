@@ -26,11 +26,32 @@ const userData = ref<User | null>(null);
 // Track if we've done initial load
 let initialCheckDone = false;
 let checkSessionPromise: Promise<boolean> | null = null;
+let checkSessionPromiseToken: symbol | null = null;
 let fetchUserPromise: Promise<void> | null = null;
+let fetchUserPromiseVersion: number | null = null;
+let fetchUserPromiseToken: symbol | null = null;
+let sessionStateVersion = 0;
+
+const isCurrentSessionState = (version: number) =>
+  version === sessionStateVersion;
+
+const clearSessionState = () => {
+  isAuthenticated.value = false;
+  isLoading.value = false;
+  userId.value = null;
+  userData.value = null;
+  isEmailVerified.value = null;
+};
 
 // Fetch user profile
-const fetchUserData = async () => {
-  if (fetchUserPromise) return fetchUserPromise;
+const fetchUserData = async (version = sessionStateVersion) => {
+  if (fetchUserPromise && fetchUserPromiseVersion === version) {
+    return fetchUserPromise;
+  }
+
+  fetchUserPromiseVersion = version;
+  const token = Symbol("fetchUser");
+  fetchUserPromiseToken = token;
 
   fetchUserPromise = (async () => {
     if (!isAuthenticated.value) {
@@ -47,14 +68,20 @@ const fetchUserData = async () => {
         },
       );
 
-      if (response && response.id) {
+      if (response && response.id && isCurrentSessionState(version)) {
         userData.value = response;
       }
     } catch (error) {
       console.error("Error fetching user profile:", error);
-      userData.value = null;
+      if (isCurrentSessionState(version)) {
+        userData.value = null;
+      }
     } finally {
-      fetchUserPromise = null;
+      if (fetchUserPromiseToken === token) {
+        fetchUserPromise = null;
+        fetchUserPromiseVersion = null;
+        fetchUserPromiseToken = null;
+      }
     }
   })();
 
@@ -65,14 +92,25 @@ const fetchUserData = async () => {
 const checkSession = async (shouldFetchUserData = true): Promise<boolean> => {
   if (checkSessionPromise) return checkSessionPromise;
 
+  const version = sessionStateVersion;
+  const token = Symbol("checkSession");
+  checkSessionPromiseToken = token;
+
   checkSessionPromise = (async () => {
     try {
       isLoading.value = true;
       const exists = await Session.doesSessionExist();
-      isAuthenticated.value = exists;
+
+      if (!isCurrentSessionState(version)) {
+        return isAuthenticated.value;
+      }
 
       if (exists) {
-        userId.value = await Session.getUserId();
+        const sessionUserId = await Session.getUserId();
+
+        if (!isCurrentSessionState(version)) {
+          return isAuthenticated.value;
+        }
 
         try {
           const verificationResponse =
@@ -80,32 +118,49 @@ const checkSession = async (shouldFetchUserData = true): Promise<boolean> => {
           const verified =
             verificationResponse.status === "OK" &&
             verificationResponse.isVerified;
+
+          if (!isCurrentSessionState(version)) {
+            return isAuthenticated.value;
+          }
+
+          isAuthenticated.value = true;
+          userId.value = sessionUserId;
           isEmailVerified.value = verified;
 
           if (verified && shouldFetchUserData) {
-            await fetchUserData();
+            await fetchUserData(version);
           }
         } catch (e) {
           console.error("Error checking email verification:", e);
-          isEmailVerified.value = false;
+          if (isCurrentSessionState(version)) {
+            isAuthenticated.value = true;
+            userId.value = sessionUserId;
+            isEmailVerified.value = null;
+
+            if (shouldFetchUserData) {
+              await fetchUserData(version);
+            }
+          }
         }
       } else {
-        userId.value = null;
-        userData.value = null;
-        isEmailVerified.value = null;
+        clearSessionState();
       }
 
       return exists;
     } catch (error) {
       console.error("Error checking SuperTokens session:", error);
-      isAuthenticated.value = false;
-      userId.value = null;
-      userData.value = null;
-      isEmailVerified.value = null;
+      if (isCurrentSessionState(version)) {
+        clearSessionState();
+      }
       return false;
     } finally {
-      isLoading.value = false;
-      checkSessionPromise = null;
+      if (isCurrentSessionState(version)) {
+        isLoading.value = false;
+      }
+      if (checkSessionPromiseToken === token) {
+        checkSessionPromise = null;
+        checkSessionPromiseToken = null;
+      }
     }
   })();
 
@@ -122,9 +177,10 @@ export function useSuperTokens() {
     });
 
     if (response.status === "OK") {
+      sessionStateVersion += 1;
       isAuthenticated.value = true;
       userId.value = response.user.id;
-      await fetchUserData();
+      await fetchUserData(sessionStateVersion);
     }
 
     return response;
@@ -165,6 +221,7 @@ export function useSuperTokens() {
     });
 
     if (response.status === "OK") {
+      sessionStateVersion += 1;
       isAuthenticated.value = true;
       userId.value = response.user.id;
     }
@@ -187,22 +244,29 @@ export function useSuperTokens() {
     const response = await signInAndUp();
 
     if (response.status === "OK") {
+      sessionStateVersion += 1;
       isAuthenticated.value = true;
       userId.value = response.user.id;
-      await fetchUserData();
+      await fetchUserData(sessionStateVersion);
     }
 
     return response;
   };
 
   const signOut = async () => {
+    const version = sessionStateVersion + 1;
+    sessionStateVersion = version;
+    checkSessionPromise = null;
     try {
       await Session.signOut();
-      isAuthenticated.value = false;
-      userId.value = null;
-      userData.value = null;
+      if (isCurrentSessionState(version)) {
+        clearSessionState();
+      }
     } catch (error) {
       console.error("Error signing out:", error);
+      if (isCurrentSessionState(version)) {
+        clearSessionState();
+      }
       throw error;
     }
   };
@@ -229,7 +293,7 @@ export function useSuperTokens() {
       return verified;
     } catch (error) {
       console.error("Error checking email verification:", error);
-      isEmailVerified.value = false;
+      isEmailVerified.value = null;
       return false;
     }
   };

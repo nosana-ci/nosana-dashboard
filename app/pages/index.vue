@@ -378,6 +378,7 @@ import WalletIcon from "~/components/WalletIcon.vue";
 import { useNosanaWallet } from "~/composables/useNosanaWallet";
 import { useSuperTokens } from "~/composables/useSuperTokens";
 import { useAPI } from "~/composables/useAPI";
+import { createAuthCookiesKey } from "~/utils/createAuthCookiesKey";
 
 declare global {
   interface Window {
@@ -437,6 +438,7 @@ const googleLoading = ref(false);
 const githubLoading = ref(false);
 const showWalletModal = ref(false);
 const signingMessage = ref(false);
+const providerSwitchInProgress = ref(false);
 const backgroundImageKey = ref(0);
 const currentWalletName = ref<string | null>(null);
 const freeCreditsEnabled = ref<boolean | null>(null);
@@ -474,6 +476,44 @@ const handleDisconnect = async () => {
     toast.info("Wallet disconnected");
   } catch (error) {
     toast.error("Failed to disconnect wallet");
+  }
+};
+
+const clearWalletAuthState = async () => {
+  const sessionCookie = useCookie<{ address?: string } | null>(
+    "nosana-wallet-session",
+  );
+  const addresses = new Set<string>();
+
+  if (sessionCookie.value?.address) {
+    addresses.add(sessionCookie.value.address);
+  }
+  if (account.value?.address) {
+    addresses.add(account.value.address);
+  }
+
+  for (const address of addresses) {
+    const authCookie = useCookie(createAuthCookiesKey(address));
+    authCookie.value = null;
+  }
+
+  sessionCookie.value = null;
+  currentWalletName.value = null;
+
+  if (typeof localStorage !== "undefined") {
+    localStorage.removeItem("nosana-wallet");
+  }
+
+  if (connected.value) {
+    await disconnect();
+  }
+};
+
+const clearSuperTokensAuthState = async () => {
+  try {
+    await signOut();
+  } catch (error) {
+    console.warn("Failed to clear SuperTokens session before wallet login:", error);
   }
 };
 
@@ -604,8 +644,11 @@ const handleEmailSubmit = async () => {
   });
 
   emailLoading.value = true;
+  providerSwitchInProgress.value = true;
 
   try {
+    await clearWalletAuthState();
+
     const captchaToken = isSignUpMode.value
       ? await getSignupCaptchaToken()
       : undefined;
@@ -671,6 +714,7 @@ const handleEmailSubmit = async () => {
   authError.value = error?.message || "An error occurred. Please try again.";
   } finally {
     emailLoading.value = false;
+    providerSwitchInProgress.value = false;
   }
 };
 
@@ -685,7 +729,11 @@ onMounted(async () => {
     superTokensAuth.value || walletAuthenticated || hasSession;
 
   // Only redirect to account if authenticated AND email is verified
-  if (isAuthenticated && isEmailVerified.value !== false) {
+  if (
+    !providerSwitchInProgress.value &&
+    isAuthenticated &&
+    isEmailVerified.value !== false
+  ) {
     const redirect = (route.query.redirect as string) || "/account";
     router.replace(redirect);
     return;
@@ -752,6 +800,7 @@ const checkWalletAuth = () => {
 // Google login logic
 const selectGoogleLogin = async () => {
   googleLoading.value = true;
+  providerSwitchInProgress.value = true;
   let popup: Window | null = null;
 
   try {
@@ -759,9 +808,7 @@ const selectGoogleLogin = async () => {
       auth_method: "google",
     });
 
-    if (connected.value) {
-      await disconnect();
-    }
+    await clearWalletAuthState();
 
     const redirectUri = `${window.location.origin}/st-auth/callback/google`;
     const authUrl = await getThirdPartyAuthUrl("google", redirectUri);
@@ -804,6 +851,7 @@ const selectGoogleLogin = async () => {
         popup?.close();
         toast.error(event.data.error || "Authentication failed");
         googleLoading.value = false;
+        providerSwitchInProgress.value = false;
       }
     };
 
@@ -816,6 +864,7 @@ const selectGoogleLogin = async () => {
         window.removeEventListener("message", handleMessage);
         if (googleLoading.value) {
           googleLoading.value = false;
+          providerSwitchInProgress.value = false;
         }
         if (githubLoading.value) {
           githubLoading.value = false;
@@ -831,12 +880,14 @@ const selectGoogleLogin = async () => {
       toast.error("Error starting Google login");
     }
     googleLoading.value = false;
+    providerSwitchInProgress.value = false;
   }
 };
 
 // GitHub login logic
 const selectGithubLogin = async () => {
   githubLoading.value = true;
+  providerSwitchInProgress.value = true;
   let popup: Window | null = null;
 
   try {
@@ -844,9 +895,7 @@ const selectGithubLogin = async () => {
       auth_method: "github",
     });
 
-    if (connected.value) {
-      await disconnect();
-    }
+    await clearWalletAuthState();
 
     const redirectUri = `${window.location.origin}/st-auth/callback/github`;
     const authUrl = await getThirdPartyAuthUrl("github", redirectUri);
@@ -889,6 +938,7 @@ const selectGithubLogin = async () => {
         popup?.close();
         toast.error(event.data.error || "Authentication failed");
         githubLoading.value = false;
+        providerSwitchInProgress.value = false;
       }
     };
 
@@ -900,6 +950,7 @@ const selectGithubLogin = async () => {
         window.removeEventListener("message", handleMessage);
         if (githubLoading.value) {
           githubLoading.value = false;
+          providerSwitchInProgress.value = false;
         }
       }
     }, 1000);
@@ -912,15 +963,15 @@ const selectGithubLogin = async () => {
       toast.error("Error starting GitHub login");
     }
     githubLoading.value = false;
+    providerSwitchInProgress.value = false;
   }
 };
 
 // Wallet connection logic
 const handleWalletConnect = async () => {
+  providerSwitchInProgress.value = true;
   try {
-    if (superTokensAuth.value) {
-      await signOut();
-    }
+    await clearSuperTokensAuthState();
 
     if (wallets.value && wallets.value.length > 0) {
       showWalletModal.value = true;
@@ -948,6 +999,8 @@ const handleWalletConnect = async () => {
   } catch (error) {
     console.error("Error preparing wallet selection:", error);
     toast.error("Failed to prepare wallet connection.");
+  } finally {
+    providerSwitchInProgress.value = false;
   }
 };
 
