@@ -72,11 +72,11 @@
             <div v-else-if="!savedMethods.length" class="no-card-notice">
               <p class="is-size-7 mb-2">No payment method on file.</p>
               <nuxt-link
-                to="/account/payments"
+                to="/account/billing"
                 class="is-size-7 has-text-dark"
                 @click="closeModal"
               >
-                Add a card on the Payments page &rarr;
+                Add a card on the Billing page &rarr;
               </nuxt-link>
             </div>
             <div
@@ -130,7 +130,7 @@
               </ul>
             </div>
             <p v-if="savedMethods.length" class="is-size-7 mt-2 mb-0">
-              <nuxt-link to="/account/payments" class="has-text-grey" @click="closeModal">
+              <nuxt-link to="/account/billing" class="has-text-grey" @click="closeModal">
                 Manage cards
               </nuxt-link>
             </p>

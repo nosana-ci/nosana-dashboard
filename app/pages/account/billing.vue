@@ -1,8 +1,8 @@
 <template>
   <div>
-    <TopBar title="Payments" subtitle="Manage your payment methods and purchase history" />
+    <TopBar title="Billing" subtitle="Manage your payment methods and purchase history" />
     <div v-if="!isAuthenticated && !isLoading" class="section has-text-centered">
-      <p class="has-text-grey">Please sign in to manage payments.</p>
+      <p class="has-text-grey">Please sign in to manage billing.</p>
     </div>
     <Loader v-else-if="isLoading" />
     <div v-else class="mt-6">
@@ -231,7 +231,7 @@ const tryOpenFreeCreditsClaimModal = async () => {
 const handleFreeCreditsClaimed = async () => {
   triggerCreditRefresh();
   if (isFreeCreditsFlow.value) {
-    await router.replace({ path: "/account/payments" });
+    await router.replace({ path: "/account/billing" });
   }
 };
 
@@ -415,7 +415,7 @@ onMounted(async () => {
       openBuyCreditsModal();
       const query = { ...route.query };
       delete query.buy;
-      await router.replace({ path: "/account/payments", query });
+      await router.replace({ path: "/account/billing", query });
     }
     if (isFreeCreditsFlow.value && paymentVerified.value) {
       await tryOpenFreeCreditsClaimModal();

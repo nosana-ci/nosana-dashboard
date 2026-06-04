@@ -77,7 +77,7 @@
           <div class="mt-5">
             <nuxt-link
               v-if="verificationRequired && !claimedSuccessfully"
-              to="/account/payments?source=free-credits"
+              to="/account/billing?source=free-credits"
               class="button is-dark is-fullwidth is-medium"
               style="border-radius: 8px"
               @click="closeModal"

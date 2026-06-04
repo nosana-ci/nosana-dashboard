@@ -39,6 +39,19 @@
         </li>
         <li>
           <nuxt-link
+            to="/account/billing"
+            active-class="is-active"
+            @click="showMenu = false"
+            style="padding-left: 1.1rem"
+          >
+            <span class="icon is-small mr-4">
+              <CoinsIcon />
+            </span>
+            <span>Billing</span>
+          </nuxt-link>
+        </li>
+        <li>
+          <nuxt-link
             active-class="is-active"
             @click="showMenu = false"
             to="/support"

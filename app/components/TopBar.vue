@@ -128,10 +128,10 @@
         <button
           v-if="isGoogleAuthenticated"
           class="dropdown-item-simple"
-          @click.stop="goToPayments"
+          @click.stop="goToBilling"
         >
           <WalletIcon class="dropdown-icon" />
-          Payments
+          Billing
         </button>
         <!-- Priority Fee Settings for wallet users -->
         <button
@@ -222,9 +222,9 @@ const goToAccount = () => {
   router.push("/account");
 };
 
-const goToPayments = () => {
+const goToBilling = () => {
   showUserProfileDropdown.value = false;
-  router.push("/account/payments");
+  router.push("/account/billing");
 };
 
 // Wallet address formatting

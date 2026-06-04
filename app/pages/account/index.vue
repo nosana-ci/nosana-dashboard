@@ -125,43 +125,45 @@
       <Loader v-if="isLoading && !canShowAccountData" />
       <div v-else-if="canShowAccountData">
         <div class="columns mt-6">
-          <div class="column is-4">
+          <div class="column is-4 cost-usage-column">
             <h3 class="title is-4 mb-0">Cost and Usage</h3>
             <div class="mb-4"></div>
-            <div class="box cost-and-usage-box">
-              <!-- Credit / NOS balance at the top -->
-              <div v-if="isAuthenticated" class="balance-section">
-                <CreditBalance />
-              </div>
-              <div
-                v-else-if="connected && publicKey && nosBalance"
-                class="balance-section has-text-centered"
-              >
-                <p
-                  class="heading mb-1"
-                  style="
-                    font-size: 0.7rem;
-                    text-transform: uppercase;
-                    font-weight: 600;
-                    color: #7a7a7a;
-                  "
+            <div class="box credit-usage-box">
+              <div class="credit-usage-top">
+                <CreditBalance v-if="isAuthenticated" />
+                <div
+                  v-else-if="connected && publicKey && nosBalance"
+                  class="balance-section has-text-centered"
                 >
-                  NOS Balance
-                </p>
-                <p class="title is-4 mb-1">
-                  {{ nosBalance.uiAmount.toFixed(2) }} NOS
-                  <span class="has-text-grey is-size-6"
-                    >${{ (nosBalance.uiAmount * nosPrice).toFixed(2) }}</span
+                  <p
+                    class="heading mb-1"
+                    style="
+                      font-size: 0.7rem;
+                      text-transform: uppercase;
+                      font-weight: 600;
+                      color: #7a7a7a;
+                    "
                   >
-                </p>
+                    NOS Balance
+                  </p>
+                  <p class="title is-4 mb-1">
+                    {{ nosBalance.uiAmount.toFixed(2) }} NOS
+                    <span class="has-text-grey is-size-6"
+                      >${{ (nosBalance.uiAmount * nosPrice).toFixed(2) }}</span
+                    >
+                  </p>
+                </div>
               </div>
+
               <div class="usage-divider"></div>
 
-              <!-- This month + forecast side by side -->
-              <div class="columns is-mobile mb-0">
+              <div class="credit-usage-bottom">
+                <div class="credit-usage-bottom-inner">
+                <p class="title is-6 mb-4 usage-heading">Usage this month</p>
+                <div class="columns is-mobile mb-0 usage-metrics">
                 <div class="column">
                   <p class="heading mb-1" style="font-size: 0.7rem">
-                    This months cost
+                    Spent
                   </p>
                   <p
                     class="title is-4 mb-1"
@@ -187,9 +189,9 @@
                     {{ pctChangeSoFar.toFixed(2) }}% vs last month
                   </p>
                 </div>
-                <div class="column">
+                <div class="column usage-column-divider">
                   <p class="heading mb-1" style="font-size: 0.7rem">
-                    Forecasted cost
+                    Forecasted
                   </p>
                   <p
                     class="title is-4 mb-1"
@@ -215,6 +217,8 @@
                     {{ pctChangeForecastFromLastMonth.toFixed(2) }}% vs last
                     month
                   </p>
+                </div>
+                </div>
                 </div>
               </div>
             </div>
@@ -277,7 +281,7 @@
             <div class="equal-height-boxes">
               <nuxt-link
                 v-if="pendingFreeCreditsVerification"
-                to="/account/payments?source=free-credits"
+                to="/account/billing?source=free-credits"
                 class="box p-2 mb-2 is-block free-credits-verify-box"
               >
                 <div
@@ -773,7 +777,7 @@ const refreshSpendingHistory = () => {
   return _refreshSpendingHistory();
 };
 
-// Compute values for Cost and Usage section
+// Compute values for Usage this month section
 const spentThisMonth = computed(() => {
   if (!spendingHistory.value?.results) return 0;
 
@@ -1354,21 +1358,64 @@ watch(
   color: #f5f5f5;
 }
 
-.usage-divider {
-  width: 100%;
-  height: 1px;
-  background-color: #dbdbdb;
-  margin: 1rem 0;
-}
-
 .balance-section {
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 
-.cost-and-usage-box {
-  justify-content: space-evenly;
+.usage-divider {
+  width: 100%;
+  height: 1px;
+  background-color: #dbdbdb;
+  margin: 1.75rem 0;
+}
+
+.cost-usage-column {
+  display: flex;
+  flex-direction: column;
+}
+
+.credit-usage-box {
+  flex: 1 1 auto;
+  height: auto;
+  max-height: none !important;
+  padding: 1.75rem;
+}
+
+.credit-usage-top,
+.credit-usage-bottom {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
+.credit-usage-bottom-inner {
+  width: 100%;
+  max-width: 100%;
+}
+
+.usage-heading {
+  text-align: center;
+}
+
+.usage-metrics .column {
+  text-align: center;
+}
+
+.usage-column-divider {
+  border-left: 1px solid #dbdbdb;
+}
+
+.dark-mode .usage-divider {
+  background-color: #363636;
+}
+
+.dark-mode .usage-column-divider {
+  border-color: #363636;
 }
 
 .buttons.has-addons .button:focus,
@@ -1384,7 +1431,7 @@ watch(
   justify-content: center;
 }
 
-/* Special handling for Cost and Usage and Monthly History boxes */
+/* Special handling for account summary and Monthly History boxes */
 .column.is-4 .box:not(.equal-height-boxes .box) {
   max-height: 360px;
 }
