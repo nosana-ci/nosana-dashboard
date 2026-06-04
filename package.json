@@ -39,8 +39,6 @@
     "@types/dompurify": "^3.0.5",
     "@vueuse/components": "^10.9.0",
     "@vueuse/integrations": "^10.9.0",
-    "@xterm/addon-fit": "^0.10.0",
-    "@xterm/xterm": "^5.5.0",
     "ansi_up": "^5.2.1",
     "bn.js": "^5.2.1",
     "bulma-o-steps": "^1.1.0",
