@@ -217,6 +217,27 @@ const saveCard = async () => {
         body: { paymentMethodId: result.paymentMethod.id },
       },
     );
+
+    if (res.requiresAction && res.clientSecret) {
+      const confirmResult = await stripe.confirmCardSetup(res.clientSecret);
+      if (confirmResult.error) {
+        cardError.value =
+          confirmResult.error.message ?? "Card authentication failed.";
+        return;
+      }
+      await fetchPaymentMethods();
+      if (!paymentVerified.value) {
+        cardError.value =
+          "Your card could not be verified. Please try a different card.";
+        return;
+      }
+      toast.success("Payment method verified.");
+      emit("verified");
+      emit("update:modelValue", false);
+      resetModal();
+      return;
+    }
+
     if (!res.accepted) {
       cardError.value =
         res.verificationError ??
@@ -225,6 +246,11 @@ const saveCard = async () => {
     }
     paymentVerified.value = res.paymentVerified;
     await fetchPaymentMethods();
+    if (!paymentVerified.value) {
+      cardError.value =
+        "Your card could not be verified. Please try a different card.";
+      return;
+    }
     toast.success("Payment method verified.");
     emit("verified");
     emit("update:modelValue", false);

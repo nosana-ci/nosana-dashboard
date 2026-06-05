@@ -17,6 +17,9 @@ export interface SetupIntentResponse {
   accepted: boolean;
   verificationError: string | null;
   paymentVerified: boolean;
+  requiresAction: boolean;
+  clientSecret: string | null;
+  setupIntentId: string | null;
 }
 
 const methods = ref<SavedPaymentMethod[]>([]);

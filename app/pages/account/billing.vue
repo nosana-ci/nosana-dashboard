@@ -313,6 +313,26 @@ const handleAddCard = async () => {
         body: { paymentMethodId: result.paymentMethod.id },
       },
     );
+
+    if (res.requiresAction && res.clientSecret) {
+      const confirmResult = await stripe.confirmCardSetup(res.clientSecret);
+      if (confirmResult.error) {
+        addCardError.value =
+          confirmResult.error.message ?? "Card authentication failed.";
+        return;
+      }
+      await fetchPaymentMethods();
+      if (!paymentVerified.value) {
+        addCardError.value =
+          "Your card could not be verified. Please try a different card.";
+        return;
+      }
+      toast.success("Payment method verified.");
+      cancelAddCard();
+      await tryOpenFreeCreditsClaimModal();
+      return;
+    }
+
     if (!res.accepted) {
       addCardError.value =
         res.verificationError ??
@@ -324,7 +344,7 @@ const handleAddCard = async () => {
     cancelAddCard();
     await fetchPaymentMethods();
 
-    if (res.paymentVerified) {
+    if (paymentVerified.value) {
       await tryOpenFreeCreditsClaimModal();
     }
   } catch (err: unknown) {

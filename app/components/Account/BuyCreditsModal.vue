@@ -306,6 +306,18 @@ const handlePurchase = async () => {
         purchaseError.value = result.error.message ?? "Payment failed";
         return;
       }
+
+      const status = result.paymentIntent?.status;
+      if (status === "processing") {
+        purchaseError.value =
+          "Payment is processing. Your balance will update shortly.";
+        triggerCreditRefresh();
+        return;
+      }
+      if (status && status !== "succeeded") {
+        purchaseError.value = "Payment could not be completed. Please try again.";
+        return;
+      }
     }
 
     purchasedAmount.value = effectiveAmount.value;
