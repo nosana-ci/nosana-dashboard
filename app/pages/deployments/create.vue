@@ -907,7 +907,7 @@ watch(
   { deep: true }
 );
 
-// Auto-select PyTorch template when grouped templates load
+// Auto-select template from URL query param or fall back to PyTorch
 watch(
   () => groupedTemplates.value,
   (newTemplates) => {
@@ -917,6 +917,21 @@ watch(
       !selectedTemplate.value &&
       !isRestoringState.value
     ) {
+      const templateQuery = route.query.template as string | undefined;
+
+      if (templateQuery) {
+        const matched = newTemplates.find(
+          (t: any) =>
+            String(t.id) === templateQuery ||
+            t.name?.toLowerCase() === templateQuery.toLowerCase()
+        );
+        if (matched && matched.jobDefinition) {
+          selectedTemplate.value = matched as Template;
+          jobDefinition.value = matched.jobDefinition;
+          return;
+        }
+      }
+
       const pytorchTemplate = newTemplates.find((template: any) =>
         template.jobDefinition?.ops?.[0]?.args?.image?.includes(
           "nosana/pytorch-jupyter"
@@ -995,6 +1010,7 @@ const showTemplateModal = ref(false);
 const selectTemplateFromModal = (template: Template) => {
   selectedTemplate.value = template;
   showTemplateModal.value = false;
+  router.replace({ query: { ...route.query, template: String(template.id) } });
 };
 
 // Watch for template modal state to control body scroll
