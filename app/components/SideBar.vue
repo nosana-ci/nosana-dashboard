@@ -39,6 +39,19 @@
         </li>
         <li>
           <nuxt-link
+            to="/account/billing"
+            active-class="is-active"
+            @click="showMenu = false"
+            style="padding-left: 1.1rem"
+          >
+            <span class="icon is-small mr-4">
+              <CoinsIcon />
+            </span>
+            <span>Billing</span>
+          </nuxt-link>
+        </li>
+        <li>
+          <nuxt-link
             active-class="is-active"
             @click="showMenu = false"
             to="/support"
@@ -184,6 +197,7 @@ import ListIcon from "@/assets/img/icons/sidebar/list.svg?component";
 import ExplorerIcon from "@/assets/img/icons/sidebar/explorer.svg?component";
 import UserIcon from "@/assets/img/icons/sidebar/user.svg?component";
 import SupportIcon from "@/assets/img/icons/sidebar/support.svg?component";
+import CoinsIcon from "@/assets/img/icons/sidebar/coins.svg?component";
 import { useWallet } from "@nosana/solana-vue";
 import { computed, onMounted, watch, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";

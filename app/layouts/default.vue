@@ -14,10 +14,19 @@
         <site-footer class="mt-auto" />
       </div>
     </section>
+    <AccountBuyCreditsModal v-model="buyCreditsModalOpen" @purchased="onBuyCreditsPurchased" />
   </div>
 </template>
 
 <script setup lang="ts">
+const { isOpen: buyCreditsModalOpen, notifyPurchased } = useBuyCreditsModal();
+const { triggerCreditRefresh } = useCreditRefresh();
+
+const onBuyCreditsPurchased = () => {
+  triggerCreditRefresh();
+  notifyPurchased();
+};
+
 // Handle OAuth redirect for Google login popup
 onMounted(() => {
   const urlParams = new URLSearchParams(window.location.search);

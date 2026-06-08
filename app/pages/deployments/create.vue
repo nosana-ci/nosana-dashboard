@@ -276,10 +276,17 @@
                     }}, have ${{ creditBalance.toFixed(2) }}
                   </p>
                   <button
-                    class="button is-small is-outlined is-fullwidth"
+                    type="button"
+                    class="button is-primary is-fullwidth mb-2"
+                    @click="openBuyCreditsModal"
+                  >
+                    Buy Credits
+                  </button>
+                  <button
+                    class="button is-outlined is-fullwidth has-text-grey"
                     @click="goToClaimCredits"
                   >
-                    Claim Credit Codes
+                    Have a code? Claim it
                   </button>
                 </div>
               </div>
@@ -405,6 +412,7 @@ const toast = useToast();
 
 const { isAuthenticated: superTokensAuth, userData } = useSuperTokens();
 const { connected, account } = useWallet();
+const { openBuyCreditsModal } = useBuyCreditsModal();
 
 // Compatibility: create publicKey-like object from account
 const publicKey = computed(() => {
@@ -716,6 +724,13 @@ const refreshCreditBalance = async () => {
   }
 };
 
+const { onCreditRefresh } = useCreditRefresh();
+onCreditRefresh(() => {
+  if (superTokensAuth.value) {
+    refreshCreditBalance();
+  }
+});
+
 const createDeployment = async () => {
   if (!canCreateDeployment.value) return;
 
@@ -892,7 +907,7 @@ watch(
   { deep: true }
 );
 
-// Auto-select PyTorch template when grouped templates load
+// Auto-select template from URL query param or fall back to PyTorch
 watch(
   () => groupedTemplates.value,
   (newTemplates) => {
@@ -902,6 +917,21 @@ watch(
       !selectedTemplate.value &&
       !isRestoringState.value
     ) {
+      const templateQuery = route.query.template as string | undefined;
+
+      if (templateQuery) {
+        const matched = newTemplates.find(
+          (t: any) =>
+            String(t.id) === templateQuery ||
+            t.name?.toLowerCase() === templateQuery.toLowerCase()
+        );
+        if (matched && matched.jobDefinition) {
+          selectedTemplate.value = matched as Template;
+          jobDefinition.value = matched.jobDefinition;
+          return;
+        }
+      }
+
       const pytorchTemplate = newTemplates.find((template: any) =>
         template.jobDefinition?.ops?.[0]?.args?.image?.includes(
           "nosana/pytorch-jupyter"
@@ -980,6 +1010,7 @@ const showTemplateModal = ref(false);
 const selectTemplateFromModal = (template: Template) => {
   selectedTemplate.value = template;
   showTemplateModal.value = false;
+  router.replace({ query: { ...route.query, template: String(template.id) } });
 };
 
 // Watch for template modal state to control body scroll

@@ -113,8 +113,10 @@ export function useKit() {
     ([apiKey, walletAdapter]) => {
       const apiBase = config.public.apiBase as string | undefined;
       const rpcUrl = config.public.rpcUrl as string | undefined;
+      const shouldUseWalletAuth =
+        !apiKey && !isAuthenticated.value && Boolean(account.value?.address);
       const store =
-        !apiKey && account.value?.address
+        shouldUseWalletAuth
           ? createAuthorizationStore()
           : undefined;
 
@@ -137,14 +139,14 @@ export function useKit() {
         clientConfig.solana = { rpcEndpoint: rpcUrl };
       }
 
-      if (!apiKey && walletAdapter && account.value?.address) {
+      if (shouldUseWalletAuth && walletAdapter) {
         clientConfig.wallet = walletAdapter;
       }
 
       const client = createNosanaClient(network, clientConfig);
 
       // Set wallet directly on client to ensure reactive updates
-      if (!apiKey && walletAdapter && account.value?.address) {
+      if (shouldUseWalletAuth && walletAdapter) {
         client.wallet = walletAdapter;
       }
 

@@ -38,6 +38,12 @@
         type="manual"
         @claimed="handleFreeCreditsClaimed"
       />
+      <AccountFreeCreditsVerifyModal
+        v-model="showFreeCreditsVerifyModal"
+        :amount="freeCreditsAmount"
+        @dismissed="handleFreeCreditsVerifyDismissed"
+        @verified="handleFreeCreditsVerified"
+      />
       <!-- Credit Invitation Section - only show when there's an issue -->
       <div
         v-if="
@@ -119,43 +125,45 @@
       <Loader v-if="isLoading && !canShowAccountData" />
       <div v-else-if="canShowAccountData">
         <div class="columns mt-6">
-          <div class="column is-4">
+          <div class="column is-4 cost-usage-column">
             <h3 class="title is-4 mb-0">Cost and Usage</h3>
             <div class="mb-4"></div>
-            <div class="box cost-and-usage-box">
-              <!-- Credit / NOS balance at the top -->
-              <div v-if="isAuthenticated" class="balance-section">
-                <CreditBalance />
-              </div>
-              <div
-                v-else-if="connected && publicKey && nosBalance"
-                class="balance-section has-text-centered"
-              >
-                <p
-                  class="heading mb-1"
-                  style="
-                    font-size: 0.7rem;
-                    text-transform: uppercase;
-                    font-weight: 600;
-                    color: #7a7a7a;
-                  "
+            <div class="box credit-usage-box">
+              <div class="credit-usage-top">
+                <CreditBalance v-if="isAuthenticated" />
+                <div
+                  v-else-if="connected && publicKey && nosBalance"
+                  class="balance-section has-text-centered"
                 >
-                  NOS Balance
-                </p>
-                <p class="title is-4 mb-1">
-                  {{ nosBalance.uiAmount.toFixed(2) }} NOS
-                  <span class="has-text-grey is-size-6"
-                    >${{ (nosBalance.uiAmount * nosPrice).toFixed(2) }}</span
+                  <p
+                    class="heading mb-1"
+                    style="
+                      font-size: 0.7rem;
+                      text-transform: uppercase;
+                      font-weight: 600;
+                      color: #7a7a7a;
+                    "
                   >
-                </p>
+                    NOS Balance
+                  </p>
+                  <p class="title is-4 mb-1">
+                    {{ nosBalance.uiAmount.toFixed(2) }} NOS
+                    <span class="has-text-grey is-size-6"
+                      >${{ (nosBalance.uiAmount * nosPrice).toFixed(2) }}</span
+                    >
+                  </p>
+                </div>
               </div>
+
               <div class="usage-divider"></div>
 
-              <!-- This month + forecast side by side -->
-              <div class="columns is-mobile mb-0">
+              <div class="credit-usage-bottom">
+                <div class="credit-usage-bottom-inner">
+                <p class="title is-6 mb-4 usage-heading">Usage this month</p>
+                <div class="columns is-mobile mb-0 usage-metrics">
                 <div class="column">
                   <p class="heading mb-1" style="font-size: 0.7rem">
-                    This months cost
+                    Spent
                   </p>
                   <p
                     class="title is-4 mb-1"
@@ -181,9 +189,9 @@
                     {{ pctChangeSoFar.toFixed(2) }}% vs last month
                   </p>
                 </div>
-                <div class="column">
+                <div class="column usage-column-divider">
                   <p class="heading mb-1" style="font-size: 0.7rem">
-                    Forecasted cost
+                    Forecasted
                   </p>
                   <p
                     class="title is-4 mb-1"
@@ -209,6 +217,8 @@
                     {{ pctChangeForecastFromLastMonth.toFixed(2) }}% vs last
                     month
                   </p>
+                </div>
+                </div>
                 </div>
               </div>
             </div>
@@ -269,6 +279,33 @@
             <h3 class="title is-4 mb-0">Welcome to Nosana</h3>
             <div class="mb-4"></div>
             <div class="equal-height-boxes">
+              <nuxt-link
+                v-if="pendingFreeCreditsVerification"
+                to="/account/billing?source=free-credits"
+                class="box p-2 mb-2 is-block free-credits-verify-box"
+              >
+                <div
+                  class="is-flex is-align-items-start"
+                  style="margin: 8px 8px 0 8px"
+                >
+                  <CoinsIcon
+                    style="
+                      width: 16px;
+                      height: 16px;
+                      fill: #10e80c;
+                      margin-right: 0.5rem;
+                      margin-top: 4px;
+                    "
+                  />
+                  <div>
+                    <h4 class="title is-6 mb-0">Claim free credits</h4>
+                    <p class="is-size-6 mb-0" style="line-height: 1.2">
+                      Verify your payment method to unlock free credits.
+                    </p>
+                  </div>
+                </div>
+              </nuxt-link>
+
               <nuxt-link
                 to="/deployments/create"
                 class="box has-text-black p-2 mb-2 is-block"
@@ -367,6 +404,7 @@ import { computed, ref, onMounted, watch } from "vue";
 import RocketIcon from "@/assets/img/icons/rocket.svg?component";
 import ExplorerIcon from "@/assets/img/icons/sidebar/explorer.svg?component";
 import SupportIcon from "@/assets/img/icons/sidebar/support.svg?component";
+import CoinsIcon from "@/assets/img/icons/sidebar/coins.svg?component";
 import ArrowUpIcon from "@/assets/img/icons/arrow-up.svg?component";
 import ArrowDownIcon from "@/assets/img/icons/arrow-down.svg?component";
 import { useToast } from "vue-toastification";
@@ -383,7 +421,13 @@ import {
 import { useRouter, useRoute } from "vue-router";
 import ApiKeys from "~/components/Account/ApiKeys.vue";
 import AccountClaimModal from "~/components/Account/ClaimModal.vue";
+import AccountFreeCreditsVerifyModal from "~/components/Account/FreeCreditsVerifyModal.vue";
 import CreditBalance from "~/components/Account/CreditBalance.vue";
+import {
+  isFreeCreditsVerifyDismissed,
+  setFreeCreditsVerifyDismissed,
+  clearFreeCreditsVerifyDismissed,
+} from "~/utils/freeCreditsVerifyDismissal";
 
 const config = useRuntimeConfig().public;
 ChartJS.register(
@@ -452,18 +496,21 @@ const claiming = ref(false);
 let invitationLoadPromise: Promise<void> | null = null;
 
 const showFreeCreditsModal = ref(false);
+const showFreeCreditsVerifyModal = ref(false);
 const showInvitationModal = ref(false);
 const showClaimModal = ref(false);
 const checkedEligibility = ref(false);
 const freeCreditsAmount = ref<number | null>(null);
+const pendingFreeCreditsVerification = ref(false);
 
-const checkFreeCreditsEligibility = async () => {
-  if (!isAuthenticated.value || checkedEligibility.value) {
+const checkFreeCreditsEligibility = async (force = false) => {
+  if (!isAuthenticated.value || (checkedEligibility.value && !force)) {
     return;
   }
 
   // Mark in-flight immediately so a concurrent call can't slip through
   checkedEligibility.value = true;
+  pendingFreeCreditsVerification.value = false;
 
   // If we have an invitation token, ensure it's loaded before checking eligibility
   if (invitationToken.value) {
@@ -487,19 +534,38 @@ const checkFreeCreditsEligibility = async () => {
   }
 
   try {
-    const data = await $fetch<{ eligible: boolean; amount?: number; message?: string }>(
-      `${config.apiBase}/api/credits/request/eligibility`,
-      {
-        credentials: "include",
-      },
-    );
+    const [data, paymentMethods] = await Promise.all([
+      $fetch<{ eligible: boolean; amount?: number; message?: string }>(
+        `${config.apiBase}/api/credits/request/eligibility`,
+        { credentials: "include" },
+      ),
+      $fetch<{ methods: unknown[]; paymentVerified: boolean }>(
+        `${config.apiBase}/api/payments/methods`,
+        { credentials: "include" },
+      ),
+    ]);
 
     if (data && data.eligible) {
+      clearFreeCreditsVerifyDismissed(userData.value?.id);
       freeCreditsAmount.value = data.amount ?? null;
       showFreeCreditsModal.value = true;
       trackEvent("credits_claim_cta_view", {
         user_id: userData.value?.generatedAddress,
       });
+    } else if (
+      data &&
+      !data.eligible &&
+      !data.message?.includes("already requested free credits") &&
+      !paymentMethods.paymentVerified &&
+      data.message?.includes("Verify a payment method")
+    ) {
+      pendingFreeCreditsVerification.value = true;
+      if (!force && !isFreeCreditsVerifyDismissed(userData.value?.id)) {
+        showFreeCreditsVerifyModal.value = true;
+        trackEvent("credits_verify_cta_view", {
+          user_id: userData.value?.generatedAddress,
+        });
+      }
     }
   } catch (error: unknown) {
     type FetchError = { status?: number; data?: { message?: string } };
@@ -516,17 +582,55 @@ const checkFreeCreditsEligibility = async () => {
   }
 };
 
+const handleFreeCreditsVerifyDismissed = () => {
+  setFreeCreditsVerifyDismissed(userData.value?.id);
+};
+
+const handleFreeCreditsVerified = async () => {
+  pendingFreeCreditsVerification.value = false;
+  clearFreeCreditsVerifyDismissed(userData.value?.id);
+
+  try {
+    const data = await $fetch<{ eligible: boolean; amount?: number }>(
+      `${config.apiBase}/api/credits/request/eligibility`,
+      { credentials: "include" },
+    );
+    if (data?.eligible) {
+      freeCreditsAmount.value = data.amount ?? null;
+      showFreeCreditsModal.value = true;
+    }
+  } catch {
+    // User can claim from account later
+  }
+};
+
 const handleFreeCreditsClaimed = async (amount: number) => {
   triggerCreditRefresh();
+  pendingFreeCreditsVerification.value = false;
+  showFreeCreditsVerifyModal.value = false;
+
   if (showInvitationModal.value) {
     trackEvent("credits_claim_success", {
       user_id: userData.value?.generatedAddress,
       auth_method: userData.value?.loginMethod,
       credits_amount: amount,
     });
+  }
+
+  if (route.query.source === "free-credits" || showInvitationModal.value) {
     navigateTo("/account", { replace: true });
   }
 };
+
+watch(
+  () => route.query.source,
+  (source) => {
+    if (source === "free-credits" && isAuthenticated.value && !isLoading.value) {
+      checkedEligibility.value = false;
+      checkFreeCreditsEligibility(true);
+    }
+  },
+);
 
 const activeAddress = computed(() => {
   if (isAuthenticated.value && userData.value?.generatedAddress) {
@@ -610,7 +714,7 @@ onMounted(async () => {
     lastStableAddress = activeAddress.value; // Keep stable address in sync after checkSession
     // Wait for eligibility check first — opening the modal while other async
     // fetches are in-flight causes navigations that close it prematurely.
-    await checkFreeCreditsEligibility();
+    await checkFreeCreditsEligibility(route.query.source === "free-credits");
     refreshSpendingHistory();
   }
 
@@ -673,7 +777,7 @@ const refreshSpendingHistory = () => {
   return _refreshSpendingHistory();
 };
 
-// Compute values for Cost and Usage section
+// Compute values for Usage this month section
 const spentThisMonth = computed(() => {
   if (!spendingHistory.value?.results) return 0;
 
@@ -1243,11 +1347,15 @@ watch(
   justify-content: flex-start;
 }
 
-.usage-divider {
-  width: 100%;
-  height: 1px;
-  background-color: #dbdbdb;
-  margin: 1rem 0;
+.free-credits-verify-box {
+  border: 1px solid #10e80c;
+  background-color: #f6fff5;
+  color: #363636;
+}
+
+.dark-mode .free-credits-verify-box {
+  background-color: #1e2e1e;
+  color: #f5f5f5;
 }
 
 .balance-section {
@@ -1256,8 +1364,58 @@ watch(
   align-items: center;
 }
 
-.cost-and-usage-box {
-  justify-content: space-evenly;
+.usage-divider {
+  width: 100%;
+  height: 1px;
+  background-color: #dbdbdb;
+  margin: 1.75rem 0;
+}
+
+.cost-usage-column {
+  display: flex;
+  flex-direction: column;
+}
+
+.credit-usage-box {
+  flex: 1 1 auto;
+  height: auto;
+  max-height: none !important;
+  padding: 1.75rem;
+}
+
+.credit-usage-top,
+.credit-usage-bottom {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
+.credit-usage-bottom-inner {
+  width: 100%;
+  max-width: 100%;
+}
+
+.usage-heading {
+  text-align: center;
+}
+
+.usage-metrics .column {
+  text-align: center;
+}
+
+.usage-column-divider {
+  border-left: 1px solid #dbdbdb;
+}
+
+.dark-mode .usage-divider {
+  background-color: #363636;
+}
+
+.dark-mode .usage-column-divider {
+  border-color: #363636;
 }
 
 .buttons.has-addons .button:focus,
@@ -1273,7 +1431,7 @@ watch(
   justify-content: center;
 }
 
-/* Special handling for Cost and Usage and Monthly History boxes */
+/* Special handling for account summary and Monthly History boxes */
 .column.is-4 .box:not(.equal-height-boxes .box) {
   max-height: 360px;
 }
