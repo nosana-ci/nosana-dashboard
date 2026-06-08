@@ -4,6 +4,13 @@ import type { DeploymentJob as ApiDeploymentJob } from "@nosana/api";
 import type { ResultsSection } from "~/composables/jobs/types";
 import { useTimestamp } from "@vueuse/core";
 import { useKit } from "~/composables/useKit";
+import {
+  collectAllJobs,
+  paginate,
+  clampPage,
+  ACTIVE_JOB_STATES,
+  HISTORY_JOB_STATES,
+} from "~/utils/jobPagination";
 
 type DeploymentJob = DeploymentJobItem;
 
@@ -24,6 +31,16 @@ export function useDeploymentJobs(deps: DeploymentJobsDeps) {
   const activeJobsPage = ref(1);
   const historicalJobsPage = ref(1);
   const logsJobsPage = ref(1);
+
+  // Active jobs: full server-fetched set (state-filtered), paginated client-side
+  const activeJobsAll = ref<DeploymentJob[]>([]);
+  const activeLoading = ref(false);
+
+  // Historical jobs: server-side cursor pagination
+  const historyJobs = ref<DeploymentJob[]>([]);
+  const historyLoading = ref(false);
+  const historyNextPageFn = ref<(() => Promise<any>) | null>(null);
+  const historyPrevPageFn = ref<(() => Promise<any>) | null>(null);
 
   // Log selection
   const activeLogsJobId = ref<string | null>(null);
@@ -91,6 +108,15 @@ export function useDeploymentJobs(deps: DeploymentJobsDeps) {
     return deps.jobStateStringToNumber(job.state);
   };
 
+  // Keep the shared state/data maps in sync with any jobs we fetch, so
+  // getJobDuration / JobStatus / hasActiveJobs see them (no behavior change vs today).
+  const mergeIntoStateMaps = (jobs: DeploymentJob[]) => {
+    for (const job of jobs) {
+      deps.jobStates.value[job.job] = getJobStateNumber(job);
+      deps.allJobsData.value[job.job] = job;
+    }
+  };
+
   // Job list computed properties
   const activeJobs = computed((): DeploymentJob[] => {
     const jobs = deps.deploymentJobs.value || [];
@@ -99,6 +125,48 @@ export function useDeploymentJobs(deps: DeploymentJobsDeps) {
       return state === 0 || state === 1;
     });
   });
+
+  // Fetch the *full* active set (QUEUED + RUNNING), following cursors. Active jobs
+  // are bounded by replica count, so this is cheap and gives correct live state.
+  const fetchAllActiveJobs = async () => {
+    const dep = deps.deployment.value;
+    if (!dep || activeLoading.value) return;
+    activeLoading.value = true;
+    try {
+      const first = await dep.getJobs({
+        // @ts-ignore - kit search-param types lag behind the API (see DeploymentsList.vue)
+        state: ACTIVE_JOB_STATES,
+        limit: 100,
+        sort_order: "desc",
+      });
+      const all = await collectAllJobs(first);
+      activeJobsAll.value = all;
+      mergeIntoStateMaps(all);
+      activeJobsPage.value = clampPage(
+        activeJobsPage.value,
+        Math.max(1, Math.ceil(all.length / jobsPerPage)),
+      );
+    } catch (error) {
+      console.error("Failed to fetch active jobs:", error);
+    } finally {
+      activeLoading.value = false;
+    }
+  };
+  const refreshActiveJobs = fetchAllActiveJobs;
+
+  const activeJobsPaged = computed(() =>
+    paginate(activeJobsAll.value, activeJobsPage.value, jobsPerPage),
+  );
+  const activeHasPrev = computed(() => activeJobsPage.value > 1);
+  const activeHasNext = computed(
+    () => activeJobsPage.value * jobsPerPage < activeJobsAll.value.length,
+  );
+  const activeNext = () => {
+    if (activeHasNext.value) activeJobsPage.value += 1;
+  };
+  const activePrev = () => {
+    if (activeJobsPage.value > 1) activeJobsPage.value -= 1;
+  };
 
   const allHistoricalJobs = computed((): DeploymentJob[] => {
     const jobs = deps.deploymentJobs.value || [];
@@ -118,6 +186,38 @@ export function useDeploymentJobs(deps: DeploymentJobsDeps) {
   const historicalJobsTotalPages = computed(() => {
     return Math.ceil(allHistoricalJobs.value.length / jobsPerPage);
   });
+
+  // Fetch one server-side page of historical jobs (COMPLETED + STOPPED).
+  const loadHistory = async (pageFunc?: (() => Promise<any>) | null) => {
+    const dep = deps.deployment.value;
+    if (!dep || historyLoading.value) return;
+    historyLoading.value = true;
+    try {
+      const result = pageFunc
+        ? await pageFunc()
+        : await dep.getJobs({
+            // @ts-ignore - kit search-param types lag behind the API
+            state: HISTORY_JOB_STATES,
+            limit: jobsPerPage,
+            sort_order: "desc",
+          });
+      historyJobs.value = result?.jobs || [];
+      historyNextPageFn.value = result?.nextPage || null;
+      historyPrevPageFn.value = result?.previousPage || null;
+      mergeIntoStateMaps(historyJobs.value);
+    } catch (error) {
+      console.error("Failed to fetch historical jobs:", error);
+      historyJobs.value = [];
+      historyNextPageFn.value = null;
+      historyPrevPageFn.value = null;
+    } finally {
+      historyLoading.value = false;
+    }
+  };
+  const historyHasPrev = computed(() => historyPrevPageFn.value !== null);
+  const historyHasNext = computed(() => historyNextPageFn.value !== null);
+  const historyNext = () => loadHistory(historyNextPageFn.value);
+  const historyPrev = () => loadHistory(historyPrevPageFn.value);
 
   const totalJobs = computed(
     () => activeJobs.value.length + allHistoricalJobs.value.length,
@@ -252,6 +352,25 @@ export function useDeploymentJobs(deps: DeploymentJobsDeps) {
     );
   });
 
+  // Load the full active set once the deployment is available.
+  watch(
+    () => deps.deployment.value,
+    (dep) => {
+      if (dep) fetchAllActiveJobs();
+    },
+    { immediate: true },
+  );
+
+  // Switching tabs (re)loads that tab's first page. Reloading History on every
+  // activation keeps newly-completed jobs visible and resets it to page 1.
+  watch(jobActivityTab, (tab) => {
+    if (tab === "history") {
+      loadHistory();
+    } else {
+      activeJobsPage.value = 1;
+    }
+  });
+
   return {
     // Pagination
     jobsPerPage,
@@ -297,5 +416,24 @@ export function useDeploymentJobs(deps: DeploymentJobsDeps) {
     deploymentEndpoints,
     deploymentEvents,
     hasErrorInLastEvent,
+
+    // Active jobs (full polled set, client-side pagination)
+    activeJobsAll,
+    activeJobsPaged,
+    activeLoading,
+    activeHasPrev,
+    activeHasNext,
+    activeNext,
+    activePrev,
+    refreshActiveJobs,
+
+    // Historical jobs (server-side cursor pagination)
+    historyJobs,
+    historyLoading,
+    historyHasPrev,
+    historyHasNext,
+    historyNext,
+    historyPrev,
+    loadHistory,
   };
 }

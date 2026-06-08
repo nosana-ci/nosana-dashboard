@@ -63,17 +63,22 @@
               <DeploymentJobActivity
                 :deploymentId="deployment.id"
                 :deploymentStatus="deployment.status"
-                :activeJobs="activeJobs"
-                :allHistoricalJobs="allHistoricalJobs"
-                :historicalJobs="historicalJobs"
-                :historicalJobsTotalPages="historicalJobsTotalPages"
-                :historicalJobsPage="historicalJobsPage"
-                :totalJobs="totalJobs"
                 :jobActivityTab="jobActivityTab"
+                :activeJobs="activeJobsPaged"
+                :activeLoading="activeLoading"
+                :activeHasPrev="activeHasPrev"
+                :activeHasNext="activeHasNext"
+                :historyJobs="historyJobs"
+                :historyLoading="historyLoading"
+                :historyHasPrev="historyHasPrev"
+                :historyHasNext="historyHasNext"
                 :getJobStateNumber="getJobStateNumber"
                 :getJobDuration="getJobDuration"
                 @update:jobActivityTab="jobActivityTab = $event"
-                @update:historicalJobsPage="historicalJobsPage = $event"
+                @active:prev="activePrev"
+                @active:next="activeNext"
+                @history:prev="historyPrev"
+                @history:next="historyNext"
               />
             </div>
 
@@ -247,26 +252,41 @@ const jobs = useDeploymentJobs({
 });
 
 const {
-  historicalJobsPage,
   jobActivityTab,
   getJobDuration,
   getJobStateNumber,
-  activeJobs,
-  allHistoricalJobs,
-  historicalJobs,
-  historicalJobsTotalPages,
-  totalJobs,
+  activeJobsPaged,
+  activeLoading,
+  activeHasPrev,
+  activeHasNext,
+  activeNext,
+  activePrev,
+  refreshActiveJobs,
+  historyJobs,
+  historyLoading,
+  historyHasPrev,
+  historyHasNext,
+  historyNext,
+  historyPrev,
   deploymentEndpoints,
   deploymentEvents,
   hasErrorInLastEvent,
 } = jobs;
+
+// Each poll refreshes deploymentJobs (logs/maps/hasActiveJobs) AND the full
+// active set that powers the Active tab and the running-job timer. Guard the
+// first await so refreshActiveJobs always runs even if loadJobs ever throws.
+const pollLoadJobs = async (silent?: boolean) => {
+  await loadJobs(silent).catch(() => {});
+  await refreshActiveJobs();
+};
 
 const polling = useDeploymentPolling({
   deployment,
   activeTab,
   hasActiveJobs,
   loadDeployment,
-  loadJobs,
+  loadJobs: pollLoadJobs,
   loadEvents,
   loadTasks,
 });
