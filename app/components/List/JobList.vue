@@ -27,39 +27,35 @@
               v-for="job in displayedJobs"
               :key="job.address"
               class="clickable-row"
+              @click="router.push(`/jobs/${job.address}`)"
             >
               <td>
-                <NuxtLink
-                  :to="`/jobs/${job.address}`"
-                  class="clickable-row-link"
+                <div
+                  class="clickable-row-cell-content is-flex is-align-items-center"
                 >
-                  <div
-                    class="clickable-row-cell-content is-flex is-align-items-center"
+                  <NvidiaIcon
+                    alt="Nvidia"
+                    class="mr-2"
+                    style="width: 20px; height: 20px"
+                  />
+                  <span
+                    v-if="
+                      testgridMarkets &&
+                      testgridMarkets.find(
+                        (tgm: any) => tgm.address === job.market.toString()
+                      )
+                    "
                   >
-                    <NvidiaIcon
-                      alt="Nvidia"
-                      class="mr-2"
-                      style="width: 20px; height: 20px"
-                    />
-                    <span
-                      v-if="
-                        testgridMarkets &&
-                        testgridMarkets.find(
-                          (tgm: any) => tgm.address === job.market.toString()
-                        )
-                      "
-                    >
-                      {{
-                        testgridMarkets.find(
-                          (tgm: any) => tgm.address === job.market.toString()
-                        ).name
-                      }}
-                    </span>
-                    <span v-else class="is-family-monospace">{{
-                      job.market.toString()
-                    }}</span>
-                  </div>
-                </NuxtLink>
+                    {{
+                      testgridMarkets.find(
+                        (tgm: any) => tgm.address === job.market.toString()
+                      ).name
+                    }}
+                  </span>
+                  <span v-else class="is-family-monospace">{{
+                    job.market.toString()
+                  }}</span>
+                </div>
               </td>
               <td>
                 <div

@@ -7,20 +7,20 @@
         </div>
         <div class="credit-balance-body">
           <div class="credit-balance-text">
-            <p class="title is-6 mb-1 credit-balance-label">Credit balance</p>
+            <p class="title is-6 mb-1 mt-2 credit-balance-label">Credit balance</p>
             <p class="title is-3 mb-0 credit-balance-amount" v-if="!loading">
               ${{ creditBalance.toFixed(2) }}
             </p>
             <p class="title is-3 mb-0 credit-balance-amount" v-else>-</p>
-            <p
-              class="has-text-grey is-size-7 mt-2 mb-0 credit-balance-reserved"
-              v-if="!loading && reservedCredits > 0"
-            >
-              (${{ reservedCredits.toFixed(2) }} reserved in running/queued jobs)
-            </p>
           </div>
         </div>
       </div>
+      <p
+        class="has-text-grey is-size-7 mt-2 mb-0 credit-balance-reserved"
+        v-if="!loading && reservedCredits > 0"
+      >
+        (${{ reservedCredits.toFixed(2) }} reserved in running/queued jobs)
+      </p>
       <div class="buttons is-centered mt-5 mb-0">
         <button
           type="button"

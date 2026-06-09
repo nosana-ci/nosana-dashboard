@@ -32,21 +32,17 @@
               v-for="deployment in deployments"
               :key="deployment.id"
               class="clickable-row"
+              @click="router.push(`/deployments/${deployment.id}`)"
             >
               <td>
-                <NuxtLink
-                  :to="`/deployments/${deployment.id}`"
-                  class="clickable-row-link"
-                >
-                  <div class="clickable-row-cell-content">
-                    <div class="deployment-name">
-                      {{ deployment.name }}
-                    </div>
-                    <div class="is-size-7 is-family-monospace has-text-grey">
-                      {{ deployment.id }}
-                    </div>
+                <div class="clickable-row-cell-content">
+                  <div class="deployment-name">
+                    {{ deployment.name }}
                   </div>
-                </NuxtLink>
+                  <div class="is-size-7 is-family-monospace has-text-grey">
+                    {{ deployment.id }}
+                  </div>
+                </div>
               </td>
               <td>
                 <div class="clickable-row-cell-content">
