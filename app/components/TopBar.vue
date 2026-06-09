@@ -329,8 +329,8 @@ const fetchNosBalance = async (signal?: AbortSignal) => {
     // Note: SDK calls don't support AbortSignal directly, but we can check if aborted
     if (signal?.aborted) return;
 
-    const bal = await nosana.value.nos.getBalance(publicKey.value.toBase58());
-    nosBalance.value = bal !== null ? { uiAmount: bal } : null;
+    const bal = await nosana.value.nos.getBalanceInfo(publicKey.value.toBase58());
+    nosBalance.value = { uiAmount: bal.uiAmount ?? 0 };
   } catch (error) {
     // Don't log errors for aborted requests
     if (
