@@ -1228,8 +1228,8 @@ const refreshBalance = async () => {
   errorBalance.value = null;
   
   try {
-    const balanceData = await nosana.value.nos.getBalance(publicKey.value.toString());
-    balance.value = balanceData || 0;
+    const balanceData = await nosana.value.nos.getBalanceInfo(publicKey.value.toString());
+    balance.value = balanceData.uiAmount || 0;
   } catch (error: any) {
     errorBalance.value = error.toString();
     console.error('Error fetching NOS balance:', error);
@@ -1244,13 +1244,13 @@ const refreshAllBalances = async () => {
   
   try {
     const [nosBal, solBal] = await Promise.all([
-      nosana.value.nos.getBalance(),
-      nosana.value.solana.getBalance()
+      nosana.value.nos.getBalanceInfo(),
+      nosana.value.solana.getBalanceInfo()
     ]);
 
     userBalances.value = {
-      nos: nosBal ?? 0,
-      sol: solBal / 1e9,
+      nos: nosBal.uiAmount ?? 0,
+      sol: solBal.uiAmount ?? 0,
       usdc: 0,
       usdt: 0
     };

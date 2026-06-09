@@ -467,8 +467,8 @@ watch(
   async ([newConnected, newPublicKey]) => {
     if (newConnected && newPublicKey) {
       try {
-        const bal = await nosana.value.nos.getBalance(newPublicKey.toBase58());
-        nosBalance.value = bal !== null ? { uiAmount: bal } : null;
+        const bal = await nosana.value.nos.getBalanceInfo(newPublicKey.toBase58());
+        nosBalance.value = { uiAmount: bal.uiAmount ?? 0 };
       } catch {
         nosBalance.value = null;
       }
