@@ -467,8 +467,8 @@ watch(
   async ([newConnected, newPublicKey]) => {
     if (newConnected && newPublicKey) {
       try {
-        const bal = await nosana.value.nos.getBalance(newPublicKey.toBase58());
-        nosBalance.value = bal !== null ? { uiAmount: bal } : null;
+        const bal = await nosana.value.nos.getBalanceInfo(newPublicKey.toBase58());
+        nosBalance.value = { uiAmount: bal.uiAmount ?? 0 };
       } catch {
         nosBalance.value = null;
       }
@@ -642,6 +642,10 @@ const activeAddress = computed(() => {
   return null;
 });
 
+const isCreditUser = computed(
+  () => isAuthenticated.value && Boolean(userData.value?.generatedAddress),
+);
+
 // Latching ref: once true, never goes back to false — prevents flicker when
 // isLoading briefly toggles true/false after mount while isAuthenticated stays true.
 const canShowAccountData = ref(false);
@@ -749,7 +753,20 @@ const spendingHistoryEndpoint = computed(() => {
     return date.toISOString().split("T")[0];
   };
 
-  return `/api/stats/spending-history?address=${activeAddress.value}&start_date=${formatDate(startDate)}&group_by=month`;
+  const params = new URLSearchParams({
+    start_date: formatDate(startDate),
+    group_by: "month",
+  });
+
+  if (!isCreditUser.value) {
+    params.set("address", activeAddress.value);
+  }
+
+  const path = isCreditUser.value
+    ? "/api/credits/spending-history"
+    : "/api/stats/spending-history";
+
+  return `${path}?${params.toString()}`;
 });
 
 const {
@@ -759,6 +776,7 @@ const {
 } = useAPI(
   computed(() => spendingHistoryEndpoint.value || ""),
   {
+    credentials: true,
     default: () => ({
       userAddress: "",
       startDate: "",

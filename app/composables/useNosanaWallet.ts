@@ -26,8 +26,8 @@ export function useNosanaWallet() {
 
   const refreshAllBalances = async () => {
     try {
-      const nosBal = await nosana.value.nos.getBalance();
-      userBalances.value.nos = nosBal ?? 0;
+      const nosBalanceInfo = await nosana.value.nos.getBalanceInfo();
+      userBalances.value.nos = nosBalanceInfo.uiAmount ?? 0;
     } catch (error) {
       console.error("Failed to refresh NOS balance", error);
     }
