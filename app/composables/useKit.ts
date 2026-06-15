@@ -169,6 +169,7 @@ export function useKit() {
     nosana: computed(() => nosana.value),
     publicKey,
     connected,
+    wallet,
     prioFee,
     creditAuthToken,
   };
