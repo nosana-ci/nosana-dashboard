@@ -8,6 +8,7 @@ export type CreditTransactionType =
   | "job_debit"
   | "job_extend"
   | "job_settlement"
+  | "token_topup"
   | string;
 
 const CREDIT_IN_TYPES = new Set([
@@ -17,6 +18,7 @@ const CREDIT_IN_TYPES = new Set([
   "manual_grant",
   "purchase",
   "job_refund",
+  "token_topup",
 ]);
 
 const TYPE_LABELS: Record<string, string> = {
@@ -29,6 +31,7 @@ const TYPE_LABELS: Record<string, string> = {
   job_debit: "Spent",
   job_extend: "Extension",
   job_settlement: "Settlement",
+  token_topup: "Token topup",
 };
 
 export const getCreditTransactionLabel = (type: CreditTransactionType): string =>
