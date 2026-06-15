@@ -7,8 +7,8 @@
         <template v-if="purchasedSuccessfully">
           <h3 class="title is-4 mb-2 has-text-centered">Credits Added!</h3>
           <p class="subtitle is-6 has-text-grey has-text-centered mb-5">
-            <strong class="has-text-success">${{ purchasedAmount.toFixed(2) }}</strong>
-            in credits have been added to your account.
+            <strong class="has-text-success">{{ purchasedLabel }}</strong>
+            {{ purchasedSublabel }}
           </p>
           <button
             class="button is-dark is-fullwidth is-medium"
@@ -22,9 +22,24 @@
         <!-- Purchase form -->
         <template v-else>
           <h3 class="title is-4 mb-1">Buy Credits</h3>
-          <p class="subtitle is-6 has-text-grey mb-5">
+          <p class="subtitle is-6 has-text-grey mb-3">
             Credits are used to run AI workloads on the Nosana network.
           </p>
+
+          <!-- Tab switcher -->
+          <div class="tabs mb-5">
+            <ul>
+              <li :class="{ 'is-active': activeTab === 'card' }">
+                <a @click="activeTab = 'card'">Credit Card</a>
+              </li>
+              <li :class="{ 'is-active': activeTab === 'crypto' }">
+                <a @click="activeTab = 'crypto'">Crypto</a>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Card tab -->
+          <template v-if="activeTab === 'card'">
 
           <!-- Amount selection -->
           <div class="mb-5">
@@ -69,7 +84,7 @@
             <div v-if="loadingMethods && !savedMethods.length" class="has-text-grey is-size-7">
               Loading saved cards...
             </div>
-            <div v-else-if="!savedMethods.length" class="no-card-notice">
+            <div v-else-if="!savedMethods.length" class="notification is-light p-4 mb-0">
               <p class="is-size-7 mb-2">No payment method on file.</p>
               <nuxt-link
                 to="/account/billing"
@@ -82,52 +97,54 @@
             <div
               v-else
               ref="methodPickerRef"
-              class="payment-method-picker"
-              :class="{ 'is-open': methodMenuOpen }"
+              class="dropdown is-fullwidth"
+              :class="{ 'is-active': methodMenuOpen }"
             >
-              <button
-                type="button"
-                class="payment-method-trigger"
-                :disabled="savedMethods.length <= 1"
-                :aria-expanded="methodMenuOpen"
-                aria-haspopup="listbox"
-                @click="toggleMethodMenu"
-              >
-                <AccountCardBrandIcon
-                  :brand="selectedMethod?.brand ?? null"
-                  class="payment-method-icon"
-                />
-                <span class="payment-method-label">
-                  {{ formatMethodLabel(selectedMethod) }}
-                </span>
-                <span
-                  v-if="savedMethods.length > 1"
-                  class="payment-method-chevron"
-                  :class="{ 'is-open': methodMenuOpen }"
-                  aria-hidden="true"
-                />
-              </button>
-              <ul
-                v-if="methodMenuOpen && savedMethods.length > 1"
-                class="payment-method-menu"
+              <div class="dropdown-trigger">
+                <button
+                  type="button"
+                  class="button is-fullwidth is-justify-content-space-between"
+                  :disabled="savedMethods.length <= 1"
+                  :aria-expanded="methodMenuOpen"
+                  aria-haspopup="listbox"
+                  @click="toggleMethodMenu"
+                >
+                  <span class="is-flex is-align-items-center">
+                    <AccountCardBrandIcon
+                      :brand="selectedMethod?.brand ?? null"
+                      class="mr-2"
+                    />
+                    <span class="is-family-monospace">
+                      {{ formatMethodLabel(selectedMethod) }}
+                    </span>
+                  </span>
+                  <span v-if="savedMethods.length > 1" class="icon is-small">
+                    <i class="fas fa-angle-down"></i>
+                  </span>
+                </button>
+              </div>
+              <div
+                v-if="savedMethods.length > 1"
+                class="dropdown-menu"
                 role="listbox"
               >
-                <li v-for="method in savedMethods" :key="method.id" role="none">
-                  <button
-                    type="button"
-                    class="payment-method-option"
-                    :class="{ 'is-selected': method.id === selectedMethodId }"
+                <div class="dropdown-content">
+                  <a
+                    v-for="method in savedMethods"
+                    :key="method.id"
+                    class="dropdown-item is-flex is-align-items-center"
+                    :class="{ 'is-active': method.id === selectedMethodId }"
                     role="option"
                     :aria-selected="method.id === selectedMethodId"
                     @click="selectMethod(method.id)"
                   >
-                    <AccountCardBrandIcon :brand="method.brand" class="payment-method-icon" />
-                    <span class="payment-method-label">
+                    <AccountCardBrandIcon :brand="method.brand" class="mr-2" />
+                    <span class="is-family-monospace">
                       {{ formatMethodLabel(method) }}
                     </span>
-                  </button>
-                </li>
-              </ul>
+                  </a>
+                </div>
+              </div>
             </div>
             <p v-if="savedMethods.length" class="is-size-7 mt-2 mb-0">
               <nuxt-link to="/account/billing" class="has-text-grey" @click="closeModal">
@@ -140,7 +157,6 @@
             class="button is-dark is-fullwidth is-medium"
             :disabled="!canSubmit || purchasing"
             :class="{ 'is-loading': purchasing }"
-            style="border-radius: 8px"
             @click="handlePurchase"
           >
             Pay ${{ effectiveAmount }}
@@ -148,9 +164,93 @@
           <p v-if="purchaseError" class="help is-danger has-text-centered mt-2">
             {{ purchaseError }}
           </p>
+
+          </template><!-- end card tab -->
+
+          <!-- Crypto tab -->
+          <template v-else-if="activeTab === 'crypto'">
+            <!-- Connect wallet prompt -->
+            <template v-if="!walletConnected">
+              <p class="is-size-7 has-text-grey mb-3">
+                Connect your Solana wallet to pay with USDC or NOS.
+              </p>
+              <button
+                class="button is-dark is-fullwidth is-medium"
+                @click="walletModalOpen = true"
+              >
+                Connect Wallet
+              </button>
+              <SolanaWalletModal v-model="walletModalOpen" />
+            </template>
+
+            <template v-else>
+              <!-- Token picker -->
+              <div class="mb-4">
+                <label class="label is-small">Token</label>
+                <div class="buttons">
+                  <button
+                    class="button is-small"
+                    :class="{ 'is-dark': cryptoToken === 'USDC' }"
+                    @click="cryptoToken = 'USDC'"
+                  >
+                    USDC
+                  </button>
+                  <button
+                    class="button is-small"
+                    :class="{ 'is-dark': cryptoToken === 'NOS' }"
+                    @click="cryptoToken = 'NOS'"
+                  >
+                    NOS
+                  </button>
+                </div>
+              </div>
+
+              <!-- Amount -->
+              <div class="mb-4">
+                <label class="label is-small">
+                  Amount <span class="has-text-grey">({{ cryptoToken }})</span>
+                </label>
+                <div class="control">
+                  <input
+                    class="input"
+                    type="number"
+                    min="0.000001"
+                    step="any"
+                    :placeholder="`Amount in ${cryptoToken}`"
+                    v-model.number="cryptoAmount"
+                  />
+                </div>
+                <p v-if="cryptoToken === 'USDC'" class="help has-text-grey">
+                  1 USDC = $1 USD
+                </p>
+                <p v-if="cryptoToken === 'NOS' && cryptoAmount && cryptoAmount > 0 && nosPrice" class="help has-text-grey">
+                  ≈ ${{ (cryptoAmount * nosPrice).toFixed(2) }} in credits
+                </p>
+              </div>
+
+              <!-- Destination info -->
+              <p v-if="cryptoAmount && cryptoAmount > 0" class="is-size-7 has-text-grey mb-4">
+                Sending to your account address:
+                <span class="is-family-monospace has-text-dark">{{ truncatedGeneratedAddress }}</span>
+              </p>
+
+              <button
+                class="button is-dark is-fullwidth is-medium"
+                :disabled="!cryptoCanSubmit || cryptoPurchasing"
+                :class="{ 'is-loading': cryptoPurchasing }"
+                @click="handleCryptoPurchase"
+              >
+                Send {{ cryptoAmount || '' }} {{ cryptoToken }}
+              </button>
+              <p v-if="cryptoError" class="help is-danger has-text-centered mt-2">
+                {{ cryptoError }}
+              </p>
+            </template>
+          </template><!-- end crypto tab -->
+
         </template>
 
-        <div class="mt-4" v-if="!purchasing && !purchasedSuccessfully">
+        <div class="mt-4" v-if="!purchasing && !cryptoPurchasing && !purchasedSuccessfully">
           <a
             @click="closeModal"
             class="has-text-grey-light is-size-7 is-clickable is-block has-text-centered"
@@ -169,7 +269,9 @@ import { ref, computed, watch, nextTick } from "vue";
 import { loadStripe } from "@stripe/stripe-js";
 import type { Stripe } from "@stripe/stripe-js";
 import { useToast } from "vue-toastification";
+import { SolanaWalletModal, useWallet } from "@nosana/solana-vue";
 import type { SavedPaymentMethod } from "~/composables/usePaymentMethods";
+import type { CryptoTopupToken } from "~/composables/useCryptoTopup";
 
 const props = defineProps<{
   modelValue: boolean;
@@ -185,6 +287,41 @@ const {
   loading: loadingMethods,
   fetchPaymentMethods,
 } = usePaymentMethods();
+const { connected: walletConnected } = useWallet();
+const walletModalOpen = ref(false);
+const { topup: cryptoTopup } = useCryptoTopup();
+const { userData } = useSuperTokens();
+const { data: stats } = useAPI("/api/stats");
+const nosPrice = computed(() => stats.value?.price || 0);
+
+const activeTab = ref<"card" | "crypto">("card");
+
+const cryptoToken = ref<CryptoTopupToken>("USDC");
+const cryptoAmount = ref<number | null>(null);
+const cryptoPurchasing = ref(false);
+const cryptoError = ref("");
+const cryptoPurchasedToken = ref<CryptoTopupToken | null>(null);
+
+const truncatedGeneratedAddress = computed(() => {
+  const addr = userData.value?.generatedAddress;
+  if (!addr) return "";
+  return `${addr.slice(0, 4)}...${addr.slice(-4)}`;
+});
+
+const cryptoCanSubmit = computed(
+  () => !!(cryptoAmount.value && cryptoAmount.value > 0),
+);
+
+const purchasedLabel = computed(() => {
+  if (cryptoPurchasedToken.value === "NOS") return `${purchasedAmount.value} NOS`;
+  return `$${purchasedAmount.value.toFixed(2)}`;
+});
+
+const purchasedSublabel = computed(() => {
+  if (cryptoPurchasedToken.value === "NOS")
+    return "sent — credits will be added to your account shortly.";
+  return "in credits have been added to your account.";
+});
 
 const PRESET_AMOUNTS = [10, 25, 50, 100] as const;
 
@@ -265,7 +402,7 @@ const enableCustom = () => {
 };
 
 const closeModal = () => {
-  if (purchasing.value || justOpened.value) return;
+  if (purchasing.value || cryptoPurchasing.value || justOpened.value) return;
   emit("update:modelValue", false);
   setTimeout(() => {
     purchasedSuccessfully.value = false;
@@ -275,7 +412,33 @@ const closeModal = () => {
     selectedAmount.value = 25;
     selectedMethodId.value = null;
     methodMenuOpen.value = false;
+    cryptoAmount.value = null;
+    cryptoError.value = "";
+    cryptoToken.value = "USDC";
+    cryptoPurchasedToken.value = null;
+    activeTab.value = "card";
   }, 300);
+};
+
+const handleCryptoPurchase = async () => {
+  if (!cryptoCanSubmit.value || !cryptoAmount.value) return;
+  cryptoPurchasing.value = true;
+  cryptoError.value = "";
+  try {
+    await cryptoTopup(cryptoToken.value, cryptoAmount.value);
+    cryptoPurchasedToken.value = cryptoToken.value;
+    purchasedAmount.value = cryptoAmount.value;
+    purchasedSuccessfully.value = true;
+    triggerCreditRefresh();
+    emit("purchased", cryptoAmount.value);
+    toast.success(`${cryptoAmount.value} ${cryptoToken.value} sent — credits are being added to your account.`);
+  } catch (err: unknown) {
+    type FetchError = { data?: { message?: string }; message?: string };
+    const e = err as FetchError;
+    cryptoError.value = e?.data?.message ?? e?.message ?? "Transaction failed. Please try again.";
+  } finally {
+    cryptoPurchasing.value = false;
+  }
 };
 
 const handlePurchase = async () => {
@@ -344,152 +507,29 @@ const formatMethodLabel = (method: SavedPaymentMethod | null) =>
 </script>
 
 <style scoped>
-.buy-credits-modal.is-active {
-  overflow: visible;
-}
-
-.buy-credits-modal-content {
-  overflow: visible;
-}
-
-.buy-credits-modal-box {
-  overflow: visible;
-}
-
+.buy-credits-modal.is-active,
+.buy-credits-modal-content,
+.buy-credits-modal-box,
 .payment-method-section {
   overflow: visible;
 }
 
-.payment-method-picker {
-  position: relative;
-  z-index: 2;
-}
-
-.payment-method-trigger {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
+.dropdown.is-fullwidth,
+.dropdown.is-fullwidth .dropdown-trigger,
+.dropdown.is-fullwidth .dropdown-menu {
   width: 100%;
-  padding: 0.65rem 0.75rem;
-  border: 1px solid #dbdbdb;
-  border-radius: 8px;
-  background-color: #fff;
-  font-size: 0.95rem;
-  cursor: pointer;
-  text-align: left;
-  transition: border-color 0.15s ease;
-}
-
-.payment-method-trigger:not(:disabled):hover,
-.payment-method-picker.is-open .payment-method-trigger {
-  border-color: #10e80c;
-}
-
-.payment-method-trigger:disabled {
-  cursor: default;
-}
-
-.payment-method-icon {
-  flex-shrink: 0;
-}
-
-.payment-method-label {
-  flex: 1;
-  min-width: 0;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.9rem;
-}
-
-.payment-method-chevron {
-  flex-shrink: 0;
-  width: 0.45rem;
-  height: 0.45rem;
-  margin-right: 0.15rem;
-  border-right: 2px solid #10e80c;
-  border-bottom: 2px solid #10e80c;
-  transform: rotate(45deg);
-  transition: transform 0.15s ease;
-}
-
-.payment-method-chevron.is-open {
-  transform: rotate(-135deg);
-}
-
-.payment-method-menu {
-  position: absolute;
-  top: calc(100% + 0.35rem);
-  left: 0;
-  right: 0;
-  z-index: 50;
-  margin: 0;
-  padding: 0.35rem;
-  list-style: none;
-  border: 1px solid #dbdbdb;
-  border-radius: 8px;
-  background-color: #fff;
-  box-shadow: 0 4px 16px rgba(10, 10, 10, 0.08);
-}
-
-.payment-method-option {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  width: 100%;
-  padding: 0.6rem 0.65rem;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  font-size: 0.95rem;
-  cursor: pointer;
-  text-align: left;
-  transition: background-color 0.12s ease;
-}
-
-.payment-method-option:hover {
-  background-color: #f5f5f5;
-}
-
-.payment-method-option.is-selected {
-  background-color: #f6fff5;
-}
-
-.no-card-notice {
-  padding: 0.75rem 1rem;
-  border: 1px solid #dbdbdb;
-  border-radius: 8px;
-  background-color: #fafafa;
 }
 </style>
 
 <style lang="scss">
 html.dark-mode {
   .buy-credits-modal {
-    .payment-method-trigger,
-    .payment-method-menu {
-      border-color: #4a4a4a;
+    .notification.is-light {
       background-color: #1a1a1a;
       color: #f5f5f5;
     }
 
-    .payment-method-option {
-      color: #f5f5f5;
-
-      &:hover {
-        background-color: #2a2a2a;
-      }
-
-      &.is-selected {
-        background-color: #1e2e1e;
-      }
-    }
-
-    .no-card-notice {
-      border-color: #4a4a4a;
-      background-color: #1a1a1a;
-      color: #dbdbdb;
-    }
-
-    .no-card-notice a {
+    .notification.is-light a {
       color: #10e80c !important;
     }
   }
