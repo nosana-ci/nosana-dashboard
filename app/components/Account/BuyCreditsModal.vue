@@ -184,6 +184,22 @@
             </template>
 
             <template v-else>
+              <!-- Connected wallet info -->
+              <div class="notification is-light p-3 mb-4">
+                <div class="is-flex is-align-items-center is-justify-content-space-between">
+                  <div>
+                    <div class="is-flex is-align-items-center mb-1" style="gap: 0.5rem">
+                      <span class="tag is-success is-rounded is-small" style="width: 8px; height: 8px; padding: 0; min-width: 8px;"></span>
+                      <span class="has-text-weight-medium is-size-7">{{ walletName }}</span>
+                    </div>
+                    <p class="is-family-monospace is-size-7 has-text-grey">{{ truncatedWalletAddress }}</p>
+                  </div>
+                  <button class="button is-small is-light" @click="disconnectWallet">
+                    Disconnect
+                  </button>
+                </div>
+              </div>
+
               <!-- Token picker -->
               <div class="mb-4">
                 <label class="label is-small">Token</label>
@@ -269,7 +285,7 @@ import { ref, computed, watch, nextTick } from "vue";
 import { loadStripe } from "@stripe/stripe-js";
 import type { Stripe } from "@stripe/stripe-js";
 import { useToast } from "vue-toastification";
-import { SolanaWalletModal, useWallet } from "@nosana/solana-vue";
+import { SolanaWalletModal, useWallet, useSolanaWallets } from "@nosana/solana-vue";
 import type { SavedPaymentMethod } from "~/composables/usePaymentMethods";
 import type { CryptoTopupToken } from "~/composables/useCryptoTopup";
 
@@ -287,7 +303,30 @@ const {
   loading: loadingMethods,
   fetchPaymentMethods,
 } = usePaymentMethods();
-const { connected: walletConnected } = useWallet();
+const { connected: walletConnected, account: walletAccount, disconnect } = useWallet();
+
+const disconnectWallet = async () => {
+  try {
+    await disconnect();
+  } catch {
+    // ignore
+  }
+};
+const { wallets } = useSolanaWallets();
+
+const walletName = computed(() => {
+  if (!walletAccount.value) return null;
+  const found = wallets.value?.find((w: any) =>
+    w.accounts?.some((acc: any) => acc.address === walletAccount.value?.address),
+  );
+  return found?.name ?? "Connected Wallet";
+});
+
+const truncatedWalletAddress = computed(() => {
+  const addr = walletAccount.value?.address;
+  if (!addr) return "";
+  return `${addr.substring(0, 8)}...${addr.substring(addr.length - 6)}`;
+});
 const walletModalOpen = ref(false);
 const { topup: cryptoTopup } = useCryptoTopup();
 const { userData } = useSuperTokens();
