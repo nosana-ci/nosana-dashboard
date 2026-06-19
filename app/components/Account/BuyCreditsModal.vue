@@ -243,7 +243,7 @@
                   />
                 </div>
                 <p v-if="cryptoToken === 'USDC'" class="help has-text-grey">
-                  1 USDC = $1 USD
+                  1 USDC = $1 USD in credits
                 </p>
                 <p v-if="cryptoToken === 'NOS' && cryptoAmount && cryptoAmount > 0 && nosPrice" class="help has-text-grey">
                   ≈ ${{ (cryptoAmount * nosPrice).toFixed(2) }} in credits
