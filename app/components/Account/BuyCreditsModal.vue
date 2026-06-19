@@ -223,8 +223,14 @@
 
               <!-- Amount -->
               <div class="mb-4">
-                <label class="label is-small">
-                  Amount <span class="has-text-grey">({{ cryptoToken }})</span>
+                <label class="label is-small is-flex is-justify-content-space-between">
+                  <span>Amount <span class="has-text-grey">({{ cryptoToken }})</span></span>
+                  <span class="has-text-grey has-text-weight-normal">
+                    <template v-if="loadingBalance">Loading...</template>
+                    <template v-else-if="selectedTokenBalance !== null">
+                      Balance: {{ selectedTokenBalance.toLocaleString(undefined, { maximumFractionDigits: 4 }) }} {{ cryptoToken }}
+                    </template>
+                  </span>
                 </label>
                 <div class="control">
                   <input
@@ -286,6 +292,8 @@ import { loadStripe } from "@stripe/stripe-js";
 import type { Stripe } from "@stripe/stripe-js";
 import { useToast } from "vue-toastification";
 import { SolanaWalletModal, useWallet, useSolanaWallets } from "@nosana/solana-vue";
+import { createTokenService, Logger } from "@nosana/kit";
+import type { Address } from "@nosana/kit";
 import type { SavedPaymentMethod } from "~/composables/usePaymentMethods";
 import type { CryptoTopupToken } from "~/composables/useCryptoTopup";
 
@@ -313,6 +321,7 @@ const disconnectWallet = async () => {
   }
 };
 const { wallets } = useSolanaWallets();
+const { nosana, wallet } = useKit();
 
 const walletName = computed(() => {
   if (!walletAccount.value) return null;
@@ -327,6 +336,38 @@ const truncatedWalletAddress = computed(() => {
   if (!addr) return "";
   return `${addr.substring(0, 8)}...${addr.substring(addr.length - 6)}`;
 });
+
+const tokenBalances = ref({ NOS: null as number | null, USDC: null as number | null });
+const loadingBalance = ref(false);
+
+const fetchTokenBalance = async (token: CryptoTopupToken) => {
+  if (!walletConnected.value || !nosana.value || !wallet.value) return;
+  loadingBalance.value = true;
+  nosana.value.wallet = wallet.value;
+  try {
+    if (token === "NOS") {
+      const info = await nosana.value.nos.getBalanceInfo();
+      tokenBalances.value.NOS = info.uiAmount ?? 0;
+    } else {
+      const USDC_MINT = config.network === "devnet"
+        ? "Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr"
+        : "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+      const usdcService = createTokenService(
+        { logger: Logger.getInstance(), solana: nosana.value.solana, getWallet: () => wallet.value ?? undefined },
+        { tokenAddress: USDC_MINT as Address },
+      );
+      const info = await usdcService.getBalanceInfo();
+      tokenBalances.value.USDC = info.uiAmount ?? 0;
+    }
+  } catch {
+    // balance stays null
+  } finally {
+    loadingBalance.value = false;
+  }
+};
+
+const selectedTokenBalance = computed(() => tokenBalances.value[cryptoToken.value]);
+
 const walletModalOpen = ref(false);
 const { topup: cryptoTopup } = useCryptoTopup();
 const { userData } = useSuperTokens();
@@ -406,6 +447,11 @@ const selectMethod = (id: string) => {
 onClickOutside(methodPickerRef, () => {
   methodMenuOpen.value = false;
 });
+
+watch([walletConnected, cryptoToken], ([connected]) => {
+  if (connected) fetchTokenBalance(cryptoToken.value);
+  else tokenBalances.value = { NOS: null, USDC: null };
+}, { immediate: true });
 
 watch(
   () => props.modelValue,
