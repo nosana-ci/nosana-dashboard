@@ -4,7 +4,10 @@
     :class="{ 'is-hidden-touch': !showMenu }"
   >
     <div class="mb-6 is-hidden-touch">
-      <nuxt-link to="/">
+      <nuxt-link
+        to="/deployments/create"
+        @click.capture="handleSidebarNav($event, '/deployments/create')"
+      >
         <logo width="160px" :animated="true" class="light-only" />
         <logo width="160px" :white="true" class="dark-only" :animated="true" />
       </nuxt-link>
@@ -14,8 +17,10 @@
         <li>
           <nuxt-link
             to="/deployments"
-            active-class="is-active"
-            @click="showMenu = false"
+            :active-class="isLoggedOut ? '' : 'is-active'"
+            :class="{ 'auth-disabled-link': isLoggedOut }"
+            :aria-disabled="isLoggedOut"
+            @click.capture="handleSidebarNav($event, '/deployments', true)"
             style="padding-left: 1.1rem"
           >
             <span class="icon is-small mr-4">
@@ -27,8 +32,10 @@
         <li>
           <nuxt-link
             to="/account"
-            active-class="is-active"
-            @click="showMenu = false"
+            :active-class="isLoggedOut ? '' : 'is-active'"
+            :class="{ 'auth-disabled-link': isLoggedOut }"
+            :aria-disabled="isLoggedOut"
+            @click.capture="handleSidebarNav($event, '/account', true)"
             style="padding-left: 1.1rem"
           >
             <span class="icon is-small mr-4">
@@ -40,8 +47,10 @@
         <li>
           <nuxt-link
             to="/account/billing"
-            active-class="is-active"
-            @click="showMenu = false"
+            :active-class="isLoggedOut ? '' : 'is-active'"
+            :class="{ 'auth-disabled-link': isLoggedOut }"
+            :aria-disabled="isLoggedOut"
+            @click.capture="handleSidebarNav($event, '/account/billing', true)"
             style="padding-left: 1.1rem"
           >
             <span class="icon is-small mr-4">
@@ -52,9 +61,11 @@
         </li>
         <li>
           <nuxt-link
-            active-class="is-active"
-            @click="showMenu = false"
             to="/support"
+            :active-class="isLoggedOut ? '' : 'is-active'"
+            :class="{ 'auth-disabled-link': isLoggedOut }"
+            :aria-disabled="isLoggedOut"
+            @click.capture="handleSidebarNav($event, '/support', true)"
             style="padding-left: 1.1rem"
           >
             <span class="icon is-small mr-4">
@@ -109,7 +120,11 @@
       class="navbar-brand is-flex is-align-items-center is-justify-content-space-between"
       style="width: 100%"
     >
-      <nuxt-link to="/" class="navbar-item" @click="showMenu = false">
+      <nuxt-link
+        to="/deployments/create"
+        class="navbar-item"
+        @click.capture="handleSidebarNav($event, '/deployments/create')"
+      >
         <logo width="135px" :animated="true" class="light-only" />
         <logo width="135px" :white="true" class="dark-only" :animated="true" />
       </nuxt-link>
@@ -221,7 +236,34 @@ const {
 const route = useRoute();
 const router = useRouter();
 
-// removed auth-based gating in navigation; keep links visible
+const isLoggedOut = computed(
+  () => !isAuthenticated.value && !connected.value && !isLoading.value,
+);
+
+const handleSidebarNav = (
+  event: MouseEvent,
+  path: string,
+  requiresAuth = false,
+) => {
+  if (
+    event.button !== 0 ||
+    event.metaKey ||
+    event.ctrlKey ||
+    event.shiftKey ||
+    event.altKey
+  ) {
+    return;
+  }
+
+  event.preventDefault();
+  showMenu.value = false;
+
+  if (requiresAuth && isLoggedOut.value) {
+    return;
+  }
+
+  router.push(path);
+};
 
 // Check if the current route is an explorer page
 const isExplorerPage = computed(() => {
@@ -348,6 +390,25 @@ const getWalletAddress = () => {
       color: $text !important;
     }
   }
+
+  a.auth-disabled-link {
+    color: $grey !important;
+    cursor: not-allowed;
+    filter: blur(3px);
+    opacity: 0.4;
+    pointer-events: none;
+    user-select: none;
+
+    .icon,
+    span {
+      color: $grey !important;
+    }
+
+    &:hover {
+      opacity: 0.4;
+      background-color: transparent;
+    }
+  }
 }
 
 .has-dropdown {
@@ -468,6 +529,21 @@ const getWalletAddress = () => {
 
       span.icon:first-of-type {
         color: $white !important;
+      }
+    }
+
+    a.auth-disabled-link {
+      color: $grey !important;
+      opacity: 0.4;
+
+      .icon,
+      span {
+        color: $grey !important;
+      }
+
+      &:hover {
+        opacity: 0.4;
+        background-color: transparent !important;
       }
     }
   }

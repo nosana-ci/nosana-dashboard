@@ -21,9 +21,8 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
     "/",
     "/privacy-policy",
     "/tos",
-    "/support",
     "/st-auth/reset-password",
-    "/st-auth/verify-email",
+    "/deployments/create",
   ];
 
   const isPublicRoute =
@@ -79,6 +78,12 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
     return navigateTo("/account/");
   }
 
+  // Logged-out users land on the deploy create form
+  if (to.path === "/" && !isAuthenticated && !isLoading.value) {
+    const query = to.query.redirect ? { redirect: to.query.redirect } : {};
+    return navigateTo({ path: "/deployments/create", query });
+  }
+
   // If user is authenticated but email is not verified, redirect to verification page
   // ONLY for protected routes - allow access to public routes regardless of verification status
   if (isPublicRoute) {
@@ -95,11 +100,10 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
     }
   }
 
-  // If trying to access protected route without authentication, redirect to root (login page)
-  // Only redirect if we are not in a loading state
+  // If trying to access protected route without authentication, send to create page
   if (!isPublicRoute && !isAuthenticated && !isLoading.value) {
     return navigateTo({
-      path: "/",
+      path: "/deployments/create",
       query: { redirect: to.fullPath },
     });
   }
