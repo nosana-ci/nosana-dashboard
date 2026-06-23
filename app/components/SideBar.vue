@@ -44,7 +44,7 @@
             <span>Account</span>
           </nuxt-link>
         </li>
-        <li>
+        <li v-if="canUseBilling">
           <nuxt-link
             to="/account/billing"
             :active-class="isLoggedOut ? '' : 'is-active'"
@@ -239,6 +239,25 @@ const router = useRouter();
 const isLoggedOut = computed(
   () => !isAuthenticated.value && !connected.value && !isLoading.value,
 );
+const canUseBilling = computed(() => isAuthenticated.value && !isLoading.value);
+
+const isPublicRoute = (path: string) =>
+  path === "/" ||
+  path === "/deployments/create" ||
+  path === "/privacy-policy" ||
+  path === "/tos" ||
+  path.startsWith("/st-auth/");
+
+const getPostLogoutTarget = () => {
+  if (isPublicRoute(route.path)) {
+    return "/deployments/create";
+  }
+
+  return {
+    path: "/",
+    query: { redirect: route.fullPath },
+  };
+};
 
 const handleSidebarNav = (
   event: MouseEvent,
@@ -316,12 +335,12 @@ const handleLogout = async () => {
 
     if (connected.value) {
       await disconnect();
-      await navigateTo("/");
+      await navigateTo(getPostLogoutTarget());
     } else if (isAuthenticated.value) {
       await superTokensSignOut();
-      await navigateTo("/");
+      await navigateTo(getPostLogoutTarget());
     } else {
-      await navigateTo("/");
+      await navigateTo(getPostLogoutTarget());
     }
   } catch (error) {
     console.error("Error logging out:", error);

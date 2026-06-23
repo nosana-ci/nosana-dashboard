@@ -180,11 +180,12 @@ import LogoutIcon from "@/assets/img/icons/logout.svg?component";
 import SunIcon from "@/assets/img/icons/sun.svg?component";
 import MoonIcon from "@/assets/img/icons/moon.svg?component";
 import WalletIcon from "@/assets/img/icons/wallet.svg?component";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 
 const { nosana, prioFee } = useKit();
 const { isAuthenticated, isLoading, signOut, userData } = useSuperTokens();
 const router = useRouter();
+const route = useRoute();
 const { connected, account, wallet, disconnect } = useWallet();
 
 // Compatibility: create publicKey-like object from account
@@ -201,7 +202,7 @@ const showUserProfileDropdown = ref(false);
 
 // Memoized authentication state to prevent unnecessary template re-renders
 const isGoogleAuthenticated = computed(() => {
-  return isAuthenticated.value || isLoading.value;
+  return isAuthenticated.value && !isLoading.value;
 });
 
 // Profile dropdown functions
@@ -345,6 +346,24 @@ const fetchNosBalance = async (signal?: AbortSignal) => {
   }
 };
 
+const isPublicRoute = (path: string) =>
+  path === "/" ||
+  path === "/deployments/create" ||
+  path === "/privacy-policy" ||
+  path === "/tos" ||
+  path.startsWith("/st-auth/");
+
+const getPostLogoutTarget = () => {
+  if (isPublicRoute(route.path)) {
+    return "/deployments/create";
+  }
+
+  return {
+    path: "/",
+    query: { redirect: route.fullPath },
+  };
+};
+
 // Logout function
 const logout = async () => {
   showUserProfileDropdown.value = false;
@@ -365,12 +384,12 @@ const logout = async () => {
 
     if (connected.value) {
       await disconnect();
-      await navigateTo("/");
+      await navigateTo(getPostLogoutTarget());
     } else if (isAuthenticated.value) {
       await signOut();
-      await navigateTo("/");
+      await navigateTo(getPostLogoutTarget());
     } else {
-      await navigateTo("/");
+      await navigateTo(getPostLogoutTarget());
     }
   } catch (error) {
     console.error("Error logging out:", error);

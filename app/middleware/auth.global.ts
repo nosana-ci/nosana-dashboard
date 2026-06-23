@@ -30,6 +30,7 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
     to.path.startsWith("/st-auth/callback/") ||
     to.path.startsWith("/st-auth/verify-email") ||
     to.path.startsWith("/st-auth/reset-password");
+  const isBillingRoute = to.path === "/account/billing";
 
   // On client, always check session for protected routes
   // SuperTokens cookies are HttpOnly so we can't check them via JS
@@ -69,19 +70,12 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
   // Check if user is authenticated (via Google, wallet, or SuperTokens)
   const isAuthenticated = walletAuthenticated || superTokensAuthenticated;
 
-  // Redirect authenticated users from root to account (only if email is verified)
-  if (
-    to.path === "/" &&
-    (walletAuthenticated ||
-      (superTokensAuthenticated && isEmailVerified.value !== false))
-  ) {
-    return navigateTo("/account/");
+  if (isBillingRoute && walletAuthenticated && !superTokensAuthenticated) {
+    return navigateTo("/account");
   }
 
-  // Logged-out users land on the deploy create form
-  if (to.path === "/" && !isAuthenticated && !isLoading.value) {
-    const query = to.query.redirect ? { redirect: to.query.redirect } : {};
-    return navigateTo({ path: "/deployments/create", query });
+  if (to.path === "/" && !to.query.redirect) {
+    return navigateTo("/deployments/create");
   }
 
   // If user is authenticated but email is not verified, redirect to verification page
@@ -100,10 +94,10 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
     }
   }
 
-  // If trying to access protected route without authentication, send to create page
+  // If trying to access protected route without authentication, send to login page
   if (!isPublicRoute && !isAuthenticated && !isLoading.value) {
     return navigateTo({
-      path: "/deployments/create",
+      path: "/",
       query: { redirect: to.fullPath },
     });
   }
