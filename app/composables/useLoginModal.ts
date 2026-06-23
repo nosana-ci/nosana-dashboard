@@ -1,5 +1,3 @@
-import { ref } from 'vue';
-
 export type LoginMode = 'both' | 'google' | 'wallet';
 
 interface LoginModalState {
@@ -8,35 +6,49 @@ interface LoginModalState {
   redirectPath?: string;
 }
 
-const modalState = ref<LoginModalState>({
-  isOpen: false,
-  mode: 'both',
-  redirectPath: undefined
-});
+let onSuccessCb: (() => void) | null = null;
 
 export function useLoginModal() {
-  const openModal = (mode: LoginMode = 'both', redirectPath?: string) => {
+  const modalState = useState<LoginModalState>('loginModal', () => ({
+    isOpen: false,
+    mode: 'both',
+    redirectPath: undefined,
+  }));
+
+  const openModal = (
+    mode: LoginMode = 'both',
+    redirectPath?: string,
+    onSuccess?: () => void,
+  ) => {
+    onSuccessCb = onSuccess ?? null;
     modalState.value = {
       isOpen: true,
       mode,
-      redirectPath: redirectPath
+      redirectPath,
     };
   };
 
   const closeModal = () => {
-    modalState.value.isOpen = false;
+    modalState.value = { ...modalState.value, isOpen: false };
+    onSuccessCb = null;
   };
 
-  const openGoogleModal = (redirectPath?: string) => {
-    openModal('google', redirectPath);
+  const openGoogleModal = (redirectPath?: string, onSuccess?: () => void) => {
+    openModal('google', redirectPath, onSuccess);
   };
 
-  const openWalletModal = (redirectPath?: string) => {
-    openModal('wallet', redirectPath);
+  const openWalletModal = (redirectPath?: string, onSuccess?: () => void) => {
+    openModal('wallet', redirectPath, onSuccess);
   };
 
-  const openBothModal = (redirectPath?: string) => {
-    openModal('both', redirectPath);
+  const openBothModal = (redirectPath?: string, onSuccess?: () => void) => {
+    openModal('both', redirectPath, onSuccess);
+  };
+
+  const notifySuccess = () => {
+    const cb = onSuccessCb;
+    closeModal();
+    cb?.();
   };
 
   return {
@@ -45,6 +57,7 @@ export function useLoginModal() {
     closeModal,
     openGoogleModal,
     openWalletModal,
-    openBothModal
+    openBothModal,
+    notifySuccess,
   };
 }

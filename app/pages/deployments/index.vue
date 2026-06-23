@@ -47,7 +47,7 @@ watch(
   [superTokensAuth, isLoading, connected],
   async ([auth, loading, conn]) => {
     if (!loading && !auth && !conn) {
-      router.push("/");
+      router.push("/deployments/create");
       return;
     }
     if (!loading && (auth || conn)) {

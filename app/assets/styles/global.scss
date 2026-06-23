@@ -1260,6 +1260,11 @@ button[disabled][data-tooltip] {
   overflow: visible !important; /* prevent clipping inside modal container */
 }
 
+// Wallet connect popup must appear above Bulma modals (z-index: 1001)
+.wallet-modal-overlay {
+  z-index: 1100 !important;
+}
+
 /* ==========================================================================
    Clickable Table Rows
    ========================================================================== */

@@ -94,9 +94,7 @@
 
               <!-- No Auth -->
               <div v-else>
-                <p class="has-text-grey">
-                  Connect wallet or sign in to see pricing
-                </p>
+                <p class="has-text-grey">-</p>
               </div>
             </div>
 
@@ -410,9 +408,16 @@ const router = useRouter();
 const route = useRoute();
 const toast = useToast();
 
-const { isAuthenticated: superTokensAuth, userData } = useSuperTokens();
+const { isAuthenticated: superTokensAuth, isEmailVerified, userData } =
+  useSuperTokens();
 const { connected, account } = useWallet();
 const { openBuyCreditsModal } = useBuyCreditsModal();
+const { openBothModal } = useLoginModal();
+const {
+  save: saveDraft,
+  load: loadDraft,
+  clear: clearDraft,
+} = useCreateDeployDraft();
 
 // Compatibility: create publicKey-like object from account
 const publicKey = computed(() => {
@@ -771,6 +776,9 @@ const createDeployment = async () => {
     if (!isCreditMode.value && !isWalletMode.value) {
       throw new Error("Please connect wallet or sign in");
     }
+    if (isCreditMode.value && isEmailVerified.value === false) {
+      throw new Error("Please verify your email before creating a deployment");
+    }
     if (!selectedMarket.value) {
       throw new Error("Please select a market");
     }
@@ -804,6 +812,8 @@ const createDeployment = async () => {
       auth_method: userData.value?.loginMethod,
     });
 
+    clearDraft();
+
     router.push(`/deployments/${deployment.id}`);
   } catch (error: any) {
     console.error("Deployment creation error:", error);
@@ -834,9 +844,55 @@ const enforceTimeoutMin = () => {
   }
 };
 
-// Handle login click
+const persistDraft = () => {
+  saveDraft({
+    selectedMarketAddress: selectedMarketAddress.value,
+    selectedTemplate: selectedTemplate.value,
+    jobDefinition: jobDefinition.value,
+    deploymentName: deploymentName.value,
+    replicas: replicas.value,
+    timeout: timeout.value,
+    strategy: strategy.value,
+    schedule: schedule.value,
+    gpuTypeCheckbox: gpuTypeCheckbox.value,
+    activeFilter: activeFilter.value,
+  });
+};
+
+const restoreDraftIfNeeded = () => {
+  const draft = loadDraft();
+  if (!draft) return;
+
+  isRestoringState.value = true;
+  skipAutoSelection.value = true;
+  try {
+    if (draft.jobDefinition) jobDefinition.value = draft.jobDefinition;
+    if (draft.selectedTemplate) selectedTemplate.value = draft.selectedTemplate;
+    if (draft.deploymentName) deploymentName.value = draft.deploymentName;
+    if (typeof draft.replicas === "number") replicas.value = draft.replicas;
+    if (typeof draft.timeout === "number") timeout.value = draft.timeout;
+    if (draft.strategy) strategy.value = draft.strategy as DeploymentStrategy;
+    if (draft.schedule) schedule.value = draft.schedule;
+    if (Array.isArray(draft.gpuTypeCheckbox))
+      gpuTypeCheckbox.value = draft.gpuTypeCheckbox;
+    if (draft.activeFilter) activeFilter.value = draft.activeFilter;
+
+    if (draft.selectedMarketAddress && markets.value) {
+      const match = markets.value.find(
+        (m: Market) => m.address?.toString() === draft.selectedMarketAddress
+      );
+      if (match) selectedMarket.value = match;
+    }
+  } finally {
+    nextTick(() => {
+      isRestoringState.value = false;
+    });
+  }
+};
+
 const handleLoginClick = () => {
-  router.push({ path: '/', query: { redirect: route.fullPath } });
+  persistDraft();
+  openBothModal(route.fullPath);
 };
 
 // Navigate to account page
@@ -968,6 +1024,9 @@ onMounted(async () => {
   if (!markets.value && !loadingMarkets.value) {
     await getMarkets();
   }
+
+  // Restore a persisted draft
+  restoreDraftIfNeeded();
 
   // Load credit balance if authenticated
   if (isCreditMode.value) {

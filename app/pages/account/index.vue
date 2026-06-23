@@ -44,6 +44,7 @@
         @dismissed="handleFreeCreditsVerifyDismissed"
         @verified="handleFreeCreditsVerified"
       />
+      <AccountCreditTransactionHistory v-model="showHistoryModal" />
       <!-- Credit Invitation Section - only show when there's an issue -->
       <div
         v-if="
@@ -219,6 +220,22 @@
                   </p>
                 </div>
                 </div>
+                <p v-if="isAuthenticated" class="has-text-centered mt-5 mb-0">
+                  <button
+                    type="button"
+                    class="button is-small balance-history-button"
+                    @click="showHistoryModal = true"
+                  >
+                    <span class="icon is-small">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px">
+                        <path d="M3 3v5h5" />
+                        <path d="M3.05 13A9 9 0 1 0 6 5.3L3 8" />
+                        <polyline points="12 7 12 12 15 15" />
+                      </svg>
+                    </span>
+                    <span>View balance history</span>
+                  </button>
+                </p>
                 </div>
               </div>
             </div>
@@ -422,6 +439,7 @@ import { useRouter, useRoute } from "vue-router";
 import ApiKeys from "~/components/Account/ApiKeys.vue";
 import AccountClaimModal from "~/components/Account/ClaimModal.vue";
 import AccountFreeCreditsVerifyModal from "~/components/Account/FreeCreditsVerifyModal.vue";
+import AccountCreditTransactionHistory from "~/components/Account/CreditTransactionHistory.vue";
 import CreditBalance from "~/components/Account/CreditBalance.vue";
 import {
   isFreeCreditsVerifyDismissed,
@@ -499,6 +517,7 @@ const showFreeCreditsModal = ref(false);
 const showFreeCreditsVerifyModal = ref(false);
 const showInvitationModal = ref(false);
 const showClaimModal = ref(false);
+const showHistoryModal = ref(false);
 const checkedEligibility = ref(false);
 const freeCreditsAmount = ref<number | null>(null);
 const pendingFreeCreditsVerification = ref(false);
@@ -642,6 +661,10 @@ const activeAddress = computed(() => {
   return null;
 });
 
+const isCreditUser = computed(
+  () => isAuthenticated.value && Boolean(userData.value?.generatedAddress),
+);
+
 // Latching ref: once true, never goes back to false — prevents flicker when
 // isLoading briefly toggles true/false after mount while isAuthenticated stays true.
 const canShowAccountData = ref(false);
@@ -749,7 +772,20 @@ const spendingHistoryEndpoint = computed(() => {
     return date.toISOString().split("T")[0];
   };
 
-  return `/api/stats/spending-history?address=${activeAddress.value}&start_date=${formatDate(startDate)}&group_by=month`;
+  const params = new URLSearchParams({
+    start_date: formatDate(startDate),
+    group_by: "month",
+  });
+
+  if (!isCreditUser.value) {
+    params.set("address", activeAddress.value);
+  }
+
+  const path = isCreditUser.value
+    ? "/api/credits/spending-history"
+    : "/api/stats/spending-history";
+
+  return `${path}?${params.toString()}`;
 });
 
 const {
@@ -759,6 +795,7 @@ const {
 } = useAPI(
   computed(() => spendingHistoryEndpoint.value || ""),
   {
+    credentials: true,
     default: () => ({
       userAddress: "",
       startDate: "",
@@ -1408,6 +1445,39 @@ watch(
 
 .usage-column-divider {
   border-left: 1px solid #dbdbdb;
+}
+
+.balance-history-button {
+  border-radius: 8px;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+  transition:
+    border-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.balance-history-button .icon {
+  color: #10e80c;
+}
+
+.balance-history-button:hover {
+  border-color: #10e80c;
+  color: #10e80c;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(16, 232, 12, 0.25);
+}
+
+.dark-mode .balance-history-button {
+  background-color: transparent;
+  border-color: #4a4a4a;
+  color: #f5f5f5;
+}
+
+.dark-mode .balance-history-button:hover {
+  border-color: #10e80c;
+  color: #10e80c;
 }
 
 .dark-mode .usage-divider {

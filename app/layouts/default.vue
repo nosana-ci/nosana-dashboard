@@ -15,6 +15,7 @@
       </div>
     </section>
     <AccountBuyCreditsModal v-model="buyCreditsModalOpen" @purchased="onBuyCreditsPurchased" />
+    <AuthLoginModal />
   </div>
 </template>
 
