@@ -239,7 +239,7 @@ const router = useRouter();
 const isLoggedOut = computed(
   () => !isAuthenticated.value && !connected.value && !isLoading.value,
 );
-const canUseBilling = computed(() => isAuthenticated.value && !isLoading.value);
+const canUseBilling = computed(() => isAuthenticated.value);
 
 const isPublicRoute = (path: string) =>
   path === "/" ||

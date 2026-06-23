@@ -202,7 +202,7 @@ const showUserProfileDropdown = ref(false);
 
 // Memoized authentication state to prevent unnecessary template re-renders
 const isGoogleAuthenticated = computed(() => {
-  return isAuthenticated.value && !isLoading.value;
+  return isAuthenticated.value;
 });
 
 // Profile dropdown functions
