@@ -44,6 +44,7 @@
                     <th class="px-5 py-4">Date</th>
                     <th class="px-5 py-4">Type</th>
                     <th class="px-5 py-4 has-text-right">Amount</th>
+                    <th class="px-5 py-4 has-text-right">Details</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -67,6 +68,13 @@
                           transaction.amountUsd.toFixed(2)
                         }}
                       </strong>
+                    </td>
+                     <td class="px-5 py-4 has-text-right">
+                      <span v-if="transaction.method"
+                        :class="transaction.type === 'token_topup' ? 'is-uppercase' : 'is-capitalized'">
+                        {{ transaction.method }}
+                      </span>
+                      <span v-else>-</span>
                     </td>
                   </tr>
                 </tbody>
@@ -125,6 +133,7 @@ import {
 interface CreditTransaction {
   id: string;
   type: string;
+  method?: string;
   amountUsd: number;
   createdAt: string;
 }
