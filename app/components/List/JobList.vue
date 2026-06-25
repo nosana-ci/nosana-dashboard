@@ -27,11 +27,12 @@
               v-for="job in displayedJobs"
               :key="job.address"
               class="clickable-row"
-              @click="router.push(`/jobs/${job.address}`)"
+              @click="openJob($event, job.address)"
             >
               <td>
-                <div
-                  class="clickable-row-cell-content is-flex is-align-items-center"
+                <NuxtLink
+                  :to="`/jobs/${job.address}`"
+                  class="clickable-row-link clickable-row-cell-content is-flex is-align-items-center"
                 >
                   <NvidiaIcon
                     alt="Nvidia"
@@ -55,11 +56,12 @@
                   <span v-else class="is-family-monospace">{{
                     job.market.toString()
                   }}</span>
-                </div>
+                </NuxtLink>
               </td>
               <td>
-                <div
-                  class="clickable-row-cell-content is-flex is-align-items-center"
+                <NuxtLink
+                  :to="`/jobs/${job.address}`"
+                  class="clickable-row-link clickable-row-cell-content is-flex is-align-items-center"
                 >
                   <template v-if="getTemplateForJob(job)">
                     <div class="template-icon mr-2">
@@ -94,26 +96,35 @@
                       getJobImage(job)
                     }}</span>
                   </template>
-                </div>
+                </NuxtLink>
               </td>
               <td>
-                <span class="clickable-row-cell-content">
+                <NuxtLink
+                  :to="`/jobs/${job.address}`"
+                  class="clickable-row-link clickable-row-cell-content"
+                >
                   <span v-if="nodeCountries[job.node]">{{
                     formatCountry(nodeCountries[job.node])
                   }}</span>
                   <span v-else>-</span>
-                </span>
+                </NuxtLink>
               </td>
               <td>
-                <span class="clickable-row-cell-content">
+                <NuxtLink
+                  :to="`/jobs/${job.address}`"
+                  class="clickable-row-link clickable-row-cell-content"
+                >
                   <span v-if="job.timeStart">{{
                     formatTimeAgo(job.timeStart)
                   }}</span>
                   <span v-else>-</span>
-                </span>
+                </NuxtLink>
               </td>
               <td class="is-hidden-mobile">
-                <span class="clickable-row-cell-content">
+                <NuxtLink
+                  :to="`/jobs/${job.address}`"
+                  class="clickable-row-link clickable-row-cell-content"
+                >
                   <span v-if="job.timeStart && job.timeEnd" class="duration-cell">
                     <SecondsFormatter
                       :seconds="job.timeEnd - job.timeStart"
@@ -124,10 +135,13 @@
                     </span>
                   </span>
                   <span v-else>-</span>
-                </span>
+                </NuxtLink>
               </td>
               <td class="is-hidden-touch">
-                <span class="clickable-row-cell-content">
+                <NuxtLink
+                  :to="`/jobs/${job.address}`"
+                  class="clickable-row-link clickable-row-cell-content"
+                >
                   <JobPrice
                     :job="job"
                     :options="{
@@ -136,10 +150,13 @@
                     }"
                     :marketsData="testgridMarkets"
                   />
-                </span>
+                </NuxtLink>
               </td>
               <td>
-                <div class="clickable-row-cell-content">
+                <NuxtLink
+                  :to="`/jobs/${job.address}`"
+                  class="clickable-row-link clickable-row-cell-content"
+                >
                   <div
                     class="tag is-outlined status-tag"
                     :class="{
@@ -156,7 +173,7 @@
                     />
                     <span>{{ getStatusText(job.state) }}</span>
                   </div>
-                </div>
+                </NuxtLink>
               </td>
             </tr>
           </template>
@@ -193,6 +210,15 @@ import { computed, type PropType } from "vue";
 import { useStatus } from "~/composables/useStatus";
 
 const router = useRouter();
+
+// Navigate on plain row clicks, but let the browser handle the real <a> links
+// for modifier/middle clicks so jobs can be opened in a new tab/window.
+const openJob = (event: MouseEvent, address: string) => {
+  if (event.metaKey || event.ctrlKey || event.shiftKey) return;
+  if ((event.target as Element)?.closest("a")) return;
+  router.push(`/jobs/${address}`);
+};
+
 const { account: walletAccount } = useWallet();
 const { templates } = useTemplates();
 const { isAuthenticated, userData } = useSuperTokens();
