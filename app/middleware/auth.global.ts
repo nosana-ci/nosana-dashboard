@@ -74,10 +74,6 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
     return navigateTo("/account");
   }
 
-  if (to.path === "/" && !to.query.redirect) {
-    return navigateTo("/deployments/create");
-  }
-
   // If user is authenticated but email is not verified, redirect to verification page
   // ONLY for protected routes - allow access to public routes regardless of verification status
   if (isPublicRoute) {

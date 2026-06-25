@@ -175,7 +175,7 @@
 
           <div class="tab-panel-wrapper" :style="tabWrapperStyle">
             <div
-              v-if="modalTab === 'definition'"
+              v-show="modalTab === 'definition'"
               class="tab-panel tab-panel--definition"
               ref="podPanelRef"
             >
@@ -183,7 +183,7 @@
             </div>
 
             <div
-              v-else
+              v-show="modalTab === 'configuration'"
               class="tab-panel tab-panel--configuration"
             >
             <DeploymentConfigurationTab
@@ -495,14 +495,14 @@ const openEditorModal = () => {
 // Handle save with validation
 const podTab = ref<{ canSave: () => boolean } | null>(null);
 const handleSaveChanges = () => {
-  // If on definition tab, validate job definition
+  // Validate job definition if currently on definition tab
   if (modalTab.value === 'definition') {
     if (!podTab.value?.canSave?.()) return;
-    emit('update:jobDefinition', editingJobDefinition.value as JobDefinition);
   }
-  // For configuration tab, values are already updated via computed setters
+  // Always emit job definition — user may have edited it before switching tabs
+  emit('update:jobDefinition', editingJobDefinition.value as JobDefinition);
+  // Configuration tab values are already updated via computed setters
   // (strategyLocal, scheduleLocal, replicasLocal, timeoutLocal)
-  // Just close the modal
   showEditorModal.value = false;
 };
 
