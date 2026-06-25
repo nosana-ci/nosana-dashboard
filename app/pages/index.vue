@@ -1,5 +1,6 @@
 <template>
   <div class="login-page" :class="{ 'dark-mode': isDarkMode }">
+    <Loader v-if="autoLoginChecking" class="auth-checking-loader" />
     <!-- Main Content -->
     <div class="content-wrapper">
       <!-- World Map Background -->
@@ -407,6 +408,7 @@ const {
   checkSession,
   isAuthenticated: superTokensAuth,
   isEmailVerified,
+  isLoading: autoLoginChecking,
   getThirdPartyAuthUrl,
   sendVerificationEmail,
 } = useSuperTokens();
@@ -1170,6 +1172,14 @@ const signAuthMessage = async (walletName: string) => {
 
 <style lang="scss" scoped>
 @use "sass:color";
+
+.auth-checking-loader :deep(.spinner-bg) {
+  z-index: 99999;
+}
+
+.auth-checking-loader :deep(.half-circle-spinner) {
+  z-index: 100000;
+}
 
 .login-page {
   position: fixed;
