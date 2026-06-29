@@ -23,6 +23,17 @@ export default defineNuxtConfig({
       htmlAttrs: {
         lang: 'en',
       },
+      meta: [
+        { name: 'description', content: 'Instant GPU Rental at Scale for AI & High-Performance Workloads' },
+        { property: 'og:title', content: 'Deploy AI on Nosana' },
+        { property: 'og:description', content: 'Instant GPU Rental at Scale for AI & High-Performance Workloads' },
+        { property: 'og:image', content: 'https://nosana.com/og/home.png' },
+        { property: 'og:type', content: 'website' },
+        { name: 'twitter:card', content: 'summary_large_image' },
+        { name: 'twitter:title', content: 'Deploy AI on Nosana' },
+        { name: 'twitter:description', content: 'Instant GPU Rental at Scale for AI & High-Performance Workloads' },
+        { name: 'twitter:image', content: 'https://nosana.com/og/home.png' },
+      ],
       link: [
         { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico', sizes: 'any' },
       ],

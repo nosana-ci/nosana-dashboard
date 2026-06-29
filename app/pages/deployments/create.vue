@@ -465,21 +465,20 @@ const selectedMarket = ref<Market | null>(null);
 const selectedTemplate = ref<Template | null>(null);
 
 useSeoMeta({
-  title: computed(() =>
-    selectedTemplate.value
-      ? `Deploy ${selectedTemplate.value.name} on Nosana`
-      : 'Create Deployment — Nosana'
-  ),
-  ogTitle: computed(() =>
-    selectedTemplate.value
-      ? `Deploy ${selectedTemplate.value.name} on Nosana`
-      : 'Create a GPU Deployment on Nosana'
-  ),
-  ogDescription: computed(() =>
-    selectedTemplate.value?.description ?? 'Run GPU workloads on decentralised GPUs'
-  ),
-  ogImage: computed(() => selectedTemplate.value?.icon ?? undefined),
-  twitterCard: 'summary',
+  title: () => selectedTemplate.value
+    ? `Deploy ${selectedTemplate.value.name} on Nosana`
+    : 'Create Deployment — Nosana',
+  ogTitle: () => selectedTemplate.value
+    ? `Deploy ${selectedTemplate.value.name} on Nosana`
+    : 'Create a GPU Deployment on Nosana',
+  ogDescription: () => selectedTemplate.value?.description ?? 'Run GPU workloads on decentralised GPUs',
+  ogImage: () => selectedTemplate.value?.icon || null,
+  twitterCard: 'summary_large_image',
+  twitterTitle: () => selectedTemplate.value
+    ? `Deploy ${selectedTemplate.value.name} on Nosana`
+    : 'Create a GPU Deployment on Nosana',
+  twitterDescription: () => selectedTemplate.value?.description ?? 'Run GPU workloads on decentralised GPUs',
+  twitterImage: () => selectedTemplate.value?.icon || null,
 });
 
 const INFINITE_TIMEOUT = 6;
