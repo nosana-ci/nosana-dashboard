@@ -1017,17 +1017,50 @@ watch(
       const templateQuery = route.query.template as string | undefined;
 
       if (templateQuery) {
-        const matched = newTemplates.find(
+        // Direct match on parent template ID or name
+        const directMatch = newTemplates.find(
           (t: any) =>
             String(t.id) === templateQuery ||
             t.name?.toLowerCase() === templateQuery.toLowerCase()
         );
-        if (matched && matched.jobDefinition) {
-          selectedTemplate.value = matched as Template;
-          jobDefinition.value = matched.jobDefinition;
-          readmeContentForModal.value = (matched as Template).readme || undefined;
-          showReadmeModal.value = true;
+        if (directMatch?.jobDefinition) {
+          selectedTemplate.value = directMatch as Template;
+          jobDefinition.value = directMatch.jobDefinition;
+          nextTick(() => {
+            readmeContentForModal.value = (directMatch as Template).readme || undefined;
+            showReadmeModal.value = true;
+          });
           return;
+        }
+
+        // Variant match: check inside each parent's variants array.
+        // The URL stores either the variant's full `id` or the compound
+        // `${parentId}-${variantId}` that selectTemplateVariant emits.
+        for (const t of newTemplates as any[]) {
+          if (!t.variants?.length) continue;
+          const variant = t.variants.find(
+            (v: any) =>
+              String(v.id) === templateQuery ||
+              `${t.id}-${v.variant_id}` === templateQuery ||
+              v.variant_id === templateQuery
+          );
+          if (variant?.jobDefinition) {
+            const variantTemplate: Template = {
+              ...t,
+              id: variant.id ?? `${t.id}-${variant.variant_id}`,
+              name: `${t.name} - ${variant.name}`,
+              description: variant.description,
+              jobDefinition: variant.jobDefinition,
+              selectedVariant: variant,
+            };
+            selectedTemplate.value = variantTemplate;
+            jobDefinition.value = variant.jobDefinition;
+            nextTick(() => {
+              readmeContentForModal.value = variantTemplate.readme || undefined;
+              showReadmeModal.value = true;
+            });
+            return;
+          }
         }
       }
 
@@ -1045,6 +1078,7 @@ watch(
   },
   { immediate: true }
 );
+
 
 // Update GPU type when market changes
 watch(
