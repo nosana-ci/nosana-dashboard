@@ -362,8 +362,25 @@
               v-if="readmeContentForModal"
               :raw-markdown="readmeContentForModal"
             />
+            <p v-else class="has-text-grey">No documentation available for this template.</p>
           </ClientOnly>
         </section>
+        <footer class="modal-card-foot" style="justify-content: space-between; align-items: center;">
+          <div class="buttons mb-0">
+            <button class="button is-primary" @click="showReadmeModal = false">
+              Use Template
+            </button>
+            <button
+              class="button is-light"
+              @click="showReadmeModal = false; showTemplateModal = true"
+            >
+              Change Template
+            </button>
+          </div>
+          <p v-if="selectedTemplate?.description" class="has-text-grey is-size-7" style="text-align: right; max-width: 50%;">
+            {{ selectedTemplate.description }}
+          </p>
+        </footer>
       </div>
     </div>
 
@@ -446,6 +463,25 @@ const activeFilter = ref(
 );
 const selectedMarket = ref<Market | null>(null);
 const selectedTemplate = ref<Template | null>(null);
+
+useSeoMeta({
+  title: computed(() =>
+    selectedTemplate.value
+      ? `Deploy ${selectedTemplate.value.name} on Nosana`
+      : 'Create Deployment — Nosana'
+  ),
+  ogTitle: computed(() =>
+    selectedTemplate.value
+      ? `Deploy ${selectedTemplate.value.name} on Nosana`
+      : 'Create a GPU Deployment on Nosana'
+  ),
+  ogDescription: computed(() =>
+    selectedTemplate.value?.description ?? 'Run GPU workloads on decentralised GPUs'
+  ),
+  ogImage: computed(() => selectedTemplate.value?.icon ?? undefined),
+  twitterCard: 'summary',
+});
+
 const INFINITE_TIMEOUT = 6;
 const DEFAULT_TIMEOUT = 1;
 const timeout = ref(INFINITE_TIMEOUT);
@@ -924,6 +960,11 @@ watch(
   { deep: true }
 );
 
+// State for modals
+const showReadmeModal = ref(false);
+const readmeContentForModal = ref<string | undefined>(undefined);
+const showTemplateModal = ref(false);
+
 // Watch jobDefinition changes to detect custom configurations
 watch(
   () => jobDefinition.value,
@@ -984,6 +1025,8 @@ watch(
         if (matched && matched.jobDefinition) {
           selectedTemplate.value = matched as Template;
           jobDefinition.value = matched.jobDefinition;
+          readmeContentForModal.value = (matched as Template).readme || undefined;
+          showReadmeModal.value = true;
           return;
         }
       }
@@ -1060,16 +1103,13 @@ const openReadmeModal = (readme: string) => {
   showReadmeModal.value = true;
 };
 
-// State for modals
-const showReadmeModal = ref(false);
-const readmeContentForModal = ref<string | undefined>(undefined);
-const showTemplateModal = ref(false);
-
 // Template selection handler
 const selectTemplateFromModal = (template: Template) => {
   selectedTemplate.value = template;
   showTemplateModal.value = false;
   router.replace({ query: { ...route.query, template: String(template.id) } });
+  readmeContentForModal.value = template.readme || undefined;
+  showReadmeModal.value = true;
 };
 
 // Watch for template modal state to control body scroll
