@@ -8,7 +8,50 @@ export default defineNuxtConfig({
     port: 3003,
   },
   devtools: { enabled: true },
-  ssr: false,
+  routeRules: {
+    '/**': { ssr: false },
+    '/deploy/**': { prerender: true },
+  },
+  hooks: {
+    // prerender template routes for custom preview link
+    async 'nitro:config'(nitroConfig) {
+      const apiBase = process.env.NUXT_PUBLIC_API_BASE;
+      if (!apiBase) return;
+
+      try {
+        const res = await fetch(`${apiBase}/api/jobs/templates/grouped`);
+        if (!res.ok) return;
+
+        const data = await res.json();
+        const templates: any[] = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.data)
+            ? data.data
+            : typeof data === 'object' && data
+              ? Object.values(data).flat() as any[]
+              : [];
+
+        const routes: string[] = [];
+        for (const t of templates) {
+          if (t?.id) routes.push(`/deploy/${t.id}`);
+          if (t?.variants?.length) {
+            for (const v of t.variants) {
+              if (v?.id) routes.push(`/deploy/${v.id}`);
+              else if (v?.variant_id) routes.push(`/deploy/${t.id}-${v.variant_id}`);
+            }
+          }
+        }
+
+        nitroConfig.prerender ??= {};
+        nitroConfig.prerender.routes = [
+          ...(nitroConfig.prerender.routes ?? []),
+          ...routes,
+        ];
+      } catch (e) {
+        console.warn('[prerender] Failed to fetch templates for route generation:', e);
+      }
+    },
+  },
   css: [
     "~/assets/styles/global.scss",
     "bulma-o-steps/bulma-steps.css",
