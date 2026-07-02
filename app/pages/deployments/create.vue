@@ -464,22 +464,6 @@ const activeFilter = ref(
 const selectedMarket = ref<Market | null>(null);
 const selectedTemplate = ref<Template | null>(null);
 
-useSeoMeta({
-  title: () => selectedTemplate.value
-    ? `Deploy ${selectedTemplate.value.name} on Nosana`
-    : 'Create Deployment — Nosana',
-  ogTitle: () => selectedTemplate.value
-    ? `Deploy ${selectedTemplate.value.name} on Nosana`
-    : 'Create a GPU Deployment on Nosana',
-  ogDescription: () => selectedTemplate.value?.description ?? 'Run GPU workloads on decentralised GPUs',
-  ogImage: () => selectedTemplate.value?.icon || null,
-  twitterCard: 'summary_large_image',
-  twitterTitle: () => selectedTemplate.value
-    ? `Deploy ${selectedTemplate.value.name} on Nosana`
-    : 'Create a GPU Deployment on Nosana',
-  twitterDescription: () => selectedTemplate.value?.description ?? 'Run GPU workloads on decentralised GPUs',
-  twitterImage: () => selectedTemplate.value?.icon || null,
-});
 
 const INFINITE_TIMEOUT = 6;
 const DEFAULT_TIMEOUT = 1;
