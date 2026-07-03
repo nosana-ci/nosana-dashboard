@@ -10,7 +10,7 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   routeRules: {
     '/**': { ssr: false },
-    '/deploy/**': { prerender: true },
+    '/deploy/**': { ssr: true, prerender: true },
   },
   hooks: {
     // prerender template routes for custom preview link
