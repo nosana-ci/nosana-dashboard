@@ -1,10 +1,11 @@
 <template>
   <div class="callback-page">
     <div class="callback-content">
-      <Loader />
+      <Loader v-if="!error" />
       <p v-if="!error">Completing sign in...</p>
       <div v-else class="error-message">
         <p class="error-text">{{ error }}</p>
+        <NuxtLink to="/" class="button is-primary">Back to home</NuxtLink>
       </div>
     </div>
   </div>
@@ -21,6 +22,7 @@ definePageMeta({
 
 const { handleThirdPartyCallback } = useSuperTokens();
 const error = ref<string | null>(null);
+const router = useRouter();
 
 onMounted(async () => {
   try {
@@ -29,7 +31,7 @@ onMounted(async () => {
     if (response.status === "OK") {
       const isSignUp = response.createdNewRecipeUser && response.user.loginMethods.length === 1;
       const eventType = isSignUp ? "sign_up" : "login";
-      
+
       try {
         trackEvent(eventType, {
           user_id: response.user.id,
@@ -39,16 +41,9 @@ onMounted(async () => {
         console.warn("Error tracking event:", e);
       }
 
-      // Notify opener and close
-      if (window.opener) {
-        window.opener.postMessage({ type: "SUPERTOKENS_AUTH_SUCCESS" }, window.location.origin);
-        window.close();
-      } else {
-        // Fallback for non-popup scenario
-        const router = useRouter();
-        router.replace("/account");
-      }
-
+      const redirect = sessionStorage.getItem("postLoginRedirect") || "/account";
+      sessionStorage.removeItem("postLoginRedirect");
+      router.replace(redirect);
     } else if (response.status === "SIGN_IN_UP_NOT_ALLOWED") {
       error.value = response.reason || "Sign in not allowed. Please contact support.";
     } else if (response.status === "NO_EMAIL_GIVEN_BY_PROVIDER") {
@@ -56,23 +51,12 @@ onMounted(async () => {
     } else {
       error.value = "An error occurred during sign in. Please try again.";
     }
-
-    if (error.value && window.opener) {
-         window.opener.postMessage({ type: "SUPERTOKENS_AUTH_ERROR", error: error.value }, window.location.origin);
-         setTimeout(() => window.close(), 3000);
-    }
-
   } catch (err: any) {
     console.error("ThirdParty callback error:", err);
     if (err.isSuperTokensGeneralError === true) {
       error.value = err.message;
     } else {
       error.value = "Something went wrong during authentication.";
-    }
-    
-    if (window.opener) {
-         window.opener.postMessage({ type: "SUPERTOKENS_AUTH_ERROR", error: error.value }, window.location.origin);
-         setTimeout(() => window.close(), 3000);
     }
   }
 });

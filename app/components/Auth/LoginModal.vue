@@ -152,6 +152,9 @@
             v-if="modalState.mode === 'both' || modalState.mode === 'google'"
             class="login-button google-button py-4"
             @click="selectGoogleLogin"
+            @mousedown="prefetchAuthUrl('google')"
+            @focus="prefetchAuthUrl('google')"
+            @touchstart="prefetchAuthUrl('google')"
             :disabled="googleLoading"
             :class="{ 'is-loading': googleLoading }"
           >
@@ -169,6 +172,9 @@
             v-if="modalState.mode === 'both' || modalState.mode === 'google'"
             class="login-button github-button py-4"
             @click="selectGithubLogin"
+            @mousedown="prefetchAuthUrl('github')"
+            @focus="prefetchAuthUrl('github')"
+            @touchstart="prefetchAuthUrl('github')"
             :disabled="githubLoading"
             :class="{ 'is-loading': githubLoading }"
           >
@@ -264,6 +270,7 @@ import { trackEvent } from "~/utils/analytics";
 import WalletIcon from "~/components/WalletIcon.vue";
 import { useNosanaWallet } from "~/composables/useNosanaWallet";
 import { useSuperTokens } from "~/composables/useSuperTokens";
+import { useOAuthLogin } from "~/composables/useOAuthLogin";
 import { useLoginModal } from "~/composables/useLoginModal";
 import { useModalScrollLock } from "~/composables/useModalScrollLock";
 import { createAuthCookiesKey } from "~/utils/createAuthCookiesKey";
@@ -291,7 +298,6 @@ const {
   checkSession,
   isEmailVerified,
   sendVerificationEmail,
-  getThirdPartyAuthUrl,
 } = useSuperTokens();
 
 const toast = useToast();
@@ -516,78 +522,27 @@ const handleEmailSubmit = async () => {
   }
 };
 
-// OAuth popup flow shared by Google & GitHub.
-const startOAuthLogin = async (
+const { prefetch: prefetchAuthUrl, start: startOAuthLogin } = useOAuthLogin();
+
+const handleOAuthLogin = async (
   provider: "google" | "github",
   loadingRef: { value: boolean },
 ) => {
   loadingRef.value = true;
-  let popup: Window | null = null;
+
+  clearWalletAuthState().catch((error) =>
+    console.error("Error clearing wallet auth state:", error),
+  );
 
   try {
-    trackEvent("auth_start", { auth_method: provider });
-    await clearWalletAuthState();
-
-    const redirectUri = `${window.location.origin}/st-auth/callback/${provider}`;
-    const authUrl = await getThirdPartyAuthUrl(provider, redirectUri);
-
-    const width = 500;
-    const height = 600;
-    const left = window.screen.width - width;
-    const top = 0;
-
-    popup = window.open(
-      authUrl,
-      `${provider}-auth`,
-      `width=${width},height=${height},top=${top},left=${left},scrollbars=yes,resizable=yes`,
-    );
-
-    if (!popup) {
-      throw new Error("Popup blocked. Please allow popups for this site.");
-    }
-
-    const handleMessage = async (event: MessageEvent) => {
-      if (event.origin !== window.location.origin) return;
-
-      if (event.data.type === "SUPERTOKENS_AUTH_SUCCESS") {
-        window.removeEventListener("message", handleMessage);
-        popup?.close();
-        await checkSession();
-        trackEvent("auth_success", { auth_method: provider });
-        toast.success("Signed in successfully!");
-        loadingRef.value = false;
-        notifySuccess();
-      } else if (event.data.type === "SUPERTOKENS_AUTH_ERROR") {
-        window.removeEventListener("message", handleMessage);
-        popup?.close();
-        toast.error(event.data.error || "Authentication failed");
-        loadingRef.value = false;
-      }
-    };
-
-    window.addEventListener("message", handleMessage);
-
-    const timer = setInterval(() => {
-      if (popup && popup.closed) {
-        clearInterval(timer);
-        window.removeEventListener("message", handleMessage);
-        loadingRef.value = false;
-      }
-    }, 1000);
-  } catch (error: any) {
-    if (popup) popup.close();
-    console.error(`Error starting ${provider} login:`, error);
-    if (error.isSuperTokensGeneralError === true) {
-      toast.error(error.message);
-    } else {
-      toast.error(`Error starting ${provider} login`);
-    }
+    await startOAuthLogin(provider, modalState.value.redirectPath);
+  } catch {
     loadingRef.value = false;
   }
 };
 
-const selectGoogleLogin = () => startOAuthLogin("google", googleLoading);
-const selectGithubLogin = () => startOAuthLogin("github", githubLoading);
+const selectGoogleLogin = () => handleOAuthLogin("google", googleLoading);
+const selectGithubLogin = () => handleOAuthLogin("github", githubLoading);
 
 const handleWalletConnect = async () => {
   try {
