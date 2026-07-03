@@ -882,11 +882,16 @@ const restoreDraftIfNeeded = () => {
   const draft = loadDraft();
   if (!draft) return;
 
+  // An explicit ?template= deep link always wins over a stale draft
+  const hasTemplateQuery = Boolean(route.query.template);
+
   isRestoringState.value = true;
   skipAutoSelection.value = true;
   try {
-    if (draft.jobDefinition) jobDefinition.value = draft.jobDefinition;
-    if (draft.selectedTemplate) selectedTemplate.value = draft.selectedTemplate;
+    if (!hasTemplateQuery) {
+      if (draft.jobDefinition) jobDefinition.value = draft.jobDefinition;
+      if (draft.selectedTemplate) selectedTemplate.value = draft.selectedTemplate;
+    }
     if (draft.deploymentName) deploymentName.value = draft.deploymentName;
     if (typeof draft.replicas === "number") replicas.value = draft.replicas;
     if (typeof draft.timeout === "number") timeout.value = draft.timeout;
