@@ -20,7 +20,6 @@ export function useDeploymentAuth() {
   const { connected } = useWallet();
   const {
     isAuthenticated: superTokensAuth,
-    isLoading: superTokensLoading,
     checkSession,
   } = useSuperTokens();
 
@@ -30,11 +29,18 @@ export function useDeploymentAuth() {
     const signOptions = ["nosana-auth", { includeTime: false }] as const;
 
     inFlight = (async () => {
-      if (superTokensLoading.value) {
-        await checkSession(false);
+      // Decide the auth path from a *settled* session state. Relying on the
+      // reactive flag alone can race (e.g. right after navigation, when the
+      // flag is transiently false but loading is already false): a credit/
+      // email user would then fall through to the wallet signer path and throw
+      // "Signer or key is required for this operation." If the flag isn't
+      // already true, actively re-verify the session before falling back.
+      let isSuperTokensAuthed = superTokensAuth.value;
+      if (!isSuperTokensAuthed) {
+        isSuperTokensAuthed = await checkSession(false);
       }
 
-      if (superTokensAuth.value) {
+      if (isSuperTokensAuthed) {
         const message = await nosana.value.api.auth.signMessage(...signOptions);
         return `${signOptions[0]}:${message}`;
       }
