@@ -433,6 +433,25 @@ watch(
   { immediate: true },
 );
 
+// Re-load the parent deployment when returning from a job subroute.
+// loadDeployment() intentionally early-returns while on a job subroute, so
+// navigating back to the deployment overview (browser back or the in-app back
+// button) can leave `deployment` null with loading=false -> blank screen.
+// Refetch when the subroute is exited and we don't already have the deployment.
+watch(
+  () => route.params.jobaddress,
+  (jobaddress, prevJobaddress) => {
+    if (
+      !jobaddress &&
+      prevJobaddress &&
+      hasAnyAuth.value &&
+      !deployment.value
+    ) {
+      loadDeployment();
+    }
+  },
+);
+
 // --- Auth timeout cleanup ---
 let authTimeout: NodeJS.Timeout | null = null;
 

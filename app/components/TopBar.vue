@@ -269,13 +269,13 @@ const getAuthProvider = () => {
   return "google";
 };
 
-// Credit balance state - using useState to persist across navigation
-const creditBalance = useState("topbar-credit-balance", () => 0);
-const loadingCreditBalance = ref(false);
-const hasLoadedCreditBalance = useState(
-  "topbar-has-loaded-balance",
-  () => false,
-);
+// Credit balance state - shared single source of truth (see useCreditBalance).
+const {
+  creditBalance,
+  hasLoaded: hasLoadedCreditBalance,
+  fetchBalance: fetchCreditBalance,
+  reset: resetCreditBalance,
+} = useCreditBalance();
 
 // NOS balance state
 const nosBalance = ref<any | null>(null);
@@ -297,29 +297,7 @@ const nosBalanceUSD = computed(() => {
 
 const getNosBalanceUSD = () => nosBalanceUSD.value;
 
-// Fetch credit balance
-const fetchCreditBalance = async (signal?: AbortSignal) => {
-  // Only fetch if user is authenticated
-  if (!isAuthenticated.value) {
-    return;
-  }
-
-  loadingCreditBalance.value = true;
-  try {
-    const data = await nosana.value.api.credits.balance();
-    creditBalance.value = data.assignedCredits
-      ? data.assignedCredits - data.settledCredits - data.reservedCredits
-      : 0;
-    hasLoadedCreditBalance.value = true;
-  } catch (error) {
-    // Don't log errors for aborted requests
-    if (error instanceof Error && error.name !== "AbortError") {
-      console.error("Error fetching credit balance:", error);
-    }
-  } finally {
-    loadingCreditBalance.value = false;
-  }
-};
+// Credit balance fetching is provided by useCreditBalance (fetchCreditBalance).
 
 // Fetch NOS balance
 const fetchNosBalance = async (signal?: AbortSignal) => {
@@ -445,8 +423,7 @@ watch(
       debouncedFetchCreditBalance();
     } else if (!newIsAuthenticated && oldIsAuthenticated) {
       // Reset on logout so next login will fetch
-      hasLoadedCreditBalance.value = false;
-      creditBalance.value = 0;
+      resetCreditBalance();
     }
   },
   { immediate: true },

@@ -56,44 +56,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from "vue";
+import { onMounted, watch } from "vue";
 import AccountClaimModal from "./ClaimModal.vue";
 import WalletIcon from "@/assets/img/icons/wallet.svg?component";
 
 const { isAuthenticated, isLoading } = useSuperTokens();
-const { nosana } = useKit();
 const { openBuyCreditsModal } = useBuyCreditsModal();
 const { onCreditRefresh } = useCreditRefresh();
 
-const creditBalance = ref(0);
-const reservedCredits = ref(0);
-const loading = ref(false);
-const hasLoadedOnce = ref(false);
+// Single shared source of truth (header, account page and deploy page all read
+// this), so the balances can never drift out of sync.
+const { creditBalance, reservedCredits, loading, fetchBalance, reset } =
+  useCreditBalance();
 const showClaimModal = ref(false);
-
-const fetchBalance = async () => {
-  if (!isAuthenticated.value) {
-    creditBalance.value = 0;
-    reservedCredits.value = 0;
-    return;
-  }
-
-  loading.value = true;
-  try {
-    const data = await nosana.value.api.credits.balance();
-    hasLoadedOnce.value = true;
-    creditBalance.value = data.assignedCredits
-      ? data.assignedCredits - data.settledCredits - data.reservedCredits
-      : 0;
-    reservedCredits.value = data.reservedCredits || 0;
-  } catch (error) {
-    console.error("Error fetching credit balance:", error);
-    creditBalance.value = 0;
-    reservedCredits.value = 0;
-  } finally {
-    loading.value = false;
-  }
-};
 
 onCreditRefresh(() => {
   if (isAuthenticated.value) {
@@ -101,8 +76,10 @@ onCreditRefresh(() => {
   }
 });
 
+// Always refetch when the account page opens so it reflects the latest balance
+// (and, via the shared store, updates the header at the same time).
 onMounted(() => {
-  if (isAuthenticated.value && !hasLoadedOnce.value) {
+  if (isAuthenticated.value) {
     fetchBalance();
   }
 });
@@ -111,13 +88,11 @@ watch(
   [isAuthenticated, isLoading],
   ([newIsAuthenticated, newIsLoading], [oldIsAuthenticated]) => {
     if (newIsLoading) return;
-    if (newIsAuthenticated && !hasLoadedOnce.value) {
+    if (newIsAuthenticated) {
       fetchBalance();
     }
     if (!newIsAuthenticated && oldIsAuthenticated) {
-      creditBalance.value = 0;
-      reservedCredits.value = 0;
-      hasLoadedOnce.value = false;
+      reset();
     }
   },
   { immediate: false },
