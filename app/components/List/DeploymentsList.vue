@@ -32,30 +32,38 @@
               v-for="deployment in deployments"
               :key="deployment.id"
               class="clickable-row"
-              @click="router.push(`/deployments/${deployment.id}`)"
+              @click="openDeployment($event, deployment.id)"
             >
               <td>
-                <div class="clickable-row-cell-content">
+                <NuxtLink
+                  :to="`/deployments/${deployment.id}`"
+                  class="clickable-row-link clickable-row-cell-content"
+                >
                   <div class="deployment-name">
                     {{ deployment.name }}
                   </div>
                   <div class="is-size-7 is-family-monospace has-text-grey">
                     {{ deployment.id }}
                   </div>
-                </div>
+                </NuxtLink>
               </td>
               <td>
-                <div class="clickable-row-cell-content">
+                <NuxtLink
+                  :to="`/deployments/${deployment.id}`"
+                  class="clickable-row-link clickable-row-cell-content"
+                >
                   <StatusTag
                     :status="deployment.status"
                     :outlined="true"
                     :show-label="true"
                   />
-                </div>
+                </NuxtLink>
               </td>
               <td>
-                <span class="clickable-row-cell-content"
-                  >{{ deployment.active_jobs || 0 }} Jobs</span
+                <NuxtLink
+                  :to="`/deployments/${deployment.id}`"
+                  class="clickable-row-link clickable-row-cell-content"
+                  >{{ deployment.active_jobs || 0 }} Jobs</NuxtLink
                 >
               </td>
               <VaultOverviewRows
@@ -64,12 +72,15 @@
                 :deployment="deployment"
               />
               <td>
-                <span class="clickable-row-cell-content">
+                <NuxtLink
+                  :to="`/deployments/${deployment.id}`"
+                  class="clickable-row-link clickable-row-cell-content"
+                >
                   <span v-if="deployment.updated_at">{{
                     formatDate(deployment.updated_at)
                   }}</span>
                   <span v-else>-</span>
-                </span>
+                </NuxtLink>
               </td>
             </tr>
           </template>
@@ -144,6 +155,14 @@ const router = useRouter();
 
 const nextPage = ref<(() => Promise<ApiDeploymentListResult>) | null>(null);
 const prevPage = ref<(() => Promise<ApiDeploymentListResult>) | null>(null);
+
+// Navigate on plain row clicks, but let the browser handle the real <a> links
+// for modifier/middle clicks so deployments can be opened in a new tab/window.
+const openDeployment = (event: MouseEvent, id: string) => {
+  if (event.metaKey || event.ctrlKey || event.shiftKey) return;
+  if ((event.target as Element)?.closest("a")) return;
+  router.push(`/deployments/${id}`);
+};
 
 const { nosana } = useKit();
 const loading = ref(false);

@@ -362,8 +362,25 @@
               v-if="readmeContentForModal"
               :raw-markdown="readmeContentForModal"
             />
+            <p v-else class="has-text-grey">No documentation available for this template.</p>
           </ClientOnly>
         </section>
+        <footer class="modal-card-foot" style="justify-content: space-between; align-items: center;">
+          <div class="buttons mb-0">
+            <button class="button is-primary" @click="showReadmeModal = false">
+              Use Template
+            </button>
+            <button
+              class="button is-light"
+              @click="showReadmeModal = false; showTemplateModal = true"
+            >
+              Change Template
+            </button>
+          </div>
+          <p v-if="selectedTemplate?.description" class="has-text-grey is-size-7" style="text-align: right; max-width: 50%;">
+            {{ selectedTemplate.description }}
+          </p>
+        </footer>
       </div>
     </div>
 
@@ -446,6 +463,8 @@ const activeFilter = ref(
 );
 const selectedMarket = ref<Market | null>(null);
 const selectedTemplate = ref<Template | null>(null);
+
+
 const INFINITE_TIMEOUT = 6;
 const DEFAULT_TIMEOUT = 1;
 const timeout = ref(INFINITE_TIMEOUT);
@@ -863,11 +882,16 @@ const restoreDraftIfNeeded = () => {
   const draft = loadDraft();
   if (!draft) return;
 
+  // An explicit ?template= deep link always wins over a stale draft
+  const hasTemplateQuery = Boolean(route.query.template);
+
   isRestoringState.value = true;
   skipAutoSelection.value = true;
   try {
-    if (draft.jobDefinition) jobDefinition.value = draft.jobDefinition;
-    if (draft.selectedTemplate) selectedTemplate.value = draft.selectedTemplate;
+    if (!hasTemplateQuery) {
+      if (draft.jobDefinition) jobDefinition.value = draft.jobDefinition;
+      if (draft.selectedTemplate) selectedTemplate.value = draft.selectedTemplate;
+    }
     if (draft.deploymentName) deploymentName.value = draft.deploymentName;
     if (typeof draft.replicas === "number") replicas.value = draft.replicas;
     if (typeof draft.timeout === "number") timeout.value = draft.timeout;
@@ -924,6 +948,11 @@ watch(
   { deep: true }
 );
 
+// State for modals
+const showReadmeModal = ref(false);
+const readmeContentForModal = ref<string | undefined>(undefined);
+const showTemplateModal = ref(false);
+
 // Watch jobDefinition changes to detect custom configurations
 watch(
   () => jobDefinition.value,
@@ -976,15 +1005,50 @@ watch(
       const templateQuery = route.query.template as string | undefined;
 
       if (templateQuery) {
-        const matched = newTemplates.find(
+        // Direct match on parent template ID or name
+        const directMatch = newTemplates.find(
           (t: any) =>
             String(t.id) === templateQuery ||
             t.name?.toLowerCase() === templateQuery.toLowerCase()
         );
-        if (matched && matched.jobDefinition) {
-          selectedTemplate.value = matched as Template;
-          jobDefinition.value = matched.jobDefinition;
+        if (directMatch?.jobDefinition) {
+          selectedTemplate.value = directMatch as Template;
+          jobDefinition.value = directMatch.jobDefinition;
+          nextTick(() => {
+            readmeContentForModal.value = (directMatch as Template).readme || undefined;
+            showReadmeModal.value = true;
+          });
           return;
+        }
+
+        // Variant match: check inside each parent's variants array.
+        // The URL stores either the variant's full `id` or the compound
+        // `${parentId}-${variantId}` that selectTemplateVariant emits.
+        for (const t of newTemplates as any[]) {
+          if (!t.variants?.length) continue;
+          const variant = t.variants.find(
+            (v: any) =>
+              String(v.id) === templateQuery ||
+              `${t.id}-${v.variant_id}` === templateQuery ||
+              v.variant_id === templateQuery
+          );
+          if (variant?.jobDefinition) {
+            const variantTemplate: Template = {
+              ...t,
+              id: variant.id ?? `${t.id}-${variant.variant_id}`,
+              name: `${t.name} - ${variant.name}`,
+              description: variant.description,
+              jobDefinition: variant.jobDefinition,
+              selectedVariant: variant,
+            };
+            selectedTemplate.value = variantTemplate;
+            jobDefinition.value = variant.jobDefinition;
+            nextTick(() => {
+              readmeContentForModal.value = variantTemplate.readme || undefined;
+              showReadmeModal.value = true;
+            });
+            return;
+          }
         }
       }
 
@@ -1002,6 +1066,7 @@ watch(
   },
   { immediate: true }
 );
+
 
 // Update GPU type when market changes
 watch(
@@ -1060,16 +1125,13 @@ const openReadmeModal = (readme: string) => {
   showReadmeModal.value = true;
 };
 
-// State for modals
-const showReadmeModal = ref(false);
-const readmeContentForModal = ref<string | undefined>(undefined);
-const showTemplateModal = ref(false);
-
 // Template selection handler
 const selectTemplateFromModal = (template: Template) => {
   selectedTemplate.value = template;
   showTemplateModal.value = false;
   router.replace({ query: { ...route.query, template: String(template.id) } });
+  readmeContentForModal.value = template.readme || undefined;
+  showReadmeModal.value = true;
 };
 
 // Watch for template modal state to control body scroll

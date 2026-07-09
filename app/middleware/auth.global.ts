@@ -25,8 +25,11 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
     "/deployments/create",
   ];
 
+  const normalizedPath =
+    to.path.length > 1 ? to.path.replace(/\/+$/, "") : to.path;
+
   const isPublicRoute =
-    publicRoutes.some((route) => to.path === route) ||
+    publicRoutes.some((route) => normalizedPath === route) ||
     to.path.startsWith("/st-auth/callback/") ||
     to.path.startsWith("/st-auth/verify-email") ||
     to.path.startsWith("/st-auth/reset-password");
@@ -72,10 +75,6 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
 
   if (isBillingRoute && walletAuthenticated && !superTokensAuthenticated) {
     return navigateTo("/account");
-  }
-
-  if (to.path === "/" && !to.query.redirect) {
-    return navigateTo("/deployments/create");
   }
 
   // If user is authenticated but email is not verified, redirect to verification page
