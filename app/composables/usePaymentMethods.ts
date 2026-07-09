@@ -17,6 +17,7 @@ export interface SetupIntentResponse {
   accepted: boolean;
   verificationError: string | null;
   paymentVerified: boolean;
+  threeDSecureAuthenticated: boolean;
   requiresAction: boolean;
   clientSecret: string | null;
   setupIntentId: string | null;
