@@ -225,6 +225,8 @@ const tryOpenFreeCreditsClaimModal = async () => {
       clearFreeCreditsVerifyDismissed(userData.value?.id);
       freeCreditsAmount.value = data.amount ?? null;
       showFreeCreditsModal.value = true;
+    } else if (data?.message?.includes("daily limit")) {
+      toast.info(data.message);
     }
   } catch {
     // Ineligible or request failed — no UI feedback

@@ -603,13 +603,15 @@ const handleFreeCreditsVerified = async () => {
   clearFreeCreditsVerifyDismissed(userData.value?.id);
 
   try {
-    const data = await $fetch<{ eligible: boolean; amount?: number }>(
+    const data = await $fetch<{ eligible: boolean; amount?: number; message?: string }>(
       `${config.apiBase}/api/credits/request/eligibility`,
       { credentials: "include" },
     );
     if (data?.eligible) {
       freeCreditsAmount.value = data.amount ?? null;
       showFreeCreditsModal.value = true;
+    } else if (data?.message?.includes("daily limit")) {
+      toast.info(data.message);
     }
   } catch {
     // User can claim from account later
