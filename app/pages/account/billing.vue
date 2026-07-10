@@ -212,9 +212,6 @@ const setDefault = async (id: string) => {
   }
 };
 
-const THREE_DS_ERROR =
-  "We couldn't confirm this card with your bank, so it can't be used to claim free credits. Try a different card, or use this one to buy credits instead.";
-
 const tryOpenFreeCreditsClaimModal = async () => {
   try {
     const data = await $fetch<{ eligible: boolean; amount?: number; message?: string }>(
@@ -357,11 +354,6 @@ const handleAddCard = async () => {
       addCardError.value =
         res.verificationError ??
         "Your card could not be verified. Please try a different card.";
-      return;
-    }
-
-    if (requireThreeDSecure && !res.threeDSecureAuthenticated) {
-      addCardError.value = THREE_DS_ERROR;
       return;
     }
 
