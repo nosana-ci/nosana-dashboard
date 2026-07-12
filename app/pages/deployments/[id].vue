@@ -18,1288 +18,399 @@
         <!-- Unified Card -->
         <div class="box is-borderless">
           <!-- Header Section -->
-          <div class="p-5 deployment-header">
-            <div
-              class="is-flex is-justify-content-space-between is-align-items-start"
-            >
-              <div class="header-left-section">
-                <div class="is-flex is-align-items-center mb-0">
-                  <button
-                    @click="router.back()"
-                    class="button is-ghost back-button mr-4 pb-1 height-auto"
-                  >
-                    <span class="icon is-small">
-                      <ArrowUpIcon
-                        class="icon-16 transform-rotate-270 back-arrow-icon"
-                      />
-                    </span>
-                  </button>
-                  <div class="header-title-section">
-                    <h1 class="title is-5 has-text-weight-normal mb-1">
-                      {{ deployment.name || "Deployment" }}
-                    </h1>
-                    <p
-                      v-if="deployment.name"
-                      class="subtitle is-7 has-text-grey is-family-monospace mb-0"
-                    >
-                      {{ deployment.id }}
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div class="deployment-tabs">
-                <button
-                  v-for="tab in [
-                    'overview',
-                    'logs',
-                    'events',
-                    'job-definition',
-                  ]"
-                  :key="tab"
-                  @click="activeTab = tab"
-                  :class="{ 'is-active': activeTab === tab }"
-                  class="tab-button"
-                >
-                  {{
-                    tab === "job-definition"
-                      ? "Definition"
-                      : tab.charAt(0).toUpperCase() + tab.slice(1)
-                  }}
-                </button>
-                <!-- Actions Dropdown -->
-                <div
-                  class="dropdown is-right"
-                  :class="{ 'is-active': isActionsDropdownOpen }"
-                  ref="actionsDropdown"
-                >
-                  <div class="dropdown-trigger">
-                    <button
-                      class="tab-button actions-button"
-                      @click="isActionsDropdownOpen = !isActionsDropdownOpen"
-                      :class="{ 'is-loading': actionLoading }"
-                    >
-                      <span>Actions</span>
-                      <span
-                        class="icon is-small dropdown-arrow ml-1"
-                        :class="{ 'is-rotated': isActionsDropdownOpen }"
-                      >
-                        <ChevronDownIcon />
-                      </span>
-                    </button>
-                  </div>
-                  <div class="dropdown-menu">
-                    <div class="dropdown-content">
-                      <!-- Start Action -->
-                      <a
-                        v-if="canStart"
-                        class="dropdown-item"
-                        @click="
-                          startDeployment();
-                          isActionsDropdownOpen = false;
-                        "
-                        :disabled="actionLoading"
-                      >
-                        <span class="icon is-small mr-2">
-                          <PlayIcon />
-                        </span>
-                        <span>Start</span>
-                      </a>
-
-                      <!-- Stop Action -->
-                      <a
-                        v-if="canStop"
-                        class="dropdown-item"
-                        @click="
-                          stopDeployment();
-                          isActionsDropdownOpen = false;
-                        "
-                        :disabled="actionLoading"
-                      >
-                        <span class="icon is-small mr-2">
-                          <SquareIcon />
-                        </span>
-                        <span>Stop Deployment</span>
-                      </a>
-
-                      <!-- Archive Action -->
-                      <a
-                        v-if="canArchive"
-                        class="dropdown-item"
-                        @click="
-                          archiveDeployment();
-                          isActionsDropdownOpen = false;
-                        "
-                        :disabled="actionLoading"
-                      >
-                        <span class="icon is-small mr-2">
-                          <ArchiveIcon />
-                        </span>
-                        <span>Archive</span>
-                      </a>
-
-                      <hr
-                        class="dropdown-divider"
-                        v-if="
-                          (canStart || canStop || canArchive) &&
-                          deployment.status !== 'ARCHIVED'
-                        "
-                      />
-
-                      <!-- Update Replicas Action -->
-                      <a
-                        v-if="deployment.status !== 'ARCHIVED'"
-                        class="dropdown-item"
-                        @click="
-                          showReplicasModal = true;
-                          isActionsDropdownOpen = false;
-                        "
-                        :disabled="actionLoading"
-                      >
-                        <span class="icon is-small mr-2">
-                          <GridIcon />
-                        </span>
-                        <span>Update Replicas</span>
-                      </a>
-
-                      <!-- Update Timeout Action -->
-                      <a
-                        v-if="deployment.status !== 'ARCHIVED'"
-                        class="dropdown-item"
-                        @click="
-                          showTimeoutModal = true;
-                          isActionsDropdownOpen = false;
-                        "
-                        :disabled="actionLoading"
-                      >
-                        <span class="icon is-small mr-2">
-                          <ClockIcon />
-                        </span>
-                        <span>Update Timeout</span>
-                      </a>
-
-                      <!-- Update Schedule Action (only for scheduled deployments) -->
-                      <a
-                        v-if="
-                          deployment.status !== 'ARCHIVED' &&
-                          deployment.strategy?.toUpperCase() === 'SCHEDULED'
-                        "
-                        class="dropdown-item"
-                        @click="
-                          showScheduleModal = true;
-                          isActionsDropdownOpen = false;
-                        "
-                        :disabled="actionLoading"
-                      >
-                        <span class="icon is-small mr-2">
-                          <CalendarIcon />
-                        </span>
-                        <span>Update Schedule</span>
-                      </a>
-
-                      <!-- Create Revision Action -->
-                      <a
-                        v-if="deployment.status !== 'ARCHIVED'"
-                        class="dropdown-item"
-                        @click="
-                          showRevisionModal = true;
-                          isActionsDropdownOpen = false;
-                        "
-                        :disabled="actionLoading"
-                      >
-                        <span class="icon is-small mr-2">
-                          <EditIcon />
-                        </span>
-                        <span>Create Revision</span>
-                      </a>
-
-                      <div
-                        v-if="!hasAnyActions"
-                        class="dropdown-item has-text-grey"
-                      >
-                        <span>No actions available</span>
-                      </div>
-
-                      <VaultActions
-                        v-if="hasVault && deploymentVault"
-                        :vault="deploymentVault"
-                        :closeMenu="
-                          () => {
-                            isActionsDropdownOpen = false;
-                          }
-                        "
-                        :isDisabled="actionLoading"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <DeploymentHeader
+            :deployment="deployment"
+            :activeTab="activeTab"
+            :availableTabs="availableTabs"
+            :actionLoading="actionLoading"
+            :canStart="canStart"
+            :canStop="canStop"
+            :canArchive="canArchive"
+            :hasAnyActions="hasAnyActions"
+            :hasVault="hasVault"
+            :deploymentVault="deploymentVault"
+            @switchTab="switchTab"
+            @action="switchAction"
+            @rename="updateName"
+            @navigateBack="router.push('/deployments')"
+          />
 
           <!-- Tab Content -->
           <div class="p-5">
             <!-- Overview Tab -->
             <div v-if="activeTab === 'overview'">
-              <!-- Deployment Details Section -->
-              <div class="mb-5">
-                <h2 class="title is-5 mb-3">Deployment details</h2>
-                <div class="box is-borderless">
-                  <div class="table-container">
-                    <table class="table is-fullwidth mb-0">
-                      <tbody>
-                        <tr>
-                          <td class="va-bottom">Status</td>
-                          <td>
-                            <StatusTag :status="deployment.status" />
-                          </td>
-                        </tr>
-                        <!-- Vault Details Section -->
-                        <VaultOverviewRows
-                          v-if="hasVault && deploymentVault"
-                          :isTableRow="true"
-                          :deployment="deployment"
-                        />
-                        <tr>
-                          <td>Deployment strategy</td>
-                          <td>{{ deployment.strategy }}</td>
-                        </tr>
-                        <tr>
-                          <td>Replicas count</td>
-                          <td>{{ deployment.replicas }}</td>
-                        </tr>
-                        <tr>
-                          <td>GPU</td>
-                          <td v-if="deployment && deployment.market">
-                            <span
-                              v-if="
-                                testgridMarkets &&
-                                testgridMarkets.find(
-                                  (tgm: any) =>
-                                    tgm.address === deployment?.market
-                                )
-                              "
-                            >
-                              {{
-                                testgridMarkets.find(
-                                  (tgm: any) =>
-                                    tgm.address === deployment?.market
-                                ).name
-                              }}
-                            </span>
-                            <span v-else>{{ deployment.market }}</span>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td>Container timeout</td>
-                          <td>
-                            <SecondsFormatter
-                              :seconds="deployment.timeout * 60"
-                              :showSeconds="false"
-                            />
-                          </td>
-                        </tr>
+              <DeploymentErrorBanner
+                :hasErrorInLastEvent="hasErrorInLastEvent"
+                @viewEvents="switchTab('events')"
+              />
 
-                        <!-- Scheduled deployment cron schedule -->
-                        <tr
-                          v-if="
-                            deployment.strategy?.toUpperCase() ===
-                              'SCHEDULED' && deploymentSchedule
-                          "
-                        >
-                          <td>Schedule</td>
-                          <td>
-                            <div class="is-flex is-flex-direction-column">
-                              <span class="is-family-monospace">{{
-                                deploymentSchedule
-                              }}</span>
-                              <span class="is-size-7 has-text-grey mt-1">{{
-                                parseCronExpression(deploymentSchedule || "")
-                              }}</span>
-                            </div>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td>Created on</td>
-                          <td>{{ formatDate(deployment.created_at) }}</td>
-                        </tr>
-                        <tr>
-                          <td>Last updated on</td>
-                          <td>{{ formatDate(deployment.updated_at) }}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
+              <DeploymentDetails
+                :deployment="deployment"
+                :hasVault="hasVault"
+                :deploymentVault="deploymentVault"
+                :deploymentSchedule="deploymentSchedule"
+                :testgridMarkets="testgridMarkets || []"
+              />
 
-              <!-- Endpoints Section -->
-              <div v-if="deploymentEndpoints.length > 0" class="mb-5">
-                <h2 class="title is-5 mb-3">Endpoints</h2>
-                <div class="box is-borderless">
-                  <div class="table-container">
-                    <table class="table is-fullwidth mb-0">
-                      <thead>
-                        <tr>
-                          <th>Operation</th>
-                          <th>Port</th>
-                          <th>URL</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr
-                          v-for="endpoint in deploymentEndpoints"
-                          :key="`${endpoint.opId}-${endpoint.port}`"
-                        >
-                          <td>{{ endpoint.opId }}</td>
-                          <td>{{ endpoint.port }}</td>
-                          <td>
-                            <a
-                              :href="endpoint.url"
-                              target="_blank"
-                              class="has-text-link endpoint-url"
-                              >{{ endpoint.url }} ↗</a
-                            >
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
+              <DeploymentEndpoints
+                :endpoints="deploymentEndpoints"
+                :isActiveOrStarting="
+                  deployment.status === 'RUNNING' ||
+                  deployment.status === 'STARTING'
+                "
+              />
 
-              <!-- Job Activity Section -->
-              <div>
-                <h2 class="title is-5 mb-3">Job activity</h2>
-
-                <!-- Job Activity Tabs -->
-                <div class="deployment-tabs mb-3 ml-4">
-                  <button
-                    @click="jobActivityTab = 'running'"
-                    class="tab-button"
-                    :class="{ 'is-active': jobActivityTab === 'running' }"
-                  >
-                    Running
-                  </button>
-                  <button
-                    @click="jobActivityTab = 'history'"
-                    class="tab-button"
-                    :class="{ 'is-active': jobActivityTab === 'history' }"
-                  >
-                    History
-                  </button>
-                </div>
-
-                <!-- Running Jobs -->
-                <div v-if="jobActivityTab === 'running'">
-                  <div
-                    v-if="activeJobs.length === 0"
-                    class="box has-text-centered p-6"
-                  >
-                    <p class="has-text-grey">
-                      <span v-if="deployment.status === 'DRAFT'"
-                        >Start deployment to create jobs</span
-                      >
-                      <span v-else>No running jobs</span>
-                    </p>
-                  </div>
-
-                  <div v-else class="box is-borderless">
-                    <div class="table-container">
-                      <table class="table is-fullwidth mb-0">
-                        <thead>
-                          <tr>
-                            <th>Name</th>
-                            <th>Revision</th>
-                            <th>Status</th>
-                            <th>Duration</th>
-                            <th>Created on</th>
-                            <th></th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr v-for="job in activeJobs" :key="job.job">
-                            <td>
-                              <span class="is-family-monospace is-size-7">{{
-                                job.job
-                              }}</span>
-                            </td>
-                            <td>
-                              {{ job.revision || "-" }}
-                            </td>
-                            <td>
-                              <JobStatus :status="job.state || 0" />
-                            </td>
-                            <td>
-                              <span v-if="getJobDuration(job.job)">
-                                <SecondsFormatter
-                                  :seconds="getJobDuration(job.job)"
-                                  :showSeconds="true"
-                                />
-                              </span>
-                              <span v-else>-</span>
-                            </td>
-                            <td>{{ formatDate(job.created_at) }}</td>
-                            <td>
-                              <NuxtLink
-                                :to="`/deployments/${deployment.id}/jobs/${job.job}`"
-                                class="has-text-link"
-                              >
-                                View job
-                              </NuxtLink>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Historical Jobs -->
-                <div v-if="jobActivityTab === 'history'">
-                  <div
-                    v-if="historicalJobs.length === 0"
-                    class="box has-text-centered p-6"
-                  >
-                    <p class="has-text-grey">No completed jobs yet</p>
-                  </div>
-
-                  <div v-else class="box is-borderless">
-                    <div class="table-container">
-                      <table class="table is-fullwidth mb-0">
-                        <thead>
-                          <tr>
-                            <th>Name</th>
-                            <th>Revision</th>
-                            <th>Status</th>
-                            <th>Duration</th>
-                            <th>Created on</th>
-                            <th></th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr v-for="job in historicalJobs" :key="job.job">
-                            <td>
-                              <span class="is-family-monospace is-size-7">{{
-                                job.job
-                              }}</span>
-                            </td>
-                            <td>
-                              {{ job.revision || "-" }}
-                            </td>
-                            <td>
-                              <JobStatus :status="job.state || 0" />
-                            </td>
-                            <td>
-                              <span v-if="getJobDuration(job.job)">
-                                <SecondsFormatter
-                                  :seconds="getJobDuration(job.job)"
-                                  :showSeconds="true"
-                                />
-                              </span>
-                              <span v-else>-</span>
-                            </td>
-                            <td>{{ formatDate(job.created_at) }}</td>
-                            <td>
-                              <NuxtLink
-                                :to="`/deployments/${deployment.id}/jobs/${job.job}`"
-                                class="has-text-link"
-                              >
-                                View job
-                              </NuxtLink>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <DeploymentJobActivity
+                :deploymentId="deployment.id"
+                :deploymentStatus="deployment.status"
+                :jobActivityTab="jobActivityTab"
+                :activeJobs="activeJobsPaged"
+                :activeLoading="activeLoading"
+                :activeHasPrev="activeHasPrev"
+                :activeHasNext="activeHasNext"
+                :historyJobs="historyJobs"
+                :historyLoading="historyLoading"
+                :historyHasPrev="historyHasPrev"
+                :historyHasNext="historyHasNext"
+                :getJobStateNumber="getJobStateNumber"
+                :getJobDuration="getJobDuration"
+                @update:jobActivityTab="jobActivityTab = $event"
+                @active:prev="activePrev"
+                @active:next="activeNext"
+                @history:prev="historyPrev"
+                @history:next="historyNext"
+              />
             </div>
 
             <!-- Events Tab -->
             <div v-if="activeTab === 'events'">
-              <!-- Upcoming Tasks -->
-              <div class="mb-5">
-                <div
-                  class="is-flex is-justify-content-space-between is-align-items-center mb-3"
-                >
-                  <h2 class="title is-5 mb-0">Upcoming Tasks</h2>
-                  <button
-                    class="button is-small"
-                    @click="loadTasks"
-                    :class="{ 'is-loading': tasksLoading }"
-                    :disabled="tasksLoading"
-                    data-tooltip="Refresh upcoming tasks"
-                  >
-                    <span class="icon is-small">
-                      <RefreshIcon />
-                    </span>
-                  </button>
-                </div>
+              <DeploymentUpcomingTasks
+                :tasks="tasks"
+                :tasksLoading="tasksLoading"
+                @refresh="loadTasks()"
+              />
 
-                <div class="box is-borderless">
-                  <div class="table-container">
-                    <table class="table is-fullwidth mb-0">
-                      <thead>
-                        <tr>
-                          <th>Status</th>
-                          <th>Task</th>
-                          <th>Due Date</th>
-                          <th>Deployment ID</th>
-                          <th>Created</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr v-if="tasks.length === 0 && !tasksLoading">
-                          <td
-                            colspan="5"
-                            class="has-text-centered has-text-grey py-6"
-                          >
-                            No tasks yet
-                          </td>
-                        </tr>
-                        <tr v-else-if="tasksLoading">
-                          <td
-                            colspan="5"
-                            class="has-text-centered has-text-grey py-6"
-                          >
-                            <span class="icon is-small mr-2">
-                              <i class="fas fa-spinner fa-spin"></i>
-                            </span>
-                            Loading tasks...
-                          </td>
-                        </tr>
-                        <tr
-                          v-else
-                          v-for="task in tasks"
-                          :key="task.deploymentId + task.created_at"
-                        >
-                          <td>
-                            <StatusTag status="QUEUED" />
-                          </td>
-                          <td>
-                            <span class="tag is-small category-tag">{{
-                              task.task
-                            }}</span>
-                          </td>
-                          <td class="has-text-grey">
-                            {{ formatDate(task.due_at) }}
-                          </td>
-                          <td class="is-family-monospace has-text-grey">
-                            {{ task.deploymentId }}
-                          </td>
-                          <td class="has-text-grey">
-                            {{ formatDate(task.created_at) }}
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-
-              <!-- History -->
-              <div>
-                <h2 class="title is-5 mb-3">History</h2>
-
-                <div class="box is-borderless">
-                  <div class="table-container">
-                    <table class="table is-fullwidth mb-0">
-                      <thead>
-                        <tr>
-                          <th>Type</th>
-                          <th>Category</th>
-                          <th>Message</th>
-                          <th>Date</th>
-                          <th></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr v-if="deploymentEvents.length === 0">
-                          <td
-                            colspan="5"
-                            class="has-text-centered has-text-grey py-6"
-                          >
-                            No events yet
-                          </td>
-                        </tr>
-                        <tr
-                          v-else
-                          v-for="(event, index) in deploymentEvents"
-                          :key="index"
-                        >
-                          <td>
-                            <span class="tag is-small category-tag">{{
-                              event.type
-                            }}</span>
-                          </td>
-                          <td>
-                            <span class="tag is-small category-tag">{{
-                              event.category
-                            }}</span>
-                          </td>
-                          <td>
-                            <span
-                              :class="{
-                                'is-family-monospace':
-                                  event.message.length > 200,
-                              }"
-                            >
-                              {{ event.message }}
-                            </span>
-                          </td>
-                          <td class="has-text-grey">
-                            {{ formatDate(event.created_at) }}
-                          </td>
-                          <td>
-                            <a
-                              v-if="event.tx"
-                              :href="`https://solscan.io/tx/${event.tx}`"
-                              target="_blank"
-                              class="button is-small is-light"
-                              title="View transaction"
-                            >
-                              TX ↗
-                            </a>
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
+              <DeploymentEventHistory :events="deploymentEvents" />
             </div>
 
             <!-- Logs Tab -->
-            <div v-if="activeTab === 'logs'" class="deployment-logs-container">
-              <div
-                v-if="activeJobs.length === 0"
-                class="notification is-light has-text-centered"
-              >
-                <p class="has-text-grey">No running jobs to show logs for</p>
-              </div>
-              <div v-else class="deployment-logs-content">
-                <!-- Job Tabs -->
-                <div class="deployment-tabs mb-3">
-                  <button
-                    v-for="job in activeJobs"
-                    :key="job.job"
-                    @click="activeLogsJobId = job.job"
-                    :class="{ 'is-active': activeLogsJobId === job.job }"
-                    class="tab-button"
-                  >
-                    {{ job.job.slice(0, 16) }}...
-                  </button>
-                </div>
-
-                <!-- Selected Job Logs -->
-                <div v-if="activeLogsJobId" class="selected-job-logs">
-                  <JobLogsContainer :job-id="activeLogsJobId" :deployment-id="route.params.id" />
-                </div>
-              </div>
+            <div v-if="activeTab === 'logs'">
+              <DeploymentLogCollector
+                :deploymentId="deployment.id"
+                :jobs="deploymentJobs"
+              />
             </div>
 
-            <!-- Job Definition Tab -->
-            <div v-if="activeTab === 'job-definition'">
-              <!-- Current Job Definition Section -->
-              <div class="mb-5">
-                <div
-                  class="is-flex is-justify-content-space-between is-align-items-center mb-3"
-                >
-                  <h2 class="title is-5 mb-0">Current Job Definition</h2>
-                  <div class="buttons" v-if="hasDefinitionChanged">
-                    <button
-                      @click="resetDefinition"
-                      class="button is-small is-light"
-                    >
-                      Reset
-                    </button>
-                    <button
-                      @click="makeRevision"
-                      class="button is-small is-primary"
-                    >
-                      Make Revision
-                    </button>
-                  </div>
-                </div>
-                <div class="box is-borderless">
-                  <div
-                    v-if="loadingJobDefinition"
-                    class="has-text-grey has-text-centered py-4"
-                  >
-                    Loading job definition...
-                  </div>
-                  <div
-                    v-else-if="jobDefinitionModel"
-                    class="json-editor-container"
-                  >
-                    <JsonEditorVue
-                      :validator="validator"
-                      :class="{ 'jse-theme-dark': colorMode.value === 'dark' }"
-                      :modelValue="jobDefinitionModel"
-                      :mode="Mode.text"
-                      :mainMenuBar="false"
-                      :statusBar="false"
-                      :stringified="false"
-                      :readOnly="false"
-                      class="json-editor"
-                      @update:modelValue="
-                        (value: unknown) => {
-                          if (value && typeof value === 'object') {
-                            jobDefinitionModel = value as JobDefinition;
-                          }
-                        }
-                      "
-                    />
-                  </div>
-                  <div v-else class="has-text-grey has-text-centered py-4">
-                    No job definition found
-                  </div>
-                </div>
-              </div>
+            <!-- Configuration Tab -->
+            <div v-if="activeTab === 'configuration'">
+              <DeploymentJobDefinitionEditor
+                ref="jobDefEditorComponent"
+                :jobDefinitionModel="jobDefinitionModel"
+                :loadingJobDefinition="loadingJobDefinition"
+                :hasDefinitionChanged="hasDefinitionChanged"
+                @update:jobDefinitionModel="jobDefinitionModel = $event"
+                @reset="resetDefinition"
+                @makeRevision="makeRevision"
+              />
 
-              <!-- Revisions Section -->
-              <div class="mb-4">
-                <h2 class="title is-5 mb-3">Deployment Revisions</h2>
-                <div
-                  v-if="
-                    deployment?.revisions && deployment.revisions.length > 0
-                  "
-                  class="box is-borderless"
-                >
-                  <div class="table-container">
-                    <table class="table is-fullwidth">
-                      <thead>
-                        <tr>
-                          <th>Revision</th>
-                          <th>Status</th>
-                          <th>Created</th>
-                          <th>Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr
-                          v-for="revision in sortedRevisions"
-                          :key="revision.revision"
-                        >
-                          <td>
-                            <span class="has-text-weight-semibold">{{
-                              revision.revision
-                            }}</span>
-                          </td>
-                          <td>
-                            <StatusTag
-                              :status="
-                                revision.revision === deployment.active_revision
-                                  ? 'ACTIVE'
-                                  : 'INACTIVE'
-                              "
-                              :showLabel="true"
-                              :imageOnly="false"
-                            />
-                          </td>
-                          <td class="has-text-grey">
-                            {{ formatDate(revision.created_at) }}
-                          </td>
-                          <td>
-                            <div class="buttons are-small">
-                              <button
-                                v-if="
-                                  revision.revision !==
-                                  deployment.active_revision
-                                "
-                                @click="switchToRevision(revision.revision)"
-                                class="button is-primary is-small"
-                                :class="{
-                                  'is-loading':
-                                    switchingRevision === revision.revision,
-                                }"
-                                :disabled="
-                                  actionLoading || switchingRevision !== null
-                                "
-                              >
-                                Make Active
-                              </button>
-                              <button
-                                @click="viewRevisionDefinition(revision)"
-                                class="button is-light is-small"
-                              >
-                                View Definition
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-                <div v-else class="notification is-light has-text-centered">
-                  <p>No revisions found for this deployment.</p>
-                  <p class="has-text-grey is-size-7 mt-2">
-                    Create a new revision using the Actions menu.
-                  </p>
-                </div>
-              </div>
+              <DeploymentRevisions
+                :revisions="sortedRevisions"
+                :activeRevision="deployment.active_revision"
+                :switchingRevision="switchingRevision"
+                :actionLoading="actionLoading"
+                @switchToRevision="switchToRevision"
+                @viewRevision="viewRevisionDefinition"
+              />
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Update Replicas Modal -->
-      <div
-        v-if="deployment"
-        class="modal"
-        :class="{ 'is-active': showReplicasModal }"
-      >
-        <div class="modal-background" @click="showReplicasModal = false"></div>
-        <div class="modal-card has-limited-width-smaller">
-          <header class="modal-card-head">
-            <p class="modal-card-title">Update Replicas</p>
-            <button class="delete" @click="showReplicasModal = false"></button>
-          </header>
-          <section class="modal-card-body">
-            <div class="field">
-              <label class="label">
-                Replica Count
-                <span
-                  class="icon is-small has-tooltip-arrow has-tooltip-right"
-                  data-tooltip="Number of parallel job instances"
-                >
-                  <InfoCircleIcon />
-                </span>
-              </label>
-              <div class="control">
-                <input
-                  type="number"
-                  class="input"
-                  v-model.number="newReplicaCount"
-                  min="1"
-                  max="100"
-                  :placeholder="deployment.replicas.toString()"
-                />
-              </div>
-              <p class="help">Current: {{ deployment.replicas }}</p>
-            </div>
-          </section>
-          <footer class="modal-card-foot is-justify-content-flex-end">
-            <button class="button" @click="showReplicasModal = false">
-              Cancel
-            </button>
-            <button
-              class="button is-success"
-              @click="
-                updateReplicas();
-                showReplicasModal = false;
-              "
-              :class="{ 'is-loading': actionLoading }"
-              :disabled="
-                actionLoading || !newReplicaCount || newReplicaCount < 1
-              "
-            >
-              Update
-            </button>
-          </footer>
-        </div>
-      </div>
+      <!-- Modals -->
+      <template v-if="deployment">
+        <DeploymentReplicasModal
+          v-model="showReplicasModal"
+          v-model:replicaCount="newReplicaCount"
+          :currentReplicas="deployment.replicas"
+          :actionLoading="actionLoading"
+          @confirm="updateReplicas()"
+        />
 
-      <!-- Update Timeout Modal -->
-      <div
-        v-if="deployment"
-        class="modal"
-        :class="{ 'is-active': showTimeoutModal }"
-      >
-        <div class="modal-background" @click="showTimeoutModal = false"></div>
-        <div class="modal-card has-limited-width-smaller">
-          <header class="modal-card-head">
-            <p class="modal-card-title">Update Timeout</p>
-            <button class="delete" @click="showTimeoutModal = false"></button>
-          </header>
-          <section class="modal-card-body">
-            <div class="field">
-              <label class="label">
-                Timeout (hours)
-                <span
-                  class="icon is-small has-tooltip-arrow has-tooltip-right"
-                  data-tooltip="Maximum runtime before auto-shutdown"
-                >
-                  <InfoCircleIcon />
-                </span>
-              </label>
-              <div class="control">
-                <input
-                  type="number"
-                  class="input"
-                  v-model.number="newTimeoutHours"
-                  min="0.0167"
-                  step="0.1"
-                  :placeholder="(deployment.timeout / 60).toFixed(2)"
-                />
-              </div>
-              <p class="help">
-                Current: {{ (deployment.timeout / 60).toFixed(2) }}h
-              </p>
-            </div>
-          </section>
-          <footer class="modal-card-foot is-justify-content-flex-end">
-            <button class="button" @click="showTimeoutModal = false">
-              Cancel
-            </button>
-            <button
-              class="button is-success"
-              @click="
-                updateJobTimeout();
-                showTimeoutModal = false;
-              "
-              :class="{ 'is-loading': actionLoading }"
-              :disabled="
-                actionLoading || !newTimeoutHours || newTimeoutHours < 0.0167
-              "
-            >
-              Update
-            </button>
-          </footer>
-        </div>
-      </div>
+        <DeploymentTimeoutModal
+          v-model="showTimeoutModal"
+          v-model:timeoutHours="newTimeoutHours"
+          :currentTimeoutDisplay="(deployment.timeout / 60).toFixed(2)"
+          :actionLoading="actionLoading"
+          @confirm="updateJobTimeout()"
+        />
 
-      <!-- Update Schedule Modal -->
-      <div
-        v-if="deployment"
-        class="modal"
-        :class="{ 'is-active': showScheduleModal }"
-      >
-        <div class="modal-background" @click="showScheduleModal = false"></div>
-        <div class="modal-card has-limited-width-small">
-          <header class="modal-card-head">
-            <p class="modal-card-title">Update Schedule</p>
-            <button class="delete" @click="showScheduleModal = false"></button>
-          </header>
-          <section class="modal-card-body">
-            <div class="field">
-              <label class="label">
-                Cron Expression
-                <span
-                  class="icon is-small has-tooltip-arrow"
-                  data-tooltip="Cron expression defining when jobs should run. Format: minute hour day month day-of-week"
-                >
-                  <InfoCircleIcon />
-                </span>
-              </label>
-              <div class="control">
-                <input
-                  type="text"
-                  class="input is-family-monospace"
-                  v-model="newSchedule"
-                  :placeholder="deploymentSchedule || '0 * * * *'"
-                />
-              </div>
-              <p class="help">
-                <span
-                  >Current:
-                  <span class="is-family-monospace has-text-dark">{{
-                    deploymentSchedule
-                  }}</span></span
-                ><br />
-                <span class="has-text-grey">{{
-                  deploymentSchedule
-                    ? parseCronExpression(deploymentSchedule)
-                    : ""
-                }}</span>
-              </p>
-              <div v-if="newSchedule" class="mt-3">
-                <p class="help">
-                  <span
-                    >Preview:
-                    <span class="is-family-monospace has-text-dark">{{
-                      newSchedule
-                    }}</span></span
-                  ><br />
-                  <span class="has-text-grey">{{
-                    parseCronExpression(newSchedule)
-                  }}</span>
-                </p>
-              </div>
-            </div>
+        <DeploymentScheduleModal
+          v-model="showScheduleModal"
+          v-model:schedule="newSchedule"
+          :currentSchedule="deploymentSchedule"
+          :actionLoading="actionLoading"
+          :isValidCronExpression="isValidCronExpression"
+          @confirm="updateSchedule()"
+        />
 
-            <div class="content">
-              <p class="has-text-grey is-size-7 mb-2">
-                <strong>Common examples:</strong>
-              </p>
-              <div class="tags">
-                <span
-                  class="tag is-light is-clickable"
-                  @click="newSchedule = '0 * * * *'"
-                >
-                  <span class="is-family-monospace mr-1 has-text-dark"
-                    >0 * * * *</span
-                  >
-                  Every hour
-                </span>
-                <span
-                  class="tag is-light is-clickable"
-                  @click="newSchedule = '*/30 * * * *'"
-                >
-                  <span class="is-family-monospace mr-1 has-text-dark"
-                    >*/30 * * * *</span
-                  >
-                  Every 30 min
-                </span>
-                <span
-                  class="tag is-light is-clickable"
-                  @click="newSchedule = '0 0 * * *'"
-                >
-                  <span class="is-family-monospace mr-1 has-text-dark"
-                    >0 0 * * *</span
-                  >
-                  Daily
-                </span>
-                <span
-                  class="tag is-light is-clickable"
-                  @click="newSchedule = '0 0 * * 0'"
-                >
-                  <span class="is-family-monospace mr-1 has-text-dark"
-                    >0 0 * * 0</span
-                  >
-                  Weekly
-                </span>
-              </div>
-            </div>
-          </section>
-          <footer class="modal-card-foot is-justify-content-flex-end">
-            <button class="button" @click="showScheduleModal = false">
-              Cancel
-            </button>
-            <button
-              class="button is-success"
-              @click="
-                updateSchedule();
-                showScheduleModal = false;
-              "
-              :class="{ 'is-loading': actionLoading }"
-              :disabled="
-                actionLoading ||
-                !newSchedule ||
-                !isValidCronExpression(newSchedule)
-              "
-            >
-              Update
-            </button>
-          </footer>
-        </div>
-      </div>
+        <DeploymentRevisionModal
+          v-model="showRevisionModal"
+          v-model:definition="revisionJobDefinition"
+          ref="revisionModalComponent"
+          :actionLoading="actionLoading"
+          @confirm="createRevision(canSaveRevision)"
+        />
 
-      <!-- Create Revision Modal -->
-      <div
-        v-if="deployment"
-        class="modal"
-        :class="{ 'is-active': showRevisionModal }"
-      >
-        <div class="modal-background" @click="showRevisionModal = false"></div>
-        <div class="modal-card modal-card-wide">
-          <header class="modal-card-head">
-            <p class="modal-card-title">Create New Revision</p>
-            <button class="delete" @click="showRevisionModal = false"></button>
-          </header>
-          <section class="modal-card-body has-min-height-500">
-            <div class="field full-height">
-              <div class="control full-height">
-                <JsonEditorVue
-                  :validator="validator"
-                  :class="{ 'jse-theme-dark': colorMode.value === 'dark' }"
-                  v-model="revisionJobDefinition"
-                  :mode="Mode.text"
-                  :mainMenuBar="false"
-                  :statusBar="false"
-                  :stringified="false"
-                  class="has-height-500"
-                />
-              </div>
-            </div>
-          </section>
-          <footer class="modal-card-foot is-justify-content-flex-end">
-            <button class="button" @click="showRevisionModal = false">
-              Cancel
-            </button>
-            <button
-              class="button is-success"
-              @click="createRevision()"
-              :class="{ 'is-loading': actionLoading }"
-              :disabled="actionLoading"
-            >
-              Create Revision
-            </button>
-          </footer>
-        </div>
-      </div>
-
-      <!-- View Revision Definition Modal -->
-      <div
-        v-if="viewingRevision"
-        class="modal"
-        :class="{ 'is-active': showRevisionDefinitionModal }"
-      >
-        <div
-          class="modal-background"
-          @click="showRevisionDefinitionModal = false"
-        ></div>
-        <div class="modal-card modal-card-wide">
-          <header class="modal-card-head">
-            <p class="modal-card-title">
-              Revision {{ viewingRevision.revision }} - Job Definition
-            </p>
-            <button
-              class="delete"
-              @click="showRevisionDefinitionModal = false"
-            ></button>
-          </header>
-          <section class="modal-card-body has-min-height-500">
-            <div
-              v-if="viewingRevision.job_definition"
-              class="json-editor-container"
-            >
-              <JsonEditorVue
-                :validator="validator"
-                v-model="viewingRevision.job_definition"
-                :mode="Mode.text"
-                :mainMenuBar="false"
-                :statusBar="false"
-                :stringified="false"
-                :readOnly="true"
-                class="json-editor"
-              />
-            </div>
-            <div v-else class="has-text-grey has-text-centered py-4">
-              No job definition found for this revision
-            </div>
-          </section>
-          <footer class="modal-card-foot is-justify-content-flex-end">
-            <button class="button" @click="showRevisionDefinitionModal = false">
-              Close
-            </button>
-          </footer>
-        </div>
-      </div>
+        <DeploymentRevisionViewModal
+          v-model="showRevisionDefinitionModal"
+          :revision="viewingRevision"
+        />
+      </template>
     </template>
   </div>
   <VaultModal />
 </template>
 
 <script setup lang="ts">
-import type { Deployment, JobDefinition } from "@nosana/sdk";
-import { Mode, ValidationSeverity } from "vanilla-jsoneditor";
-import JsonEditorVue from "json-editor-vue";
-import "vanilla-jsoneditor/themes/jse-theme-dark.css";
-import { useToast } from "vue-toastification";
-import { useWallet } from "solana-wallets-vue";
-import { useAuth } from "#imports";
-import JobStatus from "~/components/Job/Status.vue";
-import JobLogsContainer from "~/components/Job/LogsContainer.vue";
-import SecondsFormatter from "~/components/SecondsFormatter.vue";
-import StatusTag from "~/components/Common/StatusTag.vue";
+import type { JobDefinition } from "@nosana/kit";
+import { useVaultModal } from "~/composables/useVaultModal";
+import { updateVaultBalance } from "~/composables/useDeploymentVault";
+import { useWallet } from "@nosana/solana-vue";
+import { useSuperTokens } from "~/composables/useSuperTokens";
+import { useDeploymentDetail } from "~/composables/useDeploymentDetail";
+import { useDeploymentJobs } from "~/composables/useDeploymentJobs";
+import { useDeploymentActions } from "~/composables/useDeploymentActions";
+import { useDeploymentPolling } from "~/composables/useDeploymentPolling";
+import { useDeploymentJobDefinition } from "~/composables/useDeploymentJobDefinition";
 import VaultModal from "~/components/Vault/Modal/VaultModal.vue";
-import VaultActions from "~/components/Vault/VaultActions.vue";
 
-// Import icons as components
-import ArrowUpIcon from "@/assets/img/icons/arrow-up.svg?component";
-import ChevronDownIcon from "@/assets/img/icons/chevron-down.svg?component";
-import PlayIcon from "@/assets/img/icons/play.svg?component";
-import SquareIcon from "@/assets/img/icons/square.svg?component";
-import ArchiveIcon from "@/assets/img/icons/archive.svg?component";
-import GridIcon from "@/assets/img/icons/grid.svg?component";
-import ClockIcon from "@/assets/img/icons/clock.svg?component";
-import CalendarIcon from "@/assets/img/icons/calendar.svg?component";
-import EditIcon from "@/assets/img/icons/edit.svg?component";
-import RefreshIcon from "@/assets/img/icons/refresh.svg?component";
-import InfoCircleIcon from "@/assets/img/icons/info-circle.svg?component";
-import { useTimestamp } from "@vueuse/core";
-import { useSDK } from "~/composables/useSDK";
-import { parseCronExpression } from "~/utils/parseCronExpression";
-
-const colorMode = useColorMode();
-
-// Types
-interface DeploymentJob {
-  job: string;
-  tx: string;
-  created_at: string;
-  state?: number;
-  market?: string;
-  revision?: number;
-}
-
-interface DeploymentRevision {
-  revision: number;
-  created_at: string;
-  job_definition?: JobDefinition;
-}
-
-interface DeploymentEndpoint {
-  opId: string;
-  port: number | string;
-  url: string;
-}
-
-// Use SDK Deployment as-is; access extra fields via guarded indexing
-
-interface DeploymentEvent {
-  type: string;
-  category: string;
-  message: string;
-  created_at: string;
-  deploymentId: string;
-  tx?: string;
-}
-
-// Composables
+// --- Auth setup ---
 const route = useRoute();
 const router = useRouter();
-const toast = useToast();
-const { status, token } = useAuth();
-const { connected, publicKey } = useWallet();
-const isAuthenticated = computed(
-  () => status.value === "authenticated" && token.value
-);
+const { open: openVaultModal, state: vaultModalState } = useVaultModal();
+const { isAuthenticated: superTokensAuth } = useSuperTokens();
+const { connected, account } = useWallet();
+
+const isAuthenticated = computed(() => superTokensAuth.value);
 const isWalletMode = computed(
-  () => connected.value && publicKey.value && !token.value
+  () => connected.value && account.value?.address && !superTokensAuth.value,
 );
 const hasAnyAuth = computed(() => isAuthenticated.value || isWalletMode.value);
-const { getIpfs } = useIpfs();
-const { nosana } = useSDK();
 
-// State
-const deployment = ref<Deployment | null>(null);
-const loading = ref(true);
-const error = ref<string | null>(null);
+// --- Tab state ---
 const activeTab = ref("overview");
-const activeLogsJobId = ref<string | null>(null);
-const jobActivityTab = ref("running");
-const actionLoading = ref(false);
-const newReplicaCount = ref<number | null>(null);
-const newTimeoutHours = ref<number | null>(null);
-const newSchedule = ref<string>("");
-const tasks = ref<any[]>([]);
-const tasksLoading = ref(false);
-const tasksPollingInterval = ref<NodeJS.Timeout | null>(null);
-const isActionsDropdownOpen = ref(false);
-const showReplicasModal = ref(false);
-const showTimeoutModal = ref(false);
-const showScheduleModal = ref(false);
-const showRevisionModal = ref(false);
-const revisionJobDefinition = ref<JobDefinition | null>(null);
-const switchingRevision = ref<number | null>(null);
-const showRevisionDefinitionModal = ref(false);
-const viewingRevision = ref<any>(null);
-const actionsDropdown = ref<HTMLElement | null>(null);
-// Debug instrumentation for page header icon
-const headerIconRef = ref<HTMLElement | null>(null);
-const { data: testgridMarkets } = useAPI("/api/markets");
-// Safe accessors for optional DM fields
-const deploymentSchedule = computed<string | null>(() => {
-  const d = deployment.value as unknown as { schedule?: string } | null;
-  return d?.schedule ?? null;
+const availableTabs = computed(() => {
+  return ["overview", "logs", "events", "configuration"];
 });
 
-// Use API-provided deployment.status as-is for display
-// Auto-start deployments when status is DRAFT
+// Initialize activeTab from URL query parameter
+const initialTab = route.query.tab?.toString();
+if (
+  initialTab &&
+  ["overview", "logs", "events", "configuration"].includes(initialTab)
+) {
+  activeTab.value = initialTab;
+}
+
+// --- Composables ---
+const detail = useDeploymentDetail({
+  hasAnyAuth,
+  isWalletMode,
+  activeTab,
+});
+
+const {
+  deployment,
+  loading,
+  error,
+  deploymentJobs,
+  deploymentEventsData,
+  deploymentRevisions,
+  tasks,
+  tasksLoading,
+  jobStates,
+  allJobsData,
+  jobStateStringToNumber,
+  deploymentStatus,
+  hasVault,
+  deploymentVault,
+  deploymentSchedule,
+  hasActiveJobs,
+  loadDeployment,
+  loadJobs,
+  loadEvents,
+  loadTasks,
+} = detail;
+
+const jobs = useDeploymentJobs({
+  deployment,
+  deploymentJobs,
+  deploymentEventsData,
+  jobStates,
+  allJobsData,
+  jobStateStringToNumber,
+});
+
+const {
+  jobActivityTab,
+  getJobDuration,
+  getJobStateNumber,
+  activeJobsPaged,
+  activeLoading,
+  activeHasPrev,
+  activeHasNext,
+  activeNext,
+  activePrev,
+  refreshActiveJobs,
+  historyJobs,
+  historyLoading,
+  historyHasPrev,
+  historyHasNext,
+  historyNext,
+  historyPrev,
+  deploymentEndpoints,
+  deploymentEvents,
+  hasErrorInLastEvent,
+} = jobs;
+
+// Each poll refreshes deploymentJobs (logs/maps/hasActiveJobs) AND the full
+// active set that powers the Active tab and the running-job timer. Guard the
+// first await so refreshActiveJobs always runs even if loadJobs ever throws.
+const pollLoadJobs = async (silent?: boolean) => {
+  await loadJobs(silent).catch(() => {});
+  await refreshActiveJobs();
+};
+
+const polling = useDeploymentPolling({
+  deployment,
+  activeTab,
+  hasActiveJobs,
+  loadDeployment,
+  loadJobs: pollLoadJobs,
+  loadEvents,
+  loadTasks,
+});
+
+const {
+  pollingTimeout,
+  stopAllPolling,
+  startUnifiedPolling,
+  startFastPolling,
+  stopJobPolling,
+} = polling;
+
+const actions = useDeploymentActions({
+  deployment,
+  hasAnyAuth,
+  isWalletMode,
+  deploymentStatus,
+  hasActiveJobs,
+  loadDeployment,
+  startFastPolling,
+  stopJobPolling,
+});
+
+const {
+  actionLoading,
+  showReplicasModal,
+  showTimeoutModal,
+  showScheduleModal,
+  showRevisionModal,
+  showRevisionDefinitionModal,
+  newReplicaCount,
+  newTimeoutHours,
+  newSchedule,
+  revisionJobDefinition,
+  switchingRevision,
+  viewingRevision,
+  canStart,
+  canStop,
+  canArchive,
+  hasAnyActions,
+  startDeployment,
+  stopDeployment,
+  archiveDeployment,
+  updateName,
+  updateReplicas,
+  updateJobTimeout,
+  updateSchedule,
+  createRevision,
+  switchToRevision,
+  viewRevisionDefinition,
+  isValidCronExpression,
+} = actions;
+
+const jobDef = useDeploymentJobDefinition({
+  deployment,
+  deploymentRevisions,
+  actionLoading,
+  loadDeployment,
+});
+
+const {
+  jobDefinitionModel,
+  loadingJobDefinition,
+  canSaveRevision,
+  loadJobDefinition,
+  hasDefinitionChanged,
+  resetDefinition,
+  makeRevision,
+} = jobDef;
+
+// Wire up the circular dependency: loadDeployment needs loadJobDefinition
+detail.setLoadJobDefinition(loadJobDefinition);
+
+// --- Remaining page-level state ---
+const { data: testgridMarkets } = useAPI("/api/markets", { default: () => [] });
+
+// Component refs for editor validation wiring
+const jobDefEditorComponent = ref<any>(null);
+const revisionModalComponent = ref<any>(null);
+
+// Wire editor refs from child components to job definition composable
+watch(
+  () => jobDefEditorComponent.value?.editorRef,
+  (editorRef: any) => {
+    if (editorRef) {
+      jobDef.currentJobDefEditor.value = editorRef;
+    }
+  },
+);
+
+watch(
+  () => revisionModalComponent.value?.editorRef,
+  (editorRef: any) => {
+    if (editorRef) {
+      jobDef.revisionJobDefEditor.value = editorRef;
+    }
+  },
+);
+
+// Available actions for URL-based modal opening
+const availableActions = [
+  "create-revision",
+  "update-replicas",
+  "update-timeout",
+  "update-schedule",
+  "topup",
+  "withdraw",
+];
+
+// Initialize action from URL query parameter
+const initialAction = route.query.action?.toString();
+if (initialAction && availableActions.includes(initialAction)) {
+  if (initialAction === "create-revision") showRevisionModal.value = true;
+  else if (initialAction === "update-replicas") showReplicasModal.value = true;
+  else if (initialAction === "update-timeout") showTimeoutModal.value = true;
+  else if (initialAction === "update-schedule") showScheduleModal.value = true;
+}
+
+// --- Formatters ---
+const sortedRevisions = computed(() => {
+  return deploymentRevisions.value || [];
+});
+
+// --- Auto-start DRAFT deployments ---
 const autostartTriggered = ref(false);
 watch(
   () => deployment.value?.status,
@@ -1319,922 +430,222 @@ watch(
       }
     }
   },
-  { immediate: true }
+  { immediate: true },
 );
 
-const attachSmilDebugListeners = (svgEl: SVGElement, label: string) => {
-  try {
-    const animations = svgEl.querySelectorAll("animateTransform");
-    animations.forEach((anim: any) => {
-      if (anim.__dbg) return;
-      // attach to initialise timeline without logging
-      anim.addEventListener("beginEvent", () => {});
-      anim.addEventListener("repeatEvent", () => {});
-      anim.addEventListener("endEvent", () => {});
-      anim.__dbg = true;
-    });
-  } catch {}
-};
-
-const instrumentHeaderIcon = () => {
-  const svg = headerIconRef.value?.querySelector("svg") as SVGElement | null;
-  if (!svg || !deployment.value) return;
-  attachSmilDebugListeners(
-    svg,
-    `dep=${deployment.value.id} status=${deployment.value.status}`
-  );
-};
-
+// Re-load the parent deployment when returning from a job subroute.
+// loadDeployment() intentionally early-returns while on a job subroute, so
+// navigating back to the deployment overview (browser back or the in-app back
+// button) can leave `deployment` null with loading=false -> blank screen.
+// Refetch when the subroute is exited and we don't already have the deployment.
 watch(
-  () => deployment.value?.status,
-  () => nextTick(instrumentHeaderIcon),
-  { immediate: true }
-);
-const statusPollingInterval = ref<NodeJS.Timeout | null>(null);
-const jobPollingInterval = ref<NodeJS.Timeout | null>(null);
-
-// Add debugging for polling state
-const pollingDebug = ref({
-  statusPollingActive: false,
-  jobPollingActive: false,
-  lastStatusPoll: null as Date | null,
-  lastJobPoll: null as Date | null,
-});
-
-// Computed properties for revisions
-const sortedRevisions = computed<DeploymentRevision[]>(() => {
-  const dep = deployment.value as unknown as {
-    revisions?: DeploymentRevision[];
-  } | null;
-  return Array.isArray(dep?.revisions) ? dep!.revisions! : [];
-});
-
-const formatDate = (dateString: string | Date) => {
-  return new Date(dateString).toLocaleString();
-};
-
-const validator = (json: any) => {
-  const errors: {
-    path: string[];
-    message: string;
-    severity: ValidationSeverity;
-  }[] = [];
-  return errors;
-};
-
-const jobDefinitionModel = ref<JobDefinition | null>(null);
-const loadingJobDefinition = ref(false);
-const originalDefinition = ref<JobDefinition | null>(null);
-
-const loadJobDefinition = async () => {
-  // Try to get job definition from deployment revisions first
-  const d = deployment.value as unknown as {
-    revisions?: DeploymentRevision[];
-    active_revision?: number;
-  } | null;
-  if (Array.isArray(d?.revisions) && d!.revisions!.length > 0) {
-    const activeRevision =
-      d!.revisions!.find(
-        (r: DeploymentRevision) => r.revision === d!.active_revision
-      ) || d!.revisions![d!.revisions!.length - 1];
-
-    if (activeRevision?.job_definition) {
-      jobDefinitionModel.value = activeRevision.job_definition;
-      originalDefinition.value = JSON.parse(
-        JSON.stringify(activeRevision.job_definition)
-      );
-      return;
-    }
-  }
-
-  // Fallback to IPFS if no job definition in revisions
-  const ipfsHash = (
-    deployment.value as unknown as { ipfs_definition_hash?: string } | null
-  )?.ipfs_definition_hash;
-  if (!ipfsHash) {
-    jobDefinitionModel.value = null;
-    return;
-  }
-
-  try {
-    loadingJobDefinition.value = true;
-    const definition = await getIpfs(ipfsHash);
-    jobDefinitionModel.value = definition as JobDefinition;
-    originalDefinition.value = JSON.parse(
-      JSON.stringify(definition)
-    ) as JobDefinition;
-  } catch (err: any) {
-    console.error("Error loading job definition:", err);
-    jobDefinitionModel.value = null;
-  } finally {
-    loadingJobDefinition.value = false;
-  }
-};
-
-const hasDefinitionChanged = computed(() => {
-  if (!originalDefinition.value) return false;
-  try {
-    // Ensure both are valid objects before comparing
-    const original = JSON.stringify(originalDefinition.value);
-    const current = JSON.stringify(jobDefinitionModel.value);
-    return original !== current;
-  } catch (err) {
-    // If JSON.stringify fails, there are changes (invalid JSON)
-    return true;
-  }
-});
-
-const resetDefinition = () => {
-  if (originalDefinition.value) {
-    jobDefinitionModel.value = JSON.parse(
-      JSON.stringify(originalDefinition.value)
-    );
-  }
-};
-
-const makeRevision = async () => {
-  if (!deployment.value || !hasDefinitionChanged.value) return;
-
-  // Validate JSON before making revision
-  try {
-    JSON.stringify(jobDefinitionModel.value);
-  } catch (err) {
-    toast.error(
-      "Invalid JSON: Please fix the job definition before creating a revision"
-    );
-    return;
-  }
-
-  try {
-    const { data } = await useAPI(
-      `/api/deployments/${deployment.value.id}/revisions`,
-      {
-        method: "POST",
-        body: { job_definition: jobDefinitionModel.value },
-        auth: true,
-      }
-    );
-
-    if (data.value) {
-      toast.success("Revision created successfully!");
-      await loadDeployment();
-      originalDefinition.value = JSON.parse(
-        JSON.stringify(jobDefinitionModel.value)
-      );
-    }
-  } catch (err: any) {
-    console.error("Error creating revision:", err);
-    toast.error(`Failed to create revision: ${err.message}`);
-  }
-};
-
-const loadDeployment = async (silent = false) => {
-  // Skip parent deployment fetch when on job subroute
-  if ((route.params as any)?.jobaddress) {
-    if (!silent) loading.value = false;
-    return;
-  }
-  if (!hasAnyAuth.value) {
-    error.value = "Please log in or connect wallet to view deployments";
-    if (!silent) loading.value = false;
-    return;
-  }
-
-  try {
-    // Only show loading for non-silent operations (initial load, user actions)
-    if (!silent) {
-      loading.value = true;
-      error.value = null;
-    }
-
-    const deploymentId = route.params.id as string;
-    const data = await nosana.value.deployments.get(deploymentId);
-
-    deployment.value = data as Deployment;
-
-    // Only load job definition and tasks on initial load, not during polling
-    // This prevents tasks loading state from being reset during background polling
-    if (!silent) {
-      await loadJobDefinition();
-      await loadTasks();
-    }
-
-    // Update job states for active jobs during polling
-    if (deployment.value.jobs && deployment.value.jobs.length > 0) {
-      for (const job of deployment.value.jobs) {
-        // Only fetch state for jobs that aren't already in a completed state
-        // Completed states: DONE=2, STOPPED=3, TIMEOUT=4, ERROR=5
-        const currentState = jobStates.value[job.job];
-        if (currentState !== undefined && currentState >= 2) {
-          // Job is already completed, skip fetching
-          continue;
-        }
-
-        try {
-          const { data } = await useAPI(`/api/jobs/${job.job}`);
-          if (data.value?.state !== undefined) {
-            jobStates.value[job.job] = data.value.state;
-            allJobsData.value[job.job] = data.value;
-          }
-        } catch (err) {
-          // Silent polling shouldn't spam console warnings
-          if (!silent) {
-            console.warn(`Failed to fetch state for job ${job.job}`);
-          }
-        }
-      }
-    }
-  } catch (err: any) {
-    console.error("Error loading deployment:", err);
-    // Only set error for non-silent operations
-    if (!silent) {
-      error.value = `Failed to load deployment: ${err.message}`;
-    }
-  } finally {
-    if (!silent) loading.value = false;
-  }
-};
-
-// Action button visibility
-const deploymentStatus = computed(() =>
-  deployment.value?.status?.toUpperCase()
-);
-
-const canStart = computed(() => {
-  const status = deploymentStatus.value;
-  return status === "DRAFT" || status === "STOPPED" || status === "ERROR";
-});
-
-const canStop = computed(() => {
-  const status = deploymentStatus.value;
-  return status === "RUNNING" || status === "STARTING";
-});
-
-const canArchive = computed(
-  () =>
-    deploymentStatus.value !== "ARCHIVED" &&
-    deploymentStatus.value !== "RUNNING" &&
-    deploymentStatus.value !== "STOPPING" &&
-    deploymentStatus.value !== "DRAFT"
-);
-
-const hasAnyActions = computed(() => {
-  const status = deploymentStatus.value;
-  const hasMainActions = canStart.value || canStop.value || canArchive.value;
-  const hasConfigActions = status !== "ARCHIVED";
-  return hasMainActions || hasConfigActions;
-});
-
-// Show withdraw only when deployment exposes a vault with withdraw (wallet mode)
-const hasVault = computed(() => {
-  if (!deployment.value || typeof deployment.value !== "object") return false;
-  return "vault" in deployment.value;
-});
-
-const deploymentVault = computed(() => {
-  if (
-    !hasVault.value ||
-    !deployment.value ||
-    typeof deployment.value.vault !== "object"
-  )
-    return null;
-  return (deployment.value as any).vault;
-});
-
-// Job activity split
-// Note: Deployment jobs don't include state info, so we show all jobs
-// Users can click through to see individual job details
-const jobStates = ref<Record<string, number>>({});
-const allJobsData = ref<Record<string, any>>({});
-
-
-
-
-// Running job duration (for concise timeout row suffix)
-const firstRunningJobId = computed<string | null>(() => {
-  const entries = Object.entries(jobStates.value || {});
-  const running = entries.find(([id, st]) => st === 1);
-  return running ? running[0] : null;
-});
-
-const runningJobApiUrl = computed(() =>
-  firstRunningJobId.value ? `/api/jobs/${firstRunningJobId.value}` : ""
-);
-const { data: runningJobData } = useAPI(runningJobApiUrl, {
-  default: () => null,
-  watch: [runningJobApiUrl],
-});
-const nowTs = useTimestamp({ interval: 1000 });
-const runningJobDurationSeconds = computed<number | null>(() => {
-  const data = (runningJobData.value ?? null) as Record<string, unknown> | null;
-  const jsUnknown = data?.["timeStart"];
-  const stateUnknown = data?.["state"];
-  const js = typeof jsUnknown === "number" ? jsUnknown : 0;
-  if (!js || js === 0) return null;
-  const isRunning =
-    stateUnknown === 1 ||
-    (typeof stateUnknown === "string" &&
-      String(stateUnknown).toUpperCase() === "RUNNING");
-  if (!isRunning) return null;
-  return Math.max(0, Math.floor(nowTs.value / 1000) - js);
-});
-
-// Function to get duration for individual jobs
-const getJobDuration = (jobId: string): number | null => {
-  const jobState = jobStates.value[jobId];
-  const jobData = allJobsData.value[jobId];
-
-  if (!jobData?.timeStart) return null;
-
-  const timeStart = jobData.timeStart;
-  const timeFinished = jobData.timeFinished;
-
-  // For completed jobs, use timeFinished - timeStart
-  if (timeFinished && jobState >= 2) {
-    return Math.max(0, timeFinished - timeStart);
-  }
-
-  // For running jobs, use current time - timeStart
-  if (jobState === 1) {
-    return Math.max(0, Math.floor(nowTs.value / 1000) - timeStart);
-  }
-
-  return null;
-};
-
-const activeJobs = computed((): DeploymentJob[] => {
-  const jobs = (deployment.value?.jobs as DeploymentJob[]) || [];
-  // Enrich jobs with fetched states
-  const enrichedJobs = jobs.map((job) => ({
-    ...job,
-    state: jobStates.value[job.job] ?? 0,
-  }));
-
-  // Filter for running jobs (states: QUEUED=0, RUNNING=1)
-  return enrichedJobs.filter((job) => job.state === 0 || job.state === 1);
-});
-
-const historicalJobs = computed((): DeploymentJob[] => {
-  const jobs = (deployment.value?.jobs as DeploymentJob[]) || [];
-  // Enrich jobs with fetched states
-  const enrichedJobs = jobs.map((job) => ({
-    ...job,
-    state: jobStates.value[job.job] ?? 0,
-  }));
-
-  // Filter for completed/stopped jobs (states: DONE=2, STOPPED=3, TIMEOUT=4, ERROR=5)
-  return enrichedJobs.filter((job) => job.state >= 2);
-});
-
-// Deployment endpoints
-const deploymentEndpoints = computed(() => {
-  if (!deployment.value?.endpoints) return [];
-  
-  return (deployment.value.endpoints as DeploymentEndpoint[]).map(
-    (endpoint: DeploymentEndpoint) => ({
-      opId: endpoint.opId,
-      port: endpoint.port,
-      url: endpoint.url,
-    })
-  );
-});
-
-// All deployment events
-const deploymentEvents = computed((): DeploymentEvent[] => {
-  return (deployment.value?.events as DeploymentEvent[]) || [];
-});
-
-// No vault actions in API mode
-
-// Generic deployment action handler (credit system via API)
-const executeDeploymentAction = async (
-  action: () => Promise<void>,
-  successMessage: string,
-  shouldRedirect = false
-) => {
-  if (!deployment.value || !hasAnyAuth.value) {
-    toast.error("Please log in or connect wallet to perform this action");
-    return;
-  }
-
-  try {
-    actionLoading.value = true;
-    await action();
-    toast.success(successMessage);
-
-    if (shouldRedirect) {
-      setTimeout(() => router.push("/deployments"), 2000);
-    } else {
-      // Wait a moment for backend to process, then refresh
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      await loadDeployment(true);
-
-    }
-  } catch (err: any) {
-    console.error("Deployment action error:", err);
-    toast.error(`Failed: ${err.message || err.toString()}`);
-  } finally {
-    if (!shouldRedirect) {
-      actionLoading.value = false;
-    }
-  }
-};
-
-// Deployment action methods
-const startDeployment = async () => {
-  if (!deployment.value) {
-    toast.error("Deployment is not loaded yet");
-    return;
-  }
-  
-  // Check vault balance before starting deployment (wallet mode only)
-  if (isWalletMode.value && deployment.value.vault) {
-    try {
-      const vaultBalance = await deployment.value.vault.getBalance();
-      const hasSol = vaultBalance.SOL > 0;
-      const hasNos = vaultBalance.NOS > 0;
-      
-      if (!hasSol && !hasNos) {
-        toast.error("Vault has no balance. Please top up your vault with both SOL and NOS before starting the deployment.");
-        return;
-      } else if (!hasSol) {
-        toast.error("Vault needs SOL for transaction fees. Please top up your vault with SOL before starting the deployment.");
-        return;
-      } else if (!hasNos) {
-        toast.error("Vault needs NOS for job costs. Please top up your vault with NOS before starting the deployment.");
-        return;
-      }
-    } catch (error) {
-      console.error("Error checking vault balance:", error);
-      toast.error("Failed to check vault balance. Please try again.");
-      return;
-    }
-  }
-  
-  await executeDeploymentAction(
-    () => deployment.value!.start(),
-    "Deployment started successfully"
-  );
-
-  // Do an initial quick poll after 3 seconds to get faster feedback
-  setTimeout(async () => {
+  () => route.params.jobaddress,
+  (jobaddress, prevJobaddress) => {
     if (
-      deployment.value?.status?.toUpperCase() === "RUNNING" ||
-      deployment.value?.status?.toUpperCase() === "STARTING"
+      !jobaddress &&
+      prevJobaddress &&
+      hasAnyAuth.value &&
+      !deployment.value
     ) {
-      await loadDeployment(true);
+      loadDeployment();
     }
-  }, 3000);
+  },
+);
 
-  // Start regular job polling after starting
-  startJobPolling();
-};
-
-const stopDeployment = async () => {
-  if (!deployment.value) {
-    toast.error("Deployment is not loaded yet");
-    return;
-  }
-  await executeDeploymentAction(
-    () => deployment.value!.stop(),
-    "Deployment stopped successfully"
-  );
-
-  // Stop job polling after stopping - status polling will continue to monitor stop progress
-  stopJobPolling();
-
-  // Status polling will automatically stop when deployment reaches STOPPED state
-  if (!statusPollingInterval.value) {
-    startDeploymentPolling();
-  }
-};
-
-const archiveDeployment = async () => {
-  if (
-    !confirm(
-      "Are you sure you want to archive this deployment? This action cannot be undone."
-    )
-  ) {
-    return;
-  }
-  if (!deployment.value) {
-    toast.error("Deployment is not loaded yet");
-    return;
-  }
-  await executeDeploymentAction(
-    () => deployment.value!.archive(),
-    "Deployment archived successfully",
-    true
-  );
-};
-
-const withdrawVault = async () => {
-  if (!deployment.value) return;
-  await executeDeploymentAction(
-    () => (deployment.value as any).vault.withdraw(),
-    "Vault withdrawn to your wallet"
-  );
-};
-
-const updateReplicas = async () => {
-  if (!newReplicaCount.value || newReplicaCount.value < 1) {
-    toast.error("Replica count must be at least 1");
-    return;
-  }
-
-  await executeDeploymentAction(
-    () => deployment.value!.updateReplicaCount(newReplicaCount.value),
-    `Replica count updated to ${newReplicaCount.value}`
-  );
-
-  newReplicaCount.value = null;
-};
-
-const updateJobTimeout = async () => {
-  if (!newTimeoutHours.value || newTimeoutHours.value < 0.0167) {
-    toast.error("Timeout must be at least 1 minute (0.0167 hours)");
-    return;
-  }
-
-  await executeDeploymentAction(
-    () => deployment.value!.updateTimeout(Math.round(newTimeoutHours.value * 3600)),
-    `Job timeout updated to ${newTimeoutHours.value} hours`
-  );
-
-  newTimeoutHours.value = null;
-};
-
-const updateSchedule = async () => {
-  if (!newSchedule.value || !isValidCronExpression(newSchedule.value)) {
-    toast.error("Please enter a valid cron expression");
-    return;
-  }
-
-  if (!deployment.value || !hasAnyAuth.value) {
-    toast.error("Please log in or connect wallet to perform this action");
-    return;
-  }
-
-  try {
-    actionLoading.value = true;
-    await deployment.value.updateSchedule(newSchedule.value);
-
-    toast.success(
-      `Schedule updated to: ${newSchedule.value} (${parseCronExpression(newSchedule.value)})`
-    );
-
-    // Wait a moment for backend to process, then refresh
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    await loadDeployment(true);
-
-    newSchedule.value = "";
-  } catch (error: any) {
-    console.error("Update schedule error:", error);
-    const errorMessage =
-      error.data?.message || error.message || "Failed to update schedule";
-    toast.error(`Error updating schedule: ${errorMessage}`);
-  } finally {
-    actionLoading.value = false;
-  }
-};
-
-const createRevision = async () => {
-  if (!revisionJobDefinition.value) {
-    toast.error("Please provide a valid job definition");
-    return;
-  }
-
-  if (!deployment.value || !hasAnyAuth.value) {
-    toast.error("Please log in or connect wallet to perform this action");
-    return;
-  }
-
-  try {
-    actionLoading.value = true;
-    await deployment.value.createRevision(revisionJobDefinition.value);
-
-    toast.success("New revision created successfully!");
-    showRevisionModal.value = false;
-
-    // Wait a moment for backend to process, then refresh
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    await loadDeployment(true);
-  } catch (error: any) {
-    console.error("Create revision error:", error);
-    const errorMessage =
-      error.data?.message || error.message || "Failed to create revision";
-    toast.error(`Error creating revision: ${errorMessage}`);
-  } finally {
-    actionLoading.value = false;
-  }
-};
-
-// Switch to a different revision
-const switchToRevision = async (revisionNumber: number) => {
-  if (!deployment.value || !hasAnyAuth.value) {
-    toast.error("Please log in or connect wallet to perform this action");
-    return;
-  }
-
-  try {
-    switchingRevision.value = revisionNumber;
-    await deployment.value.updateActiveRevision(revisionNumber);
-
-    toast.success(`Switched to revision ${revisionNumber} successfully!`);
-
-    // Refresh deployment data
-    await loadDeployment(true);
-  } catch (error: any) {
-    console.error("Switch revision error:", error);
-    const errorMessage =
-      error.data?.message || error.message || "Failed to switch revision";
-    toast.error(`Error switching revision: ${errorMessage}`);
-  } finally {
-    switchingRevision.value = null;
-  }
-};
-
-// View a revision's job definition
-const viewRevisionDefinition = (revision: any) => {
-  viewingRevision.value = revision;
-  showRevisionDefinitionModal.value = true;
-};
-
-const isValidCronExpression = (cron: string): boolean => {
-  if (!cron) return false;
-
-  const parts = cron.trim().split(/\s+/);
-  if (parts.length !== 5) return false;
-
-  // Basic validation for each part
-  for (let i = 0; i < parts.length; i++) {
-    const part = parts[i];
-
-    // Allow wildcard
-    if (part === "*") continue;
-
-    // Allow step values (*/n)
-    if (part.startsWith("*/")) {
-      const stepValue = parseInt(part.slice(2));
-      if (isNaN(stepValue) || stepValue <= 0) return false;
-      continue;
-    }
-
-    // Allow ranges (n-m) and lists (n,m,...)
-    if (part.includes("-") || part.includes(",")) continue;
-
-    // Check if it's a valid number
-    const num = parseInt(part);
-    if (isNaN(num)) return false;
-
-    // Validate ranges for each position
-    switch (i) {
-      case 0: // minute (0-59)
-        if (num < 0 || num > 59) return false;
-        break;
-      case 1: // hour (0-23)
-        if (num < 0 || num > 23) return false;
-        break;
-      case 2: // day of month (1-31)
-        if (num < 1 || num > 31) return false;
-        break;
-      case 3: // month (1-12)
-        if (num < 1 || num > 12) return false;
-        break;
-      case 4: // day of week (0-7, where 0 and 7 are Sunday)
-        if (num < 0 || num > 7) return false;
-        break;
-    }
-  }
-
-  return true;
-};
-
-const loadTasks = async (silent = false) => {
-  if (!deployment.value) {
-    return;
-  }
-
-  if (silent !== true) tasksLoading.value = true;
-
-  try {
-    const result = await deployment.value.getTasks();
-    tasks.value = result || [];
-  } catch (err: any) {
-    console.error("Load tasks error:", err);
-    toast.error(`Failed to load tasks: ${err.message}`);
-  } finally {
-    tasksLoading.value = false;
-  }
-};
-
-const startTasksPolling = () => {
-  if (tasksPollingInterval.value) {
-    clearInterval(tasksPollingInterval.value);
-  }
-
-  tasksPollingInterval.value = setInterval(async () => {
-    if (!deployment.value) return;
-    await loadTasks(true);
-  }, 5000);
-};
-
-const stopTasksPolling = () => {
-  if (tasksPollingInterval.value) {
-    clearInterval(tasksPollingInterval.value);
-    tasksPollingInterval.value = null;
-  }
-};
-
-const startDeploymentPolling = () => {
-  if (statusPollingInterval.value) {
-    clearInterval(statusPollingInterval.value);
-  }
-
-  pollingDebug.value.statusPollingActive = true;
-
-  statusPollingInterval.value = setInterval(async () => {
-    if (!deployment.value) return;
-
-    pollingDebug.value.lastStatusPoll = new Date();
-    await loadDeployment(true);
-
-    const finalStates = ["STOPPED", "ARCHIVED", "ERROR"];
-    if (finalStates.includes(deployment.value?.status?.toUpperCase() || "")) {
-      stopDeploymentPolling();
-      stopJobPolling();
-      stopTasksPolling();
-    }
-  }, 5000);
-};
-
-const stopDeploymentPolling = () => {
-  if (statusPollingInterval.value) {
-    clearInterval(statusPollingInterval.value);
-    statusPollingInterval.value = null;
-    pollingDebug.value.statusPollingActive = false;
-  }
-};
-
-const startJobPolling = (intervalMs: number = 5000) => {
-  if (jobPollingInterval.value) {
-    clearInterval(jobPollingInterval.value);
-  }
-
-  pollingDebug.value.jobPollingActive = true;
-
-  jobPollingInterval.value = setInterval(async () => {
-    if (!deployment.value) return;
-
-    pollingDebug.value.lastJobPoll = new Date();
-
-    const status = deployment.value?.status?.toUpperCase();
-    if (status !== "RUNNING" && status !== "STARTING") {
-      stopJobPolling();
-      return;
-    }
-
-    await loadDeployment(true);
-  }, intervalMs);
-};
-
-const stopJobPolling = () => {
-  if (jobPollingInterval.value) {
-    clearInterval(jobPollingInterval.value);
-    jobPollingInterval.value = null;
-    pollingDebug.value.jobPollingActive = false;
-  }
-};
-
-// Removed fast job polling - was too aggressive at 1 second intervals
-
-// Click outside handler to close dropdown
-const handleClickOutside = (event: MouseEvent) => {
-  if (
-    actionsDropdown.value &&
-    !actionsDropdown.value.contains(event.target as Node)
-  ) {
-    isActionsDropdownOpen.value = false;
-  }
-};
-
-onMounted(() => {
-  document.addEventListener("click", handleClickOutside);
-});
+// --- Auth timeout cleanup ---
+let authTimeout: NodeJS.Timeout | null = null;
 
 onUnmounted(() => {
-  document.removeEventListener("click", handleClickOutside);
-
-  // Clear any timeout from auth debouncing
   if (authTimeout) {
     clearTimeout(authTimeout);
     authTimeout = null;
   }
 });
 
-// Stop all polling when navigating away from the page
 onBeforeRouteLeave(() => {
-  // Clean up all polling intervals to prevent them from continuing
-  stopDeploymentPolling();
-  stopJobPolling();
-  stopTasksPolling();
+  stopAllPolling();
 });
 
-// Auto-select first job when switching to logs tab
-watch(
-  () => [activeTab.value, activeJobs.value],
-  ([newTab, jobs]) => {
-    if (newTab === "logs" && jobs.length > 0 && !activeLogsJobId.value) {
-      const first: any = (jobs as any)[0];
-      activeLogsJobId.value = (first?.job || first) as string;
-    }
-  },
-  { immediate: true }
-);
+// --- Watchers ---
 
-// Debounced authentication watcher to prevent flickering
-let authTimeout: NodeJS.Timeout | null = null;
 
+// Debounced authentication watcher
 watch(
   hasAnyAuth,
   (authed) => {
-    // Clear any existing timeout
     if (authTimeout) {
       clearTimeout(authTimeout);
     }
 
-    // If authenticated, load deployment if we don't have one
     if (authed) {
-      // Clear any error state
       if (
         error.value === "Please log in or connect wallet to view deployments"
       ) {
         error.value = null;
       }
-      // Only load if deployment doesn't exist yet
       if (!deployment.value) {
         loadDeployment();
       }
       return;
     }
 
-    // If not authenticated, only show error after a delay and only if we don't have a deployment
-    // This prevents the error from showing during temporary auth interruptions (tab switching, session refresh)
     authTimeout = setTimeout(() => {
       if (!hasAnyAuth.value) {
-        // Only show login error if we don't already have deployment data
-        // This preserves the deployment during temporary auth interruptions
         if (!deployment.value) {
           error.value = "Please log in or connect wallet to view deployments";
         }
       }
-    }, 2000); // 2 second delay to allow auth to re-establish
+    }, 2000);
   },
-  { immediate: true }
+  { immediate: true },
 );
 
-// Watch deployment status to automatically manage polling for running deployments
+// Watch deployment status to manage polling
+const prevDeploymentStatus = ref<string | null>(null);
+
 watch(
   () => deployment.value?.status,
-  (newStatus, oldStatus) => {
+  (newStatus) => {
     if (!newStatus) return;
 
     const status = newStatus.toUpperCase();
+    const prev = prevDeploymentStatus.value;
 
-    // Start job polling when deployment is running or starting
-    if (
+    if (status === "RUNNING" && prev !== "RUNNING") {
+      const expectedStatus =
+        prev && prev !== "STARTING" && prev !== "RUNNING"
+          ? "RUNNING"
+          : undefined;
+      startFastPolling(expectedStatus);
+    } else if (
       (status === "STARTING" || status === "RUNNING") &&
-      !jobPollingInterval.value
+      !pollingTimeout.value
     ) {
-      startJobPolling();
+      startUnifiedPolling();
     }
 
-    // Start tasks polling for all non-archived deployments (less frequent)
-    if (status !== "ARCHIVED" && !tasksPollingInterval.value) {
-      startTasksPolling();
+    if (
+      ["STOPPED", "ARCHIVED", "ERROR"].includes(status) &&
+      !hasActiveJobs.value
+    ) {
+      stopAllPolling();
     }
 
-    // Stop all polling when deployment stops running
-    if (status !== "RUNNING" && status !== "STARTING") {
-      stopJobPolling();
-      stopDeploymentPolling();
-      stopTasksPolling();
-    }
+    prevDeploymentStatus.value = status;
   },
-  { immediate: true }
+  { immediate: true },
 );
 
-// Watch revision modal to initialize job definition
-watch(
-  () => showRevisionModal.value,
-  (isOpen) => {
-    if (isOpen && jobDefinitionModel.value) {
-      // Initialize revision job definition with current job definition
-      revisionJobDefinition.value = JSON.parse(
-        JSON.stringify(jobDefinitionModel.value)
-      );
-    }
+// --- Tab & action URL sync ---
+const switchTab = (tab: string) => {
+  activeTab.value = tab;
+  if (tab === "events") {
+    loadEvents(true);
+    loadTasks(true);
   }
+  router.replace({
+    query: {
+      ...route.query,
+      tab: tab === "overview" ? undefined : tab,
+    },
+  });
+};
+
+const switchAction = (action: string) => {
+  if (action === "start") {
+    startDeployment();
+    return;
+  }
+  if (action === "stop") {
+    stopDeployment();
+    return;
+  }
+  if (action === "archive") {
+    archiveDeployment();
+    return;
+  }
+  if (action === "create-revision") showRevisionModal.value = true;
+  else if (action === "update-replicas") showReplicasModal.value = true;
+  else if (action === "update-timeout") showTimeoutModal.value = true;
+  else if (action === "update-schedule") showScheduleModal.value = true;
+  else if (action === "topup" && deploymentVault.value) {
+    openVaultModal(deploymentVault.value, "topup", () =>
+      updateVaultBalance(deploymentVault.value!),
+    );
+  } else if (action === "withdraw" && deploymentVault.value) {
+    openVaultModal(deploymentVault.value, "withdraw", () =>
+      updateVaultBalance(deploymentVault.value!),
+    );
+  }
+
+  router.replace({
+    query: {
+      ...route.query,
+      action,
+    },
+  });
+};
+
+const clearAction = () => {
+  if (route.query.action) {
+    const { action, ...query } = route.query;
+    router.replace({ query });
+  }
+};
+
+// --- Modal watchers ---
+watch(
+  [() => showRevisionModal.value, () => jobDefinitionModel.value],
+  ([isOpen, definition]) => {
+    if (isOpen && definition && !revisionJobDefinition.value) {
+      revisionJobDefinition.value = JSON.parse(JSON.stringify(definition));
+    }
+    if (!isOpen) {
+      revisionJobDefinition.value = null;
+      if (route.query.action === "create-revision") {
+        clearAction();
+      }
+    }
+  },
+);
+
+watch(showReplicasModal, (isOpen) => {
+  if (!isOpen && route.query.action === "update-replicas") clearAction();
+});
+
+watch(showTimeoutModal, (isOpen) => {
+  if (!isOpen && route.query.action === "update-timeout") clearAction();
+});
+
+watch(showScheduleModal, (isOpen) => {
+  if (!isOpen && route.query.action === "update-schedule") clearAction();
+});
+
+watch(
+  deploymentVault,
+  (vault) => {
+    const action = route.query.action?.toString();
+    if (
+      vault &&
+      (action === "topup" || action === "withdraw") &&
+      !vaultModalState.value.modalType
+    ) {
+      openVaultModal(vault, action, () => updateVaultBalance(vault));
+    }
+  },
+  { immediate: true },
+);
+
+watch(
+  () => vaultModalState.value.modalType,
+  (modalType) => {
+    if (
+      !modalType &&
+      (route.query.action === "topup" || route.query.action === "withdraw")
+    ) {
+      clearAction();
+    }
+  },
 );
 
 // Head
@@ -2242,226 +653,9 @@ useHead({
   title: computed(() =>
     deployment.value
       ? `${deployment.value.name} - Deployment`
-      : "Loading Deployment"
+      : "Loading Deployment",
   ),
 });
 </script>
 
-<style lang="scss" scoped>
-// Improved header layout
-.deployment-header > .is-flex {
-  flex-wrap: wrap;
-  gap: 1rem;
-}
-
-.header-left-section {
-  min-width: 0; // Allow text to truncate
-  flex: 1;
-}
-
-.header-title-section {
-  min-width: 0; // Allow text to truncate
-  max-width: 400px; // Prevent extremely long names from stretching too much
-  display: flex !important;
-  flex-direction: column !important;
-}
-
-.header-title-section .title {
-  display: block !important;
-  margin-bottom: 0.25rem !important;
-}
-
-.header-title-section .subtitle {
-  display: block !important;
-  word-break: break-all; // Allow long IDs to wrap
-  line-height: 1.2;
-  margin-top: 0 !important;
-}
-
-.deployment-header .status-tag {
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-// Mobile responsive
-@media screen and (max-width: 768px) {
-  .deployment-header > .is-flex {
-    flex-direction: column !important;
-    align-items: stretch !important;
-    flex-wrap: nowrap !important;
-  }
-
-  .header-left-section {
-    width: 100%;
-    margin-bottom: 1rem;
-  }
-
-  .deployment-tabs {
-    width: 100% !important;
-    justify-content: flex-start;
-    margin-top: 0.5rem;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-
-  .header-title-section {
-    max-width: none;
-  }
-
-  .header-title-section .subtitle {
-    font-size: 0.75rem;
-  }
-
-  .tab-button {
-    font-size: 0.875rem;
-    padding: 0.5rem 0.75rem;
-  }
-}
-
-// Extra small screens
-@media screen and (max-width: 480px) {
-  .deployment-tabs {
-    gap: 0.25rem;
-  }
-
-  .tab-button {
-    font-size: 0.75rem;
-    padding: 0.375rem 0.5rem;
-  }
-}
-
-// Responsive endpoint URLs
-.endpoint-url {
-  word-break: break-all;
-  display: inline-block;
-  max-width: 100%;
-  overflow-wrap: break-word;
-}
-
-@media screen and (max-width: 768px) {
-  .endpoint-url {
-    font-size: 0.75rem;
-    max-width: 300px;
-    min-width: 200px;
-  }
-}
-
-@media screen and (max-width: 480px) {
-  .endpoint-url {
-    font-size: 0.7rem;
-    max-width: 250px;
-    min-width: 180px;
-  }
-}
-
-.status-dot {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  margin-right: 0.4rem;
-}
-
-.status-running {
-  background-color: $success;
-}
-.status-starting {
-  background-color: $info;
-}
-.status-draft {
-  background-color: $grey;
-}
-.status-stopped {
-  background-color: $grey-dark;
-}
-.status-stopping {
-  background-color: $warning;
-}
-.status-error {
-  background-color: $danger;
-}
-.status-insufficient {
-  background-color: $warning;
-}
-.status-archived {
-  background-color: $grey-light;
-}
-.status-unknown {
-  background-color: $grey-lighter;
-}
-
-.sep {
-  opacity: 0.6;
-}
-
-.gap-2 {
-  gap: 0.5rem;
-}
-
-.sticky-subheader {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  background: $white;
-}
-
-.dark-mode .sticky-subheader {
-  background: #1a1a1a;
-}
-
-.box.is-borderless {
-  padding: 0 !important;
-}
-
-.tag.is-stopped {
-  background-color: $grey-lightest !important;
-  border-color: $grey-lighter !important;
-  color: $grey-dark !important;
-
-  img {
-    width: 12px !important;
-    height: 12px !important;
-  }
-}
-
-.dark-mode .tag.is-stopped {
-  background-color: $grey-darker !important;
-  border-color: $grey-dark !important;
-  color: $grey !important;
-
-  img {
-    width: 12px !important;
-    height: 12px !important;
-  }
-}
-
-// Deployment-specific styling
-.deployment-header {
-  border-bottom: 1px solid $grey-lighter;
-}
-
-html.dark-mode .deployment-header {
-  border-bottom-color: $grey-dark;
-}
-
-// Deployment logs styling
-.deployment-logs-container {
-  .deployment-logs-content {
-    background-color: $white;
-    border-radius: $radius-small;
-    margin-top: 0.2rem;
-  }
-
-  .selected-job-logs {
-    min-height: 25rem;
-  }
-}
-
-// Dark mode support
-html.dark-mode {
-  .deployment-logs-container .deployment-logs-content {
-    background-color: $black-ter;
-  }
-}
-</style>
+<style lang="scss" scoped></style>

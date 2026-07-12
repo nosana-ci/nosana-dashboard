@@ -12,7 +12,7 @@
           :key="statusString"
         />
       </span>
-      <span v-if="showLabel">{{ statusString }}</span>
+      <span v-if="showLabel">{{ customLabel || statusString }}</span>
     </div>
     <span
       v-else
@@ -42,6 +42,7 @@ const props = withDefaults(
     imageOnly?: boolean;
     outlined?: boolean;
     showLabel?: boolean;
+    customLabel?: string;
   }>(),
   { imageOnly: false, outlined: true, showLabel: true }
 );

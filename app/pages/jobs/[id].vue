@@ -8,8 +8,8 @@
     />
 
     <Loader v-if="loading" />
-    <div v-else-if="!job" class="box">
-      <div class="notification is-danger">
+    <div v-else-if="!job || !isJobPoster" class="box">
+      <div class="notification">
         <p>Job not found</p>
       </div>
     </div>

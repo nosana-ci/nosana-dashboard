@@ -8,63 +8,38 @@
       v-model="showSettingsModal"
     ></TopBar>
 
-    <!-- Wallet Auth Banner -->
-    <div
-      v-if="shouldShowWalletAuthBanner"
-      class="notification is-light wallet-auth-banner mb-5 clickable-notification"
-    >
-      <nuxt-link
-        to="/deploy"
-        class="is-block"
-        style="color: inherit; text-decoration: none;"
-      >
-        <div class="is-flex is-align-items-center">
-          <div class="is-flex-grow-1">
-            <p class="banner-title">Legacy Job Deploy page</p>
-            <p class="mb-0">
-              Looking for the classic job deployment experience? Use our legacy
-              deploy page click here.
-            </p>
-          </div>
-        </div>
-      </nuxt-link>
-    </div>
-
     <!-- Show loader for external data only; editor always visible -->
     <Loader v-if="loadingTemplates || loadingMarkets" />
 
     <div v-else class="columns is-multiline">
       <div class="column is-9-fullhd is-12">
-        <!-- Name your deployment -->
-        <div class="box" style="border: none">
-          <h2 class="title is-5 mb-4">Define your deployment</h2>
-          <div class="field">
-            <div class="control">
-              <input
-                class="input"
-                type="text"
-                v-model="deploymentName"
-                placeholder="Enter deployment name"
-                maxlength="50"
-              />
-            </div>
-          </div>
-        </div>
 
         <!-- Choose model -->
-        <DeployJobDefinition
-          title="Configure deployment"
+        <ConfigurationModal
+          title="Configure Deployment"
           :selectedTemplate="selectedTemplate"
           v-model:jobDefinition="jobDefinition"
           v-model:isEditorCollapsed="isEditorCollapsed"
-          :validator="validator"
           @showTemplateModal="showTemplateModal = true"
           @openReadme="openReadmeModal"
+          :strategy="strategy"
+          @update:strategy="strategy = $event"
+          :schedule="schedule"
+          @update:schedule="schedule = $event"
+          :replicas="replicas"
+          @update:replicas="replicas = $event"
+          :timeout="timeout"
+          @update:timeout="timeout = $event"
+          :isWalletMode="isWalletMode"
+          :modalSelectedVault="modalSelectedVault"
+          @update:modalSelectedVault="(vault) => (modalSelectedVault = vault)"
+          :deployment-name="deploymentName"
+          @update:deploymentName="deploymentName = $event"
         />
 
         <!-- Select GPU -->
         <div class="box" style="border: none; margin-top: 1.5rem">
-          <h2 class="title is-5 mb-4">Select instance</h2>
+          <h2 class="title is-5 mb-4">Select GPU</h2>
           <DeploySimpleGpuSelection
             :markets="markets || null"
             :testgridMarkets="testgridMarkets"
@@ -88,14 +63,7 @@
             <h2 class="title is-5 mb-4">Summary</h2>
             <!-- Cost Summary -->
             <div class="mb-4">
-              <p
-                class="has-text-grey is-size-7 mb-2"
-                style="
-                  text-transform: uppercase;
-                  letter-spacing: 0.5px;
-                  font-weight: 500;
-                "
-              >
+              <p class="section-header">
                 Cost
               </p>
 
@@ -126,24 +94,15 @@
 
               <!-- No Auth -->
               <div v-else>
-                <p class="has-text-grey">
-                  Connect wallet or sign in to see pricing
-                </p>
+                <p class="has-text-grey">-</p>
               </div>
             </div>
 
-            <hr style="margin: 1.5rem 0" />
+            <hr style="margin: 0.5rem 0" />
 
             <!-- Configuration Summary -->
             <div class="mb-4">
-              <p
-                class="has-text-grey is-size-7 mb-3"
-                style="
-                  text-transform: uppercase;
-                  letter-spacing: 0.5px;
-                  font-weight: 500;
-                "
-              >
+              <p class="section-header">
                 Configuration
               </p>
 
@@ -220,28 +179,6 @@
                   justify-content: space-between;
                   align-items: start;
                 "
-              >
-                <span class="has-text-grey is-size-7">Strategy</span>
-                <span
-                  class="has-text-weight-medium is-size-7"
-                  style="
-                    text-align: right;
-                    max-width: 60%;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                  "
-                >
-                  {{ strategy }}
-                </span>
-              </div>
-
-              <div
-                class="mb-2"
-                style="
-                  display: flex;
-                  justify-content: space-between;
-                  align-items: start;
-                "
                 v-if="strategy === 'SCHEDULED'"
               >
                 <span class="has-text-grey is-size-7">Schedule</span>
@@ -292,27 +229,6 @@
               </div>
 
               <div
-                class="mb-2"
-                style="
-                  display: flex;
-                  justify-content: space-between;
-                  align-items: start;
-                "
-              >
-                <span class="has-text-grey is-size-7">Timeout (hours)</span>
-                <span
-                  class="has-text-weight-medium is-size-7"
-                  style="
-                    text-align: right;
-                    max-width: 60%;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                  "
-                >
-                  {{ timeout }}
-                </span>
-              </div>
-              <div
                 v-if="isWalletMode"
                 style="
                   display: flex;
@@ -334,31 +250,6 @@
                 </span>
               </div>
             </div>
-
-            <hr style="margin: 1.5rem 0" />
-
-            <!-- Advanced Settings Button -->
-            <button
-              class="button is-light is-fullwidth mb-4"
-              @click="showDeploymentSettingsModal = true"
-              style="border: 1px solid #e8eaed"
-            >
-              <span class="icon is-small">
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"
-                    fill="currentColor"
-                  />
-                </svg>
-              </span>
-              <span>Advanced Deployment Settings</span>
-            </button>
 
             <ClientOnly>
               <!-- Credit Mode Actions -->
@@ -383,10 +274,17 @@
                     }}, have ${{ creditBalance.toFixed(2) }}
                   </p>
                   <button
-                    class="button is-small is-outlined is-fullwidth"
+                    type="button"
+                    class="button is-primary is-fullwidth mb-2"
+                    @click="openBuyCreditsModal"
+                  >
+                    Buy Credits
+                  </button>
+                  <button
+                    class="button is-outlined is-fullwidth has-text-grey"
                     @click="goToClaimCredits"
                   >
-                    Claim Credit Codes
+                    Have a code? Claim it
                   </button>
                 </div>
               </div>
@@ -464,8 +362,25 @@
               v-if="readmeContentForModal"
               :raw-markdown="readmeContentForModal"
             />
+            <p v-else class="has-text-grey">No documentation available for this template.</p>
           </ClientOnly>
         </section>
+        <footer class="modal-card-foot" style="justify-content: space-between; align-items: center;">
+          <div class="buttons mb-0">
+            <button class="button is-primary" @click="showReadmeModal = false">
+              Use Template
+            </button>
+            <button
+              class="button is-light"
+              @click="showReadmeModal = false; showTemplateModal = true"
+            >
+              Change Template
+            </button>
+          </div>
+          <p v-if="selectedTemplate?.description" class="has-text-grey is-size-7" style="text-align: right; max-width: 50%;">
+            {{ selectedTemplate.description }}
+          </p>
+        </footer>
       </div>
     </div>
 
@@ -475,188 +390,6 @@
       :templates="groupedTemplates || []"
       @select-template="selectTemplateFromModal"
     />
-
-    <!-- Advanced Deployment Settings Modal -->
-    <div class="modal" :class="{ 'is-active': showDeploymentSettingsModal }">
-      <div
-        class="modal-background"
-        @click="showDeploymentSettingsModal = false"
-      ></div>
-      <div class="modal-card" style="max-width: 500px">
-        <header class="modal-card-head">
-          <p class="modal-card-title">Advanced Deployment Settings</p>
-          <button
-            class="delete"
-            aria-label="close"
-            @click="showDeploymentSettingsModal = false"
-          ></button>
-        </header>
-        <section class="modal-card-body">
-          <div class="field">
-            <label class="label">
-              Deployment Strategy
-              <span
-                class="icon is-small has-tooltip-arrow has-tooltip-right"
-                style="position: relative; z-index: 3000"
-                data-tooltip="How your deployment manages job instances"
-              >
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                >
-                  <circle cx="12" cy="12" r="10" stroke-width="2" />
-                  <path
-                    d="M12 16v-4m0-4h.01"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                  />
-                </svg>
-              </span>
-            </label>
-            <div class="control">
-              <div class="select is-fullwidth">
-                <select v-model="strategy">
-                  <option value="SIMPLE">Simple</option>
-                  <option value="SIMPLE-EXTEND">Simple Extend</option>
-                  <option value="SCHEDULED">Scheduled</option>
-                  <!-- <option value="INFINITE">Infinite</option> -->
-                </select>
-              </div>
-            </div>
-          </div>
-
-          <div v-if="strategy === 'SCHEDULED'" class="field">
-            <label class="label">
-              Schedule
-              <span
-                class="icon is-small has-tooltip-arrow has-tooltip-right"
-                style="position: relative; z-index: 3000"
-                data-tooltip="Cron expression for scheduling jobs"
-              >
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                >
-                  <circle cx="12" cy="12" r="10" stroke-width="2" />
-                  <path
-                    d="M12 16v-4m0-4h.01"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                  />
-                </svg>
-              </span>
-            </label>
-            <div class="control">
-              <input
-                v-model="schedule"
-                class="input"
-                type="text"
-                placeholder="0 0 * * * (daily at midnight)"
-                required
-              />
-            </div>
-            <div v-if="schedule" class="help has-text-grey mt-2">
-              {{ parseCronExpression(schedule) }}
-            </div>
-          </div>
-
-          <div class="field">
-            <label class="label">
-              Replica Count
-              <span
-                class="icon is-small has-tooltip-arrow has-tooltip-right"
-                style="position: relative; z-index: 3000"
-                data-tooltip="Number of parallel job instances (1-100)"
-              >
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                >
-                  <circle cx="12" cy="12" r="10" stroke-width="2" />
-                  <path
-                    d="M12 16v-4m0-4h.01"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                  />
-                </svg>
-              </span>
-            </label>
-            <div class="control">
-              <input
-                class="input"
-                type="number"
-                v-model.number="replicas"
-                min="1"
-                max="100"
-                @blur="enforceReplicasMax"
-              />
-            </div>
-          </div>
-
-          <div class="field">
-            <label class="label">
-              Container Timeout
-              <span
-                class="icon is-small has-tooltip-arrow has-tooltip-right"
-                style="position: relative; z-index: 3000"
-                data-tooltip="Maximum runtime before container auto-shutdown (minimum 1 hour)"
-              >
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                >
-                  <circle cx="12" cy="12" r="10" stroke-width="2" />
-                  <path
-                    d="M12 16v-4m0-4h.01"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                  />
-                </svg>
-              </span>
-            </label>
-            <div class="control">
-              <input
-                class="input"
-                type="number"
-                v-model="timeout"
-                min="1"
-                step="0.1"
-                @blur="enforceTimeoutMin"
-              />
-            </div>
-          </div>
-          <VaultSelector
-            v-if="isWalletMode"
-            :setSelectedVault="
-              (vault: string | undefined) => (modalSelectedVault = vault)
-            "
-          />
-        </section>
-        <footer class="modal-card-foot" style="justify-content: flex-end">
-          <button class="button" @click="showDeploymentSettingsModal = false">
-            Cancel
-          </button>
-          <button
-            class="button is-secondary"
-            @click="showDeploymentSettingsModal = false"
-          >
-            Save Settings
-          </button>
-        </footer>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -665,28 +398,52 @@ import {
   type Market,
   type JobDefinition,
   type CreateDeployment,
+  type Deployment,
   DeploymentStrategy,
-} from "@nosana/sdk";
-import { ValidationSeverity } from "vanilla-jsoneditor";
-import "vanilla-jsoneditor/themes/jse-theme-dark.css";
+} from "@nosana/kit";
 import { useToast } from "vue-toastification";
-import { useWallet } from "solana-wallets-vue";
+import { useWallet } from "@nosana/solana-vue";
 import TopBar from "~/components/TopBar.vue";
-import { useRouter } from "vue-router";
+import { useRouter, useRoute } from "vue-router";
 import { useEstimatedCost } from "~/composables/useMarketPricing";
 import type { Template } from "~/composables/useTemplates";
 import Loader from "~/components/Loader.vue";
 import VaultSelector from "~/components/Vault/VaultSelector.vue";
+import ConfigurationModal from "~/components/Deploy/ConfigurationModal.vue";
 import { parseCronExpression } from "~/utils/parseCronExpression";
+import {
+  MAX_TIMEOUT_HOURS,
+  MIN_TIMEOUT_HOURS,
+  MIN_INFINITE_TIMEOUT_HOURS,
+} from "~/composables/useTimeoutConstants";
 
 // Setup composables
 const { markets, getMarkets, loadingMarkets } = useMarkets();
 const { templates, groupedTemplates, loadingTemplates } = useTemplates();
-const { nosana } = useSDK();
+const { nosana } = useKit();
 const router = useRouter();
+const route = useRoute();
 const toast = useToast();
-const { status, token } = useAuth();
-const { connected, publicKey } = useWallet();
+
+const { isAuthenticated: superTokensAuth, isEmailVerified, userData } =
+  useSuperTokens();
+const { connected, account } = useWallet();
+const { openBuyCreditsModal } = useBuyCreditsModal();
+const { openBothModal } = useLoginModal();
+const {
+  save: saveDraft,
+  load: loadDraft,
+  clear: clearDraft,
+} = useCreateDeployDraft();
+
+// Compatibility: create publicKey-like object from account
+const publicKey = computed(() => {
+  if (!account.value?.address) return null;
+  return {
+    toString: () => account.value!.address,
+    toBase58: () => account.value!.address,
+  };
+});
 const loading = ref(false);
 
 // Initialize redirect composable for authentication flow
@@ -706,27 +463,78 @@ const activeFilter = ref(
 );
 const selectedMarket = ref<Market | null>(null);
 const selectedTemplate = ref<Template | null>(null);
-const timeout = ref(1);
+
+
+const INFINITE_TIMEOUT = 6;
+const DEFAULT_TIMEOUT = 1;
+const timeout = ref(INFINITE_TIMEOUT);
+const previousStrategyDefault = ref(INFINITE_TIMEOUT);
 const isCreatingDeployment = ref(false);
 const showSettingsModal = ref(false); // For priority fee settings (TopBar)
-const showDeploymentSettingsModal = ref(false); // For deployment settings
 const skipAutoSelection = ref(false);
 const isUpdatingFromJobDef = ref(false);
 const isRestoringState = ref(false);
 const isEditorCollapsed = ref(false);
 
+// Generate funny random deployment name
+const generateFunnyDeploymentName = (): string => {
+  const adjectives = [
+    "efficient", "reliable", "robust", "scalable", "secure", "optimized", "advanced", "modern",
+    "intelligent", "adaptive", "dynamic", "flexible", "precise", "streamlined", "enhanced", "refined",
+    "innovative", "strategic", "systematic", "methodical", "comprehensive", "integrated", "modular", "unified",
+    "resilient", "durable", "stable", "consistent", "proven", "tested", "validated", "certified"
+  ];
+  
+  const secondAdjectives = [
+    "enterprise", "cloud", "distributed", "microservice", "containerized", "serverless", "edge", "hybrid",
+    "realtime", "eventdriven", "apifirst", "datadriven", "aipowered", "mlenhanced", "highperformance", "lowlatency",
+    "production", "staging", "development", "testing", "monitoring", "analytics", "security", "compliance",
+    "global", "regional", "multizone", "faulttolerant", "autoscaling", "loadbalanced", "replicated", "backup"
+  ];
+  
+  const nouns = [
+    "banana", "penguin", "robot", "ninja", "wizard", "dragon", "unicorn", "panda",
+    "koala", "otter", "sloth", "hedgehog", "raccoon", "squirrel", "hamster", "bunny",
+    "puppy", "kitten", "duckling", "chick", "turtle", "frog", "butterfly", "bee",
+    "donut", "pizza", "taco", "burger", "cookie", "cake", "icecream", "pancake"
+  ];
+  
+  const randomAdjective1 = adjectives[Math.floor(Math.random() * adjectives.length)];
+  const randomAdjective2 = secondAdjectives[Math.floor(Math.random() * secondAdjectives.length)];
+  const randomNoun = nouns[Math.floor(Math.random() * nouns.length)];
+  
+  return `${randomAdjective1}_${randomAdjective2}_${randomNoun}`;
+};
+
 // Deployment-specific state
-const deploymentName = ref("");
+const deploymentName = ref(generateFunnyDeploymentName());
 const replicas = ref(1);
-const strategy = ref<DeploymentStrategy>("SIMPLE");
+const strategy = ref<DeploymentStrategy>("INFINITE");
 const schedule = ref("0 0 * * *"); // Default schedule
+const preloadedDeployment = useState<Deployment | null>("preloadedDeployment", () => null);
+
+watch(
+  strategy,
+  (newStrategy) => {
+    const newDefault =
+      newStrategy === "INFINITE" ? INFINITE_TIMEOUT : DEFAULT_TIMEOUT;
+    if (timeout.value === previousStrategyDefault.value) {
+      timeout.value = newDefault;
+    }
+    previousStrategyDefault.value = newDefault;
+  },
+  { immediate: true }
+);
 
 // Balance and price state
 const nosPrice = ref(0);
 
-// Credit balance state
-const creditBalance = ref<number>(0);
-const loadingCreditBalance = ref(false);
+// Credit balance state - shared single source of truth (see useCreditBalance).
+const {
+  creditBalance,
+  fetchBalance: refreshCreditBalance,
+  reset: resetCreditBalance,
+} = useCreditBalance();
 const solPrice = ref(0);
 const usdcPrice = ref(0);
 const usdtPrice = ref(0);
@@ -766,6 +574,7 @@ const isCacheValid = () => {
 const { data: priceData } = await useAPI(
   "https://api.coingecko.com/api/v3/simple/price?ids=nosana,solana,usd-coin,tether&vs_currencies=usd",
   {
+    credentials: false,
     default: () => ({
       nosana: { usd: 0 },
       solana: { usd: 0 },
@@ -872,12 +681,10 @@ const { estimatedCost, formattedCost, formattedHourlyRate, usdPricePerHour } =
 const hourlyPrice = computed(() => usdPricePerHour.value || 0);
 
 const requiredNos = computed(() => {
-  if (!selectedMarket.value || !timeout.value) return 0;
+  if (!selectedMarket.value) return 0;
 
   if (usdPricePerHour.value && nosPrice.value) {
-    return (
-      (usdPricePerHour.value * timeout.value * replicas.value) / nosPrice.value
-    );
+    return (usdPricePerHour.value * replicas.value) / nosPrice.value;
   }
 
   return 0;
@@ -885,7 +692,7 @@ const requiredNos = computed(() => {
 
 // Check if user can post job based on authentication and credits
 const canPostJob = computed(() => {
-  if (status.value === "authenticated") {
+  if (superTokensAuth.value) {
     const costUSD = hourlyPrice.value * replicas.value * timeout.value || 0;
     return creditBalance.value >= costUSD;
   }
@@ -894,16 +701,11 @@ const canPostJob = computed(() => {
 
 // Authentication mode detection
 const isWalletMode = computed(() => {
-  return connected.value && publicKey.value && !token.value;
+  return Boolean(connected.value && publicKey.value && !superTokensAuth.value);
 });
 
 const isCreditMode = computed(() => {
-  return status.value === "authenticated" && token.value;
-});
-
-// Show legacy deploy banner for all users
-const shouldShowWalletAuthBanner = computed(() => {
-  return true;
+  return superTokensAuth.value;
 });
 
 const canCreateDeployment = computed(() => {
@@ -930,33 +732,12 @@ const activeFilterKey = computed(
   () => `${selectedTemplate?.value?.id || "default"}-${activeFilter.value}`
 );
 
-// Validation function
-const validator = (json: any) => {
-  const errors: {
-    path: string[];
-    message: string;
-    severity: ValidationSeverity;
-  }[] = [];
-  return errors;
-};
-// Credit balance fetch (SDK API)
-const refreshCreditBalance = async () => {
-  if (status.value !== "authenticated" || !token.value) return;
-  loadingCreditBalance.value = true;
-  try {
-    const data = await nosana.value.api.credits.balance();
-    if (data) {
-      creditBalance.value =
-        (data.assignedCredits || 0) -
-        (data.settledCredits || 0) -
-        (data.reservedCredits || 0);
-    }
-  } catch (error) {
-    console.error("Error fetching credit balance:", error);
-  } finally {
-    loadingCreditBalance.value = false;
+const { onCreditRefresh } = useCreditRefresh();
+onCreditRefresh(() => {
+  if (superTokensAuth.value) {
+    refreshCreditBalance();
   }
-};
+});
 
 const createDeployment = async () => {
   if (!canCreateDeployment.value) return;
@@ -974,8 +755,16 @@ const createDeployment = async () => {
     toast.error("Number of replicas cannot exceed 100");
     return;
   }
-  if (timeout.value < 1) {
-    toast.error("Timeout must be at least 1 hour");
+  const effectiveMinTimeout =
+    strategy.value === DeploymentStrategy.INFINITE
+      ? MIN_INFINITE_TIMEOUT_HOURS
+      : MIN_TIMEOUT_HOURS;
+  if (timeout.value < effectiveMinTimeout) {
+    toast.error(`Timeout must be at least ${effectiveMinTimeout} hour${effectiveMinTimeout === 1 ? "" : "s"}`);
+    return;
+  }
+  if (timeout.value > MAX_TIMEOUT_HOURS) {
+    toast.error(`Timeout cannot exceed ${MAX_TIMEOUT_HOURS} hours`);
     return;
   }
   if (!jobDefinition.value) {
@@ -990,10 +779,13 @@ const createDeployment = async () => {
     if (!isCreditMode.value && !isWalletMode.value) {
       throw new Error("Please connect wallet or sign in");
     }
+    if (isCreditMode.value && isEmailVerified.value === false) {
+      throw new Error("Please verify your email before creating a deployment");
+    }
     if (!selectedMarket.value) {
       throw new Error("Please select a market");
     }
-    const deployment = await nosana.value.deployments.create({
+    const deployment = (await nosana.value.api.deployments.create({
       name: deploymentName.value.trim(),
       market: selectedMarket.value.address.toString(),
       replicas: replicas.value,
@@ -1004,9 +796,27 @@ const createDeployment = async () => {
         : {}),
       ...(modalSelectedVault.value && modalSelectedVault.value !== "" ? { vault: modalSelectedVault.value } : {}),
       job_definition: jobDefinition.value,
-    });
+    })) as Deployment;
 
     toast.success(`Successfully created deployment ${deployment.id}`);
+
+    if (isCreditMode.value) {
+      await deployment.start();
+      preloadedDeployment.value = {
+        ...deployment,
+        status: "RUNNING",
+      } as Deployment;
+    } else {
+      preloadedDeployment.value = deployment;
+    }
+
+    trackEvent("workload_created", {
+      user_id: userData.value?.generatedAddress,
+      auth_method: userData.value?.loginMethod,
+    });
+
+    clearDraft();
+
     router.push(`/deployments/${deployment.id}`);
   } catch (error: any) {
     console.error("Deployment creation error:", error);
@@ -1030,22 +840,72 @@ const enforceReplicasMax = () => {
 
 const enforceTimeoutMin = () => {
   const numValue = parseFloat(timeout.value as any) || 0;
-  if (numValue < 1) {
-    timeout.value = 1;
-  } else {
-    timeout.value = numValue;
+  if (numValue < MIN_TIMEOUT_HOURS) {
+    toast.error(`Timeout must be at least ${MIN_TIMEOUT_HOURS} hours`);
+  } else if (numValue > MAX_TIMEOUT_HOURS) {
+    toast.error(`Timeout cannot exceed ${MAX_TIMEOUT_HOURS} hours`);
   }
 };
 
-// Handle login click
+const persistDraft = () => {
+  saveDraft({
+    selectedMarketAddress: selectedMarketAddress.value,
+    selectedTemplate: selectedTemplate.value,
+    jobDefinition: jobDefinition.value,
+    deploymentName: deploymentName.value,
+    replicas: replicas.value,
+    timeout: timeout.value,
+    strategy: strategy.value,
+    schedule: schedule.value,
+    gpuTypeCheckbox: gpuTypeCheckbox.value,
+    activeFilter: activeFilter.value,
+  });
+};
+
+const restoreDraftIfNeeded = () => {
+  const draft = loadDraft();
+  if (!draft) return;
+
+  // An explicit ?template= deep link always wins over a stale draft
+  const hasTemplateQuery = Boolean(route.query.template);
+
+  isRestoringState.value = true;
+  skipAutoSelection.value = true;
+  try {
+    if (!hasTemplateQuery) {
+      if (draft.jobDefinition) jobDefinition.value = draft.jobDefinition;
+      if (draft.selectedTemplate) selectedTemplate.value = draft.selectedTemplate;
+    }
+    if (draft.deploymentName) deploymentName.value = draft.deploymentName;
+    if (typeof draft.replicas === "number") replicas.value = draft.replicas;
+    if (typeof draft.timeout === "number") timeout.value = draft.timeout;
+    if (draft.strategy) strategy.value = draft.strategy as DeploymentStrategy;
+    if (draft.schedule) schedule.value = draft.schedule;
+    if (Array.isArray(draft.gpuTypeCheckbox))
+      gpuTypeCheckbox.value = draft.gpuTypeCheckbox;
+    if (draft.activeFilter) activeFilter.value = draft.activeFilter;
+
+    if (draft.selectedMarketAddress && markets.value) {
+      const match = markets.value.find(
+        (m: Market) => m.address?.toString() === draft.selectedMarketAddress
+      );
+      if (match) selectedMarket.value = match;
+    }
+  } finally {
+    nextTick(() => {
+      isRestoringState.value = false;
+    });
+  }
+};
+
 const handleLoginClick = () => {
-  const { openBothModal } = useLoginModal();
-  openBothModal();
+  persistDraft();
+  openBothModal(route.fullPath);
 };
 
 // Navigate to account page
 const goToClaimCredits = () => {
-  navigateTo("/account/deployer");
+  navigateTo("/account");
 };
 
 // Template selection handling
@@ -1071,6 +931,11 @@ watch(
   },
   { deep: true }
 );
+
+// State for modals
+const showReadmeModal = ref(false);
+const readmeContentForModal = ref<string | undefined>(undefined);
+const showTemplateModal = ref(false);
 
 // Watch jobDefinition changes to detect custom configurations
 watch(
@@ -1111,7 +976,7 @@ watch(
   { deep: true }
 );
 
-// Auto-select PyTorch template when grouped templates load
+// Auto-select template from URL query param or fall back to PyTorch
 watch(
   () => groupedTemplates.value,
   (newTemplates) => {
@@ -1121,6 +986,56 @@ watch(
       !selectedTemplate.value &&
       !isRestoringState.value
     ) {
+      const templateQuery = route.query.template as string | undefined;
+
+      if (templateQuery) {
+        // Direct match on parent template ID or name
+        const directMatch = newTemplates.find(
+          (t: any) =>
+            String(t.id) === templateQuery ||
+            t.name?.toLowerCase() === templateQuery.toLowerCase()
+        );
+        if (directMatch?.jobDefinition) {
+          selectedTemplate.value = directMatch as Template;
+          jobDefinition.value = directMatch.jobDefinition;
+          nextTick(() => {
+            readmeContentForModal.value = (directMatch as Template).readme || undefined;
+            showReadmeModal.value = true;
+          });
+          return;
+        }
+
+        // Variant match: check inside each parent's variants array.
+        // The URL stores either the variant's full `id` or the compound
+        // `${parentId}-${variantId}` that selectTemplateVariant emits.
+        for (const t of newTemplates as any[]) {
+          if (!t.variants?.length) continue;
+          const variant = t.variants.find(
+            (v: any) =>
+              String(v.id) === templateQuery ||
+              `${t.id}-${v.variant_id}` === templateQuery ||
+              v.variant_id === templateQuery
+          );
+          if (variant?.jobDefinition) {
+            const variantTemplate: Template = {
+              ...t,
+              id: variant.id ?? `${t.id}-${variant.variant_id}`,
+              name: `${t.name} - ${variant.name}`,
+              description: variant.description,
+              jobDefinition: variant.jobDefinition,
+              selectedVariant: variant,
+            };
+            selectedTemplate.value = variantTemplate;
+            jobDefinition.value = variant.jobDefinition;
+            nextTick(() => {
+              readmeContentForModal.value = variantTemplate.readme || undefined;
+              showReadmeModal.value = true;
+            });
+            return;
+          }
+        }
+      }
+
       const pytorchTemplate = newTemplates.find((template: any) =>
         template.jobDefinition?.ops?.[0]?.args?.image?.includes(
           "nosana/pytorch-jupyter"
@@ -1135,6 +1050,7 @@ watch(
   },
   { immediate: true }
 );
+
 
 // Update GPU type when market changes
 watch(
@@ -1158,20 +1074,28 @@ onMounted(async () => {
     await getMarkets();
   }
 
+  // Restore a persisted draft
+  restoreDraftIfNeeded();
+
   // Load credit balance if authenticated
   if (isCreditMode.value) {
     await refreshCreditBalance();
   }
+
+  trackEvent("workload_create_start", {
+    user_id: userData.value?.generatedAddress,
+    auth_method: userData.value?.loginMethod,
+  });
 });
 
 // React to auth changes to keep credit balance fresh
 watch(
-  [status, token],
+  superTokensAuth,
   async () => {
     if (isCreditMode.value) {
       await refreshCreditBalance();
     } else {
-      creditBalance.value = 0;
+      resetCreditBalance();
     }
   },
   { immediate: true }
@@ -1185,15 +1109,13 @@ const openReadmeModal = (readme: string) => {
   showReadmeModal.value = true;
 };
 
-// State for modals
-const showReadmeModal = ref(false);
-const readmeContentForModal = ref<string | undefined>(undefined);
-const showTemplateModal = ref(false);
-
 // Template selection handler
 const selectTemplateFromModal = (template: Template) => {
   selectedTemplate.value = template;
   showTemplateModal.value = false;
+  router.replace({ query: { ...route.query, template: String(template.id) } });
+  readmeContentForModal.value = template.readme || undefined;
+  showReadmeModal.value = true;
 };
 
 // Watch for template modal state to control body scroll
@@ -1202,15 +1124,6 @@ watch(showTemplateModal, (isOpen) => {
     lockScroll("template-modal");
   } else {
     unlockScroll("template-modal");
-  }
-});
-
-// Watch for deployment settings modal state to control body scroll
-watch(showDeploymentSettingsModal, (isOpen) => {
-  if (isOpen) {
-    lockScroll("deployment-settings-modal");
-  } else {
-    unlockScroll("deployment-settings-modal");
   }
 });
 

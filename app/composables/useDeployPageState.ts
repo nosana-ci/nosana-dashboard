@@ -1,4 +1,4 @@
-import type { Market, JobDefinition } from "@nosana/sdk";
+import type { Market, JobDefinition } from "@nosana/kit";
 import type { Template } from "./useTemplates";
 import { useLocalStorage } from "@vueuse/core";
 

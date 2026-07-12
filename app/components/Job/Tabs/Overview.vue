@@ -287,6 +287,7 @@ import DoneIcon from '@/assets/img/icons/status/done.svg?component';
 import QueuedIcon from '@/assets/img/icons/status/queued.svg?component';
 import FullscreenIcon from '@/assets/img/icons/fullscreen.svg?component';
 import { useStatus } from '~/composables/useStatus';
+import { useDeploymentAuth } from '~/composables/useDeploymentAuth';
 
 type EndpointStatus = 'ONLINE' | 'OFFLINE' | 'UNKNOWN';
 
@@ -396,7 +397,7 @@ const hasInitializedGroupExpansion = ref(false);
 const clearedAtByOp = ref<Map<string, number>>(new Map());
 let pollInterval: NodeJS.Timeout | null = null;
 
-const { ensureAuth } = useAuthHeader();
+const { getAuthHeader } = useDeploymentAuth();
 const route = useRoute();
 const deploymentId = computed<string | undefined>(() => {
   return route.params?.id as string || undefined;
@@ -859,7 +860,7 @@ const stopOperation = async (op: Operation) => {
     const baseUrl = getNodeUrl();
     const group = op.group || op.id;
     const url = `${baseUrl}/job/${jobId}/group/${group}/operation/${op.id}/stop`;
-    const authHeader = await ensureAuth({ deploymentId: deploymentId.value });
+    const authHeader = await getAuthHeader(jobId);
     
     await $fetch(url, {
       method: 'POST',
@@ -888,7 +889,7 @@ const restartOperation = async (op: Operation) => {
     const baseUrl = getNodeUrl();
     const group = op.group || op.id;
     const url = `${baseUrl}/job/${jobId}/group/${group}/operation/${op.id}/restart`;
-    const authHeader = await ensureAuth({ deploymentId: deploymentId.value });
+    const authHeader = await getAuthHeader(jobId);
     
     await $fetch(url, {
       method: 'POST',
@@ -920,7 +921,7 @@ const stopGroup = async (groupName: string) => {
     const jobId = props.job.address;
     const baseUrl = getNodeUrl();
     const url = `${baseUrl}/job/${jobId}/group/${groupName}/stop`;
-    const authHeader = await ensureAuth({ deploymentId: deploymentId.value });
+    const authHeader = await getAuthHeader(jobId);
     
     await $fetch(url, {
       method: 'POST',
@@ -951,7 +952,7 @@ const restartGroup = async (groupName: string) => {
     const jobId = props.job.address;
     const baseUrl = getNodeUrl();
     const url = `${baseUrl}/job/${jobId}/group/${groupName}/restart`;
-    const authHeader = await ensureAuth({ deploymentId: deploymentId.value });
+    const authHeader = await getAuthHeader(jobId);
     
     await $fetch(url, {
       method: 'POST',

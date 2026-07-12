@@ -1,5 +1,5 @@
 <template>
-  <div :class="{ 'min-height-container': !hasLoadedOnce && loading }">
+  <div :class="{ 'min-height-container': !hasLoadedOnce }">
     <div class="table-container">
       <table class="table is-fullwidth is-striped is-hoverable">
         <thead>
@@ -12,57 +12,58 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-if="!hasLoadedOnce && loading">
+          <tr v-if="!hasLoadedOnce">
             <td :colspan="isWalletMode ? 5 : 4" class="has-text-centered py-6">
               Loading deployments...
             </td>
           </tr>
-          <tr v-else-if="deploymentsError">
+          <tr v-else-if="hasLoadedOnce && deploymentsError">
             <td colspan="4" class="has-text-centered has-text-danger">
               Failed to load deployments: {{ deploymentsError }}
             </td>
           </tr>
-          <tr v-else-if="!displayedDeployments.length">
+          <tr v-else-if="hasLoadedOnce && !deployments.length">
             <td :colspan="isWalletMode ? 5 : 4" class="has-text-centered">
               No deployments found
             </td>
           </tr>
           <template v-else>
             <tr
-              v-for="deployment in displayedDeployments"
+              v-for="deployment in deployments"
               :key="deployment.id"
               class="clickable-row"
+              @click="openDeployment($event, deployment.id)"
             >
               <td>
                 <NuxtLink
-                  :to="deploymentLink(deployment.id)"
-                  class="clickable-row-link"
+                  :to="`/deployments/${deployment.id}`"
+                  class="clickable-row-link clickable-row-cell-content"
                 >
-                  <div class="clickable-row-cell-content">
-                    <div class="deployment-name">
-                      {{ deployment.name }}
-                    </div>
-                    <div class="is-size-7 is-family-monospace has-text-grey">
-                      {{ deployment.id }}
-                    </div>
+                  <div class="deployment-name">
+                    {{ deployment.name }}
+                  </div>
+                  <div class="is-size-7 is-family-monospace has-text-grey">
+                    {{ deployment.id }}
                   </div>
                 </NuxtLink>
               </td>
               <td>
-                <div class="clickable-row-cell-content">
+                <NuxtLink
+                  :to="`/deployments/${deployment.id}`"
+                  class="clickable-row-link clickable-row-cell-content"
+                >
                   <StatusTag
                     :status="deployment.status"
                     :outlined="true"
                     :show-label="true"
                   />
-                </div>
+                </NuxtLink>
               </td>
               <td>
-                <span class="clickable-row-cell-content"
-                  >{{
-                    Array.isArray(deployment.jobs) ? deployment.jobs.length : 0
-                  }}
-                  Jobs</span
+                <NuxtLink
+                  :to="`/deployments/${deployment.id}`"
+                  class="clickable-row-link clickable-row-cell-content"
+                  >{{ deployment.active_jobs || 0 }} Jobs</NuxtLink
                 >
               </td>
               <VaultOverviewRows
@@ -71,12 +72,15 @@
                 :deployment="deployment"
               />
               <td>
-                <span class="clickable-row-cell-content">
+                <NuxtLink
+                  :to="`/deployments/${deployment.id}`"
+                  class="clickable-row-link clickable-row-cell-content"
+                >
                   <span v-if="deployment.updated_at">{{
                     formatDate(deployment.updated_at)
                   }}</span>
                   <span v-else>-</span>
-                </span>
+                </NuxtLink>
               </td>
             </tr>
           </template>
@@ -85,18 +89,29 @@
     </div>
   </div>
 
-  <Pagination
-    v-if="showPagination && totalPages > 1"
-    v-model="currentPage"
-    class="pagination is-centered mt-4"
-    :total-page="totalPages"
-    :max-page="6"
-  />
-  <div v-if="!showPagination && hasMore" class="has-text-right mt-2">
-    <nuxt-link to="/deployments" class="button is-text">
-      <span>See all</span>
-      <span class="icon"> &#8250; </span>
-    </nuxt-link>
+  <div v-if="showPagination" class="pagination-buttons mt-4">
+    <button
+      class="button"
+      :class="{ 'is-disabled': !prevPage }"
+      :disabled="!prevPage || loading"
+      @click="refreshDeployments(prevPage)"
+    >
+      <span class="icon">
+        <span>&#8249;</span>
+      </span>
+      <span>Previous</span>
+    </button>
+    <button
+      class="button"
+      :class="{ 'is-disabled': !nextPage }"
+      :disabled="!nextPage || loading"
+      @click="refreshDeployments(nextPage)"
+    >
+      <span>Next</span>
+      <span class="icon">
+        <span>&#8250;</span>
+      </span>
+    </button>
   </div>
 </template>
 
@@ -104,23 +119,28 @@
 import StatusTag from "@/components/Common/StatusTag.vue";
 import VaultOverviewRows from "@/components/Vault/VaultOverviewRows.vue";
 
-import { useWallet } from "solana-wallets-vue";
-import { useSDK } from "~/composables/useSDK";
-import type { Deployment } from "@nosana/sdk";
+import { useWallet } from "@nosana/solana-vue";
+import { useKit } from "~/composables/useKit";
+import type { ApiDeploymentListResult } from "@nosana/api";
 import { formatDate } from "~/utils/formatDate";
+
+const { isAuthenticated, isLoading } = useSuperTokens();
+const { connected } = useWallet();
+
+const isWalletMode = computed(() => {
+  return connected.value && !isAuthenticated.value;
+});
 
 // Props
 const props = withDefaults(
   defineProps<{
     itemsPerPage?: number;
-    limit?: number;
     showPagination?: boolean;
   }>(),
   {
     itemsPerPage: 10,
-    limit: undefined,
     showPagination: true,
-  }
+  },
 );
 
 // Emits
@@ -128,163 +148,80 @@ const emit = defineEmits<{
   "update:total-deployments": [count: number];
 }>();
 
-const deployments = ref<Deployment[]>([]);
+const deployments = ref<ApiDeploymentListResult["deployments"]>([]);
 const currentPage = ref(1);
 const hasLoadedOnce = ref(false);
-const { status, token } = useAuth();
-const { connected } = useWallet();
 const router = useRouter();
-const route = useRoute();
 
-const isAuthenticated = computed(() => {
-  return status.value === "authenticated" && token.value;
-});
+const nextPage = ref<(() => Promise<ApiDeploymentListResult>) | null>(null);
+const prevPage = ref<(() => Promise<ApiDeploymentListResult>) | null>(null);
 
-const isWalletMode = computed(() => {
-  return connected.value && !token.value;
-});
+// Navigate on plain row clicks, but let the browser handle the real <a> links
+// for modifier/middle clicks so deployments can be opened in a new tab/window.
+const openDeployment = (event: MouseEvent, id: string) => {
+  if (event.metaKey || event.ctrlKey || event.shiftKey) return;
+  if ((event.target as Element)?.closest("a")) return;
+  router.push(`/deployments/${id}`);
+};
 
-const hasAnyAuth = computed(() => {
-  return isAuthenticated.value || isWalletMode.value;
-});
-
-const { nosana } = useSDK();
+const { nosana } = useKit();
 const loading = ref(false);
 const deploymentsError = ref<string | null>(null);
 
-const refreshDeployments = async () => {
+const searchQuery = computed(
+  () => router.currentRoute.value.query.search?.toString() || "",
+);
+
+const statusQuery = computed(
+  () => router.currentRoute.value.query.filter?.toString() || "",
+);
+
+const refreshDeployments = async (
+  pageFunc?: (() => Promise<ApiDeploymentListResult>) | null,
+) => {
   try {
-    deploymentsError.value = null;
     loading.value = true;
-    const items = await nosana.value.deployments.list();
-    deployments.value = items || [];
+
+    let items;
+    if (pageFunc) {
+      items = await pageFunc();
+    } else {
+      items = await nosana.value.api.deployments.list({
+        search: searchQuery.value || undefined,
+        status: statusQuery.value || undefined,
+        // @ts-ignore - API client types need to be updated to reflect new pagination params1
+        limit: props.itemsPerPage,
+      });
+    }
+
+    deploymentsError.value = null;
+    deployments.value = items.deployments || [];
+    nextPage.value = items.nextPage || null;
+    prevPage.value = items.previousPage || null;
   } catch (e: any) {
     deploymentsError.value = e?.message || "Failed to load deployments";
     deployments.value = [];
+    nextPage.value = null;
+    prevPage.value = null;
   } finally {
     loading.value = false;
     hasLoadedOnce.value = true;
   }
 };
 
-const currentState = computed(() =>
-  router.currentRoute.value.query.filter?.toString()
-);
-
-// Computed properties
-const filteredDeployments = computed(() => {
-  let filtered = deployments.value;
-
-  // Apply status filter
-  if (currentState.value) {
-    filtered = filtered.filter((d) => d.status === currentState.value);
-  }
-
-  // Apply search filter
-  const searchQuery = router.currentRoute.value.query.search?.toString() as
-    | string
-    | undefined;
-  if (searchQuery) {
-    const query = searchQuery.toLowerCase();
-    filtered = filtered.filter(
-      (d) =>
-        d.name.toLowerCase().includes(query) ||
-        d.id.toLowerCase().includes(query)
-    );
-  }
-
-  return filtered;
-});
-
-// Create a computed property for the deployments actually displayed in the table
-const displayedDeployments = computed(() => {
-  // Compact mode: show only first N and hide pagination
-  if (!props.showPagination) {
-    const max = props.limit ?? props.itemsPerPage;
-    return filteredDeployments.value.slice(0, max);
-  }
-
-  // Paginated mode
-  const start = (currentPage.value - 1) * props.itemsPerPage;
-  const end = start + props.itemsPerPage;
-  return filteredDeployments.value.slice(start, end);
-});
-
-const totalDeployments = computed(() => filteredDeployments.value.length);
-
-const totalPages = computed(() =>
-  Math.ceil(totalDeployments.value / props.itemsPerPage)
-);
-
-// More indicator for compact mode
-const hasMore = computed(() => {
-  if (props.showPagination) return false;
-  const max = props.limit ?? props.itemsPerPage;
-  return filteredDeployments.value.length > max;
-});
-
-// Build nuxt-link target
-const deploymentLink = (id: string) => {
-  return `/deployments/${id}`;
-};
-
-// Debounced redirect to prevent flicker during session refresh
-let redirectTimer: NodeJS.Timeout | null = null;
-watch(
-  status,
-  (authStatus) => {
-    if (redirectTimer) {
-      clearTimeout(redirectTimer);
-    }
-
-    if (authStatus === "unauthenticated" && !connected.value) {
-      // Add small delay to prevent redirect during quick session refresh
-      redirectTimer = setTimeout(() => {
-        if (status.value === "unauthenticated" && !connected.value) {
-          router.push("/account/deployer");
-        }
-      }, 500);
-    }
-  },
-  { immediate: true }
-);
+const debouncedRefresh = useDebounceFn(refreshDeployments, 500);
 
 watch(
-  [status, connected],
-  ([newStatus, newConnected], [oldStatus, oldConnected]) => {
-    // Skip loading state (session refresh in progress)
-    if (newStatus === 'loading') return;
-    
-    const isAuth = newStatus === 'authenticated' || newConnected;
-    
-    // Only fetch if authenticated AND haven't loaded yet
-    if (isAuth && !hasLoadedOnce.value) {
-      refreshDeployments();
-    } else if (newStatus === 'unauthenticated' && !newConnected) {
-      // Clear on logout (definitive unauthenticated state)
-      deployments.value = [];
-      hasLoadedOnce.value = false; // Reset so next login will fetch
-    }
-  },
-  { immediate: true }
-);
-
-// Emit total deployments count
-watch(
-  totalDeployments,
-  (count) => {
-    emit("update:total-deployments", count);
-  },
-  { immediate: true }
-);
-
-// Add watcher for status filter changes
-watch(
-  () => currentState.value,
+  () => [
+    currentPage.value,
+    props.itemsPerPage,
+    searchQuery.value,
+    statusQuery.value,
+  ],
   () => {
-    currentPage.value = 1;
+    debouncedRefresh();
   },
-  { immediate: false }
+  { immediate: true },
 );
 </script>
 
@@ -345,6 +282,21 @@ watch(
 /* Fix for option key type error */
 select option {
   value: any;
+}
+
+.pagination-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.pagination-buttons .button {
+  min-width: 120px;
+}
+
+.pagination-buttons .button.is-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* Match deployment detail page responsive tab styling */

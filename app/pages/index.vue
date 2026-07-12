@@ -1,396 +1,1643 @@
 <template>
   <div class="login-page" :class="{ 'dark-mode': isDarkMode }">
-    <!-- World Map Background -->
-    <div class="world-map-wrapper">
-      <WorldMap />
-    </div>
-
+    <Loader v-if="autoLoginChecking" class="auth-checking-loader" />
     <!-- Main Content -->
     <div class="content-wrapper">
-      <!-- Top Left -->
-      <div class="left-content">
-        <h1 class="title is-2">Nosana dashboard</h1>
-        <!-- <h2 class="subtitle is-4 mb-6">Launch the dashboard</h2> -->
+      <!-- World Map Background -->
+      <div class="world-map-background">
+        <img
+          :key="backgroundImageKey"
+          src="/img/worldmap.png"
+          alt=""
+          class="world-map-image"
+        />
+      </div>
+      <!-- Center Login Card -->
+      <div class="login-card-container">
+        <div class="login-card">
+          <!-- Header with Logo -->
+          <div class="login-header">
+            <logo width="120px" :animated="true" class="light-only" />
+            <logo
+              width="120px"
+              :white="true"
+              class="dark-only"
+              :animated="true"
+            />
+          </div>
 
-        <!-- Bottom Stats -->
-        <div class="hosts-stats">
-          <div class="stats-box">
-            <span class="icon mr-3">
-              <RocketIcon class="rocket-icon" />
-            </span>
-            <div class="stats-text">
-              <div class="has-text-grey is-size-6">GPUs Available</div>
-              <div class="has-text-black has-text-weight-bold is-size-4">
-                {{ queuedHosts }}/{{ activeHosts }}
+          <!-- Main Login Content -->
+          <div class="login-content">
+            <!-- SIGN UP MODE - Email/Password with confirmation -->
+            <template v-if="isSignUpMode">
+              <h1 class="login-title">Create Your Account</h1>
+              <p class="login-subtitle">
+                Sign up to build with the Nosana AI Platform
+              </p>
+
+              <form @submit.prevent="handleEmailSubmit" class="email-form">
+                <div class="form-field">
+                  <input
+                    v-model="email"
+                    type="email"
+                    placeholder="Email address"
+                    class="form-input"
+                    :disabled="emailLoading"
+                    required
+                  />
+                </div>
+                <div class="form-field">
+                  <input
+                    v-model="password"
+                    type="password"
+                    placeholder="Password"
+                    class="form-input"
+                    :disabled="emailLoading"
+                    required
+                    minlength="8"
+                  />
+                </div>
+                <div class="form-field">
+                  <input
+                    v-model="confirmPassword"
+                    type="password"
+                    placeholder="Confirm Password"
+                    class="form-input"
+                    :disabled="emailLoading"
+                    required
+                    minlength="8"
+                  />
+                </div>
+                <div v-if="authError" class="auth-error">
+                  {{ authError }}
+                </div>
+                <p v-if="isSignupCaptchaEnabled" class="captcha-notice">
+                  This site is protected by reCAPTCHA and the Google
+                  <a
+                    href="https://policies.google.com/privacy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Privacy Policy
+                  </a>
+                  and
+                  <a
+                    href="https://policies.google.com/terms"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Terms of Service
+                  </a>
+                  apply.
+                </p>
+                <div class="form-actions">
+                  <button
+                    type="submit"
+                    class="login-button email-button"
+                    :disabled="emailLoading"
+                    :class="{ 'is-loading': emailLoading }"
+                  >
+                    Create Account
+                  </button>
+                </div>
+                <div class="form-toggle">
+                  <span>
+                    Already have an account?
+                    <a href="#" @click.prevent="isSignUpMode = false"
+                      >Sign in</a
+                    >
+                  </span>
+                </div>
+              </form>
+            </template>
+
+            <!-- SIGN IN MODE - Original login with all options -->
+            <template v-else>
+              <h1 class="login-title">
+                {{
+                  isCampaignMode
+                    ? (freeCreditsEnabled === false ? "Free Credits Unavailable" : "Claim your Free Credits")
+                    : "Build with Nosana"
+                }}
+              </h1>
+              <p class="login-subtitle">
+                <template v-if="isCampaignMode && freeCreditsEnabled === false">
+                  Free credits are currently unavailable. Please check back soon.
+                </template>
+                <template v-else>
+                  Sign in or create an account to build with the Nosana AI Platform
+                </template>
+              </p>
+
+              <!-- Email/Password Form -->
+              <form @submit.prevent="handleEmailSubmit" class="email-form">
+                <div class="form-field">
+                  <input
+                    v-model="email"
+                    type="email"
+                    placeholder="Email address"
+                    class="form-input"
+                    :disabled="emailLoading"
+                    required
+                  />
+                </div>
+                <div class="form-field">
+                  <input
+                    v-model="password"
+                    type="password"
+                    placeholder="Password"
+                    class="form-input"
+                    :disabled="emailLoading"
+                    required
+                    minlength="8"
+                  />
+                </div>
+                <div class="forgot-password-link">
+                  <NuxtLink to="/st-auth/reset-password"
+                    >Forgot password?</NuxtLink
+                  >
+                </div>
+                <div v-if="authError" class="auth-error">
+                  {{ authError }}
+                </div>
+                <div class="form-actions">
+                  <button
+                    type="submit"
+                    class="login-button email-button"
+                    :disabled="emailLoading"
+                    :class="{ 'is-loading': emailLoading }"
+                  >
+                    Sign In
+                  </button>
+                </div>
+                <div class="form-toggle">
+                  <span>
+                    Don't have an account?
+                    <a href="#" @click.prevent="isSignUpMode = true">Sign up</a>
+                  </span>
+                </div>
+              </form>
+
+              <div class="divider">
+                <span>OR</span>
               </div>
-            </div>
+
+              <!-- Google Login Button -->
+              <button
+                class="login-button google-button py-4"
+                @click="selectGoogleLogin"
+                @mousedown="prefetchAuthUrl('google')"
+                @focus="prefetchAuthUrl('google')"
+                @touchstart="prefetchAuthUrl('google')"
+                :disabled="googleLoading"
+                :class="{ 'is-loading': googleLoading }"
+              >
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                    fill="#4285F4"
+                  />
+                  <path
+                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                    fill="#34A853"
+                  />
+                  <path
+                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                    fill="#FBBC05"
+                  />
+                  <path
+                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                    fill="#EA4335"
+                  />
+                </svg>
+                Continue with Google
+              </button>
+
+              <!-- GitHub Login Button -->
+              <button
+                class="login-button github-button py-4"
+                @click="selectGithubLogin"
+                @mousedown="prefetchAuthUrl('github')"
+                @focus="prefetchAuthUrl('github')"
+                @touchstart="prefetchAuthUrl('github')"
+                :disabled="githubLoading"
+                :class="{ 'is-loading': githubLoading }"
+              >
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="currentColor"
+                >
+                  <path
+                    d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"
+                  />
+                </svg>
+                Continue with GitHub
+              </button>
+
+              <!-- Wallet Connection Button -->
+              <div class="wallet-section" v-if="!isCampaignMode">
+                <!-- Connection Status -->
+                <div
+                  v-if="connected && account"
+                  class="wallet-connection-status"
+                >
+                  <div class="status-indicator">
+                    <span class="status-dot connected"></span>
+                    <span class="status-text">
+                      Connected: {{ getWalletName() || "Unknown Wallet" }}
+                    </span>
+                  </div>
+                  <div v-if="account?.address" class="wallet-address">
+                    {{ account.address.substring(0, 8) }}...{{
+                      account.address.substring(account.address.length - 6)
+                    }}
+                  </div>
+                  <div v-if="signingMessage" class="signing-status">
+                    <span class="status-dot signing"></span>
+                    Signing authentication message to login...
+                  </div>
+                  <div
+                    v-if="
+                      !signingMessage &&
+                      !signMessageError &&
+                      connected &&
+                      account
+                    "
+                    class="sign-message-section"
+                  >
+                    <button
+                      class="sign-message-button"
+                      @click="handleSignMessage"
+                      :disabled="signingMessage"
+                    >
+                      Sign Message to Login
+                    </button>
+                  </div>
+                  <div
+                    v-if="signMessageError && !signingMessage"
+                    class="signing-error"
+                  >
+                    <span class="error-text">Signing failed</span>
+                    <button
+                      class="retry-button"
+                      @click="retrySignMessage"
+                      :disabled="signingMessage"
+                    >
+                      Retry Signing
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  v-if="!connected"
+                  class="login-button wallet-button"
+                  @click="handleWalletConnect"
+                  :disabled="signingMessage"
+                  :class="{ 'is-loading': signingMessage }"
+                >
+                  <WalletIcon :size="20" />
+                  {{
+                    signingMessage ? "Signing Message..." : "Connect Wallet"
+                  }}
+                </button>
+
+                <button
+                  v-else
+                  class="login-button wallet-button"
+                  @click="handleDisconnect"
+                  :disabled="signingMessage"
+                >
+                  <WalletIcon :size="20" />
+                  Disconnect Wallet
+                </button>
+              </div>
+
+              <!-- Wallet Selection Modal -->
+              <div
+                v-if="showWalletModal"
+                class="wallet-selection-modal"
+                @click="showWalletModal = false"
+              >
+                <div class="wallet-modal-content" @click.stop>
+                  <h3 class="wallet-modal-title">Select a Wallet</h3>
+                  <div class="wallet-list">
+                    <div
+                      v-for="wallet in wallets"
+                      :key="wallet.name"
+                      class="wallet-item"
+                      @click="selectWallet(wallet)"
+                    >
+                      <img
+                        :src="wallet.icon"
+                        :alt="wallet.name"
+                        class="wallet-icon"
+                      />
+                      <span class="wallet-name">{{ wallet.name }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- YouTube Video Link (Campaign Mode Only) -->
+              <a
+                v-if="isCampaignMode"
+                href="https://www.youtube.com/watch?v=J9lfl2QOmhU"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="campaign-video-link"
+              >
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"
+                  />
+                </svg>
+                Watch: How to Claim Free GPU Credits on Nosana
+              </a>
+            </template>
           </div>
         </div>
       </div>
-
-      <!-- Top Right -->
-      <div class="right-content">
-        <div class="topbar-wrapper">
-          <TopBar 
-            title="" 
-            :hide-buttons="false"
-            v-model="showSettingsModal"
-          />
-        </div>
-      </div>
     </div>
-
-
-    <Loader v-if="loading" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
-import { useWallet } from "solana-wallets-vue";
+import { ref, computed, watch } from "vue";
+import { useWallet } from "@nosana/solana-vue";
 import { useRouter } from "vue-router";
+import { useToast } from "vue-toastification";
+import { trackEvent } from "~/utils/analytics";
+import WalletIcon from "~/components/WalletIcon.vue";
+import { useNosanaWallet } from "~/composables/useNosanaWallet";
+import { useSuperTokens } from "~/composables/useSuperTokens";
+import { useOAuthLogin } from "~/composables/useOAuthLogin";
 import { useAPI } from "~/composables/useAPI";
-import WorldMap from "~/components/WorldMap.vue";
-import RocketIcon from "~/assets/img/icons/rocket.svg?component";
-import Loader from "~/components/Loader.vue";
-import TopBar from "~/components/TopBar.vue";
+import { createAuthCookiesKey } from "~/utils/createAuthCookiesKey";
 
-const { data: nodeStatsResponse } = await useAPI("/api/stats/nodes-country");
-const { status } = useAuth();
-const { connected } = useWallet();
-const router = useRouter();
-
-const showSettingsModal = ref(false);
-const loading = ref(false);
-
-// Check if user is authenticated
-const isAuthenticated = computed(() => {
-  return status.value === 'authenticated' || connected.value;
-});
-
-// Handle Google OAuth callback on root page
-onMounted(() => {
-  const urlParams = new URLSearchParams(window.location.search);
-  const code = urlParams.get('code');
-  
-  if (code) {
-    // This is a popup window completing OAuth, just close it
-    if (window.opener) {
-      window.close();
-      return;
-    }
-  }
-  
-});
-
-// Get running nodes from jobs API
-const { data: runningNodesData } = useAPI("/api/jobs/running", {
-  transform: (data: any) => {
-    if (!data) return { total: 0 };
-    return {
-      total: Object.values(data).reduce(
-        (sum: number, market: any) => sum + (market.running || 0),
-        0
-      ),
+declare global {
+  interface Window {
+    grecaptcha?: {
+      ready: (callback: () => void) => void;
+      execute: (
+        siteKey: string,
+        options: { action: string },
+      ) => Promise<string>;
     };
-  },
-  default: () => ({ total: 0 }),
-});
-
-// Define interface for node stats item
-interface NodeStatsItem {
-  country: string;
-  running: number;
-  queue: number;
-  offline: number;
-  total: number;
+  }
 }
 
-// Calculate queued hosts
-const queuedHosts = computed(() => {
-  if (
-    !nodeStatsResponse.value?.data ||
-    !Array.isArray(nodeStatsResponse.value.data)
-  )
-    return 0;
-
-  let total = 0;
-  // Group by country and sum up queues
-  nodeStatsResponse.value.data.forEach((item: NodeStatsItem) => {
-    if (item.queue > 0) {
-      total += item.queue;
-    }
-  });
-
-  // Use API's total if available, otherwise use our calculation
-  return nodeStatsResponse.value.totals?.totalQueued ?? total;
+definePageMeta({
+  layout: false, // No sidebar/layout for login page
 });
 
-// Calculate active hosts using running nodes from jobs API
-const activeHosts = computed(() => {
-  const runningCount = runningNodesData.value?.total || 0;
-  const queuedCount = queuedHosts.value;
-  return runningCount + queuedCount;
+const { connected, disconnect, connect, account } = useWallet();
+import { useSolanaWallets } from "@nosana/solana-vue";
+const { wallets } = useSolanaWallets();
+const { generateAuthHeaders, signMessageError } = useNosanaWallet();
+const {
+  signIn,
+  signUp,
+  signOut,
+  checkSession,
+  isAuthenticated: superTokensAuth,
+  isEmailVerified,
+  isLoading: autoLoginChecking,
+  sendVerificationEmail,
+} = useSuperTokens();
+
+// Compatibility: create publicKey-like object from account
+const publicKey = computed(() => {
+  if (!account.value?.address) return null;
+  return {
+    toString: () => account.value!.address,
+    toBase58: () => account.value!.address,
+  };
 });
+const router = useRouter();
+const route = useRoute();
+const toast = useToast();
+const config = useRuntimeConfig().public;
+const recaptchaSiteKey = config.recaptcha_site_key as string | undefined;
+const isSignupCaptchaEnabled = computed(() => Boolean(recaptchaSiteKey));
 
+// Email/Password form state
+const email = ref("");
+const password = ref("");
+const confirmPassword = ref("");
+const emailLoading = ref(false);
+const authError = ref("");
+const isSignUpMode = ref(false);
 
-// Add dark mode detection
-const isDarkMode = computed(() =>
-  document.documentElement.classList.contains("dark-mode")
+const googleLoading = ref(false);
+const githubLoading = ref(false);
+const { prefetch: prefetchAuthUrl, start: startOAuthLogin } = useOAuthLogin();
+const showWalletModal = ref(false);
+const signingMessage = ref(false);
+const providerSwitchInProgress = ref(false);
+const backgroundImageKey = ref(0);
+const currentWalletName = ref<string | null>(null);
+const freeCreditsEnabled = ref<boolean | null>(null);
+
+const { data: freeCreditsConfig } = useAPI("/api/credits/admin/request/config");
+
+watch(
+  freeCreditsConfig,
+  (val) => {
+    freeCreditsEnabled.value =
+      typeof val?.enabled === "boolean" ? val.enabled : null;
+  },
+  { immediate: true },
 );
 
+// Get wallet name from account or stored name
+const getWalletName = () => {
+  if (currentWalletName.value) {
+    return currentWalletName.value;
+  }
+  if (account.value) {
+    const wallet = wallets.value?.find((w: any) =>
+      w.accounts?.some((acc: any) => acc.address === account.value?.address),
+    );
+    return wallet?.name || "Connected Wallet";
+  }
+  return null;
+};
+
+// Handle disconnect
+const handleDisconnect = async () => {
+  try {
+    await disconnect();
+    currentWalletName.value = null;
+    toast.info("Wallet disconnected");
+  } catch (error) {
+    toast.error("Failed to disconnect wallet");
+  }
+};
+
+const clearWalletAuthState = async () => {
+  const sessionCookie = useCookie<{ address?: string } | null>(
+    "nosana-wallet-session",
+  );
+  const addresses = new Set<string>();
+
+  if (sessionCookie.value?.address) {
+    addresses.add(sessionCookie.value.address);
+  }
+  if (account.value?.address) {
+    addresses.add(account.value.address);
+  }
+
+  for (const address of addresses) {
+    const authCookie = useCookie(createAuthCookiesKey(address));
+    authCookie.value = null;
+  }
+
+  sessionCookie.value = null;
+  currentWalletName.value = null;
+
+  if (typeof localStorage !== "undefined") {
+    localStorage.removeItem("nosana-wallet");
+  }
+
+  if (connected.value) {
+    await disconnect();
+  }
+};
+
+const clearSuperTokensAuthState = async () => {
+  try {
+    await signOut();
+  } catch (error) {
+    console.warn("Failed to clear SuperTokens session before wallet login:", error);
+  }
+};
+
+// Handle sign message button click (user gesture required for mobile wallets)
+const handleSignMessage = async () => {
+  if (!currentWalletName.value) {
+    toast.error("No wallet name stored. Please reconnect.");
+    return;
+  }
+
+  if (!connected.value || !account.value) {
+    toast.error("Wallet not connected. Please reconnect.");
+    return;
+  }
+
+  if (signMessageError) {
+    signMessageError.value = false;
+  }
+
+  await signAuthMessage(currentWalletName.value);
+};
+
+// Retry signing message
+const retrySignMessage = async () => {
+  if (!currentWalletName.value) {
+    toast.error("No wallet name stored. Please reconnect.");
+    return;
+  }
+
+  if (signMessageError) {
+    signMessageError.value = false;
+  }
+
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  await signAuthMessage(currentWalletName.value);
+};
+
+// Watch for auto-connect and set wallet name if not already set
+watch(
+  [connected, account, wallets],
+  () => {
+    if (
+      connected.value &&
+      account.value &&
+      !currentWalletName.value &&
+      wallets.value &&
+      wallets.value.length > 0
+    ) {
+      const wallet = wallets.value.find((w: any) =>
+        w.accounts?.some((acc: any) => acc.address === account.value?.address),
+      );
+
+      if (wallet?.name) {
+        currentWalletName.value = wallet.name;
+      }
+    }
+  },
+  { immediate: true },
+);
+
+const isCampaignMode = computed(() => {
+  return (
+    route.query.context === "get-started" &&
+    typeof window !== "undefined" &&
+    !window.opener
+  );
+});
+
+const colorMode = useColorMode();
+const isDarkMode = computed(() => colorMode.value === "dark");
+
+useHead(() => ({
+  script: isSignupCaptchaEnabled.value
+    ? [
+        {
+          src: `https://www.google.com/recaptcha/api.js?render=${encodeURIComponent(recaptchaSiteKey ?? "")}`,
+          async: true,
+          defer: true,
+        },
+      ]
+    : [],
+}));
+
+const waitForRecaptcha = async () => {
+  if (!import.meta.client) {
+    throw new Error("reCAPTCHA is only available in the browser");
+  }
+
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    if (window.grecaptcha?.ready) {
+      return;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+
+  throw new Error("reCAPTCHA failed to load");
+};
+
+const getSignupCaptchaToken = async () => {
+  if (!isSignupCaptchaEnabled.value) {
+    return undefined;
+  }
+
+  await waitForRecaptcha();
+
+  return await new Promise<string>((resolve, reject) => {
+    window.grecaptcha?.ready(() => {
+      window.grecaptcha
+        ?.execute(recaptchaSiteKey!, { action: "signup" })
+        .then(resolve)
+        .catch(() => reject(new Error("Captcha verification failed")));
+    });
+  });
+};
+
+// Handle email/password form submission
+const handleEmailSubmit = async () => {
+  authError.value = "";
+
+  if (isSignUpMode.value && password.value !== confirmPassword.value) {
+    authError.value = "Passwords do not match";
+    return;
+  }
+
+  trackEvent("auth_start", {
+    auth_method: "email",
+  });
+
+  emailLoading.value = true;
+  providerSwitchInProgress.value = true;
+
+  try {
+    await clearWalletAuthState();
+
+    const captchaToken = isSignUpMode.value
+      ? await getSignupCaptchaToken()
+      : undefined;
+
+    const response = isSignUpMode.value
+      ? await signUp(email.value, password.value, captchaToken)
+      : await signIn(email.value, password.value);
+
+    if (response.status === "OK") {
+      toast.success(
+        isSignUpMode.value
+          ? "Account created successfully!"
+          : "Signed in successfully!",
+      );
+
+      trackEvent("auth_success", {
+        auth_method: "email",
+      });
+
+      // Check if email is verified, redirect to verification if not
+      await checkSession(false);
+      if (isEmailVerified.value === false) {
+        // Send verification email on signup
+        if (isSignUpMode.value) {
+          try {
+            await sendVerificationEmail();
+          } catch (e) {
+            console.error("Failed to send verification email:", e);
+          }
+          router.replace(
+            `/st-auth/verify-email?email=${encodeURIComponent(email.value)}`,
+          );
+          return;
+        }
+        router.replace("/st-auth/verify-email");
+        return;
+      }
+
+      const redirect = (route.query.redirect as string) || "/account";
+      router.replace(redirect);
+    } else if (response.status === "WRONG_CREDENTIALS_ERROR") {
+      authError.value = "Invalid email or password";
+    } else if (response.status === "FIELD_ERROR") {
+      const fieldErrors = response.formFields
+        .map((f: any) => f.error)
+        .join(", ");
+      authError.value = fieldErrors || "Please check your input";
+    } else if (response.status === "SIGN_UP_NOT_ALLOWED") {
+      authError.value = "Sign up is not allowed. Please contact support.";
+    } else {
+      authError.value = "An error occurred. Please try again.";
+    }
+  } catch (error: any) {
+    if (error instanceof Response) {
+    const data = await error
+      .clone()
+      .json()
+      .catch(async () => ({ message: await error.clone().text() }));
+
+    authError.value = data?.message || `Request failed (${error.status})`;
+    return;
+  }
+  authError.value = error?.message || "An error occurred. Please try again.";
+  } finally {
+    emailLoading.value = false;
+    providerSwitchInProgress.value = false;
+  }
+};
+
+// Check authentication on mount
+onMounted(async () => {
+  // Check SuperTokens session
+  const hasSession = await checkSession();
+
+  // Check if user is already authenticated
+  const walletAuthenticated = checkWalletAuth();
+  const isAuthenticated =
+    superTokensAuth.value || walletAuthenticated || hasSession;
+
+  // Only redirect to account if authenticated AND email is verified
+  if (
+    !providerSwitchInProgress.value &&
+    isAuthenticated &&
+    isEmailVerified.value !== false
+  ) {
+    const redirect = (route.query.redirect as string) || "/account";
+    router.replace(redirect);
+    return;
+  }
+
+  // Handle OAuth popup callback
+  const urlParams = new URLSearchParams(window.location.search);
+  const code = urlParams.get("code");
+
+  if (code && window.opener) {
+    window.opener.postMessage(
+      {
+        type: "GOOGLE_AUTH_CODE",
+        code: code,
+      },
+      window.location.origin,
+    );
+    window.close();
+    return;
+  }
+
+  // Wait for wallet auto-connect
+  if (!connected.value && wallets.value && wallets.value.length > 0) {
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    if (connected.value && account.value && !currentWalletName.value) {
+      const wallet = wallets.value.find((w: any) =>
+        w.accounts?.some((acc: any) => acc.address === account.value?.address),
+      );
+      if (wallet?.name) {
+        currentWalletName.value = wallet.name;
+      }
+      toast.success(
+        `Wallet connected: ${account.value.address.substring(0, 8)}...`,
+      );
+    }
+  }
+
+  if (isCampaignMode && isCampaignMode.value) {
+    trackEvent("credits_page_view", {
+      page_location: typeof window !== "undefined" ? window.location.href : "",
+    });
+  }
+});
+
+// Helper to check wallet authentication cookie
+const checkWalletAuth = () => {
+  try {
+    const sessionCookie = useCookie("nosana-wallet-session");
+    if (sessionCookie.value) {
+      const authTime = (sessionCookie.value as any).timestamp || 0;
+      const now = Date.now();
+      const maxAge = 24 * 60 * 60 * 1000; // 24 hours
+      return (
+        (sessionCookie.value as any).authenticated && now - authTime < maxAge
+      );
+    }
+  } catch (error) {
+    // Ignore cookie errors
+  }
+  return false;
+};
+
+const handleOAuthLogin = async (provider: "google" | "github") => {
+  const loadingRef = provider === "google" ? googleLoading : githubLoading;
+  loadingRef.value = true;
+  providerSwitchInProgress.value = true;
+
+  clearWalletAuthState().catch((error) =>
+    console.error("Error clearing wallet auth state:", error),
+  );
+
+  try {
+    await startOAuthLogin(provider, route.query.redirect as string);
+  } catch {
+    loadingRef.value = false;
+    providerSwitchInProgress.value = false;
+  }
+};
+
+const selectGoogleLogin = () => handleOAuthLogin("google");
+const selectGithubLogin = () => handleOAuthLogin("github");
+
+// Wallet connection logic
+const handleWalletConnect = async () => {
+  providerSwitchInProgress.value = true;
+  try {
+    await clearSuperTokensAuthState();
+
+    if (wallets.value && wallets.value.length > 0) {
+      showWalletModal.value = true;
+    } else {
+      const isMobile =
+        /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+          navigator.userAgent,
+        );
+      const isAndroid = /Android/i.test(navigator.userAgent);
+
+      if (isMobile && isAndroid) {
+        toast.error(
+          "No wallets found. Make sure you have a compatible Solana wallet app installed.",
+        );
+      } else if (isMobile) {
+        toast.error(
+          "Mobile Wallet Adapter is only available on Android devices.",
+        );
+      } else {
+        toast.error(
+          "No wallets found. Please install a Solana wallet browser extension.",
+        );
+      }
+    }
+  } catch (error) {
+    console.error("Error preparing wallet selection:", error);
+    toast.error("Failed to prepare wallet connection.");
+  } finally {
+    providerSwitchInProgress.value = false;
+  }
+};
+
+const selectWallet = async (wallet: any) => {
+  showWalletModal.value = false;
+  const walletName = wallet.name;
+
+  try {
+    const isMobileWallet =
+      walletName?.toLowerCase().includes("mobile") ||
+      wallet.id?.toLowerCase().includes("mobile");
+
+    await connect(wallet);
+
+    if (!isMobileWallet) {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    } else {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+
+    if (!connected.value || !account.value) {
+      if (isMobileWallet) {
+        return;
+      }
+      toast.error(`Failed to connect to ${walletName}. Please try again.`);
+      return;
+    }
+
+    currentWalletName.value = walletName;
+    toast.success(`Connected to ${walletName}!`);
+
+    try {
+      trackEvent("wallet_connected", {
+        user_id: publicKey.value?.toString(),
+        wallet: walletName,
+      });
+    } catch (error) {
+      console.warn("Error tracking wallet connected:", error);
+    }
+
+    const isMobileWalletAdapter = walletName?.toLowerCase().includes("mobile");
+
+    if (isMobileWalletAdapter) {
+      toast.success('Wallet connected! Please click "Sign Message" to login.');
+      return;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    if (!connected.value || !account.value) {
+      toast.warning("Wallet connection lost. Please reconnect.");
+      return;
+    }
+
+    await signAuthMessage(walletName);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+
+    const isRedirectError =
+      errorMessage.includes("redirect") ||
+      errorMessage.includes("navigation") ||
+      errorMessage.includes("aborted");
+
+    if (!isRedirectError) {
+      toast.error(`Failed to connect to ${walletName}: ${errorMessage}`);
+    } else {
+      toast.info("Redirecting to wallet app...");
+    }
+  }
+};
+
+const signAuthMessage = async (walletName: string) => {
+  signingMessage.value = true;
+  const sessionCookie = useCookie<{
+    authenticated: boolean;
+    address: string;
+    timestamp: number;
+  } | null>("nosana-wallet-session");
+
+  try {
+    if (!connected.value || !account.value) {
+      const errorMsg = "Wallet disconnected before signing. Please reconnect.";
+      toast.error(errorMsg);
+      throw new Error(errorMsg);
+    }
+
+    const isMobileWallet = walletName?.toLowerCase().includes("mobile");
+
+    if (isMobileWallet) {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      if (!connected.value || !account.value) {
+        const errorMsg =
+          "Wallet disconnected before signing. Please reconnect.";
+        toast.error(errorMsg);
+        throw new Error(errorMsg);
+      }
+    }
+
+    try {
+      await generateAuthHeaders();
+    } catch (signError: any) {
+      const errorMsg = signError?.message || String(signError);
+
+      if (
+        errorMsg.includes("mobile wallet protocol") ||
+        errorMsg.includes("no installed wallet")
+      ) {
+        toast.error(
+          "Mobile wallet not found for signing. Please ensure Phantom/Jupiter is installed and try reconnecting.",
+        );
+
+        if (!connected.value || !account.value) {
+          toast.warning(
+            "Wallet is disconnected. Please reconnect and try again.",
+          );
+        }
+      } else {
+        toast.error(`Failed to sign message: ${errorMsg}`);
+      }
+
+      if (!connected.value || !account.value) {
+        toast.warning("Wallet disconnected during signing.");
+      }
+      signingMessage.value = false;
+      return;
+    }
+
+    if (signMessageError) {
+      signMessageError.value = false;
+    }
+
+    const walletAddress = publicKey.value?.toString();
+    if (walletAddress) {
+      sessionCookie.value = {
+        authenticated: true,
+        address: walletAddress,
+        timestamp: Date.now(),
+      };
+    }
+
+    try {
+      trackEvent("wallet_authorized", {
+        user_id: walletAddress,
+        wallet: walletName,
+      });
+    } catch (error) {
+      console.warn("Error tracking wallet authorized:", error);
+    }
+
+    const redirect = (route.query.redirect as string) || "/account";
+    await navigateTo(redirect);
+  } catch (error: any) {
+    const errorMessage = error?.message || String(error);
+    toast.error(`Error: ${errorMessage}`);
+
+    try {
+      sessionCookie.value = null;
+    } catch (e) {
+      // Ignore
+    }
+  } finally {
+    signingMessage.value = false;
+  }
+};
 </script>
 
 <style lang="scss" scoped>
 @use "sass:color";
+
+.auth-checking-loader :deep(.spinner-bg) {
+  z-index: 99999;
+}
+
+.auth-checking-loader :deep(.half-circle-spinner) {
+  z-index: 100000;
+}
+
 .login-page {
   position: fixed;
   top: 0;
-  left: 280px;
-  width: calc(100vw - 280px);
+  left: 0;
+  width: 100vw;
   height: 100vh;
   overflow: hidden;
-  background: transparent;
+  background: #f9f9f9;
 
   &.dark-mode {
-    .world-map-wrapper {
-      background: #121212;
-    }
-  }
-}
+    background: #121212;
 
-.world-map-wrapper {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #f9f9f9;
-  transition: background-color 0.3s ease;
-  overflow: hidden;
-
-  :deep(.box) {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-  }
-
-  :deep(.world-map-container) {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-  }
-
-  :deep(.aspect-ratio-container) {
-    /* No max-width to allow the map to be cut off at the sides */
-    overflow: hidden;
-  }
-
-  :deep(.v-chart) {
-    overflow: hidden;
-  }
-}
-
-.content-wrapper {
-  position: absolute;
-  z-index: 2;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  padding: 2rem;
-  display: flex;
-  justify-content: space-between;
-  pointer-events: none;
-  @media screen and (max-width: 1024px) {
-    top: 50px;
-    padding: 1rem;
-  }
-
-  @media screen and (max-width: 450px) {
-    flex-direction: column;
-  }
-}
-
-.left-content {
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  align-items: flex-start;
-  pointer-events: none;
-
-  .button {
-    pointer-events: auto;
-    position: relative;
-    z-index: 3;
-  }
-
-  @media screen and (max-width: 450px) {
-    h1.title {
-      font-size: 1.5rem;
-      margin-bottom: 0.5rem;
+    .login-card {
+      background: $black-bis;
+      color: $white;
+      h1 {
+        color: $white;
+      }
     }
 
-    .button {
-      font-size: 0.85rem;
-      padding: 0.5em 0.75em;
+    .world-map-background {
+      opacity: 0.2;
     }
-  }
-}
 
-.right-content {
-  display: flex;
-  align-items: flex-start;
-  gap: 1rem;
-  pointer-events: none;
+    .form-input {
+      background: $black-ter;
+      border-color: $grey-dark;
+      color: $white;
 
-  .button {
-    pointer-events: auto;
-    position: relative;
-    z-index: 3;
-  }
+      &::placeholder {
+        color: $grey;
+      }
+    }
 
-  @media screen and (max-width: 450px) {
-    position: absolute;
-    top: 0.75rem;
-    right: 0.75rem;
-    gap: 0.5rem;
-    align-items: center;
+    .form-toggle {
+      color: $grey-light;
+      a {
+        color: $white !important;
 
-    .button {
-      padding: 0.25rem;
-      height: auto;
-      display: flex;
-      align-items: center;
-
-      .icon {
-        width: 1.5rem;
-        height: 1.5rem;
-
-        svg {
-          width: 1.5rem;
-          height: 1.5rem;
+        &:hover {
+          color: $primary;
         }
       }
     }
   }
 }
 
-.wallet-container {
+.world-map-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  will-change: transform;
+}
+
+.world-map-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  filter: blur(4px) grayscale(30%);
+  opacity: 0.55;
+  will-change: transform;
+}
+
+.content-wrapper {
+  position: absolute;
+  z-index: 9999;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 2rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  pointer-events: none;
+
+  @media screen and (max-width: 1024px) {
+    padding: 1rem;
+  }
+}
+
+.login-card-container {
   pointer-events: auto;
+  z-index: 10000;
+}
+
+.login-card {
+  background: $white;
+  color: $black;
+  border-radius: 16px;
+  padding: 3rem;
+  max-width: 500px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  text-align: center;
   position: relative;
-  z-index: 999;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
 
-  @media screen and (max-width: 450px) {
-    transform: scale(0.85);
-    transform-origin: right center;
+  @media screen and (max-width: 640px) {
+    padding: 2rem;
+  }
+}
 
-    :deep(.wallet-adapter-button) {
-      font-size: 0.7rem;
-      padding: 0 0.5rem;
-      height: 1.75rem;
+.login-header {
+  margin-bottom: 2rem;
+}
 
-      .wallet-adapter-button-start-icon {
-        margin-right: 4px;
-        width: 16px;
-        height: 16px;
+.login-content {
+  margin-bottom: 2rem;
+}
+
+.login-title {
+  font-size: 2rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: $black;
+
+  @media screen and (max-width: 640px) {
+    font-size: 1.75rem;
+  }
+}
+
+.login-subtitle {
+  font-size: 1rem;
+  color: $grey;
+  margin-bottom: 2rem;
+  line-height: 1.5;
+}
+
+.campaign-video-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.925rem;
+  font-weight: 500;
+  text-decoration: none;
+  margin-top: 1.5rem;
+
+  &:hover {
+    text-decoration: underline;
+  }
+
+  svg {
+    flex-shrink: 0;
+    color: #d32f2f;
+  }
+}
+
+/* Email Form Styles */
+.email-form {
+  margin-bottom: 1rem;
+}
+
+.form-field {
+  margin-bottom: 1rem;
+}
+
+.form-input {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  border: 1px solid $grey-light;
+  border-radius: 8px;
+  background: $white;
+  color: $black;
+  font-size: 1rem;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+
+  &:focus {
+    outline: none;
+    border-color: $primary;
+    box-shadow: 0 0 0 3px rgba($primary, 0.1);
+  }
+
+  &::placeholder {
+    color: $grey;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.auth-error {
+  color: #d32f2f;
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+  padding: 0.5rem;
+  background: rgba(#d32f2f, 0.1);
+  border-radius: 6px;
+}
+
+.captcha-notice {
+  margin-bottom: 1rem;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: $grey;
+
+  a {
+    color: inherit;
+    text-decoration: underline;
+  }
+}
+
+:global(.grecaptcha-badge) {
+  visibility: hidden;
+}
+
+.form-actions {
+  margin-bottom: 1rem;
+}
+
+.forgot-password-link {
+  text-align: right;
+  margin-bottom: 1rem;
+  margin-top: -0.5rem;
+
+  a {
+    font-size: 0.875rem;
+    color: $grey;
+    text-decoration: none;
+
+    &:hover {
+      color: $primary;
+      text-decoration: underline;
+    }
+  }
+}
+
+.form-toggle {
+  font-size: 0.875rem;
+  color: $grey;
+
+  a {
+    color: $primary;
+    text-decoration: none;
+    font-weight: 500;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+.login-button {
+  width: 100%;
+  padding: 0.875rem 1.5rem;
+  border: 1px solid $grey-light;
+  border-radius: 8px;
+  background: $white-bis;
+  color: $black;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  position: relative;
+
+  &:hover:not(:disabled) {
+    background: $white-ter;
+    border-color: $grey;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+/* Dark mode refinements */
+.login-page.dark-mode {
+  .login-subtitle {
+    color: $grey-light;
+  }
+
+  .forgot-password-link {
+    a {
+      color: $grey-light;
+
+      &:hover {
+        color: $primary;
       }
     }
   }
-}
 
-.hosts-stats {
-  margin-top: auto;
-  padding-bottom: 2rem;
-  pointer-events: auto;
-  position: relative;
-  z-index: 3;
+  .divider span {
+    color: $grey-light;
+  }
 
-  @media screen and (max-width: 450px) {
-    padding-bottom: 1rem;
+  .login-button {
+    background: $black-ter;
+    border-color: $grey-dark;
+    color: $white;
+
+    &:hover:not(:disabled) {
+      background: color.scale($black-ter, $lightness: 5%);
+      border-color: $grey;
+    }
+  }
+
+  .google-button,
+  .wallet-button {
+    background: $black-ter;
+    border-color: $grey-dark;
+
+    &:hover:not(:disabled) {
+      background: color.scale($black-ter, $lightness: 5%);
+      border-color: $grey;
+    }
+  }
+
+  .github-button {
+    border-color: #24292e;
   }
 }
 
-.stats-box {
-  border-radius: 8px;
-  padding: 1rem 1.5rem;
+.email-button {
+  background: $primary;
+  color: $white;
+  border-color: $primary;
+
+  &:hover:not(:disabled) {
+    background: darken($primary, 10%);
+    border-color: darken($primary, 10%);
+  }
+}
+
+.google-button {
+  background: $white;
+  border-color: $grey-light;
+
+  &:hover:not(:disabled) {
+    background: $white-bis;
+    border-color: $grey;
+  }
+}
+
+.github-button {
+  background: #24292e;
+  color: $white;
+  border-color: #24292e;
+
+  &:hover:not(:disabled) {
+    background: #1b1f23;
+    border-color: #1b1f23;
+  }
+}
+
+.divider {
+  margin: 1.5rem 0;
+  text-align: center;
+
+  span {
+    color: $grey;
+    font-size: 0.875rem;
+  }
+}
+
+.wallet-section {
+  margin-bottom: 0;
+}
+
+.login-button.is-loading {
+  color: transparent !important;
+  pointer-events: none;
+
+  &::after {
+    content: "";
+    position: absolute;
+    width: 1.25rem;
+    height: 1.25rem;
+    border: 2px solid;
+    border-color: $black transparent $black transparent;
+    border-radius: 50%;
+    animation: button-loading-spinner 1.2s linear infinite;
+  }
+}
+
+.email-button.is-loading::after {
+  border-color: $white transparent $white transparent;
+}
+
+@keyframes button-loading-spinner {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.wallet-selection-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.8);
   display: flex;
   align-items: center;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-
-  @media screen and (max-width: 450px) {
-    padding: 0.75rem 1rem;
-
-    .is-size-4 {
-      font-size: 1.25rem !important;
-    }
-
-    .is-size-6 {
-      font-size: 0.8rem !important;
-    }
-  }
+  justify-content: center;
+  z-index: 1001;
 }
 
-.rocket-icon {
-  width: 28px;
-  height: 28px;
-  fill: #10e80c;
-
-  @media screen and (max-width: 450px) {
-    width: 20px;
-    height: 20px;
-  }
+.wallet-modal-content {
+  background: $white;
+  color: $black;
+  border-radius: 12px;
+  padding: 2rem;
+  max-width: 400px;
+  width: 90%;
+  margin: 0 auto;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
 }
 
-.left-content :deep(.button.is-primary) {
-  background-color: #10e80c !important;
-  border-color: transparent !important;
-  color: #1a1a1a !important;
-  font-weight: bold !important;
+.wallet-modal-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: $black;
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.wallet-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.wallet-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid $grey-light;
+  border-radius: 8px;
+  background: $white-bis;
+  color: $black;
+  cursor: pointer;
+  transition: all 0.2s ease;
 
   &:hover {
-    background-color: color.adjust(#10e80c, $lightness: -5%) !important;
-  }
-
-  &.is-outlined {
-    background-color: transparent !important;
-    border-color: #10e80c !important;
-    color: #10e80c !important;
+    border-color: $secondary;
+    background: $white-ter;
   }
 }
 
-@include touch {
-  .login-page {
-    left: 0;
-    width: 100vw;
-  }
+.wallet-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
 }
 
-.modal-content {
-  position: relative;
-  z-index: 2;
+.wallet-name {
+  font-size: 1rem;
+  font-weight: 500;
+  color: $black;
 }
 
-/* Ensure modals are always on top */
-:deep(.modal) {
-  z-index: 1000;
+.wallet-connection-status {
+  background: $white-bis;
+  border: 1px solid $grey-light;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  text-align: left;
 }
 
-:deep(.modal.is-active) {
+.status-indicator {
   display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
 }
 
-.topbar-wrapper {
-  pointer-events: auto;
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+
+  &.connected {
+    background: #10e80c;
+    box-shadow: 0 0 4px rgba(16, 232, 12, 0.5);
+  }
+
+  &.signing {
+    background: #ffa500;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.status-text {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: $black;
+}
+
+.wallet-address {
+  font-size: 0.85rem;
+  color: $grey;
+  font-family: monospace;
+  margin-top: 0.25rem;
+}
+
+.signing-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid $grey-light;
+  font-size: 0.9rem;
+  color: $grey-dark;
+}
+
+.signing-error {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid $grey-light;
+}
+
+.error-text {
+  font-size: 0.9rem;
+  color: #d32f2f;
+  font-weight: 500;
+}
+
+.sign-message-section {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid $grey-light;
+}
+
+.sign-message-button {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: $primary;
+  color: $white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background: darken($primary, 10%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.retry-button {
+  padding: 0.5rem 1rem;
+  background: $secondary;
+  color: $white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background: darken($secondary, 10%);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 }
 </style>

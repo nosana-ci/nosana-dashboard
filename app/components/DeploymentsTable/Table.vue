@@ -6,10 +6,17 @@
 
         <DeploymentList
           v-if="currentTab === 'deployments'"
-          :items-per-page="10"
+          :items-per-page="itemsPerPage"
         />
-        <JobsList v-if="currentTab === 'jobs'" :items-per-page="10" />
-        <VaultsList v-if="currentTab === 'vaults'" />
+        <JobsList
+          v-if="currentTab === 'jobs'"
+          :items-per-page="itemsPerPage"
+          :status-filter="filterValue"
+        />
+        <VaultsList
+          v-if="currentTab === 'vaults'"
+          :items-per-page="itemsPerPage"
+        />
       </div>
     </div>
   </div>
@@ -25,6 +32,19 @@ import TableHeader from "~/components/DeploymentsTable/TableHeader.vue";
 const { currentRoute } = useRouter();
 
 const currentTab = computed(
-  () => currentRoute.value.query.tab?.toString() || "deployments"
+  () => currentRoute.value.query.tab?.toString() || "deployments",
 );
+
+const filterValue = computed(
+  () => currentRoute.value.query.filter?.toString() || null,
+);
+
+const pageSizeValue = computed(
+  () => currentRoute.value.query.size?.toString() || "10",
+);
+
+const itemsPerPage = computed(() => {
+  const size = pageSizeValue.value;
+  return parseInt(size) || 10;
+});
 </script>

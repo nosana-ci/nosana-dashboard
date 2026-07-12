@@ -14,7 +14,7 @@
                 </h4>
                 <p class="mb-5 is-size-5 p-2" style="color: #666">
                   Receive prompt, personalized support for staking or wallet issues from our dedicated support team.<br>
-                  <a href="https://discord.gg/KFNu8Skx8T" target="_blank" class="button mt-4">
+                  <a href="https://nosana.com/discord" target="_blank" class="button mt-4">
                     <img src="~/assets/img/icons/discord.svg" style="width: 16px; margin-right: 8px;">Support
                   </a>
                 </p>
@@ -28,7 +28,7 @@
                 <p class="mb-5 is-size-5 p-2" style="color: #666">
                   We pride ourselves on being open-source. Visit our GitHub repository to contribute,
                   build, and report technical issues.<br>
-                  <a href="https://github.com/nosana-ci" target="_blank" class="button mt-4">
+                  <a href="https://nosana.com/github" target="_blank" class="button mt-4">
                     <img src="~/assets/img/icons/github.svg" style="width: 18px; margin-right: 8px;">GitHub
                   </a>
                 </p>
@@ -41,7 +41,7 @@
                 </h4>
                 <p class="mb-5 is-size-5 p-2" style="color: #666">
                   Our server is where you can connect with others, chat, and interact with team members.<br>
-                  <a href="https://discord.gg/nosana-ai" target="_blank" class="button mt-4">
+                  <a href="https://nosana.com/discord" target="_blank" class="button mt-4">
                     <img src="~/assets/img/icons/discord.svg" style="width: 16px; margin-right: 8px;">Discord
                   </a>
                 </p>
@@ -95,12 +95,12 @@ export default {
         {
           question: 'What is the contract address of Nosana’s token and the max supply?',
           answer:
-            'The contract address is <code>nosXBVoaCTtYdLvKY6Csb4AC8JCdQKKAaWYtx2ZMoo7</code>, and the total fixed supply is 100,000,000 $NOS. For detailed information and tokenomics, please refer to <a href="https://docs.nosana.com/" target="_blank">our docs</a>'
+            'The contract address is <code>nosXBVoaCTtYdLvKY6Csb4AC8JCdQKKAaWYtx2ZMoo7</code>, and the total fixed supply is 100,000,000 $NOS. For detailed information and tokenomics, please refer to <a href="https://learn.nosana.com/" target="_blank">our docs</a>'
         },
         {
           question: 'How does the staking program work?',
           answer:
-            'When you stake NOS, you select an unstake duration ranging from 14 to 365 days. Your tokens are staked indefinitely, and you earn rewards during this period. When you initiate the unstake process, your chosen unstake duration begins. Once unstaked, you stop earning rewards, and your staked tokens are released to you linearly over the duration you selected. You can claim your released tokens at any time. Once you choose an unstake duration for your wallet, it cannot be changed. If you lose access to your wallet or it gets compromised, we cannot assist with token recovery. Please ensure you practice wallet safety to protect your stake. The staking APY is dynamic and depends on your stake, unstake duration, and other stakers in the reward pool. To view the current APY, stake your tokens, and claim rewards, visit our <a href="https://explorer.nosana.io/stake" target="_blank">Staking Dashboard</a>.'
+            'When you stake NOS, you select an unstake duration ranging from 14 to 365 days. Your tokens are staked indefinitely, and you earn rewards during this period. When you initiate the unstake process, your chosen unstake duration begins. Once unstaked, you stop earning rewards, and your staked tokens are released to you linearly over the duration you selected. You can claim your released tokens at any time. Once you choose an unstake duration for your wallet, it cannot be changed. If you lose access to your wallet or it gets compromised, we cannot assist with token recovery. Please ensure you practice wallet safety to protect your stake. The staking APY is dynamic and depends on your stake, unstake duration, and other stakers in the reward pool. To view the current APY, stake your tokens, and claim rewards, visit our <a href="https://stake.nosana.com" target="_blank">Staking Dashboard</a>.'
         },
         {
           question: 'I need help with staking or another issue. How do I get assistance?',

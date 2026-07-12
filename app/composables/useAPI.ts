@@ -4,6 +4,7 @@ interface APIOptions extends Record<string, any> {
   headers?: Record<string, string>;
   auth?: boolean; // Add auth header if true
   default?: () => any;
+  credentials?: boolean; // Send cookies with request (default: false)
 }
 
 export const useAPI = (
@@ -11,8 +12,6 @@ export const useAPI = (
   opts?: APIOptions
 ) => {
   const config = useRuntimeConfig();
-  const { token } = useAuth();
-
   return useMyAsyncData(
     toValue(request).toString(),
     async () => {
@@ -24,14 +23,11 @@ export const useAPI = (
         ...(opts?.headers || {}),
       };
 
-      if (opts?.auth && token.value) {
-        headers.Authorization = token.value as string;
-      }
-
       return $fetch(url, {
         baseURL: config.public.apiBase as string,
         method: opts?.method || 'GET',
         headers,
+        ...(opts?.credentials ? { credentials: 'include' as const } : {}),
         ...(opts?.body && { body: opts.body }),
       });
     },

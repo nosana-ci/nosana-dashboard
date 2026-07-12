@@ -9,8 +9,16 @@
 
     <Loader v-if="loading" />
     <div v-else-if="!job" class="box">
-      <div class="notification is-danger">
-        <p>Job not found</p>
+      <button
+        @click="router.push(`/deployments/${deploymentId}`)"
+        class="button is-ghost back-button mb-3"
+      >
+        <span class="icon is-small">
+          <ArrowUpIcon class="icon-16 transform-rotate-270 back-arrow-icon" />
+        </span>
+      </button>
+      <div class="notification">
+        <p>Job not found or delisted</p>
       </div>
     </div>
 
@@ -31,19 +39,17 @@
 <script setup lang="ts">
 // Views
 import Job from "~/components/Job/Job.vue";
-import ArrowUpIcon from '@/assets/img/icons/arrow-up.svg?component';
-// Composables
+import ArrowUpIcon from "@/assets/img/icons/arrow-up.svg?component";
 import { useDeploymentJobPage } from "~/composables/jobs/useDeploymentJobPage";
 const showSettingsModal = ref(false);
 const { params } = useRoute();
+const router = useRouter();
 
 const jobId = ref<string>(params.jobaddress as string);
-const deploymentId = ref<string | null>(params.id as string || null);
+const deploymentId = ref<string | null>((params.id as string) || null);
 
-const { job, modal, endpoints, nosPrice, isJobPoster, loading, jobInfo } = useDeploymentJobPage(
-  deploymentId.value as string,
-  jobId.value
-);
+const { job, modal, endpoints, nosPrice, isJobPoster, loading, jobInfo } =
+  useDeploymentJobPage(deploymentId.value as string, jobId.value);
 </script>
 
 <style lang="scss" scoped>
@@ -61,5 +67,3 @@ html.dark-mode {
   }
 }
 </style>
-
-

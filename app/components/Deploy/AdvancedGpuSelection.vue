@@ -197,7 +197,7 @@
 </template>
 
 <script setup lang="ts">
-import type { Market } from "@nosana/sdk";
+import type { Market } from "@nosana/kit";
 import countries from 'i18n-iso-countries';
 import en from 'i18n-iso-countries/langs/en.json';
 import NvidiaIcon from '@/assets/img/icons/nvidia.svg?component';

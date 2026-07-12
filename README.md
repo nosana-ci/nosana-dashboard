@@ -22,46 +22,15 @@ npm run generate
 npx http-server .output/public
 ```
 
-## Local Development Setup
+## Devnet Development
 
-### 1. Install mkcert
+To run the dashboard against the devnet backend at `https://local.devnet.nosana.com`:
 
-```bash
-# Windows
-choco install mkcert
-
-# macOS
-brew install mkcert
-
-# Linux
-sudo apt-get update && apt-get install -y libnss3-tools wget
-wget https://github.com/FiloSottile/mkcert/releases/download/v1.4.4/mkcert-v1.4.4-linux-amd64
-chmod +x mkcert-v1.4.4-linux-amd64
-sudo mv mkcert-v1.4.4-linux-amd64 /usr/local/bin/mkcert
-```
-
-### 2. Generate SSL certificates
+### Run
 
 ```bash
-chmod +x generateCert.sh
-./generateCert.sh
+sudo npm run dev -- --dotenv .env.dev --host local.devnet.nosana.com --port 443 --https
 ```
 
-### 3. Update hosts file
-
-Add this line to your hosts file:
-
-- macOS/Linux: `/etc/hosts`
-- Windows: `C:\Windows\System32\drivers\etc\hosts`
-
-```bash
-echo "127.0.0.1    local.devnet.nosana.io" | sudo tee -a /etc/hosts
-```
-
-### 4. Run the dev server
-
-```bash
-sudo npm run dev:https
-```
-
-Access at: https://local.devnet.nosana.io
+The dashboard will be available at `https://local.devnet.nosana.com/`.
+Your browser will show a self-signed certificate warning that you'll need to accept.

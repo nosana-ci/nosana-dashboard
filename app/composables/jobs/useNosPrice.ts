@@ -6,6 +6,7 @@ export function useNosPrice(): Ref<number> {
     "https://api.coingecko.com/api/v3/simple/price?ids=nosana&vs_currencies=usd",
     {
       immediate: true,
+      credentials: false,
       default: () => ({
         nosana: { usd: 0 },
       }),

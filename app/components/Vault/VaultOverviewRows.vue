@@ -1,27 +1,13 @@
 <template>
   <template v-if="isTableRow">
     <tr>
-      <td>Vault address</td>
-      <td>{{ vault }}</td>
+      <td style="width: 25%;">Vault address</td>
+      <td style="width: 75%;">{{ vault }}</td>
     </tr>
     <tr>
-      <td>
-        Vault balance
-        <span
-          class="refresh icon is-small ml-1 borderless vertical-middle"
-          @click="updateBalance"
-          :class="{ 'is-loading': balance.loading }"
-          :disabled="balance.loading"
-          data-tooltip="Refresh vault balance."
-        >
-          <RefreshIcon />
-        </span>
-      </td>
-      <td>
+      <td style="width: 25%;">Vault balance</td>
+      <td style="width: 75%;">
         SOL: {{ balance.SOL }} | NOS: {{ balance.NOS }}
-        <span @click="topup" class="button small ml-3 pt-0 pb-0 height-auto"
-          ><small>Topup</small></span
-        >
       </td>
     </tr>
   </template>
@@ -47,8 +33,7 @@
 </template>
 <script setup lang="ts">
 import { useRouter } from "vue-router";
-import type { Deployment } from "@nosana/sdk";
-import RefreshIcon from "@/assets/img/icons/refresh.svg?component";
+import type { Deployment } from "@nosana/kit";
 import ArrowSquareUpRightIcon from "@/assets/img/icons/arrow-square-up-right.svg?component";
 import { useDeploymentVault } from "~/composables/useDeploymentVault";
 
@@ -60,5 +45,5 @@ interface VaultProps {
 const { deployment } = defineProps<VaultProps>();
 
 const { push } = useRouter();
-const { balance, updateBalance, vault, topup } = useDeploymentVault(deployment);
+const { balance, vault, topup } = useDeploymentVault(deployment);
 </script>

@@ -4,7 +4,10 @@
     :class="{ 'is-hidden-touch': !showMenu }"
   >
     <div class="mb-6 is-hidden-touch">
-      <nuxt-link to="/">
+      <nuxt-link
+        to="/deployments/create"
+        @click.capture="handleSidebarNav($event, '/deployments/create')"
+      >
         <logo width="160px" :animated="true" class="light-only" />
         <logo width="160px" :white="true" class="dark-only" :animated="true" />
       </nuxt-link>
@@ -13,21 +16,26 @@
       <ul class="menu-list is-size-5">
         <li>
           <nuxt-link
-            :to="deployRoute"
-            class="deploy-cta"
-            @click="showMenu = false"
+            to="/deployments"
+            :active-class="isLoggedOut ? '' : 'is-active'"
+            :class="{ 'auth-disabled-link': isLoggedOut }"
+            :aria-disabled="isLoggedOut"
+            @click.capture="handleSidebarNav($event, '/deployments', true)"
+            style="padding-left: 1.1rem"
           >
             <span class="icon is-small mr-4">
-              <JobBuilderIcon  />
+              <ListIcon />
             </span>
-            <span>Deploy</span>
+            <span>Deployments</span>
           </nuxt-link>
         </li>
         <li>
           <nuxt-link
-            to="/account/deployer"
-            active-class="is-active"
-            @click="showMenu = false"
+            to="/account"
+            :active-class="isLoggedOut ? '' : 'is-active'"
+            :class="{ 'auth-disabled-link': isLoggedOut }"
+            :aria-disabled="isLoggedOut"
+            @click.capture="handleSidebarNav($event, '/account', true)"
             style="padding-left: 1.1rem"
           >
             <span class="icon is-small mr-4">
@@ -36,113 +44,28 @@
             <span>Account</span>
           </nuxt-link>
         </li>
-        <li v-if="!connected && status === 'unauthenticated'">
-          <a
-            @click="openBothModal($route.fullPath); showMenu = false"
-            style="padding-left: 1.1rem; cursor: pointer"
-          >
-            <span class="icon is-small mr-4">
-              <UserIcon />
-            </span>
-            <span>Login</span>
-          </a>
-        </li>
-        <li>
+        <li v-if="canUseBilling">
           <nuxt-link
-            to="/deployments"
-            active-class="is-active"
-            @click="showMenu = false"
+            to="/account/billing"
+            :active-class="isLoggedOut ? '' : 'is-active'"
+            :class="{ 'auth-disabled-link': isLoggedOut }"
+            :aria-disabled="isLoggedOut"
+            @click.capture="handleSidebarNav($event, '/account/billing', true)"
+            style="padding-left: 1.1rem"
           >
             <span class="icon is-small mr-4">
-              <ListIcon />
+              <CoinsIcon />
             </span>
-            <span>Deployments</span>
+            <span>Billing</span>
           </nuxt-link>
         </li>
-        <li class="has-dropdown">
-          <a class="menu-list-link sidebar-link" @click="toggleExplorer"
-            :class="{ 'is-active': $route.path === '/explorer' || $route.path.includes('/markets') || $route.path === '/account/host' || $route.path === '/stake'}"
-          >
-            <div
-              class="is-flex is-align-items-center"
-              style="width: 100%; padding-left: 0.6rem;"
-            >
-              <span class="icon is-small mr-4">
-                <ExplorerIcon />
-              </span>
-              <span style="opacity: 1">Explorer</span>
-              <span class="icon is-small ml-auto">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  class="chevron"
-                  :class="{ 'is-active': showExplorerDropdown }"
-                >
-                  <path
-                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                  />
-                </svg>
-              </span>
-            </div>
-          </a>
-          <ul class="submenu" :class="{ 'is-active': showExplorerDropdown }">
-            <li>
-              <nuxt-link
-                to="/explorer"
-                active-class="is-active"
-                class="submenu-link"
-                @click="showMenu = false"
-              >
-                Jobs
-              </nuxt-link>
-            </li>
-            <li>
-              <nuxt-link
-                to="/markets"
-                active-class="is-active"
-                class="submenu-link"
-                @click="showMenu = false"
-              >
-                GPUs
-              </nuxt-link>
-            </li>
-            <li>
-              <a
-                v-if="!connected"
-                @click="openWalletModal($route.fullPath); showMenu = false"
-                class="submenu-link"
-                style="cursor: pointer"
-              >
-                Host Earnings
-              </a>
-              <nuxt-link
-                v-else
-                to="/account/host"
-                active-class="is-active"
-                class="submenu-link"
-                @click="showMenu = false"
-              >
-                Host Earnings
-              </nuxt-link>
-            </li>
-            <li>
-              <nuxt-link
-                to="/stake"
-                active-class="is-active"
-                class="submenu-link"
-                @click="showMenu = false"
-              >
-                Staking
-              </nuxt-link>
-            </li>
-          </ul>
-        </li>
         <li>
           <nuxt-link
-            active-class="is-active"
-            @click="showMenu = false"
             to="/support"
+            :active-class="isLoggedOut ? '' : 'is-active'"
+            :class="{ 'auth-disabled-link': isLoggedOut }"
+            :aria-disabled="isLoggedOut"
+            @click.capture="handleSidebarNav($event, '/support', true)"
             style="padding-left: 1.1rem"
           >
             <span class="icon is-small mr-4">
@@ -151,57 +74,128 @@
             <span>Help & Support</span>
           </nuxt-link>
         </li>
+        <li>
+          <nuxt-link
+            to="/mcp"
+            :active-class="isLoggedOut ? '' : 'is-active'"
+            :class="{ 'auth-disabled-link': isLoggedOut }"
+            :aria-disabled="isLoggedOut"
+            @click.capture="handleSidebarNav($event, '/mcp', true)"
+            style="padding-left: 1.1rem"
+          >
+            <span class="icon is-small mr-4">
+              <BlocksIcon />
+            </span>
+            <span>Agentic AI</span>
+          </nuxt-link>
+        </li>
       </ul>
     </div>
     <div
       class="is-flex is-justify-content-space-between is-align-items-center mt-auto"
     >
-      <a href="https://nosana.statuspage.io" target="_blank" rel="noopener" @click="showMenu = false" class="status-link">
+      <a
+        href="https://nosana.statuspage.io"
+        target="_blank"
+        rel="noopener"
+        @click="showMenu = false"
+        class="status-link"
+      >
         <div class="status-dot dot-online"></div>
         Status
       </a>
-      <button 
+      <button
         class="sidebar-theme-toggle"
         @click="toggleDarkMode"
-        :title="$colorMode.value === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'"
+        :title="
+          $colorMode.value === 'dark'
+            ? 'Switch to Light Mode'
+            : 'Switch to Dark Mode'
+        "
       >
         <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
-          <path v-if="$colorMode.value === 'dark'" fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd" fill="currentColor"/>
-          <path v-else d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" fill="currentColor"/>
+          <path
+            v-if="$colorMode.value === 'dark'"
+            fill-rule="evenodd"
+            d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"
+            clip-rule="evenodd"
+            fill="currentColor"
+          />
+          <path
+            v-else
+            d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"
+            fill="currentColor"
+          />
         </svg>
       </button>
     </div>
   </aside>
   <nav class="navbar is-hidden-desktop is-fixed-top has-shadow">
-    <div class="navbar-brand is-flex is-align-items-center is-justify-content-space-between" style="width: 100%;">
-      <nuxt-link to="/" class="navbar-item" @click="showMenu = false">
+    <div
+      class="navbar-brand is-flex is-align-items-center is-justify-content-space-between"
+      style="width: 100%"
+    >
+      <nuxt-link
+        to="/deployments/create"
+        class="navbar-item"
+        @click.capture="handleSidebarNav($event, '/deployments/create')"
+      >
         <logo width="135px" :animated="true" class="light-only" />
         <logo width="135px" :white="true" class="dark-only" :animated="true" />
       </nuxt-link>
 
       <div class="is-flex is-align-items-center">
         <!-- Simple mobile user avatar -->
-        <div v-if="connected || status === 'authenticated' || status === 'loading'" class="dropdown mobile-avatar-dropdown mr-3" :class="{ 'is-active': showMobileDropdown }">
+        <div
+          v-if="connected || isAuthenticated || isLoading"
+          class="dropdown mobile-avatar-dropdown mr-3"
+          :class="{ 'is-active': showMobileDropdown }"
+        >
           <div class="dropdown-trigger">
-            <span class="mobile-avatar-trigger" @click="showMobileDropdown = !showMobileDropdown">
+            <span
+              class="mobile-avatar-trigger"
+              @click="showMobileDropdown = !showMobileDropdown"
+            >
               <template v-if="connected && wallet">
-                <img v-if="wallet.adapter.icon" :src="wallet.adapter.icon" :alt="wallet.adapter.name + ' icon'" class="wallet-icon" />
+                <img
+                  v-if="wallet.icon"
+                  :src="wallet.icon"
+                  :alt="wallet.name + ' icon'"
+                  class="wallet-icon"
+                />
                 <span v-else>W</span>
               </template>
               <template v-else>
-                {{ (data?.email && data.email.charAt(0).toUpperCase()) || 'U' }}
+                {{
+                  (userData?.email && userData.email.charAt(0).toUpperCase()) ||
+                  "U"
+                }}
               </template>
             </span>
           </div>
           <div class="dropdown-menu">
             <div class="dropdown-content">
               <div class="dropdown-item">
-                <p class="is-size-7 has-text-grey mb-0">{{ connected ? getWalletAddress() : (data?.email || '') }}</p>
+                <p class="is-size-7 has-text-grey mb-0">
+                  {{ connected ? getWalletAddress() : userData?.email || "" }}
+                </p>
               </div>
-              <hr class="dropdown-divider">
+              <hr class="dropdown-divider" />
               <a class="dropdown-item logout-item" @click="handleLogout">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" class="dropdown-icon">
-                  <path d="M6 2H3C2.44772 2 2 2.44772 2 3V13C2 13.5523 2.44772 14 3 14H6M10 6L14 10M14 10L10 14M14 10H6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  class="dropdown-icon"
+                >
+                  <path
+                    d="M6 2H3C2.44772 2 2 2.44772 2 3V13C2 13.5523 2.44772 14 3 14H6M10 6L14 10M14 10L10 14M14 10H6"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
                 </svg>
                 Log out
               </a>
@@ -229,34 +223,91 @@ const showMenu = ref(false);
 const showExplorerDropdown = ref(false);
 const connectingFromSidebar = ref(false);
 const showMobileDropdown = ref(false);
-import JobBuilderIcon from "@/assets/img/icons/sidebar/job-builder.svg?component";
 import ListIcon from "@/assets/img/icons/sidebar/list.svg?component";
 import ExplorerIcon from "@/assets/img/icons/sidebar/explorer.svg?component";
 import UserIcon from "@/assets/img/icons/sidebar/user.svg?component";
 import SupportIcon from "@/assets/img/icons/sidebar/support.svg?component";
-import { useWallet } from "solana-wallets-vue";
+import CoinsIcon from "@/assets/img/icons/sidebar/coins.svg?component";
+import BlocksIcon from "@/assets/img/icons/sidebar/blocks.svg?component";
+import { useWallet } from "@nosana/solana-vue";
 import { computed, onMounted, watch, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
-const { connected, disconnect, publicKey, wallet } = useWallet();
-const { status, signOut, data } = useAuth();
+const { connected, disconnect, account, wallet } = useWallet();
+
+// Compatibility: create publicKey-like object from account
+const publicKey = computed(() => {
+  if (!account.value?.address) return null;
+  return {
+    toString: () => account.value!.address,
+    toBase58: () => account.value!.address,
+  };
+});
+const {
+  isAuthenticated,
+  isLoading,
+  userData,
+  signOut: superTokensSignOut,
+} = useSuperTokens();
 const route = useRoute();
 const router = useRouter();
-const { openBothModal, openWalletModal } = useLoginModal();
 
-// removed auth-based gating in navigation; keep links visible
+const isLoggedOut = computed(
+  () => !isAuthenticated.value && !connected.value && !isLoading.value,
+);
+const canUseBilling = computed(() => isAuthenticated.value);
 
-// Computed property for deploy route - now unified to deployments/create
-const deployRoute = computed(() => {
-  // Direct all users to deployments/create for unified experience
-  // The page will handle wallet auth detection with a banner
-  return '/deployments/create';
-});
+const isPublicRoute = (path: string) =>
+  path === "/" ||
+  path === "/deployments/create" ||
+  path === "/privacy-policy" ||
+  path === "/tos" ||
+  path.startsWith("/st-auth/");
 
+const getPostLogoutTarget = () => {
+  if (isPublicRoute(route.path)) {
+    return "/deployments/create";
+  }
+
+  return {
+    path: "/",
+    query: { redirect: route.fullPath },
+  };
+};
+
+const handleSidebarNav = (
+  event: MouseEvent,
+  path: string,
+  requiresAuth = false,
+) => {
+  if (
+    event.button !== 0 ||
+    event.metaKey ||
+    event.ctrlKey ||
+    event.shiftKey ||
+    event.altKey
+  ) {
+    return;
+  }
+
+  event.preventDefault();
+  showMenu.value = false;
+
+  if (requiresAuth && isLoggedOut.value) {
+    return;
+  }
+
+  router.push(path);
+};
 
 // Check if the current route is an explorer page
 const isExplorerPage = computed(() => {
-  return route.path === '/explorer' || route.path.includes('/markets') || (route.path === '/account/host' && status.value !== 'authenticated') || route.path === '/stake';
+  return (
+    route.path === "/explorer" ||
+    route.path.includes("/markets") ||
+    (route.path === "/account/host" && !isAuthenticated.value) ||
+    route.path === "/stake"
+  );
 });
 
 // Update dropdown states based on the current route
@@ -270,23 +321,21 @@ onMounted(() => {
 });
 
 // Watch for route changes to update dropdown states
-watch(() => route.path, () => {
-  updateDropdownStates();
-});
+watch(
+  () => route.path,
+  () => {
+    updateDropdownStates();
+  },
+);
 
 // Navigate to account page only when connecting from sidebar
 watch(connected, (isConnected, prevConnected) => {
   if (isConnected && !prevConnected && connectingFromSidebar.value) {
-    router.push('/account/deployer');
-    showMenu.value = false;  // Close mobile menu if open
-    connectingFromSidebar.value = false;  // Reset the flag
+    router.push("/account");
+    showMenu.value = false; // Close mobile menu if open
+    connectingFromSidebar.value = false; // Reset the flag
   }
 });
-
-
-const toggleExplorer = () => {
-  showExplorerDropdown.value = !showExplorerDropdown.value;
-};
 
 const isActive = (paths: string[]) => {
   return paths.includes(route.path);
@@ -296,32 +345,36 @@ const isActive = (paths: string[]) => {
 const handleLogout = async () => {
   showMobileDropdown.value = false;
   try {
+    // Clear wallet session cookie
+    const sessionCookie = useCookie("nosana-wallet-session");
+    sessionCookie.value = null;
+
     if (connected.value) {
       await disconnect();
-    } else if (status.value === 'authenticated') {
-      const redirect = window.location.pathname === '/account/deployer' ? true : false;
-      await signOut({ redirect: false });
-      if (redirect) {
-        await navigateTo('/');
-      }
+      await navigateTo(getPostLogoutTarget());
+    } else if (isAuthenticated.value) {
+      await superTokensSignOut();
+      await navigateTo(getPostLogoutTarget());
+    } else {
+      await navigateTo(getPostLogoutTarget());
     }
   } catch (error) {
-    console.error('Error logging out:', error);
+    console.error("Error logging out:", error);
   }
 };
 
 // Toggle dark mode
 const toggleDarkMode = () => {
-  useColorMode().preference = useColorMode().value === 'dark' ? 'light' : 'dark';
+  useColorMode().preference =
+    useColorMode().value === "dark" ? "light" : "dark";
 };
 
 // Format wallet address for display
 const getWalletAddress = () => {
-  if (!publicKey?.value) return '';
+  if (!publicKey?.value) return "";
   const address = publicKey.value.toBase58();
   return `${address.slice(0, 4)}..${address.slice(-4)}`;
 };
-
 </script>
 
 <style lang="scss" scoped>
@@ -362,28 +415,33 @@ const getWalletAddress = () => {
   a.is-active {
     background-color: $menu-item-hover-background-color;
     color: $text !important;
-    
+
     .icon {
       color: $text;
       opacity: 1;
     }
-    
+
     span {
       color: $text !important;
     }
   }
-  
-  .deploy-cta {
-    background-color: $menu-item-active-background-color;
-    color: $menu-item-active-color !important;
-    
-    .icon {
-      color: $secondary;
-      opacity: 1;
+
+  a.auth-disabled-link {
+    color: $grey !important;
+    cursor: not-allowed;
+    filter: blur(3px);
+    opacity: 0.4;
+    pointer-events: none;
+    user-select: none;
+
+    .icon,
+    span {
+      color: $grey !important;
     }
-    
-    span:not(.icon) {
-      color: $menu-item-active-color !important;
+
+    &:hover {
+      opacity: 0.4;
+      background-color: transparent;
     }
   }
 }
@@ -418,7 +476,7 @@ const getWalletAddress = () => {
 
     &.is-active {
       background-color: $menu-item-hover-background-color;
-      
+
       div {
         opacity: 1;
         color: inherit;
@@ -485,44 +543,46 @@ const getWalletAddress = () => {
 }
 
 .dark-mode {
-  .deploy-cta {
-    background-color: $white;
-    color: $text !important;
-    
-    .icon {
-      color: $secondary;
-    }
-    
-    span:not(.icon) {
-      color: $text !important;
-    }
-  }
-  
   .menu-list {
-    a:not(.deploy-cta) {
+    a {
       background-color: transparent !important;
       color: $grey-lighter;
-      
+
       &:hover {
         background-color: $grey-darker !important;
       }
     }
-    
+
     a.is-active {
       background-color: $grey-darker !important;
       color: $white !important;
-      
-      .icon, 
+
+      .icon,
       span {
         color: $white !important;
       }
-      
+
       span.icon:first-of-type {
         color: $white !important;
       }
     }
+
+    a.auth-disabled-link {
+      color: $grey !important;
+      opacity: 0.4;
+
+      .icon,
+      span {
+        color: $grey !important;
+      }
+
+      &:hover {
+        opacity: 0.4;
+        background-color: transparent !important;
+      }
+    }
   }
-  
+
   .sidebar-link {
     color: $grey-lighter;
 
@@ -532,12 +592,12 @@ const getWalletAddress = () => {
 
     &.is-active {
       background-color: $grey-darker;
-      
-      .icon, 
+
+      .icon,
       span {
         color: $white !important;
       }
-      
+
       span.icon:first-of-type {
         color: $white !important;
       }
@@ -565,7 +625,7 @@ const getWalletAddress = () => {
   .submenu-link {
     color: $grey-lighter !important;
     background-color: transparent !important;
-    
+
     &:hover {
       opacity: 1 !important;
       background-color: $grey-darker !important;
@@ -727,7 +787,7 @@ const getWalletAddress = () => {
 
 /* Dark mode styles */
 .dark-mode .profile-button {
-  background: #0A0A0A;
+  background: #0a0a0a;
 }
 
 .dark-mode .profile-name {

@@ -3,30 +3,50 @@
   <div class="box is-borderless">
     <!-- Header Section -->
     <div class="p-5 deployment-header">
-        <div class="is-flex is-justify-content-space-between is-align-items-start">
-          <div class="header-left-section">
-            <div class="is-flex is-align-items-center mb-2">
-              <button @click="router.back()" class="button is-ghost back-button mr-4">
-                <span class="icon is-small">
-                  <ArrowUpIcon class="icon-16 transform-rotate-270 back-arrow-icon" />
+      <div
+        class="is-flex is-justify-content-space-between is-align-items-start"
+      >
+        <div class="header-left-section">
+          <div class="is-flex is-align-items-center mb-2">
+            <button
+              @click="
+                deploymentId
+                  ? router.push(`/deployments/${deploymentId}`)
+                  : router.push(`/deployments?tab=jobs`)
+              "
+              class="button is-ghost back-button mr-4"
+            >
+              <span class="icon is-small">
+                <ArrowUpIcon
+                  class="icon-16 transform-rotate-270 back-arrow-icon"
+                />
+              </span>
+            </button>
+            <div class="header-title-section">
+              <p class="subtitle is-7 has-text-grey is-family-monospace mb-0">
+                {{ props.job.address }}
+              </p>
+              <div
+                v-if="props.job.timeStart || jobDurationData"
+                class="is-size-7 has-text-grey mt-1"
+              >
+                <span v-if="props.job.timeStart && formatStartTime">
+                  Started: {{ formatStartTime(props.job.timeStart) }}
                 </span>
-              </button>
-              <div class="header-title-section">
-                <p class="subtitle is-7 has-text-grey is-family-monospace mb-0">{{ props.job.address }}</p>
-                <div v-if="props.job.timeStart || jobDurationData" class="is-size-7 has-text-grey mt-1">
-                  <span v-if="props.job.timeStart && formatStartTime">
-                    Started: {{ formatStartTime(props.job.timeStart) }}
-                  </span>
-                  <span v-if="jobDurationData" class="ml-2">
-                    Duration: <SecondsFormatter :seconds="jobDurationData.actualSeconds" :showSeconds="true" />
-                  </span>
-                </div>
+                <span v-if="jobDurationData" class="ml-2">
+                  Duration:
+                  <SecondsFormatter
+                    :seconds="jobDurationData.actualSeconds"
+                    :showSeconds="true"
+                  />
+                </span>
               </div>
-              <StatusTag class="ml-4" :status="props.job.state" />
             </div>
+            <StatusTag class="ml-4" :status="props.job.state" />
           </div>
-          <div class="deployment-tabs">
-          <button 
+        </div>
+        <div class="deployment-tabs">
+          <button
             v-for="tab in availableTabs"
             :key="tab"
             @click="activeTab = tab"
@@ -36,22 +56,30 @@
             {{ getTabLabel(tab) }}
           </button>
           <!-- Actions Dropdown - Only show for standalone job pages (not deployment job pages) -->
-          <div v-if="!deploymentId && hasAnyActions" class="dropdown is-right" :class="{ 'is-active': showActionsDropdown }" ref="actionsDropdown">
+          <div
+            v-if="!deploymentId && hasAnyActions"
+            class="dropdown is-right"
+            :class="{ 'is-active': showActionsDropdown }"
+            ref="actionsDropdown"
+          >
             <div class="dropdown-trigger">
-              <button 
-                class="tab-button actions-button" 
+              <button
+                class="tab-button actions-button"
                 @click="toggleActionsDropdown"
                 :class="{ 'is-loading': loading }"
               >
                 <span>Actions</span>
-                <span class="icon is-small dropdown-arrow ml-1" :class="{ 'is-rotated': showActionsDropdown }">
+                <span
+                  class="icon is-small dropdown-arrow ml-1"
+                  :class="{ 'is-rotated': showActionsDropdown }"
+                >
                   <ChevronDownIcon />
                 </span>
               </button>
             </div>
             <div class="dropdown-menu">
               <div class="dropdown-content">
-                <a 
+                <a
                   v-if="props.job.isRunning && props.isJobPoster"
                   class="dropdown-item"
                   @click="handleActionClick(openExtendModal)"
@@ -63,8 +91,11 @@
                   <span>Extend</span>
                 </a>
 
-                <a 
-                  v-if="(props.job.isRunning || props.job.state === 0) && props.isJobPoster"
+                <a
+                  v-if="
+                    (props.job.isRunning || props.job.state === 0) &&
+                    props.isJobPoster
+                  "
                   class="dropdown-item"
                   @click="handleActionClick(stopJob)"
                   :disabled="loading"
@@ -72,9 +103,9 @@
                   <span class="icon is-small mr-2">
                     <SquareIcon />
                   </span>
-                  <span>{{ props.job.state === 0 ? 'Delist' : 'Stop' }}</span>
+                  <span>{{ props.job.state === 0 ? "Delist" : "Stop" }}</span>
                 </a>
-                
+
                 <div v-if="!hasAnyActions" class="dropdown-item has-text-grey">
                   <span>No actions available</span>
                 </div>
@@ -95,84 +126,86 @@
           <div class="box is-borderless">
             <div class="table-container">
               <table class="table is-fullwidth mb-0">
-              <tbody>
-                <tr>
-                  <td>Deployer</td>
-                  <td>
-                    <nuxt-link :to="`/deployer/${props.job.project}`" class="has-text-link is-family-monospace">
+                <tbody>
+                  <tr>
+                    <td>Deployer</td>
+                    <td>
                       {{ props.job.project?.toString() }}
-                    </nuxt-link>
-                  </td>
-                </tr>
-                <tr>
-                  <td>Node</td>
-                  <td>
-                    <span v-if="props.job.node && props.job.node !== '11111111111111111111111111111111'">
-                      <nuxt-link :to="`/host/${props.job.node}`" class="has-text-link is-family-monospace">
-                        {{ props.job.node }}
-                      </nuxt-link>
-                    </span>
-                    <span v-else class="has-text-grey">--</span>
-                  </td>
-                </tr>
-                <tr v-if="!(props.hideFields?.marketAddress)">
-                  <td>Market</td>
-                  <td>
-                    <nuxt-link :to="`/markets/${props.job.market}`" class="has-text-link is-family-monospace">
-                      {{ props.job.market?.toString() }}
-                    </nuxt-link>
-                  </td>
-                </tr>
-                <tr v-if="!(props.hideFields?.price)">
-                  <td>Price</td>
-                  <td v-html="formatPrice(props.job.price, props.nosPrice)"></td>
-                </tr>
-                <tr v-if="gpuSummary">
-                  <td>GPU</td>
-                  <td>{{ gpuSummary }}</td>
-                </tr>
-                <tr v-if="combinedSpecs?.cpu">
-                  <td>CPU</td>
-                  <td>{{ combinedSpecs.cpu }}</td>
-                </tr>
-                <tr v-if="combinedSpecs?.ram">
-                  <td>RAM</td>
-                  <td>{{ formatRam(combinedSpecs.ram) }}</td>
-                </tr>
-                <tr v-if="combinedSpecs?.diskSpace">
-                  <td>Diskspace</td>
-                  <td>{{ combinedSpecs.diskSpace }} GB</td>
-                </tr>
-                <tr v-if="combinedSpecs?.country || isQueuedJob">
-                  <td>Country</td>
-                  <td>
-                    <span v-if="combinedSpecs?.country">{{ formatCountry(combinedSpecs.country) }}</span>
-                    <span v-else class="has-text-grey">--</span>
-                  </td>
-                </tr>
-                <tr v-if="combinedSpecs?.download || combinedSpecs?.upload || combinedSpecs?.ping">
-                  <td>Network</td>
-                  <td v-html="formatNetwork(combinedSpecs?.download, combinedSpecs?.upload, combinedSpecs?.ping)"></td>
-                </tr>
-                <tr>
-                  <td>OS</td>
-                  <td>{{ combinedSpecs?.systemEnvironment || '--' }}</td>
-                </tr>
-              </tbody>
-            </table>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Node</td>
+                    <td>
+                      <span
+                        v-if="
+                          props.job.node &&
+                          props.job.node !== '11111111111111111111111111111111'
+                        "
+                      >
+                        <nuxt-link
+                          :href="`https://explore.nosana.com/hosts/${props.job.node}`"
+                          target="_blank"
+                          class="has-text-link is-family-monospace"
+                        >
+                          {{ props.job.node }}
+                        </nuxt-link>
+                      </span>
+                      <span v-else class="has-text-grey">--</span>
+                    </td>
+                  </tr>
+                  <tr v-if="!props.hideFields?.marketAddress">
+                    <td>Market</td>
+                    <td>
+                      <a
+                        :href="`https://explore.nosana.com/markets/${props.job.market}`"
+                        target="_blank"
+                        class="has-text-link is-family-monospace"
+                      >
+                        {{ props.job.market?.toString() }}
+                      </a>
+                    </td>
+                  </tr>
+                  <tr v-if="!props.hideFields?.price">
+                    <td>Price</td>
+                    <td
+                      v-html="formatPrice(totalNos || 0, totalCostUsd || 0)"
+                    ></td>
+                  </tr>
+                  <tr
+                    v-for="field in resolvedMetricFields"
+                    :key="field.key"
+                  >
+                    <td>{{ field.label }}</td>
+                    <td>{{ field.displayValue }}</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
-
+        <div
+          class="mt-6"
+          v-if="
+            props.isJobPoster &&
+            props.job.isRunning &&
+            props.job.jobDefinition?.ops
+          "
+        >
+          <SystemUsageCharts
+            :jobAddress="props.job.address"
+            :node="props.job.node"
+            :opIds="props.job.jobDefinition.ops.map((op) => op.id)"
+          />
+        </div>
       </div>
 
-      <!-- Job Definition Tab -->
-      <div v-if="activeTab === 'job-definition'">
+      <!-- Configuration Tab -->
+      <div v-if="activeTab === 'configuration'">
         <div v-if="jobDefinitionForTab">
           <JobDefinitionTab :job-definition="jobDefinitionForTab" />
         </div>
         <div v-else class="notification is-light has-text-centered">
-          <p class="has-text-grey">No job definition available</p>
+          <p class="has-text-grey">No job configuration available</p>
         </div>
       </div>
 
@@ -182,9 +215,11 @@
           <JobOverview
             :job="props.job"
             :isJobPoster="props.isJobPoster"
-            :opIds="flogTabs.filter(t => t !== 'system')"
+            :opIds="flogTabs.filter((t) => t !== 'system')"
             :activeLogs="flogActiveLogs"
-            :selectOp="(opId: string | null) => setFlogActiveTab(opId ?? 'system')"
+            :selectOp="
+              (opId: string | null) => setFlogActiveTab(opId ?? 'system')
+            "
             :logsByOp="flogLogsByOp"
             :systemLogsMap="flogSystemLogs"
             :jobInfo="props.jobInfo"
@@ -202,7 +237,6 @@
             :jobInfo="props.jobInfo"
             :isConfidential="isConfidential"
             :jobDefinition="props.job.jobDefinition"
-            :hasArtifacts="false"
             :isConnecting="isConnecting"
             :logConnectionEstablished="connectionEstablished"
             :systemLogs="[]"
@@ -213,13 +247,19 @@
             :chatServiceUrl="chatServiceUrl"
             :chatApiConfig="chatApiConfig"
             :jobCombinedSpecs="combinedSpecs"
-            :jobNodeReport="jobNodeReport"
             :loadingJobNodeSpecs="loadingNodeSpecs"
             :isQueuedJob="isQueuedJob"
             :activeLogs="flogActiveLogs"
-            :opIds="flogTabs.filter(t => t !== 'system')"
-            :filters="{ value: { opId: flogActiveTab === 'system' ? null : flogActiveTab, types: new Set(['container','info','error']) } }"
-            :selectOp="(opId: string | null) => setFlogActiveTab(opId ?? 'system')"
+            :opIds="flogTabs.filter((t) => t !== 'system')"
+            :filters="{
+              value: {
+                opId: flogActiveTab === 'system' ? null : flogActiveTab,
+                types: new Set(['container', 'info', 'error']),
+              },
+            }"
+            :selectOp="
+              (opId: string | null) => setFlogActiveTab(opId ?? 'system')
+            "
             :toggleType="() => {}"
             :logsByOp="flogLogsByOp"
             :systemLogsMap="flogSystemLogs"
@@ -228,14 +268,11 @@
           />
         </div>
       </div>
-      
+
       <!-- Results Tab -->
       <div v-if="activeTab === 'results'">
         <div v-if="props.job.results">
-          <JobResult 
-            :ipfs-result="props.job.results"
-            :ipfs-job="props.job"
-          />
+          <JobResult :ipfs-result="props.job.results" :ipfs-job="props.job" />
         </div>
         <div v-else class="notification is-light has-text-centered">
           <p class="has-text-grey">No results available</p>
@@ -285,26 +322,30 @@ import JobResult from "~/components/Job/Result.vue";
 import JobDefinitionTab from "~/components/Job/Tabs/JobDefinition.vue";
 import SecondsFormatter from "~/components/SecondsFormatter.vue";
 import StatusTag from "~/components/Common/StatusTag.vue";
+import {
+  resolveMetricFields,
+  type MetricField,
+} from "~/components/UI/AdaptiveMetricsGrid.vue";
 
 import LogSubscription from "./LogSubscription.vue";
 import { useFLogs } from "~/composables/jobs/useFLogs";
 import { useTemplates } from "~/composables/useTemplates";
 import { useToast } from "vue-toastification";
 import { useNosanaWallet } from "~/composables/useNosanaWallet";
-import { useAuthHeader } from "~/composables/useAuthHeader";
 import { useAPI } from "~/composables/useAPI";
+import { useJobPricing } from "~/composables/useMarketPricing";
 
 // Import icons as components
-import ChevronDownIcon from '@/assets/img/icons/chevron-down.svg?component';
-import ClockIcon from '@/assets/img/icons/clock.svg?component';
-import SquareIcon from '@/assets/img/icons/square.svg?component';
-import ArrowUpIcon from '@/assets/img/icons/arrow-up.svg?component';
-import RunningIcon from '@/assets/img/icons/status/running.svg?component';
-import StoppedIcon from '@/assets/img/icons/status/stopped.svg?component';
-import FailedIcon from '@/assets/img/icons/status/failed.svg?component';
-import QueuedIcon from '@/assets/img/icons/status/queued.svg?component';
-import DoneIcon from '@/assets/img/icons/status/done.svg?component';
-import { useStatus } from '~/composables/useStatus';
+import ChevronDownIcon from "@/assets/img/icons/chevron-down.svg?component";
+import ClockIcon from "@/assets/img/icons/clock.svg?component";
+import SquareIcon from "@/assets/img/icons/square.svg?component";
+import ArrowUpIcon from "@/assets/img/icons/arrow-up.svg?component";
+import RunningIcon from "@/assets/img/icons/status/running.svg?component";
+import StoppedIcon from "@/assets/img/icons/status/stopped.svg?component";
+import FailedIcon from "@/assets/img/icons/status/failed.svg?component";
+import QueuedIcon from "@/assets/img/icons/status/queued.svg?component";
+import DoneIcon from "@/assets/img/icons/status/done.svg?component";
+import { useStatus } from "~/composables/useStatus";
 
 import type { UseModal } from "~/composables/jobs/useModal";
 import type { Endpoints, UseJob } from "~/composables/jobs/useJob";
@@ -324,9 +365,9 @@ import type {
   Operation,
   OperationArgsMap,
   HttpHealthCheck,
-} from "@nosana/sdk";
-import type { FLogEntry } from "~/composables/jobs/useFLogs";
+} from "@nosana/kit";
 import type { ProgressBar } from "~/composables/jobs/logTypes";
+import SystemUsageCharts from "./SystemUsageCharts.vue";
 
 // Type definitions
 interface TestgridMarket {
@@ -368,26 +409,6 @@ interface NodeInfoResponse {
   info?: NodeInfoData;
 }
 
-interface NodeSpecs {
-  marketAddress?: string;
-  ram?: string | number;
-  diskSpace?: string | number;
-  cpu?: string;
-  country?: string;
-  avgDownload10?: number;
-  avgUpload10?: number;
-  avgPing10?: number;
-  gpus?: Array<{
-    gpu?: string;
-    memory?: number;
-    architecture?: string;
-  }>;
-  cudaVersion?: string;
-  nvmlVersion?: string;
-  nodeVersion?: string;
-  systemEnvironment?: string;
-}
-
 interface CombinedSpecs {
   ram: number;
   diskSpace: number;
@@ -412,7 +433,11 @@ interface ResourceProgressBar extends ProgressBar {
 }
 
 const jobDefinitionForTab = computed<JobDefinition | null>(() => {
-  return (props.jobInfo?.jobDefinition as JobDefinition | undefined) ?? props.job.jobDefinition ?? null;
+  return (
+    (props.jobInfo?.jobDefinition as JobDefinition | undefined) ??
+    props.job.jobDefinition ??
+    null
+  );
 });
 
 interface Props {
@@ -432,14 +457,20 @@ interface Props {
 
 const props = defineProps<Props>();
 const { userBalances } = useNosanaWallet();
-const { hasAuth, ensureAuth } = useAuthHeader();
-const getAuth = async () => ensureAuth();
+const { getAuthHeader } = useDeploymentAuth();
+const getAuth = async () => {
+  return await getAuthHeader(props.deploymentId ?? undefined);
+};
 const { templates } = useTemplates();
 const { markets } = useMarkets();
 const { saveState } = useDeployPageState();
 
 // Fetch markets data needed for centralized pricing
-const { data: testgridMarkets, pending: marketsPending, execute: executeMarkets } = useAPI<TestgridMarket[]>('/api/markets', { default: () => [] });
+const {
+  data: testgridMarkets,
+  pending: marketsPending,
+  execute: executeMarkets,
+} = useAPI<TestgridMarket[]>("/api/markets", { default: () => [] });
 
 // Execute the markets API call on mount
 onMounted(() => {
@@ -466,9 +497,15 @@ onUnmounted(() => {
 });
 
 // Single boolean to drive connection
-const hasRealNode = computed<boolean>(() => Boolean(props.job.node && props.job.node !== '11111111111111111111111111111111'));
+const hasRealNode = computed<boolean>(() =>
+  Boolean(
+    props.job.node && props.job.node !== "11111111111111111111111111111111",
+  ),
+);
 // Do not gate on hasAuth; auth will be ensured during WS open
-const shouldConnect = computed(() => props.isJobPoster && props.job.isRunning && hasRealNode.value);
+const shouldConnect = computed(
+  () => props.isJobPoster && props.job.isRunning && hasRealNode.value,
+);
 
 // No local WS watchers; lifecycle handled inside useJobLogs
 
@@ -508,7 +545,7 @@ const getJobImage = (job: UseJob) => {
   const jd = props.jobInfo?.jobDefinition || job.jobDefinition;
   if (!jd?.ops?.length) return null;
   const firstOp = jd.ops[0];
-  if (firstOp.type === 'container/run' && firstOp.args?.image) {
+  if (firstOp.type === "container/run" && firstOp.args?.image) {
     return firstOp.args.image;
   }
   return null;
@@ -521,8 +558,8 @@ const jobImages = computed(() => {
 
   const images: string[] = [];
   jd.ops.forEach((op: Operation) => {
-    if (op.type === 'container/run') {
-      const args = op.args as OperationArgsMap['container/run'];
+    if (op.type === "container/run") {
+      const args = op.args as OperationArgsMap["container/run"];
       if (args?.image && !images.includes(args.image)) images.push(args.image);
     }
   });
@@ -554,7 +591,7 @@ const templateForJob = computed(() => {
   return templates.value.find(
     (t) =>
       JSON.stringify(t.jobDefinition) ===
-      JSON.stringify(props.job.jobDefinition)
+      JSON.stringify(props.job.jobDefinition),
   );
 });
 
@@ -564,33 +601,18 @@ const isGHCR = (image: string) => {
 
 // Get host specs for actual GPU info (skip when node is placeholder)
 const nodeSpecsUrl = computed(() =>
-  hasRealNode.value ? `/api/nodes/${props.job.node}/specs` : ''
+  hasRealNode.value ? `/api/nodes/${props.job.node}/metrics` : "",
 );
-const { data: nodeSpecs, pending: loadingNodeSpecs } = useAPI<NodeSpecs | null>(nodeSpecsUrl);
+const { data: nodeMetrics, pending: loadingNodeSpecs } = useAPI(
+  nodeSpecsUrl,
+);
 
 const nodeInfoUrl = computed(() =>
   hasRealNode.value
     ? `https://${props.job.node}.${useRuntimeConfig().public.nodeDomain}/node/info`
-    : ''
+    : "",
 );
-const { data: nodeInfo } = useAPI<NodeInfoResponse | null>(nodeInfoUrl);
-
-// Get node report
-const jobNodeReportUrl = computed(() => {
-  if (!props.job.node || props.job.node.toString() === '11111111111111111111111111111111') return '';
-  return `/api/benchmarks/node-report?node=${props.job.node.toString()}`;
-});
-const { data: jobNodeReport, pending: loadingJobNodeReport } = useAPI(
-  jobNodeReportUrl,
-  {
-    default: () => null,
-    watch: [jobNodeReportUrl],
-  }
-);
-
-
-
-
+const { data: nodeInfo } = useAPI<NodeInfoResponse | null>(nodeInfoUrl, { credentials: false });
 
 const jobDataForPriceComponent = computed(() => {
   return {
@@ -598,7 +620,11 @@ const jobDataForPriceComponent = computed(() => {
     timeStart: props.job.timeStart,
     timeEnd: props.job.timeEnd,
     timeout: props.job.timeout,
-    market: typeof props.job.market === 'string' ? props.job.market : props.job.market?.toString(),
+    price: props.job.price,
+    market:
+      typeof props.job.market === "string"
+        ? props.job.market
+        : props.job.market?.toString(),
     state:
       props.job.state ??
       (props.job.isCompleted ? 2 : props.job.timeStart ? 1 : 0),
@@ -609,8 +635,19 @@ const jobOptionsForPriceComponent = computed(() => {
   return { showPerHour: !props.job.isCompleted };
 });
 
+// Get accurate pricing using the same method as job list
+const marketsDataRef = computed(() => testgridMarkets.value);
+const { totalNos, totalCostUsd, usdPricePerHour } = useJobPricing(
+  jobDataForPriceComponent,
+  { showPerHour: false },
+  marketsDataRef,
+);
+
 // Duration data for SecondsFormatter
-const jobDurationData = ref<{ actualSeconds: number; maxDurationHours?: string } | null>(null);
+const jobDurationData = ref<{
+  actualSeconds: number;
+  maxDurationHours?: string;
+} | null>(null);
 
 const formatMaxDurationInHours = (seconds: number) => {
   if (isNaN(seconds) || seconds < 0) return "Invalid duration";
@@ -621,7 +658,7 @@ const formatMaxDurationInHours = (seconds: number) => {
 
 // Helper function to format relative dates
 const formatDateRelative = (timestamp: number) => {
-  if (!timestamp || timestamp === 0) return '--';
+  if (!timestamp || timestamp === 0) return "--";
   const date = new Date(timestamp * 1000);
   const now = new Date();
   const diffInMs = now.getTime() - date.getTime();
@@ -629,22 +666,20 @@ const formatDateRelative = (timestamp: number) => {
   const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
   const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
 
-  if (diffInMinutes < 1) return 'just now';
+  if (diffInMinutes < 1) return "just now";
   if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
   if (diffInHours < 24) return `${diffInHours}h ago`;
   if (diffInDays < 7) return `${diffInDays}d ago`;
-  
+
   return date.toLocaleDateString();
 };
 
-// Helper function to format price
-const formatPrice = (price: number, nosPrice: number) => {
-  const timeout = props.job?.timeout ?? 0;
-  if (!price || !timeout) return '--';
-  const totalNos = (price * timeout) / 1e6;
-  if (!nosPrice) return `NOS: ${totalNos.toFixed(4)}`;
-  const usdPrice = (totalNos * nosPrice).toFixed(4);
-  return `NOS: ${totalNos.toFixed(4)} <br> USD: $${usdPrice}`;
+// Helper function to format price - show only totals
+const formatPrice = (nosAmount: number, usdAmount: number) => {
+  if (!nosAmount || nosAmount <= 0) return "--";
+  const nosDisplay = nosAmount.toFixed(3);
+  const usdDisplay = usdAmount > 0 ? usdAmount.toFixed(3) : "--";
+  return `NOS: ${nosDisplay} <br> USD: $${usdDisplay}`;
 };
 
 watch(
@@ -656,77 +691,60 @@ watch(
     }
 
     const maxDurationInHoursFormatted =
-      typeof newJob.timeout === 'number'
+      typeof newJob.timeout === "number"
         ? formatMaxDurationInHours(newJob.timeout)
         : undefined;
 
     if (newJob.isCompleted && newJob.timeEnd !== undefined) {
       const actualDuration = newJob.timeEnd - newJob.timeStart;
-      const data: { actualSeconds: number; maxDurationHours?: string } = { actualSeconds: actualDuration };
-      if (maxDurationInHoursFormatted) data.maxDurationHours = maxDurationInHoursFormatted;
+      const data: { actualSeconds: number; maxDurationHours?: string } = {
+        actualSeconds: actualDuration,
+      };
+      if (maxDurationInHoursFormatted)
+        data.maxDurationHours = maxDurationInHoursFormatted;
       jobDurationData.value = data;
     } else if (newJob.isRunning && newJob.timeStart) {
       const currentDuration = newCurrentTimeVal - newJob.timeStart;
-      const data: { actualSeconds: number; maxDurationHours?: string } = { actualSeconds: currentDuration };
-      if (maxDurationInHoursFormatted) data.maxDurationHours = maxDurationInHoursFormatted;
+      const data: { actualSeconds: number; maxDurationHours?: string } = {
+        actualSeconds: currentDuration,
+      };
+      if (maxDurationInHoursFormatted)
+        data.maxDurationHours = maxDurationInHoursFormatted;
       jobDurationData.value = data;
     } else if (newJob.state === 0 && newJob.timeStart === 0) {
       jobDurationData.value = null;
     } else {
       // Fallback or other states
-      const data: { actualSeconds: number; maxDurationHours?: string } = { actualSeconds: 0 };
-      if (maxDurationInHoursFormatted) data.maxDurationHours = maxDurationInHoursFormatted;
+      const data: { actualSeconds: number; maxDurationHours?: string } = {
+        actualSeconds: 0,
+      };
+      if (maxDurationInHoursFormatted)
+        data.maxDurationHours = maxDurationInHoursFormatted;
       jobDurationData.value = data;
     }
   },
-  { immediate: true, deep: true }
+  { immediate: true, deep: true },
 );
 
-
+const formatPing = (ping?: number) => {
+  if (typeof ping !== "number" || Number.isNaN(ping)) return null;
+  return `${Math.round(ping)} ms`;
+};
 
 const gpuSummary = computed(() => {
-  const model = combinedSpecs.value?.gpu || '';
+  const model = combinedSpecs.value?.gpu;
   if (!model) return null;
+
   let shortModel = model;
-  if (shortModel.startsWith('NVIDIA GeForce ')) {
-    shortModel = 'Nvidia ' + shortModel.substring('NVIDIA GeForce '.length);
+  if (shortModel.startsWith("NVIDIA GeForce ")) {
+    shortModel = "Nvidia " + shortModel.substring("NVIDIA GeForce ".length);
   } else if (/^NVIDIA /i.test(shortModel)) {
-    shortModel = shortModel.replace(/^NVIDIA /i, 'Nvidia ');
+    shortModel = shortModel.replace(/^NVIDIA /i, "Nvidia ");
   }
+
   const cuda = combinedSpecs.value?.cudaVersion;
   return cuda ? `${shortModel} (CUDA ${cuda})` : shortModel;
 });
-
-const formatRam = (mb?: number) => {
-  if (typeof mb !== 'number' || isNaN(mb)) return '--';
-  return `${Math.round(mb / 1024)} GB`;
-};
-
-const formatCountry = (countryCode?: string) => {
-  if (!countryCode) return "-";
-  try {
-    return (
-      new Intl.DisplayNames(["en"], { type: "region" }).of(countryCode) ||
-      countryCode
-    );
-  } catch {
-    return countryCode;
-  }
-};
-
-const formatNetwork = (download?: number, upload?: number, ping?: number) => {
-  const parts: string[] = [];
-  if (typeof download === 'number' && !isNaN(download)) {
-    parts.push(`Download: ${Math.round(download)} Mbps`);
-  }
-  if (typeof upload === 'number' && !isNaN(upload)) {
-    parts.push(`Upload: ${Math.round(upload)} Mbps`);
-  }
-  if (typeof ping === 'number' && !isNaN(ping)) {
-    parts.push(`Ping: ${Math.round(ping)} ms`);
-  }
-  return parts.length ? parts.join(' <br>') : '--';
-};
 
 // Format time started
 const timeStartFormatted = computed(() => {
@@ -763,9 +781,10 @@ const timeAgo = computed(() => {
 
 // Combined node specs
 const combinedSpecs = computed<CombinedSpecs | null>(() => {
-  if (!nodeSpecs.value) return null;
-
+  const metrics = nodeMetrics.value?.metrics;
   const nodeInfoData = nodeInfo.value?.info;
+
+  if (!metrics && !nodeInfoData) return null;
 
   const gpusArray = nodeInfoData?.gpus?.devices
     ? nodeInfoData.gpus.devices.map((gpu: GpuDevice) => ({
@@ -773,69 +792,165 @@ const combinedSpecs = computed<CombinedSpecs | null>(() => {
         memory: gpu.memory?.total_mb,
         architecture: `${gpu.network_architecture?.major}.${gpu.network_architecture?.minor}`,
       }))
-    : (nodeSpecs.value.gpus ?? []);
+    : ((metrics?.gpu?.devices ?? []).map((gpu: any) => ({
+        gpu: gpu?.name,
+        memory: gpu?.vram_total_mb,
+        architecture:
+          gpu?.network_architecture?.major !== undefined &&
+          gpu?.network_architecture?.minor !== undefined
+            ? `${gpu.network_architecture.major}.${gpu.network_architecture.minor}`
+            : undefined,
+      })));
 
   const firstGpu = gpusArray.length > 0 ? gpusArray[0] : undefined;
-
-  const cpuModel = nodeInfoData?.cpu?.model ?? nodeSpecs.value.cpu;
+  const cpuModel = nodeInfoData?.cpu?.model ?? metrics?.cpu?.cpu_model;
+  const metricRamMb =
+    typeof metrics?.ram_mb === "number"
+      ? metrics.ram_mb
+      : typeof metrics?.ram_gb === "number"
+        ? metrics.ram_gb * 1024
+        : undefined;
+  const metricDiskGb =
+    typeof metrics?.disk_gb === "number" ? metrics.disk_gb : undefined;
+  const metricCountry = metrics?.network?.country ?? metrics?.country;
+  const metricDownload =
+    metrics?.network?.download_mbps ?? metrics?.download_mbps;
+  const metricUpload =
+    metrics?.network?.upload_mbps ?? metrics?.upload_mbps;
+  const metricPing = metrics?.network?.ping_ms ?? metrics?.ping_ms;
+  const metricCudaVersion =
+    nodeInfoData?.gpus?.cuda_driver_version ??
+    metrics?.gpu?.cuda_driver_version ??
+    metrics?.gpu?.runtime_version ??
+    metrics?.cuda_driver_version ??
+    metrics?.cuda_runtime_version;
+  const metricSystemEnvironment =
+    nodeInfoData?.system_environment ?? metrics?.system_environment;
 
   return {
     ram: nodeInfoData?.ram_mb
       ? Math.round(nodeInfoData.ram_mb)
-      : Math.round(Number(nodeSpecs.value.ram)),
+      : Math.round(Number(metricRamMb)),
     diskSpace: nodeInfoData?.disk_gb
       ? Math.round(Number(nodeInfoData.disk_gb))
-      : Math.round(Number(nodeSpecs.value.diskSpace)),
+      : Math.round(Number(metricDiskGb)),
     cpu: cpuModel,
-    country: nodeInfoData?.country ?? nodeSpecs.value.country,
-    download: nodeSpecs.value.avgDownload10 ?? (jobNodeReport.value as any)?.avgDownload10,
-    upload: nodeSpecs.value.avgUpload10 ?? (jobNodeReport.value as any)?.avgUpload10,
-    ping: nodeSpecs.value.avgPing10 ?? (jobNodeReport.value as any)?.avgPing10,
+    country: nodeInfoData?.country ?? metricCountry,
+    download: metricDownload,
+    upload: metricUpload,
+    ping: metricPing,
     gpu: firstGpu?.gpu,
-    cudaVersion:
-      nodeInfoData?.gpus?.cuda_driver_version ?? nodeSpecs.value.cudaVersion,
-    systemEnvironment: nodeInfoData?.system_environment
-      ? nodeInfoData.system_environment.toLowerCase().includes("wsl")
+    cudaVersion: metricCudaVersion ? String(metricCudaVersion) : undefined,
+    systemEnvironment: metricSystemEnvironment
+      ? metricSystemEnvironment.toLowerCase().includes("wsl")
         ? "WSL"
-        : nodeInfoData.system_environment
+        : metricSystemEnvironment
           ? "Linux"
           : null
-      : nodeSpecs.value.systemEnvironment
-        ? nodeSpecs.value.systemEnvironment.toLowerCase().includes("wsl")
-          ? "WSL"
-          : "Linux"
-        : null,
+      : null,
   };
 });
 
+const metricFields: MetricField[] = [
+  {
+    key: "gpu",
+    label: "GPU",
+    paths: ["derived.gpuSummary", "derived.gpuName"],
+  },
+  {
+    key: "cpu",
+    label: "CPU",
+    paths: ["nodeInfo.info.cpu.model", "metrics.cpu.cpu_model"],
+  },
+  {
+    key: "ram",
+    label: "RAM",
+    paths: ["nodeInfo.info.ram_mb", "metrics.ram_gb", "metrics.ram_mb"],
+    transformPaths: {
+      "metrics.ram_gb": "gbToMb",
+    },
+    formatter: "mb",
+  },
+  {
+    key: "diskSpace",
+    label: "Disk Space",
+    paths: ["nodeInfo.info.disk_gb", "metrics.disk_gb"],
+    formatter: "gb",
+  },
+  {
+    key: "country",
+    label: "Country",
+    paths: ["nodeInfo.info.country", "metrics.network.country", "metrics.country"],
+    formatter: "country",
+  },
+  {
+    key: "download",
+    label: "Download Speed",
+    paths: ["metrics.network.download_mbps", "metrics.download_mbps"],
+    formatter: "mbps",
+  },
+  {
+    key: "upload",
+    label: "Upload Speed",
+    paths: ["metrics.network.upload_mbps", "metrics.upload_mbps"],
+    formatter: "mbps",
+  },
+  {
+    key: "ping",
+    label: "Ping",
+    paths: ["derived.ping"],
+  },
+  {
+    key: "os",
+    label: "OS",
+    paths: ["derived.systemEnvironment", "metrics.system_environment"],
+  },
+];
+
+const metricSources = computed(() => ({
+  nodeInfo: nodeInfo.value,
+  metrics: nodeMetrics.value?.metrics,
+  derived: {
+    gpuName: combinedSpecs.value?.gpu,
+    gpuSummary: gpuSummary.value,
+    ping: formatPing(combinedSpecs.value?.ping),
+    systemEnvironment: combinedSpecs.value?.systemEnvironment,
+  },
+}));
+
+const resolvedMetricFields = computed(() =>
+  resolveMetricFields(metricFields, metricSources.value).secondary,
+);
 
 // Check if the job is queued (state 0 and no start time, or placeholder node)
 const isQueuedJob = computed(() => {
   return (
-    props.job.state === 0 && 
-    props.job.timeStart === 0
-  ) || props.job.node === '11111111111111111111111111111111';
+    (props.job.state === 0 && props.job.timeStart === 0) ||
+    props.job.node === "11111111111111111111111111111111"
+  );
 });
 
 // Check if any actions are available for the job
 const hasAnyActions = computed(() => {
   // Extend action: available for running jobs if user is job poster
   const canExtend = props.job.isRunning && props.isJobPoster;
-  
+
   // Stop/Delist action: available for running or queued jobs if user is job poster
-  const canStop = (props.job.isRunning || props.job.state === 0) && props.isJobPoster;
-  
+  const canStop =
+    (props.job.isRunning || props.job.state === 0) && props.isJobPoster;
+
   return canExtend || canStop;
 });
 
 // Check if job has results to show
 const hasResults = computed(() => {
-  return props.job.results && (props.job.hasResultsRegex || props.job.isCompleted);
+  return (
+    props.job.results && (props.job.hasResultsRegex || props.job.isCompleted)
+  );
 });
 
 const hasContainerControls = computed(() => {
   if (!props.job.jobDefinition) return false;
-
 
   const isStopped = props.job.state === 3;
   if (props.job.isCompleted || isStopped) {
@@ -843,7 +958,11 @@ const hasContainerControls = computed(() => {
       const haveJobInfo = Boolean(props.jobInfo);
       const haveResults = Boolean(props.job.results);
       const haveEndpoints = (() => {
-        try { return props.endpoints?.size > 0; } catch { return false; }
+        try {
+          return props.endpoints?.size > 0;
+        } catch {
+          return false;
+        }
       })();
       if (haveJobInfo || haveResults || haveEndpoints) return true;
 
@@ -856,13 +975,15 @@ const hasContainerControls = computed(() => {
         ...(Array.isArray(opStatesFromInfo) ? opStatesFromInfo : []),
         ...(Array.isArray(liveOpStates) ? liveOpStates : []),
       ];
-      return allStates.some((s: OpState) => Array.isArray(s?.logs) && s.logs.length > 0);
+      return allStates.some(
+        (s: OpState) => Array.isArray(s?.logs) && s.logs.length > 0,
+      );
     } catch {
       return false;
     }
   }
 
-  const operationTabs = flogTabs.value.filter((t) => t !== 'system');
+  const operationTabs = flogTabs.value.filter((t) => t !== "system");
   const hasOperationLogs = operationTabs.some((tab) => {
     const logs = flogLogsByOp.value.get(tab);
     return logs && logs.length > 0;
@@ -878,7 +999,9 @@ const hasSystemLogs = computed(() => {
 
   const hasLiveLogs = (() => {
     const hasSystem = flogSystemLogs.value.length > 0;
-    const hasOps = Array.from(flogLogsByOp.value.values()).some((logs) => (logs && logs.length > 0));
+    const hasOps = Array.from(flogLogsByOp.value.values()).some(
+      (logs) => logs && logs.length > 0,
+    );
     return hasSystem || hasOps;
   })();
 
@@ -891,42 +1014,45 @@ const hasSystemLogs = computed(() => {
 
 // Available tabs based on job state and data
 const availableTabs = computed(() => {
-  const tabs = ['overview'];
+  const tabs = ["overview"];
   if (props.jobInfo?.jobDefinition || props.job.jobDefinition) {
-    tabs.push('job-definition');
+    tabs.push("configuration");
   }
-  
+
   if (hasContainerControls.value) {
-    tabs.push('container-controls');
+    tabs.push("container-controls");
   }
-  
+
   if (hasSystemLogs.value) {
-    tabs.push('system-logs');
+    tabs.push("system-logs");
   }
-  
+
   if (hasResults.value) {
-    tabs.push('results');
+    tabs.push("results");
   }
-  
+
   return tabs;
 });
 
 // Get display label for tab
 const getTabLabel = (tab: string) => {
   switch (tab) {
-    case 'system-logs': return 'Logs';
-    case 'job-definition': return 'Definition';
-    case 'container-controls': return 'Containers';
-    case 'results': return 'Results';
-    default: return tab.charAt(0).toUpperCase() + tab.slice(1);
+    case "system-logs":
+      return "Logs";
+    case "configuration":
+      return "Configuration";
+    case "container-controls":
+      return "Containers";
+    case "results":
+      return "Results";
+    default:
+      return tab.charAt(0).toUpperCase() + tab.slice(1);
   }
 };
-
 
 const toggleDetails = () => {
   isDetailsOpen.value = !isDetailsOpen.value;
 };
-
 
 // Job action functions (moved from JobToolbar)
 async function stopJob() {
@@ -959,12 +1085,18 @@ async function stopJob() {
 
 function repostJob() {
   // Find the matching market object
-  const selectedMarket = markets.value?.find(m => m.address.toString() === props.job.market.toString()) || null;
-  
+  const selectedMarket =
+    markets.value?.find(
+      (m) => m.address.toString() === props.job.market.toString(),
+    ) || null;
+
   // Find the matching template
-  const selectedTemplate = templates.value?.find(
-    (t) => JSON.stringify(t.jobDefinition) === JSON.stringify(props.job.jobDefinition)
-  ) || null;
+  const selectedTemplate =
+    templates.value?.find(
+      (t) =>
+        JSON.stringify(t.jobDefinition) ===
+        JSON.stringify(props.job.jobDefinition),
+    ) || null;
 
   // Save job data using unified state persistence
   saveState({
@@ -972,13 +1104,13 @@ function repostJob() {
     selectedTemplate,
     jobDefinition: props.job.jobDefinition,
     hours: props.job.timeout / 3600, // Convert from seconds to hours
-    gpuTab: 'simple',
+    gpuTab: "simple",
     gpuTypeCheckbox: ["PREMIUM"], // Default, will be updated by market type
     activeFilter: "PREMIUM", // Default, will be updated by market type
   });
 
   // Navigate to deploy page (no URL parameters needed)
-  router.push('/deploy');
+  router.push("/deploy");
 }
 
 function openExtendModal() {
@@ -996,7 +1128,7 @@ const hasOpenaiEndpoint = computed(() => {
       if (args.expose && Array.isArray(args.expose)) {
         const exposedPorts = args.expose.filter(
           (e): e is ExposedPort =>
-            typeof e === "object" && e !== null && "health_checks" in e
+            typeof e === "object" && e !== null && "health_checks" in e,
         );
         for (const exposedPort of exposedPorts) {
           if (exposedPort.health_checks) {
@@ -1008,12 +1140,19 @@ const hasOpenaiEndpoint = computed(() => {
                   try {
                     const body = JSON.parse(httpCheck.body);
                     // Check if it has LLM-style request format (model + messages)
-                    if (body.model && body.messages && Array.isArray(body.messages)) {
+                    if (
+                      body.model &&
+                      body.messages &&
+                      Array.isArray(body.messages)
+                    ) {
                       return true;
                     }
                   } catch (e) {
                     // If body parsing fails, fall back to path-based detection
-                    if (httpCheck.path.includes("/chat") || httpCheck.path.includes("/v1")) {
+                    if (
+                      httpCheck.path.includes("/chat") ||
+                      httpCheck.path.includes("/v1")
+                    ) {
                       return true;
                     }
                   }
@@ -1031,7 +1170,11 @@ const hasOpenaiEndpoint = computed(() => {
 const isConfidential = computed<boolean>(() => {
   try {
     const jd = props.job.jobDefinition;
-    return Boolean(jd && 'logistics' in jd && (jd as JobDefinition & { logistics?: unknown }).logistics);
+    return Boolean(
+      jd &&
+        "logistics" in jd &&
+        (jd as JobDefinition & { logistics?: unknown }).logistics,
+    );
   } catch {
     return false;
   }
@@ -1052,7 +1195,7 @@ const {
   props.job.address,
   computed(() => props.job.node),
   shouldConnect,
-  getAuth
+  getAuth,
 );
 
 // Expose flog progress bars (directly from useFLogs)
@@ -1076,7 +1219,7 @@ watchEffect(() => {
         if (args.expose && Array.isArray(args.expose)) {
           const exposedPorts = args.expose.filter(
             (e): e is ExposedPort =>
-              typeof e === "object" && e !== null && "health_checks" in e
+              typeof e === "object" && e !== null && "health_checks" in e,
           );
           for (const exposedPort of exposedPorts) {
             if (exposedPort.health_checks) {
@@ -1087,23 +1230,30 @@ watchEffect(() => {
                     try {
                       const body = JSON.parse(httpCheck.body);
                       // Check if it has LLM-style request format
-                      if (body.model && body.messages && Array.isArray(body.messages)) {
+                      if (
+                        body.model &&
+                        body.messages &&
+                        Array.isArray(body.messages)
+                      ) {
                         chatServiceUrl.value = url;
                         chatApiConfig.value = {
                           path: httpCheck.path,
                           model: body.model,
-                          headers: httpCheck.headers || {}
+                          headers: httpCheck.headers || {},
                         };
                         return; // Found our chat service with configuration
                       }
                     } catch (e) {
                       // If body parsing fails, fall back to path-based detection
-                      if (httpCheck.path.includes("/chat") || httpCheck.path.includes("/v1")) {
+                      if (
+                        httpCheck.path.includes("/chat") ||
+                        httpCheck.path.includes("/v1")
+                      ) {
                         chatServiceUrl.value = url;
                         chatApiConfig.value = {
                           path: httpCheck.path,
                           model: "unknown",
-                          headers: httpCheck.headers || {}
+                          headers: httpCheck.headers || {},
                         };
                         return;
                       }
@@ -1147,7 +1297,7 @@ watch(
       isChatServiceReady.value = false;
     }
   },
-  { deep: true }
+  { deep: true },
 ); // deep true for endpoints map
 
 function activateChatAndClosePopup() {
@@ -1166,27 +1316,19 @@ function activateChatAndClosePopup() {
 
 const activeTab = ref("system-logs");
 
-const hasAutoSwitchedToLogs = ref(false);
+// Watch for changes in available tabs and ensure active tab is valid
 watch(
-  () => hasSystemLogs.value,
-  (canShowLogsNow) => {
-    if (canShowLogsNow && !hasAutoSwitchedToLogs.value) {
-      if (activeTab.value !== 'system-logs' && activeTab.value === 'overview') {
-        activeTab.value = 'system-logs';
-      }
-      hasAutoSwitchedToLogs.value = true;
+  availableTabs,
+  (newTabs) => {
+    if (!newTabs.includes(activeTab.value)) {
+      // Prefer system-logs (Logs tab) as default, fallback to overview
+      activeTab.value = newTabs.includes("system-logs")
+        ? "system-logs"
+        : newTabs[0] || "overview";
     }
   },
-  { immediate: false }
+  { immediate: true },
 );
-
-// Watch for changes in available tabs and ensure active tab is valid
-watch(availableTabs, (newTabs) => {
-  if (!newTabs.includes(activeTab.value)) {
-    // Prefer system-logs (Logs tab) as default, fallback to overview
-    activeTab.value = newTabs.includes('system-logs') ? 'system-logs' : (newTabs[0] || 'overview');
-  }
-}, { immediate: true });
 const jobTabsRef = ref<JobTabsComponent | null>(null); // Ref for the JobTabs component
 
 // Watch for changes in table content (for real-time updates) - REMOVING THIS SECTION
@@ -1207,7 +1349,7 @@ watch(isMainContentOpen, (newValue) => {
 
 const getStatusIcon = (status: string | number) => {
   // Handle both string (endpoint status) and number (job state)
-  if (typeof status === 'number') {
+  if (typeof status === "number") {
     // Job state mapping
     switch (status) {
       case 0: // QUEUED
@@ -1222,12 +1364,12 @@ const getStatusIcon = (status: string | number) => {
         return StoppedIcon;
     }
   }
-  
+
   // Endpoint status mapping (legacy)
   if (!props.job.isRunning || props.job.isCompleted) {
     return StoppedIcon;
   }
-  
+
   if (status === "ONLINE") {
     return DoneIcon;
   } else if (status === "UNKNOWN") {
@@ -1235,13 +1377,13 @@ const getStatusIcon = (status: string | number) => {
   } else if (status === "OFFLINE") {
     return FailedIcon;
   }
-  
+
   return FailedIcon;
 };
 
 const getStatusText = (status: string | number) => {
   // Handle both string (endpoint status) and number (job state)
-  if (typeof status === 'number') {
+  if (typeof status === "number") {
     // Job state mapping
     switch (status) {
       case 0:
@@ -1256,12 +1398,12 @@ const getStatusText = (status: string | number) => {
         return "UNKNOWN";
     }
   }
-  
+
   // Endpoint status mapping (legacy)
   if (!props.job.isRunning || props.job.isCompleted) {
     return "OFFLINE";
   }
-  
+
   if (status === "ONLINE") {
     return "ONLINE";
   } else if (status === "UNKNOWN") {
@@ -1273,19 +1415,21 @@ const getStatusText = (status: string | number) => {
 };
 
 // Market address as a simple string
-const marketAddress = computed(() => String(props.job.market ?? '').trim());
+const marketAddress = computed(() => String(props.job.market ?? "").trim());
 
 // Market name from API (match by address)
 const marketName = computed(() => {
   const address = marketAddress.value;
   if (!address || !testgridMarkets.value?.length) return null;
-  const market = testgridMarkets.value.find((m: TestgridMarket) => String(m.address).trim() === address);
+  const market = testgridMarkets.value.find(
+    (m: TestgridMarket) => String(m.address).trim() === address,
+  );
   return market?.name ?? null;
 });
 
 const formatStartTime = (timeStart: number) => {
   const date = new Date(timeStart * 1000);
-  return date.toISOString().replace('T', ' ').substring(0, 19);
+  return date.toISOString().replace("T", " ").substring(0, 19);
 };
 
 const formatTimeAgo = (timeStart: number) => {
@@ -1322,17 +1466,17 @@ const { getStatusClass: statusClass } = useStatus();
 // Close dropdown when clicking outside
 const handleClickOutside = (event: MouseEvent) => {
   const target = event.target as HTMLElement;
-  if (!target.closest('.dropdown')) {
+  if (!target.closest(".dropdown")) {
     showActionsDropdown.value = false;
   }
 };
 
 onMounted(() => {
-  document.addEventListener('click', handleClickOutside);
+  document.addEventListener("click", handleClickOutside);
 });
 
 onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside);
+  document.removeEventListener("click", handleClickOutside);
 });
 </script>
 
@@ -1372,8 +1516,8 @@ onUnmounted(() => {
   margin-top: 0 !important;
 }
 
-.deployment-header .status-tag { 
-  white-space: nowrap; 
+.deployment-header .status-tag {
+  white-space: nowrap;
   flex-shrink: 0;
 }
 
@@ -1384,12 +1528,12 @@ onUnmounted(() => {
     align-items: stretch !important;
     flex-wrap: nowrap !important;
   }
-  
+
   .header-left-section {
     width: 100%;
     margin-bottom: 1rem;
   }
-  
+
   .deployment-tabs {
     width: 100% !important;
     justify-content: flex-start;
@@ -1398,15 +1542,15 @@ onUnmounted(() => {
     flex-wrap: wrap;
     gap: 0.5rem;
   }
-  
+
   .header-title-section {
     max-width: none;
   }
-  
+
   .header-title-section .subtitle {
     font-size: 0.75rem;
   }
-  
+
   .tab-button {
     font-size: 0.875rem;
     padding: 0.5rem 0.75rem;
@@ -1418,7 +1562,7 @@ onUnmounted(() => {
   .deployment-tabs {
     gap: 0.25rem;
   }
-  
+
   .tab-button {
     font-size: 0.75rem;
     padding: 0.375rem 0.5rem;
@@ -1432,11 +1576,6 @@ onUnmounted(() => {
 
 html.dark-mode .job-header {
   border-bottom-color: $grey-dark;
-}
-
-
-.box.is-borderless {
-  padding: 0 !important;
 }
 
 // Remove old grid styling - now using tables
@@ -1453,136 +1592,136 @@ html.dark-mode {
   .card {
     background: transparent;
   }
-  
+
   .compact-job-header {
     background: $black-ter;
   }
-  
+
   .actions-dropdown-btn {
     background: $black;
     border-color: $grey-dark;
     color: $white;
-    
+
     &:hover {
       background: $black-bis;
       border-color: $grey;
     }
   }
-  
+
   .actions-dropdown-menu {
     background: $black-ter;
     border-color: $grey-dark;
     box-shadow: $box-shadow;
   }
-  
+
   .dropdown-item {
     background: $black-ter;
     border-bottom-color: $grey-dark;
     color: $white;
-    
+
     &:hover:not(.is-disabled) {
       background: $grey-darker;
     }
-    
+
     &.is-disabled {
       opacity: 0.3;
     }
   }
-  
+
   .address-grid {
     .address-label {
       color: $text-light;
     }
-    
+
     .address-link,
     .address-value {
       color: $white;
-      
+
       &:hover {
         color: $secondary;
       }
     }
-    
+
     .address-value.has-text-grey-light {
       color: $grey;
     }
   }
-  
+
   .service-endpoints-new {
     background: $black-ter;
-    
+
     .endpoint-port {
       color: $white;
     }
-    
+
     .action-button {
       background: $black-ter;
       border-color: $grey-dark;
       color: $white;
-      
+
       &:hover {
         background: $grey-darker;
         border-color: $grey;
       }
     }
   }
-  
+
   .title-section {
     .job-main-title {
       color: $white;
     }
   }
-  
+
   .address-section {
     .address-label {
       color: #999;
     }
-    
+
     .address-link,
     .address-value {
       color: $white;
-      
+
       &:hover {
         color: $secondary;
       }
     }
-    
+
     .address-value.has-text-grey-light {
       color: $grey;
     }
   }
-  
+
   .spec-item {
     .spec-label {
       color: $text-light;
     }
-    
+
     .spec-value {
       color: $white;
-      
+
       .market-link {
         color: $white;
-        
+
         &:hover {
           color: $secondary;
         }
       }
-      
+
       .time-ago {
         color: $text-light;
       }
-      
+
       :deep(.job-price) {
         color: inherit;
       }
     }
   }
-  
+
   .spec-grid-item {
     .spec-grid-label {
       color: #999;
     }
-    
+
     .spec-grid-value {
       color: $white;
     }
@@ -1927,7 +2066,7 @@ html.dark-mode {
 
   .card-content {
     background-color: transparent;
-    
+
     :deep(.job-tabs-condensed) {
       background: $black-ter;
     }
@@ -2124,5 +2263,4 @@ html.dark-mode {
     }
   }
 }
-
 </style>

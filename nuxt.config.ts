@@ -4,8 +4,53 @@ import { nodePolyfills } from "vite-plugin-node-polyfills";
 // https://nuxt.com/docs/api/configuration/nuxt-config
 
 export default defineNuxtConfig({
+  devServer: {
+  },
   devtools: { enabled: true },
-  ssr: false,
+  routeRules: {
+    '/**': { ssr: false },
+    '/deploy/**': { ssr: true, prerender: true },
+  },
+  hooks: {
+    // prerender template routes for custom preview link
+    async 'nitro:config'(nitroConfig) {
+      const apiBase = process.env.NUXT_PUBLIC_API_BASE;
+      if (!apiBase) return;
+
+      try {
+        const res = await fetch(`${apiBase}/api/jobs/templates/grouped`);
+        if (!res.ok) return;
+
+        const data = await res.json();
+        const templates: any[] = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.data)
+            ? data.data
+            : typeof data === 'object' && data
+              ? Object.values(data).flat() as any[]
+              : [];
+
+        const routes: string[] = [];
+        for (const t of templates) {
+          if (t?.id) routes.push(`/deploy/${t.id}`);
+          if (t?.variants?.length) {
+            for (const v of t.variants) {
+              if (v?.id) routes.push(`/deploy/${v.id}`);
+              else if (v?.variant_id) routes.push(`/deploy/${t.id}-${v.variant_id}`);
+            }
+          }
+        }
+
+        nitroConfig.prerender ??= {};
+        nitroConfig.prerender.routes = [
+          ...(nitroConfig.prerender.routes ?? []),
+          ...routes,
+        ];
+      } catch (e) {
+        console.warn('[prerender] Failed to fetch templates for route generation:', e);
+      }
+    },
+  },
   css: [
     "~/assets/styles/global.scss",
     "bulma-o-steps/bulma-steps.css",
@@ -14,14 +59,36 @@ export default defineNuxtConfig({
   dir: {
     public: "static",
   },
+  app: {
+    head: {
+      title: 'Nosana Deploy',
+      htmlAttrs: {
+        lang: 'en',
+      },
+      meta: [
+        { name: 'description', content: 'Instant GPU Rental at Scale for AI & High-Performance Workloads' },
+        { property: 'og:title', content: 'Deploy AI on Nosana' },
+        { property: 'og:description', content: 'Instant GPU Rental at Scale for AI & High-Performance Workloads' },
+        { property: 'og:image', content: 'https://nosana.com/og/home.png' },
+        { property: 'og:type', content: 'website' },
+        { name: 'twitter:card', content: 'summary_large_image' },
+        { name: 'twitter:title', content: 'Deploy AI on Nosana' },
+        { name: 'twitter:description', content: 'Instant GPU Rental at Scale for AI & High-Performance Workloads' },
+        { name: 'twitter:image', content: 'https://nosana.com/og/home.png' },
+      ],
+      link: [
+        { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico', sizes: 'any' },
+      ],
+    },
+  },
   pwa: {
     manifest: {
-      name: "Nosana Dashboard",
+      name: "Nosana Deploy",
       short_name: "nosana",
       theme_color: "#10E80C",
       background_color: "#ffffff",
       display: "standalone",
-      description: "Nosana Dashboard",
+      description: "Nosana Deploy",
       icons: [
         {
           src: "icon.png",
@@ -35,7 +102,6 @@ export default defineNuxtConfig({
     "@nuxtjs/google-fonts",
     "@vueuse/nuxt",
     "@nuxtjs/color-mode",
-    "@sidebase/nuxt-auth",
     "nuxt-gtag",
     "@vite-pwa/nuxt",
   ],
@@ -59,57 +125,20 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
     public: {
+      maintenance: process.env.NUXT_PUBLIC_MAINTENANCE === "true",
       rpcUrl: process.env.RPC_URL,
-      apiBase: process.env.API_BASE,
-      oldApiBase: process.env.OLD_API_BASE || "https://backend.k8s.prd.nos.ci",
+      apiBase: process.env.NUXT_PUBLIC_API_BASE,
+      recaptcha_site_key: process.env.NUXT_PUBLIC_RECAPTCHA_SITE_KEY,
       network: process.env.NETWORK || "mainnet",
       nodeDomain: process.env.NODE_DOMAIN,
       frpServer: process.env.FRP_SERVER || "node.k8s.prd.nos.ci",
-      googleRedirectUri: process.env.GOOGLE_REDIRECT_URI,
-      googleClientId: process.env.GOOGLE_CLIENT_ID,
-      twitterClientId: process.env.TWITTER_CLIENT_ID,
-      twitterRedirectUri: process.env.TWITTER_REDIRECT_URI,
+      cookie_domain: process.env.NUXT_PUBLIC_COOKIE_DOMAIN,
+      stripe_publishable_key: process.env.NUXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
     },
   },
   gtag: {
     enabled: process.env.NODE_ENV === "production",
     id: "G-HNDP62SH8M",
-  },
-  auth: {
-    baseURL: process.env.NUXT_PUBLIC_API_BASE,
-    provider: {
-      type: "local",
-      endpoints: {
-        signIn: {
-          path: "/api/auth/login",
-          method: "post",
-          propertyName: "token",
-        },
-        getSession: { path: "/api/auth/session", method: "get" },
-        signOut: false,
-      },
-      token: {
-        type: false,
-        maxAgeInSeconds: 60 * 60 * 24 * 3, // 3 days
-      },
-      session: {
-        dataType: {
-          id: "string",
-          name: "string",
-          email: "string",
-          address: "string",
-          generatedAddress: "string",
-          providerUsername: "string",
-          type: "string",
-          created_at: "string",
-        },
-      },
-    },
-    sessionRefresh: {
-      enablePeriodically: false, // Disable automatic session refresh
-      enableOnWindowFocus: true, // Enable refresh on window focus for cross-tab sync
-    },
-    globalAppMiddleware: false,
   },
   vite: {
     esbuild: {

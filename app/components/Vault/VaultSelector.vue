@@ -32,13 +32,15 @@
 </template>
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
-import { useSDK } from "~/composables/useSDK";
+import { useKit } from "~/composables/useKit";
+import type { Vault } from "@nosana/kit";
+import type { DeploymentsApi } from "@nosana/api";
 
 const { setSelectedVault } = defineProps<{
   setSelectedVault: (vault: string | undefined) => void;
 }>();
 
-const { nosana } = useSDK();
+const { nosana } = useKit();
 
 const isLoading = ref(true);
 const options = ref<{ vault: string; balance: { NOS: number; SOL: number } }[]>(
@@ -46,29 +48,44 @@ const options = ref<{ vault: string; balance: { NOS: number; SOL: number } }[]>(
 );
 
 onMounted(async () => {
-  const vaults = await nosana.value.deployments.vaults.list();
+  try {
+    const deploymentsApi = nosana.value.api.deployments as DeploymentsApi;
+    const vaults = await deploymentsApi.vaults.list();
 
   await Promise.all(
     vaults.map(
-      ({ publicKey, getBalance }) =>
-        new Promise(async (resolve) => {
-          const balance = await getBalance();
+        (vault: Vault) =>
+          new Promise<void>(async (resolve) => {
+            try {
+              if (!vault.address || typeof vault.getBalance !== 'function') {
+                resolve();
+                return;
+              }
+
+              const balance = await vault.getBalance();
           options.value.push({
-            vault: publicKey.toString(),
+                vault: vault.address,
             balance: {
-              NOS: balance.NOS,
-              SOL: balance.SOL,
+                  NOS: balance.NOS || 0,
+                  SOL: balance.SOL || 0,
             },
           });
-          resolve(true);
+            } catch (error) {
+              console.warn('Failed to get vault balance:', error);
+            } finally {
+              resolve();
+            }
         })
     )
   );
 
-  if (options.value.length === 1) {
-    setSelectedVault(options.value[0].vault);
-  }
-
+    if (options.value.length === 1) {
+      setSelectedVault(options.value[0]?.vault);
+    }
+  } catch (error) {
+    console.error('Failed to load vaults:', error);
+  } finally {
   isLoading.value = false;
+  }
 });
 </script>

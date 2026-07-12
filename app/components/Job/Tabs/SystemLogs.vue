@@ -1,7 +1,7 @@
 <template>
   <div class="logs-tab-container">
     <div class="logs-container" ref="logsContainerRef">
-      <div class="logs-header" v-if="job.isRunning && isJobPoster && logConnectionEstablished">
+      <div class="logs-header" v-if="opIds && opIds.length > 0 && (isJobPoster || logConnectionEstablished)">
         <div class="parallel-controls">
           <div class="tabs is-toggle is-small is-rounded log-type-switcher">
             <ul>
@@ -59,7 +59,7 @@
 
     <FullscreenModal :isOpen="logModal.isOpen.value" title="Logs" @close="logModal.close">
       <div class="fullscreen-logs-wrapper">
-        <div class="logs-header">
+        <div class="logs-header" v-if="opIds && opIds.length > 0 && (isJobPoster || logConnectionEstablished)">
             <div class="tabs is-toggle is-small is-rounded log-type-switcher">
               <ul>
                 <li :class="{ 'is-active': selectedOpId === null }">

@@ -9,7 +9,7 @@
 <script setup lang="ts">
 import { computed, toRef, type PropType } from 'vue';
 import { useMarketUsdPrice } from '~/composables/useMarketPricing';
-import type { Market } from '@nosana/sdk';
+import type { Market } from '@nosana/kit';
 
 const props = defineProps({
   // Can be market address (string) OR pre-fetched market data (Market object)

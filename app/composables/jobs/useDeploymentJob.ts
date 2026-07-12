@@ -1,11 +1,12 @@
 import { EventSourcePolyfill } from "event-source-polyfill";
 import { useToast } from "vue-toastification";
-import { useWallet } from "solana-wallets-vue";
-import type { Job, JobDefinition } from "@nosana/sdk";
-import { getJobExposedServices } from "@nosana/sdk";
-import type { JobInfo, JobViewModel, LiveEndpoints, ResultsSection} from "~/composables/jobs/types";
+import { useWallet } from "@nosana/solana-vue";
+import type { Job, JobDefinition } from "@nosana/kit";
+import { getJobExposedServices } from "@nosana/kit";
+import type { DeploymentJob as ApiDeploymentJob } from "@nosana/api";
+import type { JobInfo, JobViewModel, LiveEndpoints, ResultsSection } from "~/composables/jobs/types";
 import { normalizeEndpoints } from "~/composables/jobs/normalizeEndpoints";
-import { useAuthHeader } from "~/composables/useAuthHeader";
+import { useDeploymentAuth } from "~/composables/useDeploymentAuth";
 
 const DEFAULT_NODE_ADDRESS = "11111111111111111111111111111111";
 
@@ -17,41 +18,8 @@ function getStateNumber(stateVal: string | number | undefined): number {
   return -1;
 }
 
-interface DeploymentJobApiResultOpState {
-  providerId?: string;
-  operationId: string;
-  group?: string;
-  status?: string;
-  startTime?: number;
-  endTime?: number;
-  exitCode?: number;
-  logs?: Array<{ type?: string; log?: string } | string>;
-  results?: unknown;
-}
-
-interface DeploymentJobApiResult {
-  status?: string;
-  startTime?: number;
-  endTime?: number;
-  errors?: unknown[];
-  opStates: DeploymentJobApiResultOpState[];
-  secrets?: Record<string, unknown>;
-}
-
-interface DeploymentJobApiResponse {
-  confidential?: boolean;
-  revision?: number;
-  market?: string;
-  node?: string;
-  state: string | number;
-  jobStatus?: string;
-  jobDefinition?: JobDefinition;
-  jobResult?: DeploymentJobApiResult;
-  timeStart?: number;
-  timeEnd?: number;
-  listedAt?: number;
-  project?: string;
-}
+// Use SDK type directly
+type DeploymentJobApiResponse = ApiDeploymentJob;
 
 export function useDeploymentJob(deploymentId: string, jobId: string) {
   const job = ref<JobViewModel | null>(null);
@@ -60,18 +28,20 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
   const loading = ref<boolean>(true);
 
   const toast = useToast();
-  const { nosana } = useSDK();
-  const { status, data: userData, token } = useAuth();
-  const { connected, publicKey } = useWallet();
-  const { ensureAuth } = useAuthHeader();
+  const { nosana } = useKit();
+  const { isAuthenticated: superTokensAuth, userData } = useSuperTokens();
+  const { connected, account } = useWallet();
 
-  const isCreditUser = computed(() => status.value === "authenticated" && Boolean(userData.value?.generatedAddress));
+  const isCreditUser = computed(() => superTokensAuth.value);
 
   const activeAddress = computed(() => {
-    if (status.value === "authenticated" && userData.value?.generatedAddress) return userData.value.generatedAddress as string;
-    if (connected.value && publicKey.value) return publicKey.value.toString();
+    if (superTokensAuth.value && userData.value?.generatedAddress) return userData.value.generatedAddress as string;
+    if (connected.value && account.value?.address) return account.value.address;
     return null;
   });
+
+  // Use deployment auth composable for clean, reusable auth handling
+  const { getAuthHeader } = useDeploymentAuth();
 
   let eventSource: EventSourcePolyfill | null = null;
   let currentNodeAddress: string | null = null;
@@ -79,31 +49,19 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
 
   async function fetchDeploymentJob(): Promise<DeploymentJobApiResponse | null> {
     try {
-      const dep = (await nosana.value.deployments.get(deploymentId)) as any;
+      const dep = await nosana.value.api.deployments.get(deploymentId);
       const response = await dep.getJob(jobId);
-      return response as unknown as DeploymentJobApiResponse;
+      return response as ApiDeploymentJob;
     } catch (e) {
       console.error("Failed to fetch deployment job:", e);
       return null;
     }
   }
 
-  function toResultsSection(result?: DeploymentJobApiResult): ResultsSection | null {
+  function toResultsSection(result?: ApiDeploymentJob['jobResult']): ResultsSection | null {
     if (!result) return null;
-    return {
-      status: result.status,
-      startTime: result.startTime,
-      endTime: result.endTime,
-      opStates: (result.opStates || []).map((op) => ({
-        operationId: op.operationId,
-        status: op.status ?? "",
-        startTime: op.startTime,
-        endTime: op.endTime,
-        exitCode: op.exitCode,
-        results: op.results,
-        logs: op.logs ?? [],
-      })),
-    };
+    // Use SDK types directly - no mapping needed
+    return result as ResultsSection;
   }
 
   function buildViewModel(base: DeploymentJobApiResponse): JobViewModel {
@@ -141,22 +99,22 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
         try {
           if (isCreditUser.value) {
             const config = useRuntimeConfig();
-            const resp = await $fetch<{ message: string; creditRefund?: number; delisted?: boolean }>(`${config.public.apiBase}/api/jobs/stop-with-credits`, {
+            const resp = await $fetch<{ tx: string; job: string; delisted: boolean }>(`${config.public.apiBase}/api/jobs/${jobId}/stop`, {
               method: "POST",
-              body: { jobAddress: jobId },
-              headers: { Authorization: `Bearer ${token.value}` },
+              credentials: "include",
             });
-            if (resp.creditRefund && resp.creditRefund > 0) toast.success(`Job stopped successfully! ${resp.creditRefund} credits refunded.`);
-            else toast.success("Job stopped successfully!");
+            toast.success("Job stopped successfully!");
             if (resp.delisted) setTimeout(() => navigateTo("/deploy"), 3000);
             else setTimeout(() => job.value?.refresh(), 1000);
           } else {
             if (numericState === 0) {
-              await nosana.value.jobs.delist(jobId);
+              const jobAddress = job.value.address as Parameters<typeof nosana.value.jobs.delist>[0]["job"];
+              await nosana.value.jobs.delist({ job: jobAddress });
               toast.success("Job successfully delisted (canceled) from queue!");
               setTimeout(() => navigateTo("/deploy"), 3000);
             } else if (numericState === 1) {
-              await nosana.value.jobs.end(jobId);
+              const jobAddress = job.value.address as Parameters<typeof nosana.value.jobs.end>[0]["job"];
+              await nosana.value.jobs.end({ job: jobAddress });
               toast.success("Job successfully ended!");
               setTimeout(() => job.value?.refresh(), 1000);
             } else {
@@ -197,18 +155,16 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
           const extensionSeconds = extensionHours * 3600;
           if (isCreditUser.value) {
             const config = useRuntimeConfig();
-            const resp = await $fetch<{ message: string; newTimeout?: number; creditsUsed?: number }>(`${config.public.apiBase}/api/jobs/extend-with-credits`, {
+            await $fetch<{ tx: string; job: string; credits: { creditsUsed: number } }>(`${config.public.apiBase}/api/jobs/${jobId}/extend`, {
               method: "POST",
-              body: { jobAddress: jobId, extensionSeconds },
-              headers: { Authorization: `Bearer ${token.value}` },
+              body: { seconds: extensionSeconds },
+              credentials: "include",
             });
-            if (resp.creditsUsed) {
-              const dollarAmount = (resp.creditsUsed / 1000).toFixed(2);
-              toast.success(`Job extended by ${extensionHours} hour${extensionHours !== 1 ? "s" : ""}! $${dollarAmount} used.`);
-            } else toast.success(`Job extended by ${extensionHours} hour${extensionHours !== 1 ? "s" : ""}!`);
+            toast.success(`Job extended by ${extensionHours} hour${extensionHours !== 1 ? "s" : ""}!`);
             setTimeout(() => job.value?.refresh(), 1000);
           } else {
-            await nosana.value.jobs.extend(jobId, extensionSeconds);
+            const jobAddress = job.value.address as Parameters<typeof nosana.value.jobs.extend>[0]["job"];
+            await nosana.value.jobs.extend({ job: jobAddress, timeout: extensionSeconds });
             toast.success(`Job extended by ${extensionHours} hour${extensionHours !== 1 ? "s" : ""}!`);
             setTimeout(() => job.value?.refresh(), 1000);
           }
@@ -252,14 +208,14 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
         if (jobInfo.value) {
           jobInfo.value = { ...jobInfo.value, jobDefinition: vm.jobDefinition };
         }
-      } catch {}
+      } catch { }
     }
 
 
     if (stateNum === 2 || stateNum === 3) {
       fetchFinalInfoOnce();
       if (eventSource) {
-        try { eventSource.close(); } catch {}
+        try { eventSource.close(); } catch { }
         eventSource = null;
       }
     }
@@ -272,7 +228,7 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
       const config = useRuntimeConfig();
       const nodeAddress = (job.value.node as unknown as { toString?: () => string })?.toString?.() || (job.value.node as unknown as string);
       if (!nodeAddress || nodeAddress === DEFAULT_NODE_ADDRESS) { hasFetchedFinalInfo = true; return; }
-      const authHeader = await ensureAuth({ deploymentId });
+      const authHeader = await getAuthHeader(deploymentId);
       const sseUrl = `https://${nodeAddress}.${config.public.nodeDomain}/job/${jobId}/info`;
 
       const sdkServices = job.value?.jobDefinition ? getJobExposedServices(job.value.jobDefinition, jobId) : [];
@@ -282,7 +238,7 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
       }
 
       const finalEs = new EventSourcePolyfill(sseUrl, { headers: { Authorization: authHeader } });
-      const closeFinal = () => { try { (finalEs as unknown as EventSource).close?.(); } catch {} hasFetchedFinalInfo = true; };
+      const closeFinal = () => { try { (finalEs as unknown as EventSource).close?.(); } catch { } hasFetchedFinalInfo = true; };
 
       const handleOnce = (event: MessageEvent) => {
         try {
@@ -308,12 +264,12 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
               ? sseResults.opStates.some((op) => (op as { results?: unknown }).results !== undefined)
               : false;
           }
-        } catch {}
+        } catch { }
         closeFinal();
       };
 
-      try { (finalEs as unknown as EventSource).addEventListener?.("message", handleOnce as EventListener); } catch {}
-      try { (finalEs as unknown as EventSource).addEventListener?.("flow:updated", handleOnce as EventListener); } catch {}
+      try { (finalEs as unknown as EventSource).addEventListener?.("message", handleOnce as EventListener); } catch { }
+      try { (finalEs as unknown as EventSource).addEventListener?.("flow:updated", handleOnce as EventListener); } catch { }
       finalEs.onerror = () => { closeFinal(); };
       setTimeout(() => { closeFinal(); }, 2500);
     } catch {
@@ -331,13 +287,13 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
     }
     if (eventSource && currentNodeAddress === nodeAddress) return;
     if (eventSource) {
-      try { eventSource.close(); } catch {}
+      try { eventSource.close(); } catch { }
       eventSource = null;
     }
     currentNodeAddress = nodeAddress;
     (async () => {
       try {
-        const authHeader = await ensureAuth({ deploymentId });
+        const authHeader = await getAuthHeader(deploymentId);
         const sseUrl = `https://${nodeAddress}.${config.public.nodeDomain}/job/${jobId}/info`;
         eventSource = new EventSourcePolyfill(sseUrl, { headers: { Authorization: authHeader } });
 
@@ -358,7 +314,7 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
             if (!job.value?.jobDefinition && info.jobDefinition) {
               try {
                 job.value = { ...(job.value as JobViewModel), jobDefinition: info.jobDefinition };
-              } catch {}
+              } catch { }
             }
 
             const normalized = normalizeEndpoints(info, jobId, metaByPort);
@@ -387,8 +343,8 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
           }
         };
 
-        try { (eventSource as unknown as EventSource).addEventListener?.("message", handleInfo as EventListener); } catch {}
-        try { (eventSource as unknown as EventSource).addEventListener?.("flow:updated", handleInfo as EventListener); } catch {}
+        try { (eventSource as unknown as EventSource).addEventListener?.("message", handleInfo as EventListener); } catch { }
+        try { (eventSource as unknown as EventSource).addEventListener?.("flow:updated", handleInfo as EventListener); } catch { }
 
         eventSource.onerror = () => {
           loading.value = false;
@@ -417,7 +373,7 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
   }
 
   onMounted(() => { init(); });
-  onBeforeUnmount(() => { if (eventSource) { try { eventSource.close(); } catch {} eventSource = null; } });
+  onBeforeUnmount(() => { if (eventSource) { try { eventSource.close(); } catch { } eventSource = null; } });
 
   return {
     job,

@@ -53,7 +53,7 @@
 </template>
 
 <script setup lang="ts">
-import { type Market } from '@nosana/sdk';
+import { type Market } from '@nosana/kit';
 import { useAPI } from "~/composables/useAPI";
 import NvidiaIcon from '@/assets/img/icons/nvidia.svg?component';
 import CurrentMarketPrice from "~/components/Market/CurrentPrice.vue";

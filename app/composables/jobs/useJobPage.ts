@@ -1,12 +1,12 @@
-import { useWallet } from "solana-wallets-vue";
+import { useWallet } from "@nosana/solana-vue";
 
 import { useJob } from "./useJob";
 import { useNosPrice } from "./useNosPrice";
 import { useModal } from "./useModal";
 
 export function useJobPage(id: string) {
-  const { connected, publicKey } = useWallet();
-  const { status, data: userData } = useAuth();
+  const { connected, account } = useWallet();
+  const { isAuthenticated: superTokensAuth, userData } = useSuperTokens();
 
   const { job, endpoints, loading, jobInfo } = useJob(id);
   const modal = useModal();
@@ -14,11 +14,11 @@ export function useJobPage(id: string) {
 
   // Get the active address - either generated address (for credit users) or wallet address
   const activeAddress = computed(() => {
-    if (status.value === 'authenticated' && userData.value?.generatedAddress) {
+    if (superTokensAuth.value && userData.value?.generatedAddress) {
       return userData.value.generatedAddress;
     }
-    if (connected.value && publicKey.value) {
-      return publicKey.value.toString();
+    if (connected.value && account.value?.address) {
+      return account.value.address;
     }
     return null;
   });

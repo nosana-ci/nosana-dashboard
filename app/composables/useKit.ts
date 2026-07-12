@@ -1,0 +1,176 @@
+import {
+  createNosanaClient,
+  type NosanaClient,
+  NosanaNetwork,
+  type AuthorizationStore,
+  type GenerateOptions,
+  type Wallet,
+  type PartialClientConfig,
+} from "@nosana/kit";
+import {
+  useWalletAccountPartialSigner,
+  useWalletAccountModifyingSigner,
+  useWallet,
+} from "@nosana/solana-vue";
+import { computed, ref, watch, type Ref } from "vue";
+import { useCookies } from "@vueuse/integrations/useCookies";
+import type { CookieSetOptions } from "universal-cookie";
+import { createAuthCookiesKey } from "~/utils/createAuthCookiesKey";
+import { buildNosanaApiConfig } from "~/utils/buildNosanaApiConfig";
+import { useSuperTokens } from "~/composables/useSuperTokens";
+
+const config = useRuntimeConfig();
+
+const prioFee = useLocalStorage("prio-fee", {
+  strategy: "medium",
+  staticFee: 100000,
+  dynamicPriorityFee: true,
+  maxPriorityFee: 15000000,
+});
+
+const AUTH_COOKIE_MAX_AGE_SECONDS = 1200; // 20 minutes
+
+const cookieOptions: CookieSetOptions = {
+  maxAge: AUTH_COOKIE_MAX_AGE_SECONDS,
+  sameSite: "strict",
+  path: "/",
+  secure: typeof location !== "undefined" && location.protocol === "https:",
+};
+
+const network =
+  config.public.network === "devnet"
+    ? NosanaNetwork.DEVNET
+    : NosanaNetwork.MAINNET;
+
+const currentChain =
+  config.public.network === "devnet" ? "solana:devnet" : "solana:mainnet";
+
+export function useKit() {
+  const { isAuthenticated } = useSuperTokens();
+
+  // Use useWallet from @nosana/solana-vue (re-exported from wallet-standard-vue)
+  const { account, connected: walletConnected } = useWallet();
+
+  // Support for manual API key if needed
+  const creditAuthToken = ref<string | null>(null);
+
+  // retrieve Wallet from UiWalletAccount.
+  // We combine both signers so that:
+  // - modifyAndSignTransactions is available for topup (Phantom modifies the tx)
+  // - signTransactions is available for vault withdraw (isTransactionPartialSigner check)
+  const modifyingSigner = useWalletAccountModifyingSigner(
+    account,
+    currentChain,
+  );
+  const partialSigner = useWalletAccountPartialSigner(account, currentChain);
+  const wallet: ComputedRef<Wallet | null> = computed(() => {
+    const m = modifyingSigner.value;
+    const p = partialSigner.value;
+    if (!m || !p) return null;
+    return { ...m, ...p, address: m.address };
+  });
+
+  const connected = computed(
+    () => walletConnected.value && account.value !== null,
+  );
+
+  const nosana = ref<NosanaClient>(createNosanaClient(network));
+
+  const createAuthorizationStore = ():
+    | AuthorizationStore["actions"]
+    | undefined => {
+    if (!account.value?.address || process.server) {
+      return undefined;
+    }
+
+    const cookies = useCookies();
+
+    return {
+      get: (
+        identifier: string,
+        options: Omit<GenerateOptions, "store">,
+      ): Promise<string | undefined> | string | undefined => {
+        const value = cookies.get(createAuthCookiesKey(identifier));
+        return value || undefined;
+      },
+      set: (
+        identifier: string,
+        options: Omit<GenerateOptions, "store">,
+        value: string | undefined,
+      ): void => {
+        const cookieKey = createAuthCookiesKey(identifier);
+        if (value) {
+          cookies.set(cookieKey, value, cookieOptions);
+        } else {
+          cookies.remove(cookieKey);
+        }
+      },
+    };
+  };
+
+  watch(
+    [creditAuthToken, wallet, account, isAuthenticated],
+    ([apiKey, walletAdapter]) => {
+      const apiBase = config.public.apiBase as string | undefined;
+      const rpcUrl = config.public.rpcUrl as string | undefined;
+      const shouldUseWalletAuth =
+        !apiKey && !isAuthenticated.value && Boolean(account.value?.address);
+      const store =
+        shouldUseWalletAuth
+          ? createAuthorizationStore()
+          : undefined;
+
+      const clientConfig: PartialClientConfig = {};
+      const apiConfig = buildNosanaApiConfig({
+        apiBase,
+        apiKey,
+        includeCredentials: isAuthenticated.value,
+      });
+
+      if (apiConfig) {
+        clientConfig.api = apiConfig;
+      }
+
+      if (store) {
+        clientConfig.authorization = { store };
+      }
+
+      if (rpcUrl) {
+        clientConfig.solana = { rpcEndpoint: rpcUrl };
+      }
+
+      if (shouldUseWalletAuth && walletAdapter) {
+        clientConfig.wallet = walletAdapter;
+      }
+
+      const client = createNosanaClient(network, clientConfig);
+
+      // Set wallet directly on client to ensure reactive updates
+      if (shouldUseWalletAuth && walletAdapter) {
+        client.wallet = walletAdapter;
+      }
+
+      nosana.value = client;
+    },
+    { immediate: true },
+  );
+
+  const publicKey = computed(() => {
+    if (account.value?.address) {
+      return {
+        toString: () => account.value!.address,
+        toBase58: () => account.value!.address,
+      };
+    }
+    return null;
+  });
+
+  return {
+    nosana: computed(() => nosana.value),
+    publicKey,
+    connected,
+    wallet,
+    prioFee,
+    creditAuthToken,
+  };
+}

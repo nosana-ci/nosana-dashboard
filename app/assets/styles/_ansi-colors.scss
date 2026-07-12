@@ -1,0 +1,56 @@
+// Shared ANSI terminal color classes for log viewers.
+// Use with :deep() in scoped components that render ANSI-colored HTML.
+
+@mixin ansi-colors {
+  .ansi-black-fg { color: #484f58; }
+  .ansi-red-fg { color: inherit; }
+  .ansi-green-fg { color: #4ade80; }
+  .ansi-yellow-fg { color: #ffdd4a; }
+  .ansi-blue-fg { color: #2f9fff; }
+  .ansi-magenta-fg { color: #ff44ff; }
+  .ansi-cyan-fg { color: #00ffff; }
+  .ansi-white-fg { color: #ffffff; }
+  .ansi-bright-black-fg { color: #6e7681; }
+  .ansi-bright-red-fg { color: inherit; }
+  .ansi-bright-green-fg { color: #4dffb5; }
+  .ansi-bright-yellow-fg { color: #ffe66d; }
+  .ansi-bright-blue-fg { color: #5cb3ff; }
+  .ansi-bright-magenta-fg { color: #ff77ff; }
+  .ansi-bright-cyan-fg { color: #60ffff; }
+  .ansi-bright-white-fg { color: #ffffff; }
+  .ansi-bold { font-weight: bold; }
+  .timestamp { color: #6e7681; }
+  .download-status { color: #4ade80; font-weight: 500; }
+}
+
+@mixin log-progress-bars {
+  .progress-bar-container {
+    background: rgba(110, 118, 129, 0.1);
+    padding: 0.75rem;
+    border-radius: 4px;
+    margin-top: 0.5rem;
+  }
+
+  .progress-text {
+    margin-bottom: 0.5rem;
+    font-size: 0.8rem;
+
+    &.is-primary { color: #00d1b2; }
+    &.is-info { color: #3e8ed0; }
+    &.is-warning { color: #ffe08a; }
+    &.is-success { color: #48c78e; }
+  }
+
+  .progress {
+    height: 0.5rem;
+
+    &.is-primary::-webkit-progress-value { background-color: #00d1b2; }
+    &.is-primary::-moz-progress-bar { background-color: #00d1b2; }
+    &.is-info::-webkit-progress-value { background-color: #3e8ed0; }
+    &.is-info::-moz-progress-bar { background-color: #3e8ed0; }
+    &.is-warning::-webkit-progress-value { background-color: #ffe08a; }
+    &.is-warning::-moz-progress-bar { background-color: #ffe08a; }
+    &.is-success::-webkit-progress-value { background-color: #48c78e; }
+    &.is-success::-moz-progress-bar { background-color: #48c78e; }
+  }
+}

@@ -1,5 +1,5 @@
 <template>
-  <div :class="{ 'min-height-container': loadingJobs || loadingNodeJobs }">
+  <div :class="{ 'min-height-container': loadingJobs }">
     <div class="table-container">
       <table class="table is-fullwidth is-striped is-hoverable">
         <thead>
@@ -14,56 +14,54 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-if="loadingJobs || loadingNodeJobs">
+          <tr v-if="loadingJobs">
             <td colspan="7" class="has-text-centered py-6">
-              Loading deployments...
+              Loading jobs...
             </td>
           </tr>
           <tr v-else-if="displayedJobs.length === 0">
-            <td colspan="7" class="has-text-centered">No deployments found</td>
+            <td colspan="7" class="has-text-centered">No jobs found</td>
           </tr>
           <template v-else>
             <tr
               v-for="job in displayedJobs"
               :key="job.address"
               class="clickable-row"
+              @click="openJob($event, job.address)"
             >
               <td>
                 <NuxtLink
                   :to="`/jobs/${job.address}`"
-                  class="clickable-row-link"
+                  class="clickable-row-link clickable-row-cell-content is-flex is-align-items-center"
                 >
-                  <div
-                    class="clickable-row-cell-content is-flex is-align-items-center"
+                  <NvidiaIcon
+                    alt="Nvidia"
+                    class="mr-2"
+                    style="width: 20px; height: 20px"
+                  />
+                  <span
+                    v-if="
+                      testgridMarkets &&
+                      testgridMarkets.find(
+                        (tgm: any) => tgm.address === job.market.toString()
+                      )
+                    "
                   >
-                    <NvidiaIcon
-                      alt="Nvidia"
-                      class="mr-2"
-                      style="width: 20px; height: 20px"
-                    />
-                    <span
-                      v-if="
-                        testgridMarkets &&
-                        testgridMarkets.find(
-                          (tgm: any) => tgm.address === job.market.toString()
-                        )
-                      "
-                    >
-                      {{
-                        testgridMarkets.find(
-                          (tgm: any) => tgm.address === job.market.toString()
-                        ).name
-                      }}
-                    </span>
-                    <span v-else class="is-family-monospace">{{
-                      job.market.toString()
-                    }}</span>
-                  </div>
+                    {{
+                      testgridMarkets.find(
+                        (tgm: any) => tgm.address === job.market.toString()
+                      ).name
+                    }}
+                  </span>
+                  <span v-else class="is-family-monospace">{{
+                    job.market.toString()
+                  }}</span>
                 </NuxtLink>
               </td>
               <td>
-                <div
-                  class="clickable-row-cell-content is-flex is-align-items-center"
+                <NuxtLink
+                  :to="`/jobs/${job.address}`"
+                  class="clickable-row-link clickable-row-cell-content is-flex is-align-items-center"
                 >
                   <template v-if="getTemplateForJob(job)">
                     <div class="template-icon mr-2">
@@ -98,37 +96,52 @@
                       getJobImage(job)
                     }}</span>
                   </template>
-                </div>
+                </NuxtLink>
               </td>
               <td>
-                <span class="clickable-row-cell-content">
-                  <span v-if="nodeSpecs[job.node]">{{
-                    formatCountry(nodeSpecs[job.node].country)
+                <NuxtLink
+                  :to="`/jobs/${job.address}`"
+                  class="clickable-row-link clickable-row-cell-content"
+                >
+                  <span v-if="nodeCountries[job.node]">{{
+                    formatCountry(nodeCountries[job.node])
                   }}</span>
                   <span v-else>-</span>
-                </span>
+                </NuxtLink>
               </td>
               <td>
-                <span class="clickable-row-cell-content">
+                <NuxtLink
+                  :to="`/jobs/${job.address}`"
+                  class="clickable-row-link clickable-row-cell-content"
+                >
                   <span v-if="job.timeStart">{{
                     formatTimeAgo(job.timeStart)
                   }}</span>
                   <span v-else>-</span>
-                </span>
+                </NuxtLink>
               </td>
               <td class="is-hidden-mobile">
-                <span class="clickable-row-cell-content">
-                  <span v-if="job.timeStart && job.timeEnd">
+                <NuxtLink
+                  :to="`/jobs/${job.address}`"
+                  class="clickable-row-link clickable-row-cell-content"
+                >
+                  <span v-if="job.timeStart && job.timeEnd" class="duration-cell">
                     <SecondsFormatter
                       :seconds="job.timeEnd - job.timeStart"
-                      :showSeconds="true"
+                      :showSeconds="false"
                     />
+                    <span v-if="job.timeout" class="max-duration">
+                      (Max <SecondsFormatter :seconds="job.timeout" :showSeconds="false" />)
+                    </span>
                   </span>
                   <span v-else>-</span>
-                </span>
+                </NuxtLink>
               </td>
               <td class="is-hidden-touch">
-                <span class="clickable-row-cell-content">
+                <NuxtLink
+                  :to="`/jobs/${job.address}`"
+                  class="clickable-row-link clickable-row-cell-content"
+                >
                   <JobPrice
                     :job="job"
                     :options="{
@@ -137,10 +150,13 @@
                     }"
                     :marketsData="testgridMarkets"
                   />
-                </span>
+                </NuxtLink>
               </td>
               <td>
-                <div class="clickable-row-cell-content">
+                <NuxtLink
+                  :to="`/jobs/${job.address}`"
+                  class="clickable-row-link clickable-row-cell-content"
+                >
                   <div
                     class="tag is-outlined status-tag"
                     :class="{
@@ -157,7 +173,7 @@
                     />
                     <span>{{ getStatusText(job.state) }}</span>
                   </div>
-                </div>
+                </NuxtLink>
               </td>
             </tr>
           </template>
@@ -177,7 +193,7 @@
 
 <script setup lang="ts">
 import { useRouter } from "vue-router";
-import { useWallet } from "solana-wallets-vue";
+import { useWallet } from "@nosana/solana-vue";
 import NvidiaIcon from "@/assets/img/icons/nvidia.svg?component";
 import GithubIcon from "@/assets/img/icons/github.svg?component";
 import PlusSymbolIcon from "@/assets/img/icons/plus_symbol.svg?component";
@@ -194,16 +210,25 @@ import { computed, type PropType } from "vue";
 import { useStatus } from "~/composables/useStatus";
 
 const router = useRouter();
-const { publicKey: walletPublicKey } = useWallet();
+
+// Navigate on plain row clicks, but let the browser handle the real <a> links
+// for modifier/middle clicks so jobs can be opened in a new tab/window.
+const openJob = (event: MouseEvent, address: string) => {
+  if (event.metaKey || event.ctrlKey || event.shiftKey) return;
+  if ((event.target as Element)?.closest("a")) return;
+  router.push(`/jobs/${address}`);
+};
+
+const { account: walletAccount } = useWallet();
 const { templates } = useTemplates();
-const { status, data: userData } = useAuth();
+const { isAuthenticated, userData } = useSuperTokens();
 
 const activeAddress = computed(() => {
-  if (status.value === "authenticated" && userData.value?.generatedAddress) {
+  if (isAuthenticated.value && userData.value?.generatedAddress) {
     return userData.value.generatedAddress;
   }
-  if (walletPublicKey.value) {
-    return walletPublicKey.value.toString();
+  if (walletAccount.value?.address) {
+    return walletAccount.value.address;
   }
   return null;
 });
@@ -212,12 +237,6 @@ const props = defineProps({
   itemsPerPage: {
     type: Number,
     default: 10,
-  },
-  jobType: {
-    type: String,
-    default: "combined", // 'posted', 'node', or 'combined'
-    validator: (value: string) =>
-      ["posted", "node", "combined"].includes(value),
   },
   statusFilter: {
     type: [String, null] as PropType<string | null>,
@@ -231,8 +250,9 @@ const currentPage = ref(1);
 
 // Convert string status filter to number for backwards compatibility
 const currentState = computed(() => {
-  if (props.statusFilter === null) return null;
-  return parseInt(props.statusFilter) || null;
+  if (props.statusFilter === null || props.statusFilter === undefined) return null;
+  const parsed = parseInt(props.statusFilter);
+  return isNaN(parsed) ? null : parsed;
 });
 
 const jobStateMapping: Record<number, string> = {
@@ -242,18 +262,26 @@ const jobStateMapping: Record<number, string> = {
   3: "STOPPED",
 };
 
+// Check if search is active
+const hasSearchQuery = computed(() => {
+  const searchQuery = router.currentRoute.value.query.search?.toString();
+  return searchQuery && searchQuery.trim().length > 0;
+});
+
 // URL for posted jobs
 const postedJobsUrl = computed(() => {
   const address = activeAddress.value;
   if (!address) return "";
-  return `/api/jobs?limit=${props.itemsPerPage}&offset=${(currentPage.value - 1) * props.itemsPerPage}${currentState.value !== null ? `&state=${jobStateMapping[currentState.value as keyof typeof jobStateMapping]}` : ""}&poster=${address}`;
-});
 
-// URL for node jobs
-const nodeJobsUrl = computed(() => {
-  const address = activeAddress.value;
-  if (!address) return "";
-  return `/api/jobs?limit=${props.itemsPerPage}&offset=${(currentPage.value - 1) * props.itemsPerPage}${currentState.value !== null ? `&state=${jobStateMapping[currentState.value as keyof typeof jobStateMapping]}` : ""}&node=${address}`;
+  let url = `/api/jobs?${currentState.value != null ? `&state=${jobStateMapping[currentState.value as keyof typeof jobStateMapping]}` : ""}&poster=${address}`;
+
+  // If searching, fetch all jobs without pagination
+  if (hasSearchQuery.value) {
+    return url;
+  }
+
+  // Otherwise, use pagination
+  return `${url}&limit=${props.itemsPerPage}&offset=${(currentPage.value - 1) * props.itemsPerPage}`;
 });
 
 // Fetch jobs API calls
@@ -270,52 +298,67 @@ const {
   }
 );
 
-const {
-  data: nodeJobs,
-  pending: loadingNodeJobs,
-  refresh: refreshNodeJobs,
-} = useAPI(() => (activeAddress.value ? nodeJobsUrl.value : ""), {
-  default: () => ({ jobs: [], totalJobs: 0 }),
+// Get posted jobs
+const postedJobsList = computed(() => {
+  return postedJobs.value?.jobs || [];
 });
 
-// Combine jobs and remove duplicates
-const combinedJobs = computed(() => {
-  switch (props.jobType) {
-    case "posted":
-      return postedJobs.value?.jobs || [];
-    case "node":
-      return nodeJobs.value?.jobs || [];
-    case "combined":
-    default:
-      const allJobs = [
-        ...(postedJobs.value?.jobs || []),
-        ...(nodeJobs.value?.jobs || []),
-      ];
-      return allJobs.filter(
-        (job, index, self) =>
-          index === self.findIndex((j) => j.address === job.address)
-      );
+// Apply search filter
+const filteredJobs = computed(() => {
+  let filtered = postedJobsList.value;
+
+  // Apply status filter
+  if (currentState.value !== null) {
+    filtered = filtered.filter((job) => job.state === currentState.value);
   }
+
+  // Apply search filter
+  const searchQuery = router.currentRoute.value.query.search?.toString() as
+    | string
+    | undefined;
+  if (searchQuery) {
+    const query = searchQuery.toLowerCase();
+    filtered = filtered.filter((job) => {
+      const jobAddress = job.address.toLowerCase();
+      const jobImage = getJobImage(job).toLowerCase();
+      const templateName = getTemplateForJob(job)?.name?.toLowerCase() || "";
+      const marketName = testgridMarkets.value?.find(
+        (m: any) => m.address === job.market.toString()
+      )?.name?.toLowerCase() || "";
+
+      return (
+        jobAddress.includes(query) ||
+        jobImage.includes(query) ||
+        templateName.includes(query) ||
+        marketName.includes(query)
+      );
+    });
+  }
+
+  return filtered;
 });
 
 // Create a new computed property for the jobs actually displayed in the table
 const displayedJobs = computed(() => {
-  // Take the combined & deduplicated jobs and apply the itemsPerPage limit
-  return combinedJobs.value.slice(0, props.itemsPerPage);
+  // If searching, apply client-side pagination to filtered results
+  if (hasSearchQuery.value) {
+    const start = (currentPage.value - 1) * props.itemsPerPage;
+    const end = start + props.itemsPerPage;
+    return filteredJobs.value.slice(start, end);
+  }
+
+  // If not searching, API already provides paginated results
+  return filteredJobs.value;
 });
 
 const totalJobs = computed(() => {
-  switch (props.jobType) {
-    case "posted":
-      return postedJobs.value?.totalJobs || 0;
-    case "node":
-      return nodeJobs.value?.totalJobs || 0;
-    case "combined":
-    default:
-      const postedTotal = postedJobs.value?.totalJobs || 0;
-      const nodeTotal = nodeJobs.value?.totalJobs || 0;
-      return Math.max(postedTotal, nodeTotal);
+  // If searching, use the filtered results count
+  if (hasSearchQuery.value) {
+    return filteredJobs.value.length;
   }
+
+  // Otherwise, use API totals for posted jobs
+  return postedJobs.value?.totalJobs || 0;
 });
 
 // Emit total jobs count when it changes
@@ -364,8 +407,8 @@ const getStatusIconComponent = (state: number) => {
   }
 };
 
-// Store node specifications
-const nodeSpecs = ref<Record<string, any>>({});
+// Store node countries for the list view.
+const nodeCountries = ref<Record<string, string>>({});
 
 // Helper function to format country code to full name
 const formatCountry = (countryCode: string) => {
@@ -380,45 +423,45 @@ const formatCountry = (countryCode: string) => {
   }
 };
 
-// Helper function to fetch node specs
-const fetchNodeSpecs = async (nodeAddress: string) => {
+// Helper function to fetch the country shown in the list.
+const fetchNodeCountry = async (nodeAddress: string) => {
   if (!nodeAddress || nodeAddress === "11111111111111111111111111111111")
     return null;
 
   try {
-    const { data } = await useAPI(`/api/nodes/${nodeAddress}/specs`);
+    const { data } = await useAPI(`/api/nodes/${nodeAddress}/metrics`);
     if (data.value) {
-      return data.value;
+      return data.value?.metrics?.network?.country ?? data.value?.metrics?.country ?? null;
     }
     return null;
   } catch (error) {
-    console.error(`Error fetching specs for node ${nodeAddress}:`, error);
+    console.error(`Error fetching country for node ${nodeAddress}:`, error);
     return null;
   }
 };
 
-// Watch for changes in combined jobs to fetch node specs
+// Watch for changes in posted jobs to fetch node specs
 watch(
-  [combinedJobs, currentPage],
+  [postedJobsList, currentPage],
   async ([jobs]) => {
     if (!jobs) return;
 
-    // Get unique node addresses that we haven't fetched yet
+    // Get unique node addresses that we haven't fetched yet.
     const nodeAddresses = [...new Set(jobs.map((job) => job.node))].filter(
       (address) =>
-        !nodeSpecs.value[address as string] &&
+        !nodeCountries.value[address as string] &&
         address !== "11111111111111111111111111111111"
     );
 
-    // Fetch specs for each node in parallel
-    const specsPromises = nodeAddresses.map(async (nodeAddress) => {
-      const specs = await fetchNodeSpecs(nodeAddress as string);
-      if (specs) {
-        nodeSpecs.value[nodeAddress as string] = specs;
+    // Fetch countries for each node in parallel.
+    const countryPromises = nodeAddresses.map(async (nodeAddress) => {
+      const country = await fetchNodeCountry(nodeAddress as string);
+      if (country) {
+        nodeCountries.value[nodeAddress as string] = country;
       }
     });
 
-    await Promise.all(specsPromises);
+    await Promise.all(countryPromises);
   },
   { immediate: true }
 );
@@ -432,7 +475,19 @@ watch(
 
     // Refresh the data
     refreshPostedJobs();
-    refreshNodeJobs();
+  },
+  { immediate: false }
+);
+
+// Add watcher for search query changes
+watch(
+  () => router.currentRoute.value.query.search,
+  () => {
+    // Reset to first page when search changes
+    currentPage.value = 1;
+
+    // Refresh the data (will fetch all jobs if searching)
+    refreshPostedJobs();
   },
   { immediate: false }
 );
@@ -441,9 +496,22 @@ watch(
 watch(
   () => currentPage.value,
   () => {
-    // Refresh the data when page changes
+    // Only refresh data when not searching (API pagination)
+    // When searching, we use client-side pagination so no refresh needed
+    if (!hasSearchQuery.value) {
+      refreshPostedJobs();
+    }
+  },
+  { immediate: false }
+);
+
+// Add watcher for items per page changes
+watch(
+  () => props.itemsPerPage,
+  () => {
+    // Reset to first page and refresh data when items per page changes
+    currentPage.value = 1;
     refreshPostedJobs();
-    refreshNodeJobs();
   },
   { immediate: false }
 );
@@ -563,6 +631,18 @@ const isGHCR = (image: string) => {
     brightness(97%) contrast(91%);
 }
 
+.duration-cell {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35em;
+}
+
+.max-duration {
+  font-size: 0.85em;
+  color: #7a7a7a;
+  white-space: nowrap;
+}
+
 .dark-mode img[src*="github.svg"] {
   filter: invert(1);
 }
@@ -596,8 +676,4 @@ const isGHCR = (image: string) => {
   min-height: 430px;
 }
 
-/* Fix for option key type error */
-select option {
-  value: any;
-}
 </style>

@@ -1,4 +1,36 @@
-import type { Job, JobDefinition } from "@nosana/sdk";
+import type { Job, JobDefinition } from "@nosana/kit";
+import type { DeploymentJob } from "@nosana/api";
+
+export interface TaskStat {
+  opId: string;
+  timestamp: number;
+  cpu: { cpu_percent: number };
+  memory: {
+    memory_usage: number;
+    memory_limit: number;
+    memory_percent: number;
+  };
+  disk: { read: number; write: number };
+  network: { received: number; sent: number };
+}
+
+export interface Point {
+  x: number;
+  y: number;
+}
+
+export interface Series {
+  label: string;
+  group: string;
+  points: Point[];
+  dashed?: boolean;
+}
+
+export const CPU_TIERS = [1, 5, 10, 25, 50, 100];
+export const STATS_INTERVALS = [5, 10, 30, 60, 300, 1800] as const;
+export type StatsInterval = (typeof STATS_INTERVALS)[number];
+
+export const MAX_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 export type EndpointStatus = "ONLINE" | "OFFLINE" | "UNKNOWN";
 
@@ -14,15 +46,8 @@ export interface EndpointsSection {
   urls: Record<string, EndpointInfo>;
 }
 
-export interface OpState {
-  operationId: string;
-  status: string;
-  startTime?: number;
-  endTime?: number;
-  exitCode?: number;
-  results?: unknown;
-  logs?: Array<{ log?: string; type?: string } | string> | any[];
-}
+// Use SDK types directly from API response (DeploymentJob is from @nosana/api SDK)
+export type OpState = NonNullable<DeploymentJob['jobResult']>['opStates'][number];
 
 export interface OperationsInfo {
   all?: Record<string, string>;
@@ -31,12 +56,8 @@ export interface OperationsInfo {
   opStates: OpState[];
 }
 
-export interface ResultsSection {
-  status?: string;
-  startTime?: number;
-  endTime?: number;
-  opStates: OpState[];
-}
+// Use SDK types directly from API response (DeploymentJob is from @nosana/api SDK)
+export type ResultsSection = NonNullable<DeploymentJob['jobResult']>;
 
 export interface JobInfo {
   jobId: string;

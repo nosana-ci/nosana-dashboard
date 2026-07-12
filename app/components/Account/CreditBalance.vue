@@ -1,206 +1,160 @@
 <template>
-  <div v-if="token" class="box has-text-centered equal-height-box">
-    <p class="heading">Credit Balance</p>
-    <p class="title is-4 mb-1" v-if="!loading">
-      ${{ creditBalance.toFixed(2) }}
-    </p>
-    <p class="title is-4 mb-1" v-else>-</p>
-    <p class="has-text-grey is-size-7" v-if="!loading && reservedCredits > 0">
-      (${{ reservedCredits.toFixed(2) }} reserved in running/queued jobs)
-    </p>
-    <div class="buttons is-centered mt-3">
-      <button
-        class="button is-dark"
-        @click="showClaimModal = true"
-        :disabled="loading"
-      >
-        <span>Claim Credit Code</span>
-      </button>
-    </div>
-  </div>
-
-  <!-- Credit Code Claim Modal -->
-  <div class="modal" :class="{ 'is-active': showClaimModal }">
-    <div class="modal-background" @click="closeClaimModal"></div>
-    <div class="modal-content" style="max-width: 400px; width: 100%">
-      <div class="box">
-        <h3 class="title is-4 mb-4">Claim Credit Code</h3>
-        <div class="field">
-          <label class="label">Credit Code</label>
-          <div class="control">
-            <input
-              class="input"
-              type="text"
-              placeholder="Enter your credit code"
-              v-model="claimCode"
-              :disabled="claiming"
-            />
-          </div>
+  <div class="credit-balance-root">
+    <div v-if="isAuthenticated" class="credit-balance-content">
+      <div class="credit-balance-header">
+        <div class="wallet-badge">
+          <WalletIcon />
         </div>
-        <div class="field is-grouped">
-          <div class="control">
-            <button
-              class="button is-dark"
-              @click="claimCreditCode"
-              :disabled="!claimCode.trim() || claiming"
-              :class="{ 'is-loading': claiming }"
-            >
-              <span>Claim Credits</span>
-            </button>
-          </div>
-          <div class="control">
-            <button
-              class="button"
-              @click="closeClaimModal"
-              :disabled="claiming"
-            >
-              Cancel
-            </button>
+        <div class="credit-balance-body">
+          <div class="credit-balance-text">
+            <p class="title is-6 mb-1 mt-2 credit-balance-label">Credit balance</p>
+            <p class="title is-3 mb-0 credit-balance-amount" v-if="!loading">
+              ${{ creditBalance.toFixed(2) }}
+            </p>
+            <p class="title is-3 mb-0 credit-balance-amount" v-else>-</p>
           </div>
         </div>
       </div>
+      <p
+        class="has-text-grey is-size-7 mt-2 mb-0 credit-balance-reserved"
+        v-if="!loading && reservedCredits > 0"
+      >
+        (${{ reservedCredits.toFixed(2) }} reserved in running/queued jobs)
+      </p>
+      <div class="buttons is-centered mt-5 mb-0">
+        <button
+          type="button"
+          class="button is-primary"
+          :class="{ 'is-loading': loading }"
+          :disabled="loading"
+          @click="openBuyCreditsModal"
+        >
+          Buy Credits
+        </button>
+        <button
+          class="button is-primary is-outlined"
+          @click="showClaimModal = true"
+          :disabled="loading"
+        >
+          <span class="icon claim-tag-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+              <line x1="7" y1="7" x2="7.01" y2="7" />
+            </svg>
+          </span>
+          <span>Claim code</span>
+        </button>
+      </div>
     </div>
+
+    <AccountClaimModal
+      v-model="showClaimModal"
+      type="manual"
+      @claimed="fetchBalance"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from "vue";
-import { useToast } from "vue-toastification";
-import { trackEvent } from "~/utils/analytics";
+import { onMounted, watch } from "vue";
+import AccountClaimModal from "./ClaimModal.vue";
+import WalletIcon from "@/assets/img/icons/wallet.svg?component";
 
-const config = useRuntimeConfig().public;
-const { status, token, data: userData } = useAuth();
-const { nosana } = useSDK();
-const toast = useToast();
+const { isAuthenticated, isLoading } = useSuperTokens();
+const { openBuyCreditsModal } = useBuyCreditsModal();
+const { onCreditRefresh } = useCreditRefresh();
 
-// State
-const creditBalance = ref(0);
-const reservedCredits = ref(0);
-const loading = ref(false);
-const hasLoadedOnce = ref(false);
+// Single shared source of truth (header, account page and deploy page all read
+// this), so the balances can never drift out of sync.
+const { creditBalance, reservedCredits, loading, fetchBalance, reset } =
+  useCreditBalance();
 const showClaimModal = ref(false);
-const claimCode = ref("");
-const claiming = ref(false);
 
-// Fetch credit balance
-const fetchBalance = async () => {
-  // Only fetch if user has auth token (credit system authentication)
-  if (!token.value) {
-    creditBalance.value = 0;
-    reservedCredits.value = 0;
-    return;
+onCreditRefresh(() => {
+  if (isAuthenticated.value) {
+    fetchBalance();
   }
+});
 
-  loading.value = true;
-  try {
-    const data = await nosana.value.api.credits.balance();
-    hasLoadedOnce.value = true;
-    creditBalance.value = data.assignedCredits
-      ? data.assignedCredits - data.settledCredits - data.reservedCredits
-      : 0;
-    reservedCredits.value = data.reservedCredits || 0;
-  } catch (error) {
-    console.error("Error fetching credit balance:", error);
-    creditBalance.value = 0;
-    reservedCredits.value = 0;
-  } finally {
-    loading.value = false;
-  }
-};
-
-// Claim credit code
-const claimCreditCode = async () => {
-  if (!claimCode.value.trim()) return;
-
-  claiming.value = true;
-  try {
-    const response = await fetch(`${config.apiBase}/api/credits/claim`, {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        Authorization: token.value as string,
-      },
-      body: JSON.stringify({
-        code: claimCode.value.trim(),
-      }),
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      toast.success(`Successfully claimed $${data.amount} in credits!`);
-      await fetchBalance(); // Refresh balance
-      
-      // Trigger global credit refresh for TopBar
-      const { triggerCreditRefresh } = useCreditRefresh();
-      triggerCreditRefresh();
-      
-      closeClaimModal();
-      try {
-        trackEvent('credit_claimed', {
-          amount: data.amount,
-          code: claimCode.value.trim(),
-          user_id: userData.value?.generatedAddress,
-        });
-      } catch (error) {
-        console.warn("Error tracking credit claimed:", error);
-      }
-    } else {
-      const errorData = await response.json();
-      toast.error(errorData.message || "Failed to claim credit code");
-    }
-  } catch (error) {
-    console.error("Error claiming credit code:", error);
-    toast.error("Error claiming credit code");
-  } finally {
-    claiming.value = false;
-  }
-};
-
-const closeClaimModal = () => {
-  showClaimModal.value = false;
-  claimCode.value = "";
-};
-
-// Initialize - only fetch if not already loaded
+// Always refetch when the account page opens so it reflects the latest balance
+// (and, via the shared store, updates the header at the same time).
 onMounted(() => {
-  if (token.value && !hasLoadedOnce.value) {
+  if (isAuthenticated.value) {
     fetchBalance();
   }
 });
 
-// Watch for auth changes - only fetch if not already loaded
-watch([() => status.value, token], ([newStatus, newToken]) => {
-  // Only fetch if authenticated AND haven't loaded yet
-  if (newToken && newStatus === 'authenticated' && !hasLoadedOnce.value) {
-    fetchBalance();
-  }
-  // Reset on logout
-  if (newStatus === 'unauthenticated') {
-    creditBalance.value = 0;
-    reservedCredits.value = 0;
-    hasLoadedOnce.value = false;
-  }
-}, { immediate: false });
+watch(
+  [isAuthenticated, isLoading],
+  ([newIsAuthenticated, newIsLoading], [oldIsAuthenticated]) => {
+    if (newIsLoading) return;
+    if (newIsAuthenticated) {
+      fetchBalance();
+    }
+    if (!newIsAuthenticated && oldIsAuthenticated) {
+      reset();
+    }
+  },
+  { immediate: false },
+);
 
-// Expose refresh function for parent components
-defineExpose({
-  fetchBalance,
-});
+defineExpose({ fetchBalance });
 </script>
 
 <style scoped>
-.heading {
-  text-transform: uppercase;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #7a7a7a;
+.credit-balance-root {
+  width: fit-content;
+  max-width: 100%;
 }
 
-.equal-height-box {
-  height: 150px;
+.credit-balance-content {
   display: flex;
   flex-direction: column;
+  align-items: center;
+}
+
+.credit-balance-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.credit-balance-body {
+  flex: 1;
+}
+
+.credit-balance-text {
+  display: grid;
+  justify-items: center;
+}
+
+.credit-balance-label {
+  justify-self: start;
+}
+
+.wallet-badge {
+  display: flex;
+  align-items: center;
   justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background-color: rgba(16, 232, 12, 0.12);
+  color: #10e80c;
+  flex-shrink: 0;
+}
+
+.wallet-badge :deep(svg) {
+  width: 26px;
+  height: 26px;
+}
+
+.claim-tag-icon {
+  color: #10e80c;
+}
+
+.claim-tag-icon svg {
+  width: 18px;
+  height: 18px;
 }
 </style>

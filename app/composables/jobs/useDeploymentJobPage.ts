@@ -1,22 +1,22 @@
-import { useWallet } from "solana-wallets-vue";
+import { useWallet } from "@nosana/solana-vue";
 import { useDeploymentJob } from "~/composables/jobs/useDeploymentJob";
 import { useNosPrice } from "~/composables/jobs/useNosPrice";
 import { useModal } from "~/composables/jobs/useModal";
 
 export function useDeploymentJobPage(deploymentId: string, jobId: string) {
-  const { connected, publicKey } = useWallet();
-  const { status, data: userData } = useAuth();
+  const { connected, account } = useWallet();
+  const { isAuthenticated: superTokensAuth, userData } = useSuperTokens();
 
   const { job, endpoints, loading, jobInfo } = useDeploymentJob(deploymentId, jobId);
   const modal = useModal();
   const nosPrice = useNosPrice();
 
   const activeAddress = computed(() => {
-    if (status.value === 'authenticated' && userData.value?.generatedAddress) {
+    if (superTokensAuth.value && userData.value?.generatedAddress) {
       return userData.value.generatedAddress as string;
     }
-    if (connected.value && publicKey.value) {
-      return publicKey.value.toString();
+    if (connected.value && account.value?.address) {
+      return account.value.address;
     }
     return null;
   });

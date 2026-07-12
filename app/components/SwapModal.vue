@@ -152,8 +152,8 @@
 <script setup lang="ts">
 import { computed, ref, watch, onMounted } from 'vue';
 import { useToast } from "vue-toastification";
-import { useSDK } from '~/composables/useSDK';
-import { sleep } from '@nosana/sdk';
+import { useKit } from '~/composables/useKit';
+import { sleep } from '~/utils/sleep';
 import SolIcon from '@/assets/img/token_icons/solana-sol-logo.svg?url';
 import UsdcIcon from '@/assets/img/token_icons/usd-coin-usdc-logo.svg?url';
 import UsdtIcon from '@/assets/img/token_icons/tether-usdt-logo.svg?url';
@@ -194,7 +194,7 @@ const props = defineProps({
 const emit = defineEmits(['update:showModal', 'refresh-balances']);
 
 const toast = useToast();
-const { nosana } = useSDK();
+const { nosana } = useKit();
 
 // State
 const swapAmount = ref(0);
@@ -343,7 +343,9 @@ async function confirmSwap() {
 
   loadingSwap.value = true;
   try {
-    const txid = await nosana.value.swap.swapToNos(amountToSwap, selectedSwapSource.value);
+    // TODO: Swap functionality not available in @nosana/kit - needs separate implementation
+    // const txid = await nosana.value.swap.swapToNos(amountToSwap, selectedSwapSource.value);
+    throw new Error('Swap functionality not yet implemented in new kit');
     toast.success('Swap successfully completed');
     await sleep(.2);
     emit('refresh-balances');

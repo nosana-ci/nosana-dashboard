@@ -35,7 +35,7 @@ import { ref, watch, computed } from 'vue';
 import JobLogsView from './Tabs/SystemLogs.vue';
 import { useJob } from '~/composables/jobs/useJob';
 import { useFLogs } from '~/composables/jobs/useFLogs';
-import { useWallet } from 'solana-wallets-vue';
+import { useWallet } from '@nosana/solana-vue';
 
 interface Props {
   jobId: string;
@@ -53,29 +53,28 @@ onMounted(() => {
   pausePolling();
 });
 
-// Authentication setup (use DM header when deploymentId is provided)
-const { hasAuth, ensureAuth } = useAuthHeader();
+// Authentication setup using deployment auth composable
+const { getAuthHeader } = useDeploymentAuth();
 const getAuth = async () => {
-  if (props.deploymentId) return ensureAuth({ deploymentId: props.deploymentId });
-  return ensureAuth();
+  return await getAuthHeader(props.deploymentId);
 };
 
 // Check if user is job poster
-const { status, data: userData } = useAuth();
-const { connected, publicKey } = useWallet();
+const { isAuthenticated, userData } = useSuperTokens();
+const { connected, account } = useWallet();
 
 // Consider DM-vault auth on deployment page equivalent to poster for viewing logs
 const isJobPoster = computed(() => {
   if (!job.value) return false;
   
   // Check for credit users
-  if (status.value === 'authenticated' && userData.value?.generatedAddress) {
+  if (isAuthenticated.value && userData.value?.generatedAddress) {
     return userData.value.generatedAddress === job.value.project?.toString();
   }
   
   // Check for wallet users  
-  if (connected.value && publicKey.value) {
-    return publicKey.value.toString() === job.value.project?.toString();
+  if (connected.value && account.value?.address) {
+    return account.value.address === job.value.project?.toString();
   }
   
   // If viewing from a deployment context and we can fetch DM auth, allow logs

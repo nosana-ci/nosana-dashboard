@@ -135,7 +135,7 @@
 import { ref, computed, nextTick, watch } from 'vue';
 import type { UseJob } from "~/composables/jobs/useJob";
 import { createOpenAIClient, sendChatCompletion, sendCustomChatCompletion, type ChatMessage } from '~/composables/useOpenaiAPI';
-import type { OperationArgsMap, ExposedPort, HttpHealthCheck } from '@nosana/sdk';
+import type { OperationArgsMap, ExposedPort, HttpHealthCheck } from '@nosana/kit';
 import { marked } from 'marked';
 import ArrowExpandIcon from '@/assets/img/icons/arrow-expand.svg?component';
 import type { Tokens } from 'marked';

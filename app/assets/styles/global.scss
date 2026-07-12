@@ -57,7 +57,7 @@
 );
 
 .tag.is-success {
-  background-color: $white !important;
+  background-color: $success !important;
 }
 
 // Table column alignment for consistent two-column tables
@@ -67,11 +67,19 @@
   white-space: nowrap;
 }
 
-
 // Section titles
 .title.is-5 {
   color: $text;
   font-weight: $weight-normal;
+}
+
+// Section headers (reusable for consistent styling)
+.section-header {
+  color: $grey;
+  font-size: $size-6;
+  letter-spacing: 0.5px;
+  font-weight: 500;
+  padding-bottom: 0.5rem;
 }
 
 .button {
@@ -108,7 +116,9 @@
   }
 
   // Only apply border and background overrides to buttons without color classes
-  &:not(.is-primary):not(.is-secondary):not(.is-success):not(.is-danger):not(.is-warning):not(.is-info):not(.is-light):not(.is-dark):not(.is-link) {
+  &:not(.is-primary):not(.is-secondary):not(.is-success):not(.is-danger):not(
+      .is-warning
+    ):not(.is-info):not(.is-light):not(.is-dark):not(.is-link) {
     &:hover,
     &:focus,
     &:focus-visible,
@@ -124,7 +134,7 @@
     box-sizing: border-box !important;
     border-width: 1px !important;
     border-style: solid !important;
-    
+
     &.is-primary {
       &:hover,
       &.is-hovered {
@@ -133,7 +143,7 @@
         border-color: $primary !important;
       }
     }
-    
+
     &.is-success {
       &:hover,
       &.is-hovered {
@@ -142,7 +152,7 @@
         border-color: $success !important;
       }
     }
-    
+
     &.is-info {
       &:hover,
       &.is-hovered {
@@ -151,7 +161,7 @@
         border-color: $info !important;
       }
     }
-    
+
     &.is-warning {
       &:hover,
       &.is-hovered {
@@ -160,7 +170,7 @@
         border-color: $warning !important;
       }
     }
-    
+
     &.is-danger {
       &:hover,
       &.is-hovered {
@@ -169,7 +179,7 @@
         border-color: $danger !important;
       }
     }
-    
+
     &.is-dark {
       &:hover,
       &.is-hovered {
@@ -186,17 +196,17 @@
     box-sizing: border-box !important;
     border-width: 1px !important;
     border-style: solid !important;
-    
+
     &:hover,
     &.is-hovered,
     &:focus,
     &:active {
       transform: none !important;
     }
-    
+
     &.is-small {
       padding: 3px 1em !important;
-      
+
       &:hover,
       &.is-hovered,
       &:focus,
@@ -225,15 +235,16 @@
     border-radius: $radius-small;
     display: flex;
     align-items: center;
-    
+
     svg {
       color: inherit;
     }
-    
+
     img[src$=".svg"] {
-      filter: brightness(0) saturate(100%) invert(48%) sepia(9%) saturate(665%) hue-rotate(180deg) brightness(93%) contrast(87%);
+      filter: brightness(0) saturate(100%) invert(48%) sepia(9%) saturate(665%)
+        hue-rotate(180deg) brightness(93%) contrast(87%);
     }
-    
+
     &:hover {
       background: $grey-lightest;
       color: $text;
@@ -249,7 +260,7 @@
 // Action button styling (matching dropdown-item style)
 .action-btn,
 .group-action-btn {
-  padding: 0.5rem 1rem;
+  padding: 0.5rem 0.9rem;
   border-radius: $radius-small;
   border: 1px solid $grey-lighter;
   background: $white;
@@ -262,16 +273,21 @@
   box-shadow: $button-shadow;
   font-size: $size-6;
   font-weight: $weight-medium;
-  
+
   .icon {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    
+
     img {
       display: block;
       flex-shrink: 0;
-      filter: brightness(0) saturate(100%) invert(48%) sepia(9%) saturate(665%) hue-rotate(180deg) brightness(93%) contrast(87%);
+      filter: brightness(0) saturate(100%) invert(48%) sepia(9%) saturate(665%)
+        hue-rotate(180deg) brightness(93%) contrast(87%);
+    }
+
+    & + span {
+      margin-left: 0.5rem;
     }
   }
 
@@ -284,15 +300,15 @@
     opacity: 0.4;
     cursor: not-allowed;
   }
-  
+
   &.is-loading {
     position: relative;
     color: transparent;
-    
+
     span {
       opacity: 0;
     }
-    
+
     &:after {
       position: absolute;
       content: "";
@@ -321,7 +337,7 @@
   transition: all 0.2s ease;
   font-size: $size-7;
   line-height: 1.2;
-  
+
   &:hover {
     background: $secondary;
     color: $white;
@@ -338,24 +354,24 @@
 // Wallet authentication banner
 .wallet-auth-banner {
   border-left: 4px solid $secondary;
-  
+
   .banner-icon {
     color: $secondary;
     flex-shrink: 0;
   }
-  
+
   .banner-title {
     font-weight: $weight-semibold;
     margin-bottom: 0.25rem;
     color: $text;
   }
-  
+
   .banner-subtitle {
     font-size: $size-7;
     color: $text-dark;
     line-height: 1.4;
   }
-  
+
   .banner-actions {
     gap: 0.5rem;
   }
@@ -405,40 +421,40 @@
   }
 
   .notification {
-    &.is-warning {  
-      background-color: darken($warning, 15%);
+    &.is-warning {
+      background-color: color.adjust($warning, $lightness: -15%);
       &.is-light {
-        background-color: darken($warning, 35%);
+        background-color: color.adjust($warning, $lightness: -35%);
       }
     }
     &.is-link {
-      background-color: darken($link, 15%);
+      background-color: color.adjust($link, $lightness: -15%);
       &.is-light {
-        background-color: darken($link, 35%);
+        background-color: color.adjust($link, $lightness: -35%);
       }
     }
     &.is-info {
-      background-color: darken($info, 15%);
+      background-color: color.adjust($info, $lightness: -15%);
       &.is-light {
-        background-color: darken($info, 35%);
+        background-color: color.adjust($info, $lightness: -35%);
       }
     }
     &.is-danger {
-      background-color: darken($danger, 15%);
+      background-color: color.adjust($danger, $lightness: -15%);
       &.is-light {
-        background-color: darken($danger, 35%);
+        background-color: color.adjust($danger, $lightness: -35%);
       }
     }
     &.is-success {
-      background-color: darken($success, 15%);
+      background-color: color.adjust($success, $lightness: -15%);
       &.is-light {
-        background-color: darken($success, 35%);
+        background-color: color.adjust($success, $lightness: -35%);
       }
     }
     &.is-primary {
-      background-color: darken($primary, 15%);
+      background-color: color.adjust($primary, $lightness: -15%);
       &.is-light {
-        background-color: darken($primary, 35%);
+        background-color: color.adjust($primary, $lightness: -35%);
       }
     }
   }
@@ -456,8 +472,8 @@
     }
 
     &:hover:not(:disabled) {
-      background: lighten($grey-darker, 5%);
-      border-color: lighten($grey-dark, 10%);
+      background: color.adjust($grey-darker, $lightness: 5%);
+      border-color: color.adjust($grey-dark, $lightness: 10%);
       color: $white;
     }
 
@@ -512,9 +528,13 @@
   }
 
   // spacing when icon is on the left of text
-  .icon:first-child { margin-right: 0.5rem; }
+  .icon:first-child {
+    margin-right: 0.5rem;
+  }
   // spacing when icon is on the right of text (e.g., dropdown arrow)
-  .icon:last-child { margin-left: 0.5rem; }
+  .icon:last-child {
+    margin-left: 0.5rem;
+  }
 
   &:hover {
     background: $grey-lightest;
@@ -527,7 +547,6 @@
   }
 }
 
-
 // Deployment tabs container styling (used for tab navigation containers)
 .deployment-tabs {
   display: flex;
@@ -535,7 +554,7 @@
   flex-wrap: nowrap;
   align-items: center;
   overflow: visible;
-  
+
   .tab-button {
     min-width: auto; // allow natural width
     white-space: nowrap; // prevent wrap but allow full label
@@ -584,7 +603,6 @@
     color: $menu-item-color;
   }
 }
-
 
 /* Extra bulma classes */
 .has-radius {
@@ -801,7 +819,7 @@
       tbody {
         tr:not(.is-selected) {
           &:nth-child(even) {
-            background-color: darken($black-ter, 3%);
+            background-color: color.adjust($black-ter, $lightness: -3%);
           }
         }
       }
@@ -818,8 +836,6 @@
   .has-text-white:not(.light-mode) {
     color: $black !important;
   }
-
-  
 
   .has-text-black:not(.light-mode) {
     color: $white !important;
@@ -1000,12 +1016,12 @@
 .modal-card {
   width: 420px;
   max-width: 90%;
-  
+
   &.modal-card-wide {
     width: 90%;
     max-width: 1200px;
   }
-  
+
   &-body {
     &.modal-card-body-scrollable {
       max-height: 70vh;
@@ -1027,6 +1043,10 @@
   overflow: visible; /* let bubbles extend over the header edge */
   position: relative;
   z-index: auto !important; /* avoid creating stacking context above tooltips */
+  border-bottom: 1px solid $grey-lighter;
+}
+.modal-card-head + .modal-card-body {
+  padding-top: 1.5rem;
 }
 .modal-card-body {
   position: relative; /* create stacking context above header */
@@ -1057,7 +1077,8 @@ button[disabled][data-tooltip] {
 /* Add before dark-mode styles */
 .dropdown-item {
   &:hover {
-    strong, .has-text-weight-bold {
+    strong,
+    .has-text-weight-bold {
       color: $secondary !important;
     }
   }
@@ -1147,6 +1168,7 @@ button[disabled][data-tooltip] {
 .is-borderless {
   border: none !important;
   box-shadow: none !important;
+  padding: 0 !important;
 }
 
 /* Dropdown styles */
@@ -1160,33 +1182,33 @@ button[disabled][data-tooltip] {
     outline: none !important;
     box-shadow: none !important;
     padding-left: 12px;
-    
+
     &:focus {
       border-color: $grey-light;
     }
-    
+
     option {
       text-align: left;
       border: 1px solid $grey-lighter;
       border-radius: 4px;
       margin: 2px;
       padding: 4px 8px;
-      
+
       &.has-text-success {
         color: $success !important;
         border-color: $success;
       }
-      
+
       &.has-text-info {
         color: $info !important;
         border-color: $info;
       }
-      
+
       &.has-text-warning {
         color: $warning !important;
         border-color: $warning;
       }
-      
+
       &.has-text-dark {
         color: $dark !important;
         border-color: $dark;
@@ -1238,6 +1260,11 @@ button[disabled][data-tooltip] {
   overflow: visible !important; /* prevent clipping inside modal container */
 }
 
+// Wallet connect popup must appear above Bulma modals (z-index: 1001)
+.wallet-modal-overlay {
+  z-index: 1100 !important;
+}
+
 /* ==========================================================================
    Clickable Table Rows
    ========================================================================== */
@@ -1260,16 +1287,6 @@ button[disabled][data-tooltip] {
   &:hover {
     color: inherit;
   }
-
-  &::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 1;
-  }
 }
 
 /* This is intentionally left empty. */
@@ -1284,7 +1301,7 @@ button[disabled][data-tooltip] {
 /* Status color mapping to ensure consistency across all components */
 :root {
   --status-success-color: #{$success}; // Green for completed/success
-  --status-info-color: #{$info}; // Blue for running/pending  
+  --status-info-color: #{$info}; // Blue for running/pending
   --status-warning-color: #{$warning}; // Orange for queued
   --status-danger-color: #{$danger}; // Red for failed/error
   --status-dark-color: #{$dark}; // Gray for stopped/default
@@ -1293,48 +1310,50 @@ button[disabled][data-tooltip] {
 /* Global status tag styling with consistent colors */
 .tag.status-tag.is-outlined {
   background-color: transparent !important;
-  
+
   &.is-success {
     color: var(--status-success-color) !important;
     border-color: var(--status-success-color) !important;
-    
+
     svg {
       color: var(--status-success-color) !important;
     }
   }
-  
+
   &.is-info {
     color: var(--status-info-color) !important;
     border-color: var(--status-info-color) !important;
-    
+
     svg {
       color: var(--status-info-color) !important;
     }
   }
-  
+
   &.is-warning {
     color: var(--status-warning-color) !important;
     border-color: var(--status-warning-color) !important;
-    
+
     svg {
       color: var(--status-warning-color) !important;
     }
   }
-  
+
   &.is-danger {
     color: var(--status-danger-color) !important;
     border-color: var(--status-danger-color) !important;
-    
+
     svg {
       color: var(--status-danger-color) !important;
     }
   }
-  
+
   &.is-dark {
     color: var(--status-dark-color) !important;
     border-color: var(--status-dark-color) !important;
-    
-    svg, .status-icon-wrap, .status-icon {
+
+    svg,
+    .status-icon-wrap,
+    .status-icon {
       color: var(--status-dark-color) !important;
       fill: var(--status-dark-color) !important;
     }
@@ -1353,7 +1372,7 @@ button[disabled][data-tooltip] {
   justify-content: center;
   vertical-align: middle;
   line-height: 0;
-  
+
   svg {
     color: inherit;
   }
@@ -1389,7 +1408,7 @@ button[disabled][data-tooltip] {
   margin-left: 0.25rem;
   text-decoration: none !important;
   border-bottom: none !important;
-  
+
   &:hover {
     color: #363636;
     text-decoration: none !important;
@@ -1422,7 +1441,7 @@ button[disabled][data-tooltip] {
 .dropdown-arrow {
   transition: transform 0.2s ease;
   transform: rotate(90deg);
-  
+
   &.is-rotated {
     transform: rotate(0deg);
   }
@@ -1437,6 +1456,10 @@ html.dark-mode .deployment-header {
   border-bottom-color: $grey-dark;
 }
 
+html.dark-mode .modal-card-head {
+  border-bottom-color: $grey-dark;
+}
+
 .has-min-height-500 {
   min-height: 500px;
 }
@@ -1447,7 +1470,7 @@ html.dark-mode .deployment-header {
 
 .back-button.is-ghost {
   border: none !important;
-  
+
   &:hover,
   &:focus,
   &:active {
@@ -1483,8 +1506,12 @@ html.dark-mode .deployment-header {
 }
 
 @keyframes statusSpinFallback {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 /* Force SMIL animations to restart immediately when component mounts */
@@ -1511,31 +1538,31 @@ html.dark-mode .deployment-header {
   padding: 0;
   margin-top: 0.2rem;
   position: relative; /* For copy button positioning */
-  
+
   .json-editor {
     min-height: 300px;
     border: none;
     border-radius: 4px;
     background-color: $grey-lightest !important;
-    
+
     :deep(.jse-main) {
       border: none;
       background-color: $grey-lightest !important;
     }
-    
+
     :deep(.jse-contents) {
       border-radius: 4px;
       background-color: $grey-lightest !important;
     }
-    
+
     :deep(.jse-text-mode) {
       background-color: $grey-lightest !important;
     }
-    
+
     :deep(.cm-editor) {
       background-color: $grey-lightest !important;
     }
-    
+
     :deep(.cm-focused) {
       background-color: $grey-lightest !important;
     }
@@ -1574,57 +1601,54 @@ html.dark-mode .deployment-header {
    Global Dark Mode Box Styling (Using Bulma Variables)
    ========================================================================== */
 
-
-
 @media screen and (max-width: 768px) {
   .is-flex-direction-column-mobile {
     flex-direction: column !important;
   }
 
   /* Clickable notifications */
-.clickable-notification {
-  cursor: pointer;
-  transition: all 0.2s ease;
+  .clickable-notification {
+    cursor: pointer;
+    transition: all 0.2s ease;
 
-  &:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
   }
-}
 
-
-.icon.borderless {
-  border: none !important;
-}
-.vertical-middle {
-  vertical-align: middle;
-}
-.refresh.is-loading svg {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
+  .icon.borderless {
+    border: none !important;
   }
-  100% {
-    transform: rotate(360deg);
+  .vertical-middle {
+    vertical-align: middle;
   }
-}
+  .refresh.is-loading svg {
+    animation: spin 1s linear infinite;
+  }
 
-.height-auto {
-  height: auto;
-}
+  @keyframes spin {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
 
-.va-bottom {
-  vertical-align: bottom;
-}
+  .height-auto {
+    height: auto;
+  }
 
-.relative {
-  position: relative;
-}
+  .va-bottom {
+    vertical-align: bottom;
+  }
 
-.z-index-2 {
-  z-index: 2;
-}
+  .relative {
+    position: relative;
+  }
+
+  .z-index-2 {
+    z-index: 2;
+  }
 }
