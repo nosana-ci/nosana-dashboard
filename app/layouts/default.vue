@@ -1,6 +1,5 @@
 <template>
   <div id="app">
-    <feedback-banner />
     <section class="columns ml-0 mr-0 mt-0 mb-0">
       <side-bar />
       <div

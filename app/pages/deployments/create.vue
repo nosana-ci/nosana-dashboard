@@ -529,9 +529,12 @@ watch(
 // Balance and price state
 const nosPrice = ref(0);
 
-// Credit balance state
-const creditBalance = ref<number>(0);
-const loadingCreditBalance = ref(false);
+// Credit balance state - shared single source of truth (see useCreditBalance).
+const {
+  creditBalance,
+  fetchBalance: refreshCreditBalance,
+  reset: resetCreditBalance,
+} = useCreditBalance();
 const solPrice = ref(0);
 const usdcPrice = ref(0);
 const usdtPrice = ref(0);
@@ -728,25 +731,6 @@ const canCreateDeployment = computed(() => {
 const activeFilterKey = computed(
   () => `${selectedTemplate?.value?.id || "default"}-${activeFilter.value}`
 );
-
-// Credit balance fetch (SDK API)
-const refreshCreditBalance = async () => {
-  if (!superTokensAuth.value) return;
-  loadingCreditBalance.value = true;
-  try {
-    const data = await nosana.value.api.credits.balance();
-    if (data) {
-      creditBalance.value =
-        (data.assignedCredits || 0) -
-        (data.settledCredits || 0) -
-        (data.reservedCredits || 0);
-    }
-  } catch (error) {
-    console.error("Error fetching credit balance:", error);
-  } finally {
-    loadingCreditBalance.value = false;
-  }
-};
 
 const { onCreditRefresh } = useCreditRefresh();
 onCreditRefresh(() => {
@@ -1111,7 +1095,7 @@ watch(
     if (isCreditMode.value) {
       await refreshCreditBalance();
     } else {
-      creditBalance.value = 0;
+      resetCreditBalance();
     }
   },
   { immediate: true }
