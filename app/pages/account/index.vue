@@ -553,16 +553,10 @@ const checkFreeCreditsEligibility = async (force = false) => {
   }
 
   try {
-    const [data, paymentMethods] = await Promise.all([
-      $fetch<{ eligible: boolean; amount?: number; message?: string }>(
-        `${config.apiBase}/api/credits/request/eligibility`,
-        { credentials: "include" },
-      ),
-      $fetch<{ methods: unknown[]; paymentVerified: boolean }>(
-        `${config.apiBase}/api/payments/methods`,
-        { credentials: "include" },
-      ),
-    ]);
+    const data = await $fetch<{ eligible: boolean; amount?: number; message?: string }>(
+      `${config.apiBase}/api/credits/request/eligibility`,
+      { credentials: "include" },
+    );
 
     if (data && data.eligible) {
       clearFreeCreditsVerifyDismissed(userData.value?.id);
@@ -574,9 +568,8 @@ const checkFreeCreditsEligibility = async (force = false) => {
     } else if (
       data &&
       !data.eligible &&
-      !data.message?.includes("already requested free credits") &&
-      !paymentMethods.paymentVerified &&
-      data.message?.includes("Verify a payment method")
+      (data.message?.includes("Verify a payment method") ||
+        data.message?.includes("confirm your card with your bank"))
     ) {
       pendingFreeCreditsVerification.value = true;
       if (!force && !isFreeCreditsVerifyDismissed(userData.value?.id)) {
@@ -610,13 +603,15 @@ const handleFreeCreditsVerified = async () => {
   clearFreeCreditsVerifyDismissed(userData.value?.id);
 
   try {
-    const data = await $fetch<{ eligible: boolean; amount?: number }>(
+    const data = await $fetch<{ eligible: boolean; amount?: number; message?: string }>(
       `${config.apiBase}/api/credits/request/eligibility`,
       { credentials: "include" },
     );
     if (data?.eligible) {
       freeCreditsAmount.value = data.amount ?? null;
       showFreeCreditsModal.value = true;
+    } else if (data?.message?.includes("daily limit")) {
+      toast.info(data.message);
     }
   } catch {
     // User can claim from account later

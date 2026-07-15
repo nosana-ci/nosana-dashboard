@@ -98,7 +98,7 @@ const emit = defineEmits(["update:modelValue", "dismissed", "verified"]);
 const config = useRuntimeConfig().public;
 const toast = useToast();
 const colorMode = useColorMode();
-const { paymentVerified, fetchPaymentMethods } = usePaymentMethods();
+const { fetchPaymentMethods } = usePaymentMethods();
 
 const showCardForm = ref(false);
 const cardElementRef = ref<HTMLElement | null>(null);
@@ -196,6 +196,9 @@ const backToPrompt = () => {
   resetModal();
 };
 
+const THREE_DS_ERROR =
+  "We couldn't confirm this card with your bank, so it can't be used to claim free credits. Try a different card, or use this one to buy credits instead.";
+
 const saveCard = async () => {
   if (!stripe || !cardElement) return;
   savingCard.value = true;
@@ -209,12 +212,12 @@ const saveCard = async () => {
       cardError.value = result.error.message ?? "Failed to add card";
       return;
     }
-    const res = await $fetch<SetupIntentResponse>(
+    let res = await $fetch<SetupIntentResponse>(
       `${config.apiBase}/api/payments/setup-intent`,
       {
         method: "POST",
         credentials: "include",
-        body: { paymentMethodId: result.paymentMethod.id },
+        body: { paymentMethodId: result.paymentMethod.id, requireThreeDSecure: true },
       },
     );
 
@@ -225,17 +228,18 @@ const saveCard = async () => {
           confirmResult.error.message ?? "Card authentication failed.";
         return;
       }
-      await fetchPaymentMethods();
-      if (!paymentVerified.value) {
-        cardError.value =
-          "Your card could not be verified. Please try a different card.";
+      if (!res.setupIntentId) {
+        cardError.value = "Your card could not be verified. Please try again.";
         return;
       }
-      toast.success("Payment method verified.");
-      emit("verified");
-      emit("update:modelValue", false);
-      resetModal();
-      return;
+      res = await $fetch<SetupIntentResponse>(
+        `${config.apiBase}/api/payments/setup-intent/confirm`,
+        {
+          method: "POST",
+          credentials: "include",
+          body: { setupIntentId: res.setupIntentId },
+        },
+      );
     }
 
     if (!res.accepted) {
@@ -244,13 +248,17 @@ const saveCard = async () => {
         "Your card could not be verified. Please try a different card.";
       return;
     }
-    paymentVerified.value = res.paymentVerified;
-    await fetchPaymentMethods();
-    if (!paymentVerified.value) {
-      cardError.value =
-        "Your card could not be verified. Please try a different card.";
+
+    if (!res.threeDSecureAuthenticated) {
+      await fetchPaymentMethods();
+      toast.info(THREE_DS_ERROR);
+      emit("update:modelValue", false);
+      resetModal();
+      await navigateTo("/account/billing?source=free-credits");
       return;
     }
+
+    await fetchPaymentMethods();
     toast.success("Payment method verified.");
     emit("verified");
     emit("update:modelValue", false);

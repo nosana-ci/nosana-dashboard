@@ -222,6 +222,8 @@ const tryOpenFreeCreditsClaimModal = async () => {
       clearFreeCreditsVerifyDismissed(userData.value?.id);
       freeCreditsAmount.value = data.amount ?? null;
       showFreeCreditsModal.value = true;
+    } else if (data?.message?.includes("daily limit")) {
+      toast.info(data.message);
     }
   } catch {
     // Ineligible or request failed — no UI feedback
@@ -305,12 +307,16 @@ const handleAddCard = async () => {
       addCardError.value = result.error.message ?? "Failed to add card";
       return;
     }
-    const res = await $fetch<SetupIntentResponse>(
+    const requireThreeDSecure = isFreeCreditsFlow.value;
+    let res = await $fetch<SetupIntentResponse>(
       `${config.apiBase}/api/payments/setup-intent`,
       {
         method: "POST",
         credentials: "include",
-        body: { paymentMethodId: result.paymentMethod.id },
+        body: {
+          paymentMethodId: result.paymentMethod.id,
+          ...(requireThreeDSecure ? { requireThreeDSecure: true } : {}),
+        },
       },
     );
 
@@ -321,16 +327,27 @@ const handleAddCard = async () => {
           confirmResult.error.message ?? "Card authentication failed.";
         return;
       }
-      await fetchPaymentMethods();
-      if (!paymentVerified.value) {
-        addCardError.value =
-          "Your card could not be verified. Please try a different card.";
+      if (requireThreeDSecure && res.setupIntentId) {
+        res = await $fetch<SetupIntentResponse>(
+          `${config.apiBase}/api/payments/setup-intent/confirm`,
+          {
+            method: "POST",
+            credentials: "include",
+            body: { setupIntentId: res.setupIntentId },
+          },
+        );
+      } else {
+        await fetchPaymentMethods();
+        if (!paymentVerified.value) {
+          addCardError.value =
+            "Your card could not be verified. Please try a different card.";
+          return;
+        }
+        toast.success("Payment method verified.");
+        cancelAddCard();
+        await tryOpenFreeCreditsClaimModal();
         return;
       }
-      toast.success("Payment method verified.");
-      cancelAddCard();
-      await tryOpenFreeCreditsClaimModal();
-      return;
     }
 
     if (!res.accepted) {
@@ -339,6 +356,7 @@ const handleAddCard = async () => {
         "Your card could not be verified. Please try a different card.";
       return;
     }
+
     toast.success("Payment method verified.");
     paymentVerified.value = res.paymentVerified;
     cancelAddCard();
