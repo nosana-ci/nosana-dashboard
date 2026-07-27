@@ -30,9 +30,6 @@
           @update:replicas="replicas = $event"
           :timeout="timeout"
           @update:timeout="timeout = $event"
-          :isWalletMode="isWalletMode"
-          :modalSelectedVault="modalSelectedVault"
-          @update:modalSelectedVault="(vault) => (modalSelectedVault = vault)"
           :deployment-name="deploymentName"
           @update:deploymentName="deploymentName = $event"
         />
@@ -227,28 +224,6 @@
                   {{ replicas }}
                 </span>
               </div>
-
-              <div
-                v-if="isWalletMode"
-                style="
-                  display: flex;
-                  justify-content: space-between;
-                  align-items: start;
-                "
-              >
-                <span class="has-text-grey is-size-7">Vault</span>
-                <span
-                  class="has-text-weight-medium is-size-7"
-                  style="
-                    text-align: right;
-                    max-width: 60%;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                  "
-                >
-                  {{ modalSelectedVault || "Create new vault" }}
-                </span>
-              </div>
             </div>
 
             <ClientOnly>
@@ -299,6 +274,25 @@
                   <span v-if="isCreatingDeployment">Creating...</span>
                   <span v-else>Create Deployment</span>
                 </button>
+
+                <!-- Show insufficient vault balance message -->
+                <div
+                  v-if="!canAffordDeployment && selectedMarket"
+                  class="has-text-centered mb-3 mt-3"
+                >
+                  <p class="has-text-grey is-size-7 mb-2">
+                    Insufficient vault balance. Need {{
+                      requiredNosTotal.toFixed(3)
+                    }} NOS, have {{ vaultBalance.NOS.toFixed(3) }} NOS
+                  </p>
+                  <button
+                    type="button"
+                    class="button is-primary is-fullwidth mb-2"
+                    @click="topupVault"
+                  >
+                    Top Up Vault
+                  </button>
+                </div>
               </div>
 
               <!-- No Authentication Actions -->
@@ -390,6 +384,8 @@
       :templates="groupedTemplates || []"
       @select-template="selectTemplateFromModal"
     />
+
+    <VaultModal />
   </div>
 </template>
 
@@ -408,8 +404,8 @@ import { useRouter, useRoute } from "vue-router";
 import { useEstimatedCost } from "~/composables/useMarketPricing";
 import type { Template } from "~/composables/useTemplates";
 import Loader from "~/components/Loader.vue";
-import VaultSelector from "~/components/Vault/VaultSelector.vue";
 import ConfigurationModal from "~/components/Deploy/ConfigurationModal.vue";
+import VaultModal from "~/components/Vault/Modal/VaultModal.vue";
 import { parseCronExpression } from "~/utils/parseCronExpression";
 import {
   MAX_TIMEOUT_HOURS,
@@ -538,10 +534,6 @@ const {
 const solPrice = ref(0);
 const usdcPrice = ref(0);
 const usdtPrice = ref(0);
-
-// Vault selection modal
-const showVaultModal = ref(false);
-const modalSelectedVault = ref<any>(null);
 
 // API data
 const { data: stats } = await useAPI("/api/stats");
@@ -690,6 +682,10 @@ const requiredNos = computed(() => {
   return 0;
 });
 
+// Total NOS needed for the full configured runtime (timeout is in hours),
+// mirroring the credit flow's costUSD = hourlyPrice * replicas * timeout.
+const requiredNosTotal = computed(() => requiredNos.value * timeout.value);
+
 // Check if user can post job based on authentication and credits
 const canPostJob = computed(() => {
   if (superTokensAuth.value) {
@@ -697,6 +693,20 @@ const canPostJob = computed(() => {
     return creditBalance.value >= costUSD;
   }
   return false;
+});
+
+// Wallet mode's equivalent of canPostJob: the shared vault must be able to
+// afford the deployment. Vacuously true when no market is selected yet, same
+// as the credit check (basicRequirements gates on selectedMarket separately).
+const {
+  balance: vaultBalance,
+  ensureSharedVault,
+  topup: topupVault,
+} = useSharedVault();
+
+const canAffordDeployment = computed(() => {
+  if (!isWalletMode.value) return true;
+  return vaultBalance.value.NOS >= requiredNosTotal.value;
 });
 
 // Authentication mode detection
@@ -720,9 +730,7 @@ const canCreateDeployment = computed(() => {
   if (isCreditMode.value) {
     return basicRequirements && canPostJob.value;
   } else if (isWalletMode.value) {
-    // For wallet mode, basic requirements are enough
-    // Vault will be created during deployment if needed
-    return basicRequirements;
+    return basicRequirements && canAffordDeployment.value;
   }
 
   return false;
@@ -794,21 +802,15 @@ const createDeployment = async () => {
       ...(strategy.value === DeploymentStrategy.SCHEDULED
         ? { schedule: schedule.value }
         : {}),
-      ...(modalSelectedVault.value && modalSelectedVault.value !== "" ? { vault: modalSelectedVault.value } : {}),
+      // Start immediately server-side instead of a separate start() call.
+      // Not yet in the vendored @nosana/types, hence the assertion.
+      autostart: true,
       job_definition: jobDefinition.value,
-    })) as Deployment;
+    } as Parameters<typeof nosana.value.api.deployments.create>[0])) as Deployment;
 
     toast.success(`Successfully created deployment ${deployment.id}`);
 
-    if (isCreditMode.value) {
-      await deployment.start();
-      preloadedDeployment.value = {
-        ...deployment,
-        status: "RUNNING",
-      } as Deployment;
-    } else {
-      preloadedDeployment.value = deployment;
-    }
+    preloadedDeployment.value = deployment;
 
     trackEvent("workload_created", {
       user_id: userData.value?.generatedAddress,
@@ -1096,6 +1098,18 @@ watch(
       await refreshCreditBalance();
     } else {
       resetCreditBalance();
+    }
+  },
+  { immediate: true }
+);
+
+// React to wallet connection to keep the shared vault balance fresh, so the
+// affordability check reflects the current balance as soon as it's known.
+watch(
+  isWalletMode,
+  () => {
+    if (isWalletMode.value) {
+      ensureSharedVault();
     }
   },
   { immediate: true }

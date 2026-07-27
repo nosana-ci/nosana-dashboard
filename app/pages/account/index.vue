@@ -45,6 +45,7 @@
         @verified="handleFreeCreditsVerified"
       />
       <AccountCreditTransactionHistory v-model="showHistoryModal" />
+      <VaultModal />
       <!-- Credit Invitation Section - only show when there's an issue -->
       <div
         v-if="
@@ -132,28 +133,7 @@
             <div class="box credit-usage-box">
               <div class="credit-usage-top">
                 <CreditBalance v-if="isAuthenticated" />
-                <div
-                  v-else-if="connected && publicKey && nosBalance"
-                  class="balance-section has-text-centered"
-                >
-                  <p
-                    class="heading mb-1"
-                    style="
-                      font-size: 0.7rem;
-                      text-transform: uppercase;
-                      font-weight: 600;
-                      color: #7a7a7a;
-                    "
-                  >
-                    NOS Balance
-                  </p>
-                  <p class="title is-4 mb-1">
-                    {{ nosBalance.uiAmount.toFixed(2) }} NOS
-                    <span class="has-text-grey is-size-6"
-                      >${{ (nosBalance.uiAmount * nosPrice).toFixed(2) }}</span
-                    >
-                  </p>
-                </div>
+                <VaultBalance v-else-if="connected && publicKey" />
               </div>
 
               <div class="usage-divider"></div>
@@ -441,6 +421,8 @@ import AccountClaimModal from "~/components/Account/ClaimModal.vue";
 import AccountFreeCreditsVerifyModal from "~/components/Account/FreeCreditsVerifyModal.vue";
 import AccountCreditTransactionHistory from "~/components/Account/CreditTransactionHistory.vue";
 import CreditBalance from "~/components/Account/CreditBalance.vue";
+import VaultBalance from "~/components/Account/VaultBalance.vue";
+import VaultModal from "~/components/Vault/Modal/VaultModal.vue";
 import {
   isFreeCreditsVerifyDismissed,
   setFreeCreditsVerifyDismissed,
@@ -472,30 +454,7 @@ const publicKey = computed(() => {
     toBase58: () => account.value!.address,
   };
 });
-const { nosana } = useKit();
 const { triggerCreditRefresh } = useCreditRefresh();
-
-// NOS balance (wallet users)
-const nosBalance = ref<{ uiAmount: number } | null>(null);
-const { data: stats } = useAPI("/api/stats");
-const nosPrice = computed(() => stats.value?.price || 0);
-
-watch(
-  [connected, publicKey],
-  async ([newConnected, newPublicKey]) => {
-    if (newConnected && newPublicKey) {
-      try {
-        const bal = await nosana.value.nos.getBalanceInfo(newPublicKey.toBase58());
-        nosBalance.value = { uiAmount: bal.uiAmount ?? 0 };
-      } catch {
-        nosBalance.value = null;
-      }
-    } else {
-      nosBalance.value = null;
-    }
-  },
-  { immediate: true },
-);
 
 interface Invitation {
   creditsAmount: number;
