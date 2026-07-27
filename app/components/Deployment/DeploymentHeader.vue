@@ -201,13 +201,6 @@
                 <span>No actions available</span>
               </div>
 
-              <VaultActions
-                v-if="hasVault && deploymentVault"
-                :vault="deploymentVault"
-                :closeMenu="closeDropdown"
-                :switchAction="(action: string) => emitAction(action)"
-                :isDisabled="actionLoading"
-              />
             </div>
           </div>
         </div>
@@ -219,7 +212,6 @@
 <script setup lang="ts">
 import type { Deployment } from "@nosana/kit";
 import StatusTag from "~/components/Common/StatusTag.vue";
-import VaultActions from "~/components/Vault/VaultActions.vue";
 
 import ArrowUpIcon from "@/assets/img/icons/arrow-up.svg?component";
 import ChevronDownIcon from "@/assets/img/icons/chevron-down.svg?component";
@@ -240,8 +232,6 @@ const props = defineProps<{
   canStop: boolean;
   canArchive: boolean;
   hasAnyActions: boolean;
-  hasVault: boolean;
-  deploymentVault: any;
 }>();
 
 const emit = defineEmits<{
@@ -250,6 +240,7 @@ const emit = defineEmits<{
   navigateBack: [];
   rename: [name: string];
 }>();
+
 
 const isEditingName = ref(false);
 const nameDraft = ref("");
@@ -288,10 +279,6 @@ const commitNameEdit = () => {
 
 const isDropdownOpen = ref(false);
 const dropdownRef = ref<HTMLElement | null>(null);
-
-const closeDropdown = () => {
-  isDropdownOpen.value = false;
-};
 
 const emitAction = (action: string) => {
   isDropdownOpen.value = false;

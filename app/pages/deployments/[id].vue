@@ -27,8 +27,6 @@
             :canStop="canStop"
             :canArchive="canArchive"
             :hasAnyActions="hasAnyActions"
-            :hasVault="hasVault"
-            :deploymentVault="deploymentVault"
             @switchTab="switchTab"
             @action="switchAction"
             @rename="updateName"
@@ -168,13 +166,10 @@
       </template>
     </template>
   </div>
-  <VaultModal />
 </template>
 
 <script setup lang="ts">
 import type { JobDefinition } from "@nosana/kit";
-import { useVaultModal } from "~/composables/useVaultModal";
-import { updateVaultBalance } from "~/composables/useDeploymentVault";
 import { useWallet } from "@nosana/solana-vue";
 import { useSuperTokens } from "~/composables/useSuperTokens";
 import { useDeploymentDetail } from "~/composables/useDeploymentDetail";
@@ -182,12 +177,10 @@ import { useDeploymentJobs } from "~/composables/useDeploymentJobs";
 import { useDeploymentActions } from "~/composables/useDeploymentActions";
 import { useDeploymentPolling } from "~/composables/useDeploymentPolling";
 import { useDeploymentJobDefinition } from "~/composables/useDeploymentJobDefinition";
-import VaultModal from "~/components/Vault/Modal/VaultModal.vue";
 
 // --- Auth setup ---
 const route = useRoute();
 const router = useRouter();
-const { open: openVaultModal, state: vaultModalState } = useVaultModal();
 const { isAuthenticated: superTokensAuth } = useSuperTokens();
 const { connected, account } = useWallet();
 
@@ -392,8 +385,6 @@ const availableActions = [
   "update-replicas",
   "update-timeout",
   "update-schedule",
-  "topup",
-  "withdraw",
 ];
 
 // Initialize action from URL query parameter
@@ -568,15 +559,6 @@ const switchAction = (action: string) => {
   else if (action === "update-replicas") showReplicasModal.value = true;
   else if (action === "update-timeout") showTimeoutModal.value = true;
   else if (action === "update-schedule") showScheduleModal.value = true;
-  else if (action === "topup" && deploymentVault.value) {
-    openVaultModal(deploymentVault.value, "topup", () =>
-      updateVaultBalance(deploymentVault.value!),
-    );
-  } else if (action === "withdraw" && deploymentVault.value) {
-    openVaultModal(deploymentVault.value, "withdraw", () =>
-      updateVaultBalance(deploymentVault.value!),
-    );
-  }
 
   router.replace({
     query: {
@@ -620,33 +602,6 @@ watch(showTimeoutModal, (isOpen) => {
 watch(showScheduleModal, (isOpen) => {
   if (!isOpen && route.query.action === "update-schedule") clearAction();
 });
-
-watch(
-  deploymentVault,
-  (vault) => {
-    const action = route.query.action?.toString();
-    if (
-      vault &&
-      (action === "topup" || action === "withdraw") &&
-      !vaultModalState.value.modalType
-    ) {
-      openVaultModal(vault, action, () => updateVaultBalance(vault));
-    }
-  },
-  { immediate: true },
-);
-
-watch(
-  () => vaultModalState.value.modalType,
-  (modalType) => {
-    if (
-      !modalType &&
-      (route.query.action === "topup" || route.query.action === "withdraw")
-    ) {
-      clearAction();
-    }
-  },
-);
 
 // Head
 useHead({
