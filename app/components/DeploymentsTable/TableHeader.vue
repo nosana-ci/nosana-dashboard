@@ -57,6 +57,22 @@ const { connected } = useWallet();
 const { isAuthenticated } = useSuperTokens();
 const { currentRoute, push, replace } = useRouter();
 
+// The Vaults tab is an advanced view for custom/legacy vaults only; the
+// shared (main) vault is managed from the account page.
+const { ensureSharedVault, hasCustomVaults } = useSharedVault();
+
+onMounted(() => {
+  if (connected.value && !isAuthenticated.value) {
+    ensureSharedVault();
+  }
+});
+
+watch(connected, (isConnected) => {
+  if (isConnected && !isAuthenticated.value) {
+    ensureSharedVault();
+  }
+});
+
 const currentTab = computed(
   () => currentRoute.value.query.tab?.toString() || "deployments",
 );
@@ -70,10 +86,13 @@ const buttons = computed(() => {
     // Credit users: deployments only, no tab switcher
     return [{ label: "Deployments", tab: "deployments" }];
   }
-  // Wallet users: deployments + vaults, no jobs
+  // Wallet users: deployments, plus the advanced Vaults view only when
+  // custom/legacy vaults exist (the shared vault lives on the account page)
   return [
     { label: "Deployments", tab: "deployments" },
-    ...(connected.value ? [{ label: "Vaults", tab: "vaults" }] : []),
+    ...(connected.value && hasCustomVaults.value
+      ? [{ label: "Vaults", tab: "vaults" }]
+      : []),
   ];
 });
 

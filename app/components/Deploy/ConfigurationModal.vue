@@ -191,12 +191,10 @@
               :schedule="scheduleLocal"
               :replicas="replicasLocal"
               :timeout="timeoutLocal"
-              :isWalletMode="props.isWalletMode"
               @update:strategy="strategyLocal = $event"
               @update:schedule="scheduleLocal = $event"
               @update:replicas="replicasLocal = $event"
               @update:timeout="timeoutLocal = $event"
-              @update:modalSelectedVault="handleVaultSelect"
             />
             </div>
           </div>
@@ -235,9 +233,7 @@ interface Props {
   schedule: string;
   replicas: number;
   timeout: number;
-  isWalletMode: boolean;
   deploymentName: string;
-  modalSelectedVault: string | null;
     // GPU Selection props (optional - only for /deploy page)
     markets?: Market[] | null;
     testgridMarkets?: any;
@@ -269,7 +265,6 @@ const emit = defineEmits<{
     'update:replicas': [replicas: number];
     'update:timeout': [timeout: number];
     'update:deploymentName': [name: string];
-    'update:modalSelectedVault': [vault: string | null | undefined];
     // GPU Selection emits
     selectedMarket: [market: Market | null];
     'update:activeFilter': [filter: string];
@@ -353,10 +348,6 @@ const timeoutLocal = computed({
   set: (value: number) =>
     emit('update:timeout', clampNumber(value, effectiveMinTimeout.value, MAX_TIMEOUT_HOURS)),
 });
-
-const handleVaultSelect = (vault: string | undefined | null) => {
-  emit('update:modalSelectedVault', vault ?? null);
-};
 
 const podPanelRef = ref<HTMLElement | null>(null);
 const tabMinHeight = ref(0);

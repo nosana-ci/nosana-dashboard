@@ -17,8 +17,11 @@
               Loading vaults...
             </td>
           </tr>
-          <tr v-else-if="vaults.length === 0">
-            <td colspan="7" class="has-text-centered py-6">No vaults found.</td>
+          <tr v-else-if="customVaults.length === 0">
+            <td colspan="7" class="has-text-centered py-6">
+              No custom vaults. Your main vault is managed from the
+              <NuxtLink to="/account">Account</NuxtLink> page.
+            </td>
           </tr>
           <tr
             v-else
@@ -58,24 +61,30 @@ const { nosana } = useKit();
 
 const loading = ref(true);
 const vaults = ref<Vault[]>([]);
-const filteredVaults = ref<Vault[]>([]);
 const currentPage = ref(1);
 
+// The shared (main) vault lives on the account page; this list is the
+// advanced view showing only custom/legacy vaults.
+const { ensureSharedVault, isSharedVaultAddress } = useSharedVault();
+
+const customVaults = computed(() =>
+  vaults.value.filter((vault) => !isSharedVaultAddress(vault.address)),
+);
+
+const filteredVaults = computed(() => {
+  const searchQuery = router.currentRoute.value.query.search?.toString();
+  if (!searchQuery) return customVaults.value;
+  return customVaults.value.filter((vault) =>
+    vault.address.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
+});
+
+// Reset to first page when search changes
 watch(
-  [() => router.currentRoute.value.query.search, vaults],
-  ([searchQuery]) => {
-    if (searchQuery) {
-      filteredVaults.value = vaults.value.filter((vault) =>
-        vault.address
-          .toLowerCase()
-          .includes(searchQuery.toString().toLowerCase())
-      );
-    } else {
-      filteredVaults.value = vaults.value;
-    }
-    // Reset to first page when search changes
+  () => router.currentRoute.value.query.search,
+  () => {
     currentPage.value = 1;
-  }
+  },
 );
 
 // Pagination logic
@@ -92,6 +101,7 @@ const totalPages = computed(() =>
 );
 
 onMounted(async () => {
+  await ensureSharedVault();
   const data = await nosana.value.api.deployments.vaults.list();
   vaults.value = data;
   loading.value = false;

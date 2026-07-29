@@ -94,7 +94,7 @@
           </div>
           <div class="profile-info">
             <span class="profile-name">{{ getUserName() }}</span>
-            <span class="profile-balance">${{ nosBalanceUSD.toFixed(2) }}</span>
+            <span class="profile-balance">${{ vaultBalanceUSD.toFixed(2) }}</span>
           </div>
         </template>
         <svg
@@ -277,10 +277,6 @@ const {
   reset: resetCreditBalance,
 } = useCreditBalance();
 
-// NOS balance state
-const nosBalance = ref<any | null>(null);
-const loadingNosBalance = ref(false);
-
 const getCreditBalance = () => {
   return creditBalance.value || 0;
 };
@@ -289,40 +285,14 @@ const getCreditBalance = () => {
 const { data: stats } = useAPI("/api/stats");
 const nosPrice = computed(() => stats.value?.price || 0);
 
-// Memoized NOS balance in USD to prevent recalculation on every render
-const nosBalanceUSD = computed(() => {
-  if (!nosBalance.value || !nosPrice.value) return 0;
-  return (nosBalance.value.uiAmount || 0) * nosPrice.value;
-});
-
-const getNosBalanceUSD = () => nosBalanceUSD.value;
+// Shared vault balance (wallet users): the platform-spendable balance shown
+// in the profile chip — the analog of the credit balance for credit users.
+const { balance: sharedVaultBalance, ensureSharedVault } = useSharedVault();
+const vaultBalanceUSD = computed(
+  () => (sharedVaultBalance.value.NOS || 0) * nosPrice.value,
+);
 
 // Credit balance fetching is provided by useCreditBalance (fetchCreditBalance).
-
-// Fetch NOS balance
-const fetchNosBalance = async (signal?: AbortSignal) => {
-  if (!connected.value || !publicKey.value) return;
-
-  loadingNosBalance.value = true;
-  try {
-    // Note: SDK calls don't support AbortSignal directly, but we can check if aborted
-    if (signal?.aborted) return;
-
-    const bal = await nosana.value.nos.getBalanceInfo(publicKey.value.toBase58());
-    nosBalance.value = { uiAmount: bal.uiAmount ?? 0 };
-  } catch (error) {
-    // Don't log errors for aborted requests
-    if (
-      !(error instanceof Error && error.name === "AbortError") &&
-      !signal?.aborted
-    ) {
-      console.error("Error fetching NOS balance:", error);
-    }
-    nosBalance.value = null;
-  } finally {
-    loadingNosBalance.value = false;
-  }
-};
 
 const isPublicRoute = (path: string) =>
   path === "/" ||
@@ -378,9 +348,7 @@ const logout = async () => {
 
 // Debounced API calls with abort controllers to prevent race conditions
 let creditBalanceTimeout: NodeJS.Timeout | null = null;
-let nosBalanceTimeout: NodeJS.Timeout | null = null;
 let creditBalanceController: AbortController | null = null;
-let nosBalanceController: AbortController | null = null;
 
 const debouncedFetchCreditBalance = () => {
   // Cancel any pending request
@@ -392,19 +360,6 @@ const debouncedFetchCreditBalance = () => {
   creditBalanceTimeout = setTimeout(() => {
     creditBalanceController = new AbortController();
     fetchCreditBalance(creditBalanceController.signal);
-  }, 100);
-};
-
-const debouncedFetchNosBalance = () => {
-  // Cancel any pending request
-  if (nosBalanceController) {
-    nosBalanceController.abort();
-  }
-
-  if (nosBalanceTimeout) clearTimeout(nosBalanceTimeout);
-  nosBalanceTimeout = setTimeout(() => {
-    nosBalanceController = new AbortController();
-    fetchNosBalance(nosBalanceController.signal);
   }, 100);
 };
 
@@ -442,7 +397,9 @@ watch(
       newPublicKey &&
       (!oldConnected || oldPublicKey?.toBase58() !== newPublicKey?.toBase58())
     ) {
-      debouncedFetchNosBalance();
+      // Resolve the shared vault for the profile-chip balance (no-op if
+      // already resolved for this wallet; invalidates on wallet switch).
+      ensureSharedVault();
     }
   },
   { immediate: true },
@@ -478,19 +435,11 @@ onUnmounted(() => {
     clearTimeout(creditBalanceTimeout);
     creditBalanceTimeout = null;
   }
-  if (nosBalanceTimeout) {
-    clearTimeout(nosBalanceTimeout);
-    nosBalanceTimeout = null;
-  }
 
   // Abort any pending requests
   if (creditBalanceController) {
     creditBalanceController.abort();
     creditBalanceController = null;
-  }
-  if (nosBalanceController) {
-    nosBalanceController.abort();
-    nosBalanceController = null;
   }
 
   // Clean up event listener
@@ -568,7 +517,6 @@ const updateShowSettingsModal = (value: boolean) => {
 // Expose functions for parent components to call
 defineExpose({
   fetchCreditBalance,
-  fetchNosBalance,
 });
 </script>
 

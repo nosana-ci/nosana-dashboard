@@ -66,11 +66,6 @@
         />
       </div>
     </div>
-
-    <VaultSelector
-      v-if="isWalletMode"
-      :setSelectedVault="handleVaultSelect"
-    />
   </div>
 </template>
 
@@ -83,14 +78,12 @@ import {
   MIN_TIMEOUT_HOURS,
   MIN_INFINITE_TIMEOUT_HOURS,
 } from "~/composables/useTimeoutConstants";
-import VaultSelector from "~/components/Vault/VaultSelector.vue";
 
 const props = defineProps<{
   strategy: DeploymentStrategy;
   schedule: string;
   replicas: number;
   timeout: number;
-  isWalletMode: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -98,7 +91,6 @@ const emit = defineEmits<{
   'update:schedule': [schedule: string];
   'update:replicas': [replicas: number];
   'update:timeout': [timeout: number];
-  'update:modalSelectedVault': [vault: string | null | undefined];
 }>();
 
 const clampNumber = (value: number, min: number, max: number) => {
@@ -144,10 +136,6 @@ const handleTimeoutBlur = () => {
     timeoutInputValue.value = clamped;
     emit("update:timeout", clamped);
   }
-};
-
-const handleVaultSelect = (vault: string | undefined | null) => {
-  emit("update:modalSelectedVault", vault ?? null);
 };
 </script>
 

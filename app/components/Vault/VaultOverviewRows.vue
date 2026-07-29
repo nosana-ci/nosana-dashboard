@@ -16,14 +16,7 @@
       <div>SOL: {{ balance.SOL }} | NOS: {{ balance.NOS }}</div>
       <span
         class="is-size-7 is-family-monospace has-text-grey"
-        @click="
-          push({
-            query: {
-              tab: 'vaults',
-              search: vault,
-            },
-          })
-        "
+        @click="goToVault"
         >{{ vault.slice(0, 6) + "..." + vault.slice(-6)
         }}<span class="refresh icon is-small ml-1 borderless vertical-middle"
           ><ArrowSquareUpRightIcon /></span
@@ -45,5 +38,16 @@ interface VaultProps {
 const { deployment } = defineProps<VaultProps>();
 
 const { push } = useRouter();
-const { balance, vault, topup } = useDeploymentVault(deployment);
+const { balance, vault } = useDeploymentVault(deployment);
+const { isSharedVaultAddress } = useSharedVault();
+
+// The shared (main) vault is managed on the account page; the deployments
+// vaults tab only lists custom vaults, so route accordingly.
+const goToVault = () => {
+  if (isSharedVaultAddress(vault.value)) {
+    push("/account");
+  } else {
+    push({ query: { tab: "vaults", search: vault.value } });
+  }
+};
 </script>
