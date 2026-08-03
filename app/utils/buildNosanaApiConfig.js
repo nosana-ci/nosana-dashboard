@@ -12,6 +12,8 @@ export function buildNosanaApiConfig({ apiBase, apiKey, includeCredentials }) {
   if (apiBase) {
     config.backend_url = apiBase;
     config.client_manager_url = apiBase;
+    config.host_manager_url = apiBase;
+    config.deployment_manager_url = apiBase;
   }
 
   if (includeCredentials) {
