@@ -17,7 +17,9 @@
             </template>
           </p>
 
-          <p v-if="errorMessage" class="help is-danger mb-4">{{ errorMessage }}</p>
+          <p v-if="errorMessage" class="help is-danger mb-4">
+            {{ errorMessage }}
+          </p>
 
           <div class="mt-5">
             <button
@@ -213,11 +215,14 @@ const saveCard = async () => {
       return;
     }
     let res = await $fetch<SetupIntentResponse>(
-      `${config.apiBase}/api/payments/setup-intent`,
+      `${config.apiBase}/payments/setup-intent`,
       {
         method: "POST",
         credentials: "include",
-        body: { paymentMethodId: result.paymentMethod.id, requireThreeDSecure: true },
+        body: {
+          paymentMethodId: result.paymentMethod.id,
+          requireThreeDSecure: true,
+        },
       },
     );
 
@@ -233,7 +238,7 @@ const saveCard = async () => {
         return;
       }
       res = await $fetch<SetupIntentResponse>(
-        `${config.apiBase}/api/payments/setup-intent/confirm`,
+        `${config.apiBase}/payments/setup-intent/confirm`,
         {
           method: "POST",
           credentials: "include",

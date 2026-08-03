@@ -62,7 +62,7 @@ const fetchUserData = async (version = sessionStateVersion) => {
     try {
       const config = useRuntimeConfig().public;
       const response = await $fetch<User>(
-        `${config.apiBase}/api/user/profile`,
+        `${config.apiBase}/user/profile`,
         {
           credentials: "include",
         },
@@ -198,25 +198,25 @@ export function useSuperTokens() {
       ],
       ...(captchaToken
         ? {
-            options: {
-              preAPIHook: async ({ url, requestInit }) => {
-                const rawBody =
-                  typeof requestInit.body === "string" ? requestInit.body : "{}";
-                const parsedBody = JSON.parse(rawBody) as Record<string, unknown>;
+          options: {
+            preAPIHook: async ({ url, requestInit }) => {
+              const rawBody =
+                typeof requestInit.body === "string" ? requestInit.body : "{}";
+              const parsedBody = JSON.parse(rawBody) as Record<string, unknown>;
 
-                return {
-                  url,
-                  requestInit: {
-                    ...requestInit,
-                    body: JSON.stringify({
-                      ...parsedBody,
-                      captchaToken,
-                    }),
-                  },
-                };
-              },
+              return {
+                url,
+                requestInit: {
+                  ...requestInit,
+                  body: JSON.stringify({
+                    ...parsedBody,
+                    captchaToken,
+                  }),
+                },
+              };
             },
-          }
+          },
+        }
         : {}),
     });
 

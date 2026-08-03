@@ -140,82 +140,90 @@
 
               <div class="credit-usage-bottom">
                 <div class="credit-usage-bottom-inner">
-                <p class="title is-6 mb-4 usage-heading">Usage this month</p>
-                <div class="columns is-mobile mb-0 usage-metrics">
-                <div class="column">
-                  <p class="heading mb-1" style="font-size: 0.7rem">
-                    Spent
+                  <p class="title is-6 mb-4 usage-heading">Usage this month</p>
+                  <div class="columns is-mobile mb-0 usage-metrics">
+                    <div class="column">
+                      <p class="heading mb-1" style="font-size: 0.7rem">
+                        Spent
+                      </p>
+                      <p
+                        class="title is-4 mb-1"
+                        v-if="!loadingSpending || hasLoadedSpendingOnce"
+                      >
+                        ${{ spentThisMonth.toFixed(2) }}
+                      </p>
+                      <p class="title is-4 mb-1" v-else>-</p>
+                      <p
+                        class="has-text-grey is-size-7 mb-0"
+                        v-if="pctChangeSoFar != null"
+                      >
+                        <ArrowUpIcon
+                          v-if="pctChangeSoFar >= 0"
+                          class="icon is-small mr-1"
+                          style="width: 10px; height: 10px; fill: #48c78e"
+                        />
+                        <ArrowDownIcon
+                          v-else
+                          class="icon is-small mr-1"
+                          style="width: 10px; height: 10px; fill: #f14668"
+                        />
+                        {{ pctChangeSoFar.toFixed(2) }}% vs last month
+                      </p>
+                    </div>
+                    <div class="column usage-column-divider">
+                      <p class="heading mb-1" style="font-size: 0.7rem">
+                        Forecasted
+                      </p>
+                      <p
+                        class="title is-4 mb-1"
+                        v-if="!loadingSpending || hasLoadedSpendingOnce"
+                      >
+                        ${{ forecastAmount.toFixed(2) }}
+                      </p>
+                      <p class="title is-4 mb-1" v-else>-</p>
+                      <p
+                        class="has-text-grey is-size-7 mb-0"
+                        v-if="pctChangeForecastFromLastMonth != null"
+                      >
+                        <ArrowUpIcon
+                          v-if="pctChangeForecastFromLastMonth >= 0"
+                          class="icon is-small mr-1"
+                          style="width: 10px; height: 10px; fill: #48c78e"
+                        />
+                        <ArrowDownIcon
+                          v-else
+                          class="icon is-small mr-1"
+                          style="width: 10px; height: 10px; fill: #f14668"
+                        />
+                        {{ pctChangeForecastFromLastMonth.toFixed(2) }}% vs last
+                        month
+                      </p>
+                    </div>
+                  </div>
+                  <p v-if="isAuthenticated" class="has-text-centered mt-5 mb-0">
+                    <button
+                      type="button"
+                      class="button is-small balance-history-button"
+                      @click="showHistoryModal = true"
+                    >
+                      <span class="icon is-small">
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          style="width: 14px; height: 14px"
+                        >
+                          <path d="M3 3v5h5" />
+                          <path d="M3.05 13A9 9 0 1 0 6 5.3L3 8" />
+                          <polyline points="12 7 12 12 15 15" />
+                        </svg>
+                      </span>
+                      <span>View balance history</span>
+                    </button>
                   </p>
-                  <p
-                    class="title is-4 mb-1"
-                    v-if="!loadingSpending || hasLoadedSpendingOnce"
-                  >
-                    ${{ spentThisMonth.toFixed(2) }}
-                  </p>
-                  <p class="title is-4 mb-1" v-else>-</p>
-                  <p
-                    class="has-text-grey is-size-7 mb-0"
-                    v-if="pctChangeSoFar != null"
-                  >
-                    <ArrowUpIcon
-                      v-if="pctChangeSoFar >= 0"
-                      class="icon is-small mr-1"
-                      style="width: 10px; height: 10px; fill: #48c78e"
-                    />
-                    <ArrowDownIcon
-                      v-else
-                      class="icon is-small mr-1"
-                      style="width: 10px; height: 10px; fill: #f14668"
-                    />
-                    {{ pctChangeSoFar.toFixed(2) }}% vs last month
-                  </p>
-                </div>
-                <div class="column usage-column-divider">
-                  <p class="heading mb-1" style="font-size: 0.7rem">
-                    Forecasted
-                  </p>
-                  <p
-                    class="title is-4 mb-1"
-                    v-if="!loadingSpending || hasLoadedSpendingOnce"
-                  >
-                    ${{ forecastAmount.toFixed(2) }}
-                  </p>
-                  <p class="title is-4 mb-1" v-else>-</p>
-                  <p
-                    class="has-text-grey is-size-7 mb-0"
-                    v-if="pctChangeForecastFromLastMonth != null"
-                  >
-                    <ArrowUpIcon
-                      v-if="pctChangeForecastFromLastMonth >= 0"
-                      class="icon is-small mr-1"
-                      style="width: 10px; height: 10px; fill: #48c78e"
-                    />
-                    <ArrowDownIcon
-                      v-else
-                      class="icon is-small mr-1"
-                      style="width: 10px; height: 10px; fill: #f14668"
-                    />
-                    {{ pctChangeForecastFromLastMonth.toFixed(2) }}% vs last
-                    month
-                  </p>
-                </div>
-                </div>
-                <p v-if="isAuthenticated" class="has-text-centered mt-5 mb-0">
-                  <button
-                    type="button"
-                    class="button is-small balance-history-button"
-                    @click="showHistoryModal = true"
-                  >
-                    <span class="icon is-small">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px">
-                        <path d="M3 3v5h5" />
-                        <path d="M3.05 13A9 9 0 1 0 6 5.3L3 8" />
-                        <polyline points="12 7 12 12 15 15" />
-                      </svg>
-                    </span>
-                    <span>View balance history</span>
-                  </button>
-                </p>
                 </div>
               </div>
             </div>
@@ -512,10 +520,13 @@ const checkFreeCreditsEligibility = async (force = false) => {
   }
 
   try {
-    const data = await $fetch<{ eligible: boolean; amount?: number; message?: string }>(
-      `${config.apiBase}/api/credits/request/eligibility`,
-      { credentials: "include" },
-    );
+    const data = await $fetch<{
+      eligible: boolean;
+      amount?: number;
+      message?: string;
+    }>(`${config.apiBase}/credits/request/eligibility`, {
+      credentials: "include",
+    });
 
     if (data && data.eligible) {
       clearFreeCreditsVerifyDismissed(userData.value?.id);
@@ -544,7 +555,8 @@ const checkFreeCreditsEligibility = async (force = false) => {
     if (e?.status === 429) {
       // Global rate limit hit — credits temporarily unavailable
       toast.error(
-        e?.data?.message ?? "Credits are temporarily unavailable. Please try again in a few minutes."
+        e?.data?.message ??
+          "Credits are temporarily unavailable. Please try again in a few minutes.",
       );
     } else {
       checkedEligibility.value = false; // allow retry on network/other error
@@ -562,10 +574,13 @@ const handleFreeCreditsVerified = async () => {
   clearFreeCreditsVerifyDismissed(userData.value?.id);
 
   try {
-    const data = await $fetch<{ eligible: boolean; amount?: number; message?: string }>(
-      `${config.apiBase}/api/credits/request/eligibility`,
-      { credentials: "include" },
-    );
+    const data = await $fetch<{
+      eligible: boolean;
+      amount?: number;
+      message?: string;
+    }>(`${config.apiBase}/credits/request/eligibility`, {
+      credentials: "include",
+    });
     if (data?.eligible) {
       freeCreditsAmount.value = data.amount ?? null;
       showFreeCreditsModal.value = true;
@@ -598,7 +613,11 @@ const handleFreeCreditsClaimed = async (amount: number) => {
 watch(
   () => route.query.source,
   (source) => {
-    if (source === "free-credits" && isAuthenticated.value && !isLoading.value) {
+    if (
+      source === "free-credits" &&
+      isAuthenticated.value &&
+      !isLoading.value
+    ) {
       checkedEligibility.value = false;
       checkFreeCreditsEligibility(true);
     }
@@ -1286,7 +1305,7 @@ const loadInvitation = async () => {
       invitationError.value = "";
 
       const response = await $fetch<Invitation>(
-        `${config.apiBase}/api/credits/invitations/${invitationToken.value}`,
+        `${config.apiBase}/credits/invitations/${invitationToken.value}`,
         {},
       );
       invitation.value = response;

@@ -40,7 +40,7 @@ export function usePaymentMethods() {
       loading.value = true;
       try {
         const data = await $fetch<PaymentMethodsResponse>(
-          `${config.apiBase}/api/payments/methods`,
+          `${config.apiBase}/payments/methods`,
           { credentials: "include" },
         );
         methods.value = data.methods.map((method) => ({
@@ -64,7 +64,7 @@ export function usePaymentMethods() {
     settingDefaultId.value = paymentMethodId;
     try {
       const data = await $fetch<PaymentMethodsResponse>(
-        `${config.apiBase}/api/payments/methods/${paymentMethodId}/default`,
+        `${config.apiBase}/payments/methods/${paymentMethodId}/default`,
         {
           method: "PUT",
           credentials: "include",

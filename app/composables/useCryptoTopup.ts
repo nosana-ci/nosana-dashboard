@@ -49,7 +49,7 @@ export function useCryptoTopup() {
     console.log("signed", signed);
     const sig = await nosana.value.solana.sendTransaction(signed, { commitment: "finalized" });
 
-    await $fetch(`${config.apiBase}/api/payments/topup`, {
+    await $fetch(`${config.apiBase}/payments/topup`, {
       method: "POST",
       credentials: "include",
       body: { txSignature: String(sig) },

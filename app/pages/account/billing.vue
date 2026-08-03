@@ -1,7 +1,13 @@
 <template>
   <div>
-    <TopBar title="Billing" subtitle="Manage your payment methods and purchase history" />
-    <div v-if="!isAuthenticated && !isLoading" class="section has-text-centered">
+    <TopBar
+      title="Billing"
+      subtitle="Manage your payment methods and purchase history"
+    />
+    <div
+      v-if="!isAuthenticated && !isLoading"
+      class="section has-text-centered"
+    >
       <p class="has-text-grey">Please sign in to manage billing.</p>
     </div>
     <Loader v-else-if="isLoading" />
@@ -23,7 +29,10 @@
               class="progress is-small is-info"
               max="100"
             ></progress>
-            <div v-else-if="!methods.length && !showAddCard" class="has-text-centered py-3">
+            <div
+              v-else-if="!methods.length && !showAddCard"
+              class="has-text-centered py-3"
+            >
               <p class="has-text-grey mb-3">No saved payment methods.</p>
             </div>
             <div v-else>
@@ -81,8 +90,13 @@
             </div>
             <div v-else class="mt-4">
               <label class="label is-small">New Card</label>
-              <div ref="addCardElementRef" class="stripe-card-element mb-3"></div>
-              <p v-if="addCardError" class="help is-danger mb-2">{{ addCardError }}</p>
+              <div
+                ref="addCardElementRef"
+                class="stripe-card-element mb-3"
+              ></div>
+              <p v-if="addCardError" class="help is-danger mb-2">
+                {{ addCardError }}
+              </p>
               <div class="is-flex" style="gap: 0.5rem">
                 <button
                   class="button is-primary is-small"
@@ -115,10 +129,7 @@
               class="progress is-small is-info"
               max="100"
             ></progress>
-            <div
-              v-else-if="!purchases.length"
-              class="has-text-centered py-5"
-            >
+            <div v-else-if="!purchases.length" class="has-text-centered py-5">
               <p class="has-text-grey">No purchases yet.</p>
             </div>
             <table
@@ -135,7 +146,9 @@
               </thead>
               <tbody>
                 <tr v-for="purchase in purchases" :key="purchase.id">
-                  <td class="px-5 py-4">{{ formatDate(purchase.createdAt) }}</td>
+                  <td class="px-5 py-4">
+                    {{ formatDate(purchase.createdAt) }}
+                  </td>
                   <td class="px-5 py-4">
                     <strong>${{ purchase.amountUsd.toFixed(2) }}</strong>
                   </td>
@@ -214,10 +227,13 @@ const setDefault = async (id: string) => {
 
 const tryOpenFreeCreditsClaimModal = async () => {
   try {
-    const data = await $fetch<{ eligible: boolean; amount?: number; message?: string }>(
-      `${config.apiBase}/api/credits/request/eligibility`,
-      { credentials: "include" },
-    );
+    const data = await $fetch<{
+      eligible: boolean;
+      amount?: number;
+      message?: string;
+    }>(`${config.apiBase}/credits/request/eligibility`, {
+      credentials: "include",
+    });
     if (data?.eligible) {
       clearFreeCreditsVerifyDismissed(userData.value?.id);
       freeCreditsAmount.value = data.amount ?? null;
@@ -239,7 +255,9 @@ const handleFreeCreditsClaimed = async () => {
 
 const deleteMethod = async (id: string) => {
   const method = methods.value.find((m) => m.id === id);
-  const cardLabel = method?.last4 ? `card ending in ${method.last4}` : "this card";
+  const cardLabel = method?.last4
+    ? `card ending in ${method.last4}`
+    : "this card";
   if (
     !confirm(
       `Remove ${cardLabel} from your account? You will need to add a card again to buy credits or claim free credits.`,
@@ -250,7 +268,7 @@ const deleteMethod = async (id: string) => {
 
   deletingId.value = id;
   try {
-    await $fetch(`${config.apiBase}/api/payments/methods/${id}`, {
+    await $fetch(`${config.apiBase}/payments/methods/${id}`, {
       method: "DELETE",
       credentials: "include",
     });
@@ -309,7 +327,7 @@ const handleAddCard = async () => {
     }
     const requireThreeDSecure = isFreeCreditsFlow.value;
     let res = await $fetch<SetupIntentResponse>(
-      `${config.apiBase}/api/payments/setup-intent`,
+      `${config.apiBase}/payments/setup-intent`,
       {
         method: "POST",
         credentials: "include",
@@ -329,7 +347,7 @@ const handleAddCard = async () => {
       }
       if (requireThreeDSecure && res.setupIntentId) {
         res = await $fetch<SetupIntentResponse>(
-          `${config.apiBase}/api/payments/setup-intent/confirm`,
+          `${config.apiBase}/payments/setup-intent/confirm`,
           {
             method: "POST",
             credentials: "include",
@@ -368,7 +386,8 @@ const handleAddCard = async () => {
   } catch (err: unknown) {
     type FetchError = { data?: { message?: string }; message?: string };
     const e = err as FetchError;
-    addCardError.value = e?.data?.message ?? e?.message ?? "Failed to save card.";
+    addCardError.value =
+      e?.data?.message ?? e?.message ?? "Failed to save card.";
   } finally {
     addingCard.value = false;
   }
@@ -391,7 +410,7 @@ const fetchPurchases = async () => {
   loadingPurchases.value = true;
   try {
     const data = await $fetch<{ purchases: Purchase[] }>(
-      `${config.apiBase}/api/payments/purchases`,
+      `${config.apiBase}/payments/purchases`,
       { credentials: "include" },
     );
     purchases.value = data.purchases;
@@ -469,7 +488,6 @@ const formatDate = (dateStr: string) =>
     hour: "2-digit",
     minute: "2-digit",
   });
-
 </script>
 
 <style scoped>

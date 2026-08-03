@@ -55,14 +55,12 @@
         <!-- Type: Automatic Grant -->
         <template v-else-if="type === 'grant'">
           <h1 class="title is-3 mb-3">
-            {{
-              claimedSuccessfully ? "Credits Added" : "Free Credits"
-            }}
+            {{ claimedSuccessfully ? "Credits Added" : "Free Credits" }}
           </h1>
           <p class="subtitle is-6 has-text-grey mb-5">
             <template v-if="claimedSuccessfully">
-              <strong class="has-text-success">{{ formattedAmount }}</strong> in credits
-              have been added to your account.
+              <strong class="has-text-success">{{ formattedAmount }}</strong> in
+              credits have been added to your account.
             </template>
             <template v-else-if="verificationRequired">
               Please verify a payment method before claiming free credits. Your
@@ -70,7 +68,8 @@
               charged.
             </template>
             <template v-else>
-              Claim <strong class="has-text-success">{{ formattedAmount }}</strong> in
+              Claim
+              <strong class="has-text-success">{{ formattedAmount }}</strong> in
               free credits to get started.
             </template>
           </p>
@@ -194,7 +193,7 @@ const formattedAmount = computed(() => {
     const dollars = props.amount / 1000;
     return `$${dollars % 1 === 0 ? dollars.toFixed(0) : dollars.toFixed(2)}`;
   }
-  return '$...';
+  return "$...";
 });
 
 const formattedInvitationAmount = computed(() => {
@@ -202,7 +201,7 @@ const formattedInvitationAmount = computed(() => {
     const dollars = props.invitation.creditsAmount / 1000;
     return `$${dollars % 1 === 0 ? dollars.toFixed(0) : dollars.toFixed(2)}`;
   }
-  return '$...';
+  return "$...";
 });
 
 // Guard against the modal-background receiving a stale click event from the
@@ -242,16 +241,16 @@ const handleClaim = async () => {
     let body = {};
 
     if (props.type === "manual") {
-      url = `${config.apiBase}/api/credits/claim`;
+      url = `${config.apiBase}/credits/claim`;
       body = { code: claimCode.value.trim() };
     } else if (props.type === "grant") {
       trackEvent("credits_claim_click", {
         user_id: userData.value?.generatedAddress,
         auth_method: userData.value?.loginMethod,
       });
-      url = `${config.apiBase}/api/credits/request`;
+      url = `${config.apiBase}/credits/request`;
     } else if (props.type === "invitation") {
-      url = `${config.apiBase}/api/credits/invitations/${props.token}/claim`;
+      url = `${config.apiBase}/credits/invitations/${props.token}/claim`;
     }
 
     const response = await $fetch<{ amount: number }>(url, {
@@ -275,7 +274,11 @@ const handleClaim = async () => {
     emit("claimed", response.amount);
   } catch (err: unknown) {
     console.error("Error claiming credits:", err);
-    type FetchError = { status?: number; data?: { message?: string }; response?: { status?: number; _data?: { message?: string } } };
+    type FetchError = {
+      status?: number;
+      data?: { message?: string };
+      response?: { status?: number; _data?: { message?: string } };
+    };
     const e = err as FetchError;
     const status = e?.status ?? e?.response?.status;
     const message = e?.data?.message ?? e?.response?._data?.message;
@@ -288,7 +291,10 @@ const handleClaim = async () => {
       ) {
         verificationRequired.value = true;
       } else {
-        toast.error(message ?? "Too many requests. Please come back later to claim your credits.");
+        toast.error(
+          message ??
+            "Too many requests. Please come back later to claim your credits.",
+        );
       }
     } else if (
       status === 403 &&

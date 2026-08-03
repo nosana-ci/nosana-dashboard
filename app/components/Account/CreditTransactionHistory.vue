@@ -1,6 +1,9 @@
 <template>
   <Teleport to="body">
-    <div class="modal credit-transaction-history-modal" :class="{ 'is-active': modelValue }">
+    <div
+      class="modal credit-transaction-history-modal"
+      :class="{ 'is-active': modelValue }"
+    >
       <div class="modal-background" @click="closeModal"></div>
       <div
         class="modal-content credit-transaction-history-content"
@@ -22,14 +25,31 @@
           ></progress>
           <div v-else-if="error" class="has-text-centered py-6 px-5">
             <p class="has-text-danger mb-3">{{ error }}</p>
-            <button type="button" class="button is-small" @click="fetchTransactions">
+            <button
+              type="button"
+              class="button is-small"
+              @click="fetchTransactions"
+            >
               Try again
             </button>
           </div>
-          <div v-else-if="!transactions.length" class="has-text-centered py-6 px-5">
+          <div
+            v-else-if="!transactions.length"
+            class="has-text-centered py-6 px-5"
+          >
             <span class="icon is-large has-text-grey-light mb-2">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width: 36px; height: 36px">
-                <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z" />
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                style="width: 36px; height: 36px"
+              >
+                <path
+                  d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"
+                />
                 <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8" />
                 <path d="M12 17.5v-11" />
               </svg>
@@ -49,29 +69,47 @@
                 </thead>
                 <tbody>
                   <tr v-for="transaction in transactions" :key="transaction.id">
-                    <td class="px-5 py-4">{{ formatDate(transaction.createdAt) }}</td>
+                    <td class="px-5 py-4">
+                      {{ formatDate(transaction.createdAt) }}
+                    </td>
                     <td class="px-5 py-4">
                       <span
                         class="tag is-light"
-                        :class="isCreditTransactionInflow(transaction.type) ? 'is-success' : 'is-danger'"
+                        :class="
+                          isCreditTransactionInflow(transaction.type)
+                            ? 'is-success'
+                            : 'is-danger'
+                        "
                       >
-                        <span>{{ getCreditTransactionLabel(transaction.type) }}</span>
+                        <span>{{
+                          getCreditTransactionLabel(transaction.type)
+                        }}</span>
                       </span>
                     </td>
                     <td class="px-5 py-4 has-text-right">
                       <strong
                         :style="{
-                          color: isCreditTransactionInflow(transaction.type) ? '#48c78e' : '#f14668',
+                          color: isCreditTransactionInflow(transaction.type)
+                            ? '#48c78e'
+                            : '#f14668',
                         }"
                       >
-                        {{ isCreditTransactionInflow(transaction.type) ? "+" : "-" }}${{
-                          transaction.amountUsd.toFixed(2)
-                        }}
+                        {{
+                          isCreditTransactionInflow(transaction.type)
+                            ? "+"
+                            : "-"
+                        }}${{ transaction.amountUsd.toFixed(2) }}
                       </strong>
                     </td>
-                     <td class="px-5 py-4 has-text-right">
-                      <span v-if="transaction.method"
-                        :class="transaction.type === 'token_topup' ? 'is-uppercase' : 'is-capitalized'">
+                    <td class="px-5 py-4 has-text-right">
+                      <span
+                        v-if="transaction.method"
+                        :class="
+                          transaction.type === 'token_topup'
+                            ? 'is-uppercase'
+                            : 'is-capitalized'
+                        "
+                      >
                         {{ transaction.method }}
                       </span>
                       <span v-else>-</span>
@@ -163,7 +201,9 @@ const currentPage = ref(1);
 const loading = ref(false);
 const error = ref<string | null>(null);
 
-const totalPages = computed(() => Math.max(1, Math.ceil(total.value / PAGE_SIZE)));
+const totalPages = computed(() =>
+  Math.max(1, Math.ceil(total.value / PAGE_SIZE)),
+);
 
 const closeModal = () => {
   emit("update:modelValue", false);
@@ -176,7 +216,7 @@ const fetchTransactions = async () => {
   try {
     const offset = (currentPage.value - 1) * PAGE_SIZE;
     const data = await $fetch<CreditTransactionsResponse>(
-      `${config.apiBase}/api/credits/transactions`,
+      `${config.apiBase}/credits/transactions`,
       {
         credentials: "include",
         query: {
@@ -204,7 +244,12 @@ const fetchTransactions = async () => {
 };
 
 const goToPage = (page: number) => {
-  if (page < 1 || page > totalPages.value || page === currentPage.value || loading.value) {
+  if (
+    page < 1 ||
+    page > totalPages.value ||
+    page === currentPage.value ||
+    loading.value
+  ) {
     return;
   }
   currentPage.value = page;
