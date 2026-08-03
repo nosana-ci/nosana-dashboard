@@ -171,10 +171,7 @@
                       v-html="formatPrice(totalNos || 0, totalCostUsd || 0)"
                     ></td>
                   </tr>
-                  <tr
-                    v-for="field in resolvedMetricFields"
-                    :key="field.key"
-                  >
+                  <tr v-for="field in resolvedMetricFields" :key="field.key">
                     <td>{{ field.label }}</td>
                     <td>{{ field.displayValue }}</td>
                   </tr>
@@ -472,11 +469,9 @@ const { markets } = useMarkets();
 const { saveState } = useDeployPageState();
 
 // Fetch markets data needed for centralized pricing
-const {
-  data: testgridMarkets,
-  pending: marketsPending,
-  execute: executeMarkets,
-} = useAPI<TestgridMarket[]>("/api/markets", { default: () => [] });
+const { data: testgridMarkets, execute: executeMarkets } = useAPI<
+  TestgridMarket[]
+>("/markets", { default: () => [] });
 
 // Execute the markets API call on mount
 onMounted(() => {
@@ -617,18 +612,18 @@ const isGHCR = (image: string) => {
 
 // Get host specs for actual GPU info (skip when node is placeholder)
 const nodeSpecsUrl = computed(() =>
-  hasRealNode.value ? `/api/nodes/${props.job.node}/metrics` : "",
+  hasRealNode.value ? `/nodes/${props.job.node}/metrics` : "",
 );
-const { data: nodeMetrics, pending: loadingNodeSpecs } = useAPI(
-  nodeSpecsUrl,
-);
+const { data: nodeMetrics, pending: loadingNodeSpecs } = useAPI(nodeSpecsUrl);
 
 const nodeInfoUrl = computed(() =>
   hasRealNode.value
     ? `https://${props.job.node}.${useRuntimeConfig().public.nodeDomain}/node/info`
     : "",
 );
-const { data: nodeInfo } = useAPI<NodeInfoResponse | null>(nodeInfoUrl, { credentials: false });
+const { data: nodeInfo } = useAPI<NodeInfoResponse | null>(nodeInfoUrl, {
+  credentials: false,
+});
 
 const jobDataForPriceComponent = computed(() => {
   return {
@@ -808,7 +803,7 @@ const combinedSpecs = computed<CombinedSpecs | null>(() => {
         memory: gpu.memory?.total_mb,
         architecture: `${gpu.network_architecture?.major}.${gpu.network_architecture?.minor}`,
       }))
-    : ((metrics?.gpu?.devices ?? []).map((gpu: any) => ({
+    : (metrics?.gpu?.devices ?? []).map((gpu: any) => ({
         gpu: gpu?.name,
         memory: gpu?.vram_total_mb,
         architecture:
@@ -816,7 +811,7 @@ const combinedSpecs = computed<CombinedSpecs | null>(() => {
           gpu?.network_architecture?.minor !== undefined
             ? `${gpu.network_architecture.major}.${gpu.network_architecture.minor}`
             : undefined,
-      })));
+      }));
 
   const firstGpu = gpusArray.length > 0 ? gpusArray[0] : undefined;
   const cpuModel = nodeInfoData?.cpu?.model ?? metrics?.cpu?.cpu_model;
@@ -831,8 +826,7 @@ const combinedSpecs = computed<CombinedSpecs | null>(() => {
   const metricCountry = metrics?.network?.country ?? metrics?.country;
   const metricDownload =
     metrics?.network?.download_mbps ?? metrics?.download_mbps;
-  const metricUpload =
-    metrics?.network?.upload_mbps ?? metrics?.upload_mbps;
+  const metricUpload = metrics?.network?.upload_mbps ?? metrics?.upload_mbps;
   const metricPing = metrics?.network?.ping_ms ?? metrics?.ping_ms;
   const metricCudaVersion =
     nodeInfoData?.gpus?.cuda_driver_version ??
@@ -896,7 +890,11 @@ const metricFields: MetricField[] = [
   {
     key: "country",
     label: "Country",
-    paths: ["nodeInfo.info.country", "metrics.network.country", "metrics.country"],
+    paths: [
+      "nodeInfo.info.country",
+      "metrics.network.country",
+      "metrics.country",
+    ],
     formatter: "country",
   },
   {
@@ -934,8 +932,8 @@ const metricSources = computed(() => ({
   },
 }));
 
-const resolvedMetricFields = computed(() =>
-  resolveMetricFields(metricFields, metricSources.value).secondary,
+const resolvedMetricFields = computed(
+  () => resolveMetricFields(metricFields, metricSources.value).secondary,
 );
 
 // Check if the job is queued (state 0 and no start time, or placeholder node)

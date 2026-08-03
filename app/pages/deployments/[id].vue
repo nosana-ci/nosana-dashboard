@@ -354,7 +354,7 @@ const {
 detail.setLoadJobDefinition(loadJobDefinition);
 
 // --- Remaining page-level state ---
-const { data: testgridMarkets } = useAPI("/api/markets", { default: () => [] });
+const { data: testgridMarkets } = useAPI("/markets", { default: () => [] });
 
 // Component refs for editor validation wiring
 const jobDefEditorComponent = ref<any>(null);
@@ -458,7 +458,6 @@ onBeforeRouteLeave(() => {
 });
 
 // --- Watchers ---
-
 
 // Debounced authentication watcher
 watch(

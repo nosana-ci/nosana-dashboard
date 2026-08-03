@@ -13,7 +13,6 @@
 
     <div v-else class="columns is-multiline">
       <div class="column is-9-fullhd is-12">
-
         <!-- Choose model -->
         <ConfigurationModal
           title="Configure Deployment"
@@ -60,9 +59,7 @@
             <h2 class="title is-5 mb-4">Summary</h2>
             <!-- Cost Summary -->
             <div class="mb-4">
-              <p class="section-header">
-                Cost
-              </p>
+              <p class="section-header">Cost</p>
 
               <!-- Credit User Cost -->
               <div v-if="isCreditMode">
@@ -99,9 +96,7 @@
 
             <!-- Configuration Summary -->
             <div class="mb-4">
-              <p class="section-header">
-                Configuration
-              </p>
+              <p class="section-header">Configuration</p>
 
               <div
                 class="mb-2"
@@ -179,13 +174,10 @@
                 v-if="strategy === 'SCHEDULED'"
               >
                 <span class="has-text-grey is-size-7">Schedule</span>
-                <div style="text-align: right; max-width: 60%;">
+                <div style="text-align: right; max-width: 60%">
                   <div
                     class="has-text-weight-medium is-size-7 is-family-monospace"
-                    style="
-                      overflow: hidden;
-                      text-overflow: ellipsis;
-                    "
+                    style="overflow: hidden; text-overflow: ellipsis"
                   >
                     {{ schedule || "-" }}
                   </div>
@@ -281,9 +273,9 @@
                   class="has-text-centered mb-3 mt-3"
                 >
                   <p class="has-text-grey is-size-7 mb-2">
-                    Insufficient vault balance. Need {{
-                      requiredNosTotal.toFixed(3)
-                    }} NOS, have {{ vaultBalance.NOS.toFixed(3) }} NOS
+                    Insufficient vault balance. Need
+                    {{ requiredNosTotal.toFixed(3) }} NOS, have
+                    {{ vaultBalance.NOS.toFixed(3) }} NOS
                   </p>
                   <button
                     type="button"
@@ -356,22 +348,34 @@
               v-if="readmeContentForModal"
               :raw-markdown="readmeContentForModal"
             />
-            <p v-else class="has-text-grey">No documentation available for this template.</p>
+            <p v-else class="has-text-grey">
+              No documentation available for this template.
+            </p>
           </ClientOnly>
         </section>
-        <footer class="modal-card-foot" style="justify-content: space-between; align-items: center;">
+        <footer
+          class="modal-card-foot"
+          style="justify-content: space-between; align-items: center"
+        >
           <div class="buttons mb-0">
             <button class="button is-primary" @click="showReadmeModal = false">
               Use Template
             </button>
             <button
               class="button is-light"
-              @click="showReadmeModal = false; showTemplateModal = true"
+              @click="
+                showReadmeModal = false;
+                showTemplateModal = true;
+              "
             >
               Change Template
             </button>
           </div>
-          <p v-if="selectedTemplate?.description" class="has-text-grey is-size-7" style="text-align: right; max-width: 50%;">
+          <p
+            v-if="selectedTemplate?.description"
+            class="has-text-grey is-size-7"
+            style="text-align: right; max-width: 50%"
+          >
             {{ selectedTemplate.description }}
           </p>
         </footer>
@@ -421,8 +425,11 @@ const router = useRouter();
 const route = useRoute();
 const toast = useToast();
 
-const { isAuthenticated: superTokensAuth, isEmailVerified, userData } =
-  useSuperTokens();
+const {
+  isAuthenticated: superTokensAuth,
+  isEmailVerified,
+  userData,
+} = useSuperTokens();
 const { connected, account } = useWallet();
 const { openBuyCreditsModal } = useBuyCreditsModal();
 const { openBothModal } = useLoginModal();
@@ -452,14 +459,13 @@ const { lockScroll, unlockScroll } = useModalScrollLock();
 const config = useRuntimeConfig();
 // Show all markets on devnet, only premium on mainnet
 const gpuTypeCheckbox = ref<string[]>(
-  config.public.network === "devnet" ? ["PREMIUM", "COMMUNITY"] : ["PREMIUM"]
+  config.public.network === "devnet" ? ["PREMIUM", "COMMUNITY"] : ["PREMIUM"],
 );
 const activeFilter = ref(
-  config.public.network === "devnet" ? "ALL" : "PREMIUM"
+  config.public.network === "devnet" ? "ALL" : "PREMIUM",
 );
 const selectedMarket = ref<Market | null>(null);
 const selectedTemplate = ref<Template | null>(null);
-
 
 const INFINITE_TIMEOUT = 6;
 const DEFAULT_TIMEOUT = 1;
@@ -475,30 +481,116 @@ const isEditorCollapsed = ref(false);
 // Generate funny random deployment name
 const generateFunnyDeploymentName = (): string => {
   const adjectives = [
-    "efficient", "reliable", "robust", "scalable", "secure", "optimized", "advanced", "modern",
-    "intelligent", "adaptive", "dynamic", "flexible", "precise", "streamlined", "enhanced", "refined",
-    "innovative", "strategic", "systematic", "methodical", "comprehensive", "integrated", "modular", "unified",
-    "resilient", "durable", "stable", "consistent", "proven", "tested", "validated", "certified"
+    "efficient",
+    "reliable",
+    "robust",
+    "scalable",
+    "secure",
+    "optimized",
+    "advanced",
+    "modern",
+    "intelligent",
+    "adaptive",
+    "dynamic",
+    "flexible",
+    "precise",
+    "streamlined",
+    "enhanced",
+    "refined",
+    "innovative",
+    "strategic",
+    "systematic",
+    "methodical",
+    "comprehensive",
+    "integrated",
+    "modular",
+    "unified",
+    "resilient",
+    "durable",
+    "stable",
+    "consistent",
+    "proven",
+    "tested",
+    "validated",
+    "certified",
   ];
-  
+
   const secondAdjectives = [
-    "enterprise", "cloud", "distributed", "microservice", "containerized", "serverless", "edge", "hybrid",
-    "realtime", "eventdriven", "apifirst", "datadriven", "aipowered", "mlenhanced", "highperformance", "lowlatency",
-    "production", "staging", "development", "testing", "monitoring", "analytics", "security", "compliance",
-    "global", "regional", "multizone", "faulttolerant", "autoscaling", "loadbalanced", "replicated", "backup"
+    "enterprise",
+    "cloud",
+    "distributed",
+    "microservice",
+    "containerized",
+    "serverless",
+    "edge",
+    "hybrid",
+    "realtime",
+    "eventdriven",
+    "apifirst",
+    "datadriven",
+    "aipowered",
+    "mlenhanced",
+    "highperformance",
+    "lowlatency",
+    "production",
+    "staging",
+    "development",
+    "testing",
+    "monitoring",
+    "analytics",
+    "security",
+    "compliance",
+    "global",
+    "regional",
+    "multizone",
+    "faulttolerant",
+    "autoscaling",
+    "loadbalanced",
+    "replicated",
+    "backup",
   ];
-  
+
   const nouns = [
-    "banana", "penguin", "robot", "ninja", "wizard", "dragon", "unicorn", "panda",
-    "koala", "otter", "sloth", "hedgehog", "raccoon", "squirrel", "hamster", "bunny",
-    "puppy", "kitten", "duckling", "chick", "turtle", "frog", "butterfly", "bee",
-    "donut", "pizza", "taco", "burger", "cookie", "cake", "icecream", "pancake"
+    "banana",
+    "penguin",
+    "robot",
+    "ninja",
+    "wizard",
+    "dragon",
+    "unicorn",
+    "panda",
+    "koala",
+    "otter",
+    "sloth",
+    "hedgehog",
+    "raccoon",
+    "squirrel",
+    "hamster",
+    "bunny",
+    "puppy",
+    "kitten",
+    "duckling",
+    "chick",
+    "turtle",
+    "frog",
+    "butterfly",
+    "bee",
+    "donut",
+    "pizza",
+    "taco",
+    "burger",
+    "cookie",
+    "cake",
+    "icecream",
+    "pancake",
   ];
-  
-  const randomAdjective1 = adjectives[Math.floor(Math.random() * adjectives.length)];
-  const randomAdjective2 = secondAdjectives[Math.floor(Math.random() * secondAdjectives.length)];
+
+  const randomAdjective1 =
+    adjectives[Math.floor(Math.random() * adjectives.length)];
+  const randomAdjective2 =
+    secondAdjectives[Math.floor(Math.random() * secondAdjectives.length)];
   const randomNoun = nouns[Math.floor(Math.random() * nouns.length)];
-  
+
   return `${randomAdjective1}_${randomAdjective2}_${randomNoun}`;
 };
 
@@ -507,7 +599,10 @@ const deploymentName = ref(generateFunnyDeploymentName());
 const replicas = ref(1);
 const strategy = ref<DeploymentStrategy>("INFINITE");
 const schedule = ref("0 0 * * *"); // Default schedule
-const preloadedDeployment = useState<Deployment | null>("preloadedDeployment", () => null);
+const preloadedDeployment = useState<Deployment | null>(
+  "preloadedDeployment",
+  () => null,
+);
 
 watch(
   strategy,
@@ -519,7 +614,7 @@ watch(
     }
     previousStrategyDefault.value = newDefault;
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 // Balance and price state
@@ -536,8 +631,8 @@ const usdcPrice = ref(0);
 const usdtPrice = ref(0);
 
 // API data
-const { data: stats } = await useAPI("/api/stats");
-const { data: testgridMarkets } = await useAPI("/api/markets", {
+const { data: stats } = await useAPI("/stats");
+const { data: testgridMarkets } = await useAPI("/markets", {
   default: () => [],
 });
 const nosApiPrice = computed(() => stats.value?.price || 0);
@@ -573,7 +668,7 @@ const { data: priceData } = await useAPI(
       "usd-coin": { usd: 0 },
       tether: { usd: 0 },
     }),
-  }
+  },
 );
 
 watch(
@@ -600,7 +695,7 @@ watch(
       usdtPrice.value = newPrice.tether.usd;
     }
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 const computedDeploymentName = computed(() => {
@@ -651,14 +746,14 @@ const marketName = computed(() => {
   if (!selectedMarket.value) return null;
   return (
     testgridMarkets.value.find(
-      (tgm: any) => tgm.address === selectedMarket.value?.address.toString()
+      (tgm: any) => tgm.address === selectedMarket.value?.address.toString(),
     )?.name || selectedMarket.value.address.toString()
   );
 });
 
 // Use centralized pricing system
 const selectedMarketAddress = computed(
-  () => selectedMarket.value?.address?.toString() || null
+  () => selectedMarket.value?.address?.toString() || null,
 );
 const testgridMarketsRef = computed(() => testgridMarkets.value);
 
@@ -666,7 +761,7 @@ const { estimatedCost, formattedCost, formattedHourlyRate, usdPricePerHour } =
   useEstimatedCost(
     selectedMarketAddress,
     computed(() => timeout.value),
-    testgridMarketsRef
+    testgridMarketsRef,
   );
 
 // Legacy computed properties for backward compatibility
@@ -737,7 +832,7 @@ const canCreateDeployment = computed(() => {
 });
 
 const activeFilterKey = computed(
-  () => `${selectedTemplate?.value?.id || "default"}-${activeFilter.value}`
+  () => `${selectedTemplate?.value?.id || "default"}-${activeFilter.value}`,
 );
 
 const { onCreditRefresh } = useCreditRefresh();
@@ -768,7 +863,9 @@ const createDeployment = async () => {
       ? MIN_INFINITE_TIMEOUT_HOURS
       : MIN_TIMEOUT_HOURS;
   if (timeout.value < effectiveMinTimeout) {
-    toast.error(`Timeout must be at least ${effectiveMinTimeout} hour${effectiveMinTimeout === 1 ? "" : "s"}`);
+    toast.error(
+      `Timeout must be at least ${effectiveMinTimeout} hour${effectiveMinTimeout === 1 ? "" : "s"}`,
+    );
     return;
   }
   if (timeout.value > MAX_TIMEOUT_HOURS) {
@@ -806,7 +903,9 @@ const createDeployment = async () => {
       // Not yet in the vendored @nosana/types, hence the assertion.
       autostart: true,
       job_definition: jobDefinition.value,
-    } as Parameters<typeof nosana.value.api.deployments.create>[0])) as Deployment;
+    } as Parameters<
+      typeof nosana.value.api.deployments.create
+    >[0])) as Deployment;
 
     toast.success(`Successfully created deployment ${deployment.id}`);
 
@@ -823,7 +922,7 @@ const createDeployment = async () => {
   } catch (error: any) {
     console.error("Deployment creation error:", error);
     toast.error(
-      `Error creating deployment: ${error.message || error.toString()}`
+      `Error creating deployment: ${error.message || error.toString()}`,
     );
   } finally {
     isCreatingDeployment.value = false;
@@ -876,7 +975,8 @@ const restoreDraftIfNeeded = () => {
   try {
     if (!hasTemplateQuery) {
       if (draft.jobDefinition) jobDefinition.value = draft.jobDefinition;
-      if (draft.selectedTemplate) selectedTemplate.value = draft.selectedTemplate;
+      if (draft.selectedTemplate)
+        selectedTemplate.value = draft.selectedTemplate;
     }
     if (draft.deploymentName) deploymentName.value = draft.deploymentName;
     if (typeof draft.replicas === "number") replicas.value = draft.replicas;
@@ -889,7 +989,7 @@ const restoreDraftIfNeeded = () => {
 
     if (draft.selectedMarketAddress && markets.value) {
       const match = markets.value.find(
-        (m: Market) => m.address?.toString() === draft.selectedMarketAddress
+        (m: Market) => m.address?.toString() === draft.selectedMarketAddress,
       );
       if (match) selectedMarket.value = match;
     }
@@ -919,7 +1019,7 @@ watch(
     if (newTemplate?.jobDefinition) {
       isUpdatingFromJobDef.value = true;
       jobDefinition.value = JSON.parse(
-        JSON.stringify(newTemplate.jobDefinition)
+        JSON.stringify(newTemplate.jobDefinition),
       );
       nextTick(() => {
         isUpdatingFromJobDef.value = false;
@@ -931,7 +1031,7 @@ watch(
       deploymentName.value = newTemplate.name;
     }
   },
-  { deep: true }
+  { deep: true },
 );
 
 // State for modals
@@ -966,7 +1066,7 @@ watch(
           (t: Template) =>
             t.jobDefinition &&
             JSON.stringify(t.jobDefinition) === JSON.stringify(newJobDef) &&
-            t.id !== "custom"
+            t.id !== "custom",
         );
 
         if (templateMatchingJobDef) {
@@ -975,7 +1075,7 @@ watch(
       }
     }
   },
-  { deep: true }
+  { deep: true },
 );
 
 // Auto-select template from URL query param or fall back to PyTorch
@@ -995,13 +1095,14 @@ watch(
         const directMatch = newTemplates.find(
           (t: any) =>
             String(t.id) === templateQuery ||
-            t.name?.toLowerCase() === templateQuery.toLowerCase()
+            t.name?.toLowerCase() === templateQuery.toLowerCase(),
         );
         if (directMatch?.jobDefinition) {
           selectedTemplate.value = directMatch as Template;
           jobDefinition.value = directMatch.jobDefinition;
           nextTick(() => {
-            readmeContentForModal.value = (directMatch as Template).readme || undefined;
+            readmeContentForModal.value =
+              (directMatch as Template).readme || undefined;
             showReadmeModal.value = true;
           });
           return;
@@ -1016,7 +1117,7 @@ watch(
             (v: any) =>
               String(v.id) === templateQuery ||
               `${t.id}-${v.variant_id}` === templateQuery ||
-              v.variant_id === templateQuery
+              v.variant_id === templateQuery,
           );
           if (variant?.jobDefinition) {
             const variantTemplate: Template = {
@@ -1040,8 +1141,8 @@ watch(
 
       const pytorchTemplate = newTemplates.find((template: any) =>
         template.jobDefinition?.ops?.[0]?.args?.image?.includes(
-          "nosana/pytorch-jupyter"
-        )
+          "nosana/pytorch-jupyter",
+        ),
       );
 
       if (pytorchTemplate && pytorchTemplate.jobDefinition) {
@@ -1050,9 +1151,8 @@ watch(
       }
     }
   },
-  { immediate: true }
+  { immediate: true },
 );
-
 
 // Update GPU type when market changes
 watch(
@@ -1060,14 +1160,14 @@ watch(
   (newMarket) => {
     if (newMarket && testgridMarkets.value && activeFilter.value !== "ALL") {
       const marketInfo = testgridMarkets.value.find(
-        (tgm: any) => tgm.address === newMarket.address.toString()
+        (tgm: any) => tgm.address === newMarket.address.toString(),
       );
       if (marketInfo && marketInfo.type) {
         gpuTypeCheckbox.value = [marketInfo.type];
         activeFilter.value = marketInfo.type;
       }
     }
-  }
+  },
 );
 
 // Mounted hook
@@ -1100,7 +1200,7 @@ watch(
       resetCreditBalance();
     }
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 // React to wallet connection to keep the shared vault balance fresh, so the
@@ -1112,7 +1212,7 @@ watch(
       ensureSharedVault();
     }
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 // No swap modal in API mode

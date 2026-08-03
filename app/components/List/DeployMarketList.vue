@@ -4,17 +4,31 @@
       <p class="has-text-grey">No GPUs available</p>
     </div>
     <div v-else class="gpu-grid">
-      <nuxt-link v-for="market in filteredMarkets" :key="market.address?.toString() || market.id"
-        :to="`/markets/${market.address?.toString() || ''}`" custom>
+      <nuxt-link
+        v-for="market in filteredMarkets"
+        :key="market.address?.toString() || market.id"
+        :to="`/markets/${market.address?.toString() || ''}`"
+        custom
+      >
         <template #default="{ navigate }">
           <div
             class="gpu-card"
             :class="{
-              'is-selected': selectedMarket && selectedMarket.address?.toString() === market.address?.toString(),
-              'is-incompatible': !isMarketCompatible(market)
+              'is-selected':
+                selectedMarket &&
+                selectedMarket.address?.toString() ===
+                  market.address?.toString(),
+              'is-incompatible': !isMarketCompatible(market),
             }"
-            :data-tooltip="!isMarketCompatible(market) ? 'This GPU does not meet the required VRAM specifications for your job.' : null"
-            @click="isMarketCompatible(market) && (select ? (selectedMarket = market) : navigate())"
+            :data-tooltip="
+              !isMarketCompatible(market)
+                ? 'This GPU does not meet the required VRAM specifications for your job.'
+                : null
+            "
+            @click="
+              isMarketCompatible(market) &&
+              (select ? (selectedMarket = market) : navigate())
+            "
           >
             <div class="gpu-card-header">
               <NvidiaIcon v-if="showLogo" alt="NVIDIA" class="gpu-logo" />
@@ -29,7 +43,8 @@
                     v-else
                     :marketAddressOrData="market"
                     :marketsData="testgridMarkets"
-                    :decimalPlaces="3" />
+                    :decimalPlaces="3"
+                  />
                 </span>
               </div>
               <div class="gpu-info-row">
@@ -39,9 +54,7 @@
                   <span v-else-if="market.queueType === 1">
                     {{ market.queue.length }}
                   </span>
-                  <span v-else>
-                    0
-                  </span>
+                  <span v-else> 0 </span>
                 </span>
               </div>
             </div>
@@ -53,14 +66,14 @@
 </template>
 
 <script setup lang="ts">
-import { type Market } from '@nosana/kit';
+import { type Market } from "@nosana/kit";
 import { useAPI } from "~/composables/useAPI";
-import NvidiaIcon from '@/assets/img/icons/nvidia.svg?component';
+import NvidiaIcon from "@/assets/img/icons/nvidia.svg?component";
 import CurrentMarketPrice from "~/components/Market/CurrentPrice.vue";
 
-const { data: runningJobs, pending: loadingRunningJobs } = await useAPI('/api/jobs/running');
-const { data: stats, pending: loadingStats } = await useAPI('/api/stats');
-const tab: Ref<string> = ref('premium');
+const { data: runningJobs, pending: loadingRunningJobs } =
+  await useAPI("/jobs/running");
+const tab: Ref<string> = ref("premium");
 const config = useRuntimeConfig();
 
 // Define types for market info
@@ -114,38 +127,47 @@ const props = defineProps({
 
 // Component setup
 const selectedMarket = ref<Market | null>(props.initialMarket || null);
-const emit = defineEmits(['selectedMarket']);
+const emit = defineEmits(["selectedMarket"]);
 const didInitialSetup = ref(props.initialMarket !== null);
 
-
 // Watch for market selection changes and emit
-watch(() => selectedMarket.value, (newValue: Market | null, oldValue: Market | null) => {
-  emit('selectedMarket', newValue);
-});
+watch(
+  () => selectedMarket.value,
+  (newValue: Market | null, oldValue: Market | null) => {
+    emit("selectedMarket", newValue);
+  },
+);
 
 // Watch for external market changes (from parent component)
-watch(() => props.initialMarket, (newInitialMarket, oldInitialMarket) => {
-  if (newInitialMarket && newInitialMarket !== selectedMarket.value) {
-    selectedMarket.value = newInitialMarket;
-  } else if (!newInitialMarket) {
-    selectedMarket.value = null;
-  }
-}, { immediate: true });
+watch(
+  () => props.initialMarket,
+  (newInitialMarket, oldInitialMarket) => {
+    if (newInitialMarket && newInitialMarket !== selectedMarket.value) {
+      selectedMarket.value = newInitialMarket;
+    } else if (!newInitialMarket) {
+      selectedMarket.value = null;
+    }
+  },
+  { immediate: true },
+);
 
 // Compute how much VRAM is required for this job definition
-const requiredVRAM = computed(() => props.jobDefinition?.meta?.system_requirements?.required_vram ?? 0);
+const requiredVRAM = computed(
+  () => props.jobDefinition?.meta?.system_requirements?.required_vram ?? 0,
+);
 
 // Helper function to find market info by address
 const findMarketInfo = (market: Market): MarketInfo | undefined => {
-  return props.testgridMarkets.find(tgm => tgm.address === market.address?.toString());
+  return props.testgridMarkets.find(
+    (tgm) => tgm.address === market.address?.toString(),
+  );
 };
 
 // Helper to get market name
 const getMarketName = (market: Market): string => {
   const marketInfo = findMarketInfo(market);
-  return marketInfo?.name || market.address?.toString() || 'Unknown Market';
+  return marketInfo?.name || market.address?.toString() || "Unknown Market";
 };
-
 
 // Helper to get running job count
 const getRunningJobCount = (market: Market): number => {
@@ -162,32 +184,32 @@ const getRunningJobCount = (market: Market): number => {
  */
 const filteredMarkets = computed(() => {
   if (!props.markets?.length) return [];
-  
+
   return props.markets.filter((market) => {
     const marketInfo = findMarketInfo(market);
-    
+
     // If no market info exists, show on devnet but filter by others on mainnet
     if (!marketInfo) {
       // On devnet, show all markets regardless of missing testgrid data
-      if (config.public.network === 'devnet') {
+      if (config.public.network === "devnet") {
         return true;
       }
       // On mainnet, use the original logic
-      return tab.value === 'others';
+      return tab.value === "others";
     }
 
     // Exclude client markets
     if (marketInfo.client === true) {
       return false;
     }
-    
+
     // Filter based on the selected type (PREMIUM or COMMUNITY)
     if (props.typeFilter.length === 1) {
-      if (props.typeFilter.includes('PREMIUM')) {
-        return marketInfo.type === 'PREMIUM';
+      if (props.typeFilter.includes("PREMIUM")) {
+        return marketInfo.type === "PREMIUM";
       }
-      if (props.typeFilter.includes('COMMUNITY')) {
-        return marketInfo.type === 'COMMUNITY';
+      if (props.typeFilter.includes("COMMUNITY")) {
+        return marketInfo.type === "COMMUNITY";
       }
     }
 
@@ -199,13 +221,15 @@ const filteredMarkets = computed(() => {
 const getMarketHourlyPrice = (market: Market) => {
   // Get base USD price from market data (before network fee)
   const marketAddress = market.address?.toString();
-  const marketInfo = props.testgridMarkets?.find(m => m.address === marketAddress);
-  
+  const marketInfo = props.testgridMarkets?.find(
+    (m) => m.address === marketAddress,
+  );
+
   if (marketInfo?.usd_reward_per_hour) {
     return marketInfo.usd_reward_per_hour; // Base price for fair sorting
   }
-  
-  return Number.MAX_VALUE;  
+
+  return Number.MAX_VALUE;
 };
 
 // Helper to check if market has available GPUs
@@ -221,10 +245,10 @@ const hasAvailableGPUs = (market: Market) => {
  */
 const isMarketCompatible = (market: Market) => {
   const marketInfo = findMarketInfo(market);
-  
+
   // If we don't have market info, assume it's compatible (don't auto-mark as incompatible)
   if (!marketInfo || !marketInfo.lowest_vram) return true;
-  
+
   return marketInfo.lowest_vram >= (requiredVRAM.value ?? 0);
 };
 
@@ -235,11 +259,11 @@ const isMarketCompatible = (market: Market) => {
  */
 const findCompatibleMarkets = (gpuType: string) => {
   if (!props.markets?.length) return [];
-  
+
   return props.markets.filter((market) => {
     const marketInfo = findMarketInfo(market);
     if (!marketInfo) return false;
-    
+
     return (
       // Must match the requested type (PREMIUM or COMMUNITY)
       marketInfo.type === gpuType &&
@@ -260,30 +284,32 @@ const findCompatibleMarkets = (gpuType: string) => {
 const selectBestMarket = async () => {
   // Only proceed if we have the markets data
   if (!props.markets?.length) return;
-  
+
   // Don't attempt auto-selection if the job definition is missing
   if (!props.jobDefinition) return;
-  
+
   // Try Premium markets first
-  let compatibleMarkets = findCompatibleMarkets('PREMIUM');
-  
+  let compatibleMarkets = findCompatibleMarkets("PREMIUM");
+
   // If no Premium markets are available, try Community markets
   if (compatibleMarkets.length === 0) {
-    compatibleMarkets = findCompatibleMarkets('COMMUNITY');
+    compatibleMarkets = findCompatibleMarkets("COMMUNITY");
   }
-  
+
   // If we have compatible markets, select the cheapest one
   if (compatibleMarkets.length > 0) {
     const cheapestMarket = compatibleMarkets.sort(
-      (a, b) => getMarketHourlyPrice(a) - getMarketHourlyPrice(b)
+      (a, b) => getMarketHourlyPrice(a) - getMarketHourlyPrice(b),
     )[0];
-    
+
     // Find the exact reference in the markets array for proper UI highlighting
-    const exactRef = props.markets.find(m => m.address?.toString() === cheapestMarket.address?.toString());
-    
+    const exactRef = props.markets.find(
+      (m) => m.address?.toString() === cheapestMarket.address?.toString(),
+    );
+
     // Wait for nextTick to ensure Vue updates the DOM after reactivity changes
     await nextTick();
-    
+
     // Update the selection
     selectedMarket.value = exactRef || cheapestMarket;
   } else {
@@ -303,14 +329,14 @@ const selectBestMarket = async () => {
 //   () => props.skipAutoSelection
 // ], async () => {
 //   // Skip auto-selection if in repost mode or explicitly disabled
-//   if (props.isFromRepost || 
-//       props.skipAutoSelection || 
+//   if (props.isFromRepost ||
+//       props.skipAutoSelection ||
 //       (props.initialMarket && !didInitialSetup.value)) {
-//     
+//
 //     didInitialSetup.value = true;
 //     return;
 //   }
-//   
+//
 //   // Auto-select market when appropriate
 //   await selectBestMarket();
 // }, { immediate: true });
@@ -356,7 +382,7 @@ const selectBestMarket = async () => {
 .has-tooltip-arrow {
   width: 100%;
   display: block;
-  
+
   &[data-tooltip] {
     &::before,
     &::after {
@@ -379,11 +405,11 @@ const selectBestMarket = async () => {
 
   .tooltip-container {
     position: static;
-    
+
     .has-tooltip-arrow {
       &[data-tooltip] {
         position: static;
-        
+
         &::before,
         &::after {
           position: absolute !important;
@@ -471,7 +497,8 @@ td {
 }
 
 .warning-icon {
-  filter: invert(73%) sepia(45%) saturate(5600%) hue-rotate(359deg) brightness(101%) contrast(106%);
+  filter: invert(73%) sepia(45%) saturate(5600%) hue-rotate(359deg)
+    brightness(101%) contrast(106%);
 }
 
 .gpu-logo {
@@ -513,7 +540,8 @@ td {
 }
 
 .warning-icon {
-  filter: invert(73%) sepia(45%) saturate(5600%) hue-rotate(359deg) brightness(101%) contrast(106%);
+  filter: invert(73%) sepia(45%) saturate(5600%) hue-rotate(359deg)
+    brightness(101%) contrast(106%);
 }
 
 /* Grid layout styles */
@@ -533,12 +561,12 @@ td {
 }
 
 .gpu-card:hover {
-  border-color: #10E80C;
+  border-color: #10e80c;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .gpu-card.is-selected {
-  border-color: #10E80C;
+  border-color: #10e80c;
   background: #f0fff0;
   box-shadow: 0 2px 8px rgba(16, 232, 12, 0.2);
 }
@@ -609,12 +637,12 @@ td {
 }
 
 .dark-mode .gpu-card:hover {
-  border-color: #10E80C;
+  border-color: #10e80c;
 }
 
 .dark-mode .gpu-card.is-selected {
   background: #0d2e0c;
-  border-color: #10E80C;
+  border-color: #10e80c;
 }
 
 .dark-mode .gpu-card-header {

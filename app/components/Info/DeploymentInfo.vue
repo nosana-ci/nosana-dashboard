@@ -141,7 +141,7 @@
           <span v-else-if="props.job.timeStart">
             {{
               formatDuration(
-                Math.floor(Date.now() / 1000) - props.job.timeStart
+                Math.floor(Date.now() / 1000) - props.job.timeStart,
               )
             }}
             <span class="has-text-grey is-size-7">
@@ -249,9 +249,6 @@ const formatDuration = (seconds: number) => {
   return result.length > 0 ? result : "0s";
 };
 
-// Get NOS price from API
-const { data: stats } = useAPI("/api/stats");
-
 const timeStartFormatted = computed(() => {
   if (!props.job.timeStart) return null;
   const date = new Date(props.job.timeStart * 1000);
@@ -277,7 +274,7 @@ const timeAgo = computed(() => {
   }
 });
 
-const { data: apiMarkets } = useAPI("/api/markets", { default: () => [] });
+const { data: apiMarkets } = useAPI("/markets", { default: () => [] });
 
 const jobDataForPrice = computed(() => {
   return {

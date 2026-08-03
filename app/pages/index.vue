@@ -116,16 +116,20 @@
               <h1 class="login-title">
                 {{
                   isCampaignMode
-                    ? (freeCreditsEnabled === false ? "Free Credits Unavailable" : "Claim your Free Credits")
+                    ? freeCreditsEnabled === false
+                      ? "Free Credits Unavailable"
+                      : "Claim your Free Credits"
                     : "Build with Nosana"
                 }}
               </h1>
               <p class="login-subtitle">
                 <template v-if="isCampaignMode && freeCreditsEnabled === false">
-                  Free credits are currently unavailable. Please check back soon.
+                  Free credits are currently unavailable. Please check back
+                  soon.
                 </template>
                 <template v-else>
-                  Sign in or create an account to build with the Nosana AI Platform
+                  Sign in or create an account to build with the Nosana AI
+                  Platform
                 </template>
               </p>
 
@@ -304,9 +308,7 @@
                   :class="{ 'is-loading': signingMessage }"
                 >
                   <WalletIcon :size="20" />
-                  {{
-                    signingMessage ? "Signing Message..." : "Connect Wallet"
-                  }}
+                  {{ signingMessage ? "Signing Message..." : "Connect Wallet" }}
                 </button>
 
                 <button
@@ -452,7 +454,7 @@ const backgroundImageKey = ref(0);
 const currentWalletName = ref<string | null>(null);
 const freeCreditsEnabled = ref<boolean | null>(null);
 
-const { data: freeCreditsConfig } = useAPI("/api/credits/admin/request/config");
+const { data: freeCreditsConfig } = useAPI("/credits/admin/request/config");
 
 watch(
   freeCreditsConfig,
@@ -522,7 +524,10 @@ const clearSuperTokensAuthState = async () => {
   try {
     await signOut();
   } catch (error) {
-    console.warn("Failed to clear SuperTokens session before wallet login:", error);
+    console.warn(
+      "Failed to clear SuperTokens session before wallet login:",
+      error,
+    );
   }
 };
 
@@ -712,15 +717,15 @@ const handleEmailSubmit = async () => {
     }
   } catch (error: any) {
     if (error instanceof Response) {
-    const data = await error
-      .clone()
-      .json()
-      .catch(async () => ({ message: await error.clone().text() }));
+      const data = await error
+        .clone()
+        .json()
+        .catch(async () => ({ message: await error.clone().text() }));
 
-    authError.value = data?.message || `Request failed (${error.status})`;
-    return;
-  }
-  authError.value = error?.message || "An error occurred. Please try again.";
+      authError.value = data?.message || `Request failed (${error.status})`;
+      return;
+    }
+    authError.value = error?.message || "An error occurred. Please try again.";
   } finally {
     emailLoading.value = false;
     providerSwitchInProgress.value = false;

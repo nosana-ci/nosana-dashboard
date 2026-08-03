@@ -36,8 +36,8 @@ export function useMarketUsdPrice(
   marketsData?: Ref<any[] | null | undefined>
 ) {
   const shouldFetchInternally = !marketsData;
-  const { data: internalMarketsData, pending: loadingMarkets } = useAPI('/api/markets', { 
-    default: () => [], 
+  const { data: internalMarketsData, pending: loadingMarkets } = useAPI('/markets', {
+    default: () => [],
     lazy: !shouldFetchInternally,
     immediate: shouldFetchInternally
   });
@@ -54,10 +54,10 @@ export function useMarketUsdPrice(
   const usdPricePerHour = computed(() => {
     if (!marketAddress.value) return null;
 
-    const address = typeof marketAddress.value === 'string' 
-      ? marketAddress.value 
+    const address = typeof marketAddress.value === 'string'
+      ? marketAddress.value
       : marketAddress.value.address?.toString();
-    
+
     if (!address) return null;
 
     const availableMarkets = markets.value;
@@ -97,7 +97,7 @@ export function useJobPricing(
     decimalPlaces: 3,
     showDollarSign: true
   };
-  
+
   const opts = { ...defaultOptions, ...options };
 
   // Get market USD price
@@ -112,7 +112,7 @@ export function useJobPricing(
     const timeStart = job.timeStart;
     const timeEnd = job.timeEnd || Math.floor(Date.now() / 1000);
     const duration = Math.max(0, timeEnd - timeStart);
-    
+
     return duration / 3600; // Convert seconds to hours
   });
 
@@ -134,11 +134,11 @@ export function useJobPricing(
   const hostFeeNos = computed(() => {
     const job = jobData.value;
     if (!job?.price || !job?.timeStart) return 0;
-    
+
     const timeStart = job.timeStart;
     const timeEnd = job.timeEnd || Math.floor(Date.now() / 1000);
     const runtime = Math.max(0, timeEnd - timeStart);
-    
+
     // NOS = (price per second * runtime in seconds) / 1e6
     return (job.price * runtime) / 1e6;
   });
@@ -157,9 +157,9 @@ export function useJobPricing(
   const hostFeeUsd = computed(() => {
     const baseRate = baseUsdPricePerHour.value;
     const hours = durationHours.value;
-    
+
     if (!baseRate || hours <= 0) return 0;
-    
+
     return baseRate * hours;
   });
 
@@ -221,9 +221,9 @@ export function useEstimatedCost(
   const estimatedCost = computed(() => {
     const hourlyRate = usdPricePerHour.value;
     const hours = durationHours.value;
-    
+
     if (!hourlyRate || hours <= 0) return 0;
-    
+
     return hourlyRate * hours;
   });
 
@@ -257,14 +257,14 @@ export function useHostNosRate(
   marketsData?: Ref<any[] | null | undefined>
 ) {
   const { nosana } = useKit();
-  
+
   const nosRatePerHour = computed(() => {
     if (!marketAddress.value) return null;
-    
-    const marketObject = typeof marketAddress.value === 'object' 
-      ? marketAddress.value 
+
+    const marketObject = typeof marketAddress.value === 'object'
+      ? marketAddress.value
       : null;
-    
+
     if (marketObject?.jobPrice) {
       const jobPriceLamports = parseInt(String(marketObject.jobPrice));
       if (!isNaN(jobPriceLamports)) {
@@ -272,10 +272,10 @@ export function useHostNosRate(
         return (jobPriceLamports / 1e6) * 3600;
       }
     }
-    
+
     return null;
   });
-  
+
   return {
     nosRatePerHour
   };

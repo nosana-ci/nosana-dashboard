@@ -461,7 +461,7 @@ const selectedTokenBalance = computed(
 const walletModalOpen = ref(false);
 const { topup: cryptoTopup } = useCryptoTopup();
 const { userData } = useSuperTokens();
-const { data: stats } = useAPI("/api/stats");
+const { data: stats } = useAPI("/stats");
 const nosPrice = computed(() => stats.value?.price || 0);
 
 const activeTab = ref<"card" | "crypto">("card");

@@ -94,7 +94,9 @@
           </div>
           <div class="profile-info">
             <span class="profile-name">{{ getUserName() }}</span>
-            <span class="profile-balance">${{ vaultBalanceUSD.toFixed(2) }}</span>
+            <span class="profile-balance"
+              >${{ vaultBalanceUSD.toFixed(2) }}</span
+            >
           </div>
         </template>
         <svg
@@ -282,7 +284,7 @@ const getCreditBalance = () => {
 };
 
 // Get NOS price from stats API with memoization
-const { data: stats } = useAPI("/api/stats");
+const { data: stats } = useAPI("/stats");
 const nosPrice = computed(() => stats.value?.price || 0);
 
 // Shared vault balance (wallet users): the platform-spendable balance shown

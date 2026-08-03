@@ -5,7 +5,7 @@ import { nodePolyfills } from "vite-plugin-node-polyfills";
 
 export default defineNuxtConfig({
   devServer: {
-    port: 3003,
+    port: 3000,
   },
   devtools: { enabled: true },
   routeRules: {
@@ -19,7 +19,7 @@ export default defineNuxtConfig({
       if (!apiBase) return;
 
       try {
-        const res = await fetch(`${apiBase}/api/jobs/templates/grouped`);
+        const res = await fetch(`${apiBase}/jobs/templates/grouped`);
         if (!res.ok) return;
 
         const data = await res.json();

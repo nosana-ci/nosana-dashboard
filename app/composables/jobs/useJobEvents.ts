@@ -26,7 +26,7 @@ export function useJobEvents(
 
     try {
       const response = await $fetch<JobEvent[]>(
-        `/api/jobs/${jobAddress}/events`,
+        `/jobs/${jobAddress}/events`,
         {
           baseURL: config.public.apiBase as string,
           headers: { Accept: "application/json" },

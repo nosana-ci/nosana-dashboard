@@ -15,9 +15,7 @@
         </thead>
         <tbody>
           <tr v-if="loadingJobs">
-            <td colspan="7" class="has-text-centered py-6">
-              Loading jobs...
-            </td>
+            <td colspan="7" class="has-text-centered py-6">Loading jobs...</td>
           </tr>
           <tr v-else-if="displayedJobs.length === 0">
             <td colspan="7" class="has-text-centered">No jobs found</td>
@@ -43,13 +41,13 @@
                     v-if="
                       testgridMarkets &&
                       testgridMarkets.find(
-                        (tgm: any) => tgm.address === job.market.toString()
+                        (tgm: any) => tgm.address === job.market.toString(),
                       )
                     "
                   >
                     {{
                       testgridMarkets.find(
-                        (tgm: any) => tgm.address === job.market.toString()
+                        (tgm: any) => tgm.address === job.market.toString(),
                       ).name
                     }}
                   </span>
@@ -125,13 +123,20 @@
                   :to="`/jobs/${job.address}`"
                   class="clickable-row-link clickable-row-cell-content"
                 >
-                  <span v-if="job.timeStart && job.timeEnd" class="duration-cell">
+                  <span
+                    v-if="job.timeStart && job.timeEnd"
+                    class="duration-cell"
+                  >
                     <SecondsFormatter
                       :seconds="job.timeEnd - job.timeStart"
                       :showSeconds="false"
                     />
                     <span v-if="job.timeout" class="max-duration">
-                      (Max <SecondsFormatter :seconds="job.timeout" :showSeconds="false" />)
+                      (Max
+                      <SecondsFormatter
+                        :seconds="job.timeout"
+                        :showSeconds="false"
+                      />)
                     </span>
                   </span>
                   <span v-else>-</span>
@@ -250,7 +255,8 @@ const currentPage = ref(1);
 
 // Convert string status filter to number for backwards compatibility
 const currentState = computed(() => {
-  if (props.statusFilter === null || props.statusFilter === undefined) return null;
+  if (props.statusFilter === null || props.statusFilter === undefined)
+    return null;
   const parsed = parseInt(props.statusFilter);
   return isNaN(parsed) ? null : parsed;
 });
@@ -273,7 +279,7 @@ const postedJobsUrl = computed(() => {
   const address = activeAddress.value;
   if (!address) return "";
 
-  let url = `/api/jobs?${currentState.value != null ? `&state=${jobStateMapping[currentState.value as keyof typeof jobStateMapping]}` : ""}&poster=${address}`;
+  let url = `/jobs?${currentState.value != null ? `&state=${jobStateMapping[currentState.value as keyof typeof jobStateMapping]}` : ""}&poster=${address}`;
 
   // If searching, fetch all jobs without pagination
   if (hasSearchQuery.value) {
@@ -295,7 +301,7 @@ const {
   },
   {
     default: () => ({ jobs: [], totalJobs: 0 }),
-  }
+  },
 );
 
 // Get posted jobs
@@ -322,9 +328,10 @@ const filteredJobs = computed(() => {
       const jobAddress = job.address.toLowerCase();
       const jobImage = getJobImage(job).toLowerCase();
       const templateName = getTemplateForJob(job)?.name?.toLowerCase() || "";
-      const marketName = testgridMarkets.value?.find(
-        (m: any) => m.address === job.market.toString()
-      )?.name?.toLowerCase() || "";
+      const marketName =
+        testgridMarkets.value
+          ?.find((m: any) => m.address === job.market.toString())
+          ?.name?.toLowerCase() || "";
 
       return (
         jobAddress.includes(query) ||
@@ -367,11 +374,11 @@ watch(
   (newValue) => {
     emit("update:total-deployments", newValue);
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 const totalPages = computed(() =>
-  Math.ceil(totalJobs.value / props.itemsPerPage)
+  Math.ceil(totalJobs.value / props.itemsPerPage),
 );
 
 const formatTimeAgo = (timestamp: number) => {
@@ -385,7 +392,7 @@ const formatTimeAgo = (timestamp: number) => {
   return `${Math.floor(seconds / 86400)}d ago`;
 };
 
-const { data: testgridMarkets } = useAPI("/api/markets", { default: () => [] });
+const { data: testgridMarkets } = useAPI("/markets", { default: () => [] });
 
 const { markets, getMarkets } = useMarkets();
 if (!markets.value) {
@@ -429,9 +436,13 @@ const fetchNodeCountry = async (nodeAddress: string) => {
     return null;
 
   try {
-    const { data } = await useAPI(`/api/nodes/${nodeAddress}/metrics`);
+    const { data } = await useAPI(`/nodes/${nodeAddress}/metrics`);
     if (data.value) {
-      return data.value?.metrics?.network?.country ?? data.value?.metrics?.country ?? null;
+      return (
+        data.value?.metrics?.network?.country ??
+        data.value?.metrics?.country ??
+        null
+      );
     }
     return null;
   } catch (error) {
@@ -450,7 +461,7 @@ watch(
     const nodeAddresses = [...new Set(jobs.map((job) => job.node))].filter(
       (address) =>
         !nodeCountries.value[address as string] &&
-        address !== "11111111111111111111111111111111"
+        address !== "11111111111111111111111111111111",
     );
 
     // Fetch countries for each node in parallel.
@@ -463,7 +474,7 @@ watch(
 
     await Promise.all(countryPromises);
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 // Add watcher for status filter changes
@@ -476,7 +487,7 @@ watch(
     // Refresh the data
     refreshPostedJobs();
   },
-  { immediate: false }
+  { immediate: false },
 );
 
 // Add watcher for search query changes
@@ -489,7 +500,7 @@ watch(
     // Refresh the data (will fetch all jobs if searching)
     refreshPostedJobs();
   },
-  { immediate: false }
+  { immediate: false },
 );
 
 // Add watcher for page changes
@@ -502,7 +513,7 @@ watch(
       refreshPostedJobs();
     }
   },
-  { immediate: false }
+  { immediate: false },
 );
 
 // Add watcher for items per page changes
@@ -513,7 +524,7 @@ watch(
     currentPage.value = 1;
     refreshPostedJobs();
   },
-  { immediate: false }
+  { immediate: false },
 );
 
 // Helper function to get job image from job definition
@@ -530,7 +541,8 @@ const getJobImage = (job: any) => {
 const getTemplateForJob = (job: any) => {
   if (!templates.value || !job.jobDefinition) return null;
   return templates.value.find(
-    (t) => JSON.stringify(t.jobDefinition) === JSON.stringify(job.jobDefinition)
+    (t) =>
+      JSON.stringify(t.jobDefinition) === JSON.stringify(job.jobDefinition),
   );
 };
 
@@ -675,5 +687,4 @@ const isGHCR = (image: string) => {
 .min-height-container {
   min-height: 430px;
 }
-
 </style>

@@ -755,8 +755,8 @@ const spendingHistoryEndpoint = computed(() => {
   }
 
   const path = isCreditUser.value
-    ? "/api/credits/spending-history"
-    : "/api/stats/spending-history";
+    ? "/credits/spending-history"
+    : "/stats/spending-history";
 
   return `${path}?${params.toString()}`;
 });
@@ -844,7 +844,7 @@ watch(loadingHistory, (val) => {
 });
 
 // Get markets data for name mapping
-const { data: marketsData } = useAPI("/api/markets", { default: () => [] });
+const { data: marketsData } = useAPI("/markets", { default: () => [] });
 
 // Predefined colors for different GPU types with distinct color scheme
 const GPU_COLORS: Record<string, string> = {

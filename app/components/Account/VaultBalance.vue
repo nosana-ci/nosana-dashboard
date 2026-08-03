@@ -27,7 +27,9 @@
               class="is-size-7 is-family-monospace has-text-grey mt-1"
               :title="sharedVault.address"
             >
-              {{ sharedVault.address.slice(0, 6) }}...{{ sharedVault.address.slice(-6) }}
+              {{ sharedVault.address.slice(0, 6) }}...{{
+                sharedVault.address.slice(-6)
+              }}
             </p>
           </div>
         </div>
@@ -39,10 +41,7 @@
       >
         Could not load vault: {{ error }}
       </p>
-      <p
-        class="has-text-grey is-size-7 mt-2 mb-0"
-        v-else-if="!loading"
-      >
+      <p class="has-text-grey is-size-7 mt-2 mb-0" v-else-if="!loading">
         {{ balance.SOL.toFixed(4) }} SOL for network fees
       </p>
       <div class="buttons is-centered mt-5 mb-0">
@@ -58,7 +57,9 @@
         <button
           type="button"
           class="button is-primary is-outlined"
-          :disabled="loading || !sharedVault || (balance.NOS === 0 && balance.SOL === 0)"
+          :disabled="
+            loading || !sharedVault || (balance.NOS === 0 && balance.SOL === 0)
+          "
           @click="withdraw"
         >
           Withdraw
@@ -95,7 +96,7 @@ const {
 } = useSharedVault();
 const { nosana } = useKit();
 
-const { data: stats } = useAPI("/api/stats");
+const { data: stats } = useAPI("/stats");
 const nosPrice = computed(() => stats.value?.price || 0);
 
 const showVaultsModal = ref(false);

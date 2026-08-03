@@ -94,12 +94,12 @@ const normalizeTemplates = (value: TemplatesResponse, grouped = false): Template
 }
 
 // Keep original templates endpoint for backward compatibility
-const { data: rawTemplates, pending: loadingTemplates } = useAPI('/api/jobs/templates', {
+const { data: rawTemplates, pending: loadingTemplates } = useAPI('/jobs/templates', {
   immediate: true
 });
 
 // New grouped templates endpoint
-const { data: rawGroupedTemplates, pending: loadingGroupedTemplates } = useAPI('/api/jobs/templates/grouped', {
+const { data: rawGroupedTemplates, pending: loadingGroupedTemplates } = useAPI('/jobs/templates/grouped', {
   immediate: true
 });
 
@@ -107,17 +107,17 @@ const templates = computed(() => normalizeTemplates(rawTemplates.value))
 const groupedTemplates = computed(() => normalizeTemplates(rawGroupedTemplates.value, true))
 
 export const useTemplates = (): {
-  templates: Ref<Template[]>, 
+  templates: Ref<Template[]>,
   groupedTemplates: Ref<Template[]>,
-  emptyJobDefinition: JobDefinition, 
+  emptyJobDefinition: JobDefinition,
   loadingTemplates: Ref<boolean>,
   loadingGroupedTemplates: Ref<boolean>
 } => {
-  return { 
-    templates, 
+  return {
+    templates,
     groupedTemplates,
-    emptyJobDefinition, 
+    emptyJobDefinition,
     loadingTemplates,
-    loadingGroupedTemplates 
+    loadingGroupedTemplates
   };
 };
