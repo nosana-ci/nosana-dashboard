@@ -5,3 +5,7 @@ include:
 variables:
   NODE_VERSION: 22
   OUTPUT_DIR: .output/public
+  GITHUB_REPO: nosana-dashboard # enables the github-release job on vX.Y.Z tags
+  # Feature MRs land on dev, which is then merged to main as one umbrella MR;
+  # skipping that merge keeps the individual MRs in the notes.
+  RELEASE_NOTES_SKIP_BRANCHES: dev
