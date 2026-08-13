@@ -164,7 +164,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from "vue";
 import { useToast } from "vue-toastification";
-import { trackEvent } from "~/utils/analytics";
+import { trackEvent, trackPixelEvent } from "~/utils/analytics";
 
 interface Invitation {
   creditsAmount: number;
@@ -269,6 +269,7 @@ const handleClaim = async () => {
         user_id: userData.value?.generatedAddress,
         auth_method: userData.value?.loginMethod,
       });
+      trackPixelEvent("credits_claimed", { credits_amount: response.amount });
     }
 
     emit("claimed", response.amount);
