@@ -23,6 +23,38 @@ export function trackLinkClick(
 }
 
 /**
+ * X Ads event IDs are formatted as `tw-{pixelId}-{eventCode}` (X Ads Manager > Events Manager).
+ * IDs are provided by marketing
+ */
+const X_PIXEL_EVENT_CODES = {
+  sign_up: "SignUp",
+  login: "Login",
+  credits_claimed: "credits_claimed",
+  purchase: "Purchase",
+  workload_created: "workload_created",
+} as const;
+
+/**
+ * Fires an X (Twitter) Pixel conversion event
+ * @param key Logical event key, mapped to its X Ads event code
+ * @param parameters Additional event parameters (e.g. value, currency)
+ */
+export function trackPixelEvent(
+  key: keyof typeof X_PIXEL_EVENT_CODES,
+  parameters: Record<string, any> = {}
+): void {
+  try {
+    if (process.env.NODE_ENV === "production" && typeof window !== "undefined" && (window as any).twq) {
+      const pixelId = useRuntimeConfig().public.x_pixel_id;
+      (window as any).twq("event", `tw-${pixelId}-${X_PIXEL_EVENT_CODES[key]}`, parameters);
+      console.log("[X Pixel TEMP-TESTING]", key, X_PIXEL_EVENT_CODES[key], parameters);
+    }
+  } catch (error) {
+    console.error("Error tracking pixel event:", error);
+  }
+}
+
+/**
  * Tracks a general custom event
  * @param eventName The name of the event
  * @param parameters Additional event parameters

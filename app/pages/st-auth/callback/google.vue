@@ -13,7 +13,7 @@
 
 <script setup lang="ts">
 import { useSuperTokens } from "~/composables/useSuperTokens";
-import { trackEvent } from "~/utils/analytics";
+import { trackEvent, trackPixelEvent } from "~/utils/analytics";
 import Loader from "~/components/Loader.vue";
 
 definePageMeta({
@@ -37,6 +37,7 @@ onMounted(async () => {
           user_id: response.user.id,
           provider: "google",
         });
+        trackPixelEvent(isSignUp ? "sign_up" : "login", { provider: "google" });
       } catch (e) {
         console.warn("Error tracking event:", e);
       }

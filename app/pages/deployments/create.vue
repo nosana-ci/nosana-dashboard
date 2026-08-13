@@ -416,6 +416,7 @@ import {
   MIN_TIMEOUT_HOURS,
   MIN_INFINITE_TIMEOUT_HOURS,
 } from "~/composables/useTimeoutConstants";
+import { trackPixelEvent } from "~/utils/analytics";
 
 // Setup composables
 const { markets, getMarkets, loadingMarkets } = useMarkets();
@@ -915,6 +916,17 @@ const createDeployment = async () => {
       user_id: userData.value?.generatedAddress,
       auth_method: userData.value?.loginMethod,
     });
+
+    try {
+      const { total_items } = await nosana.value.api.deployments.list({ limit: 10 });
+      if (total_items === 1) {
+        trackPixelEvent("workload_created", {
+          user_id: userData.value?.generatedAddress,
+        });
+      }
+    } catch (e) {
+      console.warn("Error checking first-deployment status:", e);
+    }
 
     clearDraft();
 

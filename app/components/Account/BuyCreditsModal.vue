@@ -370,6 +370,7 @@ import { createTokenService, Logger } from "@nosana/kit";
 import type { Address } from "@nosana/kit";
 import type { SavedPaymentMethod } from "~/composables/usePaymentMethods";
 import type { CryptoTopupToken } from "~/composables/useCryptoTopup";
+import { trackEvent, trackPixelEvent } from "~/utils/analytics";
 
 const props = defineProps<{
   modelValue: boolean;
@@ -614,9 +615,9 @@ const handleCryptoPurchase = async () => {
     purchasedSuccessfully.value = true;
     triggerCreditRefresh();
     emit("purchased", cryptoAmount.value);
-    toast.success(
-      `${cryptoAmount.value} ${cryptoToken.value} sent — credits are being added to your account.`,
-    );
+    toast.success(`${cryptoAmount.value} ${cryptoToken.value} sent — credits are being added to your account.`);
+    trackEvent("purchase_success", { value: cryptoAmount.value, currency: cryptoToken.value, method: "crypto" });
+    trackPixelEvent("purchase", { value: cryptoAmount.value, currency: cryptoToken.value });
   } catch (err: unknown) {
     type FetchError = { data?: { message?: string }; message?: string };
     const e = err as FetchError;
@@ -674,9 +675,9 @@ const handlePurchase = async () => {
     purchasedSuccessfully.value = true;
     triggerCreditRefresh();
     emit("purchased", effectiveAmount.value);
-    toast.success(
-      `$${effectiveAmount.value} in credits added to your account!`,
-    );
+    toast.success(`$${effectiveAmount.value} in credits added to your account!`);
+    trackEvent("purchase_success", { value: effectiveAmount.value, currency: "USD", method: "card" });
+    trackPixelEvent("purchase", { value: effectiveAmount.value, currency: "USD" });
   } catch (err: unknown) {
     type FetchError = { data?: { message?: string }; message?: string };
     const e = err as FetchError;
