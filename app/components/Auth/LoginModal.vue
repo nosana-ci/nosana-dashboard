@@ -266,7 +266,7 @@
 import { ref, computed, watch } from "vue";
 import { useWallet, useSolanaWallets } from "@nosana/solana-vue";
 import { useToast } from "vue-toastification";
-import { trackEvent } from "~/utils/analytics";
+import { trackEvent, trackPixelEvent } from "~/utils/analytics";
 import WalletIcon from "~/components/WalletIcon.vue";
 import { useNosanaWallet } from "~/composables/useNosanaWallet";
 import { useSuperTokens } from "~/composables/useSuperTokens";
@@ -474,6 +474,7 @@ const handleEmailSubmit = async () => {
         isSignUpMode.value ? "Account created successfully!" : "Signed in successfully!",
       );
       trackEvent("auth_success", { auth_method: "email" });
+      trackPixelEvent(isSignUpMode.value ? "sign_up" : "login", { auth_method: "email" });
       await checkSession(false);
 
       // Unverified accounts can't deploy — guide them to verification.

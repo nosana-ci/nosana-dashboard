@@ -436,6 +436,7 @@ import {
   setFreeCreditsVerifyDismissed,
   clearFreeCreditsVerifyDismissed,
 } from "~/utils/freeCreditsVerifyDismissal";
+import { trackPixelEvent } from "~/utils/analytics";
 
 const config = useRuntimeConfig().public;
 ChartJS.register(
@@ -603,6 +604,7 @@ const handleFreeCreditsClaimed = async (amount: number) => {
       auth_method: userData.value?.loginMethod,
       credits_amount: amount,
     });
+    trackPixelEvent("credits_claimed", { credits_amount: amount });
   }
 
   if (route.query.source === "free-credits" || showInvitationModal.value) {
