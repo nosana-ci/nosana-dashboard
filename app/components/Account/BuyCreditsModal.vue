@@ -29,6 +29,10 @@
             Credits are used to run AI workloads on the Nosana network.
           </p>
 
+          <div v-if="isBanned" class="notification is-danger is-light mb-4">
+            Your account is suspended. Topping up credits is disabled.
+          </div>
+
           <!-- Tab switcher -->
           <div class="tabs mb-5">
             <ul>
@@ -461,7 +465,7 @@ const selectedTokenBalance = computed(
 
 const walletModalOpen = ref(false);
 const { topup: cryptoTopup } = useCryptoTopup();
-const { userData } = useSuperTokens();
+const { userData, isBanned } = useSuperTokens();
 const { data: stats } = useAPI("/stats");
 const nosPrice = computed(() => stats.value?.price || 0);
 
@@ -480,7 +484,7 @@ const truncatedGeneratedAddress = computed(() => {
 });
 
 const cryptoCanSubmit = computed(
-  () => !!(cryptoAmount.value && cryptoAmount.value > 0),
+  () => !isBanned.value && !!(cryptoAmount.value && cryptoAmount.value > 0),
 );
 
 const purchasedLabel = computed(() => {
@@ -570,6 +574,7 @@ watch(
 );
 
 const canSubmit = computed(() => {
+  if (isBanned.value) return false;
   const amount = effectiveAmount.value;
   return !!(amount && amount >= 1 && selectedMethodId.value);
 });
@@ -605,7 +610,7 @@ const closeModal = () => {
 };
 
 const handleCryptoPurchase = async () => {
-  if (!cryptoCanSubmit.value || !cryptoAmount.value) return;
+  if (isBanned.value || !cryptoCanSubmit.value || !cryptoAmount.value) return;
   cryptoPurchasing.value = true;
   cryptoError.value = "";
   try {
@@ -629,7 +634,7 @@ const handleCryptoPurchase = async () => {
 };
 
 const handlePurchase = async () => {
-  if (!canSubmit.value || !selectedMethodId.value) return;
+  if (isBanned.value || !canSubmit.value || !selectedMethodId.value) return;
   purchasing.value = true;
   purchaseError.value = "";
   try {

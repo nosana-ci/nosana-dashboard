@@ -219,6 +219,11 @@
             </div>
 
             <ClientOnly>
+              <div v-if="isBanned" class="notification is-danger is-light mb-4">
+                Your account is suspended. Creating deployments and topping up
+                funds are disabled.
+              </div>
+
               <!-- Credit Mode Actions -->
               <div v-if="isCreditMode">
                 <button
@@ -243,6 +248,7 @@
                   <button
                     type="button"
                     class="button is-primary is-fullwidth mb-2"
+                    :disabled="isBanned"
                     @click="openBuyCreditsModal"
                   >
                     Buy Credits
@@ -280,6 +286,7 @@
                   <button
                     type="button"
                     class="button is-primary is-fullwidth mb-2"
+                    :disabled="isBanned"
                     @click="topupVault"
                   >
                     Top Up Vault
@@ -430,6 +437,7 @@ const {
   isAuthenticated: superTokensAuth,
   isEmailVerified,
   userData,
+  isBanned,
 } = useSuperTokens();
 const { connected, account } = useWallet();
 const { openBuyCreditsModal } = useBuyCreditsModal();
@@ -816,6 +824,7 @@ const isCreditMode = computed(() => {
 
 const canCreateDeployment = computed(() => {
   const basicRequirements =
+    !isBanned.value &&
     selectedMarket.value !== null &&
     jobDefinition.value !== null &&
     deploymentName.value.trim() !== "" &&
@@ -845,6 +854,10 @@ onCreditRefresh(() => {
 
 const createDeployment = async () => {
   if (!canCreateDeployment.value) return;
+  if (isBanned.value) {
+    toast.error("Your account is suspended and cannot create deployments.");
+    return;
+  }
 
   // Validate inputs
   if (!deploymentName.value.trim()) {

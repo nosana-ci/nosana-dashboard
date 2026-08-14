@@ -26,7 +26,7 @@
           type="button"
           class="button is-primary"
           :class="{ 'is-loading': loading }"
-          :disabled="loading"
+          :disabled="loading || isBanned"
           @click="openBuyCreditsModal"
         >
           Buy Credits
@@ -60,7 +60,7 @@ import { onMounted, watch } from "vue";
 import AccountClaimModal from "./ClaimModal.vue";
 import WalletIcon from "@/assets/img/icons/wallet.svg?component";
 
-const { isAuthenticated, isLoading } = useSuperTokens();
+const { isAuthenticated, isLoading, isBanned } = useSuperTokens();
 const { openBuyCreditsModal } = useBuyCreditsModal();
 const { onCreditRefresh } = useCreditRefresh();
 
