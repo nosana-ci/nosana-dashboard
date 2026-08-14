@@ -1,4 +1,4 @@
-import { ref, readonly, watch } from "vue";
+import { ref, readonly, watch, computed } from "vue";
 import Session from "supertokens-web-js/recipe/session";
 import EmailPassword from "supertokens-web-js/recipe/emailpassword";
 import EmailVerification from "supertokens-web-js/recipe/emailverification";
@@ -14,6 +14,7 @@ export interface User {
   providerUsername: string | null;
   generatedAddress: string;
   loginMethod?: string;
+  banned?: boolean;
 }
 
 // Global state shared across all instances
@@ -353,6 +354,7 @@ export function useSuperTokens() {
     isEmailVerified: readonly(isEmailVerified),
     userId: readonly(userId),
     userData: readonly(userData) as Readonly<Ref<User | null>>,
+    isBanned: computed(() => userData.value?.banned === true),
     checkSession,
     signIn,
     signUp,

@@ -13,6 +13,8 @@
           <div class="level-item">
             <button
               class="button is-dark"
+              :disabled="isBanned"
+              :title="isBanned ? 'Your account is suspended' : undefined"
               @click="$router.push('/deployments/create')"
             >
               <span class="icon">
@@ -36,7 +38,8 @@ import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import DeploymentsTable from "~/components/DeploymentsTable/Table.vue";
 
 import { useSuperTokens } from "~/composables/useSuperTokens";
-const { isAuthenticated: superTokensAuth, isLoading } = useSuperTokens();
+const { isAuthenticated: superTokensAuth, isLoading, isBanned } =
+  useSuperTokens();
 const { connected } = useWallet();
 const router = useRouter();
 const { nosana } = useKit();

@@ -20,6 +20,10 @@ export function useCryptoTopup() {
 
   const topup = async (token: CryptoTopupToken, amount: number): Promise<string> => {
 
+    if (userData.value?.banned) {
+      throw new Error("Your account is banned and cannot top up funds.");
+    }
+
     const dest = userData.value?.generatedAddress;
     if (!dest) throw new Error("No generated address found on your account.");
     if (!wallet.value) throw new Error("Wallet not connected.");
