@@ -13,7 +13,11 @@
     <Loader v-else-if="isLoading" />
     <div v-else class="mt-6">
       <div class="is-flex is-justify-content-flex-end mb-5">
-        <button class="button is-primary" @click="openBuyCreditsModal">
+        <button
+          class="button is-primary"
+          :disabled="isBanned"
+          @click="openBuyCreditsModal"
+        >
           Buy Credits
         </button>
       </div>
@@ -197,7 +201,7 @@ const config = useRuntimeConfig().public;
 const toast = useToast();
 const route = useRoute();
 const router = useRouter();
-const { isAuthenticated, isLoading, userData } = useSuperTokens();
+const { isAuthenticated, isLoading, userData, isBanned } = useSuperTokens();
 const { triggerCreditRefresh } = useCreditRefresh();
 const { openBuyCreditsModal, purchasedTick } = useBuyCreditsModal();
 const colorMode = useColorMode();
