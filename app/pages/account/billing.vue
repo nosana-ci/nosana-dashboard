@@ -194,8 +194,10 @@ import { loadStripe } from "@stripe/stripe-js";
 import type { Stripe, StripeCardElement } from "@stripe/stripe-js";
 import { useToast } from "vue-toastification";
 import type { SetupIntentResponse } from "~/composables/usePaymentMethods";
+import { fetchPurchaseHistory, type Purchase } from "~/composables/usePurchaseHistory";
 import AccountClaimModal from "~/components/Account/ClaimModal.vue";
 import { clearFreeCreditsVerifyDismissed } from "~/utils/freeCreditsVerifyDismissal";
+import { trackEvent } from "~/utils/analytics";
 
 const config = useRuntimeConfig().public;
 const toast = useToast();
@@ -327,6 +329,7 @@ const handleAddCard = async () => {
     });
     if (result.error) {
       addCardError.value = result.error.message ?? "Failed to add card";
+      trackEvent("add_payment_info_error", { payment_type: "card", reason: addCardError.value });
       return;
     }
     const requireThreeDSecure = isFreeCreditsFlow.value;
@@ -347,6 +350,7 @@ const handleAddCard = async () => {
       if (confirmResult.error) {
         addCardError.value =
           confirmResult.error.message ?? "Card authentication failed.";
+        trackEvent("add_payment_info_error", { payment_type: "card", reason: addCardError.value });
         return;
       }
       if (requireThreeDSecure && res.setupIntentId) {
@@ -363,9 +367,11 @@ const handleAddCard = async () => {
         if (!paymentVerified.value) {
           addCardError.value =
             "Your card could not be verified. Please try a different card.";
+          trackEvent("add_payment_info_error", { payment_type: "card", reason: addCardError.value });
           return;
         }
         toast.success("Payment method verified.");
+        trackEvent("add_payment_info", { payment_type: "card" });
         cancelAddCard();
         await tryOpenFreeCreditsClaimModal();
         return;
@@ -376,10 +382,12 @@ const handleAddCard = async () => {
       addCardError.value =
         res.verificationError ??
         "Your card could not be verified. Please try a different card.";
+      trackEvent("add_payment_info_error", { payment_type: "card", reason: addCardError.value });
       return;
     }
 
     toast.success("Payment method verified.");
+    trackEvent("add_payment_info", { payment_type: "card" });
     paymentVerified.value = res.paymentVerified;
     cancelAddCard();
     await fetchPaymentMethods();
@@ -392,32 +400,20 @@ const handleAddCard = async () => {
     const e = err as FetchError;
     addCardError.value =
       e?.data?.message ?? e?.message ?? "Failed to save card.";
+    trackEvent("add_payment_info_error", { payment_type: "card", reason: addCardError.value });
   } finally {
     addingCard.value = false;
   }
 };
 
 // ─── Purchase History ──────────────────────────────────────────────
-interface Purchase {
-  id: string;
-  amountUsd: number;
-  createdAt: string;
-  referenceId: string | null;
-  cardBrand: string | null;
-  cardLast4: string | null;
-}
-
 const purchases = ref<Purchase[]>([]);
 const loadingPurchases = ref(false);
 
 const fetchPurchases = async () => {
   loadingPurchases.value = true;
   try {
-    const data = await $fetch<{ purchases: Purchase[] }>(
-      `${config.apiBase}/payments/purchases`,
-      { credentials: "include" },
-    );
-    purchases.value = data.purchases;
+    purchases.value = await fetchPurchaseHistory();
   } catch {
     purchases.value = [];
   } finally {
