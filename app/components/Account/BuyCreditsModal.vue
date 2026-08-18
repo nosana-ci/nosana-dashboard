@@ -374,6 +374,7 @@ import { createTokenService, Logger } from "@nosana/kit";
 import type { Address } from "@nosana/kit";
 import type { SavedPaymentMethod } from "~/composables/usePaymentMethods";
 import type { CryptoTopupToken } from "~/composables/useCryptoTopup";
+import { fetchPurchaseHistory } from "~/composables/usePurchaseHistory";
 import { trackEvent, trackPixelEvent } from "~/utils/analytics";
 
 const props = defineProps<{
@@ -520,6 +521,7 @@ const purchasedSuccessfully = ref(false);
 const purchasedAmount = ref(0);
 const purchaseError = ref("");
 const justOpened = ref(false);
+const isRepeatBuyer = ref(false);
 
 const selectDefaultMethod = () => {
   const defaultMethod = savedMethods.value.find((method) => method.isDefault);
@@ -569,6 +571,12 @@ watch(
         await fetchPaymentMethods();
       }
       selectDefaultMethod();
+      try {
+        const history = await fetchPurchaseHistory();
+        isRepeatBuyer.value = history.length > 0;
+      } catch {
+        isRepeatBuyer.value = false;
+      }
     }
   },
 );
@@ -614,20 +622,28 @@ const handleCryptoPurchase = async () => {
   cryptoPurchasing.value = true;
   cryptoError.value = "";
   try {
-    await cryptoTopup(cryptoToken.value, cryptoAmount.value);
+    const txSignature = await cryptoTopup(cryptoToken.value, cryptoAmount.value);
     cryptoPurchasedToken.value = cryptoToken.value;
     purchasedAmount.value = cryptoAmount.value;
     purchasedSuccessfully.value = true;
     triggerCreditRefresh();
     emit("purchased", cryptoAmount.value);
     toast.success(`${cryptoAmount.value} ${cryptoToken.value} sent — credits are being added to your account.`);
-    trackEvent("purchase_success", { value: cryptoAmount.value, currency: cryptoToken.value, method: "crypto" });
+    trackEvent("purchase", {
+      transaction_id: txSignature,
+      value: cryptoAmount.value,
+      currency: cryptoToken.value,
+      method: "crypto",
+      transaction_type: "top_up",
+    });
+    if (isRepeatBuyer.value) trackEvent("repeat_purchase", { method: "crypto" });
     trackPixelEvent("purchase", { value: cryptoAmount.value, currency: cryptoToken.value });
   } catch (err: unknown) {
     type FetchError = { data?: { message?: string }; message?: string };
     const e = err as FetchError;
     cryptoError.value =
       e?.data?.message ?? e?.message ?? "Transaction failed. Please try again.";
+    trackEvent("purchase_error", { method: "crypto", reason: cryptoError.value });
   } finally {
     cryptoPurchasing.value = false;
   }
@@ -659,6 +675,7 @@ const handlePurchase = async () => {
       const result = await stripe.confirmCardPayment(intentData.clientSecret);
       if (result.error) {
         purchaseError.value = result.error.message ?? "Payment failed";
+        trackEvent("purchase_error", { method: "card", reason: purchaseError.value });
         return;
       }
 
@@ -672,6 +689,7 @@ const handlePurchase = async () => {
       if (status && status !== "succeeded") {
         purchaseError.value =
           "Payment could not be completed. Please try again.";
+        trackEvent("purchase_error", { method: "card", reason: purchaseError.value });
         return;
       }
     }
@@ -681,13 +699,21 @@ const handlePurchase = async () => {
     triggerCreditRefresh();
     emit("purchased", effectiveAmount.value);
     toast.success(`$${effectiveAmount.value} in credits added to your account!`);
-    trackEvent("purchase_success", { value: effectiveAmount.value, currency: "USD", method: "card" });
+    trackEvent("purchase", {
+      transaction_id: intentData.paymentIntentId,
+      value: effectiveAmount.value,
+      currency: "USD",
+      method: "card",
+      transaction_type: "top_up",
+    });
+    if (isRepeatBuyer.value) trackEvent("repeat_purchase", { method: "card" });
     trackPixelEvent("purchase", { value: effectiveAmount.value, currency: "USD" });
   } catch (err: unknown) {
     type FetchError = { data?: { message?: string }; message?: string };
     const e = err as FetchError;
     purchaseError.value =
       e?.data?.message ?? e?.message ?? "Payment failed. Please try again.";
+    trackEvent("purchase_error", { method: "card", reason: purchaseError.value });
     if (purchaseError.value.includes("cannot be used for purchases")) {
       await fetchPaymentMethods();
       selectDefaultMethod();
