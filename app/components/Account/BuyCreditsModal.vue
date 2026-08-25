@@ -178,7 +178,11 @@
               :class="{ 'is-loading': purchasing }"
               @click="handlePurchase"
             >
-              Pay ${{ effectiveAmount }}
+              {{
+                authenticating
+                  ? "Confirming with your bank…"
+                  : `Pay $${effectiveAmount}`
+              }}
             </button>
             <p
               v-if="purchaseError"
@@ -517,6 +521,7 @@ const methodPickerRef = ref<HTMLElement | null>(null);
 let stripe: Stripe | null = null;
 
 const purchasing = ref(false);
+const authenticating = ref(false);
 const purchasedSuccessfully = ref(false);
 const purchasedAmount = ref(0);
 const purchaseError = ref("");
@@ -657,6 +662,7 @@ const handlePurchase = async () => {
     const intentData = await $fetch<{
       clientSecret: string | null;
       paymentIntentId: string;
+      requiresAction: boolean;
     }>(`${config.apiBase}/payments/payment-intent`, {
       method: "POST",
       credentials: "include",
@@ -672,9 +678,18 @@ const handlePurchase = async () => {
       }
       if (!stripe) throw new Error("Stripe could not be initialised");
 
-      const result = await stripe.confirmCardPayment(intentData.clientSecret);
+      authenticating.value = true;
+      const result = await stripe
+        .confirmCardPayment(intentData.clientSecret)
+        .finally(() => {
+          authenticating.value = false;
+        });
+
       if (result.error) {
-        purchaseError.value = result.error.message ?? "Payment failed";
+        purchaseError.value =
+          result.error.code === "payment_intent_authentication_failure"
+            ? "Your bank did not confirm this payment, so you have not been charged. Please try again and complete the verification step."
+            : (result.error.message ?? "Payment failed");
         trackEvent("purchase_error", { method: "card", reason: purchaseError.value });
         return;
       }
@@ -686,12 +701,21 @@ const handlePurchase = async () => {
         triggerCreditRefresh();
         return;
       }
-      if (status && status !== "succeeded") {
+      if (status && status !== "requires_capture" && status !== "succeeded") {
         purchaseError.value =
           "Payment could not be completed. Please try again.";
         trackEvent("purchase_error", { method: "card", reason: purchaseError.value });
         return;
       }
+
+      await $fetch<{ success: boolean; paymentIntentId: string }>(
+        `${config.apiBase}/payments/payment-intent/confirm`,
+        {
+          method: "POST",
+          credentials: "include",
+          body: { paymentIntentId: intentData.paymentIntentId },
+        },
+      );
     }
 
     purchasedAmount.value = effectiveAmount.value;
@@ -720,6 +744,7 @@ const handlePurchase = async () => {
     }
   } finally {
     purchasing.value = false;
+    authenticating.value = false;
   }
 };
 
