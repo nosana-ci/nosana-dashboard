@@ -108,8 +108,7 @@ export function useDeploymentJobs(deps: DeploymentJobsDeps) {
     return deps.jobStateStringToNumber(job.state);
   };
 
-  // Keep the shared state/data maps in sync with any jobs we fetch, so
-  // getJobDuration / JobStatus / hasActiveJobs see them (no behavior change vs today).
+  // Keep job status and duration data in sync with fetched jobs.
   const mergeIntoStateMaps = (jobs: DeploymentJob[]) => {
     for (const job of jobs) {
       deps.jobStates.value[job.job] = getJobStateNumber(job);
@@ -128,27 +127,45 @@ export function useDeploymentJobs(deps: DeploymentJobsDeps) {
 
   // Fetch the *full* active set (QUEUED + RUNNING), following cursors. Active jobs
   // are bounded by replica count, so this is cheap and gives correct live state.
+  // A fetch asked for while one is running is run again after it, not dropped:
+  // the deployment page loads and streams at once, so the two ask within
+  // milliseconds of each other, and discarding the later one leaves the list
+  // showing whatever the earlier one happened to see — an empty list, if the
+  // job was listed in between.
+  let activeRefetchQueued = false;
+
   const fetchAllActiveJobs = async () => {
-    const dep = deps.deployment.value;
-    if (!dep || activeLoading.value) return;
+    if (activeLoading.value) {
+      activeRefetchQueued = true;
+      return;
+    }
+    if (!deps.deployment.value) return;
+
     activeLoading.value = true;
     try {
-      const first = await dep.getJobs({
-        // @ts-ignore - kit search-param types lag behind the API (see DeploymentsList.vue)
-        state: ACTIVE_JOB_STATES,
-        limit: 100,
-        sort_order: "desc",
-      });
-      const all = await collectAllJobs(first);
-      activeJobsAll.value = all;
-      mergeIntoStateMaps(all);
-      activeJobsPage.value = clampPage(
-        activeJobsPage.value,
-        Math.max(1, Math.ceil(all.length / jobsPerPage)),
-      );
+      do {
+        activeRefetchQueued = false;
+        const dep = deps.deployment.value;
+        if (!dep) return;
+
+        const first = await dep.getJobs({
+          // @ts-ignore - kit search-param types lag behind the API (see DeploymentsList.vue)
+          state: ACTIVE_JOB_STATES,
+          limit: 100,
+          sort_order: "desc",
+        });
+        const all = await collectAllJobs(first);
+        activeJobsAll.value = all;
+        mergeIntoStateMaps(all);
+        activeJobsPage.value = clampPage(
+          activeJobsPage.value,
+          Math.max(1, Math.ceil(all.length / jobsPerPage)),
+        );
+      } while (activeRefetchQueued);
     } catch (error) {
       console.error("Failed to fetch active jobs:", error);
     } finally {
+      activeRefetchQueued = false;
       activeLoading.value = false;
     }
   };
@@ -417,7 +434,7 @@ export function useDeploymentJobs(deps: DeploymentJobsDeps) {
     deploymentEvents,
     hasErrorInLastEvent,
 
-    // Active jobs (full polled set, client-side pagination)
+    // Active jobs (full fetched set, client-side pagination)
     activeJobsAll,
     activeJobsPaged,
     activeLoading,
