@@ -303,13 +303,19 @@ const applyStreamEvent = (event: DeploymentStreamEvent) => {
 
 const deploymentStream = useDeploymentStream({
   applyEvent: applyStreamEvent,
-  refresh: async () => {
-    const requests = [loadDeployment(true), refreshDeploymentJobs(true)];
-    if (jobActivityTab.value === "history") requests.push(loadHistory());
-    if (activeTab.value === "events") {
-      requests.push(loadEvents(true), loadTasks(true));
-    }
-    await Promise.all(requests);
+  refresh: {
+    deployment: () => loadDeployment(true),
+    jobs: async () => {
+      const requests = [refreshDeploymentJobs(true)];
+      if (jobActivityTab.value === "history") requests.push(loadHistory());
+      await Promise.all(requests);
+    },
+    events: async () => {
+      if (activeTab.value === "events") await loadEvents(true);
+    },
+    tasks: async () => {
+      if (activeTab.value === "events") await loadTasks(true);
+    },
   },
 });
 
