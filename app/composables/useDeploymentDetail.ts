@@ -62,16 +62,11 @@ export function useDeploymentDetail(deps: DeploymentDetailDeps) {
   };
 
   const applyDeploymentSnapshot = (dep: Deployment) => {
-    deployment.value = dep;
-    jobStates.value = {};
-    allJobsData.value = {};
-    if (deploymentJobs.value) {
-      for (const job of deploymentJobs.value) {
-        const stateNum = jobStateStringToNumber(job.state);
-        jobStates.value[job.job] = stateNum;
-        allJobsData.value[job.job] = job;
-      }
+    if (deployment.value?.id !== dep.id) {
+      jobStates.value = {};
+      allJobsData.value = {};
     }
+    deployment.value = dep;
   };
 
   // Sub-resource loaders
@@ -82,6 +77,10 @@ export function useDeploymentDetail(deps: DeploymentDetailDeps) {
     try {
       const result = await deployment.value.getJobs();
       deploymentJobs.value = result?.jobs || [];
+      for (const job of deploymentJobs.value) {
+        jobStates.value[job.job] = jobStateStringToNumber(job.state);
+        allJobsData.value[job.job] = job;
+      }
     } catch (err: any) {
       console.error("Load jobs error:", err);
       if (!silent) {
@@ -246,12 +245,6 @@ export function useDeploymentDetail(deps: DeploymentDetailDeps) {
     return d?.schedule ?? null;
   });
 
-  const hasActiveJobs = computed(() => {
-    return Object.values(jobStates.value).some(
-      (state) => state === 0 || state === 1 || state === 3,
-    );
-  });
-
   return {
     // Core state
     deployment,
@@ -280,8 +273,6 @@ export function useDeploymentDetail(deps: DeploymentDetailDeps) {
     hasVault,
     deploymentVault,
     deploymentSchedule,
-    hasActiveJobs,
-
     // Functions
     applyDeploymentSnapshot,
     loadDeployment,

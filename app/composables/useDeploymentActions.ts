@@ -7,10 +7,7 @@ export interface DeploymentActionsDeps {
   hasAnyAuth: Ref<boolean>;
   isWalletMode: Ref<boolean>;
   deploymentStatus: ComputedRef<string | undefined>;
-  hasActiveJobs: ComputedRef<boolean>;
   loadDeployment: (silent?: boolean) => Promise<void>;
-  startFastPolling: (expectedStatus?: string) => void;
-  stopJobPolling: () => void;
 }
 
 export function useDeploymentActions(deps: DeploymentActionsDeps) {
@@ -136,8 +133,6 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
       () => deps.deployment.value!.start(),
       "Deployment started successfully",
     );
-
-    deps.startFastPolling("RUNNING");
   };
 
   const stopDeployment = async () => {
@@ -151,12 +146,6 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
     );
 
     await deps.loadDeployment(true);
-
-    if (!deps.hasActiveJobs.value) {
-      deps.stopJobPolling();
-    }
-
-    deps.startFastPolling("STOPPED");
   };
 
   const archiveDeployment = async () => {
@@ -214,7 +203,6 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
       return;
     }
 
-    const currentStatus = deps.deployment.value?.status?.toUpperCase();
     await executeDeploymentAction(
       () =>
         deps.deployment.value!.updateReplicaCount(
@@ -224,10 +212,6 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
     );
 
     newReplicaCount.value = null;
-
-    if (currentStatus === "RUNNING" || currentStatus === "STARTING") {
-      deps.startFastPolling("RUNNING");
-    }
   };
 
   const updateJobTimeout = async () => {
@@ -236,7 +220,6 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
       return;
     }
 
-    const currentStatus = deps.deployment.value?.status?.toUpperCase();
     await executeDeploymentAction(
       () =>
         deps.deployment.value!.updateTimeout(
@@ -246,10 +229,6 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
     );
 
     newTimeoutHours.value = null;
-
-    if (currentStatus === "RUNNING" || currentStatus === "STARTING") {
-      deps.startFastPolling("RUNNING");
-    }
   };
 
   const updateSchedule = async () => {
@@ -263,7 +242,6 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
       return;
     }
 
-    const currentStatus = deps.deployment.value?.status?.toUpperCase();
     try {
       actionLoading.value = true;
       await deps.deployment.value.updateSchedule(newSchedule.value);
@@ -274,10 +252,6 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
 
       await new Promise((resolve) => setTimeout(resolve, 500));
       await deps.loadDeployment(true);
-
-      if (currentStatus === "RUNNING" || currentStatus === "STARTING") {
-        deps.startFastPolling("RUNNING");
-      }
 
       newSchedule.value = "";
     } catch (error: any) {

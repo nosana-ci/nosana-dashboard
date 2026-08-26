@@ -175,13 +175,16 @@ import { useSuperTokens } from "~/composables/useSuperTokens";
 import { useDeploymentDetail } from "~/composables/useDeploymentDetail";
 import { useDeploymentJobs } from "~/composables/useDeploymentJobs";
 import { useDeploymentActions } from "~/composables/useDeploymentActions";
-import { useDeploymentPolling } from "~/composables/useDeploymentPolling";
+import {
+  useDeploymentStream,
+  type DeploymentStreamEvent,
+} from "~/composables/useDeploymentStream";
 import { useDeploymentJobDefinition } from "~/composables/useDeploymentJobDefinition";
 
 // --- Auth setup ---
 const route = useRoute();
 const router = useRouter();
-const { isAuthenticated: superTokensAuth } = useSuperTokens();
+const { isAuthenticated: superTokensAuth, userData } = useSuperTokens();
 const { connected, account } = useWallet();
 
 const isAuthenticated = computed(() => superTokensAuth.value);
@@ -228,7 +231,6 @@ const {
   hasVault,
   deploymentVault,
   deploymentSchedule,
-  hasActiveJobs,
   loadDeployment,
   loadJobs,
   loadEvents,
@@ -261,46 +263,62 @@ const {
   historyHasNext,
   historyNext,
   historyPrev,
+  loadHistory,
   deploymentEndpoints,
   deploymentEvents,
   hasErrorInLastEvent,
 } = jobs;
 
-// Each poll refreshes deploymentJobs (logs/maps/hasActiveJobs) AND the full
-// active set that powers the Active tab and the running-job timer. Guard the
-// first await so refreshActiveJobs always runs even if loadJobs ever throws.
-const pollLoadJobs = async (silent?: boolean) => {
+const refreshDeploymentJobs = async (silent?: boolean) => {
   await loadJobs(silent).catch(() => {});
   await refreshActiveJobs();
 };
 
-const polling = useDeploymentPolling({
-  deployment,
-  activeTab,
-  hasActiveJobs,
-  loadDeployment,
-  loadJobs: pollLoadJobs,
-  loadEvents,
-  loadTasks,
-});
+const streamUserId = computed(() =>
+  superTokensAuth.value
+    ? userData.value?.generatedAddress
+    : account.value?.address,
+);
 
-const {
-  pollingTimeout,
-  stopAllPolling,
-  startUnifiedPolling,
-  startFastPolling,
-  stopJobPolling,
-} = polling;
+const applyStreamEvent = (event: DeploymentStreamEvent) => {
+  if (event.type === "deployment" && deployment.value) {
+    Object.assign(deployment.value, {
+      status: event.status,
+      replicas: event.replicas,
+      active_revision: event.active_revision,
+    });
+    return;
+  }
+  if (event.type === "job") {
+    jobStates.value = {
+      ...jobStates.value,
+      [event.job]: jobStateStringToNumber(event.state),
+    };
+    allJobsData.value = {
+      ...allJobsData.value,
+      [event.job]: { ...allJobsData.value[event.job], ...event },
+    };
+  }
+};
+
+const deploymentStream = useDeploymentStream({
+  applyEvent: applyStreamEvent,
+  refresh: async () => {
+    const requests = [loadDeployment(true), refreshDeploymentJobs(true)];
+    if (jobActivityTab.value === "history") requests.push(loadHistory());
+    if (activeTab.value === "events") {
+      requests.push(loadEvents(true), loadTasks(true));
+    }
+    await Promise.all(requests);
+  },
+});
 
 const actions = useDeploymentActions({
   deployment,
   hasAnyAuth,
   isWalletMode,
   deploymentStatus,
-  hasActiveJobs,
   loadDeployment,
-  startFastPolling,
-  stopJobPolling,
 });
 
 const {
@@ -451,10 +469,11 @@ onUnmounted(() => {
     clearTimeout(authTimeout);
     authTimeout = null;
   }
+  deploymentStream.stop();
 });
 
 onBeforeRouteLeave(() => {
-  stopAllPolling();
+  deploymentStream.stop();
 });
 
 // --- Watchers ---
@@ -490,38 +509,14 @@ watch(
   { immediate: true },
 );
 
-// Watch deployment status to manage polling
-const prevDeploymentStatus = ref<string | null>(null);
-
 watch(
-  () => deployment.value?.status,
-  (newStatus) => {
-    if (!newStatus) return;
-
-    const status = newStatus.toUpperCase();
-    const prev = prevDeploymentStatus.value;
-
-    if (status === "RUNNING" && prev !== "RUNNING") {
-      const expectedStatus =
-        prev && prev !== "STARTING" && prev !== "RUNNING"
-          ? "RUNNING"
-          : undefined;
-      startFastPolling(expectedStatus);
-    } else if (
-      (status === "STARTING" || status === "RUNNING") &&
-      !pollingTimeout.value
-    ) {
-      startUnifiedPolling();
+  [() => deployment.value?.id, streamUserId],
+  ([deploymentId, userId]) => {
+    if (deploymentId && userId && deployment.value) {
+      deploymentStream.start(deployment.value);
+    } else {
+      deploymentStream.stop();
     }
-
-    if (
-      ["STOPPED", "ARCHIVED", "ERROR"].includes(status) &&
-      !hasActiveJobs.value
-    ) {
-      stopAllPolling();
-    }
-
-    prevDeploymentStatus.value = status;
   },
   { immediate: true },
 );
