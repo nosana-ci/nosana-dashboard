@@ -29,3 +29,5 @@ android/*
 # Localcert files
 *.pem
 *.key
+
+.nuxt-root-owned-backup

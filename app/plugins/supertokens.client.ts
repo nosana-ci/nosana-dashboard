@@ -3,6 +3,7 @@ import Session from "supertokens-web-js/recipe/session";
 import EmailPassword from "supertokens-web-js/recipe/emailpassword";
 import ThirdParty from "supertokens-web-js/recipe/thirdparty";
 import EmailVerification from "supertokens-web-js/recipe/emailverification";
+import OAuth2Provider from "supertokens-web-js/recipe/oauth2provider";
 
 const getRequestUrl = (input: RequestInfo | URL) => {
   if (typeof input === "string") {
@@ -64,6 +65,9 @@ export default defineNuxtPlugin(() => {
       EmailPassword.init(),
       ThirdParty.init(),
       EmailVerification.init(),
+      // Lets this site act as the login/consent UI for the client-manager OAuth 2.1
+      // authorization server (Unified Login), so third-party apps reuse Nosana login.
+      OAuth2Provider.init(),
     ],
   });
 
