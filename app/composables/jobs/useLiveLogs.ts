@@ -22,6 +22,10 @@ interface UseLiveLogsDeps {
   entries: ShallowRef<UnifiedLogEntry[]>;
   seq: Ref<number>;
   getAuth: () => Promise<string>;
+  // CVM deployments: each job's host stream is just the VM boot console, so
+  // useFLogs also opens the job's own CVM socket (authed per job address).
+  isCvm?: Ref<boolean>;
+  getJobAuth?: (jobAddress: string) => Promise<string>;
 }
 
 export function useLiveLogs(deps: UseLiveLogsDeps) {
@@ -51,8 +55,12 @@ export function useLiveLogs(deps: UseLiveLogsDeps) {
 
     const nodeRef = ref(node);
     const shouldConnect = computed(() => !!nodeRef.value && nodeRef.value !== NULL_ADDRESS);
+    const cvmEnabled = !!deps.isCvm?.value && !!deps.getJobAuth;
     const flog = useFLogs(jobId, nodeRef, shouldConnect, deps.getAuth, {
       onEntry: (entry, opId) => handleEntry(entry, jobId, opId),
+      ...(cvmEnabled
+        ? { cvm: { getAuth: () => deps.getJobAuth!(jobId) } }
+        : {}),
     });
 
     instances.set(jobId, {

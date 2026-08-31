@@ -331,6 +331,7 @@ import {
 
 import LogSubscription from "./LogSubscription.vue";
 import { useFLogs } from "~/composables/jobs/useFLogs";
+import { isCvmMarket } from "~/utils/cvm";
 import { useTemplates } from "~/composables/useTemplates";
 import { useToast } from "vue-toastification";
 import { useNosanaWallet } from "~/composables/useNosanaWallet";
@@ -460,10 +461,11 @@ interface Props {
 
 const props = defineProps<Props>();
 const { userBalances } = useNosanaWallet();
-const { getAuthHeader } = useDeploymentAuth();
+const { getAuthHeader, getJobAuthHeader } = useDeploymentAuth();
 const getAuth = async () => {
   return await getAuthHeader(props.deploymentId ?? undefined);
 };
+const isCvmJob = computed(() => isCvmMarket(props.job.market));
 const { templates } = useTemplates();
 const { markets } = useMarkets();
 const { saveState } = useDeployPageState();
@@ -1210,6 +1212,9 @@ const {
   computed(() => props.job.node),
   shouldConnect,
   getAuth,
+  isCvmJob.value
+    ? { cvm: { getAuth: () => getJobAuthHeader(props.job.address) } }
+    : undefined,
 );
 
 // Expose flog progress bars (directly from useFLogs)

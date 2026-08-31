@@ -66,13 +66,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, computed, watch, onMounted } from "vue";
+import { ref, computed, watch, onMounted } from "vue";
 import type { JobDefinition } from "@nosana/kit";
 import CopyIcon from "@/assets/img/icons/copy.svg?component";
-import { useToast } from "vue-toastification";
 
 import JobLogsView from "./Tabs/SystemLogs.vue";
-import JobDefinitionView from "./Tabs/JobDefinition.vue";
 import JobChatView from "./Tabs/Chat.vue";
 import JobGroups from "./Tabs/Overview.vue";
 
@@ -141,7 +139,6 @@ watch(
 );
 
 const logsView = ref<any>(null);
-const colorMode = useColorMode();
 
 const canShowLogsTab = computed(() => {
   if (props.job.isCompleted) return false;

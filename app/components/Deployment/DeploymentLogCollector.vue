@@ -51,6 +51,7 @@ import LogCollectorViewer from "~/components/LogCollector/LogCollectorViewer.vue
 const props = defineProps<{
   deploymentId: string;
   jobs: JobItem[];
+  market?: string;
 }>();
 
 const jobsRef = computed(() => props.jobs);
@@ -70,6 +71,7 @@ const {
   deploymentId: props.deploymentId,
   jobs: jobsRef,
   selectedJobIds,
+  market: computed(() => props.market),
 });
 
 const {

@@ -3,6 +3,7 @@ import type { JobItem, UnifiedLogEntry } from './logCollectorTypes';
 import type { ProgressBar } from './logTypes';
 import { useKit } from '~/composables/useKit';
 import { useDeploymentAuth } from '~/composables/useDeploymentAuth';
+import { isCvmMarket } from '~/utils/cvm';
 import { useLiveLogs } from './useLiveLogs';
 import { useHistoricalLogs } from './useHistoricalLogs';
 
@@ -10,11 +11,12 @@ interface LogSourcesDeps {
   deploymentId: string;
   jobs: Ref<JobItem[]>;
   selectedJobIds: Ref<Set<string>>;
+  market?: Ref<string | undefined>;
 }
 
 export function useLogSources(deps: LogSourcesDeps) {
   const { nosana } = useKit();
-  const { getAuthHeader } = useDeploymentAuth();
+  const { getAuthHeader, getJobAuthHeader } = useDeploymentAuth();
 
   const entries = shallowRef<UnifiedLogEntry[]>([]);
   const seq = ref(0);
@@ -40,6 +42,8 @@ export function useLogSources(deps: LogSourcesDeps) {
     entries,
     seq,
     getAuth: () => getAuthHeader(),
+    isCvm: computed(() => isCvmMarket(deps.market?.value)),
+    getJobAuth: getJobAuthHeader,
   });
 
   const historical = useHistoricalLogs({

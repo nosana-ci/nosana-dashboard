@@ -1,3 +1,7 @@
+import {
+  createNosanaAuthorization,
+  walletToAuthorizationSigner,
+} from "@nosana/kit";
 import { useSuperTokens } from "~/composables/useSuperTokens";
 import { useWallet } from "@nosana/solana-vue";
 import { useKit } from "~/composables/useKit";
@@ -9,6 +13,15 @@ import { useKit } from "~/composables/useKit";
 // written, producing N wallet popups.
 let inFlight: Promise<string> | null = null;
 
+// Job-scoped headers (message = job address, used by the CVM log API) can't go
+// through the kit's authorization store: it keys cookies by wallet address
+// only, so a job header would collide with the cached "nosana-auth" one.
+// Cache them here instead. Wallet headers embed a timestamp the server rejects
+// after 300s, so expire the cache comfortably before that.
+const JOB_HEADER_TTL_MS = 4 * 60 * 1000;
+const jobHeaderCache = new Map<string, { header: string; expiresAt: number }>();
+const jobHeaderInFlight = new Map<string, Promise<string>>();
+
 /**
  * Composable for getting authentication headers in deployment contexts.
  * Handles both credit and wallet users. Concurrent callers share a single
@@ -16,7 +29,7 @@ let inFlight: Promise<string> | null = null;
  * wallet sign popups.
  */
 export function useDeploymentAuth() {
-  const { nosana } = useKit();
+  const { nosana, wallet } = useKit();
   const { connected } = useWallet();
   const {
     isAuthenticated: superTokensAuth,
@@ -59,7 +72,55 @@ export function useDeploymentAuth() {
     }
   };
 
+  /**
+   * Auth header scoped to a single job: the signed message is the job address
+   * itself. This is what the CVM's log/API endpoints validate (against the
+   * job's project key), unlike getAuthHeader's fixed "nosana-auth" message.
+   */
+  const getJobAuthHeader = async (jobAddress: string): Promise<string> => {
+    const cached = jobHeaderCache.get(jobAddress);
+    if (cached && cached.expiresAt > Date.now()) return cached.header;
+
+    const existing = jobHeaderInFlight.get(jobAddress);
+    if (existing) return existing;
+
+    const promise = (async () => {
+      let isSuperTokensAuthed = superTokensAuth.value;
+      if (!isSuperTokensAuthed) {
+        isSuperTokensAuthed = await checkSession(false);
+      }
+
+      if (isSuperTokensAuthed) {
+        // The backend signs on the credits account's behalf; no timestamp
+        // segment is added on this path.
+        const signature = await nosana.value.api.auth.signMessage(jobAddress);
+        return `${jobAddress}:${signature}`;
+      }
+      if (!connected.value || !wallet.value) {
+        throw new Error("No authentication available - wallet not connected");
+      }
+      return await createNosanaAuthorization(
+        walletToAuthorizationSigner(wallet.value),
+      ).generate(jobAddress, { includeTime: true });
+    })();
+
+    jobHeaderInFlight.set(jobAddress, promise);
+    try {
+      const header = await promise;
+      jobHeaderCache.set(jobAddress, {
+        header,
+        expiresAt: Date.now() + JOB_HEADER_TTL_MS,
+      });
+      return header;
+    } catch {
+      throw new Error("Failed to get job auth header from Nosana API");
+    } finally {
+      jobHeaderInFlight.delete(jobAddress);
+    }
+  };
+
   return {
     getAuthHeader,
+    getJobAuthHeader,
   };
 }

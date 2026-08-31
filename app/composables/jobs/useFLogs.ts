@@ -23,7 +23,17 @@ export interface FLogEntry {
 
 export interface FLogOptions {
   onEntry?: (entry: FLogEntry, opId: string) => void;
+  /**
+   * Set when the job runs in a confidential VM (CVM). The host node's /flog
+   * stream then only carries the VM boot console, which is filed under system
+   * logs, while a second socket to the CVM itself — same protocol, at
+   * wss://<jobAddress>.<nodeDomain> with the /log path and a job-address-signed
+   * auth header — carries the inner ops' container logs.
+   */
+  cvm?: { getAuth: () => Promise<string | Headers> };
 }
+
+type FLogSource = 'host' | 'cvm';
 
 export function useFLogs(
   jobAddress: string,
@@ -34,6 +44,8 @@ export function useFLogs(
 ) {
   const ansi = new AnsiUp();
   ansi.use_classes = true;
+
+  const isCvm = !!options?.cvm;
 
   // Tabs: 'system' first, followed by opIds in first-seen order
   const tabs = ref<string[]>(['system']);
@@ -218,8 +230,11 @@ export function useFLogs(
     return 'info';
   }
 
-  function addMessage(msg: FLogMessage) {
+  function addMessage(msg: FLogMessage, source: FLogSource = 'host') {
     const ts = msg.timestamp || Date.now();
+    // For CVM jobs the host stream is the VM boot console: keep its container
+    // styling but file it under system logs instead of op logs.
+    const toOpLogs = msg.type === 'container' && !(isCvm && source === 'host');
     const derived = msg.type === 'container' ? 'container' : deriveSystemColorType(msg.message, msg.type);
     let stampedContent = '';
 
@@ -244,7 +259,7 @@ export function useFLogs(
       html: true,
     };
 
-    if (msg.type === 'container') {
+    if (toOpLogs) {
       ensureOp(msg.opId);
       const arr = logsByOp.value.get(msg.opId)!;
       arr.push(entry);
@@ -265,7 +280,7 @@ export function useFLogs(
     // remember fingerprint after successful add
     remember(fp);
 
-    options?.onEntry?.(entry, msg.opId);
+    options?.onEntry?.(entry, isCvm && source === 'host' ? 'system' : msg.opId);
   }
 
   function capArray<T>(arr: T[], max: number) {
@@ -285,19 +300,10 @@ export function useFLogs(
     );
   }
 
-  // WebSocket wiring
-  const {
-    isConnecting: wsConnecting,
-    connectionEstablished: wsEstablished,
-    initConnection,
-    closeConnection,
-  } = useJobWebSocket(
-    jobAddress,
-    host,
-    getAuth,
-    // Suppress frontend connection/retry noise entirely for flogs
-    (_log: string) => { },
-    // onMessage
+  // Shared message handler for the host stream and (for CVM jobs) the CVM's
+  // own stream — both speak the same flog message shape.
+  const createOnMessage =
+    (source: FLogSource) =>
     (event: MessageEvent) => {
       try {
         const outer = JSON.parse(event.data);
@@ -413,24 +419,63 @@ export function useFLogs(
             timestamp,
             message: asStringRaw,
           };
-          addMessage(entry);
+          addMessage(entry, source);
           return;
         }
       } catch { }
-    },
+    };
+
+  // WebSocket wiring
+  const {
+    isConnecting: wsConnecting,
+    connectionEstablished: wsEstablished,
+    initConnection,
+    closeConnection,
+  } = useJobWebSocket(
+    jobAddress,
+    host,
+    getAuth,
+    // Suppress frontend connection/retry noise entirely for flogs
+    (_log: string) => { },
+    createOnMessage('host'),
     3,
     3000,
     { path: '/flog', disableFallback: true }
   );
 
-  // proxy flags
-  watch(wsConnecting, (v) => { isConnecting.value = v; });
-  watch(wsEstablished, (v) => { connectionEstablished.value = v; });
+  // The CVM registers its own tunnel keyed on the job address. It only comes
+  // up once the VM has booted, so retry well past the host socket's window.
+  const cvmWs = options?.cvm
+    ? useJobWebSocket(
+      jobAddress,
+      jobAddress,
+      options.cvm.getAuth,
+      (_log: string) => { },
+      createOnMessage('cvm'),
+      30,
+      5000,
+      { path: '/log', disableFallback: true }
+    )
+    : null;
+
+  // proxy flags (a CVM job counts as connected once either stream is live)
+  if (cvmWs) {
+    watch([wsConnecting, cvmWs.isConnecting], ([a, b]) => { isConnecting.value = a || b; });
+    watch([wsEstablished, cvmWs.connectionEstablished], ([a, b]) => { connectionEstablished.value = a || b; });
+  } else {
+    watch(wsConnecting, (v) => { isConnecting.value = v; });
+    watch(wsEstablished, (v) => { connectionEstablished.value = v; });
+  }
 
   // lifecycle control
   watch(shouldConnect, (next) => {
-    if (next) initConnection();
-    else closeConnection();
+    if (next) {
+      initConnection();
+      cvmWs?.initConnection();
+    } else {
+      closeConnection();
+      cvmWs?.closeConnection();
+    }
   }, { immediate: true });
 
   const activeLogs = computed<FLogEntry[]>(() => {

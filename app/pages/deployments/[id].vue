@@ -93,6 +93,8 @@
               <DeploymentLogCollector
                 :deploymentId="deployment.id"
                 :jobs="deploymentJobs"
+                :market="deployment.market"
+              />
               />
             </div>
 
