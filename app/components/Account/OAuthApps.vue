@@ -1,219 +1,399 @@
 <template>
   <div class="oauth-apps-section">
-    <div class="section-header">
-      <div class="section-heading">
-        <h2>Nosana Connected Apps</h2>
-        <p>
-          Let other apps add <strong>“Connect with Nosana”</strong>. Each app
-          gets an OAuth client that can act on a user’s behalf after they sign
-          in and approve it.
-        </p>
-      </div>
-      <div class="oauth-create">
+    <div
+      class="is-flex is-justify-content-space-between is-align-items-center mb-4"
+    >
+      <h3 class="title is-4 mb-0">Nosana Connected Apps</h3>
+      <div class="is-flex is-align-items-center" style="gap: 0.5rem">
         <button
+          @click="openCreate"
           class="button is-dark"
           :disabled="!isAuthenticated || atLimit"
-          @click="openCreate"
         >
-          <FontAwesomeIcon :icon="faPlus" />&nbsp;Create app
+          <span class="icon">
+            <FontAwesomeIcon :icon="faPlus" />
+          </span>
+          <span>Create App</span>
         </button>
-        <p v-if="atLimit" class="oauth-limit-hint">
-          Limit of {{ appsData.limit }} apps reached.
+      </div>
+    </div>
+
+    <p class="subtitle is-6 has-text-grey mb-4">
+      Add <strong>“Connect with Nosana”</strong> to your own apps, so people can
+      sign in with their Nosana account.
+    </p>
+
+    <div v-if="!hasLoadedOnce && loadingApps" class="box">
+      <progress class="progress is-small is-grey" max="100"></progress>
+      <p class="has-text-centered">Loading connected apps...</p>
+    </div>
+
+    <div v-else-if="appsData.apps.length === 0" class="box has-text-centered">
+      <div class="content">
+        <span class="icon is-large has-text-grey-light">
+          <FontAwesomeIcon :icon="faPlug" size="2x" />
+        </span>
+        <h5 class="title is-5">No Connected Apps</h5>
+        <p class="subtitle">
+          Create your first app to get a client ID for “Connect with Nosana”.
         </p>
+        <button
+          @click="openCreate"
+          class="button is-dark"
+          :disabled="!isAuthenticated || atLimit"
+        >
+          <span class="icon">
+            <FontAwesomeIcon :icon="faPlus" />
+          </span>
+          <span>Create App</span>
+        </button>
       </div>
     </div>
 
-    <div v-if="loadingApps && !hasLoadedOnce" class="oauth-empty">Loading…</div>
-    <div v-else-if="!appsData.apps.length" class="oauth-empty">
-      No connected apps yet. Create one to get a client ID.
-    </div>
-
-    <div v-else class="oauth-list">
-      <div v-for="app in appsData.apps" :key="app.clientId" class="oauth-card">
-        <div class="oauth-card-head">
-          <img
-            v-if="app.logoUri"
-            :src="app.logoUri"
-            :alt="`${app.name} logo`"
-            class="oauth-app-logo"
-          />
-          <div class="oauth-app-title">
-            <div class="oauth-app-name">{{ app.name }}</div>
-            <span
-              class="tag"
-              :class="app.confidential ? 'is-info' : 'is-light'"
-            >
-              {{ app.confidential ? "Confidential" : "Public · PKCE" }}
-            </span>
-          </div>
-          <button
-            class="button is-small is-danger is-light"
-            :class="{ 'is-loading': deletingId === app.clientId }"
-            @click="removeApp(app)"
-          >
-            <FontAwesomeIcon :icon="faTrash" />
-          </button>
-        </div>
-
-        <div class="oauth-field">
-          <label>Client ID</label>
-          <div class="oauth-copy-row">
-            <code>{{ app.clientId }}</code>
-            <button class="button is-small" @click="copy(app.clientId)">
-              <FontAwesomeIcon :icon="faCopy" />
-            </button>
-          </div>
-        </div>
-
-        <div class="oauth-field">
-          <label>Redirect URIs</label>
-          <code v-for="uri in app.redirectUris" :key="uri" class="oauth-uri">{{
-            uri
-          }}</code>
-        </div>
-
-        <div class="oauth-field">
-          <label>Connect link</label>
-          <div class="oauth-copy-row">
-            <code>{{ connectUrl(app) }}</code>
-            <button class="button is-small" @click="copy(connectUrl(app))">
-              <FontAwesomeIcon :icon="faCopy" />
-            </button>
-          </div>
-          <p class="oauth-hint">
-            Point the app’s “Connect with Nosana” button here.
-            <template v-if="!app.confidential"
-              >Public apps append their PKCE
-              <code>code_challenge</code>.</template
-            >
-          </p>
-        </div>
+    <div v-else class="box">
+      <div class="table-container">
+        <table class="table is-fullwidth is-hoverable">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Client ID</th>
+              <th>Type</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="app in appsData.apps" :key="app.clientId">
+              <td>
+                <div class="is-flex is-align-items-center" style="gap: 0.5rem">
+                  <img
+                    v-if="app.logoUri"
+                    :src="app.logoUri"
+                    :alt="`${app.name} logo`"
+                    class="oauth-app-logo"
+                  />
+                  <strong>{{ app.name }}</strong>
+                </div>
+              </td>
+              <td>
+                <code class="is-family-monospace">{{ app.clientId }}</code>
+              </td>
+              <td>
+                <span
+                  class="tag"
+                  :class="app.confidential ? 'is-info' : 'is-light'"
+                >
+                  {{ app.confidential ? "Confidential" : "Public · PKCE" }}
+                </span>
+              </td>
+              <td>
+                <div class="field is-grouped">
+                  <p class="control">
+                    <button
+                      @click="viewApp(app)"
+                      class="button is-small is-light"
+                      title="View App"
+                    >
+                      <span class="icon is-small">
+                        <FontAwesomeIcon :icon="faEye" />
+                      </span>
+                    </button>
+                  </p>
+                  <p class="control">
+                    <button
+                      @click="removeApp(app)"
+                      class="button is-small is-light has-text-danger"
+                      title="Delete App"
+                      :disabled="deletingId === app.clientId"
+                      :class="{ 'is-loading': deletingId === app.clientId }"
+                    >
+                      <span class="icon is-small">
+                        <FontAwesomeIcon :icon="faTrash" />
+                      </span>
+                    </button>
+                  </p>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
-    <!-- Create modal -->
-    <div v-if="showCreate" class="modal is-active">
-      <div class="modal-background" @click="showCreate = false" />
+    <p v-if="atLimit" class="help has-text-warning">
+      Limit of {{ appsData.limit }} apps reached.
+    </p>
+
+    <!-- Create App Modal -->
+    <div class="modal" :class="{ 'is-active': showCreate }">
+      <div class="modal-background" @click="showCreate = false"></div>
       <div class="modal-card">
         <header class="modal-card-head">
           <p class="modal-card-title">Create Nosana Connected App</p>
+          <button class="delete" @click="showCreate = false"></button>
         </header>
         <section class="modal-card-body">
           <div class="field">
-            <label class="label">App name</label>
-            <input
-              v-model="form.name"
-              class="input"
-              placeholder="AnotherApp"
-              maxlength="100"
-            />
+            <label class="label">App Name</label>
+            <div class="control">
+              <input
+                v-model="form.name"
+                class="input"
+                type="text"
+                placeholder="AnotherApp"
+                maxlength="100"
+              />
+            </div>
           </div>
+
           <div class="field">
             <label class="label">Redirect URIs</label>
             <div
               v-for="(uri, i) in form.redirectUris"
               :key="i"
-              class="oauth-uri-row"
+              class="is-flex mb-2"
+              style="gap: 0.5rem"
             >
               <input
                 v-model="form.redirectUris[i]"
                 class="input"
+                type="text"
                 placeholder="https://anotherapp.com/auth/nosana/callback"
+                style="flex: 1"
               />
               <button
                 v-if="form.redirectUris.length > 1"
                 type="button"
-                class="button oauth-uri-remove"
+                class="button is-light"
                 title="Remove"
                 @click="removeUri(i)"
               >
-                <FontAwesomeIcon :icon="faTrash" />
+                <span class="icon">
+                  <FontAwesomeIcon :icon="faTrash" />
+                </span>
               </button>
             </div>
             <button
               type="button"
-              class="button is-small is-light oauth-add-uri"
+              class="button is-small is-light"
               @click="addUri"
             >
-              <FontAwesomeIcon :icon="faPlus" />&nbsp;Add another
+              <span class="icon">
+                <FontAwesomeIcon :icon="faPlus" />
+              </span>
+              <span>Add another</span>
             </button>
           </div>
-          <div class="field">
-            <label class="label"
-              >Logo URL <span class="oauth-optional">(optional)</span></label
-            >
-            <input
-              v-model="form.logoUri"
-              class="input"
-              placeholder="https://anotherapp.com/logo.png"
-            />
-          </div>
-          <div class="field oauth-toggle-field">
-            <label class="oauth-switch">
-              <input v-model="form.confidential" type="checkbox" />
-              <span class="oauth-slider" />
-            </label>
-            <span class="oauth-toggle-text">
-              Server-side app
-              <span
-                class="oauth-info has-tooltip-arrow has-tooltip-multiline has-tooltip-top"
-                data-tooltip="Gets a client secret and skips PKCE — use for apps with a backend that can keep a secret. Leave off for browser or mobile apps."
-              >
-                <FontAwesomeIcon :icon="faInfoCircle" />
-              </span>
-            </span>
-          </div>
-        </section>
-        <footer class="modal-card-foot">
-          <button
-            class="button is-dark"
-            :class="{ 'is-loading': creating }"
-            :disabled="!canCreate"
-            @click="createApp"
-          >
-            Create app
-          </button>
-          <button class="button" @click="showCreate = false">Cancel</button>
-        </footer>
-      </div>
-    </div>
 
-    <!-- Created modal (client_id + one-time secret) -->
-    <div v-if="created" class="modal is-active">
-      <div class="modal-background" @click="created = null" />
-      <div class="modal-card">
-        <header class="modal-card-head">
-          <p class="modal-card-title">App created</p>
-        </header>
-        <section class="modal-card-body">
-          <div class="oauth-field">
-            <label>Client ID</label>
-            <div class="oauth-copy-row">
-              <code>{{ created.clientId }}</code>
-              <button class="button is-small" @click="copy(created.clientId)">
-                <FontAwesomeIcon :icon="faCopy" />
-              </button>
+          <div class="field">
+            <label class="label">Logo URL <span class="has-text-grey-light">(optional)</span></label>
+            <div class="control">
+              <input
+                v-model="form.logoUri"
+                class="input"
+                type="text"
+                placeholder="https://anotherapp.com/logo.png"
+              />
             </div>
           </div>
-          <div v-if="created.clientSecret" class="oauth-field">
-            <label>Client secret</label>
-            <div class="oauth-copy-row">
-              <code>{{ created.clientSecret }}</code>
-              <button
-                class="button is-small"
-                @click="copy(created.clientSecret)"
-              >
-                <FontAwesomeIcon :icon="faCopy" />
-              </button>
+
+          <div class="field">
+            <label class="label">App Type</label>
+            <div class="control">
+              <div class="select is-fullwidth">
+                <select v-model="form.confidential">
+                  <option :value="false">Public — browser or mobile (PKCE)</option>
+                  <option :value="true">Confidential — server-side (client secret)</option>
+                </select>
+              </div>
             </div>
-            <p class="help oauth-warn">
-              <FontAwesomeIcon :icon="faExclamationTriangle" />&nbsp;Copy this
-              now — it won’t be shown again.
+            <p class="help">
+              Confidential apps get a client secret and skip PKCE — use for apps
+              with a backend that can keep a secret.
             </p>
           </div>
         </section>
         <footer class="modal-card-foot">
-          <button class="button is-dark" @click="created = null">Done</button>
+          <button
+            @click="createApp"
+            class="button is-dark"
+            :disabled="!canCreate"
+            :class="{ 'is-loading': creating }"
+          >
+            Create App
+          </button>
+          <button @click="showCreate = false" class="button">Cancel</button>
+        </footer>
+      </div>
+    </div>
+
+    <!-- View App Modal -->
+    <div class="modal" :class="{ 'is-active': showView }">
+      <div class="modal-background" @click="showView = false"></div>
+      <div class="modal-card">
+        <header class="modal-card-head">
+          <p class="modal-card-title">App Details</p>
+          <button class="delete" @click="showView = false"></button>
+        </header>
+        <section class="modal-card-body">
+          <div v-if="selectedApp">
+            <div class="field">
+              <label class="label">App Name</label>
+              <p class="control">
+                <strong>{{ selectedApp.name }}</strong>
+              </p>
+            </div>
+
+            <div class="field">
+              <label class="label">Type</label>
+              <span
+                class="tag"
+                :class="selectedApp.confidential ? 'is-info' : 'is-light'"
+              >
+                {{ selectedApp.confidential ? "Confidential" : "Public · PKCE" }}
+              </span>
+            </div>
+
+            <div class="field">
+              <label class="label">Client ID</label>
+              <div class="control">
+                <div class="is-flex">
+                  <input
+                    :value="selectedApp.clientId"
+                    class="input is-family-monospace"
+                    type="text"
+                    readonly
+                    style="flex: 1"
+                  />
+                  <button
+                    @click="copy(selectedApp.clientId)"
+                    class="button is-light ml-2"
+                    title="Copy to clipboard"
+                  >
+                    <span class="icon">
+                      <FontAwesomeIcon :icon="faCopy" />
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="field">
+              <label class="label">Redirect URIs</label>
+              <div class="control">
+                <input
+                  v-for="uri in selectedApp.redirectUris"
+                  :key="uri"
+                  :value="uri"
+                  class="input is-family-monospace mb-2"
+                  type="text"
+                  readonly
+                />
+              </div>
+            </div>
+
+            <div class="field">
+              <label class="label">Connect link</label>
+              <div class="control">
+                <div class="is-flex">
+                  <input
+                    :value="connectUrl(selectedApp)"
+                    class="input is-family-monospace"
+                    type="text"
+                    readonly
+                    style="flex: 1"
+                  />
+                  <button
+                    @click="copy(connectUrl(selectedApp))"
+                    class="button is-light ml-2"
+                    title="Copy to clipboard"
+                  >
+                    <span class="icon">
+                      <FontAwesomeIcon :icon="faCopy" />
+                    </span>
+                  </button>
+                </div>
+              </div>
+              <p class="help">
+                Point the app’s “Connect with Nosana” button here.
+                <template v-if="!selectedApp.confidential"
+                  >Public apps append their PKCE
+                  <code>code_challenge</code>.</template
+                >
+              </p>
+            </div>
+          </div>
+        </section>
+        <footer class="modal-card-foot">
+          <button @click="showView = false" class="button">Close</button>
+        </footer>
+      </div>
+    </div>
+
+    <!-- Created Modal (client_id + one-time secret) -->
+    <div class="modal" :class="{ 'is-active': !!created }">
+      <div class="modal-background" @click="created = null"></div>
+      <div class="modal-card">
+        <header class="modal-card-head">
+          <p class="modal-card-title">App Created</p>
+          <button class="delete" @click="created = null"></button>
+        </header>
+        <section class="modal-card-body">
+          <div v-if="created">
+            <div class="field">
+              <label class="label">Client ID</label>
+              <div class="control">
+                <div class="is-flex">
+                  <input
+                    :value="created.clientId"
+                    class="input is-family-monospace"
+                    type="text"
+                    readonly
+                    style="flex: 1"
+                  />
+                  <button
+                    @click="copy(created.clientId)"
+                    class="button is-light ml-2"
+                    title="Copy to clipboard"
+                  >
+                    <span class="icon">
+                      <FontAwesomeIcon :icon="faCopy" />
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div v-if="created.clientSecret" class="field">
+              <label class="label">Client Secret</label>
+              <div class="control">
+                <div class="is-flex">
+                  <input
+                    :value="created.clientSecret"
+                    class="input is-family-monospace"
+                    type="text"
+                    readonly
+                    style="flex: 1"
+                  />
+                  <button
+                    @click="copy(created.clientSecret)"
+                    class="button is-light ml-2"
+                    title="Copy to clipboard"
+                  >
+                    <span class="icon">
+                      <FontAwesomeIcon :icon="faCopy" />
+                    </span>
+                  </button>
+                </div>
+              </div>
+              <p class="help has-text-warning">
+                <FontAwesomeIcon :icon="faExclamationTriangle" class="mr-1" />
+                Copy this now — it won’t be shown again.
+              </p>
+            </div>
+          </div>
+        </section>
+        <footer class="modal-card-foot">
+          <button @click="created = null" class="button is-dark">Done</button>
         </footer>
       </div>
     </div>
@@ -225,10 +405,11 @@ import { useToast } from "vue-toastification";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import {
   faPlus,
+  faPlug,
+  faEye,
   faTrash,
   faCopy,
   faExclamationTriangle,
-  faInfoCircle,
 } from "@fortawesome/free-solid-svg-icons";
 
 interface OAuthApp {
@@ -246,9 +427,11 @@ const toast = useToast();
 
 const hasLoadedOnce = ref(false);
 const showCreate = ref(false);
+const showView = ref(false);
 const creating = ref(false);
 const created = ref<OAuthApp | null>(null);
 const deletingId = ref<string | null>(null);
+const selectedApp = ref<OAuthApp | null>(null);
 const form = ref({
   name: "",
   redirectUris: [""] as string[],
@@ -310,6 +493,11 @@ function openCreate() {
     confidential: false,
   };
   showCreate.value = true;
+}
+
+function viewApp(app: OAuthApp) {
+  selectedApp.value = app;
+  showView.value = true;
 }
 
 async function createApp() {
@@ -383,235 +571,41 @@ async function copy(text: string) {
 }
 </script>
 
-<style lang="scss" scoped>
-.oauth-apps-section {
-  margin-top: 2.5rem;
-}
-
-.section-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 1.25rem;
-
-  h2 {
-    font-size: 1.25rem;
-    font-weight: 700;
-  }
-
-  .section-heading p {
-    color: #666;
-    font-size: 0.9rem;
-    margin-top: 0.25rem;
-    max-width: 42rem;
-  }
-}
-
-.oauth-empty {
-  color: #888;
-  font-size: 0.9rem;
-  padding: 1rem 0;
-  text-align: center;
-}
-
-.oauth-create {
-  text-align: right;
-  flex-shrink: 0;
-}
-
-.oauth-limit-hint {
-  color: #b7791f;
-  font-size: 0.75rem;
-  margin-top: 0.25rem;
-}
-
-.oauth-list {
-  display: grid;
-  gap: 1rem;
-}
-
-.oauth-card {
-  border: 1px solid #ececec;
-  border-radius: 12px;
-  padding: 1rem 1.25rem;
-}
-
-.oauth-card-head {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0.75rem;
-
-  .oauth-app-title {
-    flex: 1;
-  }
-
-  .oauth-app-name {
-    font-weight: 600;
-  }
-}
-
+<style scoped>
 .oauth-app-logo {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
   object-fit: cover;
 }
 
-.oauth-field {
-  margin-bottom: 0.6rem;
-
-  label {
-    display: block;
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: #999;
-    margin-bottom: 0.2rem;
-  }
-}
-
-.oauth-copy-row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-
-  code {
-    flex: 1;
-    overflow-x: auto;
-    white-space: nowrap;
-    padding: 0.35rem 0.5rem;
-    background: #f6f6f6;
-    border-radius: 6px;
-    font-size: 0.8rem;
-  }
-}
-
-.oauth-uri {
-  display: block;
-  padding: 0.35rem 0.5rem;
-  background: #f6f6f6;
-  border-radius: 6px;
-  font-size: 0.8rem;
-  margin-bottom: 0.25rem;
-  overflow-x: auto;
-  white-space: nowrap;
-}
-
-.oauth-hint {
-  color: #999;
-  font-size: 0.75rem;
-  margin-top: 0.3rem;
-
-  code {
-    background: #f0f0f0;
-    padding: 0.05rem 0.25rem;
-    border-radius: 4px;
-    font-size: 0.72rem;
-  }
-}
-
-.oauth-optional {
-  color: #aaa;
-  font-weight: 400;
-}
-
-.oauth-warn {
-  color: #b7791f;
+.table-container {
+  max-height: 400px;
+  overflow-y: auto;
 }
 
 .modal-card {
-  width: 92%;
   max-width: 600px;
+  width: 90%;
 }
 
-.oauth-uri-row {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
-
-  .input {
-    flex: 1;
-  }
+.is-family-monospace {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.9rem;
 }
 
-.oauth-add-uri {
-  margin-top: 0.1rem;
-}
-
-.oauth-toggle-field {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-}
-
-.oauth-switch {
-  position: relative;
-  display: inline-block;
-  width: 42px;
-  height: 24px;
-  flex-shrink: 0;
-
-  input {
-    position: absolute;
-    opacity: 0;
-    width: 0;
-    height: 0;
+@media screen and (max-width: 768px) {
+  .table-container {
+    overflow-x: auto;
   }
 
-  .oauth-slider {
-    position: absolute;
-    inset: 0;
-    cursor: pointer;
-    background: #d3d3d3;
-    border-radius: 999px;
-    transition: 0.2s;
-
-    &::before {
-      content: "";
-      position: absolute;
-      height: 18px;
-      width: 18px;
-      left: 3px;
-      top: 3px;
-      background: #fff;
-      border-radius: 50%;
-      transition: 0.2s;
-    }
+  .table {
+    font-size: 0.85rem;
   }
 
-  input:checked + .oauth-slider {
-    background: #10e80c;
-  }
-
-  input:checked + .oauth-slider::before {
-    transform: translateX(18px);
-  }
-}
-
-.oauth-toggle-text {
-  font-size: 0.95rem;
-}
-
-.oauth-info {
-  color: #aaa;
-  cursor: help;
-  margin-left: 0.15rem;
-}
-
-.dark-mode {
-  .section-header .section-heading p,
-  .oauth-empty {
-    color: #aaa;
-  }
-  .oauth-card {
-    border-color: #2a2a2a;
-  }
-  .oauth-copy-row code,
-  .oauth-uri,
-  .oauth-hint code {
-    background: #242424;
+  .table td,
+  .table th {
+    padding: 0.5rem;
   }
 }
 </style>
