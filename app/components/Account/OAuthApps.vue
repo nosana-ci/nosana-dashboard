@@ -2,32 +2,47 @@
   <div class="oauth-apps-section">
     <div class="section-header">
       <div class="section-heading">
-        <h2>OAuth Apps</h2>
+        <h2>Nosana Connected Apps</h2>
         <p>
-          Let other apps add <strong>“Connect with Nosana”</strong>. Each app gets an OAuth client
-          that can act on a user’s behalf after they sign in and approve it.
+          Let other apps add <strong>“Connect with Nosana”</strong>. Each app
+          gets an OAuth client that can act on a user’s behalf after they sign
+          in and approve it.
         </p>
       </div>
       <div class="oauth-create">
-        <button class="button is-dark" :disabled="!isAuthenticated || atLimit" @click="openCreate">
+        <button
+          class="button is-dark"
+          :disabled="!isAuthenticated || atLimit"
+          @click="openCreate"
+        >
           <FontAwesomeIcon :icon="faPlus" />&nbsp;Create app
         </button>
-        <p v-if="atLimit" class="oauth-limit-hint">Limit of {{ appsData.limit }} apps reached.</p>
+        <p v-if="atLimit" class="oauth-limit-hint">
+          Limit of {{ appsData.limit }} apps reached.
+        </p>
       </div>
     </div>
 
     <div v-if="loadingApps && !hasLoadedOnce" class="oauth-empty">Loading…</div>
     <div v-else-if="!appsData.apps.length" class="oauth-empty">
-      No OAuth apps yet. Create one to get a client ID.
+      No connected apps yet. Create one to get a client ID.
     </div>
 
     <div v-else class="oauth-list">
       <div v-for="app in appsData.apps" :key="app.clientId" class="oauth-card">
         <div class="oauth-card-head">
-          <img v-if="app.logoUri" :src="app.logoUri" :alt="`${app.name} logo`" class="oauth-app-logo" />
+          <img
+            v-if="app.logoUri"
+            :src="app.logoUri"
+            :alt="`${app.name} logo`"
+            class="oauth-app-logo"
+          />
           <div class="oauth-app-title">
             <div class="oauth-app-name">{{ app.name }}</div>
-            <span class="tag" :class="app.confidential ? 'is-info' : 'is-light'">
+            <span
+              class="tag"
+              :class="app.confidential ? 'is-info' : 'is-light'"
+            >
               {{ app.confidential ? "Confidential" : "Public · PKCE" }}
             </span>
           </div>
@@ -44,22 +59,35 @@
           <label>Client ID</label>
           <div class="oauth-copy-row">
             <code>{{ app.clientId }}</code>
-            <button class="button is-small" @click="copy(app.clientId)"><FontAwesomeIcon :icon="faCopy" /></button>
+            <button class="button is-small" @click="copy(app.clientId)">
+              <FontAwesomeIcon :icon="faCopy" />
+            </button>
           </div>
         </div>
 
         <div class="oauth-field">
           <label>Redirect URIs</label>
-          <code v-for="uri in app.redirectUris" :key="uri" class="oauth-uri">{{ uri }}</code>
+          <code v-for="uri in app.redirectUris" :key="uri" class="oauth-uri">{{
+            uri
+          }}</code>
         </div>
 
-        <details class="oauth-details">
-          <summary>Connect link</summary>
+        <div class="oauth-field">
+          <label>Connect link</label>
           <div class="oauth-copy-row">
-            <code>{{ authorizeUrl(app) }}</code>
-            <button class="button is-small" @click="copy(authorizeUrl(app))"><FontAwesomeIcon :icon="faCopy" /></button>
+            <code>{{ connectUrl(app) }}</code>
+            <button class="button is-small" @click="copy(connectUrl(app))">
+              <FontAwesomeIcon :icon="faCopy" />
+            </button>
           </div>
-        </details>
+          <p class="oauth-hint">
+            Point the app’s “Connect with Nosana” button here.
+            <template v-if="!app.confidential"
+              >Public apps append their PKCE
+              <code>code_challenge</code>.</template
+            >
+          </p>
+        </div>
       </div>
     </div>
 
@@ -67,15 +95,26 @@
     <div v-if="showCreate" class="modal is-active">
       <div class="modal-background" @click="showCreate = false" />
       <div class="modal-card">
-        <header class="modal-card-head"><p class="modal-card-title">Create Nosana Connected App</p></header>
+        <header class="modal-card-head">
+          <p class="modal-card-title">Create Nosana Connected App</p>
+        </header>
         <section class="modal-card-body">
           <div class="field">
             <label class="label">App name</label>
-            <input v-model="form.name" class="input" placeholder="AnotherApp" maxlength="100" />
+            <input
+              v-model="form.name"
+              class="input"
+              placeholder="AnotherApp"
+              maxlength="100"
+            />
           </div>
           <div class="field">
             <label class="label">Redirect URIs</label>
-            <div v-for="(uri, i) in form.redirectUris" :key="i" class="oauth-uri-row">
+            <div
+              v-for="(uri, i) in form.redirectUris"
+              :key="i"
+              class="oauth-uri-row"
+            >
               <input
                 v-model="form.redirectUris[i]"
                 class="input"
@@ -91,13 +130,23 @@
                 <FontAwesomeIcon :icon="faTrash" />
               </button>
             </div>
-            <button type="button" class="button is-small is-light oauth-add-uri" @click="addUri">
+            <button
+              type="button"
+              class="button is-small is-light oauth-add-uri"
+              @click="addUri"
+            >
               <FontAwesomeIcon :icon="faPlus" />&nbsp;Add another
             </button>
           </div>
           <div class="field">
-            <label class="label">Logo URL <span class="oauth-optional">(optional)</span></label>
-            <input v-model="form.logoUri" class="input" placeholder="https://anotherapp.com/logo.png" />
+            <label class="label"
+              >Logo URL <span class="oauth-optional">(optional)</span></label
+            >
+            <input
+              v-model="form.logoUri"
+              class="input"
+              placeholder="https://anotherapp.com/logo.png"
+            />
           </div>
           <div class="field oauth-toggle-field">
             <label class="oauth-switch">
@@ -116,7 +165,12 @@
           </div>
         </section>
         <footer class="modal-card-foot">
-          <button class="button is-dark" :class="{ 'is-loading': creating }" :disabled="!canCreate" @click="createApp">
+          <button
+            class="button is-dark"
+            :class="{ 'is-loading': creating }"
+            :disabled="!canCreate"
+            @click="createApp"
+          >
             Create app
           </button>
           <button class="button" @click="showCreate = false">Cancel</button>
@@ -128,23 +182,33 @@
     <div v-if="created" class="modal is-active">
       <div class="modal-background" @click="created = null" />
       <div class="modal-card">
-        <header class="modal-card-head"><p class="modal-card-title">App created</p></header>
+        <header class="modal-card-head">
+          <p class="modal-card-title">App created</p>
+        </header>
         <section class="modal-card-body">
           <div class="oauth-field">
             <label>Client ID</label>
             <div class="oauth-copy-row">
               <code>{{ created.clientId }}</code>
-              <button class="button is-small" @click="copy(created.clientId)"><FontAwesomeIcon :icon="faCopy" /></button>
+              <button class="button is-small" @click="copy(created.clientId)">
+                <FontAwesomeIcon :icon="faCopy" />
+              </button>
             </div>
           </div>
           <div v-if="created.clientSecret" class="oauth-field">
             <label>Client secret</label>
             <div class="oauth-copy-row">
               <code>{{ created.clientSecret }}</code>
-              <button class="button is-small" @click="copy(created.clientSecret)"><FontAwesomeIcon :icon="faCopy" /></button>
+              <button
+                class="button is-small"
+                @click="copy(created.clientSecret)"
+              >
+                <FontAwesomeIcon :icon="faCopy" />
+              </button>
             </div>
             <p class="help oauth-warn">
-              <FontAwesomeIcon :icon="faExclamationTriangle" />&nbsp;Copy this now — it won’t be shown again.
+              <FontAwesomeIcon :icon="faExclamationTriangle" />&nbsp;Copy this
+              now — it won’t be shown again.
             </p>
           </div>
         </section>
@@ -159,7 +223,13 @@
 <script setup lang="ts">
 import { useToast } from "vue-toastification";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
-import { faPlus, faTrash, faCopy, faExclamationTriangle, faInfoCircle } from "@fortawesome/free-solid-svg-icons";
+import {
+  faPlus,
+  faTrash,
+  faCopy,
+  faExclamationTriangle,
+  faInfoCircle,
+} from "@fortawesome/free-solid-svg-icons";
 
 interface OAuthApp {
   clientId: string;
@@ -179,25 +249,42 @@ const showCreate = ref(false);
 const creating = ref(false);
 const created = ref<OAuthApp | null>(null);
 const deletingId = ref<string | null>(null);
-const form = ref({ name: "", redirectUris: [""] as string[], logoUri: "", confidential: false });
+const form = ref({
+  name: "",
+  redirectUris: [""] as string[],
+  logoUri: "",
+  confidential: false,
+});
 
-const { data: appsData, pending: loadingApps, refresh } = useMyAsyncData(
+const {
+  data: appsData,
+  pending: loadingApps,
+  refresh,
+} = useMyAsyncData(
   "oauth-apps",
   async () => {
-    if (!isAuthenticated.value) return { apps: [] as OAuthApp[], total: 0, limit: 3 };
+    if (!isAuthenticated.value)
+      return { apps: [] as OAuthApp[], total: 0, limit: 3 };
     return await $fetch<{ apps: OAuthApp[]; total: number; limit: number }>(
       `${config.apiBase}/oauth-apps`,
       { credentials: "include" },
     );
   },
-  { default: () => ({ apps: [] as OAuthApp[], total: 0, limit: 999 }), watch: [isAuthenticated] },
+  {
+    default: () => ({ apps: [] as OAuthApp[], total: 0, limit: 999 }),
+    watch: [isAuthenticated],
+  },
 );
 
 const atLimit = computed(() => appsData.value.total >= appsData.value.limit);
 
-watch(loadingApps, (pending) => {
-  if (!pending) hasLoadedOnce.value = true;
-}, { immediate: true });
+watch(
+  loadingApps,
+  (pending) => {
+    if (!pending) hasLoadedOnce.value = true;
+  },
+  { immediate: true },
+);
 
 const canCreate = computed(
   () => !!form.value.name.trim() && cleanUris().length > 0 && !creating.value,
@@ -216,7 +303,12 @@ function removeUri(index: number) {
 }
 
 function openCreate() {
-  form.value = { name: "", redirectUris: [""], logoUri: "", confidential: false };
+  form.value = {
+    name: "",
+    redirectUris: [""],
+    logoUri: "",
+    confidential: false,
+  };
   showCreate.value = true;
 }
 
@@ -251,7 +343,12 @@ async function createApp() {
 }
 
 async function removeApp(app: OAuthApp) {
-  if (!confirm(`Delete “${app.name}”? Any integration using it will stop working. This cannot be undone.`)) return;
+  if (
+    !confirm(
+      `Delete “${app.name}”? Any integration using it will stop working. This cannot be undone.`,
+    )
+  )
+    return;
   if (!isAuthenticated.value) return;
   try {
     deletingId.value = app.clientId;
@@ -269,10 +366,11 @@ async function removeApp(app: OAuthApp) {
   }
 }
 
-function authorizeUrl(app: OAuthApp): string {
-  const redirect = encodeURIComponent(app.redirectUris[0] ?? "");
-  const pkce = app.confidential ? "" : "&code_challenge=<CODE_CHALLENGE>&code_challenge_method=S256";
-  return `${config.apiBase}/auth/oauth/auth?client_id=${app.clientId}&response_type=code&scope=openid%20offline_access&redirect_uri=${redirect}${pkce}&state=<STATE>`;
+// The public "Connect with Nosana" entry point. The /oauth page builds the real
+// authorize request, so integrators only ever share this single client_id link.
+function connectUrl(app: OAuthApp): string {
+  const origin = import.meta.client ? window.location.origin : "";
+  return `${origin}/oauth?client_id=${app.clientId}`;
 }
 
 async function copy(text: string) {
@@ -401,10 +499,17 @@ async function copy(text: string) {
   white-space: nowrap;
 }
 
-.oauth-details summary {
-  cursor: pointer;
-  font-size: 0.85rem;
-  color: #4a7cff;
+.oauth-hint {
+  color: #999;
+  font-size: 0.75rem;
+  margin-top: 0.3rem;
+
+  code {
+    background: #f0f0f0;
+    padding: 0.05rem 0.25rem;
+    border-radius: 4px;
+    font-size: 0.72rem;
+  }
 }
 
 .oauth-optional {
@@ -504,7 +609,8 @@ async function copy(text: string) {
     border-color: #2a2a2a;
   }
   .oauth-copy-row code,
-  .oauth-uri {
+  .oauth-uri,
+  .oauth-hint code {
     background: #242424;
   }
 }
