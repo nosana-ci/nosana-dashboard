@@ -17,19 +17,17 @@
               v-for="endpoint in endpoints"
               :key="`${endpoint.opId}-${endpoint.port}`"
               :style="{
-                opacity: isActiveOrStarting ? '1' : '0.5',
+                opacity: endpoint.online ? '1' : '0.5',
               }"
             >
               <td>{{ endpoint.opId }}</td>
               <td>{{ endpoint.port }}</td>
               <td>
-                <StatusTag
-                  :status="isActiveOrStarting ? 'ACTIVE' : 'INACTIVE'"
-                />
+                <StatusTag :status="statusOf(endpoint)" />
               </td>
               <td>
                 <a
-                  v-if="isActiveOrStarting"
+                  v-if="endpoint.online"
                   :href="endpoint.url"
                   target="_blank"
                   class="has-text-link endpoint-url"
@@ -54,10 +52,32 @@
 <script setup lang="ts">
 import StatusTag from "~/components/Common/StatusTag.vue";
 
-defineProps<{
-  endpoints: { opId: string; port: number | string; url: string }[];
-  isActiveOrStarting: boolean;
+type Endpoint = {
+  opId: string;
+  port: number | string;
+  url: string;
+  online: boolean;
+};
+
+const props = defineProps<{
+  endpoints: Endpoint[];
+  /**
+   * Deployment-wide, not per-op: it separates an endpoint that is still coming
+   * up from one whose deployment is not running at all. It does not say that
+   * this particular op has a job.
+   */
+  activeJobs: number;
 }>();
+
+/**
+ * `online` means the node's proxy for this op has registered, so the URL
+ * answers. Until it does, a deployment with a job is still on its way up —
+ * without one there is nothing coming.
+ */
+const statusOf = (endpoint: Endpoint) => {
+  if (endpoint.online) return "ONLINE";
+  return props.activeJobs > 0 ? "STARTING" : "INACTIVE";
+};
 </script>
 
 <style lang="scss" scoped>

@@ -345,11 +345,13 @@ export function useDeploymentJobs(deps: DeploymentJobsDeps) {
         opId: string;
         port: number | string;
         url: string;
+        online: boolean;
       }[]
     ).map((endpoint) => ({
       opId: endpoint.opId,
       port: endpoint.port,
       url: endpoint.url,
+      online: endpoint.online,
     }));
   });
 
