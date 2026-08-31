@@ -61,12 +61,13 @@ export function getStatusClass(status: string | number): string {
     // Running states - Blue
     case 'RUNNING':
     case 'PENDING':
-    case 'STARTING':
       return 'is-info'
     
     // Queued/Draft states - Orange  
     case 'QUEUED':
     case 'DRAFT':
+    // On its way up but not serving yet, which reads the same to someone waiting.
+    case 'STARTING':
       return 'is-warning'
     
     // Stopping states - Black
@@ -93,7 +94,7 @@ export function getStatusClass(status: string | number): string {
     
     // Endpoint states
     case 'ONLINE':
-      return 'is-success'  // Green for online
+      return 'is-info'     // Blue: an endpoint that answers is serving, like running
     case 'OFFLINE':
       return 'is-dark'     // Gray for offline
     case 'UNKNOWN':

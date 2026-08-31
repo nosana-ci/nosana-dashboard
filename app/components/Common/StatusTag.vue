@@ -136,7 +136,7 @@ const ICON_MAP: Record<string, any> = {
   QUEUED: QueuedIcon,
   DRAFT: QueuedIcon,
   RUNNING: RunningIcon,
-  STARTING: RunningIcon,
+  STARTING: QueuedIcon,
   STOPPING: StoppedIcon,
   COMPLETED: DoneIcon,
   SUCCESS: DoneIcon,
@@ -147,7 +147,8 @@ const ICON_MAP: Record<string, any> = {
   ARCHIVED: ArchiveIcon,
   ACTIVE: RunningIcon,
   INACTIVE: StoppedIcon,
-  ONLINE: DoneIcon,
+  // An endpoint that answers is serving, not finished.
+  ONLINE: RunningIcon,
   OFFLINE: StoppedIcon,
   UNKNOWN: QueuedIcon,
   LOADING: QueuedIcon,

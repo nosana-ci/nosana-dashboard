@@ -98,6 +98,10 @@ export function useDeploymentStream(deps: DeploymentStreamDeps) {
         deps.applyEvent(event);
         refresh.jobs.request();
       },
+      // An endpoint coming up or going down writes only the deployment's
+      // endpoints, so it arrives as its own frame and never as a deployment
+      // one — the deployment record has to be read back for the new `online`.
+      onEndpoint: () => refresh.deployment.request(),
       onEvent: () => refresh.events.request(),
       onTask: () => refresh.tasks.request(),
     });

@@ -65,7 +65,8 @@ export function useJob(jobId: string) {
 
   const { pause: pauseJobPolling, resume: resumeJobPolling } = useIntervalFn(
     () => {
-      // Don't poll in deployment context - deployment polling handles job updates
+      // The deployment page stays mounted above this one and refreshes it from
+      // its event stream, so polling here would only duplicate that.
       if (isDeploymentContext.value) {
         return;
       }

@@ -345,11 +345,13 @@ export function useDeploymentJobs(deps: DeploymentJobsDeps) {
         opId: string;
         port: number | string;
         url: string;
+        online: boolean;
       }[]
     ).map((endpoint) => ({
       opId: endpoint.opId,
       port: endpoint.port,
       url: endpoint.url,
+      online: endpoint.online,
     }));
   });
 
@@ -414,7 +416,6 @@ export function useDeploymentJobs(deps: DeploymentJobsDeps) {
 
     // Job lists
     activeJobs,
-    allHistoricalJobs,
     historicalJobs,
     historicalJobsTotalPages,
     totalJobs,
@@ -435,7 +436,6 @@ export function useDeploymentJobs(deps: DeploymentJobsDeps) {
     hasErrorInLastEvent,
 
     // Active jobs (full fetched set, client-side pagination)
-    activeJobsAll,
     activeJobsPaged,
     activeLoading,
     activeHasPrev,
