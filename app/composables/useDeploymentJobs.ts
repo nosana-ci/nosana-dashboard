@@ -416,7 +416,6 @@ export function useDeploymentJobs(deps: DeploymentJobsDeps) {
 
     // Job lists
     activeJobs,
-    allHistoricalJobs,
     historicalJobs,
     historicalJobsTotalPages,
     totalJobs,
@@ -437,7 +436,6 @@ export function useDeploymentJobs(deps: DeploymentJobsDeps) {
     hasErrorInLastEvent,
 
     // Active jobs (full fetched set, client-side pagination)
-    activeJobsAll,
     activeJobsPaged,
     activeLoading,
     activeHasPrev,

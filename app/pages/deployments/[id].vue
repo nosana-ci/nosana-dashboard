@@ -305,6 +305,11 @@ const deploymentStream = useDeploymentStream({
     jobs: async () => {
       const requests = [refreshDeploymentJobs(true)];
       if (jobActivityTab.value === "history") requests.push(loadHistory());
+      // The parent stays mounted over its job subroute. The job composable
+      // disables polling there, so keep its separate async-data entry current
+      // from the deployment stream as well.
+      const openJob = route.params.jobaddress as string | undefined;
+      if (openJob) requests.push(refreshNuxtData(`job-${openJob}`));
       await Promise.all(requests);
     },
     events: async () => {
