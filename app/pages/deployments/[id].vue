@@ -52,10 +52,7 @@
 
               <DeploymentEndpoints
                 :endpoints="deploymentEndpoints"
-                :isActiveOrStarting="
-                  deployment.status === 'RUNNING' ||
-                  deployment.status === 'STARTING'
-                "
+                :activeJobs="deployment.active_jobs ?? 0"
               />
 
               <DeploymentJobActivity
