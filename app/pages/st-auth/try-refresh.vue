@@ -1,16 +1,24 @@
 <template>
-  <div class="oauth-page">
-    <div class="oauth-card">
-      <div v-if="!error" class="oauth-loading">
-        <Loader />
-        <p>Signing you in…</p>
-      </div>
-      <div v-else class="oauth-error">
-        <p class="oauth-error-text">{{ error }}</p>
-        <NuxtLink to="/" class="button is-primary">Back to home</NuxtLink>
+  <section class="hero is-fullheight oauth-page">
+    <div class="hero-body is-justify-content-center">
+      <div class="box has-text-centered oauth-card">
+        <div
+          v-if="!error"
+          class="is-flex is-flex-direction-column is-align-items-center"
+        >
+          <Loader />
+          <p class="mt-3 has-text-grey">Signing you in…</p>
+        </div>
+        <div
+          v-else
+          class="is-flex is-flex-direction-column is-align-items-center"
+        >
+          <p class="has-text-danger has-text-weight-medium mb-4">{{ error }}</p>
+          <NuxtLink to="/" class="button is-primary">Back to home</NuxtLink>
+        </div>
       </div>
     </div>
-  </div>
+  </section>
 </template>
 
 <script setup lang="ts">
@@ -53,41 +61,12 @@ onMounted(async () => {
 
 <style lang="scss" scoped>
 .oauth-page {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1.5rem;
   background: #f9f9f9;
 }
 
 .oauth-card {
   width: 100%;
   max-width: 420px;
-  background: #fff;
-  border: 1px solid #ececec;
-  border-radius: 16px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
-  padding: 2rem 1.75rem;
-  text-align: center;
-}
-
-.oauth-loading,
-.oauth-error {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-
-  p {
-    color: #666;
-  }
-}
-
-.oauth-error-text {
-  color: #d32f2f;
-  font-weight: 500;
 }
 
 .dark-mode {
@@ -95,13 +74,9 @@ onMounted(async () => {
     background: #121212;
   }
 
-  .oauth-card {
+  .box.oauth-card {
     background: #1c1c1c;
     border-color: #2a2a2a;
-  }
-
-  .oauth-loading p {
-    color: #aaa;
   }
 }
 </style>

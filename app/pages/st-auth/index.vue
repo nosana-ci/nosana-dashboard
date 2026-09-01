@@ -1,55 +1,72 @@
 <template>
-  <div class="oauth-page">
-    <div class="oauth-card">
-      <!-- Loading challenge / redirecting -->
-      <div v-if="status === 'loading' || status === 'working'" class="oauth-loading">
-        <Loader />
-        <p>{{ status === 'working' ? 'Redirecting…' : 'Loading…' }}</p>
-      </div>
-
-      <!-- Error -->
-      <div v-else-if="status === 'error'" class="oauth-error">
-        <p class="oauth-error-text">{{ error }}</p>
-        <NuxtLink to="/" class="button is-primary">Back to home</NuxtLink>
-      </div>
-
-      <!-- Consent -->
-      <div v-else-if="status === 'consent' && info" class="oauth-consent">
-        <img
-          v-if="info.logoUri && !logoFailed"
-          :src="info.logoUri"
-          :alt="`${info.clientName} logo`"
-          class="oauth-logo"
-          @error="logoFailed = true"
-        />
-        <div v-else class="oauth-logo oauth-logo-fallback" aria-hidden="true">
-          {{ (info.clientName || '?').charAt(0).toUpperCase() }}
+  <section class="hero is-fullheight oauth-page">
+    <div class="hero-body is-justify-content-center">
+      <div class="box has-text-centered oauth-card">
+        <!-- Loading challenge / redirecting -->
+        <div
+          v-if="status === 'loading' || status === 'working'"
+          class="is-flex is-flex-direction-column is-align-items-center"
+        >
+          <Loader />
+          <p class="mt-3 has-text-grey">
+            {{ status === 'working' ? 'Redirecting…' : 'Loading…' }}
+          </p>
         </div>
 
-        <h1 class="oauth-title">
-          <strong>{{ info.clientName || 'An application' }}</strong> wants to access your Nosana account
-        </h1>
-
-        <p v-if="email" class="oauth-subtitle">Signed in as {{ email }}</p>
-
-        <p class="oauth-scope">
-          This will let <strong>{{ info.clientName || 'this app' }}</strong> access and manage your
-          Nosana account on your behalf — including deployments, jobs, and credits.
-        </p>
-
-        <div v-if="info.clientUri || info.policyUri || info.tosUri" class="oauth-links">
-          <a v-if="info.clientUri" :href="info.clientUri" target="_blank" rel="noopener noreferrer">Website</a>
-          <a v-if="info.tosUri" :href="info.tosUri" target="_blank" rel="noopener noreferrer">Terms</a>
-          <a v-if="info.policyUri" :href="info.policyUri" target="_blank" rel="noopener noreferrer">Privacy</a>
+        <!-- Error -->
+        <div
+          v-else-if="status === 'error'"
+          class="is-flex is-flex-direction-column is-align-items-center"
+        >
+          <p class="has-text-danger has-text-weight-medium mb-4">{{ error }}</p>
+          <NuxtLink to="/" class="button is-primary">Back to home</NuxtLink>
         </div>
 
-        <div class="oauth-actions">
-          <button class="button" @click="cancel">Cancel</button>
-          <button class="button is-primary" @click="authorize">Authorize</button>
+        <!-- Consent -->
+        <div v-else-if="status === 'consent' && info">
+          <img
+            v-if="info.logoUri && !logoFailed"
+            :src="info.logoUri"
+            :alt="`${info.clientName} logo`"
+            class="oauth-logo"
+            @error="logoFailed = true"
+          />
+          <div v-else class="oauth-logo oauth-logo-fallback" aria-hidden="true">
+            {{ (info.clientName || '?').charAt(0).toUpperCase() }}
+          </div>
+
+          <h1 class="title is-5 has-text-weight-normal mb-2">
+            <strong>{{ info.clientName || 'An application' }}</strong> wants to access your Nosana account
+          </h1>
+
+          <p v-if="email" class="subtitle is-6 has-text-grey mb-4">Signed in as {{ email }}</p>
+
+          <div class="notification is-light oauth-scope">
+            This will let <strong>{{ info.clientName || 'this app' }}</strong> access and manage your
+            Nosana account on your behalf — including deployments, jobs, and credits.
+          </div>
+
+          <div
+            v-if="info.clientUri || info.policyUri || info.tosUri"
+            class="is-flex is-justify-content-center mb-5 oauth-links"
+          >
+            <a v-if="info.clientUri" class="has-text-link" :href="info.clientUri" target="_blank" rel="noopener noreferrer">Website</a>
+            <a v-if="info.tosUri" class="has-text-link" :href="info.tosUri" target="_blank" rel="noopener noreferrer">Terms</a>
+            <a v-if="info.policyUri" class="has-text-link" :href="info.policyUri" target="_blank" rel="noopener noreferrer">Privacy</a>
+          </div>
+
+          <div class="columns is-mobile">
+            <div class="column">
+              <button class="button is-fullwidth" @click="cancel">Cancel</button>
+            </div>
+            <div class="column">
+              <button class="button is-primary is-fullwidth" @click="authorize">Authorize</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
-  </div>
+  </section>
 </template>
 
 <script setup lang="ts">
@@ -157,41 +174,17 @@ onMounted(async () => {
 
 <style lang="scss" scoped>
 .oauth-page {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1.5rem;
   background: #f9f9f9;
 }
 
 .oauth-card {
   width: 100%;
   max-width: 420px;
-  background: #fff;
-  border: 1px solid #ececec;
-  border-radius: 16px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
-  padding: 2rem 1.75rem;
-  text-align: center;
 }
 
-.oauth-loading,
-.oauth-error {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+.oauth-links {
   gap: 1rem;
-
-  p {
-    color: #666;
-  }
-}
-
-.oauth-error-text {
-  color: #d32f2f;
-  font-weight: 500;
+  font-size: 0.85rem;
 }
 
 .oauth-logo {
@@ -213,76 +206,19 @@ onMounted(async () => {
   color: #555;
 }
 
-.oauth-title {
-  font-size: 1.15rem;
-  font-weight: 400;
-  line-height: 1.4;
-  margin: 0 0 0.5rem;
-}
-
-.oauth-subtitle {
-  color: #888;
-  font-size: 0.9rem;
-  margin: 0 0 1.25rem;
-}
-
-.oauth-scope {
-  color: #555;
-  font-size: 0.9rem;
-  line-height: 1.5;
-  background: #f6f6f6;
-  border-radius: 10px;
-  padding: 0.85rem 1rem;
-  margin: 0 0 1.25rem;
-}
-
-.oauth-links {
-  display: flex;
-  gap: 1rem;
-  justify-content: center;
-  margin-bottom: 1.5rem;
-  font-size: 0.85rem;
-
-  a {
-    color: #4a7cff;
-    text-decoration: none;
-
-    &:hover {
-      text-decoration: underline;
-    }
-  }
-}
-
-.oauth-actions {
-  display: flex;
-  gap: 0.75rem;
-
-  .button {
-    flex: 1;
-  }
-}
-
 .dark-mode {
   .oauth-page {
     background: #121212;
   }
 
-  .oauth-card {
+  .box.oauth-card {
     background: #1c1c1c;
     border-color: #2a2a2a;
   }
 
-  .oauth-title {
-    color: #eee;
-  }
-
-  .oauth-scope {
+  .notification.oauth-scope {
     background: #242424;
     color: #bbb;
-  }
-
-  .oauth-loading p {
-    color: #aaa;
   }
 }
 </style>
