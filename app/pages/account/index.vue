@@ -395,6 +395,9 @@
 
         <!-- API Keys Section -->
         <ApiKeys class="pt-6" v-if="canShowAccountData && isAuthenticated" />
+
+        <!-- OAuth Apps Section -->
+        <OAuthApps class="pt-6" v-if="canShowAccountData && isAuthenticated" />
       </div>
     </div>
   </div>
@@ -425,6 +428,7 @@ import {
 } from "chart.js";
 import { useRouter, useRoute } from "vue-router";
 import ApiKeys from "~/components/Account/ApiKeys.vue";
+import OAuthApps from "~/components/Account/OAuthApps.vue";
 import AccountClaimModal from "~/components/Account/ClaimModal.vue";
 import AccountFreeCreditsVerifyModal from "~/components/Account/FreeCreditsVerifyModal.vue";
 import AccountCreditTransactionHistory from "~/components/Account/CreditTransactionHistory.vue";
