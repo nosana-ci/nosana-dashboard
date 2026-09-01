@@ -57,6 +57,14 @@
                   <span v-else> 0 </span>
                 </span>
               </div>
+              <div
+                v-for="meta in getMarketMetadata(market)"
+                :key="meta.key"
+                class="gpu-info-row"
+              >
+                <span class="gpu-label">{{ formatMetadataLabel(meta.key) }}</span>
+                <span class="gpu-value">{{ meta.value }}</span>
+              </div>
             </div>
           </div>
         </template>
@@ -82,7 +90,7 @@ interface MarketInfo {
   name?: string;
   type?: string;
   client?: boolean;
-  lowest_vram?: number;
+  metadata?: Array<{ key: string; value: string }>;
   usd_reward_per_hour?: number;
 }
 
@@ -151,10 +159,16 @@ watch(
   { immediate: true },
 );
 
-// Compute how much VRAM is required for this job definition
-const requiredVRAM = computed(
-  () => props.jobDefinition?.meta?.system_requirements?.required_vram ?? 0,
-);
+// Compute how much VRAM (in MB) the job definition requires.
+// Templates express this as either `vram_total_mb` (MB) or the legacy
+// `required_vram` (GB); normalise both to MB so we can compare against markets.
+const requiredVRAM = computed(() => {
+  const reqs = props.jobDefinition?.meta?.system_requirements;
+  if (!reqs) return 0;
+  if (reqs.vram_total_mb) return Number(reqs.vram_total_mb);
+  if (reqs.required_vram) return Number(reqs.required_vram) * 1024;
+  return 0;
+});
 
 // Helper function to find market info by address
 const findMarketInfo = (market: Market): MarketInfo | undefined => {
@@ -168,6 +182,24 @@ const getMarketName = (market: Market): string => {
   const marketInfo = findMarketInfo(market);
   return marketInfo?.name || market.address?.toString() || "Unknown Market";
 };
+
+// Metadata entries to display on a market card
+const getMarketMetadata = (
+  market: Market,
+): Array<{ key: string; value: string }> => {
+  return findMarketInfo(market)?.metadata ?? [];
+};
+
+// Human-friendly labels for known metadata keys; falls back to title case
+const METADATA_LABELS: Record<string, string> = {
+  vram: "VRAM",
+  gpu: "GPU",
+  cpu: "CPU",
+  ram: "RAM",
+};
+const formatMetadataLabel = (key: string): string =>
+  METADATA_LABELS[key.toLowerCase()] ??
+  key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
 // Helper to get running job count
 const getRunningJobCount = (market: Market): number => {
@@ -200,6 +232,11 @@ const filteredMarkets = computed(() => {
 
     // Exclude client markets
     if (marketInfo.client === true) {
+      return false;
+    }
+
+    // Exclude markets that don't meet the job's VRAM requirement
+    if (!isMarketCompatible(market)) {
       return false;
     }
 
@@ -238,18 +275,38 @@ const hasAvailableGPUs = (market: Market) => {
   return market.queue.length > 0;
 };
 
+// Parse a market metadata VRAM string (e.g. "24GB") into MB.
+// The value is stored as a string with a unit suffix; default to GB when
+// no unit is present, matching the current backend format.
+const parseVramToMb = (value: unknown): number | null => {
+  if (value == null) return null;
+  const match = String(value).match(/([\d.]+)\s*(GB|MB)?/i);
+  if (!match) return null;
+  const num = parseFloat(match[1] ?? "");
+  if (Number.isNaN(num)) return null;
+  return match[2]?.toUpperCase() === "MB" ? num : num * 1024;
+};
+
+// Read a market's available VRAM (in MB) from its metadata, if present.
+const getMarketVram = (market: Market): number | null => {
+  const marketInfo = findMarketInfo(market);
+  const entry = marketInfo?.metadata?.find((m) => m.key === "vram");
+  return parseVramToMb(entry?.value);
+};
+
 /**
  * Check if a market is compatible with the job's VRAM requirements
  * @param market The market to check compatibility for
  * @returns Boolean indicating whether the market meets VRAM requirements
  */
 const isMarketCompatible = (market: Market) => {
-  const marketInfo = findMarketInfo(market);
+  const marketVram = getMarketVram(market);
 
-  // If we don't have market info, assume it's compatible (don't auto-mark as incompatible)
-  if (!marketInfo || !marketInfo.lowest_vram) return true;
+  // If we can't determine the market's VRAM, assume it's compatible
+  // (don't auto-mark as incompatible)
+  if (marketVram == null) return true;
 
-  return marketInfo.lowest_vram >= (requiredVRAM.value ?? 0);
+  return marketVram >= (requiredVRAM.value ?? 0);
 };
 
 /**
