@@ -4,7 +4,7 @@
       class="is-flex is-justify-content-space-between is-align-items-center mb-4"
     >
       <h3 class="title is-4 mb-0">Nosana Connected Apps</h3>
-      <div class="is-flex is-align-items-center" style="gap: 0.5rem">
+      <div class="is-flex is-align-items-center is-gap-1">
         <button
           @click="openCreate"
           class="button is-dark"
@@ -29,48 +29,49 @@
       >.
     </p>
 
-    <div v-if="!hasLoadedOnce && loadingApps" class="box">
+    <div v-if="!hasLoadedOnce && loadingApps" class="box data-card p-5">
       <progress class="progress is-small is-grey" max="100"></progress>
-      <p class="has-text-centered">Loading connected apps...</p>
+      <p class="has-text-centered has-text-grey">Loading connected apps…</p>
     </div>
 
-    <div v-else-if="appsData.apps.length === 0" class="box has-text-centered">
-      <div class="content">
-        <span class="icon is-large has-text-grey-light">
-          <FontAwesomeIcon :icon="faPlug" size="2x" />
+    <div
+      v-else-if="appsData.apps.length === 0"
+      class="box empty-card has-text-centered py-6 px-5"
+    >
+      <span class="empty-icon">
+        <FontAwesomeIcon :icon="faPlug" size="lg" />
+      </span>
+      <h4 class="title is-5 mb-2">No connected apps yet</h4>
+      <p class="subtitle is-6 mb-5">
+        Create your first app to get a client ID for “Connect with Nosana”.
+      </p>
+      <button
+        @click="openCreate"
+        class="button is-dark"
+        :disabled="!isAuthenticated || atLimit"
+      >
+        <span class="icon">
+          <FontAwesomeIcon :icon="faPlus" />
         </span>
-        <h5 class="title is-5">No Connected Apps</h5>
-        <p class="subtitle">
-          Create your first app to get a client ID for “Connect with Nosana”.
-        </p>
-        <button
-          @click="openCreate"
-          class="button is-dark"
-          :disabled="!isAuthenticated || atLimit"
-        >
-          <span class="icon">
-            <FontAwesomeIcon :icon="faPlus" />
-          </span>
-          <span>Create App</span>
-        </button>
-      </div>
+        <span>Create App</span>
+      </button>
     </div>
 
-    <div v-else class="box">
+    <div v-else class="box data-card p-0">
       <div class="table-container">
-        <table class="table is-fullwidth is-hoverable">
+        <table class="table dev-table is-fullwidth is-hoverable">
           <thead>
             <tr>
               <th>Name</th>
               <th>Client ID</th>
               <th>Type</th>
-              <th>Actions</th>
+              <th class="has-text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="app in appsData.apps" :key="app.clientId">
               <td>
-                <div class="is-flex is-align-items-center" style="gap: 0.5rem">
+                <div class="is-flex is-align-items-center is-gap-1">
                   <img
                     v-if="app.logoUri"
                     :src="app.logoUri"
@@ -85,38 +86,34 @@
               </td>
               <td>
                 <span
-                  class="tag"
-                  :class="app.confidential ? 'is-info' : 'is-light'"
+                  class="tag is-rounded is-light"
+                  :class="{ 'is-info': app.confidential }"
                 >
                   {{ app.confidential ? "Server-side" : "Browser" }}
                 </span>
               </td>
               <td>
-                <div class="field is-grouped">
-                  <p class="control">
-                    <button
-                      @click="viewApp(app)"
-                      class="button is-small is-light"
-                      title="View App"
-                    >
-                      <span class="icon is-small">
-                        <FontAwesomeIcon :icon="faEye" />
-                      </span>
-                    </button>
-                  </p>
-                  <p class="control">
-                    <button
-                      @click="removeApp(app)"
-                      class="button is-small is-light has-text-danger"
-                      title="Delete App"
-                      :disabled="deletingId === app.clientId"
-                      :class="{ 'is-loading': deletingId === app.clientId }"
-                    >
-                      <span class="icon is-small">
-                        <FontAwesomeIcon :icon="faTrash" />
-                      </span>
-                    </button>
-                  </p>
+                <div class="is-flex is-justify-content-flex-end is-gap-1">
+                  <button
+                    @click="viewApp(app)"
+                    class="button is-small action-btn"
+                    title="View app"
+                  >
+                    <span class="icon is-small">
+                      <FontAwesomeIcon :icon="faEye" />
+                    </span>
+                  </button>
+                  <button
+                    @click="removeApp(app)"
+                    class="button is-small action-btn is-danger-action"
+                    title="Delete app"
+                    :disabled="deletingId === app.clientId"
+                    :class="{ 'is-loading': deletingId === app.clientId }"
+                  >
+                    <span class="icon is-small">
+                      <FontAwesomeIcon :icon="faTrash" />
+                    </span>
+                  </button>
                 </div>
               </td>
             </tr>
@@ -552,41 +549,3 @@ async function copy(text: string) {
 }
 </script>
 
-<style scoped>
-.oauth-app-logo {
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  object-fit: cover;
-}
-
-.table-container {
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-.modal-card {
-  max-width: 600px;
-  width: 90%;
-}
-
-.is-family-monospace {
-  font-family: "Courier New", Courier, monospace;
-  font-size: 0.9rem;
-}
-
-@media screen and (max-width: 768px) {
-  .table-container {
-    overflow-x: auto;
-  }
-
-  .table {
-    font-size: 0.85rem;
-  }
-
-  .table td,
-  .table th {
-    padding: 0.5rem;
-  }
-}
-</style>

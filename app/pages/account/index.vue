@@ -283,121 +283,76 @@
           <div class="column is-4">
             <h3 class="title is-4 mb-0">Welcome to Nosana</h3>
             <div class="mb-4"></div>
-            <div class="equal-height-boxes">
+            <div class="quick-stack">
               <nuxt-link
                 v-if="pendingFreeCreditsVerification"
                 to="/account/billing?source=free-credits"
-                class="box p-2 mb-2 is-block free-credits-verify-box"
+                class="quick-card is-highlight"
               >
-                <div
-                  class="is-flex is-align-items-start"
-                  style="margin: 8px 8px 0 8px"
-                >
-                  <CoinsIcon
-                    style="
-                      width: 16px;
-                      height: 16px;
-                      fill: #10e80c;
-                      margin-right: 0.5rem;
-                      margin-top: 4px;
-                    "
-                  />
-                  <div>
-                    <h4 class="title is-6 mb-0">Claim free credits</h4>
-                    <p class="is-size-6 mb-0" style="line-height: 1.2">
-                      Verify your payment method to unlock free credits.
-                    </p>
-                  </div>
-                </div>
+                <span class="quick-icon"><CoinsIcon /></span>
+                <span class="quick-text">
+                  <span class="quick-title">Claim free credits</span>
+                  <span class="quick-desc">
+                    Verify your payment method to unlock free credits.
+                  </span>
+                </span>
               </nuxt-link>
 
-              <nuxt-link
-                to="/deployments/create"
-                class="box has-text-black p-2 mb-2 is-block"
-              >
-                <div
-                  class="is-flex is-align-items-start"
-                  style="margin: 8px 8px 0 8px"
-                >
-                  <RocketIcon
-                    style="
-                      width: 16px;
-                      height: 16px;
-                      fill: #10e80c;
-                      margin-right: 0.5rem;
-                      margin-top: 4px;
-                    "
-                  />
-                  <div>
-                    <h4 class="title is-6 mb-0">Getting Started</h4>
-                    <p class="is-size-6 mb-0" style="line-height: 1.2">
-                      Start your journey by deploying your first AI model on
-                      Nosana.
-                    </p>
-                  </div>
-                </div>
+              <nuxt-link to="/deployments/create" class="quick-card">
+                <span class="quick-icon"><RocketIcon /></span>
+                <span class="quick-text">
+                  <span class="quick-title">Getting Started</span>
+                  <span class="quick-desc">
+                    Deploy your first AI model on Nosana.
+                  </span>
+                </span>
               </nuxt-link>
 
               <a
                 href="https://learn.nosana.com/"
                 target="_blank"
-                class="box has-text-black p-2 mb-2 is-block"
+                rel="noopener noreferrer"
+                class="quick-card"
               >
-                <div
-                  class="is-flex is-align-items-start"
-                  style="margin: 8px 8px 0 8px"
-                >
-                  <ExplorerIcon
-                    class="nosana-icon"
-                    style="
-                      width: 16px;
-                      height: 16px;
-                      margin-right: 0.5rem;
-                      margin-top: 4px;
-                    "
-                  />
-                  <div>
-                    <h4 class="title is-6 mb-0">Documentation</h4>
-                    <p class="is-size-6 mb-0" style="line-height: 1.2">
-                      Explore our comprehensive guides and how the network
-                      works.
-                    </p>
-                  </div>
-                </div>
+                <span class="quick-icon"><ExplorerIcon /></span>
+                <span class="quick-text">
+                  <span class="quick-title">Documentation</span>
+                  <span class="quick-desc">
+                    Guides, tutorials, and how the network works.
+                  </span>
+                </span>
               </a>
 
-              <nuxt-link to="/support" class="box has-text-black p-2 is-block">
-                <div
-                  class="is-flex is-align-items-start"
-                  style="margin: 8px 8px 0 8px"
-                >
-                  <SupportIcon
-                    class="nosana-icon"
-                    style="
-                      width: 16px;
-                      height: 16px;
-                      margin-right: 0.5rem;
-                      margin-top: 4px;
-                    "
-                  />
-                  <div>
-                    <h4 class="title is-6 mb-0">Help and Support</h4>
-                    <p class="is-size-6 mb-0" style="line-height: 1.2">
-                      Connect with our community and support team for
-                      assistance.
-                    </p>
-                  </div>
-                </div>
+              <nuxt-link to="/support" class="quick-card">
+                <span class="quick-icon"><SupportIcon /></span>
+                <span class="quick-text">
+                  <span class="quick-title">Help &amp; Support</span>
+                  <span class="quick-desc">
+                    Talk to our community and support team.
+                  </span>
+                </span>
               </nuxt-link>
+
+              <button
+                v-if="isAuthenticated"
+                type="button"
+                class="quick-card"
+                @click="openBuyCreditsModal"
+              >
+                <span class="quick-icon"><CoinsIcon /></span>
+                <span class="quick-text">
+                  <span class="quick-title">Buy Credits</span>
+                  <span class="quick-desc">
+                    Top up your balance to run more deployments.
+                  </span>
+                </span>
+              </button>
             </div>
           </div>
         </div>
 
-        <!-- API Keys Section -->
-        <ApiKeys class="pt-6" v-if="canShowAccountData && isAuthenticated" />
-
-        <!-- OAuth Apps Section -->
-        <OAuthApps class="pt-6" v-if="canShowAccountData && isAuthenticated" />
+        <!-- Billing -->
+        <AccountBillingSection v-if="isAuthenticated" class="pt-6" />
       </div>
     </div>
   </div>
@@ -427,8 +382,6 @@ import {
   LinearScale,
 } from "chart.js";
 import { useRouter, useRoute } from "vue-router";
-import ApiKeys from "~/components/Account/ApiKeys.vue";
-import OAuthApps from "~/components/Account/OAuthApps.vue";
 import AccountClaimModal from "~/components/Account/ClaimModal.vue";
 import AccountFreeCreditsVerifyModal from "~/components/Account/FreeCreditsVerifyModal.vue";
 import AccountCreditTransactionHistory from "~/components/Account/CreditTransactionHistory.vue";
@@ -468,6 +421,7 @@ const publicKey = computed(() => {
   };
 });
 const { triggerCreditRefresh } = useCreditRefresh();
+const { openBuyCreditsModal } = useBuyCreditsModal();
 
 interface Invitation {
   creditsAmount: number;
@@ -1363,15 +1317,104 @@ watch(
   justify-content: flex-start;
 }
 
-.free-credits-verify-box {
-  border: 1px solid #10e80c;
-  background-color: #f6fff5;
-  color: #363636;
+/* Quick-link cards stack inside the "Welcome to Nosana" column */
+.quick-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
-.dark-mode .free-credits-verify-box {
-  background-color: #1e2e1e;
-  color: #f5f5f5;
+/* Quick-link cards — green icon chip, hairline border, lift on hover */
+.quick-card {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  width: 100%;
+  padding: 1.1rem;
+  border-radius: 14px;
+  background: #ffffff;
+  border: 1px solid #dbdbdb;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.quick-card:hover {
+  transform: translateY(-3px);
+  border-color: #10e80c;
+  box-shadow: 0 14px 30px -18px rgba(16, 232, 12, 0.5);
+}
+
+.quick-card.is-highlight {
+  border-color: rgba(16, 232, 12, 0.45);
+  background: rgba(16, 232, 12, 0.05);
+}
+
+.dark-mode .quick-card {
+  background: #121212;
+  border-color: rgba(255, 255, 255, 0.07);
+}
+
+.dark-mode .quick-card:hover {
+  border-color: #10e80c;
+}
+
+.dark-mode .quick-card.is-highlight {
+  border-color: rgba(16, 232, 12, 0.45);
+  background: rgba(16, 232, 12, 0.08);
+}
+
+.quick-icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  background: rgba(16, 232, 12, 0.1);
+}
+
+.quick-icon :deep(svg) {
+  width: 19px;
+  height: 19px;
+}
+
+.quick-icon :deep(path) {
+  fill: #10e80c;
+}
+
+.quick-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.quick-title {
+  font-family: "Space Grotesk", sans-serif;
+  font-weight: 600;
+  font-size: 0.98rem;
+  color: #000;
+}
+
+.dark-mode .quick-title {
+  color: #fff;
+}
+
+.quick-desc {
+  font-size: 0.8rem;
+  color: #999999;
+  line-height: 1.35;
+}
+
+.dark-mode .quick-desc {
+  color: #b5b5b5;
 }
 
 .balance-section {
@@ -1473,15 +1516,8 @@ watch(
   box-shadow: none;
 }
 
-.equal-height-box {
-  height: 150px !important;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-/* Special handling for account summary and Monthly History boxes */
-.column.is-4 .box:not(.equal-height-boxes .box) {
+/* Cap the data boxes so the overview row stays tidy */
+.column.is-4 .box {
   max-height: 360px;
 }
 
@@ -1537,36 +1573,6 @@ watch(
 
 .dark-mode .container-icon:hover svg {
   fill: #10e80c !important;
-}
-
-.nosana-icon {
-  color: #10e80c;
-}
-
-.nosana-icon :deep(path) {
-  fill: #10e80c;
-}
-
-.equal-height-boxes {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  max-height: 360px;
-}
-
-.equal-height-boxes .box {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  max-height: none; /* Override the default max-height */
-}
-
-.equal-height-boxes .box:not(:last-child) {
-  margin-bottom: 0.5rem;
-}
-
-.equal-height-boxes .box > div {
-  height: 100%;
 }
 
 .container-icon:hover {

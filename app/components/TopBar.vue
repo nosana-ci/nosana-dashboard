@@ -127,14 +127,6 @@
           <span class="dropdown-item-text">{{ getUserName() }}</span>
           <UserIcon class="dropdown-icon" />
         </button>
-        <button
-          v-if="isGoogleAuthenticated"
-          class="dropdown-item-simple"
-          @click.stop="goToBilling"
-        >
-          <WalletIcon class="dropdown-icon" />
-          Billing
-        </button>
         <!-- Priority Fee Settings for wallet users -->
         <button
           v-else
@@ -181,7 +173,6 @@ import SettingsIcon from "@/assets/img/icons/settings.svg?component";
 import LogoutIcon from "@/assets/img/icons/logout.svg?component";
 import SunIcon from "@/assets/img/icons/sun.svg?component";
 import MoonIcon from "@/assets/img/icons/moon.svg?component";
-import WalletIcon from "@/assets/img/icons/wallet.svg?component";
 import { useRoute, useRouter } from "vue-router";
 
 const { nosana, prioFee } = useKit();
@@ -223,11 +214,6 @@ const openPriorityFeeSettings = () => {
 const goToAccount = () => {
   showUserProfileDropdown.value = false;
   router.push("/account");
-};
-
-const goToBilling = () => {
-  showUserProfileDropdown.value = false;
-  router.push("/account/billing");
 };
 
 // Wallet address formatting
