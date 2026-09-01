@@ -22,7 +22,7 @@
       Add <strong>“Connect with Nosana”</strong> to your own apps, so people can
       sign in with their Nosana account.
       <a
-        href="https://docs.nosana.com/kit/connect"
+        href="https://learn.nosana.com/connect"
         target="_blank"
         rel="noopener noreferrer"
         >Learn more</a
@@ -287,7 +287,7 @@
               <p class="help">
                 Add sign-in with the
                 <a
-                  href="https://docs.nosana.com/kit/connect"
+                  href="https://learn.nosana.com/connect"
                   target="_blank"
                   rel="noopener noreferrer"
                   >Nosana Kit</a
