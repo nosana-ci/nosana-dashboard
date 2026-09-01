@@ -24,7 +24,6 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
     "/st-auth",
     "/st-auth/reset-password",
     "/deployments/create",
-    "/oauth",
   ];
 
   const normalizedPath =

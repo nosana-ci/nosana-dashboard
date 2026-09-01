@@ -21,6 +21,12 @@
     <p class="subtitle is-6 has-text-grey mb-4">
       Add <strong>“Connect with Nosana”</strong> to your own apps, so people can
       sign in with their Nosana account.
+      <a
+        href="https://docs.nosana.com/kit/connect"
+        target="_blank"
+        rel="noopener noreferrer"
+        >Learn more</a
+      >.
     </p>
 
     <div v-if="!hasLoadedOnce && loadingApps" class="box">
@@ -82,7 +88,7 @@
                   class="tag"
                   :class="app.confidential ? 'is-info' : 'is-light'"
                 >
-                  {{ app.confidential ? "Confidential" : "Public · PKCE" }}
+                  {{ app.confidential ? "Server-side" : "Browser" }}
                 </span>
               </td>
               <td>
@@ -185,7 +191,10 @@
           </div>
 
           <div class="field">
-            <label class="label">Logo URL <span class="has-text-grey-light">(optional)</span></label>
+            <label class="label"
+              >Logo URL
+              <span class="has-text-grey-light">(optional)</span></label
+            >
             <div class="control">
               <input
                 v-model="form.logoUri"
@@ -197,18 +206,18 @@
           </div>
 
           <div class="field">
-            <label class="label">App Type</label>
+            <label class="label">Where does your app run?</label>
             <div class="control">
               <div class="select is-fullwidth">
                 <select v-model="form.confidential">
-                  <option :value="false">Public — browser or mobile (PKCE)</option>
-                  <option :value="true">Confidential — server-side (client secret)</option>
+                  <option :value="false">In the browser or on mobile</option>
+                  <option :value="true">On a server with a backend</option>
                 </select>
               </div>
             </div>
             <p class="help">
-              Confidential apps get a client secret and skip PKCE — use for apps
-              with a backend that can keep a secret.
+              Apps with a backend get a client secret to keep private on their
+              server. Browser and mobile apps don’t need one.
             </p>
           </div>
         </section>
@@ -249,7 +258,7 @@
                 class="tag"
                 :class="selectedApp.confidential ? 'is-info' : 'is-light'"
               >
-                {{ selectedApp.confidential ? "Confidential" : "Public · PKCE" }}
+                {{ selectedApp.confidential ? "Server-side" : "Browser" }}
               </span>
             </div>
 
@@ -275,6 +284,16 @@
                   </button>
                 </div>
               </div>
+              <p class="help">
+                Add sign-in with the
+                <a
+                  href="https://docs.nosana.com/kit/connect"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  >Nosana Kit</a
+                >
+                using this Client ID — it handles the rest for you.
+              </p>
             </div>
 
             <div class="field">
@@ -289,37 +308,6 @@
                   readonly
                 />
               </div>
-            </div>
-
-            <div class="field">
-              <label class="label">Connect link</label>
-              <div class="control">
-                <div class="is-flex">
-                  <input
-                    :value="connectUrl(selectedApp)"
-                    class="input is-family-monospace"
-                    type="text"
-                    readonly
-                    style="flex: 1"
-                  />
-                  <button
-                    @click="copy(connectUrl(selectedApp))"
-                    class="button is-light ml-2"
-                    title="Copy to clipboard"
-                  >
-                    <span class="icon">
-                      <FontAwesomeIcon :icon="faCopy" />
-                    </span>
-                  </button>
-                </div>
-              </div>
-              <p class="help">
-                Point the app’s “Connect with Nosana” button here.
-                <template v-if="!selectedApp.confidential"
-                  >Public apps append their PKCE
-                  <code>code_challenge</code>.</template
-                >
-              </p>
             </div>
           </div>
         </section>
@@ -552,13 +540,6 @@ async function removeApp(app: OAuthApp) {
   } finally {
     deletingId.value = null;
   }
-}
-
-// The public "Connect with Nosana" entry point. The /oauth page builds the real
-// authorize request, so integrators only ever share this single client_id link.
-function connectUrl(app: OAuthApp): string {
-  const origin = import.meta.client ? window.location.origin : "";
-  return `${origin}/oauth?client_id=${app.clientId}`;
 }
 
 async function copy(text: string) {
