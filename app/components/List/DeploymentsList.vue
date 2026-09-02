@@ -273,6 +273,12 @@ watch(
   tbody tr.clickable-row:hover {
     background: $white-bis;
   }
+
+  /* Give the status pills a shared minimum width so they line up down the
+     column instead of each hugging its label (Running / Completed / Error). */
+  :deep(.dep-status-pill) {
+    min-width: 90px;
+  }
 }
 
 html.dark-mode .deployments-table tbody tr.clickable-row:hover {
