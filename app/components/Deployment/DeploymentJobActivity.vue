@@ -1,19 +1,17 @@
 <template>
   <div class="mb-5">
-    <div class="is-flex is-align-items-center mb-3">
-      <h2 class="title is-5 mb-0 mr-3">Job activity</h2>
-      <div class="deployment-tabs">
+    <div class="da-head">
+      <h2 class="title is-5 mb-0">Job activity</h2>
+      <div class="da-seg">
         <button
-          @click="$emit('update:jobActivityTab', 'active')"
-          class="tab-button is-small"
           :class="{ 'is-active': jobActivityTab === 'active' }"
+          @click="$emit('update:jobActivityTab', 'active')"
         >
           Active
         </button>
         <button
-          @click="$emit('update:jobActivityTab', 'history')"
-          class="tab-button is-small"
           :class="{ 'is-active': jobActivityTab === 'history' }"
+          @click="$emit('update:jobActivityTab', 'history')"
         >
           History
         </button>
@@ -24,20 +22,18 @@
     <div v-if="jobActivityTab === 'active'">
       <div
         v-if="activeLoading && activeJobs.length === 0"
-        class="box has-text-centered p-6"
+        class="da-card da-empty"
       >
-        <p class="has-text-grey">Loading active jobs...</p>
+        Loading active jobs…
       </div>
-      <div v-else-if="activeJobs.length === 0" class="box has-text-centered p-6">
-        <p class="has-text-grey">
-          <span v-if="deploymentStatus === 'DRAFT'"
-            >Start deployment to create jobs</span
-          >
-          <span v-else>No active jobs</span>
-        </p>
+      <div v-else-if="activeJobs.length === 0" class="da-card da-empty">
+        <span v-if="deploymentStatus === 'DRAFT'"
+          >Start deployment to create jobs</span
+        >
+        <span v-else>No active jobs</span>
       </div>
 
-      <div v-else>
+      <div v-else class="da-card">
         <JobActivityTable
           :jobs="activeJobs"
           :deploymentId="deploymentId"
@@ -57,18 +53,18 @@
     <div v-else-if="jobActivityTab === 'history'">
       <div
         v-if="historyLoading && historyJobs.length === 0"
-        class="box has-text-centered p-6"
+        class="da-card da-empty"
       >
-        <p class="has-text-grey">Loading history...</p>
+        Loading history…
       </div>
       <div
         v-else-if="historyJobs.length === 0"
-        class="box has-text-centered p-6"
+        class="da-card da-empty"
       >
-        <p class="has-text-grey">No completed jobs yet</p>
+        No completed jobs yet
       </div>
 
-      <div v-else>
+      <div v-else class="da-card">
         <JobActivityTable
           :jobs="historyJobs"
           :deploymentId="deploymentId"
@@ -117,3 +113,76 @@ defineEmits<{
   "history:next": [];
 }>();
 </script>
+
+<style lang="scss" scoped>
+.da-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.da-seg {
+  display: inline-flex;
+  background: $white-ter;
+  border-radius: 10px;
+  padding: 3px;
+  gap: 2px;
+  box-shadow: inset 0 0 0 1px rgba($black, 0.04);
+
+  button {
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: $grey-dark;
+    border: 0;
+    background: none;
+    padding: 5px 14px;
+    border-radius: 7px;
+    cursor: pointer;
+    transition:
+      color 0.15s ease,
+      background 0.15s ease;
+
+    &.is-active {
+      background: $white;
+      color: $text;
+      box-shadow: 0 1px 2px rgba($black, 0.12);
+    }
+  }
+}
+
+.da-card {
+  background: $white;
+  border: 1px solid $grey-lighter;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.da-empty {
+  padding: 2.75rem 1rem;
+  text-align: center;
+  color: $grey;
+  font-size: 0.9rem;
+}
+
+html.dark-mode .da-seg {
+  background: rgba($white, 0.06);
+  box-shadow: inset 0 0 0 1px rgba($white, 0.08);
+
+  button {
+    color: $grey-light;
+
+    &.is-active {
+      background: $black-ter;
+      color: $white;
+      box-shadow: 0 1px 2px rgba($black, 0.4);
+    }
+  }
+}
+
+html.dark-mode .da-card {
+  background: $black-ter;
+  border-color: rgba($white, 0.08);
+}
+</style>

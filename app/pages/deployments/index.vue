@@ -70,11 +70,3 @@ watch(
   { immediate: true },
 );
 </script>
-
-<style scoped>
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 1.5rem;
-}
-</style>

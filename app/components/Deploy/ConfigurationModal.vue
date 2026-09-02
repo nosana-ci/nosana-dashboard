@@ -46,28 +46,36 @@
               </svg>
               <span>Change template</span>
             </button>
-            <button
-              v-if="selectedTemplate && selectedTemplate.readme"
-              type="button"
-              class="banner-btn"
-              @click="openReadmeModal(selectedTemplate.readme!)"
-              title="View template documentation"
-            >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.8"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path
-                  d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6ZM14 2v6h6M8 13h8M8 17h5"
-                />
-              </svg>
-              <span>README</span>
-            </button>
           </div>
+        </div>
+
+        <!-- Template documentation: inline, minimized to a peek, expandable -->
+        <div v-if="selectedTemplate?.readme" class="banner-readme">
+          <div
+            class="readme-body markdown"
+            :class="{ 'is-collapsed': !isReadmeOpen }"
+            v-html="renderedReadme"
+          />
+          <button
+            type="button"
+            class="readme-toggle"
+            :class="{ 'is-open': isReadmeOpen }"
+            :aria-expanded="isReadmeOpen"
+            @click="isReadmeOpen = !isReadmeOpen"
+          >
+            <span>{{ isReadmeOpen ? "Show less" : "Read more" }}</span>
+            <svg
+              class="chevron"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="m6 9 6 6 6-6" />
+            </svg>
+          </button>
         </div>
 
         <div class="banner-config-bar">
@@ -173,6 +181,7 @@
             />
           </div>
         </div>
+
       </div>
     </section>
 
@@ -279,6 +288,7 @@
   import PodConfigurationTab from './PodConfigurationTab.vue';
   import DeploymentConfigurationTab from './DeploymentConfigurationTab.vue';
   import NosanaMark from '@/assets/img/icon.svg?component';
+  import { marked } from 'marked';
   import { MIN_INFINITE_TIMEOUT_HOURS } from '~/composables/useTimeoutConstants';
 
 // Define props
@@ -316,7 +326,6 @@ const emit = defineEmits<{
   showTemplateModal: [];
   'update:isEditorCollapsed': [value: boolean];
   'update:jobDefinition': [value: JobDefinition | null];
-  openReadme: [readme: string];
     // Advanced deployment emits
     'update:strategy': [strategy: DeploymentStrategy];
     'update:schedule': [schedule: string];
@@ -478,10 +487,22 @@ const computedDockerImage = computed(() => {
   return "";
 });
 
-// Methods
-const openReadmeModal = (readme: string) => {
-  emit('openReadme', readme);
-};
+// Inline template documentation: minimized to a peek, expandable in place
+const isReadmeOpen = ref(false);
+
+const renderedReadme = computed(() =>
+  props.selectedTemplate?.readme
+    ? (marked(props.selectedTemplate.readme) as string)
+    : '',
+);
+
+// A freshly selected template starts minimized again
+watch(
+  () => props.selectedTemplate?.id,
+  () => {
+    isReadmeOpen.value = false;
+  },
+);
 
 // Open modal and store original state
 const openEditorModal = () => {
@@ -556,7 +577,7 @@ html.dark-mode {
   background:
     radial-gradient(
       circle at 90% 8%,
-      rgba(16, 232, 12, 0.16),
+      rgba($secondary, 0.16),
       transparent 46%
     ),
     linear-gradient(135deg, #0a0c0a 0%, #0f130d 55%, #0b0d0b 100%);
@@ -616,8 +637,8 @@ html.dark-mode {
   }
 
   &.is-brand {
-    background: rgba(16, 232, 12, 0.1);
-    border-color: rgba(16, 232, 12, 0.25);
+    background: rgba($secondary, 0.1);
+    border-color: rgba($secondary, 0.25);
   }
 
   .brand-mark {
@@ -741,7 +762,7 @@ html.dark-mode {
 
   &:focus-within {
     border-color: $secondary;
-    box-shadow: 0 0 0 3px rgba(16, 232, 12, 0.18);
+    box-shadow: 0 0 0 3px rgba($secondary, 0.18);
   }
 
   input {
@@ -891,6 +912,17 @@ html.dark-mode {
 
 .banner-config :deep(.select select) {
   width: 100%;
+  /* The banner forces white select text, but the native option popup
+     follows the document color-scheme — light-mode browsers then paint a
+     white popup with white options (white-on-white). Pin the control to a
+     dark scheme (fixes macOS Safari/Chrome, where option colors are
+     ignored) and set explicit option colors (Windows Chrome/Firefox). */
+  color-scheme: dark;
+}
+
+.banner-config :deep(.select select option) {
+  background-color: #10140e;
+  color: #fff;
 }
 
 .banner-config :deep(.select:not(.is-multiple):not(.is-loading)::after) {
@@ -904,7 +936,7 @@ html.dark-mode {
 .banner-config :deep(.input:focus),
 .banner-config :deep(.select select:focus) {
   border-color: $secondary;
-  box-shadow: 0 0 0 3px rgba(16, 232, 12, 0.18);
+  box-shadow: 0 0 0 3px rgba($secondary, 0.18);
 }
 
 .banner-config :deep(.help) {
@@ -913,6 +945,173 @@ html.dark-mode {
 
 .banner-config :deep(.label .icon.has-text-grey) {
   color: #8a948a !important;
+}
+
+/* ---------- Inline template README ---------- */
+.banner-readme {
+  margin-top: 1.5rem;
+}
+
+/* Plain-text expand/collapse control below the peek */
+.readme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.6rem;
+  padding: 0;
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 0.8rem;
+  cursor: pointer;
+  color: #8bf58f;
+  background: none;
+  border: none;
+  transition: color 0.2s ease;
+
+  .chevron {
+    width: 13px;
+    height: 13px;
+    transition: transform 0.25s ease;
+  }
+
+  &:hover {
+    color: #fff;
+    text-decoration: underline;
+  }
+
+  &.is-open .chevron {
+    transform: rotate(180deg);
+  }
+}
+
+.readme-body {
+  max-height: 30rem;
+  overflow-y: auto;
+  transition: max-height 0.3s ease;
+
+  &.is-collapsed {
+    max-height: 8rem;
+    overflow: hidden;
+  }
+
+  :deep(> :first-child) {
+    margin-top: 0;
+  }
+
+  :deep(p),
+  :deep(li) {
+    color: #c3ccc2;
+    font-size: 0.9rem;
+    line-height: 1.55;
+    margin-bottom: 0.85rem;
+  }
+
+  :deep(h1),
+  :deep(h2),
+  :deep(h3),
+  :deep(h4) {
+    color: #fff;
+    font-weight: 600;
+    margin-top: 1.4rem;
+    margin-bottom: 0.75rem;
+  }
+
+  :deep(h1) {
+    font-size: 1.25rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    padding-bottom: 0.4rem;
+  }
+
+  :deep(h2) {
+    font-size: 1.1rem;
+  }
+
+  :deep(h3) {
+    font-size: 1rem;
+  }
+
+  :deep(ul),
+  :deep(ol) {
+    margin-left: 1.4rem;
+    margin-bottom: 0.85rem;
+    list-style: disc outside;
+  }
+
+  :deep(ol) {
+    list-style: decimal outside;
+  }
+
+  :deep(li) {
+    display: list-item;
+    margin-bottom: 0.4rem;
+    padding-left: 0.35rem;
+  }
+
+  :deep(a) {
+    color: #8bf58f;
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  :deep(code) {
+    background: rgba(255, 255, 255, 0.08);
+    color: #d7e0d6;
+    padding: 0.2em 0.4em;
+    border-radius: 4px;
+    font-size: 0.85em;
+    font-family: var(--mono);
+  }
+
+  :deep(pre) {
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 1rem;
+    border-radius: 10px;
+    margin-bottom: 0.85rem;
+    overflow-x: auto;
+
+    code {
+      background: none;
+      padding: 0;
+      color: #d7e0d6;
+    }
+  }
+
+  :deep(blockquote) {
+    border-left: 3px solid rgba(255, 255, 255, 0.2);
+    padding-left: 1rem;
+    margin: 0 0 0.85rem;
+    color: #9aa79a;
+  }
+
+  :deep(img) {
+    max-width: 100%;
+    margin: 1rem 0;
+    border-radius: 8px;
+  }
+
+  :deep(table) {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 0.85rem;
+    font-size: 0.85rem;
+
+    th,
+    td {
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      padding: 0.5rem;
+      color: #c3ccc2;
+    }
+
+    th {
+      background: rgba(255, 255, 255, 0.05);
+      color: #fff;
+      font-weight: 600;
+    }
+  }
 }
 
 /* ---------- Job definition modal (editor sizing) ---------- */

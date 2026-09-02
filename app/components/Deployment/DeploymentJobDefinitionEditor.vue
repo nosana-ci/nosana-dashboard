@@ -4,22 +4,33 @@
       class="is-flex is-justify-content-space-between is-align-items-center mb-3"
     >
       <h2 class="title is-5 mb-0">Current Job Configuration</h2>
-      <div class="buttons" v-if="hasDefinitionChanged">
-        <button @click="$emit('reset')" class="button is-small is-light">
-          Reset
-        </button>
+      <div class="cfg-actions">
+        <template v-if="hasDefinitionChanged">
+          <button @click="$emit('reset')" class="cfg-btn ghost" type="button">
+            Reset
+          </button>
+          <button
+            @click="$emit('makeRevision')"
+            class="cfg-btn primary"
+            type="button"
+          >
+            Make Revision
+          </button>
+        </template>
         <button
-          @click="$emit('makeRevision')"
-          class="button is-small is-primary"
+          v-else
+          @click="$emit('createRevision')"
+          class="cfg-btn white sm"
+          type="button"
         >
-          Make Revision
+          Create revision
         </button>
       </div>
     </div>
-    <div class="box is-borderless">
+    <div class="dep-card">
       <div
         v-if="loadingJobDefinition"
-        class="has-text-grey has-text-centered py-4"
+        class="has-text-grey has-text-centered py-5"
       >
         Loading job definition...
       </div>
@@ -38,7 +49,7 @@
           "
         />
       </div>
-      <div v-else class="has-text-grey has-text-centered py-4">
+      <div v-else class="has-text-grey has-text-centered py-5">
         No job definition found
       </div>
     </div>
@@ -60,8 +71,105 @@ defineEmits<{
   "update:jobDefinitionModel": [value: JobDefinition];
   reset: [];
   makeRevision: [];
+  createRevision: [];
 }>();
 
 // Expose editor ref so parent can wire it up for validation
 defineExpose({ editorRef });
 </script>
+
+<style lang="scss" scoped>
+.dep-card {
+  background: $white;
+  border: 1px solid $grey-lighter;
+  border-radius: 14px;
+  overflow: hidden;
+}
+html.dark-mode .dep-card {
+  background: $black-ter;
+  border-color: rgba($white, 0.08);
+}
+
+.cfg-actions {
+  display: inline-flex;
+  gap: 0.5rem;
+}
+
+.cfg-btn {
+  font-family: $title-family;
+  font-weight: 500;
+  font-size: 0.85rem;
+  border-radius: 9px;
+  padding: 0.45rem 0.95rem;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.cfg-btn.ghost {
+  background: $white-ter;
+  border-color: $grey-lighter;
+  color: $text;
+
+  &:hover {
+    background: $grey-lightest;
+    border-color: $grey-light;
+  }
+}
+
+.cfg-btn.primary {
+  background: $primary;
+  color: $white;
+
+  &:hover {
+    background: $grey-darker;
+  }
+}
+
+.cfg-btn.sm {
+  font-size: 0.8rem;
+  padding: 0.4rem 0.85rem;
+}
+
+.cfg-btn.white {
+  background: $white;
+  border-color: $grey-lighter;
+  color: $text;
+
+  &:hover {
+    background: $white-ter;
+    border-color: $grey-light;
+  }
+}
+
+html.dark-mode .cfg-btn.white {
+  background: $white;
+  color: $black;
+  border-color: transparent;
+
+  &:hover {
+    background: $grey-lighter;
+  }
+}
+
+html.dark-mode .cfg-btn.ghost {
+  background: rgba($white, 0.06);
+  border-color: rgba($white, 0.12);
+  color: $white;
+
+  &:hover {
+    background: rgba($white, 0.1);
+  }
+}
+
+html.dark-mode .cfg-btn.primary {
+  background: $white;
+  color: $black;
+
+  &:hover {
+    background: $grey-lighter;
+  }
+}
+</style>

@@ -1543,45 +1543,46 @@ html.dark-mode .modal-card-head {
 
 /* Global class for JSON editor containers to ensure consistent styling */
 .json-editor-container {
-  background-color: $grey-lightest !important;
-  border-radius: 4px;
+  background-color: $black-ter !important;
+  border-radius: 10px;
   padding: 0;
   margin-top: 0.2rem;
+  overflow: hidden;
   position: relative; /* For copy button positioning */
 
   .json-editor {
     min-height: 300px;
     border: none;
-    border-radius: 4px;
-    background-color: $grey-lightest !important;
+    border-radius: 10px;
+    background-color: $black-ter !important;
 
-    :deep(.jse-main) {
+    .jse-main {
       border: none;
-      background-color: $grey-lightest !important;
+      background-color: $black-ter !important;
     }
 
-    :deep(.jse-contents) {
-      border-radius: 4px;
-      background-color: $grey-lightest !important;
+    .jse-contents {
+      border-radius: 10px;
+      background-color: $black-ter !important;
     }
 
-    :deep(.jse-text-mode) {
-      background-color: $grey-lightest !important;
+    .jse-text-mode {
+      background-color: $black-ter !important;
     }
 
-    :deep(.cm-editor) {
-      background-color: $grey-lightest !important;
+    .cm-editor {
+      background-color: $black-ter !important;
     }
 
-    :deep(.cm-focused) {
-      background-color: $grey-lightest !important;
+    .cm-focused {
+      background-color: $black-ter !important;
     }
   }
 }
 
 /* Override any box backgrounds when containing JSON editor */
 .box .json-editor-container {
-  background-color: $grey-lightest !important;
+  background-color: $black-ter !important;
 }
 
 /* ==========================================================================

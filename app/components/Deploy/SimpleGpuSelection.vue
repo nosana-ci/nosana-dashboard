@@ -1,33 +1,6 @@
 <template>
   <div>
     <div class="flex">
-      <!-- <div class="field px-1 mt-5 mb-5">
-        <div class="control">
-          <div class="checkboxes is-flex">
-            <button 
-              class="button button-filter mr-3"
-              :class="{ 'is-selected is-primary': activeFilter === 'ALL', 'is-outlined': activeFilter !== 'ALL' }"
-              @click="toggleGpuType('ALL')"
-            >
-              All
-            </button>
-            <button 
-              class="button button-filter mr-3"
-              :class="{ 'is-selected is-primary': activeFilter === 'PREMIUM', 'is-outlined': activeFilter !== 'PREMIUM' }"
-              @click="toggleGpuType('PREMIUM')"
-            >
-              Premium
-            </button>
-            <button 
-              class="button button-filter"
-              :class="{ 'is-selected is-primary': activeFilter === 'COMMUNITY', 'is-outlined': activeFilter !== 'COMMUNITY' }"
-              @click="toggleGpuType('COMMUNITY')"
-            >
-              Community
-            </button>
-          </div>
-        </div>
-      </div> -->
       <div v-if="loadingMarkets">
         Loading GPUs...
       </div>

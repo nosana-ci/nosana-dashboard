@@ -15,8 +15,7 @@
       </div>
 
       <div v-else-if="deployment">
-        <!-- Unified Card -->
-        <div class="box is-borderless">
+        <div class="deployment-detail">
           <!-- Header Section -->
           <DeploymentHeader
             :deployment="deployment"
@@ -35,8 +34,10 @@
 
           <!-- Tab Content -->
           <div class="p-5">
-            <!-- Overview Tab -->
-            <div v-if="activeTab === 'overview'">
+            <!-- Overview Tab. Kept mounted (v-show) rather than v-if so the
+                 per-job system-usage stream in Job activity survives tab
+                 switches instead of reconnecting each time. -->
+            <div v-show="activeTab === 'overview'" class="tab-pane">
               <DeploymentErrorBanner
                 :hasErrorInLastEvent="hasErrorInLastEvent"
                 @viewEvents="switchTab('events')"
@@ -44,41 +45,53 @@
 
               <DeploymentDetails
                 :deployment="deployment"
-                :hasVault="hasVault"
+                :hasVault="hasVault && isWalletMode"
                 :deploymentVault="deploymentVault"
                 :deploymentSchedule="deploymentSchedule"
                 :testgridMarkets="testgridMarkets || []"
               />
 
-              <DeploymentEndpoints
-                :endpoints="deploymentEndpoints"
-                :activeJobs="deployment.active_jobs ?? 0"
-              />
+              <div class="overview-cols">
+                <div class="ov-main">
+                  <DeploymentEndpoints
+                    :endpoints="deploymentEndpoints"
+                    :activeJobs="deployment.active_jobs ?? 0"
+                  />
 
-              <DeploymentJobActivity
-                :deploymentId="deployment.id"
-                :deploymentStatus="deployment.status"
-                :jobActivityTab="jobActivityTab"
-                :activeJobs="activeJobsPaged"
-                :activeLoading="activeLoading"
-                :activeHasPrev="activeHasPrev"
-                :activeHasNext="activeHasNext"
-                :historyJobs="historyJobs"
-                :historyLoading="historyLoading"
-                :historyHasPrev="historyHasPrev"
-                :historyHasNext="historyHasNext"
-                :getJobStateNumber="getJobStateNumber"
-                :getJobDuration="getJobDuration"
-                @update:jobActivityTab="jobActivityTab = $event"
-                @active:prev="activePrev"
-                @active:next="activeNext"
-                @history:prev="historyPrev"
-                @history:next="historyNext"
-              />
+                  <DeploymentJobActivity
+                    :deploymentId="deployment.id"
+                    :deploymentStatus="deployment.status"
+                    :jobActivityTab="jobActivityTab"
+                    :activeJobs="activeJobsPaged"
+                    :activeLoading="activeLoading"
+                    :activeHasPrev="activeHasPrev"
+                    :activeHasNext="activeHasNext"
+                    :historyJobs="historyJobs"
+                    :historyLoading="historyLoading"
+                    :historyHasPrev="historyHasPrev"
+                    :historyHasNext="historyHasNext"
+                    :getJobStateNumber="getJobStateNumber"
+                    :getJobDuration="getJobDuration"
+                    @update:jobActivityTab="jobActivityTab = $event"
+                    @active:prev="activePrev"
+                    @active:next="activeNext"
+                    @history:prev="historyPrev"
+                    @history:next="historyNext"
+                  />
+                </div>
+
+                <div class="ov-side">
+                  <DeploymentActivitySummary
+                    :events="deploymentEvents"
+                    :tasks="tasks"
+                    @viewAll="switchTab('events')"
+                  />
+                </div>
+              </div>
             </div>
 
             <!-- Events Tab -->
-            <div v-if="activeTab === 'events'">
+            <div v-if="activeTab === 'events'" class="tab-pane">
               <DeploymentUpcomingTasks
                 :tasks="tasks"
                 :tasksLoading="tasksLoading"
@@ -95,11 +108,10 @@
                 :jobs="deploymentJobs"
                 :market="deployment.market"
               />
-              />
             </div>
 
             <!-- Configuration Tab -->
-            <div v-if="activeTab === 'configuration'">
+            <div v-if="activeTab === 'configuration'" class="tab-pane">
               <DeploymentJobDefinitionEditor
                 ref="jobDefEditorComponent"
                 :jobDefinitionModel="jobDefinitionModel"
@@ -108,6 +120,7 @@
                 @update:jobDefinitionModel="jobDefinitionModel = $event"
                 @reset="resetDefinition"
                 @makeRevision="makeRevision"
+                @createRevision="switchAction('create-revision')"
               />
 
               <DeploymentRevisions
@@ -169,6 +182,7 @@
 
 <script setup lang="ts">
 import type { JobDefinition } from "@nosana/kit";
+import type { DeploymentEventItem } from "@nosana/api";
 import { useWallet } from "@nosana/solana-vue";
 import { useSuperTokens } from "~/composables/useSuperTokens";
 import { useDeploymentDetail } from "~/composables/useDeploymentDetail";
@@ -231,7 +245,6 @@ const {
   deploymentVault,
   deploymentSchedule,
   loadDeployment,
-  loadJobs,
   loadEvents,
   loadTasks,
 } = detail;
@@ -255,7 +268,9 @@ const {
   activeHasNext,
   activeNext,
   activePrev,
-  refreshActiveJobs,
+  applyJobFrame,
+  applyActiveJobsSnapshot,
+  runningJobsCount,
   historyJobs,
   historyLoading,
   historyHasPrev,
@@ -268,57 +283,137 @@ const {
   hasErrorInLastEvent,
 } = jobs;
 
-const refreshDeploymentJobs = async (silent?: boolean) => {
-  await loadJobs(silent).catch(() => {});
-  await refreshActiveJobs();
-};
-
 const streamUserId = computed(() =>
   superTokensAuth.value
     ? userData.value?.generatedAddress
     : account.value?.address,
 );
 
+type EndpointRec = {
+  opId: string;
+  port: number | string;
+  url: string;
+  online: boolean;
+};
+
 const applyStreamEvent = (event: DeploymentStreamEvent) => {
-  if (event.type === "deployment" && deployment.value) {
-    Object.assign(deployment.value, {
-      status: event.status,
-      replicas: event.replicas,
-      active_revision: event.active_revision,
-    });
+  if (event.type === "deployment") {
+    if (deployment.value) {
+      Object.assign(deployment.value, {
+        status: event.status,
+        replicas: event.replicas,
+        active_revision: event.active_revision,
+      });
+    }
     return;
   }
+
   if (event.type === "job") {
-    jobStates.value = {
-      ...jobStates.value,
-      [event.job]: jobStateStringToNumber(event.state),
+    // Updates the live active list in place; new jobs render straight from the
+    // frame, which carries revision/created_at.
+    applyJobFrame(event);
+    return;
+  }
+
+  // Authoritative active-jobs snapshot, sent once on (re)connect ahead of the
+  // per-job frames: prune anything we still show that's no longer active.
+  if (event.type === "jobs") {
+    applyActiveJobsSnapshot(event.jobs);
+    return;
+  }
+
+  // Endpoint up/down: the frame carries the full endpoint (opId/port/url/online),
+  // so apply it to the record instead of reading the record back.
+  if (event.type === "endpoint") {
+    if (!deployment.value) return;
+    const dep = deployment.value as { endpoints?: EndpointRec[] };
+    const list = [...(dep.endpoints ?? [])];
+    const idx = list.findIndex(
+      (e) => e.opId === event.opId && String(e.port) === String(event.port),
+    );
+    const next: EndpointRec = {
+      opId: event.opId,
+      port: event.port,
+      url: event.url,
+      online: event.online,
     };
-    allJobsData.value = {
-      ...allJobsData.value,
-      [event.job]: { ...allJobsData.value[event.job], ...event },
-    };
+    if (idx >= 0) list[idx] = { ...list[idx], ...next };
+    else list.push(next);
+    dep.endpoints = list;
+    return;
+  }
+
+  // New event: the frame is the whole record (the list names the event `type`,
+  // the frame names it `event`). Prepend it — the list is newest-first — but
+  // skip any we already hold, since the stream replays existing events on open.
+  if (event.type === "event") {
+    if (!deployment.value) return;
+    const item = {
+      category: event.category,
+      deploymentId: deployment.value.id,
+      type: event.event,
+      message: event.message,
+      tx: event.tx ?? undefined,
+      created_at: event.created_at,
+    } as DeploymentEventItem;
+    const exists = deploymentEventsData.value.some((e) =>
+      item.tx
+        ? (e as { tx?: string }).tx === item.tx
+        : e.created_at === item.created_at &&
+          e.type === item.type &&
+          e.message === item.message,
+    );
+    if (!exists) {
+      deploymentEventsData.value = [item, ...deploymentEventsData.value];
+    }
+    return;
+  }
+
+  // Scheduled task: upsert by id while pending/processing, drop it when done.
+  if (event.type === "task") {
+    const list = [...((tasks.value ?? []) as Array<{ id?: string }>)];
+    const idx = list.findIndex((t) => t.id === event.id);
+    if (event.status === "DONE") {
+      if (idx >= 0) list.splice(idx, 1);
+    } else {
+      const item = {
+        ...(idx >= 0 ? list[idx] : {}),
+        id: event.id,
+        task: event.task,
+        status: event.status,
+        attempts: event.attempts,
+        due_at: event.due_at,
+        job: event.job,
+      };
+      if (idx >= 0) list[idx] = item;
+      else list.push(item);
+    }
+    tasks.value = list as typeof tasks.value;
+    return;
   }
 };
+
+// `active_jobs` (the "up" replica count) is just the number of running jobs —
+// keep the record's field synced to that derived count for the replicas display.
+watch(runningJobsCount, (n) => {
+  if (deployment.value) {
+    (deployment.value as { active_jobs?: number }).active_jobs = n;
+  }
+});
 
 const deploymentStream = useDeploymentStream({
   applyEvent: applyStreamEvent,
   refresh: {
-    deployment: () => loadDeployment(true),
+    // The active list is fully stream-driven now (the jobs snapshot prunes and
+    // job frames add/update in place), so it's no longer read back. Only two
+    // things still need a reconnect refresh: the History tab (server-paginated)
+    // and the open job subpage, whose own polling is disabled under the parent.
     jobs: async () => {
-      const requests = [refreshDeploymentJobs(true)];
+      const requests: Promise<unknown>[] = [];
       if (jobActivityTab.value === "history") requests.push(loadHistory());
-      // The parent stays mounted over its job subroute. The job composable
-      // disables polling there, so keep its separate async-data entry current
-      // from the deployment stream as well.
       const openJob = route.params.jobaddress as string | undefined;
       if (openJob) requests.push(refreshNuxtData(`job-${openJob}`));
-      await Promise.all(requests);
-    },
-    events: async () => {
-      if (activeTab.value === "events") await loadEvents(true);
-    },
-    tasks: async () => {
-      if (activeTab.value === "events") await loadTasks(true);
+      if (requests.length) await Promise.all(requests);
     },
   },
 });
@@ -617,4 +712,74 @@ useHead({
 });
 </script>
 
-<style lang="scss" scoped></style>
+<style lang="scss" scoped>
+/* Even, generous spacing between the section cards (overrides the components'
+   own bottom margins so gap is the single source of spacing). */
+.tab-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 2.25rem;
+}
+
+.tab-pane > * {
+  margin-bottom: 0 !important;
+}
+
+/* Overview: endpoints + jobs on the left, the Activity panel alongside. */
+.overview-cols {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 1.75rem;
+  align-items: start;
+}
+
+.ov-main,
+.ov-side {
+  min-width: 0;
+}
+
+/* Sections inside each column space themselves with their own bottom margins;
+   drop the trailing one so each column ends flush. */
+.ov-main > :deep(:last-child),
+.ov-side > :deep(:last-child) {
+  margin-bottom: 0 !important;
+}
+
+/* Two columns only on wider desktops where the left column stays roomy enough
+   for the job rows and usage strip; small desktops and laptops stack so job
+   activity gets the full width and Activity drops below it. */
+@media screen and (max-width: 1365px) {
+  .overview-cols {
+    grid-template-columns: 1fr;
+    gap: 2.25rem;
+  }
+}
+
+/* A clear soft elevation lifts every section card off the near-white ground. */
+.tab-pane :deep(.dep-card),
+.tab-pane :deep(.ep-card),
+.tab-pane :deep(.da-card),
+.tab-pane :deep(.as-card),
+.tab-pane :deep(.task-card),
+.tab-pane :deep(.event-card),
+.tab-pane :deep(.rev-card) {
+  box-shadow:
+    0 1px 3px rgba($black, 0.06),
+    0 14px 38px -6px rgba($black, 0.14);
+}
+
+/* Shadows read poorly on a dark ground, so there elevation comes from a
+   lighter surface + a crisper hairline instead. */
+html.dark-mode .tab-pane :deep(.dep-card),
+html.dark-mode .tab-pane :deep(.ep-card),
+html.dark-mode .tab-pane :deep(.da-card),
+html.dark-mode .tab-pane :deep(.as-card),
+html.dark-mode .tab-pane :deep(.task-card),
+html.dark-mode .tab-pane :deep(.event-card),
+html.dark-mode .tab-pane :deep(.rev-card) {
+  border-color: rgba($white, 0.1);
+  box-shadow:
+    0 1px 3px rgba($black, 0.4),
+    0 16px 40px -8px rgba($black, 0.6);
+}
+</style>

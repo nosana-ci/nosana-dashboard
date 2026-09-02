@@ -1,6 +1,5 @@
 <template>
   <JsonEditorVue
-    :class="{ 'jse-theme-dark': colorMode.value === 'dark' }"
     :mode="Mode.text"
     :mainMenuBar="false"
     :statusBar="validateJobDefinition || !!validator"
@@ -9,7 +8,7 @@
     :validator="internalValidator"
     v-model="model"
     v-bind="$attrs"
-    class="json-editor"
+    class="json-editor jse-theme-dark"
   />
 </template>
 
@@ -17,8 +16,6 @@
 import { Mode, ValidationSeverity } from 'vanilla-jsoneditor';
 import JsonEditorVue from 'json-editor-vue';
 import 'vanilla-jsoneditor/themes/jse-theme-dark.css';
-
-const colorMode = useColorMode();
 
 interface ValidationError {
   path: (string | number)[];
@@ -141,6 +138,16 @@ defineExpose({
 .jse-repair-button,
 button[class*="repair"],
 .cm-diagnosticAction {
+  display: none !important;
+}
+
+/* No line numbers in the code editor */
+.json-editor .cm-gutters {
+  display: none !important;
+}
+
+/* Hide the "Line / Column" status bar at the bottom */
+.json-editor .jse-status-bar {
   display: none !important;
 }
 </style>

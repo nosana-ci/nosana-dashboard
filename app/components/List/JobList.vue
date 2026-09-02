@@ -552,7 +552,7 @@ const isGHCR = (image: string) => {
 };
 </script>
 
-<style scoped>
+<style scoped lang="scss">
 .address {
   font-family: monospace;
   font-size: 0.9em;
@@ -664,8 +664,8 @@ const isGHCR = (image: string) => {
 }
 
 .button:hover {
-  color: #10e80c !important;
-  border-color: #10e80c !important;
+  color: $secondary !important;
+  border-color: $secondary !important;
 }
 
 .plus-icon {
@@ -677,7 +677,7 @@ const isGHCR = (image: string) => {
 }
 
 .button:hover .plus-icon {
-  fill: #10e80c;
+  fill: $secondary;
 }
 
 .dark-mode .tag img[src*="status/stopped.svg"] {

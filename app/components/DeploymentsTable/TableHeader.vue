@@ -176,7 +176,7 @@ const pageSizeValue = computed({
   },
 });
 </script>
-<style scoped>
+<style scoped lang="scss">
 /* Search + dropdowns styled to match the Create Deployment "Select GPU" toolbar */
 .th-search {
   position: relative;
@@ -215,8 +215,8 @@ const pageSizeValue = computed({
 }
 
 .th-search-input:focus {
-  border-color: #10e80c;
-  box-shadow: 0 0 0 3px rgba(16, 232, 12, 0.15);
+  border-color: $secondary;
+  box-shadow: 0 0 0 3px rgba($secondary, 0.15);
 }
 
 .th-select-control {
@@ -233,8 +233,8 @@ const pageSizeValue = computed({
 }
 
 .th-select-control:focus-within {
-  border-color: #10e80c;
-  box-shadow: 0 0 0 3px rgba(16, 232, 12, 0.15);
+  border-color: $secondary;
+  box-shadow: 0 0 0 3px rgba($secondary, 0.15);
 }
 
 .th-select {
@@ -282,8 +282,8 @@ const pageSizeValue = computed({
 
 .dark-mode .th-search-input:focus,
 .dark-mode .th-select-control:focus-within {
-  border-color: #10e80c;
-  box-shadow: 0 0 0 3px rgba(16, 232, 12, 0.2);
+  border-color: $secondary;
+  box-shadow: 0 0 0 3px rgba($secondary, 0.2);
 }
 
 .dark-mode .th-search-icon,

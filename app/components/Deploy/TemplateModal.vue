@@ -375,7 +375,7 @@ const sections = computed(() => [
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #10e80c 0%, #0aa908 100%);
+  background: linear-gradient(135deg, $secondary 0%, #0aa908 100%);
   color: #05230a;
   font-weight: 700;
   font-size: 1.1rem;

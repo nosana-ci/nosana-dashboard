@@ -35,35 +35,6 @@
         </div>
       </div>
       
-      <!-- Market Type Selection - Replace dropdown with buttons matching simple tab -->
-      <!-- <div class="field">
-        <label class="label has-text-weight-bold has-text-black">Type</label>
-        <div class="control">
-          <div class="checkboxes is-flex">
-            <button 
-              class="button button-filter mr-3"
-              :class="{ 'is-selected is-primary': selectedMarketType === 'all', 'is-outlined': selectedMarketType !== 'all' }"
-              @click="selectedMarketType = 'all'"
-            >
-              All
-            </button>
-            <button 
-              class="button button-filter mr-3"
-              :class="{ 'is-selected is-primary': selectedMarketType === 'premium', 'is-outlined': selectedMarketType !== 'premium' }"
-              @click="selectedMarketType = 'premium'"
-            >
-              Premium
-            </button>
-            <button 
-              class="button button-filter"
-              :class="{ 'is-selected is-primary': selectedMarketType === 'community', 'is-outlined': selectedMarketType !== 'community' }"
-              @click="selectedMarketType = 'community'"
-            >
-              Community
-            </button>
-          </div>
-        </div>
-      </div> -->
       
       <!-- Dynamic Filters -->
       <template v-if="gpuFilters">
@@ -546,7 +517,7 @@ const selectHost = (host: HostInterface) => {
 
     .gpu-box__title,
     .gpu-box__price {
-      color: #00D1B2;
+      color: $secondary;
     }
 
     .gpu-box__specs-row span {
@@ -558,7 +529,7 @@ const selectHost = (host: HostInterface) => {
       background: white;
 
       &::after {
-        background: #00D1B2;
+        background: $secondary;
       }
     }
   }
