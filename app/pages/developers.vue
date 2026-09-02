@@ -96,8 +96,7 @@
 
       <template v-if="isAuthenticated">
         <ApiKeys class="mb-6" />
-        <!-- Temporarily hidden: Nosana Connected Apps (OAuth apps) section -->
-        <!-- <OAuthApps /> -->
+        <OAuthApps />
       </template>
 
       <div v-else class="box signin-prompt has-text-centered p-6">
