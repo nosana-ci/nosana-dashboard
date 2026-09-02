@@ -21,5 +21,4 @@ export default defineNuxtPlugin(() => {
   })(window, document, "script", undefined, undefined, undefined);
 
   (window as any).twq("config", pixelId);
-  console.log("[X Pixel TESTING] base pixel installed");
 });
