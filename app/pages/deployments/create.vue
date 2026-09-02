@@ -227,7 +227,7 @@
               <!-- Credit Mode Actions -->
               <div v-if="isCreditMode">
                 <button
-                  class="button is-secondary is-fullwidth"
+                  class="button is-secondary is-fullwidth is-glow"
                   :disabled="!canCreateDeployment"
                   @click="createDeployment"
                 >
@@ -265,7 +265,7 @@
               <!-- Wallet Mode Actions -->
               <div v-else-if="isWalletMode">
                 <button
-                  class="button is-secondary is-fullwidth"
+                  class="button is-secondary is-fullwidth is-glow"
                   :disabled="!canCreateDeployment"
                   @click="createDeployment"
                 >
@@ -297,7 +297,7 @@
               <!-- No Authentication Actions -->
               <div v-else>
                 <button
-                  class="button is-secondary is-fullwidth"
+                  class="button is-secondary is-fullwidth is-glow"
                   @click="handleLoginClick"
                 >
                   Login or Connect Wallet
@@ -314,77 +314,65 @@
     <!-- README Modal -->
     <div class="modal" :class="{ 'is-active': showReadmeModal }">
       <div class="modal-background" @click="showReadmeModal = false"></div>
-      <div class="modal-card" style="width: 80%; max-width: 960px">
+      <div class="modal-card is-app-modal is-medium">
         <header class="modal-card-head">
-          <div class="modal-card-title is-flex is-align-items-center">
-            <template v-if="loadingTemplates">
-              <span class="icon is-small mr-2">
-                <i class="fas fa-spinner fa-spin"></i>
-              </span>
-              <span>Loading template...</span>
-            </template>
-            <template v-else>
+          <div class="is-flex is-align-items-center is-gap-2" style="min-width: 0">
+            <span class="app-modal-icon">
+              <i v-if="loadingTemplates" class="fas fa-spinner fa-spin"></i>
               <img
-                v-if="selectedTemplate?.icon"
+                v-else-if="selectedTemplate?.icon"
                 :src="selectedTemplate.icon"
-                alt="Template Icon"
-                class="mr-2"
-                style="
-                  height: 24px;
-                  width: 24px;
-                  border-radius: 4px;
-                  object-fit: contain;
-                  flex-shrink: 0;
-                "
+                alt="Template icon"
               />
-              <span>{{ selectedTemplate?.name || "Template" }}</span>
-            </template>
+              <i v-else class="fas fa-book"></i>
+            </span>
+            <div style="min-width: 0">
+              <p class="eyebrow-label is-uppercase has-text-weight-semibold">
+                Documentation
+              </p>
+              <p class="modal-card-title title is-5 mb-0">
+                <template v-if="loadingTemplates">Loading template…</template>
+                <template v-else>{{ selectedTemplate?.name || "Template" }}</template>
+              </p>
+            </div>
           </div>
-          <button
-            class="delete"
-            aria-label="close"
-            @click="showReadmeModal = false"
-          ></button>
+          <button class="delete" aria-label="close" @click="showReadmeModal = false"></button>
         </header>
-        <section
-          class="modal-card-body"
-          style="max-height: 70vh; overflow-y: auto"
-        >
+
+        <section class="modal-card-body">
           <ClientOnly>
             <MarkdownFile
               v-if="readmeContentForModal"
               :raw-markdown="readmeContentForModal"
             />
-            <p v-else class="has-text-grey">
+            <p v-else class="has-text-grey has-text-centered py-6">
               No documentation available for this template.
             </p>
           </ClientOnly>
         </section>
-        <footer
-          class="modal-card-foot"
-          style="justify-content: space-between; align-items: center"
-        >
+
+        <footer class="modal-card-foot">
+          <p
+            v-if="selectedTemplate?.description"
+            class="has-text-grey is-size-7"
+            style="flex: 1; min-width: 0"
+          >
+            {{ selectedTemplate.description }}
+          </p>
           <div class="buttons mb-0">
-            <button class="button is-primary" @click="showReadmeModal = false">
-              Use Template
-            </button>
             <button
-              class="button is-light"
+              class="button"
               @click="
                 showReadmeModal = false;
                 showTemplateModal = true;
               "
             >
-              Change Template
+              Change template
+            </button>
+            <button class="button is-secondary" @click="showReadmeModal = false">
+              Use this template
             </button>
           </div>
-          <p
-            v-if="selectedTemplate?.description"
-            class="has-text-grey is-size-7"
-            style="text-align: right; max-width: 50%"
-          >
-            {{ selectedTemplate.description }}
-          </p>
         </footer>
       </div>
     </div>
@@ -1123,13 +1111,10 @@ watch(
             t.name?.toLowerCase() === templateQuery.toLowerCase(),
         );
         if (directMatch?.jobDefinition) {
+          // Deep link: select the template and land straight on the
+          // configured page — don't pop the README modal.
           selectedTemplate.value = directMatch as Template;
           jobDefinition.value = directMatch.jobDefinition;
-          nextTick(() => {
-            readmeContentForModal.value =
-              (directMatch as Template).readme || undefined;
-            showReadmeModal.value = true;
-          });
           return;
         }
 
@@ -1153,12 +1138,10 @@ watch(
               jobDefinition: variant.jobDefinition,
               selectedVariant: variant,
             };
+            // Deep link: select the variant and land straight on the
+            // configured page — don't pop the README modal.
             selectedTemplate.value = variantTemplate;
             jobDefinition.value = variant.jobDefinition;
-            nextTick(() => {
-              readmeContentForModal.value = variantTemplate.readme || undefined;
-              showReadmeModal.value = true;
-            });
             return;
           }
         }

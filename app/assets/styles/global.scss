@@ -795,11 +795,11 @@
     background-color: $black-bis;
 
     thead th {
-      color: $white;
+      color: $grey-light;
     }
     td,
     th {
-      border-color: $grey-dark;
+      border-color: rgba(255, 255, 255, 0.08);
       color: $white;
 
       strong {
@@ -810,7 +810,9 @@
       tbody {
         tr:not(.is-selected) {
           &:hover {
-            background-color: $black-ter !important;
+            background-color: rgba(16, 232, 12, 0.08) !important;
+            outline: 1px solid $secondary;
+            outline-offset: -1px;
           }
         }
       }
@@ -819,7 +821,7 @@
       tbody {
         tr:not(.is-selected) {
           &:nth-child(even) {
-            background-color: color.adjust($black-ter, $lightness: -3%);
+            background-color: transparent;
           }
         }
       }
@@ -878,10 +880,18 @@
   }
 
   .button:not(.light-mode) {
-    &.is-dark {
-      &.is-outlined {
-        color: $light;
+    &.is-dark:not(.is-outlined) {
+      background-color: $white;
+      color: $black;
+      border-color: transparent;
+
+      &:hover {
+        background-color: $white-ter;
+        color: $black;
       }
+    }
+    &.is-dark.is-outlined {
+      color: $light;
     }
     &.is-text {
       color: $white;
@@ -1650,5 +1660,333 @@ html.dark-mode .modal-card-head {
 
   .z-index-2 {
     z-index: 2;
+  }
+}
+
+/* =========================================================================
+   Developer portal — shared "credentials" design system
+   Consumed by the API-keys + connected-apps components on /developers.
+   Defined once here (namespaced under .dev-portal so it can't leak app-wide)
+   instead of being duplicated across two component scoped styles.
+   ========================================================================= */
+.dev-portal {
+  /* Card wrapping a data table — rounded, hairline border, flush cells */
+  .data-card {
+    border: 1px solid $border;
+    border-radius: 14px;
+    overflow: hidden;
+  }
+
+  .table-container {
+    max-height: 420px;
+    overflow-y: auto;
+  }
+
+  .dev-table {
+    margin-bottom: 0;
+    background: transparent;
+
+    thead th {
+      text-transform: uppercase;
+      font-size: 0.72rem;
+      letter-spacing: 0.04em;
+      font-weight: 600;
+      color: $grey;
+      border-bottom: 1px solid $border;
+      padding: 0.85rem 1.1rem;
+    }
+
+    td {
+      vertical-align: middle;
+      padding: 0.85rem 1.1rem;
+      border-bottom: 1px solid $border;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+  }
+
+  /* Action icon buttons — bordered, quiet until hover */
+  .action-btn {
+    border: 1px solid $border;
+    background: transparent;
+    color: $grey;
+    border-radius: 8px;
+    transition:
+      border-color 0.15s ease,
+      color 0.15s ease;
+
+    &:hover {
+      border-color: $secondary;
+      color: $secondary;
+    }
+
+    &.is-danger-action:hover {
+      border-color: $danger;
+      color: $danger;
+    }
+  }
+
+  /* Empty state — icon chip + copy */
+  .empty-card {
+    border: 1px solid $border;
+    border-radius: 14px;
+  }
+
+  .empty-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    background: rgba(16, 232, 12, 0.1);
+    color: $secondary;
+    margin-bottom: 1rem;
+  }
+
+  .empty-card .subtitle {
+    color: $grey;
+    max-width: 30rem;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* App logo chip (connected-apps table) */
+  .oauth-app-logo {
+    width: 30px;
+    height: 30px;
+    border-radius: 7px;
+    object-fit: cover;
+  }
+
+  /* Slightly smaller code cells (font comes from Bulma's is-family-monospace) */
+  .is-family-monospace {
+    font-size: 0.85rem;
+  }
+
+  .modal-card {
+    max-width: 600px;
+    width: 90%;
+  }
+}
+
+/* Dark mode: hairlines, muted headers, and a high-contrast white primary button */
+.dark-mode .dev-portal {
+  .data-card,
+  .empty-card {
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .dev-table thead th {
+    color: $grey-light;
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .dev-table td {
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .action-btn {
+    border-color: rgba(255, 255, 255, 0.12);
+    color: $grey-light;
+
+    &:hover {
+      border-color: $secondary;
+      color: $secondary;
+    }
+  }
+
+  .empty-card .subtitle {
+    color: $grey-light;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .dev-portal .table-container {
+    overflow-x: auto;
+  }
+
+  .dev-portal .dev-table {
+    font-size: 0.85rem;
+  }
+
+  .dev-portal .dev-table td,
+  .dev-portal .dev-table thead th {
+    padding: 0.6rem 0.7rem;
+  }
+}
+
+/* =========================================================================
+   App-wide data tables — aligned to the developer-portal table design:
+   clean uppercase headers, hairline row dividers, roomy cells, and no zebra
+   striping. Applies to the table internals only; wrapping a table in a
+   rounded card stays per-table (e.g. the .data-card used on /developers) so
+   horizontal scrolling on wide tables keeps working.
+   ========================================================================= */
+.table {
+  thead th {
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+    color: $grey;
+    border-bottom: 1px solid $border;
+    padding: 0.85rem 1.1rem;
+    vertical-align: middle;
+  }
+
+  td {
+    border-bottom: 1px solid $border;
+    padding: 0.85rem 1.1rem;
+    vertical-align: middle;
+  }
+
+  /* flat surface — the hairline dividers do the separating */
+  &.is-striped tbody tr:not(.is-selected):nth-child(even) {
+    background-color: transparent;
+  }
+
+  /* hoverable rows get the brand green outline, matching cards & buttons */
+  &.is-hoverable tbody tr:not(.is-selected):hover {
+    background-color: rgba(16, 232, 12, 0.05);
+    outline: 1px solid $secondary;
+    outline-offset: -1px;
+  }
+
+  tbody tr:last-child td {
+    border-bottom: 0;
+  }
+}
+
+// ============================================================
+// App dialogs — shared refined modal shell + accent icon chip.
+// Built on Bulma's modal-card so head/body/foot, scrolling and
+// dark-mode theming come for free; this only refines the look.
+// Used by the deploy template gallery, README, and job editor.
+// ============================================================
+.modal-card.is-app-modal {
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 40px 80px -30px rgba($black, 0.35);
+
+  &.is-medium {
+    width: 900px;
+  }
+  &.is-large {
+    width: 1100px;
+  }
+  &.is-huge {
+    width: 1400px;
+  }
+
+  .modal-card-head {
+    align-items: flex-start;
+    background-color: $box-background-color;
+    border-bottom: 1px solid $grey-lightest;
+    border-radius: 0;
+  }
+
+  .modal-card-body {
+    background-color: $box-background-color;
+  }
+
+  .modal-card-foot {
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    background-color: $box-background-color;
+    border-top: 1px solid $grey-lightest;
+    border-radius: 0;
+  }
+}
+
+.dark-mode .modal-card.is-app-modal {
+  border: 1px solid #2c2c2c;
+
+  .modal-card-head,
+  .modal-card-body,
+  .modal-card-foot {
+    background-color: #161616;
+    border-color: #262626;
+  }
+
+  // Plain Bulma buttons don't get themed for dark surfaces, so give the
+  // neutral ones (Cancel, Change template, inactive filter pills) a subtle
+  // on-dark treatment. Coloured buttons (is-secondary/is-dark/…) keep theirs.
+  .button:not(.is-secondary):not(.is-dark):not(.is-primary):not(.is-danger):not(
+      .is-outlined
+    ):not(.is-glow) {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.16);
+    color: #e4e4e4;
+  }
+}
+
+// Green accent chip for dialog headers / the deploy banner avatar.
+.app-modal-icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
+  background: rgba($secondary, 0.12);
+  color: $secondary;
+  overflow: hidden;
+
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 7px;
+    border-radius: inherit;
+  }
+}
+
+// Small monospace eyebrow label ("// section") used across deploy UI.
+// The extra .dark-mode selector out-specifies the global `.dark-mode p`
+// white override so the eyebrow keeps its green accent in dark mode.
+.eyebrow-label,
+.dark-mode .eyebrow-label {
+  font-family: $family-monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  color: $secondary;
+}
+
+// Subtle green glow for the primary CTA (e.g. Create Deployment) — a static
+// soft shadow, no animation. Pair with `is-secondary` so it inherits the green
+// and skips the neutral button hover overrides above.
+.button.is-glow {
+  background-color: $secondary;
+  border-color: transparent;
+  color: #05230a;
+  font-weight: $weight-semibold;
+  box-shadow: 0 8px 22px -10px rgba($secondary, 0.7);
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+
+  &:hover,
+  &:focus,
+  &:active {
+    background-color: $secondary;
+    color: #05230a;
+    transform: translateY(-1px);
+    box-shadow: 0 12px 28px -10px rgba($secondary, 0.85);
+  }
+
+  &:disabled,
+  &[disabled] {
+    box-shadow: none;
   }
 }

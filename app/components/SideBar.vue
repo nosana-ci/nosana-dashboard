@@ -44,19 +44,19 @@
             <span>Account</span>
           </nuxt-link>
         </li>
-        <li v-if="canUseBilling">
+        <li>
           <nuxt-link
-            to="/account/billing"
+            to="/developers"
             :active-class="isLoggedOut ? '' : 'is-active'"
             :class="{ 'auth-disabled-link': isLoggedOut }"
             :aria-disabled="isLoggedOut"
-            @click.capture="handleSidebarNav($event, '/account/billing', true)"
+            @click.capture="handleSidebarNav($event, '/developers', true)"
             style="padding-left: 1.1rem"
           >
             <span class="icon is-small mr-4">
-              <CoinsIcon />
+              <CodeIcon />
             </span>
-            <span>Billing</span>
+            <span>Developers</span>
           </nuxt-link>
         </li>
         <li>
@@ -212,7 +212,7 @@ import ListIcon from "@/assets/img/icons/sidebar/list.svg?component";
 import ExplorerIcon from "@/assets/img/icons/sidebar/explorer.svg?component";
 import UserIcon from "@/assets/img/icons/sidebar/user.svg?component";
 import SupportIcon from "@/assets/img/icons/sidebar/support.svg?component";
-import CoinsIcon from "@/assets/img/icons/sidebar/coins.svg?component";
+import CodeIcon from "@/assets/img/icons/sidebar/code.svg?component";
 import { useWallet } from "@nosana/solana-vue";
 import { computed, onMounted, watch, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
@@ -239,7 +239,6 @@ const router = useRouter();
 const isLoggedOut = computed(
   () => !isAuthenticated.value && !connected.value && !isLoading.value,
 );
-const canUseBilling = computed(() => isAuthenticated.value);
 
 const isPublicRoute = (path: string) =>
   path === "/" ||

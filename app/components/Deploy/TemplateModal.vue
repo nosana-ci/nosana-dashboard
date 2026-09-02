@@ -1,161 +1,102 @@
 <template>
   <div class="modal" :class="{ 'is-active': showModal }">
     <div class="modal-background" @click="closeModal"></div>
-    <div class="modal-card" style="width: 95vw; max-width: 1600px; height: 90vh;">
-      <header class="modal-card-head">
-        <div class="modal-card-title">Choose Template</div>
-        <button class="delete" aria-label="close" @click="closeModal"></button>
-      </header>
-      <section class="modal-card-body" style="height: calc(90vh - 120px); overflow-y: auto; padding: 1.5rem;">
-        <div class="flex mb-4">
-          <div class="field is-flex category-filters">
-            <div class="field">
-              <div class="control">
-                <div class="select" style="width: 120px;">
-                  <select v-model="selectedCategory">
-                    <option :value="null">All</option>
-                    <option
-                      v-for="category in COMBINED_CATEGORIES"
-                      :key="category"
-                      :value="category"
-                    >
-                      {{ category }}
-                    </option>
-                  </select>
-                </div>
-              </div>
-            </div>
+    <div class="modal-card is-app-modal is-huge">
+      <header class="modal-card-head is-flex-direction-column is-align-items-stretch">
+        <div class="is-flex is-align-items-flex-start is-justify-content-space-between is-gap-3">
+          <div>
+            <p class="eyebrow-label is-uppercase has-text-weight-semibold">
+              Template gallery
+            </p>
+            <p class="modal-card-title title is-4 mb-0">Deploy a ready-made stack</p>
+          </div>
+          <button class="delete" aria-label="close" @click="closeModal"></button>
+        </div>
 
-            <div class="field ml-4">
-              <div class="control has-icons-left">
-                <input
-                  class="input"
-                  type="text"
-                  v-model="search"
-                  placeholder="Search"
-                />
-                <span class="icon is-small is-left">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" fill="currentColor"/>
-                  </svg>
-                </span>
-              </div>
-            </div>
+        <div class="is-flex is-align-items-center is-flex-wrap-wrap is-gap-2 mt-4">
+          <p class="control has-icons-left tm-search">
+            <input
+              class="input"
+              type="text"
+              v-model="search"
+              placeholder="Search templates"
+            />
+            <span class="icon is-small is-left">
+              <i class="fas fa-search"></i>
+            </span>
+          </p>
+          <div class="is-flex is-align-items-center is-flex-wrap-wrap is-gap-1">
+            <button
+              type="button"
+              class="button is-small is-rounded"
+              :class="{ 'is-dark': selectedCategory === null }"
+              @click="selectedCategory = null"
+            >
+              All
+            </button>
+            <button
+              v-for="category in COMBINED_CATEGORIES"
+              :key="category"
+              type="button"
+              class="button is-small is-rounded"
+              :class="{ 'is-dark': selectedCategory === category }"
+              @click="selectedCategory = category"
+            >
+              {{ category }}
+            </button>
           </div>
         </div>
-        <!-- Official Templates Section -->
-        <div v-if="officialTemplates.length > 0" class="template-section">
-          <h3 class="section-title">Official</h3>
-          <div class="templates-grid">
-            <div
-              v-for="template in officialTemplates"
-              :key="template.id"
-              class="template-card"
-              :class="{ 'has-variants': template.variants && template.variants.length > 0 }"
-              @click="handleTemplateClick(template)"
-            >
-              <div class="template-card-inner">
-                <div class="template-header">
-                  <div class="template-icon">
-                    <img 
-                      v-if="template.icon || template.avatar_url" 
-                      :src="template.icon || template.avatar_url" 
+      </header>
+
+      <section class="modal-card-body">
+        <template v-for="group in sections" :key="group.title">
+          <div v-if="group.items.length > 0" class="mb-6">
+            <div class="is-flex is-align-items-center is-gap-2 mb-4">
+              <h3 class="title is-6 mb-0">{{ group.title }}</h3>
+              <span class="tag is-rounded">{{ group.items.length }}</span>
+            </div>
+            <div class="tm-grid">
+              <article
+                v-for="template in group.items"
+                :key="template.id"
+                class="box tm-tile"
+                @click="handleTemplateClick(template)"
+              >
+                <div class="is-flex is-align-items-flex-start is-gap-3">
+                  <span class="tm-tile-icon">
+                    <img
+                      v-if="template.icon || template.avatar_url"
+                      :src="template.icon || template.avatar_url"
                       :alt="template.name"
                     />
-                    <div v-else class="template-icon-placeholder">
-                      <span>{{ template.name.charAt(0).toUpperCase() }}</span>
-                    </div>
-                  </div>
-                  <div class="template-info">
-                    <h3 class="template-title">{{ template.name }}</h3>
-                    <p class="template-id">{{ getSelectedVariantDockerImage(template) }}</p>
-                  </div>
-                  
-                  <!-- Variant selector in top right -->
-                  <div v-if="template.variants && template.variants.length > 0" class="template-variants-header" @click.stop>
-                    <div class="variant-select">
-                      <select 
-                        :value="selectedVariants[template.id] || template.variants[0].variant_id"
-                        @change="updateSelectedVariant(template.id, ($event.target as HTMLSelectElement).value)"
-                      >
-                        <option 
-                          v-for="variant in template.variants" 
-                          :key="variant.variant_id"
-                          :value="variant.variant_id"
-                        >
-                          {{ variant.name }}
-                        </option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-                
-                <!-- Tags only -->
-                <div class="template-footer">
-                  <div class="template-tags">
-                    <span
-                      v-for="cat in getCategoryArray(template.category).filter((c) => !['Featured', 'New', 'Official'].includes(c))"
-                      :key="cat"
-                      class="template-tag"
-                    >
-                      {{ cat }}
+                    <span v-else class="tm-tile-icon-fallback">
+                      {{ template.name.charAt(0).toUpperCase() }}
                     </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <!-- Community Templates Section -->
-        <div v-if="communityTemplates.length > 0" class="template-section">
-          <h3 class="section-title">Community</h3>
-          <div class="templates-grid">
-            <div
-              v-for="template in communityTemplates"
-              :key="template.id"
-              class="template-card"
-              :class="{ 'has-variants': template.variants && template.variants.length > 0 }"
-              @click="handleTemplateClick(template)"
-            >
-              <div class="template-card-inner">
-                <div class="template-header">
-                  <div class="template-icon">
-                    <img 
-                      v-if="template.icon || template.avatar_url" 
-                      :src="template.icon || template.avatar_url" 
-                      :alt="template.name"
-                    />
-                    <div v-else class="template-icon-placeholder">
-                      <span>{{ template.name.charAt(0).toUpperCase() }}</span>
-                    </div>
-                  </div>
-                  <div class="template-info">
-                    <h3 class="template-title">{{ template.name }}</h3>
-                    <p class="template-id">{{ getSelectedVariantDockerImage(template) }}</p>
-                  </div>
-                </div>
-                
-                
-                <div class="template-tags">
-                  <span
-                    v-for="cat in getCategoryArray(template.category).filter((c) => !['Featured', 'New', 'Official', 'Community'].includes(c))"
-                    :key="cat"
-                    class="template-tag"
-                  >
-                    {{ cat }}
                   </span>
+                  <div class="is-flex-grow-1" style="min-width: 0">
+                    <p class="tm-tile-name" :title="template.name">{{ template.name }}</p>
+                    <p class="tm-tile-image has-text-grey is-family-monospace">
+                      {{ getSelectedVariantDockerImage(template) }}
+                    </p>
+                  </div>
                 </div>
-                
-                <!-- Variant selector for multi-variant templates -->
-                <div v-if="template.variants && template.variants.length > 0" class="template-variants" @click.stop>
-                  <div class="variant-select">
-                    <select 
+
+                <p v-if="template.description" class="tm-tile-desc has-text-grey">
+                  {{ template.description }}
+                </p>
+
+                <div class="tm-tile-foot">
+                  <div
+                    v-if="template.variants && template.variants.length > 0"
+                    class="select is-small is-fullwidth tm-variant mb-3"
+                    @click.stop
+                  >
+                    <select
                       :value="selectedVariants[template.id] || template.variants[0].variant_id"
                       @change="updateSelectedVariant(template.id, ($event.target as HTMLSelectElement).value)"
                     >
-                      <option 
-                        v-for="variant in template.variants" 
+                      <option
+                        v-for="variant in template.variants"
                         :key="variant.variant_id"
                         :value="variant.variant_id"
                       >
@@ -163,10 +104,36 @@
                       </option>
                     </select>
                   </div>
+
+                  <div class="is-flex is-align-items-center is-justify-content-space-between is-gap-2">
+                    <div class="tm-tags">
+                      <span
+                        v-for="cat in displayTags(template)"
+                        :key="cat"
+                        class="tag is-rounded"
+                      >
+                        {{ cat }}
+                      </span>
+                    </div>
+                    <span class="tm-tile-cta">
+                      Use template
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M5 12h14M13 6l6 6-6 6" />
+                      </svg>
+                    </span>
+                  </div>
                 </div>
-              </div>
+              </article>
             </div>
           </div>
+        </template>
+
+        <div
+          v-if="officialTemplates.length === 0 && communityTemplates.length === 0"
+          class="has-text-centered py-6"
+        >
+          <p class="title is-6 mb-1">No templates match “{{ search }}”.</p>
+          <p class="has-text-grey">Try a different search or clear the filters.</p>
         </div>
       </section>
     </div>
@@ -244,19 +211,20 @@ const selectTemplateVariant = (template: Template, variantId: string) => {
   }
 };
 
-const getSelectedVariantDescription = (template: Template): string | null => {
-  if (!template.variants) return null;
-  const selectedVariantId = selectedVariants.value[template.id] || template.variants[0].variant_id;
-  const variant = template.variants.find(v => v.variant_id === selectedVariantId);
-  return variant?.description || null;
-};
-
 const getCategoryArray = (category: string | string[] | undefined): string[] => {
   if (!category) return [];
   if (Array.isArray(category)) {
     return category.map((cat) => (cat === "Web UI" ? "Website" : cat));
   }
   return category.split("|").map((cat) => (cat === "Web UI" ? "Website" : cat));
+};
+
+// Category badges shown on a card — drop the internal grouping flags and
+// cap the count so every card's tag row stays a single tidy line.
+const displayTags = (template: Template): string[] => {
+  return getCategoryArray(template.category)
+    .filter((c) => !["Featured", "New", "Official", "Community"].includes(c))
+    .slice(0, 3);
 };
 
 const getTemplateImage = (template: Template): string | null => {
@@ -271,10 +239,6 @@ const getTemplateImage = (template: Template): string | null => {
     console.warn("Could not extract image from template", e);
   }
   return null;
-};
-
-const getTemplateId = (template: Template): string => {
-  return getTemplateImage(template) || template.id;
 };
 
 const getSelectedVariantDockerImage = (template: Template): string => {
@@ -293,14 +257,14 @@ const getSelectedVariantDockerImage = (template: Template): string => {
     }
   }
   // Fallback to original logic for single templates
-  return getTemplateImage(template) || template.id;
+  return getTemplateImage(template) || String(template.id);
 };
 
 const filteredTemplates = computed(() => {
   if (!props.templates) return [];
 
   let templatesList = props.templates;
-  
+
   // Filter by search term
   if (search.value) {
     const searchTerm = search.value.toLowerCase();
@@ -344,313 +308,182 @@ const communityTemplates = computed(() => {
     return !categoryArray.includes('Official');
   });
 });
+
+const sections = computed(() => [
+  { title: "Official", items: officialTemplates.value },
+  { title: "Community", items: communityTemplates.value },
+]);
 </script>
 
 <style lang="scss" scoped>
+.tm-search {
+  flex: 1 1 16rem;
+  min-width: 0;
+  max-width: 24rem;
+  margin-bottom: 0;
+}
 
-.new-badge {
-  position: absolute;
-  top: -0.35rem;
-  left: -0.55rem;
-  background: black;
-  color: white;
-  padding: 0.15rem 0.5rem;
-  border-radius: 0.75rem;
-  font-size: 0.65rem;
-  font-weight: bold;
-  text-transform: uppercase;
-  z-index: 1;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+.tm-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+/* Tile = Bulma .box + interaction; every slot is fixed so cards line up. */
+.tm-tile {
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  padding: 1.25rem;
+  border: 1px solid $border;
+  box-shadow: none;
+  transition:
+    transform 0.16s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+
+  &:hover {
+    transform: translateY(-3px);
+    border-color: $secondary;
+    box-shadow: 0 16px 34px -20px rgba($secondary, 0.55);
+  }
+}
+
+.tm-tile-icon {
+  flex-shrink: 0;
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  overflow: hidden;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  line-height: 1;
-  width: fit-content;
-  height: fit-content;
-  letter-spacing: 0.02em;
-}
-
-.category-filters {
-  .checkbox {
-    cursor: pointer;
-    user-select: none;
-
-    &:hover {
-      color: #3273dc;
-    }
-  }
-  
-  .select::after {
-    border-color: #888 !important;
-  }
-}
-
-/* Template sections */
-.template-section {
-  margin-bottom: 2rem;
-  
-  &:last-child {
-    margin-bottom: 0;
-  }
-}
-
-.section-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #2c3e50;
-  margin: 0 0 1rem 0;
-  padding-bottom: 0.5rem;
-  border-bottom: 2px solid #e0e0e0;
-}
-
-/* New template grid layout */
-.templates-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-  gap: 1.25rem;
-  padding: 0;
-}
-
-.template-card {
-  background: #f5f5f5;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 1.25rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  min-height: 120px;
-  display: flex;
-  flex-direction: column;
-
-  &:hover {
-    border-color: $secondary;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba($secondary, 0.15);
-  }
-
-  &.has-variants {
-    min-height: 120px;
-  }
-}
-
-.template-card-inner {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  gap: 0.4rem;
-}
-
-.template-header {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-  justify-content: space-between;
-}
-
-.template-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 6px;
-  flex-shrink: 0;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #fff;
-  border: 1px solid #e0e0e0;
+  background: $white-bis;
+  border: 1px solid $border;
 
   img {
     width: 100%;
     height: 100%;
     object-fit: contain;
+    padding: 6px;
   }
 }
 
-.template-icon-placeholder {
+.tm-tile-icon-fallback {
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
-  font-weight: 600;
-  font-size: 18px;
-}
-
-.template-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.template-title {
+  background: linear-gradient(135deg, #10e80c 0%, #0aa908 100%);
+  color: #05230a;
+  font-weight: 700;
   font-size: 1.1rem;
-  font-weight: 600;
-  color: #2c3e50;
-  margin: 0 0 0.25rem 0;
-  line-height: 1.3;
 }
 
-.template-id {
-  font-size: 0.85rem;
-  color: #7a7a7a;
-  margin: 0;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+/* one-line name + image so the header block is a fixed height everywhere */
+.tm-tile-name {
+  font-family: $title-family;
+  font-weight: 600;
+  font-size: 1rem;
+  line-height: 1.3;
+  color: $text;
+  margin-bottom: 0.15rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-
-.template-footer {
-  min-height: 32px;
-  display: flex;
-  align-items: center;
-}
-
-.template-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.375rem;
-  flex: 1;
-  align-items: center;
-}
-
-.template-tag {
-  background: #ffffff;
-  color: #4a4a4a;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  border: 1px solid #dbdbdb;
+.tm-tile-image {
+  font-size: 0.72rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
-  flex-shrink: 0;
+  margin-bottom: 0;
 }
 
-.template-variants {
-  flex-shrink: 0;
-}
-
-.template-variants-header {
-  flex-shrink: 0;
-  margin-left: auto;
-}
-
-.variant-select {
-  flex-shrink: 0;
-  
-  select {
-    min-width: 120px;
-    padding: 0.4rem 0.5rem;
-    border: 1px solid #dbdbdb;
-    border-radius: 4px;
-    font-size: 0.85rem;
-    background: white;
-    color: #4a4a4a;
-    
-    &:focus {
-      border-color: #b5b5b5;
-      outline: none;
-      box-shadow: 0 0 0 2px rgba(219, 219, 219, 0.2);
-    }
-  }
-}
-
-
-.dark-mode {
-  .section-title {
-    color: #f0f0f0;
-    border-color: #404040;
-  }
-  
-  .template-card {
-    background: #2d2d2d;
-    border-color: #404040;
-    
-    &:hover {
-      box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1);
-    }
-  }
-  
-  .template-title {
-    color: #f0f0f0;
-  }
-  
-  .template-id {
-    color: #a0a0a0;
-  }
-  
-  
-  .template-icon {
-    background: #1e1e1e;
-    border-color: #404040;
-  }
-  
-  .template-tag {
-    background: #2d2d2d;
-    color: #f5f5f5;
-    border-color: #5a5a5a;
-  }
-  
-  .template-variants {
-    border-color: #404040;
-  }
-  
-  .variant-select select {
-    background: #1e1e1e;
-    border-color: #5a5a5a;
-    color: #f5f5f5;
-    
-    &:focus {
-      border-color: #7a7a7a;
-      box-shadow: 0 0 0 2px rgba(90, 90, 90, 0.2);
-    }
-  }
-}
-
-/* Modal scroll fix - ensure modals can scroll when body is locked */
-.modal.is-active {
+/* clamp descriptions to two lines when present */
+.tm-tile-desc {
+  margin: 0.9rem 0 0;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
-.modal.is-active .modal-card-body {
-  overflow-y: auto !important;
+.tm-tile-foot {
+  margin-top: auto;
+  padding-top: 0.9rem;
+  border-top: 1px solid $border;
 }
 
+.tm-variant {
+  width: 100%;
+}
 
-/* Responsive styles */
+.tm-tags {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.35rem;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.tm-tile-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: $grey-light;
+  transition: color 0.2s ease;
+
+  svg {
+    width: 15px;
+    height: 15px;
+    transition: transform 0.2s ease;
+  }
+}
+
+.tm-tile:hover .tm-tile-cta {
+  color: #0aa908;
+
+  svg {
+    transform: translateX(3px);
+  }
+}
+
+/* dark mode: lift tiles above the modal body, keep dividers subtle */
+.dark-mode .tm-tile {
+  background-color: #1c1c1c;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.dark-mode .tm-tile-icon {
+  background: #121212;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.dark-mode .tm-tile-name {
+  color: $white;
+}
+
+.dark-mode .tm-tile-foot {
+  border-top-color: rgba(255, 255, 255, 0.08);
+}
+
 @media screen and (max-width: 768px) {
-  .category-filters {
-    flex-direction: column;
-    width: 100%;
-    
-    .field.ml-4 {
-      margin-left: 0 !important;
-      margin-top: 0.75rem;
-      width: 100%;
-    }
-    
-    .field {
-      width: 100%;
-    }
-  }
-  
-  .templates-grid {
-    grid-template-columns: repeat(auto-fill, minmax(100%, 1fr));
-    gap: 0.75rem;
-  }
-  
-  .section-title {
-    font-size: 1.1rem;
-  }
-  
-  .template-card {
-    min-height: 120px;
-    
-    &.has-variants {
-      min-height: 120px;
-    }
+  .tm-grid {
+    grid-template-columns: 1fr;
   }
 }
-</style> 
+
+@media (prefers-reduced-motion: reduce) {
+  .tm-tile:hover {
+    transform: none;
+  }
+}
+</style>

@@ -68,106 +68,165 @@
     <!-- Profile Section -->
     <div
       v-if="(isGoogleAuthenticated || connected) && !hideButtons"
-      class="profile-dropdown"
-      :class="{ 'sticky-profile': $route.path === '/deploy' }"
+      class="dropdown is-right profile-dropdown"
+      :class="{
+        'is-active': showUserProfileDropdown,
+        'sticky-profile': $route.path === '/deploy',
+      }"
     >
-      <div class="profile-button" @click="toggleUserProfileDropdown">
-        <!-- Google Auth User -->
-        <template v-if="isGoogleAuthenticated">
-          <span class="profile-balance"
-            >${{ getCreditBalance().toFixed(2) }}</span
-          >
-          <div class="profile-avatar auth-avatar">
-            <UserIcon class="auth-icon has-text-grey" />
-          </div>
-        </template>
-        <!-- Wallet User -->
-        <template v-else-if="connected && wallet">
-          <div class="profile-avatar wallet-avatar">
-            <img
-              v-if="wallet.icon"
-              :src="wallet.icon"
-              :alt="wallet.name + ' icon'"
-              class="wallet-icon"
-            />
-            <span v-else>W</span>
-          </div>
-          <div class="profile-info">
-            <span class="profile-name">{{ getUserName() }}</span>
-            <span class="profile-balance"
-              >${{ vaultBalanceUSD.toFixed(2) }}</span
-            >
-          </div>
-        </template>
-        <svg
-          class="dropdown-arrow"
-          :class="{ 'is-flipped': showUserProfileDropdown }"
-          width="12"
-          height="12"
-          viewBox="0 0 12 12"
-          fill="none"
+      <div class="dropdown-trigger">
+        <div
+          class="profile-button"
+          :class="{ 'is-open': showUserProfileDropdown }"
+          role="button"
+          tabindex="0"
+          aria-haspopup="true"
+          aria-controls="profile-dropdown-menu"
+          @click="toggleUserProfileDropdown"
+          @keydown.enter.prevent="toggleUserProfileDropdown"
+          @keydown.space.prevent="toggleUserProfileDropdown"
         >
-          <path
-            d="M7.5 3L4.5 6L7.5 9"
-            stroke="currentColor"
-            stroke-width="1.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-        </svg>
+          <!-- Google Auth User -->
+          <template v-if="isGoogleAuthenticated">
+            <span class="profile-balance"
+              >${{ getCreditBalance().toFixed(2) }}</span
+            >
+            <div class="profile-avatar auth-avatar">
+              <UserIcon class="auth-icon has-text-grey" />
+            </div>
+          </template>
+          <!-- Wallet User -->
+          <template v-else-if="connected && wallet">
+            <div class="profile-avatar wallet-avatar">
+              <img
+                v-if="wallet.icon"
+                :src="wallet.icon"
+                :alt="wallet.name + ' icon'"
+                class="wallet-icon"
+              />
+              <span v-else>W</span>
+            </div>
+            <div class="profile-info">
+              <span class="profile-name">{{ getUserName() }}</span>
+              <span class="profile-balance"
+                >${{ vaultBalanceUSD.toFixed(2) }}</span
+              >
+            </div>
+          </template>
+          <svg
+            class="dropdown-arrow"
+            :class="{ 'is-flipped': showUserProfileDropdown }"
+            width="12"
+            height="12"
+            viewBox="0 0 12 12"
+            fill="none"
+          >
+            <path
+              d="M3 4.5L6 7.5L9 4.5"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </div>
       </div>
 
-      <div v-if="showUserProfileDropdown" class="dropdown-menu-simple">
-        <!-- Account button for credit users -->
-        <button
-          v-if="isGoogleAuthenticated"
-          class="dropdown-item-simple"
-          @click.stop="goToAccount"
-        >
-          <span class="dropdown-item-text">{{ getUserName() }}</span>
-          <UserIcon class="dropdown-icon" />
-        </button>
-        <button
-          v-if="isGoogleAuthenticated"
-          class="dropdown-item-simple"
-          @click.stop="goToBilling"
-        >
-          <WalletIcon class="dropdown-icon" />
-          Billing
-        </button>
-        <!-- Priority Fee Settings for wallet users -->
-        <button
-          v-else
-          class="dropdown-item-simple"
-          @click.stop="openPriorityFeeSettings"
-        >
-          <SettingsIcon class="dropdown-icon" />
-          Prio-fee
-        </button>
-        <hr class="dropdown-divider" />
-        <div class="dropdown-theme-toggle">
-          <button
-            class="theme-toggle-btn"
-            :class="{ 'is-active': $colorMode.value === 'light' }"
-            @click.stop="useColorMode().preference = 'light'"
-            title="Light Mode"
-          >
-            <SunIcon class="dropdown-icon" />
-          </button>
-          <button
-            class="theme-toggle-btn"
-            :class="{ 'is-active': $colorMode.value === 'dark' }"
-            @click.stop="useColorMode().preference = 'dark'"
-            title="Dark Mode"
-          >
-            <MoonIcon class="dropdown-icon" />
+      <div id="profile-dropdown-menu" class="dropdown-menu" role="menu">
+        <div class="dropdown-content">
+          <!-- Identity header -->
+          <div class="dropdown-header">
+            <div class="dropdown-header-avatar">
+              <img
+                v-if="connected && wallet && wallet.icon"
+                :src="wallet.icon"
+                :alt="wallet.name + ' icon'"
+                class="wallet-icon"
+              />
+              <UserIcon v-else class="auth-icon" />
+            </div>
+            <div class="dropdown-header-info">
+              <span class="dropdown-header-name">{{ getUserName() }}</span>
+              <span class="dropdown-header-sub">{{ identitySubline }}</span>
+            </div>
+          </div>
+
+          <hr class="dropdown-divider" />
+
+          <!-- Account links -->
+          <div class="dropdown-section">
+            <button
+              class="dropdown-item"
+              @click.stop="goTo('/account')"
+            >
+              <UserIcon class="dropdown-icon" />
+              <span class="dropdown-item-text">Account</span>
+            </button>
+            <button
+              v-if="isGoogleAuthenticated"
+              class="dropdown-item"
+              @click.stop="goTo('/account/billing')"
+            >
+              <WalletIcon class="dropdown-icon" />
+              <span class="dropdown-item-text">Billing</span>
+            </button>
+            <button
+              class="dropdown-item"
+              @click.stop="goTo('/developers')"
+            >
+              <CodeIcon class="dropdown-icon" />
+              <span class="dropdown-item-text">Developers</span>
+            </button>
+            <button
+              class="dropdown-item"
+              @click.stop="goTo('/support')"
+            >
+              <SupportIcon class="dropdown-icon" />
+              <span class="dropdown-item-text">Help &amp; Support</span>
+            </button>
+            <!-- Priority fee for wallet users -->
+            <button
+              v-if="!isGoogleAuthenticated"
+              class="dropdown-item"
+              @click.stop="openPriorityFeeSettings"
+            >
+              <SettingsIcon class="dropdown-icon" />
+              <span class="dropdown-item-text">Priority fee</span>
+            </button>
+          </div>
+
+          <hr class="dropdown-divider" />
+
+          <!-- Theme -->
+          <div class="dropdown-theme-row">
+            <span class="dropdown-theme-label">Theme</span>
+            <div class="dropdown-theme-toggle">
+              <button
+                class="theme-toggle-btn"
+                :class="{ 'is-active': $colorMode.value === 'light' }"
+                @click.stop="useColorMode().preference = 'light'"
+                title="Light Mode"
+              >
+                <SunIcon class="dropdown-icon" />
+              </button>
+              <button
+                class="theme-toggle-btn"
+                :class="{ 'is-active': $colorMode.value === 'dark' }"
+                @click.stop="useColorMode().preference = 'dark'"
+                title="Dark Mode"
+              >
+                <MoonIcon class="dropdown-icon" />
+              </button>
+            </div>
+          </div>
+
+          <hr class="dropdown-divider" />
+
+          <button class="dropdown-item logout-item" @click.stop="logout">
+            <LogoutIcon class="dropdown-icon" />
+            <span class="dropdown-item-text">Log out</span>
           </button>
         </div>
-        <hr class="dropdown-divider" />
-        <button class="dropdown-item-simple logout-item" @click.stop="logout">
-          <LogoutIcon class="dropdown-icon" />
-          Log out
-        </button>
       </div>
     </div>
   </div>
@@ -179,9 +238,11 @@ import GoogleIcon from "@/assets/img/icons/google.svg?component";
 import UserIcon from "@/assets/img/icons/sidebar/user.svg?component";
 import SettingsIcon from "@/assets/img/icons/settings.svg?component";
 import LogoutIcon from "@/assets/img/icons/logout.svg?component";
+import WalletIcon from "@/assets/img/icons/wallet.svg?component";
+import CodeIcon from "@/assets/img/icons/sidebar/code.svg?component";
+import SupportIcon from "@/assets/img/icons/sidebar/support.svg?component";
 import SunIcon from "@/assets/img/icons/sun.svg?component";
 import MoonIcon from "@/assets/img/icons/moon.svg?component";
-import WalletIcon from "@/assets/img/icons/wallet.svg?component";
 import { useRoute, useRouter } from "vue-router";
 
 const { nosana, prioFee } = useKit();
@@ -220,14 +281,9 @@ const openPriorityFeeSettings = () => {
   updateShowSettingsModal(true);
 };
 
-const goToAccount = () => {
+const goTo = (path: string) => {
   showUserProfileDropdown.value = false;
-  router.push("/account");
-};
-
-const goToBilling = () => {
-  showUserProfileDropdown.value = false;
-  router.push("/account/billing");
+  router.push(path);
 };
 
 // Wallet address formatting
@@ -293,6 +349,18 @@ const { balance: sharedVaultBalance, ensureSharedVault } = useSharedVault();
 const vaultBalanceUSD = computed(
   () => (sharedVaultBalance.value.NOS || 0) * nosPrice.value,
 );
+
+// Secondary line under the name in the dropdown header: the spendable balance,
+// labelled for whichever account type is signed in.
+const identitySubline = computed(() => {
+  if (isGoogleAuthenticated.value) {
+    return `$${getCreditBalance().toFixed(2)} in credits`;
+  }
+  if (connected.value) {
+    return `$${vaultBalanceUSD.value.toFixed(2)} available`;
+  }
+  return "";
+});
 
 // Credit balance fetching is provided by useCreditBalance (fetchCreditBalance).
 
@@ -530,6 +598,9 @@ defineExpose({
   user-select: none;
   z-index: 100;
   flex-shrink: 0;
+  /* Override the app-wide `.dropdown { width: 100% }` in global.scss so the
+     trigger stays sized to its content and right-aligned in the top bar. */
+  width: auto;
 }
 
 .profile-button {
@@ -537,9 +608,17 @@ defineExpose({
   align-items: center;
   gap: 0.75rem;
   padding: 0.5rem 0.75rem;
-  border-radius: 8px;
-  transition: background-color 0.2s ease;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease;
   background: $box-background-color;
+}
+
+.profile-button:hover,
+.profile-button.is-open {
+  border-color: $border;
 }
 
 .profile-avatar {
@@ -600,39 +679,142 @@ defineExpose({
 }
 
 .dropdown-arrow.is-flipped {
-  transform: rotate(-90deg);
+  transform: rotate(180deg);
 }
 
-.dropdown-menu-simple {
-  position: absolute;
-  top: 100%;
-  right: 0;
+/* Bulma dropdown-menu: widen it and give it a little more breathing room */
+.dropdown-menu {
   z-index: 99999;
-  background: $box-background-color;
-  border-radius: 8px;
-  box-shadow: 0 10px 25px rgba($black, 0.1);
-  border: 1px solid $border;
-  padding: 0;
-  width: 100%;
+  min-width: 248px;
+  max-width: 280px;
+  padding-top: 8px;
 }
 
-.dropdown-item-simple {
-  width: 100%;
-  padding: 0.75rem 1rem;
-  border: none;
-  background: none;
-  text-align: left;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
+/* Bulma dropdown-content: the visible card */
+.dropdown-content {
+  background: $box-background-color;
+  border-radius: 14px;
+  border: 1px solid $border;
+  box-shadow:
+    0 1px 2px rgba($black, 0.04),
+    0 12px 32px rgba($black, 0.12);
+  padding: 6px;
+}
+
+/* Reveal animation (Bulma toggles display, so animate on appearance) */
+.dropdown.is-active .dropdown-menu {
+  transform-origin: top right;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .dropdown.is-active .dropdown-menu {
+    animation: profile-menu-in 0.16s ease;
+  }
+}
+
+@keyframes profile-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Identity header */
+.dropdown-header {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.65rem;
+  padding: 0.6rem 0.65rem 0.7rem;
+}
+
+.dropdown-header-avatar {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: $grey-lightest;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+
+  .wallet-icon {
+    width: 22px;
+    height: 22px;
+  }
+
+  .auth-icon {
+    width: 20px;
+    height: 20px;
+    color: $grey;
+  }
+}
+
+.dropdown-header-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.dropdown-header-name {
   font-size: 0.875rem;
+  font-weight: 600;
+  color: $text;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dropdown-header-sub {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: $secondary;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dropdown-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+/* Override Bulma's .dropdown-item for our actionable rows.
+   Scoped under .dropdown-content to win over Bulma's a/button.dropdown-item. */
+.dropdown-content .dropdown-item {
+  width: 100%;
+  padding: 0.55rem 0.65rem;
+  border: none;
+  border-radius: 9px;
+  background: none;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  font-size: 0.875rem;
+  font-weight: 500;
   color: $text;
 }
 
-.dropdown-item-simple:hover {
+.dropdown-content .dropdown-item:hover {
   background-color: $grey-lightest;
+  color: $text;
+}
+
+/* Signature accent: the item's icon picks up Nosana green on hover */
+.dropdown-content .dropdown-item:hover .dropdown-icon {
+  color: $secondary;
 }
 
 .dropdown-item-text {
@@ -642,59 +824,84 @@ defineExpose({
   min-width: 0;
 }
 
-.dropdown-item-simple.logout-item {
+.dropdown-content .dropdown-item.logout-item {
   color: $text;
 }
 
-.dropdown-item-simple.logout-item:hover {
-  background-color: $grey-lightest;
+.dropdown-content .dropdown-item.logout-item:hover {
+  background-color: rgba($danger, 0.08);
+  color: $danger;
+}
+
+.dropdown-content .dropdown-item.logout-item:hover .dropdown-icon {
+  color: $danger;
 }
 
 .dropdown-icon {
   flex-shrink: 0;
   color: $grey;
-  width: 16px;
-  height: 16px;
+  width: 17px;
+  height: 17px;
+  transition: color 0.15s ease;
 }
+
 .logout-item .dropdown-icon {
   color: $grey;
 }
 
 .dropdown-divider {
   border: none;
-  margin: 0;
+  height: 1px;
+  background: $border;
+  margin: 5px 0;
+}
+
+/* Theme row: label on the left, segmented control on the right */
+.dropdown-theme-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.15rem 0.35rem 0.15rem 0.65rem;
+}
+
+.dropdown-theme-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: $text;
 }
 
 .dropdown-theme-toggle {
   display: flex;
-  gap: 0;
-  padding: 0;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 9px;
+  background: $grey-lightest;
 }
 
 .theme-toggle-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  flex: 1;
-  padding: 0.4rem 1rem;
+  padding: 0.3rem 0.65rem;
   border: none;
-  border-radius: 0;
+  border-radius: 7px;
   background: none;
   cursor: pointer;
   color: $grey;
   transition:
-    background-color 0.2s ease,
-    color 0.2s ease;
+    background-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .theme-toggle-btn:hover {
-  background-color: $grey-lightest;
   color: $text;
 }
 
 .theme-toggle-btn.is-active {
-  background-color: $grey-lightest;
+  background-color: $box-background-color;
   color: $text;
+  box-shadow: 0 1px 2px rgba($black, 0.12);
 }
 
 /* Dark mode styles */
@@ -702,18 +909,38 @@ defineExpose({
   background: $box-background-color-dark;
 }
 
+.dark-mode .dropdown-header-avatar {
+  background: color.adjust($box-background-color-dark, $lightness: 5%);
+}
+
+.dark-mode .dropdown-header-avatar .auth-icon {
+  color: $grey-light;
+}
+
+.dark-mode .dropdown-header-name {
+  color: $white;
+}
+
+.dark-mode .dropdown-theme-label {
+  color: $white;
+}
+
+.dark-mode .dropdown-theme-toggle {
+  background: color.adjust($box-background-color-dark, $lightness: 5%);
+}
+
 .dark-mode .theme-toggle-btn {
   color: $grey-light;
 }
 
 .dark-mode .theme-toggle-btn:hover {
-  background-color: color.adjust($box-background-color-dark, $lightness: -5%);
   color: $white;
 }
 
 .dark-mode .theme-toggle-btn.is-active {
-  background-color: color.adjust($box-background-color-dark, $lightness: -5%);
+  background-color: color.adjust($box-background-color-dark, $lightness: 12%);
   color: $white;
+  box-shadow: 0 1px 2px rgba($black, 0.3);
 }
 
 .dark-mode .profile-name {
@@ -724,30 +951,36 @@ defineExpose({
   color: $white;
 }
 
-.dark-mode .dropdown-menu-simple {
+.dark-mode .dropdown-content {
   background: $box-background-color-dark;
   border: none;
   box-shadow: 0 10px 25px rgba($black, 0.3);
 }
 
-.dark-mode .dropdown-item-simple {
+.dark-mode .dropdown-content .dropdown-item {
   color: $white;
 }
 
-.dark-mode .dropdown-item-simple:hover {
-  background-color: color.adjust($box-background-color-dark, $lightness: -5%);
-}
-
-.dark-mode .dropdown-item-simple.logout-item {
+.dark-mode .dropdown-content .dropdown-item:hover {
+  background-color: color.adjust($box-background-color-dark, $lightness: 6%);
   color: $white;
 }
 
-.dark-mode .dropdown-item-simple.logout-item:hover {
-  background-color: color.adjust($box-background-color-dark, $lightness: -5%);
+.dark-mode .dropdown-content .dropdown-item.logout-item {
+  color: $white;
+}
+
+.dark-mode .dropdown-content .dropdown-item.logout-item:hover {
+  background-color: rgba($danger, 0.16);
+  color: $danger;
+}
+
+.dark-mode .dropdown-content .dropdown-item.logout-item:hover .dropdown-icon {
+  color: $danger;
 }
 
 .dark-mode .dropdown-divider {
-  background: $grey-darker;
+  background: color.adjust($box-background-color-dark, $lightness: 8%);
 }
 
 .dark-mode .dropdown-icon {

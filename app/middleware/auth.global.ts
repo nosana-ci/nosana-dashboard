@@ -21,6 +21,7 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
     "/",
     "/privacy-policy",
     "/tos",
+    "/st-auth",
     "/st-auth/reset-password",
     "/deployments/create",
   ];
@@ -31,6 +32,7 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
   const isPublicRoute =
     publicRoutes.some((route) => normalizedPath === route) ||
     to.path.startsWith("/st-auth/callback/") ||
+    to.path.startsWith("/st-auth/try-refresh") ||
     to.path.startsWith("/st-auth/verify-email") ||
     to.path.startsWith("/st-auth/reset-password");
   const isBillingRoute = to.path === "/account/billing";

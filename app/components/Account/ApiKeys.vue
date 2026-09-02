@@ -4,7 +4,7 @@
       class="is-flex is-justify-content-space-between is-align-items-center mb-4"
     >
       <h3 class="title is-4 mb-0">API Keys</h3>
-      <div class="is-flex is-align-items-center" style="gap: 0.5rem">
+      <div class="is-flex is-align-items-center is-gap-1">
         <button @click="showCreateKeyModal = true" class="button is-dark">
           <span class="icon">
             <FontAwesomeIcon :icon="faPlus" />
@@ -14,32 +14,33 @@
       </div>
     </div>
 
-    <div v-if="!hasLoadedOnce && loadingKeys" class="box">
+    <div v-if="!hasLoadedOnce && loadingKeys" class="box data-card p-5">
       <progress class="progress is-small is-grey" max="100"></progress>
-      <p class="has-text-centered">Loading API keys...</p>
+      <p class="has-text-centered has-text-grey">Loading API keys…</p>
     </div>
 
-    <div v-else-if="apiKeys?.keys?.length === 0" class="box has-text-centered">
-      <div class="content">
-        <span class="icon is-large has-text-grey-light">
-          <FontAwesomeIcon :icon="faKey" size="2x" />
+    <div
+      v-else-if="apiKeys?.keys?.length === 0"
+      class="box empty-card has-text-centered py-6 px-5"
+    >
+      <span class="empty-icon">
+        <FontAwesomeIcon :icon="faKey" size="lg" />
+      </span>
+      <h4 class="title is-5 mb-2">No API keys yet</h4>
+      <p class="subtitle is-6 mb-5">
+        Create your first key to authenticate requests to the Nosana API.
+      </p>
+      <button @click="showCreateKeyModal = true" class="button is-dark">
+        <span class="icon">
+          <FontAwesomeIcon :icon="faPlus" />
         </span>
-        <h5 class="title is-5">No API Keys</h5>
-        <p class="subtitle">
-          Create your first API key to access the Nosana API.
-        </p>
-        <button @click="showCreateKeyModal = true" class="button is-dark">
-          <span class="icon">
-            <FontAwesomeIcon :icon="faPlus" />
-          </span>
-          <span>Create Key</span>
-        </button>
-      </div>
+        <span>Create Key</span>
+      </button>
     </div>
 
-    <div v-else class="box">
+    <div v-else class="box data-card p-0">
       <div class="table-container">
-        <table class="table is-fullwidth is-hoverable">
+        <table class="table dev-table is-fullwidth is-hoverable">
           <thead>
             <tr>
               <th>Name</th>
@@ -47,7 +48,7 @@
               <th>Status</th>
               <th>Created</th>
               <th>Expires</th>
-              <th>Actions</th>
+              <th class="has-text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -60,7 +61,7 @@
               </td>
               <td>
                 <span
-                  class="tag"
+                  class="tag is-rounded is-light"
                   :class="{
                     'is-success': key.status === 'active',
                     'is-warning': key.status === 'disabled',
@@ -70,45 +71,41 @@
                   {{ key.status }}
                 </span>
               </td>
-              <td>{{ formatDate(key.createdAt) }}</td>
-              <td>{{ key.expiresAt ? formatDate(key.expiresAt) : "Never" }}</td>
+              <td class="has-text-grey">{{ formatDate(key.createdAt) }}</td>
+              <td class="has-text-grey">
+                {{ key.expiresAt ? formatDate(key.expiresAt) : "Never" }}
+              </td>
               <td>
-                <div class="field is-grouped">
-                  <p class="control">
-                    <button
-                      @click="viewKey(key)"
-                      class="button is-small is-light"
-                      title="View Key"
-                    >
-                      <span class="icon is-small">
-                        <FontAwesomeIcon :icon="faEye" />
-                      </span>
-                    </button>
-                  </p>
-                  <p class="control">
-                    <button
-                      @click="editKey(key)"
-                      class="button is-small is-light"
-                      title="Edit Key"
-                    >
-                      <span class="icon is-small">
-                        <FontAwesomeIcon :icon="faEdit" />
-                      </span>
-                    </button>
-                  </p>
-                  <p class="control">
-                    <button
-                      @click="deleteKey(key)"
-                      class="button is-small is-light has-text-danger"
-                      title="Delete Key"
-                      :disabled="deletingKeyId === key.id"
-                      :class="{ 'is-loading': deletingKeyId === key.id }"
-                    >
-                      <span class="icon is-small">
-                        <FontAwesomeIcon :icon="faTrash" />
-                      </span>
-                    </button>
-                  </p>
+                <div class="is-flex is-justify-content-flex-end is-gap-1">
+                  <button
+                    @click="viewKey(key)"
+                    class="button is-small action-btn"
+                    title="View key"
+                  >
+                    <span class="icon is-small">
+                      <FontAwesomeIcon :icon="faEye" />
+                    </span>
+                  </button>
+                  <button
+                    @click="editKey(key)"
+                    class="button is-small action-btn"
+                    title="Edit key"
+                  >
+                    <span class="icon is-small">
+                      <FontAwesomeIcon :icon="faEdit" />
+                    </span>
+                  </button>
+                  <button
+                    @click="deleteKey(key)"
+                    class="button is-small action-btn is-danger-action"
+                    title="Delete key"
+                    :disabled="deletingKeyId === key.id"
+                    :class="{ 'is-loading': deletingKeyId === key.id }"
+                  >
+                    <span class="icon is-small">
+                      <FontAwesomeIcon :icon="faTrash" />
+                    </span>
+                  </button>
                 </div>
               </td>
             </tr>
@@ -542,34 +539,3 @@ const maskKey = (key: string) => {
 };
 </script>
 
-<style scoped>
-.table-container {
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-.modal-card {
-  max-width: 600px;
-  width: 90%;
-}
-
-.is-family-monospace {
-  font-family: "Courier New", Courier, monospace;
-  font-size: 0.9rem;
-}
-
-@media screen and (max-width: 768px) {
-  .table-container {
-    overflow-x: auto;
-  }
-
-  .table {
-    font-size: 0.85rem;
-  }
-
-  .table td,
-  .table th {
-    padding: 0.5rem;
-  }
-}
-</style>
