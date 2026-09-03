@@ -13,7 +13,9 @@
       <div class="columns is-vcentered is-variable is-5">
         <div class="column">
           <p class="eyebrow mb-4">// developer portal</p>
-          <h1 class="hero-title mb-4">Build on the<br />Nosana&nbsp;network.</h1>
+          <h1 class="hero-title mb-4">
+            Build on the<br />Nosana&nbsp;network.
+          </h1>
           <p class="hero-sub mb-5">
             Ship AI workloads to decentralized GPUs. Grab an API key, drop in
             the SDK, and let people sign in with their Nosana account.
@@ -96,7 +98,7 @@
 
       <template v-if="isAuthenticated">
         <ApiKeys class="mb-6" />
-        <OAuthApps />
+        <!-- <OAuthApps /> -->
       </template>
 
       <div v-else class="box signin-prompt has-text-centered p-6">
@@ -108,7 +110,9 @@
           API keys and connected apps are tied to a Nosana account. Log in with
           email or Google to create and manage them.
         </p>
-        <nuxt-link to="/account" class="button is-dark">Go to account</nuxt-link>
+        <nuxt-link to="/account" class="button is-dark"
+          >Go to account</nuxt-link
+        >
       </div>
     </section>
   </div>
