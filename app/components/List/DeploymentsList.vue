@@ -5,6 +5,7 @@
         <thead>
           <tr>
             <th>Deployment</th>
+            <th>Market</th>
             <th>Status</th>
             <th>Active Jobs</th>
             <th v-if="isWalletMode">Vault</th>
@@ -14,20 +15,20 @@
         </thead>
         <tbody>
           <tr v-if="!hasLoadedOnce">
-            <td :colspan="isWalletMode ? 6 : 5" class="has-text-centered py-6">
+            <td :colspan="isWalletMode ? 7 : 6" class="has-text-centered py-6">
               Loading deployments...
             </td>
           </tr>
           <tr v-else-if="hasLoadedOnce && deploymentsError">
             <td
-              :colspan="isWalletMode ? 6 : 5"
+              :colspan="isWalletMode ? 7 : 6"
               class="has-text-centered has-text-danger"
             >
               Failed to load deployments: {{ deploymentsError }}
             </td>
           </tr>
           <tr v-else-if="hasLoadedOnce && !deployments.length">
-            <td :colspan="isWalletMode ? 6 : 5" class="has-text-centered">
+            <td :colspan="isWalletMode ? 7 : 6" class="has-text-centered">
               No deployments found
             </td>
           </tr>
@@ -52,6 +53,16 @@
                   >
                     {{ truncateMiddle(deployment.id, 6, 6) }}
                   </div>
+                </NuxtLink>
+              </td>
+              <td>
+                <NuxtLink
+                  :to="`/deployments/${deployment.id}`"
+                  class="clickable-row-link clickable-row-cell-content"
+                >
+                  <span class="market-name" :title="deployment.market">{{
+                    marketLabel(deployment.market)
+                  }}</span>
                 </NuxtLink>
               </td>
               <td>
@@ -150,6 +161,17 @@ import { truncateMiddle } from "~/utils/solana";
 const { isAuthenticated, isLoading } = useSuperTokens();
 const { connected } = useWallet();
 
+// Map market addresses to human-readable names (same source the create /
+// detail pages use). Keyed by URL, so this is deduped across components.
+const { data: testgridMarkets } = useAPI("/markets", { default: () => [] });
+const marketLabel = (address?: string | null) => {
+  if (!address) return "-";
+  const match = testgridMarkets.value?.find(
+    (m: any) => m.address === address,
+  );
+  return match?.name || truncateMiddle(address, 6, 6);
+};
+
 const isWalletMode = computed(() => {
   return connected.value && !isAuthenticated.value;
 });
@@ -208,6 +230,10 @@ const statusQuery = computed(
   () => router.currentRoute.value.query.filter?.toString() || "",
 );
 
+const marketQuery = computed(
+  () => router.currentRoute.value.query.market?.toString() || "",
+);
+
 const refreshDeployments = async (
   pageFunc?: (() => Promise<ApiDeploymentListResult>) | null,
 ) => {
@@ -221,15 +247,24 @@ const refreshDeployments = async (
       items = await nosana.value.api.deployments.list({
         search: searchQuery.value || undefined,
         status: statusQuery.value || undefined,
+        // The list endpoint can't filter by market, so when one is selected we
+        // pull a larger batch and filter client-side below.
         // @ts-ignore - API client types need to be updated to reflect new pagination params1
-        limit: props.itemsPerPage,
+        limit: marketQuery.value ? 100 : props.itemsPerPage,
       });
     }
 
     deploymentsError.value = null;
-    deployments.value = items.deployments || [];
-    nextPage.value = items.nextPage || null;
-    prevPage.value = items.previousPage || null;
+    let list = items.deployments || [];
+    if (marketQuery.value) {
+      list = list.filter((d) => d.market === marketQuery.value);
+    }
+    deployments.value = list;
+    // Server pagination can't account for the client-side market filter, so
+    // hide it while a market is selected (the batch above covers realistic
+    // per-user deployment counts).
+    nextPage.value = marketQuery.value ? null : items.nextPage || null;
+    prevPage.value = marketQuery.value ? null : items.previousPage || null;
   } catch (e: any) {
     deploymentsError.value = e?.message || "Failed to load deployments";
     deployments.value = [];
@@ -249,6 +284,7 @@ watch(
     props.itemsPerPage,
     searchQuery.value,
     statusQuery.value,
+    marketQuery.value,
   ],
   () => {
     debouncedRefresh();
@@ -325,6 +361,11 @@ html.dark-mode .deployments-table tbody tr.clickable-row:hover {
 .updated-cell {
   color: $grey;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.market-name {
+  color: inherit;
   white-space: nowrap;
 }
 
