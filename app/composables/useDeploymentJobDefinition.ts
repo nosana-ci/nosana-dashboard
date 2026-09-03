@@ -19,11 +19,8 @@ export function useDeploymentJobDefinition(deps: DeploymentJobDefinitionDeps) {
 
   // Editor refs and validation
   const currentJobDefEditor = ref<{ hasErrors: boolean } | null>(null);
-  const revisionJobDefEditor = ref<{ hasErrors: boolean } | null>(null);
   const { canSave: canSaveCurrent } =
     useJsonEditorValidation(currentJobDefEditor);
-  const { canSave: canSaveRevision } =
-    useJsonEditorValidation(revisionJobDefEditor);
 
   const loadJobDefinition = async () => {
     if (
@@ -123,9 +120,7 @@ export function useDeploymentJobDefinition(deps: DeploymentJobDefinitionDeps) {
     loadingJobDefinition,
     originalDefinition,
     currentJobDefEditor,
-    revisionJobDefEditor,
     canSaveCurrent,
-    canSaveRevision,
     loadJobDefinition,
     hasDefinitionChanged,
     resetDefinition,

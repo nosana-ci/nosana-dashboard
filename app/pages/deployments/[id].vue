@@ -162,14 +162,6 @@
           @confirm="updateSchedule()"
         />
 
-        <DeploymentRevisionModal
-          v-model="showRevisionModal"
-          v-model:definition="revisionJobDefinition"
-          ref="revisionModalComponent"
-          :actionLoading="actionLoading"
-          @confirm="createRevision(canSaveRevision)"
-        />
-
         <DeploymentRevisionViewModal
           v-model="showRevisionDefinitionModal"
           :revision="viewingRevision"
@@ -437,12 +429,10 @@ const {
   showReplicasModal,
   showTimeoutModal,
   showScheduleModal,
-  showRevisionModal,
   showRevisionDefinitionModal,
   newReplicaCount,
   newTimeoutHours,
   newSchedule,
-  revisionJobDefinition,
   switchingRevision,
   viewingRevision,
   canStart,
@@ -456,7 +446,6 @@ const {
   updateReplicas,
   updateJobTimeout,
   updateSchedule,
-  createRevision,
   switchToRevision,
   viewRevisionDefinition,
   isValidCronExpression,
@@ -472,7 +461,6 @@ const jobDef = useDeploymentJobDefinition({
 const {
   jobDefinitionModel,
   loadingJobDefinition,
-  canSaveRevision,
   loadJobDefinition,
   hasDefinitionChanged,
   resetDefinition,
@@ -487,7 +475,6 @@ const { data: testgridMarkets } = useAPI("/markets", { default: () => [] });
 
 // Component refs for editor validation wiring
 const jobDefEditorComponent = ref<any>(null);
-const revisionModalComponent = ref<any>(null);
 
 // Wire editor refs from child components to job definition composable
 watch(
@@ -495,15 +482,6 @@ watch(
   (editorRef: any) => {
     if (editorRef) {
       jobDef.currentJobDefEditor.value = editorRef;
-    }
-  },
-);
-
-watch(
-  () => revisionModalComponent.value?.editorRef,
-  (editorRef: any) => {
-    if (editorRef) {
-      jobDef.revisionJobDefEditor.value = editorRef;
     }
   },
 );
@@ -519,7 +497,7 @@ const availableActions = [
 // Initialize action from URL query parameter
 const initialAction = route.query.action?.toString();
 if (initialAction && availableActions.includes(initialAction)) {
-  if (initialAction === "create-revision") showRevisionModal.value = true;
+  if (initialAction === "create-revision") activeTab.value = "configuration";
   else if (initialAction === "update-replicas") showReplicasModal.value = true;
   else if (initialAction === "update-timeout") showTimeoutModal.value = true;
   else if (initialAction === "update-schedule") showScheduleModal.value = true;
@@ -660,8 +638,13 @@ const switchAction = (action: string) => {
     archiveDeployment();
     return;
   }
-  if (action === "create-revision") showRevisionModal.value = true;
-  else if (action === "update-replicas") showReplicasModal.value = true;
+  if (action === "create-revision") {
+    // Revisions are now created inline on the Configuration tab (edit the job
+    // definition, then Save), so this action just takes the user there.
+    switchTab("configuration");
+    return;
+  }
+  if (action === "update-replicas") showReplicasModal.value = true;
   else if (action === "update-timeout") showTimeoutModal.value = true;
   else if (action === "update-schedule") showScheduleModal.value = true;
 
@@ -681,21 +664,6 @@ const clearAction = () => {
 };
 
 // --- Modal watchers ---
-watch(
-  [() => showRevisionModal.value, () => jobDefinitionModel.value],
-  ([isOpen, definition]) => {
-    if (isOpen && definition && !revisionJobDefinition.value) {
-      revisionJobDefinition.value = JSON.parse(JSON.stringify(definition));
-    }
-    if (!isOpen) {
-      revisionJobDefinition.value = null;
-      if (route.query.action === "create-revision") {
-        clearAction();
-      }
-    }
-  },
-);
-
 watch(showReplicasModal, (isOpen) => {
   if (!isOpen && route.query.action === "update-replicas") clearAction();
 });

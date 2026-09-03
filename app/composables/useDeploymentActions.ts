@@ -1,4 +1,4 @@
-import type { Deployment, JobDefinition } from "@nosana/kit";
+import type { Deployment } from "@nosana/kit";
 import { useToast } from "vue-toastification";
 import { parseCronExpression } from "~/utils/parseCronExpression";
 
@@ -21,7 +21,6 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
   const showReplicasModal = ref(false);
   const showTimeoutModal = ref(false);
   const showScheduleModal = ref(false);
-  const showRevisionModal = ref(false);
   const showRevisionDefinitionModal = ref(false);
 
   // Form state
@@ -30,7 +29,6 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
   const newSchedule = ref("");
 
   // Revision state
-  const revisionJobDefinition = ref<JobDefinition | null>(null);
   const switchingRevision = ref<number | null>(null);
   const viewingRevision = ref<any>(null);
 
@@ -264,44 +262,6 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
     }
   };
 
-  const createRevision = async (canSaveRevision: (msg: string) => boolean) => {
-    if (!revisionJobDefinition.value) {
-      toast.error("Please provide a valid job definition");
-      return;
-    }
-
-    if (
-      !canSaveRevision(
-        "Cannot create revision: Please fix the errors in the job definition",
-      )
-    ) {
-      return;
-    }
-
-    if (!deps.deployment.value || !deps.hasAnyAuth.value) {
-      toast.error("Please log in or connect wallet to perform this action");
-      return;
-    }
-
-    try {
-      actionLoading.value = true;
-      await deps.deployment.value.createRevision(revisionJobDefinition.value);
-
-      toast.success("New revision created successfully!");
-      showRevisionModal.value = false;
-
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      await deps.loadDeployment(true);
-    } catch (error: any) {
-      console.error("Create revision error:", error);
-      const errorMessage =
-        error.data?.message || error.message || "Failed to create revision";
-      toast.error(`Error creating revision: ${errorMessage}`);
-    } finally {
-      actionLoading.value = false;
-    }
-  };
-
   const switchToRevision = async (revisionNumber: number) => {
     if (!deps.deployment.value || !deps.hasAnyAuth.value) {
       toast.error("Please log in or connect wallet to perform this action");
@@ -384,7 +344,6 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
     showReplicasModal,
     showTimeoutModal,
     showScheduleModal,
-    showRevisionModal,
     showRevisionDefinitionModal,
 
     // Form state
@@ -393,7 +352,6 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
     newSchedule,
 
     // Revision state
-    revisionJobDefinition,
     switchingRevision,
     viewingRevision,
 
@@ -413,7 +371,6 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
     updateReplicas,
     updateJobTimeout,
     updateSchedule,
-    createRevision,
     switchToRevision,
     viewRevisionDefinition,
     isValidCronExpression,
