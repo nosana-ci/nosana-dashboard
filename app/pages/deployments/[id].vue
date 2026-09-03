@@ -120,7 +120,6 @@
                 @update:jobDefinitionModel="jobDefinitionModel = $event"
                 @reset="resetDefinition"
                 @makeRevision="makeRevision"
-                @createRevision="switchAction('create-revision')"
               />
 
               <DeploymentRevisions

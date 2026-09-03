@@ -42,12 +42,41 @@ const isDark = computed(() => colorMode.value === 'dark');
 
 const emit = defineEmits(['update:modelValue']);
 
+// Serialize for cheap content comparison; fall back to "not equal" on error so
+// we never silently swallow a real update.
+function sameContent(a: any, b: any): boolean {
+  try {
+    return JSON.stringify(a) === JSON.stringify(b);
+  } catch {
+    return false;
+  }
+}
+
+// The editor is fed through an internal buffer rather than binding props.modelValue
+// directly. json-editor-vue watches the bound model and, on any external change,
+// rebuilds the whole CodeMirror document via `.set()` — which clears any text the
+// user is currently selecting. Pages that live-poll (job definitions, deployment
+// streams) hand us a fresh object reference with identical content on every tick,
+// so without this buffer the user can never hold a selection long enough to copy.
+const internalModel = ref<any>(props.modelValue);
+
+watch(
+  () => props.modelValue,
+  (next) => {
+    // Skip no-op updates (same content, new reference) so the document — and the
+    // user's selection — is left intact. Real content changes still flow through.
+    if (sameContent(next, internalModel.value)) return;
+    internalModel.value = next;
+  },
+);
+
 const model = computed({
-  get: () => props.modelValue,
+  get: () => internalModel.value,
   set: (val) => {
     // Track if value is a string or undefined (indicates JSON parse error)
     // When there's a syntax error, the editor returns the text content as a string
     hasSyntaxError.value = typeof val === 'string' || val === undefined;
+    internalModel.value = val;
     emit('update:modelValue', val);
   },
 });
@@ -184,16 +213,24 @@ button[class*="repair"],
   --jse-value-color-null: #f5c36b;
   --jse-value-color-url: #7fd4ff;
   --jse-delimiter-color: #6e7a6c;
-  --jse-selection-background-color: rgba(16, 232, 12, 0.18);
+  --jse-selection-background-color: rgba(52, 235, 74, 0.45);
+  --jse-selection-background-inactive-color: rgba(52, 235, 74, 0.28);
   --jse-active-line-background-color: rgba(255, 255, 255, 0.03);
   --jse-input-background: #121612;
   border: 1px solid #1e241e;
 }
+/* Paint the dark background on the editor container only — NOT on .cm-content.
+   CodeMirror draws the text selection in a layer at z-index -2 (behind the
+   content), so an opaque .cm-content background sits on top of it and hides the
+   selection highlight entirely. Keeping .cm-content transparent lets the
+   selection show through while the container still provides the dark surface. */
 .json-editor.jse-theme-dark .jse-text-mode,
 .json-editor.jse-theme-dark .cm-editor,
-.json-editor.jse-theme-dark .cm-scroller,
-.json-editor.jse-theme-dark .cm-content {
+.json-editor.jse-theme-dark .cm-scroller {
   background: #0c0e0c;
+}
+.json-editor.jse-theme-dark .cm-content {
+  background: transparent;
 }
 
 /* --- LIGHT (default) --- */
@@ -207,15 +244,20 @@ button[class*="repair"],
   --jse-value-color-null: #b5680a;
   --jse-value-color-url: #0b66c3;
   --jse-delimiter-color: #8a938a;
-  --jse-selection-background-color: rgba(16, 232, 12, 0.16);
+  --jse-selection-background-color: rgba(16, 232, 12, 0.32);
+  --jse-selection-background-inactive-color: rgba(16, 232, 12, 0.22);
   --jse-active-line-background-color: rgba(0, 0, 0, 0.03);
   border: 1px solid #e3e7df;
 }
+/* Same reasoning as dark mode: keep .cm-content transparent so the selection
+   layer (z-index -2) remains visible; paint the surface on the container. */
 .json-editor:not(.jse-theme-dark) .jse-text-mode,
 .json-editor:not(.jse-theme-dark) .cm-editor,
-.json-editor:not(.jse-theme-dark) .cm-scroller,
-.json-editor:not(.jse-theme-dark) .cm-content {
+.json-editor:not(.jse-theme-dark) .cm-scroller {
   background: #ffffff;
+}
+.json-editor:not(.jse-theme-dark) .cm-content {
+  background: transparent;
 }
 </style>
 

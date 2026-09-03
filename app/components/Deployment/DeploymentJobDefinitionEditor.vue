@@ -14,17 +14,9 @@
             class="cfg-btn primary"
             type="button"
           >
-            Make Revision
+            Save
           </button>
         </template>
-        <button
-          v-else
-          @click="$emit('createRevision')"
-          class="cfg-btn white sm"
-          type="button"
-        >
-          Create revision
-        </button>
       </div>
     </div>
     <div class="dep-card">
@@ -71,7 +63,6 @@ defineEmits<{
   "update:jobDefinitionModel": [value: JobDefinition];
   reset: [];
   makeRevision: [];
-  createRevision: [];
 }>();
 
 // Expose editor ref so parent can wire it up for validation
@@ -125,32 +116,6 @@ html.dark-mode .dep-card {
 
   &:hover {
     background: $grey-darker;
-  }
-}
-
-.cfg-btn.sm {
-  font-size: 0.8rem;
-  padding: 0.4rem 0.85rem;
-}
-
-.cfg-btn.white {
-  background: $white;
-  border-color: $grey-lighter;
-  color: $text;
-
-  &:hover {
-    background: $white-ter;
-    border-color: $grey-light;
-  }
-}
-
-html.dark-mode .cfg-btn.white {
-  background: $white;
-  color: $black;
-  border-color: transparent;
-
-  &:hover {
-    background: $grey-lighter;
   }
 }
 
