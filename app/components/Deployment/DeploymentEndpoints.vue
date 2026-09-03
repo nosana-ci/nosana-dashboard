@@ -7,6 +7,12 @@
         :key="`${endpoint.opId}-${endpoint.port}`"
         class="ep-row"
         :class="{ 'is-off': !endpoint.online }"
+        role="button"
+        tabindex="0"
+        :title="endpoint.online ? 'Open endpoint in a new tab' : 'Copy URL'"
+        @click="onRowClick(endpoint)"
+        @keydown.enter.prevent="onRowClick(endpoint)"
+        @keydown.space.prevent="onRowClick(endpoint)"
       >
         <span class="ep-status" :class="statusOf(endpoint).toLowerCase()">
           <span class="ep-dot" :title="statusLabel(statusOf(endpoint))"></span>
@@ -22,6 +28,7 @@
             target="_blank"
             rel="noopener"
             class="ep-url is-link"
+            @click.stop
             >{{ endpoint.url }}</a
           >
           <span v-else class="ep-url struck">{{ endpoint.url }}</span>
@@ -31,7 +38,7 @@
             type="button"
             class="ep-icobtn"
             title="Copy URL"
-            @click="copyUrl(endpoint.url)"
+            @click.stop="copyUrl(endpoint.url)"
           >
             <svg
               viewBox="0 0 24 24"
@@ -52,6 +59,7 @@
             rel="noopener"
             class="ep-icobtn"
             title="Open in new tab"
+            @click.stop
           >
             <svg
               viewBox="0 0 24 24"
@@ -72,6 +80,8 @@
 </template>
 
 <script setup lang="ts">
+import { useToast } from "vue-toastification";
+
 type Endpoint = {
   opId: string;
   port: number | string;
@@ -101,8 +111,25 @@ const statusOf = (endpoint: Endpoint) => {
 
 const statusLabel = (s: string) => s.charAt(0) + s.slice(1).toLowerCase();
 
-const copyUrl = (url: string) => {
-  navigator.clipboard?.writeText(url);
+const toast = useToast();
+
+const copyUrl = async (url: string) => {
+  try {
+    await navigator.clipboard.writeText(url);
+    toast.success("Copied endpoint URL");
+  } catch {
+    toast.error("Copy blocked by the browser");
+  }
+};
+
+// The whole bar is clickable: open the endpoint when it's live, otherwise copy
+// the URL (a dead endpoint can't be opened but is still worth copying).
+const onRowClick = (endpoint: Endpoint) => {
+  if (endpoint.online) {
+    window.open(endpoint.url, "_blank", "noopener");
+  } else {
+    copyUrl(endpoint.url);
+  }
 };
 </script>
 
@@ -120,6 +147,7 @@ const copyUrl = (url: string) => {
   align-items: center;
   gap: 15px;
   padding: 13px 16px;
+  cursor: pointer;
   transition: background 0.12s ease;
 
   & + & {
@@ -128,6 +156,11 @@ const copyUrl = (url: string) => {
 
   &:hover {
     background: $white-bis;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $secondary;
+    outline-offset: -2px;
   }
 
   &.is-off {

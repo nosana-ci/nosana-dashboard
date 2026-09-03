@@ -283,12 +283,21 @@
             ref="builderTab"
             v-model="editingJobDefinition"
           />
-          <PodConfigurationTab v-else ref="podTab" v-model="editingJobDefinition" />
+          <PodConfigurationTab v-else ref="podTab" v-model="editingJobDefinition" @update:valid="jsonValid = $event" />
         </section>
         <footer class="modal-card-foot">
-          <p class="has-text-grey is-size-7" style="flex: 1; min-width: 0">
-            Changes apply when you save.
-            {{ editorMode === 'json' ? 'Invalid JSON is blocked.' : 'Required fields are checked.' }}
+          <p class="has-text-grey is-size-7 jobdef-foot" style="flex: 1; min-width: 0">
+            <span>Changes apply when you save.
+              {{ editorMode === 'json' ? 'Invalid JSON is blocked.' : 'Required fields are checked.' }}</span>
+            <span
+              v-if="editorMode === 'json'"
+              class="jobdef-valid"
+              :class="jsonValid ? 'is-ok' : 'is-bad'"
+            >
+              <svg v-if="jsonValid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
+              <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01" /><path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z" /></svg>
+              {{ jsonValid ? 'Valid' : 'Invalid' }}
+            </span>
           </p>
           <div class="buttons mb-0">
             <button class="button" @click="handleCancel">Cancel</button>
@@ -377,6 +386,8 @@ const showEditorModal = ref(false);
 // Editor mode: schema-driven form builder (default) or raw JSON escape hatch
 const editorMode = ref<'builder' | 'json'>('builder');
 const builderTab = ref<{ canSave: () => boolean } | null>(null);
+// JSON validity, surfaced by PodConfigurationTab for the footer indicator.
+const jsonValid = ref(true);
 
 // Inline "Configure" settings drawer in the banner
 const isConfigOpen = ref(false);
@@ -1184,6 +1195,31 @@ html.dark-mode {
   margin-left: auto;
   margin-right: 0.85rem;
   flex: none;
+}
+
+/* Footer validity indicator (JSON mode) */
+.jobdef-foot {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.jobdef-valid {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: $title-family;
+  font-weight: 600;
+  font-size: 0.7rem;
+  padding: 3px 9px;
+  border-radius: 999px;
+
+  svg { width: 11px; height: 11px; }
+  &.is-ok { color: #0a8f06; background: rgba($secondary, 0.1); border: 1px solid rgba($secondary, 0.4); }
+  &.is-bad { color: #e5484d; background: rgba(#e5484d, 0.1); border: 1px solid rgba(#e5484d, 0.4); }
+}
+html.dark-mode .jobdef-valid.is-ok {
+  color: #8bf58f;
 }
 
 .jobdef-body :deep(.pod-configuration-tab),

@@ -1,17 +1,8 @@
 <template>
   <div class="pod-configuration-tab jdb-json">
-    <div class="jdb-json-head">
-      <span class="dot" aria-hidden="true"></span>
-      <span class="fname">job-definition.json</span>
-      <span class="status" :class="isValid ? 'ok' : 'bad'">
-        <svg v-if="isValid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
-        <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01" /><path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z" /></svg>
-        {{ isValid ? 'Valid' : 'Invalid' }}
-      </span>
-      <button class="copy" type="button" title="Copy JSON" aria-label="Copy JSON" @click="copyJson">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V5a2 2 0 012-2h10" /></svg>
-      </button>
-    </div>
+    <button class="copy-float" type="button" title="Copy JSON" aria-label="Copy JSON" @click="copyJson">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V5a2 2 0 012-2h10" /></svg>
+    </button>
     <div class="field full-height">
       <div class="control full-height json-editor-container">
         <CommonJsonEditor
@@ -36,6 +27,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   "update:modelValue": [value: JobDefinition | null | string];
+  "update:valid": [value: boolean];
 }>();
 
 const toast = useToast();
@@ -48,8 +40,10 @@ const editingDefinition = computed({
   set: (value: JobDefinition | null | string) => emit("update:modelValue", value),
 });
 
-// Live validity for the header pill (a string/undefined model means a JSON syntax error)
+// Live validity (a string/undefined model means a JSON syntax error). Surfaced
+// to the parent so the modal footer can show the Valid/Invalid indicator.
 const isValid = computed(() => !jobDefEditor.value?.hasErrors);
+watch(isValid, (v) => emit("update:valid", v), { immediate: true });
 
 const copyJson = async () => {
   const text =
@@ -68,78 +62,42 @@ defineExpose({ jobDefEditor, canSave });
 </script>
 
 <style lang="scss" scoped>
-$jse-bg: #0c0e0c;
-$jse-border: #1e241e;
-$jse-text: #c9d3c6;
-$jse-key: #8bf58f;
-
+/* The editor frames itself (Common/JsonEditor.vue); this wrapper just anchors
+   the floating copy button over its top-right corner. */
 .pod-configuration-tab.jdb-json {
+  position: relative;
   height: 100%;
   display: flex;
-  flex-direction: column;
-  background: $jse-bg;
-  border: 1px solid $jse-border;
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-/* Header bar — mirrors the builder's live-preview panel */
-.jdb-json-head {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  flex: none;
-  padding: 11px 13px;
-  border-bottom: 1px solid $jse-border;
-
-  .dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: $secondary;
-    box-shadow: 0 0 9px rgba($secondary, 0.5);
-  }
-  .fname {
-    font-family: monospace;
-    font-size: 0.75rem;
-    color: $jse-text;
-  }
-  .status {
-    margin-left: auto;
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    font-family: $title-family;
-    font-weight: 600;
-    font-size: 0.68rem;
-    padding: 3px 9px;
-    border-radius: 999px;
-    svg { width: 11px; height: 11px; }
-    &.ok { color: $jse-key; background: rgba($secondary, 0.1); border: 1px solid rgba($secondary, 0.4); }
-    &.bad { color: #f2686c; background: rgba(#f2686c, 0.12); border: 1px solid rgba(#f2686c, 0.4); }
-  }
-  .copy {
-    border: 1px solid $jse-border;
-    background: transparent;
-    color: $jse-text;
-    border-radius: 7px;
-    width: 28px;
-    height: 25px;
-    display: grid;
-    place-items: center;
-    cursor: pointer;
-    transition: background 0.15s;
-    svg { width: 13px; height: 13px; }
-    &:hover { background: rgba(255, 255, 255, 0.05); }
-  }
 }
 
 .field.full-height { margin: 0; }
 
-/* The editor theme is shared (Common/JsonEditor.vue); this card is its frame,
-   so drop the editor's own border/radius to avoid doubling up. */
-.jdb-json :deep(.json-editor) {
-  border: 0 !important;
-  border-radius: 0 !important;
+/* Copy button floating on the editor's top-right */
+.copy-float {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 5;
+  width: 30px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  border: 1px solid #e3e7df;
+  background: rgba(255, 255, 255, 0.85);
+  color: #586155;
+  cursor: pointer;
+  backdrop-filter: blur(2px);
+  transition: background 0.15s, color 0.15s;
+
+  svg { width: 14px; height: 14px; }
+  &:hover { color: #0a8f06; background: #ffffff; }
+}
+
+html.dark-mode .copy-float {
+  border-color: #1e241e;
+  background: rgba(12, 14, 12, 0.7);
+  color: #c9d3c6;
+  &:hover { color: #8bf58f; background: rgba(12, 14, 12, 0.92); }
 }
 </style>

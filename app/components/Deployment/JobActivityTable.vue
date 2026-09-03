@@ -13,7 +13,7 @@
           <span class="jlab">{{ stateLabel(getJobStateNumber(job)) }}</span>
         </span>
         <span class="jid is-family-monospace">{{ truncateMiddle(job.job) }}</span>
-        <span class="rev-chip is-family-monospace">Rev {{ job.revision ?? "-" }}</span>
+        <span class="rev-chip is-family-monospace">Revision {{ job.revision ?? "-" }}</span>
         <span
           v-if="!showDuration && getJobStateNumber(job) === 0"
           class="jwait-inline"

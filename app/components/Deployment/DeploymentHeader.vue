@@ -687,8 +687,9 @@ html.dark-mode .dep-tabs {
   }
 
   &.is-active {
-    background: $white;
-    color: $text;
+    background: $secondary;
+    color: #05230a;
+    font-weight: 600;
     box-shadow: 0 1px 3px rgba($black, 0.12);
   }
 }
@@ -702,11 +703,9 @@ html.dark-mode .dep-tab:hover {
 }
 
 html.dark-mode .dep-tab.is-active {
-  background: $black-bis;
-  color: $white;
-  box-shadow:
-    inset 0 0 0 1px rgba($white, 0.06),
-    0 1px 3px rgba($black, 0.5);
+  background: $secondary;
+  color: #05230a;
+  box-shadow: 0 1px 3px rgba($black, 0.5);
 }
 
 @media screen and (max-width: 768px) {

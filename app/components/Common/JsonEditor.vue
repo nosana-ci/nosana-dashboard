@@ -8,7 +8,7 @@
     :validator="internalValidator"
     v-model="model"
     v-bind="$attrs"
-    class="json-editor jse-theme-dark"
+    :class="['json-editor', { 'jse-theme-dark': isDark }]"
   />
 </template>
 
@@ -34,6 +34,11 @@ const props = withDefaults(defineProps<Props>(), {
   validator: undefined,
   validateJobDefinition: false,
 });
+
+// The editor follows the app theme: dark uses vanilla-jsoneditor's dark base
+// theme (so CodeMirror renders dark), light uses its default light base theme.
+const colorMode = useColorMode();
+const isDark = computed(() => colorMode.value === 'dark');
 
 const emit = defineEmits(['update:modelValue']);
 
@@ -132,14 +137,9 @@ defineExpose({
 </script>
 
 <style lang="scss">
-/* Shared dark theme for the JSON code editor — used across the deploy and
-   configuration views so every instance looks the same. */
-$jse-bg: #0c0e0c;
-$jse-panel: #121612;
-$jse-border: #1e241e;
-$jse-text: #c9d3c6;
-$jse-key: #8bf58f;
-$jse-gutter: #4a554a;
+/* Shared theme for the JSON code editor — used across the deploy and
+   configuration views. Follows the app's light/dark mode: the `jse-theme-dark`
+   class (toggled in the component) selects the palette. */
 
 /* Hide only repair buttons - keep error messages visible */
 .jse-actions button,
@@ -155,17 +155,29 @@ button[class*="repair"],
   display: none !important;
 }
 
-/* Palette (text mode maps these vars into the CodeMirror highlight) */
+/* --- structural (both themes) --- */
+.json-editor {
+  border-radius: 10px;
+  overflow: hidden;
+}
+.json-editor .cm-gutters {
+  display: none !important;
+}
+.json-editor .cm-cursor {
+  border-left-color: $secondary;
+}
+
+/* --- DARK --- */
 .json-editor.jse-theme-dark {
-  --jse-background-color: #{$jse-bg};
-  --jse-panel-background: #{$jse-panel};
-  --jse-panel-border: #{$jse-border};
-  --jse-panel-color: #{$jse-text};
-  --jse-panel-color-readonly: #{$jse-gutter};
-  --jse-main-border: #{$jse-border};
-  --jse-text-color: #{$jse-text};
-  --jse-value-color: #{$jse-text};
-  --jse-key-color: #{$jse-key};
+  --jse-background-color: #0c0e0c;
+  --jse-panel-background: #121612;
+  --jse-panel-border: #1e241e;
+  --jse-panel-color: #c9d3c6;
+  --jse-panel-color-readonly: #4a554a;
+  --jse-main-border: #1e241e;
+  --jse-text-color: #c9d3c6;
+  --jse-value-color: #c9d3c6;
+  --jse-key-color: #8bf58f;
   --jse-value-color-string: #d7e7c8;
   --jse-value-color-number: #7fd4ff;
   --jse-value-color-boolean: #f5c36b;
@@ -174,40 +186,36 @@ button[class*="repair"],
   --jse-delimiter-color: #6e7a6c;
   --jse-selection-background-color: rgba(16, 232, 12, 0.18);
   --jse-active-line-background-color: rgba(255, 255, 255, 0.03);
-  --jse-input-background: #{$jse-panel};
-  border: 1px solid #{$jse-border};
-  border-radius: 10px;
-  overflow: hidden;
+  --jse-input-background: #121612;
+  border: 1px solid #1e241e;
+}
+.json-editor.jse-theme-dark .jse-text-mode,
+.json-editor.jse-theme-dark .cm-editor,
+.json-editor.jse-theme-dark .cm-scroller,
+.json-editor.jse-theme-dark .cm-content {
+  background: #0c0e0c;
 }
 
-/* Dark ground on every editor surface */
-.json-editor .jse-text-mode,
-.json-editor .cm-editor,
-.json-editor .cm-scroller,
-.json-editor .cm-content {
-  background: #{$jse-bg};
+/* --- LIGHT (default) --- */
+.json-editor:not(.jse-theme-dark) {
+  --jse-text-color: #1a1a1a;
+  --jse-value-color: #1a1a1a;
+  --jse-key-color: #0a8f06;
+  --jse-value-color-string: #2e7d32;
+  --jse-value-color-number: #0b66c3;
+  --jse-value-color-boolean: #b5680a;
+  --jse-value-color-null: #b5680a;
+  --jse-value-color-url: #0b66c3;
+  --jse-delimiter-color: #8a938a;
+  --jse-selection-background-color: rgba(16, 232, 12, 0.16);
+  --jse-active-line-background-color: rgba(0, 0, 0, 0.03);
+  border: 1px solid #e3e7df;
 }
-.json-editor .cm-cursor {
-  border-left-color: $secondary;
-}
-
-/* Line-number gutter */
-.json-editor .cm-gutters {
-  display: flex !important;
-  background: #{$jse-bg};
-  border-right: 1px solid #{$jse-border};
-  color: #{$jse-gutter};
-}
-.json-editor .cm-lineNumbers .cm-gutterElement {
-  color: #{$jse-gutter};
-  font-variant-numeric: tabular-nums;
-}
-.json-editor .cm-foldGutter {
-  display: none !important;
-}
-.json-editor .cm-activeLineGutter {
-  background: rgba(255, 255, 255, 0.03);
-  color: #{$jse-text};
+.json-editor:not(.jse-theme-dark) .jse-text-mode,
+.json-editor:not(.jse-theme-dark) .cm-editor,
+.json-editor:not(.jse-theme-dark) .cm-scroller,
+.json-editor:not(.jse-theme-dark) .cm-content {
+  background: #ffffff;
 }
 </style>
 
