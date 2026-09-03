@@ -222,6 +222,13 @@ function handleSelectOp(opId: string | null) {
   min-height: 0;
 }
 
+/* Let the main Logs tab fill most of the viewport rather than the viewer's
+   default 40vh, so there's far more room to read logs. */
+.logs-viewers-wrapper :deep(.log-viewer) {
+  height: calc(100vh - 300px);
+  min-height: 460px;
+}
+
 .logs-tab-container {
   position: relative;
   padding-top: 0;

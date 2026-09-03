@@ -1,191 +1,220 @@
 <template>
-  <!-- Header Section -->
-  <div class="box is-borderless">
+  <div class="job-detail">
     <!-- Header Section -->
-    <div class="p-5 deployment-header">
-      <div
-        class="is-flex is-justify-content-space-between is-align-items-start"
+    <div class="dep-header">
+      <!-- Back link -->
+      <button
+        type="button"
+        class="back-link"
+        @click="
+          deploymentId
+            ? router.push(`/deployments/${deploymentId}`)
+            : router.push(`/deployments?tab=jobs`)
+        "
       >
-        <div class="header-left-section">
-          <div class="is-flex is-align-items-center mb-2">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M15 18l-6-6 6-6" />
+        </svg>
+        <span>{{ deploymentId ? "Deployment" : "Jobs" }}</span>
+      </button>
+
+      <!-- Title row + actions -->
+      <div class="header-main">
+        <div class="header-title-section">
+          <div class="title-row">
+            <h1 class="dep-name">{{ jobTitle }}</h1>
+            <DeploymentStatusPill :status="jobStatusString" />
+          </div>
+
+          <p class="id-line">
+            <span class="is-family-monospace">{{
+              shortAddress(props.job.address)
+            }}</span>
             <button
-              @click="
-                deploymentId
-                  ? router.push(`/deployments/${deploymentId}`)
-                  : router.push(`/deployments?tab=jobs`)
-              "
-              class="button is-ghost back-button mr-4"
+              type="button"
+              class="copy-btn"
+              :class="{ 'is-copied': addrCopied }"
+              title="Copy job address"
+              @click="copyAddress"
             >
-              <span class="icon is-small">
-                <ArrowUpIcon
-                  class="icon-16 transform-rotate-270 back-arrow-icon"
+              <svg
+                v-if="addrCopied"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.4"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M20 6 9 17l-5-5" />
+              </svg>
+              <svg
+                v-else
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <rect x="9" y="9" width="13" height="13" rx="2" />
+                <path
+                  d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+                />
+              </svg>
+            </button>
+            <template v-if="props.job.timeStart">
+              <span class="id-sep">·</span>
+              <span class="updated-time"
+                >Started {{ formatTimeAgo(new Date(props.job.timeStart * 1000)) }}</span
+              >
+            </template>
+            <template v-if="jobDurationData">
+              <span class="id-sep">·</span>
+              <span class="updated-time">
+                <SecondsFormatter
+                  :seconds="jobDurationData.actualSeconds"
+                  :showSeconds="true"
                 />
               </span>
+            </template>
+          </p>
+        </div>
+
+        <!-- Actions Dropdown - Only show for standalone job pages (not deployment job pages) -->
+        <div
+          v-if="!deploymentId && hasAnyActions"
+          class="dropdown is-right"
+          :class="{ 'is-active': showActionsDropdown }"
+          ref="actionsDropdown"
+        >
+          <div class="dropdown-trigger">
+            <button
+              class="button header-action-btn"
+              @click="toggleActionsDropdown"
+              :class="{ 'is-loading': loading }"
+            >
+              <span>Actions</span>
+              <span
+                class="icon is-small dropdown-arrow ml-1"
+                :class="{ 'is-rotated': showActionsDropdown }"
+              >
+                <ChevronDownIcon />
+              </span>
             </button>
-            <div class="header-title-section">
-              <p class="subtitle is-7 has-text-grey is-family-monospace mb-0">
-                {{ props.job.address }}
-              </p>
-              <div
-                v-if="props.job.timeStart || jobDurationData"
-                class="is-size-7 has-text-grey mt-1"
-              >
-                <span v-if="props.job.timeStart && formatStartTime">
-                  Started: {{ formatStartTime(props.job.timeStart) }}
-                </span>
-                <span v-if="jobDurationData" class="ml-2">
-                  Duration:
-                  <SecondsFormatter
-                    :seconds="jobDurationData.actualSeconds"
-                    :showSeconds="true"
-                  />
-                </span>
-              </div>
-            </div>
-            <StatusTag class="ml-4" :status="props.job.state" />
           </div>
-        </div>
-        <div class="deployment-tabs">
-          <button
-            v-for="tab in availableTabs"
-            :key="tab"
-            @click="activeTab = tab"
-            :class="{ 'is-active': activeTab === tab }"
-            class="tab-button"
-          >
-            {{ getTabLabel(tab) }}
-          </button>
-          <!-- Actions Dropdown - Only show for standalone job pages (not deployment job pages) -->
-          <div
-            v-if="!deploymentId && hasAnyActions"
-            class="dropdown is-right"
-            :class="{ 'is-active': showActionsDropdown }"
-            ref="actionsDropdown"
-          >
-            <div class="dropdown-trigger">
-              <button
-                class="tab-button actions-button"
-                @click="toggleActionsDropdown"
-                :class="{ 'is-loading': loading }"
+          <div class="dropdown-menu">
+            <div class="dropdown-content">
+              <a
+                v-if="props.job.isRunning && props.isJobPoster"
+                class="dropdown-item"
+                @click="handleActionClick(openExtendModal)"
+                :disabled="loadingExtend"
               >
-                <span>Actions</span>
-                <span
-                  class="icon is-small dropdown-arrow ml-1"
-                  :class="{ 'is-rotated': showActionsDropdown }"
-                >
-                  <ChevronDownIcon />
+                <span class="icon is-small mr-2">
+                  <ClockIcon />
                 </span>
-              </button>
-            </div>
-            <div class="dropdown-menu">
-              <div class="dropdown-content">
-                <a
-                  v-if="props.job.isRunning && props.isJobPoster"
-                  class="dropdown-item"
-                  @click="handleActionClick(openExtendModal)"
-                  :disabled="loadingExtend"
-                >
-                  <span class="icon is-small mr-2">
-                    <ClockIcon />
-                  </span>
-                  <span>Extend</span>
-                </a>
+                <span>Extend</span>
+              </a>
 
-                <a
-                  v-if="
-                    (props.job.isRunning || props.job.state === 0) &&
-                    props.isJobPoster
-                  "
-                  class="dropdown-item"
-                  @click="handleActionClick(stopJob)"
-                  :disabled="loading"
-                >
-                  <span class="icon is-small mr-2">
-                    <SquareIcon />
-                  </span>
-                  <span>{{ props.job.state === 0 ? "Delist" : "Stop" }}</span>
-                </a>
-
-                <div v-if="!hasAnyActions" class="dropdown-item has-text-grey">
-                  <span>No actions available</span>
-                </div>
-              </div>
+              <a
+                v-if="
+                  (props.job.isRunning || props.job.state === 0) &&
+                  props.isJobPoster
+                "
+                class="dropdown-item is-danger-item"
+                @click="handleActionClick(stopJob)"
+                :disabled="loading"
+              >
+                <span class="icon is-small mr-2">
+                  <SquareIcon />
+                </span>
+                <span>{{ props.job.state === 0 ? "Delist" : "Stop" }}</span>
+              </a>
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- Tab bar (segmented control) -->
+      <div class="dep-tabs">
+        <button
+          v-for="tab in availableTabs"
+          :key="tab"
+          type="button"
+          class="dep-tab"
+          :class="{ 'is-active': activeTab === tab }"
+          @click="activeTab = tab"
+        >
+          {{ getTabLabel(tab) }}
+        </button>
       </div>
     </div>
 
     <!-- Tab Content -->
     <div class="p-5">
       <!-- Overview Tab -->
-      <div v-if="activeTab === 'overview'">
+      <div v-if="activeTab === 'overview'" class="tab-pane">
         <!-- Job Details Section -->
         <div>
           <h2 class="title is-5 mb-3">Job details</h2>
-          <div class="box is-borderless">
-            <div class="table-container">
-              <table class="table is-fullwidth mb-0">
-                <tbody>
-                  <tr>
-                    <td>Deployer</td>
-                    <td>
-                      {{ props.job.project?.toString() }}
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>Node</td>
-                    <td>
-                      <span
-                        v-if="
-                          props.job.node &&
-                          props.job.node !== '11111111111111111111111111111111'
-                        "
-                      >
-                        <nuxt-link
-                          :href="`https://explore.nosana.com/hosts/${props.job.node}`"
-                          target="_blank"
-                          class="has-text-link is-family-monospace"
-                        >
-                          {{ props.job.node }}
-                        </nuxt-link>
-                      </span>
-                      <span v-else class="has-text-grey">--</span>
-                    </td>
-                  </tr>
-                  <tr v-if="!props.hideFields?.marketAddress">
-                    <td>Market</td>
-                    <td>
-                      <a
-                        :href="`https://explore.nosana.com/markets/${props.job.market}`"
-                        target="_blank"
-                        class="has-text-link is-family-monospace"
-                      >
-                        {{ props.job.market?.toString() }}
-                      </a>
-                    </td>
-                  </tr>
-                  <tr v-if="!props.hideFields?.price">
-                    <td>Price</td>
-                    <td
-                      v-html="formatPrice(totalNos || 0, totalCostUsd || 0)"
-                    ></td>
-                  </tr>
-                  <tr v-for="field in resolvedMetricFields" :key="field.key">
-                    <td>{{ field.label }}</td>
-                    <td>{{ field.displayValue }}</td>
-                  </tr>
-                </tbody>
-              </table>
+          <div class="dep-card details">
+            <div class="stat-band">
+              <!-- Node -->
+              <div class="stat">
+                <span class="k">Node</span>
+                <a
+                  v-if="hasRealNode"
+                  :href="`https://explore.nosana.com/hosts/${props.job.node}`"
+                  target="_blank"
+                  class="v mono has-text-link"
+                  :title="props.job.node"
+                  >{{ shortAddress(props.job.node) }}</a
+                >
+                <span v-else class="v mono has-text-grey">--</span>
+              </div>
+
+              <!-- Market (hidden on deployment job pages) -->
+              <div class="stat" v-if="!props.hideFields?.marketAddress">
+                <span class="k">Market</span>
+                <a
+                  :href="`https://explore.nosana.com/markets/${props.job.market}`"
+                  target="_blank"
+                  class="v mono has-text-link"
+                  :title="props.job.market?.toString()"
+                  >{{ shortAddress(props.job.market?.toString() ?? "") }}</a
+                >
+              </div>
+
+              <!-- Price (hidden on deployment job pages) -->
+              <div class="stat" v-if="!props.hideFields?.price">
+                <span class="k">Price</span>
+                <span class="v">{{
+                  totalNos ? `${totalNos.toFixed(3)} NOS` : "--"
+                }}</span>
+                <span class="s" v-if="totalCostUsd"
+                  >${{ totalCostUsd.toFixed(3) }}</span
+                >
+              </div>
+
+              <!-- Node / host specs -->
+              <div class="stat" v-for="field in resolvedMetricFields" :key="field.key">
+                <span class="k">{{ field.label }}</span>
+                <span class="v" :title="field.displayValue">{{
+                  field.displayValue
+                }}</span>
+              </div>
             </div>
           </div>
         </div>
-        <!-- On-chain activity, hidden when the API has no events endpoint -->
-        <div class="mt-6" v-if="jobEventsSupported && !loadingJobEvents">
-          <JobEventTimeline :events="jobEvents" :markets="testgridMarkets" />
-        </div>
         <div
-          class="mt-6"
           v-if="
             props.isJobPoster &&
             props.job.isRunning &&
@@ -197,6 +226,10 @@
             :node="props.job.node"
             :opIds="props.job.jobDefinition.ops.map((op) => op.id)"
           />
+        </div>
+        <!-- On-chain activity, hidden when the API has no events endpoint -->
+        <div v-if="jobEventsSupported && !loadingJobEvents">
+          <JobEventTimeline :events="jobEvents" :markets="testgridMarkets" />
         </div>
       </div>
 
@@ -323,7 +356,8 @@ import JobResult from "~/components/Job/Result.vue";
 import JobDefinitionTab from "~/components/Job/Tabs/JobDefinition.vue";
 import JobEventTimeline from "~/components/Job/EventTimeline.vue";
 import SecondsFormatter from "~/components/SecondsFormatter.vue";
-import StatusTag from "~/components/Common/StatusTag.vue";
+import DeploymentStatusPill from "~/components/Deployment/DeploymentStatusPill.vue";
+import { formatTimeAgo } from "~/utils/relativeTime";
 import {
   resolveMetricFields,
   type MetricField,
@@ -343,7 +377,6 @@ import { useJobEvents } from "~/composables/jobs/useJobEvents";
 import ChevronDownIcon from "@/assets/img/icons/chevron-down.svg?component";
 import ClockIcon from "@/assets/img/icons/clock.svg?component";
 import SquareIcon from "@/assets/img/icons/square.svg?component";
-import ArrowUpIcon from "@/assets/img/icons/arrow-up.svg?component";
 import RunningIcon from "@/assets/img/icons/status/running.svg?component";
 import StoppedIcon from "@/assets/img/icons/status/stopped.svg?component";
 import FailedIcon from "@/assets/img/icons/status/failed.svg?component";
@@ -593,6 +626,41 @@ const formattedDockerImage = computed(() => {
   return dockerImage.value;
 });
 
+// Header title: the container image gives the job a meaningful name; fall back
+// to a generic label while the definition is still loading.
+const jobTitle = computed(() => formattedDockerImage.value || "Job");
+
+// Job state (number) → status string the shared DeploymentStatusPill understands.
+const jobStatusString = computed(() => {
+  const s = props.job.state;
+  if (typeof s === "number") {
+    switch (s) {
+      case 0:
+        return "QUEUED";
+      case 1:
+        return "RUNNING";
+      case 2:
+        return "COMPLETED";
+      case 3:
+        return "STOPPED";
+    }
+  }
+  return String(s ?? "");
+});
+
+// Middle-truncate the job address for the id line; the copy button copies it whole.
+const shortAddress = (address: string): string =>
+  address && address.length > 16
+    ? `${address.slice(0, 8)}…${address.slice(-6)}`
+    : address;
+
+const addrCopied = ref(false);
+const copyAddress = () => {
+  navigator.clipboard?.writeText(props.job.address);
+  addrCopied.value = true;
+  setTimeout(() => (addrCopied.value = false), 1400);
+};
+
 const jobDefinitionId = computed(() => {
   if (!props.job.jobDefinition?.ops?.length) return null;
   const firstOp = props.job.jobDefinition.ops[0];
@@ -685,14 +753,6 @@ const formatDateRelative = (timestamp: number) => {
   if (diffInDays < 7) return `${diffInDays}d ago`;
 
   return date.toLocaleDateString();
-};
-
-// Helper function to format price - show only totals
-const formatPrice = (nosAmount: number, usdAmount: number) => {
-  if (!nosAmount || nosAmount <= 0) return "--";
-  const nosDisplay = nosAmount.toFixed(3);
-  const usdDisplay = usdAmount > 0 ? usdAmount.toFixed(3) : "--";
-  return `NOS: ${nosDisplay} <br> USD: $${usdDisplay}`;
 };
 
 watch(
@@ -1446,25 +1506,6 @@ const marketName = computed(() => {
   return market?.name ?? null;
 });
 
-const formatStartTime = (timeStart: number) => {
-  const date = new Date(timeStart * 1000);
-  return date.toISOString().replace("T", " ").substring(0, 19);
-};
-
-const formatTimeAgo = (timeStart: number) => {
-  const now = Date.now();
-  const startTime = timeStart * 1000;
-  const diffMs = now - startTime;
-  const diffSec = Math.floor(diffMs / 1000);
-  if (diffSec < 60) return `${diffSec}s ago`;
-  const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffHours = Math.floor(diffMin / 60);
-  if (diffHours < 24) return `${diffHours}h ago`;
-  const diffDays = Math.floor(diffHours / 24);
-  return `${diffDays}d ago`;
-};
-
 const showActionsDropdown = ref(false);
 const headerIconRef = ref<HTMLElement | null>(null);
 
@@ -1500,786 +1541,467 @@ onUnmounted(() => {
 </script>
 
 <style lang="scss" scoped>
-// Improved header layout
-.deployment-header > .is-flex {
-  flex-wrap: wrap;
-  gap: 1rem;
+/* Page wrapper: header sits on the page ground, tab content below in cards —
+   matches the redesigned deployment detail page. */
+.job-detail {
+  color: $text;
 }
 
-.header-left-section {
-  min-width: 0; // Allow text to truncate
-  flex: 1;
+/* ---- Header (mirrors DeploymentHeader) ---- */
+.dep-header {
+  padding: 1.25rem 1.5rem 0;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: none;
+  border: 0;
+  padding: 0;
+  margin-bottom: 1rem;
+  cursor: pointer;
+  color: $grey;
+  font-family: $family-sans-serif;
+  font-size: 0.9rem;
+  transition: color 0.15s ease;
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  &:hover {
+    color: $text;
+  }
+}
+
+html.dark-mode .back-link:hover {
+  color: $white;
+}
+
+.header-main {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
 }
 
 .header-title-section {
-  min-width: 0; // Allow text to truncate
-  max-width: 400px; // Prevent extremely long addresses from stretching too much
-  display: flex !important;
-  flex-direction: column !important;
+  min-width: 0;
+  flex: 1;
 }
 
-.header-title-section .title {
-  display: block !important;
-  margin-bottom: 0.25rem !important;
-}
-
-.job-images-list {
+.title-row {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: 0.9rem;
+  flex-wrap: wrap;
 }
 
-.header-title-section .subtitle {
-  display: block !important;
-  word-break: break-all; // Allow long addresses to wrap
-  line-height: 1.2;
-  margin-top: 0 !important;
+.dep-name {
+  font-family: $title-family;
+  font-size: 1.6rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  margin: 0;
+  color: $text;
+  word-break: break-word;
 }
 
-.deployment-header .status-tag {
+html.dark-mode .dep-name {
+  color: $white;
+}
+
+.id-line {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+  font-size: 0.78rem;
+  color: $grey;
+}
+
+.id-line .is-family-monospace {
+  word-break: break-all;
+}
+
+.id-sep {
+  color: $grey-light;
+}
+
+.updated-time {
   white-space: nowrap;
+}
+
+.copy-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 0;
+  background: transparent;
+  color: $grey;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+
+  svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  &:hover {
+    background: $white-ter;
+    color: $text;
+  }
+
+  &.is-copied {
+    color: $secondary;
+  }
+}
+
+html.dark-mode .copy-btn:hover {
+  background: rgba($white, 0.08);
+  color: $white;
+}
+
+/* Actions button — grey, matching the segmented control; the width override
+   defeats the app-wide `.dropdown { width: 100% }` that breaks the flex row. */
+.header-main .dropdown {
+  width: auto;
   flex-shrink: 0;
 }
 
-// Mobile responsive
-@media screen and (max-width: 768px) {
-  .deployment-header > .is-flex {
-    flex-direction: column !important;
-    align-items: stretch !important;
-    flex-wrap: nowrap !important;
-  }
+.header-action-btn {
+  font-family: $title-family;
+  font-weight: 500;
+  font-size: 0.9rem;
+  border-radius: 10px;
+  border: 1px solid $grey-lighter;
+  background: $white-ter;
+  color: $text;
+  box-shadow: none;
 
-  .header-left-section {
-    width: 100%;
-    margin-bottom: 1rem;
-  }
-
-  .deployment-tabs {
-    width: 100% !important;
-    justify-content: flex-start;
-    margin-top: 0.5rem;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-
-  .header-title-section {
-    max-width: none;
-  }
-
-  .header-title-section .subtitle {
-    font-size: 0.75rem;
-  }
-
-  .tab-button {
-    font-size: 0.875rem;
-    padding: 0.5rem 0.75rem;
+  &:hover {
+    background: $grey-lightest;
+    border-color: $grey-light;
   }
 }
 
-// Extra small screens
-@media screen and (max-width: 480px) {
-  .deployment-tabs {
-    gap: 0.25rem;
-  }
+html.dark-mode .header-action-btn {
+  background: rgba($white, 0.06);
+  border-color: rgba($white, 0.1);
+  color: $white;
 
-  .tab-button {
-    font-size: 0.75rem;
-    padding: 0.375rem 0.5rem;
+  &:hover {
+    background: rgba($white, 0.1);
   }
 }
 
-// Job header styling - matches deployment page
-.job-header {
-  border-bottom: 1px solid $grey-lighter;
+.dropdown-arrow {
+  transition: transform 0.2s ease;
 }
 
-html.dark-mode .job-header {
-  border-bottom-color: $grey-dark;
+.dropdown-arrow.is-rotated {
+  transform: rotate(180deg);
 }
 
-// Remove old grid styling - now using tables
-
-// Actions dropdown styling - matches deployment page pattern
-// (Most styling comes from global dropdown classes)
-
-// Remove old grid layouts - now using table format
-
-// Minimal cleanup styles
-
-// Dark mode for new compact header
-html.dark-mode {
-  .card {
-    background: transparent;
-  }
-
-  .compact-job-header {
-    background: $black-ter;
-  }
-
-  .actions-dropdown-btn {
-    background: $black;
-    border-color: $grey-dark;
-    color: $white;
-
-    &:hover {
-      background: $black-bis;
-      border-color: $grey;
-    }
-  }
-
-  .actions-dropdown-menu {
-    background: $black-ter;
-    border-color: $grey-dark;
-    box-shadow: $box-shadow;
-  }
-
-  .dropdown-item {
-    background: $black-ter;
-    border-bottom-color: $grey-dark;
-    color: $white;
-
-    &:hover:not(.is-disabled) {
-      background: $grey-darker;
-    }
-
-    &.is-disabled {
-      opacity: 0.3;
-    }
-  }
-
-  .address-grid {
-    .address-label {
-      color: $text-light;
-    }
-
-    .address-link,
-    .address-value {
-      color: $white;
-
-      &:hover {
-        color: $secondary;
-      }
-    }
-
-    .address-value.has-text-grey-light {
-      color: $grey;
-    }
-  }
-
-  .service-endpoints-new {
-    background: $black-ter;
-
-    .endpoint-port {
-      color: $white;
-    }
-
-    .action-button {
-      background: $black-ter;
-      border-color: $grey-dark;
-      color: $white;
-
-      &:hover {
-        background: $grey-darker;
-        border-color: $grey;
-      }
-    }
-  }
-
-  .title-section {
-    .job-main-title {
-      color: $white;
-    }
-  }
-
-  .address-section {
-    .address-label {
-      color: #999;
-    }
-
-    .address-link,
-    .address-value {
-      color: $white;
-
-      &:hover {
-        color: $secondary;
-      }
-    }
-
-    .address-value.has-text-grey-light {
-      color: $grey;
-    }
-  }
-
-  .spec-item {
-    .spec-label {
-      color: $text-light;
-    }
-
-    .spec-value {
-      color: $white;
-
-      .market-link {
-        color: $white;
-
-        &:hover {
-          color: $secondary;
-        }
-      }
-
-      .time-ago {
-        color: $text-light;
-      }
-
-      :deep(.job-price) {
-        color: inherit;
-      }
-    }
-  }
-
-  .spec-grid-item {
-    .spec-grid-label {
-      color: #999;
-    }
-
-    .spec-grid-value {
-      color: $white;
-    }
-  }
+.header-main .dropdown-menu {
+  min-width: 200px;
+  padding-top: 8px;
 }
 
-// Utility class for full width
-.w-100 {
-  width: 100%;
+.header-main .dropdown-content {
+  background: $white;
+  border: 1px solid $grey-lighter;
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba($black, 0.14);
+  padding: 6px;
 }
 
-// Spinner animation
-@keyframes spinAround {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.has-text-ellipsis {
+.header-main .dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 9px;
+  font-size: 0.9rem;
+  color: $text;
+  background: transparent;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-// Card header container styling
-.card-header-container {
   cursor: pointer;
-  background-color: $white;
-  border-radius: 8px 8px 0 0; // Round top corners
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 
-  // When this container is directly followed by card-content (i.e., no service endpoints)
-  &:has(+ .card-content) {
-    & > .card-header {
-      // Target the .card-header *inside* this specific .card-header-container
-      box-shadow: none !important;
-      border-bottom-color: transparent !important;
-    }
+  .icon {
+    color: $grey;
+    transition: color 0.15s ease;
   }
-}
 
-.job-header-grid {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  align-items: center;
-
-  @media (max-width: 768px) {
-    flex-direction: column;
-    gap: 0.75rem;
-    justify-content: flex-start;
-    align-items: stretch;
-  }
-}
-
-.job-header-left-group {
-  display: flex;
-  align-items: center;
-  gap: 1rem; /* Maintain gap between title, gpu, price */
-  flex-shrink: 0; /* Prevent this group from shrinking if space is tight */
-  min-width: 0; /* Allow flex items to shrink below their content size if needed */
-
-  @media (max-width: 768px) {
-    flex-direction: column; /* Stack title, gpu, price on mobile */
-    align-items: flex-start; /* Align them left on mobile */
-    width: 100%; /* Take full width to align with actions below */
-    gap: 0.75rem; /* Match mobile gap */
-  }
-}
-
-.job-title-col {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  position: relative;
-  min-width: 200px; /* Example: Set minimum width for the title column here */
-  flex-shrink: 0; // Prevent title from shrinking too much
-
-  .job-title {
-    font-size: 1.1rem;
-    font-weight: 600;
+  &:hover {
+    background: $white-ter;
     color: $text;
-    line-height: 1.2;
-  }
-
-  .job-docker {
-    font-size: 0.8rem;
-    font-family: monospace;
-    color: $text-dark;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    line-height: 1.3;
-    position: absolute; /* Positioned relative to job-title-col */
-    top: 100%;
-    left: 0;
-    right: 0;
-    margin-top: -0.1rem;
-    max-width: 100%; // Ensure it doesn't overflow its container
-  }
-}
-
-.job-gpu-col {
-  display: flex;
-  align-items: center;
-
-  .job-gpu {
-    font-size: 1.1rem;
-    color: $text;
-    font-weight: 600;
-    line-height: 1.2;
-  }
-}
-
-.job-price {
-  text-align: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  @media (max-width: 768px) {
-    text-align: left;
-    justify-content: flex-start;
-  }
-
-  .price-value {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: $text;
-    line-height: 1.2;
-  }
-}
-
-.job-actions {
-  display: flex;
-  gap: 0.5rem;
-  justify-content: flex-start;
-
-  @media (max-width: 768px) {
-    justify-content: flex-start;
-  }
-
-  .actions-container {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  .action-button {
-    display: inline-flex;
-    align-items: center;
-    background-color: #ffffff !important;
-    border: 1px solid #e8e8e8 !important;
-    color: #363636 !important;
-    padding: 0.4rem 0.6rem !important;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
-    line-height: 1;
-    transition: all 0.2s ease;
-
-    &:hover {
-      background-color: #f5f5f5 !important;
-      border-color: #dadada !important;
-    }
 
     .icon {
-      display: inline-flex !important;
-      align-items: center !important;
-      justify-content: center !important;
-      margin-right: 0.5rem;
-
-      svg {
-        width: 16px;
-        height: 16px;
-        display: block;
-      }
-    }
-
-    &.is-loading {
-      position: relative;
-      color: transparent !important;
-      pointer-events: none;
-
-      &:after {
-        position: absolute;
-        left: calc(50% - 0.5em);
-        top: calc(50% - 0.5em);
-        width: 1em;
-        height: 1em;
-      }
+      color: $secondary;
     }
   }
 }
 
-.job-status {
-  display: flex;
-  align-items: center;
+.header-main .dropdown-item.is-danger-item {
+  color: $danger;
 
-  @media (max-width: 768px) {
-    margin-left: 0.5rem;
+  .icon {
+    color: $danger;
+  }
+
+  &:hover {
+    background: rgba($danger, 0.1);
+    color: $danger;
+
+    .icon {
+      color: $danger;
+    }
   }
 }
 
-// Service endpoints styling
-.service-endpoints {
-  background-color: $white;
-  border-top: 0px solid $grey-lighter;
-  transition: background-color 0.2s ease;
+html.dark-mode .header-main .dropdown-content {
+  background: $black-ter;
+  border-color: rgba($white, 0.1);
+  box-shadow: 0 14px 44px rgba($black, 0.55);
 }
 
-.endpoint-content {
-  background-color: $white;
-  transition: background-color 0.2s ease;
-}
+html.dark-mode .header-main .dropdown-item {
+  color: $white;
 
-.card-header.is-clickable:hover + .service-endpoints,
-.card-header.is-clickable:hover {
-  background-color: rgba(0, 0, 0, 0.02);
-}
-
-.endpoint-item {
-  &:last-child {
-    margin-bottom: 0 !important;
+  &:hover {
+    background: rgba($white, 0.06);
   }
 }
 
-.endpoint-content {
-  display: flex;
-  align-items: center;
-  padding: 0rem;
-  background: $white;
-  gap: 0.5rem;
+html.dark-mode .header-main .dropdown-item.is-danger-item {
+  color: $danger;
+
+  &:hover {
+    background: rgba($danger, 0.16);
+    color: $danger;
+  }
 }
 
-.endpoint-port {
-  font-weight: 500;
-  color: $text;
-  font-size: 0.93rem;
-  display: flex;
-  align-items: center;
-}
-
-.tags.has-addons {
+/* Segmented tab control */
+.dep-tabs {
   display: inline-flex;
-  align-items: center;
-  margin: 0;
-  margin-top: 0.6rem;
+  gap: 3px;
+  padding: 5px;
+  margin: 1.75rem 0 0.25rem;
+  border-radius: 13px;
+  background: $grey-lightest;
+  max-width: 100%;
+  overflow-x: auto;
+}
 
-  .tag {
-    display: inline-flex;
-    align-items: center;
-    height: 1.3rem;
-    padding: 0 0.5rem;
+html.dark-mode .dep-tabs {
+  background: rgba($white, 0.08);
+}
+
+.dep-tab {
+  font-family: $title-family;
+  font-weight: 500;
+  font-size: 0.9rem;
+  color: $grey-dark;
+  border: 0;
+  background: none;
+  padding: 0.6rem 1.35rem;
+  border-radius: 9px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease;
+
+  &:hover {
+    color: $text;
+  }
+
+  &.is-active {
+    background: $secondary;
+    color: #05230a;
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba($black, 0.12);
   }
 }
 
-// Smooth rotation for dropdown arrow
-.fa-angle-down {
-  transition: transform 0.3s ease;
+html.dark-mode .dep-tab {
+  color: $grey-light;
 }
 
-// Quick Details specific styling
-.quick-detail-item {
-  padding: 0.2rem 0.5rem;
-  border-radius: 4px;
+html.dark-mode .dep-tab:hover {
+  color: $white;
+}
+
+html.dark-mode .dep-tab.is-active {
+  background: $secondary;
+  color: #05230a;
+  box-shadow: 0 1px 3px rgba($black, 0.5);
+}
+
+/* ---- Tab content ---- */
+.tab-pane {
   display: flex;
   flex-direction: column;
-  height: 100%;
-
-  .quick-detail-label {
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: #7a7a7a;
-    text-transform: uppercase;
-    margin-bottom: 0.1rem;
-  }
-
-  .quick-detail-value {
-    font-size: 0.85rem;
-    font-weight: 500;
-    color: #363636;
-    word-break: break-word;
-
-    .icon-text {
-      color: #363636;
-    }
-  }
+  gap: 2.25rem;
 }
 
-// Responsive adjustments
-@media (max-width: 768px) {
-  .card-header-title {
-    .columns {
-      flex-direction: column;
-      gap: 0.75rem;
-    }
-
-    .column {
-      width: 100% !important;
-      text-align: left !important; // Align all header items left on mobile
-      &.has-text-centered {
-        text-align: left !important;
-      }
-    }
-  }
-
-  .buttons {
-    justify-content: flex-start; // Align buttons left on mobile
-    &.is-flex-wrap-nowrap {
-      flex-wrap: wrap !important; // Allow buttons to wrap on mobile
-      .button {
-        margin-bottom: 0.5rem !important;
-      }
-    }
-  }
-  .level-left,
-  .level-right {
-    flex-basis: auto;
-    flex-grow: 0;
-    flex-shrink: 0;
-  }
-  .level-left + .level-right {
-    margin-top: 0.75rem;
-  }
+.tab-pane > * {
+  margin-bottom: 0 !important;
 }
 
-// Dark mode adjustments
-html.dark-mode {
-  .card {
-    background-color: $black-ter;
-    border-color: #444;
-  }
-
-  .card-header {
-    background-color: $black-ter;
-  }
-
-  .card-header-container {
-    background-color: $black-ter;
-  }
-
-  .card-content {
-    background-color: transparent;
-
-    :deep(.job-tabs-condensed) {
-      background: $black-ter;
-    }
-
-    pre {
-      background-color: #1f1f1f;
-      color: #c9d1d9;
-      border-radius: 4px;
-      border: 1px solid #444;
-      padding: 1rem;
-    }
-  }
-
-  .box {
-    background-color: #363636;
-    border-color: #555;
-  }
-
-  .job-title-col {
-    .job-title {
-      color: $white;
-    }
-  }
-
-  .job-gpu-col {
-    .job-gpu {
-      color: $white;
-    }
-  }
-
-  .job-price {
-    .price-value {
-      color: $white;
-    }
-  }
-
-  .job-docker {
-    color: $grey-light;
-  }
-
-  .service-endpoints {
-    background-color: $black-ter;
-    border-top-color: #444;
-  }
-
-  .endpoint-content {
-    background: $black-ter;
-    border-color: #444;
-  }
-
-  .endpoint-port {
-    color: $white;
-  }
-
-  .quick-detail-item {
-    .quick-detail-label {
-      color: #b0b0b0;
-    }
-
-    .quick-detail-value,
-    .quick-detail-value .icon-text {
-      color: #ffffff;
-    }
-  }
-
-  .notification.is-warning.is-light {
-    background-color: rgba(255, 221, 87, 0.1);
-    color: #fff;
-  }
-
-  .card-header.is-clickable:hover + .service-endpoints,
-  .card-header.is-clickable:hover {
-    background-color: rgba(255, 255, 255, 0.05);
-  }
-
-  .arrow-icon {
-    filter: brightness(0) invert(1);
-  }
+/* Card surface — matches the deployment detail cards, with the same soft
+   elevation the deployment page applies to its section cards. */
+.dep-card {
+  background: $white;
+  border: 1px solid $grey-lighter;
+  border-radius: 14px;
+  overflow: hidden;
+  color: $text;
+  box-shadow:
+    0 1px 3px rgba($black, 0.06),
+    0 14px 38px -6px rgba($black, 0.14);
 }
 
-// Override Bulma's default spacing for tighter layout in specific areas
-.card-content.py-3 {
-  padding-top: 0.75rem;
-  padding-bottom: 0.75rem;
+html.dark-mode .dep-card {
+  background: $black-ter;
+  border-color: rgba($white, 0.1);
+  color: $white;
+  box-shadow:
+    0 1px 3px rgba($black, 0.4),
+    0 16px 40px -8px rgba($black, 0.6);
 }
 
-// Status tag styling improvements
-.tags.has-addons {
-  .tag:first-child {
-    border-top-right-radius: 0;
-    border-bottom-right-radius: 0;
-  }
-
-  .tag:last-child {
-    border-top-left-radius: 0;
-    border-bottom-left-radius: 0;
-  }
+/* Job details — stat band mirroring the deployment details section: a grid of
+   label-over-value cells with hairline dividers between columns. */
+.details {
+  padding: 22px 0;
 }
 
-// Button group spacing
-.buttons.are-small {
-  .button {
-    margin-bottom: 0;
-  }
+.stat-band {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  row-gap: 26px;
 }
 
-.arrow-icon {
-  width: 1.5rem;
-  height: 1.5rem;
-  transition: transform 0.3s ease;
-  transform: rotate(-90deg);
-
-  &.is-rotated {
-    transform: rotate(-180deg);
-  }
+.stat {
+  padding: 0 22px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  min-width: 0;
 }
 
-.button.is-success.is-small {
-  &.px-0.py-0 {
-    padding: 0;
-    line-height: 1;
-    height: auto;
-  }
+/* Vertical divider between columns (suppressed on each row's first cell). */
+.stat::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 2px;
+  bottom: 2px;
+  width: 1px;
+  background: $grey-lighter;
 }
 
-.open-service-btn {
-  padding: 0 0.25rem !important;
-  line-height: 1;
-  height: auto;
-}
-
-.compact-btn {
-  padding: 0 0.5rem !important;
-  line-height: 1.2 !important;
-  height: 1.5rem !important;
-  min-height: unset !important;
-}
-
-// Add this new class to remove padding from columns
-.no-padding {
-  padding: 0 !important;
-
-  .column {
-    padding: 0 !important;
-    margin-bottom: 0.5rem;
-  }
-}
-
-.content-separator {
+.stat:nth-child(4n + 1)::before {
   display: none;
 }
 
-html.dark-mode .content-separator {
-  background-color: #444;
+html.dark-mode .stat::before {
+  background: rgba($white, 0.08);
 }
 
-.service-button {
-  background-color: $grey-lightest !important;
-  border: none !important;
-  color: $text !important;
-  text-decoration: none !important;
-  outline: none !important;
-  box-shadow: none !important;
+.k {
+  font-size: 12px;
+  color: $grey;
+  margin-bottom: 7px;
+}
 
-  &:hover {
-    background-color: $grey-lighter !important;
-    border: none !important;
-    box-shadow: none !important;
+.v {
+  font-family: $title-family;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v.mono {
+  font-family: $family-monospace;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.s {
+  font-size: 12px;
+  color: $grey;
+  margin-top: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+html.dark-mode .k,
+html.dark-mode .s {
+  color: $grey-light;
+}
+
+@media screen and (max-width: 920px) {
+  .stat-band {
+    grid-template-columns: repeat(3, 1fr);
   }
 
-  &:focus,
-  &:active,
-  &:focus-visible {
-    background-color: #e8e8e8 !important;
-    border: none !important;
-    box-shadow: none !important;
-    outline: none !important;
+  .stat:nth-child(4n + 1)::before {
+    display: block;
+  }
+
+  .stat:nth-child(3n + 1)::before {
+    display: none;
   }
 }
 
-html.dark-mode {
-  .service-button {
-    background-color: $grey !important;
-    color: $white !important;
+@media screen and (max-width: 560px) {
+  .stat-band {
+    grid-template-columns: repeat(2, 1fr);
+  }
 
-    &:hover {
-      background-color: $grey-light !important;
-    }
+  .stat:nth-child(3n + 1)::before {
+    display: block;
+  }
 
-    &:focus,
-    &:active,
-    &:focus-visible {
-      background-color: $grey !important;
-    }
+  .stat:nth-child(2n + 1)::before {
+    display: none;
+  }
+}
+
+/* Empty-state notifications inside tabs. */
+.notification.is-light.has-text-centered {
+  border-radius: 14px;
+}
+
+@media screen and (max-width: 768px) {
+  .dep-header {
+    padding: 1rem 1rem 0;
+  }
+
+  .dep-name {
+    font-size: 1.35rem;
   }
 }
 </style>

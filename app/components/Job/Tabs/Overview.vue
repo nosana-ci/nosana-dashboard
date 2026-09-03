@@ -1,271 +1,314 @@
 <template>
-  <div class="groups-container">
-    <div v-if="loading" class="has-text-centered p-6">
-      <span class="icon is-small">
-        <i class="fas fa-spinner fa-spin"></i>
-      </span>
-      <span>Loading groups...</span>
+  <div class="containers">
+    <!-- States -->
+    <div v-if="loading" class="cc-state has-text-grey">
+      <span class="loader"></span>
+      <span>Loading operations…</span>
     </div>
 
-    <div v-else-if="error" class="has-text-centered p-6 has-text-danger">
-      <span class="icon is-small">
-        <i class="fas fa-exclamation-triangle"></i>
-      </span>
+    <div v-else-if="error" class="cc-state has-text-danger">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
+        <path d="M12 9v4M12 17h.01" />
+      </svg>
       <span>{{ error }}</span>
     </div>
 
-    <div v-else-if="operations.length === 0" class="has-text-centered p-6 has-text-grey-light">
-      <span class="icon is-small">
-        <i class="fas fa-box-open"></i>
-      </span>
-      <span>No groups available.</span>
+    <div
+      v-else-if="operations.length === 0"
+      class="cc-state has-text-grey"
+    >
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4" />
+      </svg>
+      <span>No containers available.</span>
     </div>
 
-    <!-- Expandable Tree Table Structure -->
-    <div v-else class="container-controls-tree">
-      <template v-for="(groupOps, groupName) in groupedOperations" :key="groupName">
-        <!-- Group Row -->
-        <div class="tree-row tree-row--group" :class="{ 'is-expanded': expandedGroups.has(groupName) }">
-          <div class="tree-row__content" @click="toggleGroupExpansion(groupName)">
-            <div class="tree-row__main">
-              <span class="tree-row__expand-icon">
-                <i class="fas fa-chevron-right"></i>
-              </span>
-              <div class="tree-row__info">
-                <h2 class="title is-5 mb-0 is-capitalized">{{ groupName }}</h2>
-                <span class="subtitle is-6 has-text-grey-dark">{{ groupOps.length }} operation{{ groupOps.length !== 1 ? 's' : '' }}</span>
+    <!-- Groups -->
+    <div v-else class="cc-groups">
+      <section
+        v-for="(groupOps, groupName) in groupedOperations"
+        :key="groupName"
+        class="cc-group"
+      >
+        <header class="cc-group-head">
+          <button
+            type="button"
+            class="cc-group-toggle"
+            @click="toggleGroupExpansion(groupName)"
+          >
+            <svg
+              class="cc-chevron"
+              :class="{ 'is-open': expandedGroups.has(groupName) }"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M9 18l6-6-6-6" />
+            </svg>
+            <span class="cc-group-name">{{ groupName }}</span>
+            <span class="cc-group-count"
+              >{{ groupOps.length }} operation{{
+                groupOps.length !== 1 ? "s" : ""
+              }}</span
+            >
+          </button>
+
+          <div class="cc-actions" @click.stop>
+            <button
+              class="button is-small cc-btn"
+              @click="stopGroup(groupName)"
+              :disabled="
+                isJobCompleted ||
+                loadingGroups.has(groupName) ||
+                !hasStoppableOpsInGroup(groupOps)
+              "
+              :class="{ 'is-loading': loadingGroups.has(groupName) }"
+              title="Stop all operations in this group"
+            >
+              <span class="icon is-small"><SquareIcon /></span>
+              <span>Stop</span>
+            </button>
+            <button
+              class="button is-small cc-btn"
+              @click="restartGroup(groupName)"
+              :disabled="
+                isJobCompleted ||
+                loadingGroups.has(groupName) ||
+                !hasRestartableOpsInGroup(groupOps)
+              "
+              :class="{ 'is-loading': loadingGroups.has(groupName) }"
+              title="Restart all operations in this group"
+            >
+              <span class="icon is-small"><RefreshIcon /></span>
+              <span>Restart</span>
+            </button>
+          </div>
+        </header>
+
+        <div v-if="expandedGroups.has(groupName)" class="cc-ops">
+          <article
+            v-for="op in groupOps"
+            :key="op.id"
+            class="cc-op"
+            :class="{ 'is-open': expandedOps.has(op.id) }"
+          >
+            <div
+              class="cc-op-head is-flex is-align-items-center"
+              @click="toggleOpExpansion(op.id)"
+            >
+              <svg
+                class="cc-chevron"
+                :class="{ 'is-open': expandedOps.has(op.id) }"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M9 18l6-6-6-6" />
+              </svg>
+              <div class="cc-op-id">
+                <span class="cc-op-name">{{ op.id }}</span>
+                <span class="cc-op-image is-family-monospace">{{
+                  op.image || "--"
+                }}</span>
               </div>
-            </div>
-            <div class="tree-row__actions" @click.stop>
-              <div class="buttons has-addons">
+              <span class="cc-op-status">
+                <StatusTag :status="op.status" />
+              </span>
+              <div class="cc-actions" @click.stop>
                 <button
-                  @click="stopGroup(groupName)"
-                  :disabled="isJobCompleted || loadingGroups.has(groupName) || !hasStoppableOpsInGroup(groupOps)"
-                  :class="{ 'is-loading': loadingGroups.has(groupName) }"
-                  class="button tab-button"
-                  title="Stop all operations in this group"
+                  class="button is-small cc-btn"
+                  @click="stopOperation(op)"
+                  :disabled="
+                    isJobCompleted || !canStop(op.status) || loadingOps.has(op.id)
+                  "
+                  :class="{ 'is-loading': loadingOps.has(op.id) }"
+                  title="Stop operation"
                 >
-                  <span class="icon is-small">
-                    <SquareIcon />
-                  </span>
+                  <span class="icon is-small"><SquareIcon /></span>
                   <span>Stop</span>
                 </button>
                 <button
-                  @click="restartGroup(groupName)"
-                  :disabled="isJobCompleted || loadingGroups.has(groupName) || !hasRestartableOpsInGroup(groupOps)"
-                  :class="{ 'is-loading': loadingGroups.has(groupName) }"
-                  class="button tab-button"
-                  title="Restart all operations in this group"
+                  class="button is-small cc-btn"
+                  @click="restartOperation(op)"
+                  :disabled="
+                    isJobCompleted ||
+                    !canRestart(op.status) ||
+                    loadingOps.has(op.id)
+                  "
+                  :class="{ 'is-loading': loadingOps.has(op.id) }"
+                  title="Restart operation"
                 >
-                  <span class="icon is-small">
-                    <RefreshIcon />
-                  </span>
+                  <span class="icon is-small"><RefreshIcon /></span>
                   <span>Restart</span>
                 </button>
               </div>
             </div>
-          </div>
-          
-          <!-- Operations List (Indented Level 1) -->
-          <div v-if="expandedGroups.has(groupName)" class="tree-row__children">
-            <template v-for="op in groupOps" :key="op.id">
-              <!-- Operation Row -->
-              <div class="tree-row tree-row--operation" :class="{ 'is-expanded': expandedOps.has(op.id) }">
-                <div class="tree-row__content" @click="toggleOpExpansion(op.id)">
-                  <div class="tree-row__main">
-                    <span class="tree-row__expand-icon">
-                      <i class="fas fa-chevron-right"></i>
-                    </span>
-                    <div class="tree-row__info">
-                      <div class="is-flex is-align-items-center">
-                        <div class="mr-3">
-                          <h2 class="title is-5 mb-0">{{ op.id }}</h2>
-                          <span class="subtitle is-6 has-text-grey-dark is-family-monospace">{{ op.image || '--' }}</span>
-                        </div>
-                        <!-- Status next to title -->
-                        <div class="tree-row__status">
-                          <StatusTag :status="op.status" />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <!-- Right side: Actions -->
-                  <div class="tree-row__right" @click.stop>
-                    <!-- Actions -->
-                    <div class="tree-row__actions">
-                      <div class="buttons has-addons">
-                        <button
-                          @click="stopOperation(op)"
-                          :disabled="isJobCompleted || !canStop(op.status) || loadingOps.has(op.id)"
-                          :class="{ 'is-loading': loadingOps.has(op.id) }"
-                          class="button tab-button"
-                          title="Stop operation"
-                        >
-                          <span class="icon is-small">
-                            <SquareIcon />
-                          </span>
-                          <span>Stop</span>
-                        </button>
-                        <button
-                          @click="restartOperation(op)"
-                          :disabled="isJobCompleted || !canRestart(op.status) || loadingOps.has(op.id)"
-                          :class="{ 'is-loading': loadingOps.has(op.id) }"
-                          class="button tab-button"
-                          title="Restart operation"
-                        >
-                          <span class="icon is-small">
-                            <RefreshIcon />
-                          </span>
-                          <span>Restart</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+
+            <div v-if="expandedOps.has(op.id)" class="cc-op-body">
+              <!-- Timing + results -->
+              <div class="cc-meta">
+                <div class="cc-meta-item">
+                  <span class="k">Started</span>
+                  <span class="v">{{
+                    formatTimestamp(getOpState(op.id)?.startTime) || "--"
+                  }}</span>
                 </div>
-                
-                <!-- Operation Details (Indented Level 2) -->
-                <div v-if="expandedOps.has(op.id)" class="operation-details-panel">
-                  <!-- Operation Details -->
-                  <div class="detail-section">
-                    <h2 class="title is-5 mb-3">Operation Details</h2>
-                    <div class="table-container">
-                      <table class="table is-fullwidth mb-0">
-                      <tbody>
-                        <tr>
-                          <td class="has-min-width-250">Started</td>
-                          <td>{{ formatTimestamp(getOpState(op.id)?.startTime) || '--' }}</td>
-                        </tr>
-                        <tr>
-                          <td>Ended</td>
-                          <td>{{ formatTimestamp(getOpState(op.id)?.endTime) || '--' }}</td>
-                        </tr>
-                        <tr>
-                          <td>Results</td>
-                          <td>
-                            <button
-                              v-if="hasOpResults(op.id)"
-                              class="button is-small is-link is-light"
-                              @click.stop="openResultsModal(op.id)"
-                            >
-                              <span class="icon is-small">
-                                <i class="fas fa-eye"></i>
-                              </span>
-                              <span>View</span>
-                            </button>
-                            <span v-else class="has-text-grey">None available</span>
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                    </div>
+                <div class="cc-meta-item">
+                  <span class="k">Ended</span>
+                  <span class="v">{{
+                    formatTimestamp(getOpState(op.id)?.endTime) || "--"
+                  }}</span>
+                </div>
+                <div class="cc-meta-item">
+                  <span class="k">Results</span>
+                  <span class="v">
+                    <button
+                      v-if="hasOpResults(op.id)"
+                      class="button is-small is-ghost cc-view-btn"
+                      @click.stop="openResultsModal(op.id)"
+                    >
+                      View results
+                    </button>
+                    <span v-else class="has-text-grey">None available</span>
+                  </span>
+                </div>
+              </div>
+
+              <!-- Entrypoint / Command (only when overridden in the job definition) -->
+              <div class="cc-section" v-if="op.entrypoint || op.cmd">
+                <div class="cc-cmd">
+                  <div class="cc-cmd-item" v-if="op.entrypoint">
+                    <span class="cc-cmd-label">Entrypoint</span>
+                    <code class="cc-code is-family-monospace">{{
+                      op.entrypoint
+                    }}</code>
                   </div>
-                  
-                  <!-- Service Endpoints -->
-                  <div class="detail-section">
-                    <h2 class="title is-5 mb-3">Service Endpoints</h2>
-                    <div class="table-container">
-                      <table v-if="op.ports && op.ports.length > 0" class="table is-fullwidth mb-0">
-                      <thead>
-                        <tr>
-                          <th>Port</th>
-                          <th>URL</th>
-                          <th>Status</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr v-for="(portInfo, idx) in op.ports" :key="idx">
-                          <td>{{ portInfo.port }}</td>
-                          <td>
-                            <a :href="portInfo.url" target="_blank" class="has-text-link endpoint-url">{{ portInfo.url }} ↗</a>
-                          </td>
-                          <td>
-                            <StatusTag :status="portInfo.status" />
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                    <table v-else class="table is-fullwidth mb-0">
-                      <tbody>
-                        <tr>
-                          <td class="has-text-grey">No endpoints available</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                    </div>
-                  </div>
-                  
-                  <!-- Logs -->
-                  <div class="detail-section">
-                    <div class="is-flex is-justify-content-space-between is-align-items-center mb-3">
-                      <h2 class="title is-5 mb-0">Logs</h2>
-                    </div>
-                    <div v-if="getOpLogs(op.id)?.length" class="logs-container-with-button">
-                      <div class="logs-header">
-                        <button
-                          class="button is-small is-text fullscreen-logs-button"
-                          @click.stop="openLogModal(op.id)"
-                          title="Fullscreen Logs"
-                        >
-                          <span class="icon is-small">
-                            <FullscreenIcon />
-                          </span>
-                        </button>
-                      </div>
-                      <FLogViewer
-                        :logs="getOpLogs(op.id)"
-                        :isConnecting="false"
-                        :progressBars="new Map()"
-                        :resourceProgressBars="new Map()"
-                      />
-                    </div>
-                    <table v-else class="table is-fullwidth mb-0">
-                      <tbody>
-                        <tr>
-                          <td class="has-text-grey">No logs available</td>
-                        </tr>
-                      </tbody>
-                    </table>
+                  <div class="cc-cmd-item" v-if="op.cmd">
+                    <span class="cc-cmd-label">Command</span>
+                    <code class="cc-code is-family-monospace">{{ op.cmd }}</code>
                   </div>
                 </div>
               </div>
-            </template>
-          </div>
+
+              <!-- Endpoints -->
+              <div class="cc-section" v-if="op.ports && op.ports.length > 0">
+                <div class="cc-section-title">Endpoints</div>
+                <div class="cc-endpoints">
+                  <div
+                    v-for="(portInfo, idx) in op.ports"
+                    :key="idx"
+                    class="cc-endpoint is-flex is-align-items-center"
+                  >
+                    <span class="cc-port is-family-monospace"
+                      >:{{ portInfo.port }}</span
+                    >
+                    <a
+                      :href="portInfo.url"
+                      target="_blank"
+                      class="cc-ep-url is-family-monospace"
+                      :title="portInfo.url"
+                      >{{ portInfo.url }}</a
+                    >
+                    <StatusTag :status="portInfo.status" />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Logs -->
+              <div class="cc-section">
+                <div
+                  class="cc-section-head is-flex is-align-items-center is-justify-content-space-between"
+                >
+                  <div class="cc-section-title">Logs</div>
+                  <button
+                    v-if="getOpLogs(op.id)?.length"
+                    class="button is-small cc-icon-btn"
+                    @click.stop="openLogModal(op.id)"
+                    title="Fullscreen logs"
+                  >
+                    <span class="icon is-small"><FullscreenIcon /></span>
+                  </button>
+                </div>
+                <FLogViewer
+                  v-if="getOpLogs(op.id)?.length"
+                  :logs="getOpLogs(op.id)"
+                  :isConnecting="false"
+                  :progressBars="new Map()"
+                  :resourceProgressBars="new Map()"
+                  class="cc-logs"
+                />
+                <p v-else class="has-text-grey has-text-centered py-4 mb-0">
+                  No logs available
+                </p>
+              </div>
+            </div>
+          </article>
         </div>
-      </template>
+      </section>
     </div>
 
-  <!-- Fullscreen Logs Modal -->
-  <FullscreenModal :isOpen="logModalOpen" :title="`Operation Logs - ${fullscreenOpId || ''}`" @close="closeLogModal">
-    <FLogViewer
-      v-if="fullscreenOpId && getOpLogs(fullscreenOpId)?.length"
-      :logs="getOpLogs(fullscreenOpId)"
-      :isConnecting="false"
-      :fullscreen="true"
-      :progressBars="new Map()"
-      :resourceProgressBars="new Map()"
-      class="fullscreen-viewer"
-    />
-    <div v-else class="has-text-centered p-4">
-      <span class="has-text-grey">No logs available</span>
-    </div>
-  </FullscreenModal>
-  
-  <!-- Job Results Modal -->
-  <FullscreenModal :isOpen="resultsModalOpen" :title="`Job Results - ${resultsOpId || ''}`" @close="closeResultsModal">
-    <div class="box">
-      <div class="content">
-        <template v-if="resultsOpId && hasOpResults(resultsOpId)">
-          <VueJsonPretty :data="getOpResults(resultsOpId)" show-icon show-line-number />
-        </template>
-        <div v-else class="has-text-centered py-6">
-          <span class="has-text-grey">No results available</span>
+    <!-- Fullscreen Logs Modal -->
+    <FullscreenModal
+      :isOpen="logModalOpen"
+      :title="`Operation Logs - ${fullscreenOpId || ''}`"
+      @close="closeLogModal"
+    >
+      <FLogViewer
+        v-if="fullscreenOpId && getOpLogs(fullscreenOpId)?.length"
+        :logs="getOpLogs(fullscreenOpId)"
+        :isConnecting="false"
+        :fullscreen="true"
+        :progressBars="new Map()"
+        :resourceProgressBars="new Map()"
+        class="fullscreen-viewer"
+      />
+      <div v-else class="has-text-centered p-4">
+        <span class="has-text-grey">No logs available</span>
+      </div>
+    </FullscreenModal>
+
+    <!-- Job Results Modal -->
+    <FullscreenModal
+      :isOpen="resultsModalOpen"
+      :title="`Job Results - ${resultsOpId || ''}`"
+      @close="closeResultsModal"
+    >
+      <div class="box">
+        <div class="content">
+          <template v-if="resultsOpId && hasOpResults(resultsOpId)">
+            <VueJsonPretty
+              :data="getOpResults(resultsOpId)"
+              show-icon
+              show-line-number
+            />
+          </template>
+          <div v-else class="has-text-centered py-6">
+            <span class="has-text-grey">No results available</span>
+          </div>
         </div>
       </div>
-    </div>
-  </FullscreenModal>
-  
-  
+    </FullscreenModal>
   </div>
 </template>
 
@@ -347,7 +390,16 @@ interface JobLike {
   isCompleted?: boolean;
   timeEnd?: number;
   results?: { opStates?: SseOpState[]; secrets?: SecretsPayload };
-  jobDefinition?: { ops?: Array<{ id: string; args?: { image?: string } }> };
+  jobDefinition?: {
+    ops?: Array<{
+      id: string;
+      args?: {
+        image?: string;
+        entrypoint?: string | string[];
+        cmd?: string | string[];
+      };
+    }>;
+  };
 }
 
 type AnyLogEntry = { id: number; content: string; timestamp: number; html?: boolean };
@@ -356,6 +408,8 @@ interface Operation {
   id: string;
   name?: string;
   image?: string;
+  entrypoint?: string;
+  cmd?: string;
   ports?: Array<{ port: number; url: string; status: string }>;
   status: string;
   group: string;
@@ -540,6 +594,14 @@ const getOpState = (opId: string) => {
   return null;
 };
 
+// entrypoint/cmd are argv arrays (or a plain string) in the job definition;
+// render them as a single shell-style line, empty when unset.
+const argvToString = (value: unknown): string => {
+  if (Array.isArray(value)) return value.map((v) => String(v)).join(' ').trim();
+  if (typeof value === 'string') return value.trim();
+  return '';
+};
+
 const formatTimestamp = (timestamp: number | null | undefined) => {
   if (!timestamp) return '-';
   const date = new Date(timestamp);
@@ -704,11 +766,18 @@ const buildOperations = () => {
       }
     }
 
-    // Optional image lookup from REST jobDefinition (not from SSE)
+    // Optional image / entrypoint / cmd lookup from REST jobDefinition (not from SSE)
     const imageByOpId: Record<string, string> = {};
+    const entrypointByOpId: Record<string, string> = {};
+    const cmdByOpId: Record<string, string> = {};
     if (jobDefinition?.ops && Array.isArray(jobDefinition.ops)) {
       for (const opDef of jobDefinition.ops) {
-        if (opDef?.id) imageByOpId[opDef.id] = opDef?.args?.image || '--';
+        if (!opDef?.id) continue;
+        imageByOpId[opDef.id] = opDef?.args?.image || '--';
+        const entrypoint = argvToString(opDef?.args?.entrypoint);
+        if (entrypoint) entrypointByOpId[opDef.id] = entrypoint;
+        const cmd = argvToString(opDef?.args?.cmd);
+        if (cmd) cmdByOpId[opDef.id] = cmd;
       }
     }
 
@@ -722,6 +791,8 @@ const buildOperations = () => {
         id: opId,
         name: opId,
         image,
+        entrypoint: entrypointByOpId[opId],
+        cmd: cmdByOpId[opId],
         ports: endpointsByOpId.get(opId) || [],
         status: status,
         group: groupName,
@@ -971,117 +1042,377 @@ const restartGroup = async (groupName: string) => {
 
 <style lang="scss" scoped>
 @use "sass:color";
-// Use Bulma utility classes instead of custom containers
-.groups-container {
-  // Remove hardcoded background and radius - use Bulma classes in template
+
+.containers {
+  display: flex;
+  flex-direction: column;
 }
 
-// Replace custom flex layouts with Bulma has-text-centered
-.loading-state,
-.error-state,
-.empty-state {
-  // Use Bulma classes: has-text-centered p-6 
-}
+/* ---- States (Bulma .loader / text-colour helpers do the heavy lifting) ---- */
+.cc-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 3rem 1rem;
+  font-size: 0.9rem;
 
-.error-state {
-  // Use Bulma class: has-text-danger
-}
+  svg {
+    width: 20px;
+    height: 20px;
+  }
 
-// Use Bulma spacing utilities instead
-.groups-table-container {
-  // Use Bulma class: is-flex is-flex-direction-column 
-}
-
-.group-section {
-  // Use Bulma class: is-flex is-flex-direction-column mb-5
-}
-
-// Simplify group header using Bulma level classes
-.group-header {
-  // Use Bulma classes: level px-4 py-3 has-background-light
-  border-left: 4px solid $secondary;
-}
-
-.group-info {
-  // Use Bulma class: level-left
-}
-
-.group-name {
-  // Use Bulma classes: title is-5 mb-0 is-capitalized
-}
-
-.group-count {
-  // Use Bulma class: has-text-grey
-}
-
-// Use Bulma class: level-right with buttons field
-.group-actions {
-  // Remove - using level-right instead
-}
-
-// Minimal table customization - use Bulma table classes
-.table {
-  tbody {
-    tr.op-row {
-      cursor: pointer;
-      
-      &.is-expanded {
-        background-color: $grey-lightest;
-      }
-    }
+  .loader {
+    width: 18px;
+    height: 18px;
   }
 }
 
-html.dark-mode {
-  .table tbody tr.op-row.is-expanded {
-    background-color: $grey-darker;
-  }
+/* ---- Groups ---- */
+.cc-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
 }
 
-// Operation Details - use Bulma columns
-.op-details-cell {
-  padding: 0 !important;
-  background: transparent;
+.cc-group-head {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.8rem;
 }
 
-.op-details-container {
+.cc-group-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  background: none;
+  border: 0;
+  padding: 2px 4px 2px 0;
+  cursor: pointer;
+  min-width: 0;
+  margin-right: auto;
+}
+
+.cc-group-name {
+  font-family: $title-family;
+  font-weight: 600;
+  font-size: 1rem;
+  color: $text;
+  text-transform: capitalize;
+}
+
+html.dark-mode .cc-group-name {
+  color: $white;
+}
+
+.cc-group-count {
+  font-size: 0.78rem;
+  color: $grey;
+  white-space: nowrap;
+}
+
+/* ---- Operation cards ---- */
+.cc-ops {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.cc-op {
   background: $white;
+  border: 1px solid $grey-lighter;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: border-color 0.15s ease;
 }
 
-.op-info-panel {
-  // Single column layout now
+.cc-op.is-open {
+  border-color: $grey-light;
 }
 
-// Use Bulma typography classes - minimal custom styling needed
-.op-info-section {  
-  &.endpoints-section {
-    min-height: 0;
-    overflow: hidden;
-    
-    .endpoints-content {
-      overflow-y: auto;
-      min-height: 0;
-    }
+html.dark-mode .cc-op {
+  background: $black-ter;
+  border-color: rgba($white, 0.1);
+}
+
+.cc-op-head {
+  gap: 0.85rem;
+  padding: 0.8rem 1rem;
+  cursor: pointer;
+  transition: background 0.15s ease;
+
+  &:hover {
+    background: $white-ter;
   }
 }
 
-// Minimal custom styling - use Bulma classes in template
-.info-item {
-  border-bottom: 1px solid $grey-lighter;
-  
-  &:last-child {
-    border-bottom: none;
-  }
+html.dark-mode .cc-op-head:hover {
+  background: rgba($white, 0.04);
 }
 
-// Minimal styling for expand icon
-.expand-icon {
+.cc-chevron {
+  width: 15px;
+  height: 15px;
+  flex: none;
+  color: $grey;
   transition: transform 0.2s ease;
-  color: $text-dark;
 
-  &.is-expanded {
-    transform: rotate(180deg);
+  &.is-open {
+    transform: rotate(90deg);
   }
+}
+
+.cc-op-id {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-right: auto;
+}
+
+.cc-op-name {
+  font-family: $title-family;
+  font-weight: 600;
+  font-size: 0.92rem;
+  color: $text;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+html.dark-mode .cc-op-name {
+  color: $white;
+}
+
+.cc-op-image {
+  font-size: 0.75rem;
+  color: $grey;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cc-op-status {
+  flex: none;
+}
+
+/* ---- Action buttons: Bulma .button base + a lighter, rounded skin ---- */
+.cc-actions {
+  display: inline-flex;
+  gap: 0.4rem;
+  flex: none;
+}
+
+.cc-btn.button {
+  font-family: $title-family;
+  font-weight: 500;
+  border-radius: 8px;
+  border-color: $grey-lighter;
+
+  &:hover:not([disabled]) {
+    background-color: $white-ter;
+    border-color: $grey-light;
+  }
+}
+
+.cc-btn.button .icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+html.dark-mode .cc-btn.button {
+  background-color: rgba($white, 0.06);
+  border-color: rgba($white, 0.1);
+  color: $white;
+
+  &:hover:not([disabled]) {
+    background-color: rgba($white, 0.1);
+    border-color: rgba($white, 0.2);
+  }
+}
+
+/* ---- Expanded body ---- */
+.cc-op-body {
+  padding: 0 1rem 1.1rem;
+  border-top: 1px solid $grey-lighter;
+}
+
+html.dark-mode .cc-op-body {
+  border-top-color: rgba($white, 0.08);
+}
+
+.cc-meta {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  padding: 1rem 0;
+}
+
+.cc-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.cc-meta-item .k {
+  font-size: 0.72rem;
+  color: $grey;
+}
+
+.cc-meta-item .v {
+  font-size: 0.85rem;
+  color: $text;
+  font-variant-numeric: tabular-nums;
+}
+
+html.dark-mode .cc-meta-item .v {
+  color: $white;
+}
+
+.cc-view-btn.button {
+  height: auto;
+  padding: 0;
+  justify-content: flex-start;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+@media screen and (max-width: 620px) {
+  .cc-meta {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+}
+
+/* ---- Sub-sections (endpoints / logs) ---- */
+.cc-section {
+  padding-top: 1rem;
+  border-top: 1px solid $grey-lightest;
+}
+
+html.dark-mode .cc-section {
+  border-top-color: rgba($white, 0.06);
+}
+
+.cc-section-head {
+  margin-bottom: 0.6rem;
+}
+
+.cc-section-title {
+  font-family: $title-family;
+  font-weight: 600;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: $grey;
+  margin-bottom: 0.6rem;
+}
+
+.cc-section-head .cc-section-title {
+  margin-bottom: 0;
+}
+
+/* ---- Entrypoint / Command ---- */
+.cc-cmd {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.cc-cmd-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.cc-cmd-label {
+  font-size: 0.72rem;
+  color: $grey;
+}
+
+.cc-code {
+  display: block;
+  background: $white-ter;
+  border-radius: 8px;
+  padding: 0.55rem 0.7rem;
+  font-size: 0.78rem;
+  color: $text;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+html.dark-mode .cc-code {
+  background: rgba($white, 0.04);
+  color: $white;
+}
+
+/* ---- Endpoints ---- */
+.cc-endpoints {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.cc-endpoint {
+  gap: 0.7rem;
+  padding: 0.5rem 0.75rem;
+  background: $white-ter;
+  border-radius: 8px;
+}
+
+html.dark-mode .cc-endpoint {
+  background: rgba($white, 0.04);
+}
+
+.cc-port {
+  font-weight: 600;
+  font-size: 0.8rem;
+  color: $text;
+  flex: none;
+}
+
+html.dark-mode .cc-port {
+  color: $white;
+}
+
+.cc-ep-url {
+  font-size: 0.78rem;
+  color: $link;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-right: auto;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+/* ---- Logs ---- */
+.cc-icon-btn.button {
+  border-radius: 8px;
+  border-color: $grey-lighter;
+}
+
+.cc-icon-btn.button .icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+html.dark-mode .cc-icon-btn.button {
+  background-color: rgba($white, 0.06);
+  border-color: rgba($white, 0.1);
+  color: $white;
+}
+
+.cc-logs :deep(.log-viewer) {
+  height: 320px;
 }
 
 /* Keep JSON results background stable (disable VueJsonPretty line highlight) */
@@ -1099,543 +1430,9 @@ html.dark-mode {
   transition: none !important;
 }
 
-.log-entry {
-  margin: 0;
-  padding: 0.25rem 0;
-  word-wrap: break-word;
-  
-  :deep(.timestamp) {
-    color: $grey-dark;
-    margin-right: 0.5rem;
-  }
-  
-  :deep(.info) {
-    color: $info;
-  }
-  
-  :deep(.error) {
-    color: $danger;
-  }
-  
-  :deep(.warning) {
-    color: $warning;
-  }
-  
-  :deep(.success) {
-    color: $success;
-  }
-}
-
-.op-logs-empty {
-  padding: 2rem;
-  text-align: center;
-  color: $grey;
-  background: $white;
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid $grey-lighter;
-  border-radius: $radius;
-}
-
-.op-image {
-  color: $text;
-  font-family: monospace;
-}
-
-.op-ports {
-  color: $text-dark;
-  font-family: monospace;
-}
-
-.port-badges {
-  display: inline-flex;
-  gap: 0.375rem;
-  flex-wrap: wrap;
-  justify-content: flex-start;
-}
-
-// Port badge styling now in global.scss
-
-// Status badges now use global .tag styling
-
-.action-buttons {
-  display: inline-flex;
-  gap: 0.5rem;
-}
-
-.op-status {
-  vertical-align: middle;
-}
-
-.op-actions {
-  vertical-align: middle;
-}
-
-// Tree Table Structure using Bulma variables
-.container-controls-tree {
-  .tree-row {
-    border: 1px solid $border;
-    border-radius: $radius;
-    background: $white;
-    transition: all 0.2s ease;
-
-    &:not(:last-child) {
-      margin-bottom: $block-spacing;
-    }
-
-    &.is-expanded {
-      .tree-row__expand-icon i {
-        transform: rotate(90deg);
-      }
-    }
-
-    &--group {
-      // border-left removed from group header
-      
-      // No need for children margin adjustment anymore
-      .tree-row__children {
-        // margin-left: -5px;
-        border-left: none;
-      }
-    }
-
-    &--operation {
-      margin-left: $size-5; // keep first-level indent for operations
-    }
-
-  }
-
-  .tree-row__content {
-    padding: $size-4; // uniform padding on all sides
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-
-    &:hover {
-      background-color: $grey-lightest;
-    }
-  }
-
-  // When expanded, add a clear divider between header and body
-  .tree-row.is-expanded > .tree-row__content {
-    // border-bottom removed
-  }
-
-  .tree-row__main {
-    display: flex;
-    align-items: center;
-    flex: 1;
-    gap: 0; // remove implicit spacing between expand icon and info
-  }
-
-  .tree-row__expand-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    margin-right: 0.25rem; // minimal spacer
-    width: auto; // no reserved width
-    color: $grey;
-    transition: transform 0.2s ease;
-
-    i {
-      display: block;
-      line-height: 1;
-      transition: transform 0.2s ease;
-    }
-  }
-
-  .tree-row__info {
-    flex: 1;
-    margin-left: 0; // ensure no extra left offset inside info block
-    > .is-flex.is-align-items-center {
-      gap: 0.25rem; // tighten inner flex spacing
-    }
-  }
-
-  .tree-row__status { margin-left: 0.5rem; }
-
-  .tree-row__right {
-    display: flex;
-    align-items: center;
-  }
-
-  .tree-row__actions {
-    .buttons {
-      margin-bottom: 0;
-    }
-  }
-
-  .tree-row__children {
-    background: $white; // unify with dashboard background
-  }
-
-  // Operation details panel styling
-  .operation-details-panel {
-    margin-left: 0;
-    padding: $size-4; // match header padding
-    background: $white; // unify with dashboard background
-    border-radius: $radius-small;
-  }
-
-  .detail-section {
-    &:not(:last-child) {
-      margin-bottom: $size-4;
-      padding-bottom: $size-4;
-      border-bottom: 1px solid $border-light;
-    }
-  }
-
-}
-
-
-// Dark mode using Bulma variables
-html.dark-mode {
-  .container-controls-tree {
-    .tree-row {
-      background: $grey-darker;
-      border: 1px solid $grey-dark;
-
-      &--group {
-        // border-left-color removed from group header in dark mode
-        
-        // No need for children margin adjustment anymore
-        .tree-row__children {
-          // margin-left: -5px;
-          border-left: none;
-        }
-      }
-
-      &--operation {
-        // no border for operations
-      }
-
-    }
-
-    .tree-row__content:hover {
-      background-color: color.adjust($grey-darker, $lightness: 3%);
-    }
-
-    .tree-row.is-expanded > .tree-row__content {
-      // border-bottom removed for dark mode too
-    }
-
-    .operation-details-panel {
-      background: color.adjust($grey-darker, $lightness: -2%);
-      border-left-color: $grey;
-    }
-
-    .detail-section:not(:last-child) {
-      border-bottom-color: $grey-dark;
-    }
-
-    .tree-row__children {
-      background: color.adjust($grey-darker, $lightness: -2%);
-    }
-
-    .tree-row__expand-icon {
-      color: $grey-light;
-    }
-  }
-}
-
-html.dark-mode {
-  .groups-container {
-    background: $grey-darker;
-  }
-
-  .group-header {
-    background: $black;
-    border-left-color: $secondary;
-  }
-
-  .group-name {
-    color: $white;
-  }
-
-  .group-count {
-    color: $grey-light;
-  }
-
-  .operations-table {
-    thead tr {
-      border-bottom-color: $grey-dark;
-    }
-
-    thead th {
-      color: $grey-light;
-    }
-
-    tbody tr.op-row {
-      border-bottom-color: $grey-darker;
-
-      &:hover {
-        background-color: transparent;
-      }
-
-      &.is-expanded {
-        background-color: color.adjust($grey-darker, $lightness: 3%);
-      }
-    }
-
-    tbody tr.op-details-row {
-      border-bottom-color: $grey-darker;
-    }
-  }
-
-  .op-details-container {
-    background: $grey-darker;
-  }
-
-  .op-info-panel {
-    background: $grey-darker;
-    border-right-color: $grey-dark;
-  }
-
-  .op-info-section {
-    .section-title {
-      color: $white;
-    }
-  }
-  
-  .op-logs-panel {
-    background: $grey-darker;
-  }
-  
-  .logs-header {
-    background: $grey-darker;
-    border-bottom-color: $grey-dark;
-  }
-  
-  .logs-title {
-    color: $white;
-  }
-
-  .info-item {
-    border-bottom-color: $grey-darker;
-    
-    &:first-child {
-      padding-top: 0;
-    }
-    
-    .info-label {
-      color: $grey-light;
-    }
-    
-    .info-value {
-      color: $grey-lighter;
-    }
-  }
-
-  .endpoint-item {
-    background: $grey-darker;
-    border-color: color.adjust($grey-dark, $lightness: 10%);
-  }
-  
-  .endpoints-empty {
-    color: $grey;
-  }
-
-  .endpoint-port {
-    color: $grey-lighter;
-  }
-
-  .status-dot {
-    &.dot-online {
-      background: color.adjust($success, $lightness: 10%);
-    }
-    
-    &.dot-offline {
-      background: color.adjust($danger, $lightness: 10%);
-    }
-    
-    &.dot-unknown {
-      background: color.adjust($warning, $lightness: 10%);
-    }
-  }
-
-  .endpoint-link {
-    background: $secondary;
-    color: $black;
-    
-    &:hover {
-      background: color.adjust($secondary, $lightness: -5%);
-      box-shadow: 0 2px 4px rgba($secondary, 0.3);
-    }
-    
-    .endpoint-url {
-      color: $black;
-    }
-}
-
-// Responsive endpoint URLs
-.endpoint-url {
-  word-break: break-all;
-  display: inline-block;
-  max-width: 100%;
-  overflow-wrap: break-word;
-}
-
-@media screen and (max-width: 768px) {
-  .endpoint-url {
-    font-size: 0.75rem;
-    max-width: 300px;
-    min-width: 200px;
-  }
-}
-
-@media screen and (max-width: 480px) {
-  .endpoint-url {
-    font-size: 0.7rem;
-    max-width: 250px;
-    min-width: 180px;
-  }
-}
-
-  .op-id {
-    color: $grey-lighter;
-  }
-
-  .expand-icon {
-    color: $grey-light;
-  }
-
-  .op-logs-content {
-    background: $black-bis;
-    border-color: $grey-dark;
-  }
-
-  .op-logs-viewer {
-    color: $grey-lighter;
-  }
-
-  .log-entry {
-    :deep(.timestamp) {
-      color: $grey-dark;
-    }
-    
-    :deep(.info) {
-      color: $info;
-    }
-    
-    :deep(.error) {
-      color: $danger;
-    }
-    
-    :deep(.warning) {
-      color: $warning;
-    }
-    
-    :deep(.success) {
-      color: $success;
-    }
-  }
-
-  .op-logs-empty {
-    color: $grey;
-    background: $black-bis;
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-color: $grey-dark;
-  }
-
-  .op-image {
-    color: $grey-lighter;
-  }
-
-  .op-ports {
-    color: $grey-light;
-  }
-
-  // Port badge dark mode styling now in global.scss
-
-  // Status badges use global .tag styling in dark mode too
-
-  .action-btn {
-    background: $grey-darker;
-    border-color: $grey-dark;
-    color: $grey-light;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-    
-    .icon img {
-      filter: brightness(0) saturate(100%) invert(88%) sepia(0%) saturate(0%) hue-rotate(180deg) brightness(100%) contrast(88%);
-    }
-
-    &:hover:not(:disabled) {
-      background: color.adjust($grey-darker, $lightness: 5%);
-      border-color: color.adjust($grey-dark, $lightness: 10%);
-      color: $white;
-    }
-    
-    &.is-loading {
-      &:after {
-        border-color: $grey;
-        border-right-color: transparent;
-        border-top-color: transparent;
-      }
-    }
-  }
-
-  .loading-state,
-  .empty-state {
-    color: $grey-light;
-  }
-}
-
-// Operation logs container styling to match main logs
-.logs-container-with-button {
-  position: relative;
-  
-  .logs-header {
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    position: absolute;
-    top: 0.2rem;
-    right: 0.5rem;
-    z-index: 10;
-    pointer-events: none;
-  }
-  
-  .fullscreen-logs-button {
-    pointer-events: auto;
-    background-color: rgba(255, 255, 255, 0.8) !important;
-    backdrop-filter: blur(4px);
-    
-    &:hover {
-      background-color: rgba(255, 255, 255, 0.95) !important;
-    }
-  }
-}
-
-html.dark-mode {
-  .logs-container-with-button .fullscreen-logs-button {
-    background-color: rgba(54, 54, 54, 0.8) !important;
-    
-    &:hover {
-      background-color: rgba(54, 54, 54, 0.95) !important;
-    }
-  }
-}
-
 :deep(.fullscreen-modal-body .fullscreen-viewer) {
   height: 100%;
   min-height: 100%;
   overflow-y: auto;
 }
-
-@keyframes spinAround {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
 </style>
-
