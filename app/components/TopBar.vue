@@ -67,7 +67,7 @@
     </div>
     <!-- Profile Section -->
     <div
-      v-if="(isGoogleAuthenticated || connected) && !hideButtons"
+      v-if="showProfileSection"
       class="dropdown is-right profile-dropdown"
       :class="{
         'is-active': showUserProfileDropdown,
@@ -267,6 +267,26 @@ const showUserProfileDropdown = ref(false);
 const isGoogleAuthenticated = computed(() => {
   return isAuthenticated.value;
 });
+
+// Latching ref: once we've confirmed the user is authenticated, keep the
+// profile section rendered even if isAuthenticated/isLoading briefly toggle
+// afterwards (e.g. a background session re-check) — prevents it flickering
+// out of the DOM.
+const wasAuthenticated = ref(false);
+watch(
+  () => isGoogleAuthenticated.value || connected.value,
+  (val) => {
+    if (val) wasAuthenticated.value = true;
+  },
+  { immediate: true },
+);
+const showProfileSection = computed(
+  () =>
+    (isGoogleAuthenticated.value ||
+      connected.value ||
+      (isLoading.value && wasAuthenticated.value)) &&
+    !props.hideButtons,
+);
 
 // Profile dropdown functions
 const toggleUserProfileDropdown = (event: Event) => {
