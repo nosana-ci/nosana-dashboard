@@ -46,28 +46,36 @@
               </svg>
               <span>Change template</span>
             </button>
-            <button
-              v-if="selectedTemplate && selectedTemplate.readme"
-              type="button"
-              class="banner-btn"
-              @click="openReadmeModal(selectedTemplate.readme!)"
-              title="View template documentation"
-            >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.8"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path
-                  d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6ZM14 2v6h6M8 13h8M8 17h5"
-                />
-              </svg>
-              <span>README</span>
-            </button>
           </div>
+        </div>
+
+        <!-- Template documentation: inline, minimized to a peek, expandable -->
+        <div v-if="selectedTemplate?.readme" class="banner-readme">
+          <div
+            class="readme-body markdown"
+            :class="{ 'is-collapsed': !isReadmeOpen }"
+            v-html="renderedReadme"
+          />
+          <button
+            type="button"
+            class="readme-toggle"
+            :class="{ 'is-open': isReadmeOpen }"
+            :aria-expanded="isReadmeOpen"
+            @click="isReadmeOpen = !isReadmeOpen"
+          >
+            <span>{{ isReadmeOpen ? "Show less" : "Read more" }}</span>
+            <svg
+              class="chevron"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="m6 9 6 6 6-6" />
+            </svg>
+          </button>
         </div>
 
         <div class="banner-config-bar">
@@ -173,6 +181,7 @@
             />
           </div>
         </div>
+
       </div>
     </section>
 
@@ -243,20 +252,52 @@
               </svg>
             </span>
             <div style="min-width: 0">
-              <p class="eyebrow-label is-uppercase has-text-weight-semibold">
-                Job definition
-              </p>
-              <p class="modal-card-title title is-5 mb-0">{{ computedJobTitle }}</p>
+              <p class="modal-card-title title is-5 mb-0">Job definition</p>
             </div>
+          </div>
+          <div class="seg-tabs jobdef-seg" role="tablist" aria-label="Editor mode">
+            <button
+              type="button"
+              :class="{ 'is-active': editorMode === 'builder' }"
+              role="tab"
+              :aria-selected="editorMode === 'builder'"
+              @click="editorMode = 'builder'"
+            >
+              Builder
+            </button>
+            <button
+              type="button"
+              :class="{ 'is-active': editorMode === 'json' }"
+              role="tab"
+              :aria-selected="editorMode === 'json'"
+              @click="editorMode = 'json'"
+            >
+              JSON
+            </button>
           </div>
           <button class="delete" aria-label="close" @click="handleCancel"></button>
         </header>
         <section class="modal-card-body jobdef-body">
-          <PodConfigurationTab ref="podTab" v-model="editingJobDefinition" />
+          <DeployJobDefinitionBuilder
+            v-if="editorMode === 'builder'"
+            ref="builderTab"
+            v-model="editingJobDefinition"
+          />
+          <PodConfigurationTab v-else ref="podTab" v-model="editingJobDefinition" @update:valid="jsonValid = $event" />
         </section>
         <footer class="modal-card-foot">
-          <p class="has-text-grey is-size-7" style="flex: 1; min-width: 0">
-            Changes apply when you save. Invalid JSON is blocked.
+          <p class="has-text-grey is-size-7 jobdef-foot" style="flex: 1; min-width: 0">
+            <span>Changes apply when you save.
+              {{ editorMode === 'json' ? 'Invalid JSON is blocked.' : 'Required fields are checked.' }}</span>
+            <span
+              v-if="editorMode === 'json'"
+              class="jobdef-valid"
+              :class="jsonValid ? 'is-ok' : 'is-bad'"
+            >
+              <svg v-if="jsonValid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
+              <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01" /><path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z" /></svg>
+              {{ jsonValid ? 'Valid' : 'Invalid' }}
+            </span>
           </p>
           <div class="buttons mb-0">
             <button class="button" @click="handleCancel">Cancel</button>
@@ -277,8 +318,10 @@
   import DeploySimpleGpuSelection from './SimpleGpuSelection.vue';
   import DeployAdvancedGpuSelection from './AdvancedGpuSelection.vue';
   import PodConfigurationTab from './PodConfigurationTab.vue';
+  import DeployJobDefinitionBuilder from './JobDefinitionBuilder.vue';
   import DeploymentConfigurationTab from './DeploymentConfigurationTab.vue';
   import NosanaMark from '@/assets/img/icon.svg?component';
+  import { marked } from 'marked';
   import { MIN_INFINITE_TIMEOUT_HOURS } from '~/composables/useTimeoutConstants';
 
 // Define props
@@ -316,7 +359,6 @@ const emit = defineEmits<{
   showTemplateModal: [];
   'update:isEditorCollapsed': [value: boolean];
   'update:jobDefinition': [value: JobDefinition | null];
-  openReadme: [readme: string];
     // Advanced deployment emits
     'update:strategy': [strategy: DeploymentStrategy];
     'update:schedule': [schedule: string];
@@ -340,6 +382,12 @@ const props = defineProps<Props>();
 
 // Modal state
 const showEditorModal = ref(false);
+
+// Editor mode: schema-driven form builder (default) or raw JSON escape hatch
+const editorMode = ref<'builder' | 'json'>('builder');
+const builderTab = ref<{ canSave: () => boolean } | null>(null);
+// JSON validity, surfaced by PodConfigurationTab for the footer indicator.
+const jsonValid = ref(true);
 
 // Inline "Configure" settings drawer in the banner
 const isConfigOpen = ref(false);
@@ -478,22 +526,36 @@ const computedDockerImage = computed(() => {
   return "";
 });
 
-// Methods
-const openReadmeModal = (readme: string) => {
-  emit('openReadme', readme);
-};
+// Inline template documentation: minimized to a peek, expandable in place
+const isReadmeOpen = ref(false);
+
+const renderedReadme = computed(() =>
+  props.selectedTemplate?.readme
+    ? (marked(props.selectedTemplate.readme) as string)
+    : '',
+);
+
+// A freshly selected template starts minimized again
+watch(
+  () => props.selectedTemplate?.id,
+  () => {
+    isReadmeOpen.value = false;
+  },
+);
 
 // Open modal and store original state
 const openEditorModal = () => {
   originalJobDefinition.value = JSON.parse(JSON.stringify(props.jobDefinition));
   editingJobDefinition.value = JSON.parse(JSON.stringify(props.jobDefinition));
+  editorMode.value = 'builder';
   showEditorModal.value = true;
 };
 
-// Handle save with validation
+// Handle save with validation (gate depends on the active editor)
 const podTab = ref<{ canSave: () => boolean } | null>(null);
 const handleSaveChanges = () => {
-  if (!podTab.value?.canSave?.()) return;
+  const activeEditor = editorMode.value === 'builder' ? builderTab.value : podTab.value;
+  if (!activeEditor?.canSave?.()) return;
   emit('update:jobDefinition', editingJobDefinition.value as JobDefinition);
   showEditorModal.value = false;
 };
@@ -556,7 +618,7 @@ html.dark-mode {
   background:
     radial-gradient(
       circle at 90% 8%,
-      rgba(16, 232, 12, 0.16),
+      rgba($secondary, 0.16),
       transparent 46%
     ),
     linear-gradient(135deg, #0a0c0a 0%, #0f130d 55%, #0b0d0b 100%);
@@ -616,8 +678,8 @@ html.dark-mode {
   }
 
   &.is-brand {
-    background: rgba(16, 232, 12, 0.1);
-    border-color: rgba(16, 232, 12, 0.25);
+    background: rgba($secondary, 0.1);
+    border-color: rgba($secondary, 0.25);
   }
 
   .brand-mark {
@@ -741,7 +803,7 @@ html.dark-mode {
 
   &:focus-within {
     border-color: $secondary;
-    box-shadow: 0 0 0 3px rgba(16, 232, 12, 0.18);
+    box-shadow: 0 0 0 3px rgba($secondary, 0.18);
   }
 
   input {
@@ -891,6 +953,17 @@ html.dark-mode {
 
 .banner-config :deep(.select select) {
   width: 100%;
+  /* The banner forces white select text, but the native option popup
+     follows the document color-scheme — light-mode browsers then paint a
+     white popup with white options (white-on-white). Pin the control to a
+     dark scheme (fixes macOS Safari/Chrome, where option colors are
+     ignored) and set explicit option colors (Windows Chrome/Firefox). */
+  color-scheme: dark;
+}
+
+.banner-config :deep(.select select option) {
+  background-color: #10140e;
+  color: #fff;
 }
 
 .banner-config :deep(.select:not(.is-multiple):not(.is-loading)::after) {
@@ -904,7 +977,7 @@ html.dark-mode {
 .banner-config :deep(.input:focus),
 .banner-config :deep(.select select:focus) {
   border-color: $secondary;
-  box-shadow: 0 0 0 3px rgba(16, 232, 12, 0.18);
+  box-shadow: 0 0 0 3px rgba($secondary, 0.18);
 }
 
 .banner-config :deep(.help) {
@@ -915,13 +988,238 @@ html.dark-mode {
   color: #8a948a !important;
 }
 
+/* ---------- Inline template README ---------- */
+.banner-readme {
+  margin-top: 1.5rem;
+}
+
+/* Plain-text expand/collapse control below the peek */
+.readme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.6rem;
+  padding: 0;
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 0.8rem;
+  cursor: pointer;
+  color: #8bf58f;
+  background: none;
+  border: none;
+  transition: color 0.2s ease;
+
+  .chevron {
+    width: 13px;
+    height: 13px;
+    transition: transform 0.25s ease;
+  }
+
+  &:hover {
+    color: #fff;
+    text-decoration: underline;
+  }
+
+  &.is-open .chevron {
+    transform: rotate(180deg);
+  }
+}
+
+.readme-body {
+  max-height: 30rem;
+  overflow-y: auto;
+  transition: max-height 0.3s ease;
+
+  &.is-collapsed {
+    max-height: 8rem;
+    overflow: hidden;
+  }
+
+  :deep(> :first-child) {
+    margin-top: 0;
+  }
+
+  :deep(p),
+  :deep(li) {
+    color: #c3ccc2;
+    font-size: 0.9rem;
+    line-height: 1.55;
+    margin-bottom: 0.85rem;
+  }
+
+  :deep(h1),
+  :deep(h2),
+  :deep(h3),
+  :deep(h4) {
+    color: #fff;
+    font-weight: 600;
+    margin-top: 1.4rem;
+    margin-bottom: 0.75rem;
+  }
+
+  :deep(h1) {
+    font-size: 1.25rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    padding-bottom: 0.4rem;
+  }
+
+  :deep(h2) {
+    font-size: 1.1rem;
+  }
+
+  :deep(h3) {
+    font-size: 1rem;
+  }
+
+  :deep(ul),
+  :deep(ol) {
+    margin-left: 1.4rem;
+    margin-bottom: 0.85rem;
+    list-style: disc outside;
+  }
+
+  :deep(ol) {
+    list-style: decimal outside;
+  }
+
+  :deep(li) {
+    display: list-item;
+    margin-bottom: 0.4rem;
+    padding-left: 0.35rem;
+  }
+
+  :deep(a) {
+    color: #8bf58f;
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  :deep(code) {
+    background: rgba(255, 255, 255, 0.08);
+    color: #d7e0d6;
+    padding: 0.2em 0.4em;
+    border-radius: 4px;
+    font-size: 0.85em;
+    font-family: var(--mono);
+  }
+
+  :deep(pre) {
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 1rem;
+    border-radius: 10px;
+    margin-bottom: 0.85rem;
+    overflow-x: auto;
+
+    code {
+      background: none;
+      padding: 0;
+      color: #d7e0d6;
+    }
+  }
+
+  :deep(blockquote) {
+    border-left: 3px solid rgba(255, 255, 255, 0.2);
+    padding-left: 1rem;
+    margin: 0 0 0.85rem;
+    color: #9aa79a;
+  }
+
+  :deep(img) {
+    max-width: 100%;
+    margin: 1rem 0;
+    border-radius: 8px;
+  }
+
+  :deep(table) {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 0.85rem;
+    font-size: 0.85rem;
+
+    th,
+    td {
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      padding: 0.5rem;
+      color: #c3ccc2;
+    }
+
+    th {
+      background: rgba(255, 255, 255, 0.05);
+      color: #fff;
+      font-weight: 600;
+    }
+  }
+}
+
 /* ---------- Job definition modal (editor sizing) ---------- */
 /* The is-app-modal global styles the shell; here we just make the JSON
    editor fill the scrollable body. */
+/* Compact header now that it's a single "Job definition" title (the shared
+   is-app-modal head top-aligns for a two-line eyebrow+title we no longer use). */
+.jobdef-modal .modal-card-head {
+  align-items: center;
+  padding-top: 0.9rem;
+  padding-bottom: 0.9rem;
+}
+.jobdef-modal .app-modal-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+}
+.jobdef-modal .app-modal-icon svg {
+  width: 18px;
+  height: 18px;
+}
+.jobdef-modal .modal-card-title {
+  font-size: 1.05rem;
+}
+
 .jobdef-body {
   display: flex;
   overflow: hidden;
   min-height: 60vh;
+}
+
+/* The form builder fills the scrollable body like the JSON editor does */
+.jobdef-body :deep(.jdb) {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Builder / JSON toggle uses the shared .seg-tabs; just position it in the head */
+.jobdef-seg {
+  margin-left: auto;
+  margin-right: 0.85rem;
+  flex: none;
+}
+
+/* Footer validity indicator (JSON mode) */
+.jobdef-foot {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.jobdef-valid {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: $title-family;
+  font-weight: 600;
+  font-size: 0.7rem;
+  padding: 3px 9px;
+  border-radius: 999px;
+
+  svg { width: 11px; height: 11px; }
+  &.is-ok { color: #0a8f06; background: rgba($secondary, 0.1); border: 1px solid rgba($secondary, 0.4); }
+  &.is-bad { color: #e5484d; background: rgba(#e5484d, 0.1); border: 1px solid rgba(#e5484d, 0.4); }
+}
+html.dark-mode .jobdef-valid.is-ok {
+  color: #8bf58f;
 }
 
 .jobdef-body :deep(.pod-configuration-tab),
@@ -937,17 +1235,10 @@ html.dark-mode {
 .jobdef-body :deep(.json-editor) {
   flex: 1;
   min-width: 0;
-  border-radius: 10px;
-  overflow: hidden;
-  border: 1px solid $border;
 }
 
 .jobdef-body :deep(.jse-main) {
   min-height: 100%;
-}
-
-.dark-mode .jobdef-body :deep(.json-editor) {
-  border-color: #2c2c2c;
 }
 
 @media screen and (max-width: 768px) {

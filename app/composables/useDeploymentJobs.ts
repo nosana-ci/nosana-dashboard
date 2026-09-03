@@ -1,4 +1,8 @@
-import type { DeploymentJobItem, DeploymentEventItem } from "@nosana/api";
+import type {
+  DeploymentJobItem,
+  DeploymentEventItem,
+  DeploymentStreamEventOf,
+} from "@nosana/api";
 import type { Deployment } from "@nosana/kit";
 import type { DeploymentJob as ApiDeploymentJob } from "@nosana/api";
 import type { ResultsSection } from "~/composables/jobs/types";
@@ -169,10 +173,90 @@ export function useDeploymentJobs(deps: DeploymentJobsDeps) {
       activeLoading.value = false;
     }
   };
-  const refreshActiveJobs = fetchAllActiveJobs;
+  // Apply one job frame from the deployment stream to the live active set,
+  // without a refetch. An existing job is updated in place (a QUEUED→RUNNING
+  // change reflects immediately); a job that reaches a terminal state drops out
+  // of the active set; a job we've never seen is prepended. The frame carries
+  // revision and created_at, so a new row renders fully with no read-back.
+  const applyJobFrame = (frame: DeploymentStreamEventOf<"job">): void => {
+    const stateNum = deps.jobStateStringToNumber(frame.state);
+
+    // Set the one key that changed rather than reallocating the whole map.
+    deps.jobStates.value[frame.job] = stateNum;
+    deps.allJobsData.value[frame.job] = {
+      ...deps.allJobsData.value[frame.job],
+      ...frame,
+    };
+
+    const list = activeJobsAll.value;
+    const idx = list.findIndex((j) => j.job === frame.job);
+    const isActive = stateNum === 0 || stateNum === 1;
+
+    if (isActive) {
+      if (idx >= 0) {
+        const next = [...list];
+        next[idx] = {
+          ...next[idx],
+          state: frame.state,
+          node: frame.node ?? next[idx].node,
+        };
+        activeJobsAll.value = next;
+      } else {
+        const provisional = {
+          ...frame,
+          node: frame.node ?? null,
+        } as unknown as DeploymentJob;
+        activeJobsAll.value = [provisional, ...list];
+      }
+    } else if (idx >= 0) {
+      activeJobsAll.value = list.filter((j) => j.job !== frame.job);
+    }
+  };
+
+  // Authoritative active-jobs snapshot sent once when the stream (re)opens:
+  // prune any active job we still show whose id isn't in the set (it finished
+  // while we were away and won't be replayed). New ids arrive via their own
+  // job frames, so they're not added here.
+  const applyActiveJobsSnapshot = (activeIds: string[]): void => {
+    const keep = new Set(activeIds);
+    const pruned = activeJobsAll.value.filter((j) => keep.has(j.job));
+    if (pruned.length !== activeJobsAll.value.length) {
+      activeJobsAll.value = pruned;
+    }
+    // Drop stale active-state entries so duration/first-running logic doesn't
+    // point at a job that finished while disconnected.
+    const states = deps.jobStates.value;
+    const next = { ...states };
+    let changed = false;
+    for (const [id, st] of Object.entries(states)) {
+      if ((st === 0 || st === 1) && !keep.has(id)) {
+        delete next[id];
+        changed = true;
+      }
+    }
+    if (changed) deps.jobStates.value = next;
+  };
+
+  // Live count of RUNNING jobs — the "up" replicas shown as `active_jobs`.
+  // A queued replica isn't up yet, so it doesn't count towards it.
+  const runningJobsCount = computed(
+    () => activeJobsAll.value.filter((j) => getJobStateNumber(j) === 1).length,
+  );
+
+  // Active jobs, running first then queued, newest-first within each group.
+  const activeJobsSorted = computed(() =>
+    [...activeJobsAll.value].sort((a, b) => {
+      const ra = getJobStateNumber(a) === 1 ? 0 : 1;
+      const rb = getJobStateNumber(b) === 1 ? 0 : 1;
+      if (ra !== rb) return ra - rb;
+      const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return tb - ta;
+    }),
+  );
 
   const activeJobsPaged = computed(() =>
-    paginate(activeJobsAll.value, activeJobsPage.value, jobsPerPage),
+    paginate(activeJobsSorted.value, activeJobsPage.value, jobsPerPage),
   );
   const activeHasPrev = computed(() => activeJobsPage.value > 1);
   const activeHasNext = computed(
@@ -442,7 +526,9 @@ export function useDeploymentJobs(deps: DeploymentJobsDeps) {
     activeHasNext,
     activeNext,
     activePrev,
-    refreshActiveJobs,
+    applyJobFrame,
+    applyActiveJobsSnapshot,
+    runningJobsCount,
 
     // Historical jobs (server-side cursor pagination)
     historyJobs,

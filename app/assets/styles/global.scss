@@ -1543,45 +1543,46 @@ html.dark-mode .modal-card-head {
 
 /* Global class for JSON editor containers to ensure consistent styling */
 .json-editor-container {
-  background-color: $grey-lightest !important;
-  border-radius: 4px;
+  background-color: $black-ter !important;
+  border-radius: 10px;
   padding: 0;
   margin-top: 0.2rem;
+  overflow: hidden;
   position: relative; /* For copy button positioning */
 
   .json-editor {
     min-height: 300px;
     border: none;
-    border-radius: 4px;
-    background-color: $grey-lightest !important;
+    border-radius: 10px;
+    background-color: $black-ter !important;
 
-    :deep(.jse-main) {
+    .jse-main {
       border: none;
-      background-color: $grey-lightest !important;
+      background-color: $black-ter !important;
     }
 
-    :deep(.jse-contents) {
-      border-radius: 4px;
-      background-color: $grey-lightest !important;
+    .jse-contents {
+      border-radius: 10px;
+      background-color: $black-ter !important;
     }
 
-    :deep(.jse-text-mode) {
-      background-color: $grey-lightest !important;
+    .jse-text-mode {
+      background-color: $black-ter !important;
     }
 
-    :deep(.cm-editor) {
-      background-color: $grey-lightest !important;
+    .cm-editor {
+      background-color: $black-ter !important;
     }
 
-    :deep(.cm-focused) {
-      background-color: $grey-lightest !important;
+    .cm-focused {
+      background-color: $black-ter !important;
     }
   }
 }
 
 /* Override any box backgrounds when containing JSON editor */
 .box .json-editor-container {
-  background-color: $grey-lightest !important;
+  background-color: $black-ter !important;
 }
 
 /* ==========================================================================
@@ -1885,7 +1886,7 @@ html.dark-mode .modal-card-head {
     align-items: flex-start;
     background-color: $box-background-color;
     border-bottom: 1px solid $grey-lightest;
-    border-radius: 0;
+    border-radius: 16px 16px 0 0;
   }
 
   .modal-card-body {
@@ -1898,7 +1899,7 @@ html.dark-mode .modal-card-head {
     flex-wrap: wrap;
     background-color: $box-background-color;
     border-top: 1px solid $grey-lightest;
-    border-radius: 0;
+    border-radius: 0 0 16px 16px;
   }
 }
 
@@ -1960,6 +1961,51 @@ html.dark-mode .modal-card-head {
   font-size: 0.72rem;
   letter-spacing: 0.06em;
   color: $secondary;
+}
+
+// Shared pill segmented control (Active/History, Builder/JSON, …).
+.seg-tabs {
+  display: inline-flex;
+  background: $white-ter;
+  border-radius: 10px;
+  padding: 3px;
+  gap: 2px;
+  box-shadow: inset 0 0 0 1px rgba($black, 0.04);
+
+  button {
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: $grey-dark;
+    border: 0;
+    background: none;
+    padding: 5px 14px;
+    border-radius: 7px;
+    cursor: pointer;
+    transition:
+      color 0.15s ease,
+      background 0.15s ease;
+
+    &.is-active {
+      background: $white;
+      color: $text;
+      box-shadow: 0 1px 2px rgba($black, 0.12);
+    }
+  }
+}
+
+html.dark-mode .seg-tabs {
+  background: rgba($white, 0.06);
+  box-shadow: inset 0 0 0 1px rgba($white, 0.08);
+
+  button {
+    color: $grey-light;
+
+    &.is-active {
+      background: $black-ter;
+      color: $white;
+      box-shadow: 0 1px 2px rgba($black, 0.4);
+    }
+  }
 }
 
 // Subtle green glow for the primary CTA (e.g. Create Deployment) — a static

@@ -378,29 +378,34 @@ const compareNumbers = (
 // Sort the filtered markets by the selected toolbar option.
 const sortMarkets = (list: Market[]): Market[] => {
   const arr = [...list];
+
+  // Tiebreaker comparator for the selected sort option.
+  let comparator: (a: Market, b: Market) => number;
   switch (sortBy.value) {
     case "price-asc":
-      return arr.sort((a, b) => compareNumbers(priceOf(a), priceOf(b), "asc"));
+      comparator = (a, b) => compareNumbers(priceOf(a), priceOf(b), "asc");
+      break;
     case "price-desc":
-      return arr.sort((a, b) => compareNumbers(priceOf(a), priceOf(b), "desc"));
+      comparator = (a, b) => compareNumbers(priceOf(a), priceOf(b), "desc");
+      break;
     case "vram-desc":
-      return arr.sort((a, b) =>
-        compareNumbers(getMarketVram(a), getMarketVram(b), "desc"),
-      );
+      comparator = (a, b) => compareNumbers(getMarketVram(a), getMarketVram(b), "desc");
+      break;
     case "vram-asc":
-      return arr.sort((a, b) =>
-        compareNumbers(getMarketVram(a), getMarketVram(b), "asc"),
-      );
+      comparator = (a, b) => compareNumbers(getMarketVram(a), getMarketVram(b), "asc");
+      break;
     case "series":
     default:
-      // Available GPUs first, then by ascending model number.
-      return arr.sort((a, b) => {
-        const availability =
-          Number(hasAvailableGPUs(b)) - Number(hasAvailableGPUs(a));
-        if (availability !== 0) return availability;
-        return getGpuModelRank(a) - getGpuModelRank(b);
-      });
+      comparator = (a, b) => getGpuModelRank(a) - getGpuModelRank(b);
+      break;
   }
+
+  // Unavailable markets always sink below available ones, whatever the sort.
+  return arr.sort((a, b) => {
+    const availability = Number(hasAvailableGPUs(b)) - Number(hasAvailableGPUs(a));
+    if (availability !== 0) return availability;
+    return comparator(a, b);
+  });
 };
 
 // Parse a market metadata VRAM string (e.g. "24GB") into MB.

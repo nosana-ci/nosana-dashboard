@@ -20,7 +20,6 @@
           v-model:jobDefinition="jobDefinition"
           v-model:isEditorCollapsed="isEditorCollapsed"
           @showTemplateModal="showTemplateModal = true"
-          @openReadme="openReadmeModal"
           :strategy="strategy"
           @update:strategy="strategy = $event"
           :schedule="schedule"
@@ -310,72 +309,6 @@
     </div>
 
     <Loader v-if="loading" />
-
-    <!-- README Modal -->
-    <div class="modal" :class="{ 'is-active': showReadmeModal }">
-      <div class="modal-background" @click="showReadmeModal = false"></div>
-      <div class="modal-card is-app-modal is-medium">
-        <header class="modal-card-head">
-          <div class="is-flex is-align-items-center is-gap-2" style="min-width: 0">
-            <span class="app-modal-icon">
-              <i v-if="loadingTemplates" class="fas fa-spinner fa-spin"></i>
-              <img
-                v-else-if="selectedTemplate?.icon"
-                :src="selectedTemplate.icon"
-                alt="Template icon"
-              />
-              <i v-else class="fas fa-book"></i>
-            </span>
-            <div style="min-width: 0">
-              <p class="eyebrow-label is-uppercase has-text-weight-semibold">
-                Documentation
-              </p>
-              <p class="modal-card-title title is-5 mb-0">
-                <template v-if="loadingTemplates">Loading template…</template>
-                <template v-else>{{ selectedTemplate?.name || "Template" }}</template>
-              </p>
-            </div>
-          </div>
-          <button class="delete" aria-label="close" @click="showReadmeModal = false"></button>
-        </header>
-
-        <section class="modal-card-body">
-          <ClientOnly>
-            <MarkdownFile
-              v-if="readmeContentForModal"
-              :raw-markdown="readmeContentForModal"
-            />
-            <p v-else class="has-text-grey has-text-centered py-6">
-              No documentation available for this template.
-            </p>
-          </ClientOnly>
-        </section>
-
-        <footer class="modal-card-foot">
-          <p
-            v-if="selectedTemplate?.description"
-            class="has-text-grey is-size-7"
-            style="flex: 1; min-width: 0"
-          >
-            {{ selectedTemplate.description }}
-          </p>
-          <div class="buttons mb-0">
-            <button
-              class="button"
-              @click="
-                showReadmeModal = false;
-                showTemplateModal = true;
-              "
-            >
-              Change template
-            </button>
-            <button class="button is-secondary" @click="showReadmeModal = false">
-              Use this template
-            </button>
-          </div>
-        </footer>
-      </div>
-    </div>
 
     <!-- Template Selection Modal -->
     <DeployTemplateModal
@@ -1048,8 +981,6 @@ watch(
 );
 
 // State for modals
-const showReadmeModal = ref(false);
-const readmeContentForModal = ref<string | undefined>(undefined);
 const showTemplateModal = ref(false);
 
 // Watch jobDefinition changes to detect custom configurations
@@ -1225,19 +1156,11 @@ watch(
 
 // No swap modal in API mode
 
-// README Modal functions
-const openReadmeModal = (readme: string) => {
-  readmeContentForModal.value = readme;
-  showReadmeModal.value = true;
-};
-
 // Template selection handler
 const selectTemplateFromModal = (template: Template) => {
   selectedTemplate.value = template;
   showTemplateModal.value = false;
   router.replace({ query: { ...route.query, template: String(template.id) } });
-  readmeContentForModal.value = template.readme || undefined;
-  showReadmeModal.value = true;
 };
 
 // Watch for template modal state to control body scroll
@@ -1249,38 +1172,9 @@ watch(showTemplateModal, (isOpen) => {
   }
 });
 
-// Watch for readme modal state to control body scroll
-watch(showReadmeModal, (isOpen) => {
-  if (isOpen) {
-    lockScroll("readme-modal");
-  } else {
-    unlockScroll("readme-modal");
-  }
-});
 </script>
 
 <style lang="scss" scoped>
-// Copied styles from deploy.vue
-.nav-tabs-item {
-  border-top-left-radius: 6px;
-  border-top-right-radius: 6px;
-  color: $grey;
-  cursor: pointer;
-  border: none;
-  border-bottom: 0px;
-
-  &.is-active {
-    color: var(--text-color, $black);
-    border: none;
-    border-bottom: 1px solid var(--tab-bottom-color, #{$white});
-    margin-bottom: -1px;
-  }
-
-  &:hover {
-    background-color: $white-ter;
-  }
-}
-
 .summary {
   position: sticky !important;
   top: 1rem !important;
@@ -1314,21 +1208,6 @@ watch(showReadmeModal, (isOpen) => {
 .dark-mode {
   .box {
     border-color: $grey-darker !important;
-  }
-
-  .nav-tabs-item {
-    border-color: $grey-darker;
-    color: $grey-light;
-
-    &.is-active {
-      --text-color: $white;
-      --tab-bottom-color: $black;
-      border-color: $grey-darker;
-    }
-
-    &:hover {
-      background-color: $black-ter;
-    }
   }
 
   .tag {

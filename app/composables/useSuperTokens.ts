@@ -335,17 +335,7 @@ export function useSuperTokens() {
 
   if (import.meta.client && !initialCheckDone) {
     initialCheckDone = true;
-    const cookies = document.cookie.split(";");
-    const hasSessionCookie = cookies.some(
-      (c) =>
-        c.trim().startsWith("sIdBucket=") ||
-        c.trim().startsWith("sAccessToken="),
-    );
-    if (hasSessionCookie) {
-      checkSession();
-    } else {
-      isLoading.value = false;
-    }
+    checkSession();
   }
 
   return {

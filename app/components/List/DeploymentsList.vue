@@ -1,7 +1,7 @@
 <template>
   <div :class="{ 'min-height-container': !hasLoadedOnce }">
     <div class="table-container">
-      <table class="table is-fullwidth is-striped is-hoverable">
+      <table class="table is-fullwidth is-hoverable deployments-table">
         <thead>
           <tr>
             <th>Deployment</th>
@@ -9,21 +9,25 @@
             <th>Active Jobs</th>
             <th v-if="isWalletMode">Vault</th>
             <th>Last Updated</th>
+            <th class="chev-col"></th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="!hasLoadedOnce">
-            <td :colspan="isWalletMode ? 5 : 4" class="has-text-centered py-6">
+            <td :colspan="isWalletMode ? 6 : 5" class="has-text-centered py-6">
               Loading deployments...
             </td>
           </tr>
           <tr v-else-if="hasLoadedOnce && deploymentsError">
-            <td colspan="4" class="has-text-centered has-text-danger">
+            <td
+              :colspan="isWalletMode ? 6 : 5"
+              class="has-text-centered has-text-danger"
+            >
               Failed to load deployments: {{ deploymentsError }}
             </td>
           </tr>
           <tr v-else-if="hasLoadedOnce && !deployments.length">
-            <td :colspan="isWalletMode ? 5 : 4" class="has-text-centered">
+            <td :colspan="isWalletMode ? 6 : 5" class="has-text-centered">
               No deployments found
             </td>
           </tr>
@@ -42,8 +46,11 @@
                   <div class="deployment-name">
                     {{ deployment.name }}
                   </div>
-                  <div class="is-size-7 is-family-monospace has-text-grey">
-                    {{ deployment.id }}
+                  <div
+                    class="deployment-id is-family-monospace"
+                    :title="deployment.id"
+                  >
+                    {{ truncateMiddle(deployment.id, 6, 6) }}
                   </div>
                 </NuxtLink>
               </td>
@@ -52,18 +59,16 @@
                   :to="`/deployments/${deployment.id}`"
                   class="clickable-row-link clickable-row-cell-content"
                 >
-                  <StatusTag
-                    :status="deployment.status"
-                    :outlined="true"
-                    :show-label="true"
-                  />
+                  <DeploymentStatusPill :status="deployment.status" />
                 </NuxtLink>
               </td>
               <td>
                 <NuxtLink
                   :to="`/deployments/${deployment.id}`"
                   class="clickable-row-link clickable-row-cell-content"
-                  >{{ deployment.active_jobs || 0 }} Jobs</NuxtLink
+                  :class="{ 'has-text-grey': !deployment.active_jobs }"
+                  >{{ deployment.active_jobs || 0 }}
+                  {{ deployment.active_jobs === 1 ? "Job" : "Jobs" }}</NuxtLink
                 >
               </td>
               <VaultOverviewRows
@@ -71,16 +76,32 @@
                 :isTableRow="false"
                 :deployment="deployment"
               />
-              <td>
+              <td class="updated-cell">
                 <NuxtLink
                   :to="`/deployments/${deployment.id}`"
                   class="clickable-row-link clickable-row-cell-content"
                 >
-                  <span v-if="deployment.updated_at">{{
-                    formatDate(deployment.updated_at)
-                  }}</span>
+                  <span
+                    v-if="deployment.updated_at"
+                    :title="formatDate(deployment.updated_at)"
+                    >{{ formatTimeAgo(deployment.updated_at) }}</span
+                  >
                   <span v-else>-</span>
                 </NuxtLink>
+              </td>
+              <td class="chev-cell">
+                <span class="row-chev">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M9 18l6-6-6-6" />
+                  </svg>
+                </span>
               </td>
             </tr>
           </template>
@@ -116,13 +137,15 @@
 </template>
 
 <script setup lang="ts">
-import StatusTag from "@/components/Common/StatusTag.vue";
+import DeploymentStatusPill from "@/components/Deployment/DeploymentStatusPill.vue";
 import VaultOverviewRows from "@/components/Vault/VaultOverviewRows.vue";
 
 import { useWallet } from "@nosana/solana-vue";
 import { useKit } from "~/composables/useKit";
 import type { ApiDeploymentListResult } from "@nosana/api";
 import { formatDate } from "~/utils/formatDate";
+import { formatTimeAgo } from "~/utils/relativeTime";
+import { truncateMiddle } from "~/utils/solana";
 
 const { isAuthenticated, isLoading } = useSuperTokens();
 const { connected } = useWallet();
@@ -225,7 +248,7 @@ watch(
 );
 </script>
 
-<style scoped>
+<style lang="scss" scoped>
 .address {
   font-family: monospace;
   font-size: 0.9em;
@@ -235,9 +258,31 @@ watch(
   vertical-align: middle;
 }
 
-.tag {
-  min-width: 80px;
-  justify-content: center;
+/* Clean rows matching the site's redesigned tables (no zebra striping):
+   subtle top separators + a soft hover, uppercase title-cased headers. */
+.deployments-table {
+  th {
+    font-family: $title-family;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+    color: $grey;
+  }
+
+  tbody tr.clickable-row:hover {
+    background: $white-bis;
+  }
+
+  /* Give the status pills a shared minimum width so they line up down the
+     column instead of each hugging its label (Running / Completed / Error). */
+  :deep(.dep-status-pill) {
+    min-width: 90px;
+  }
+}
+
+html.dark-mode .deployments-table tbody tr.clickable-row:hover {
+  background: rgba($white, 0.03);
 }
 
 .pagination-previous.is-disabled,
@@ -257,7 +302,46 @@ watch(
 
 .deployment-name {
   color: inherit;
-  font-weight: 500;
+  font-family: $title-family;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.deployment-id {
+  font-size: 0.75rem;
+  color: $grey;
+  margin-top: 2px;
+}
+
+.updated-cell {
+  color: $grey;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Drill-in chevron, matching the job activity rows */
+.chev-col {
+  width: 1%;
+}
+
+.chev-cell {
+  width: 1%;
+  text-align: right;
+}
+
+.row-chev {
+  display: inline-flex;
+  color: $grey-light;
+  transition: color 0.15s ease;
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.clickable-row:hover .row-chev {
+  color: $grey;
 }
 
 .min-height-container {
@@ -279,11 +363,6 @@ watch(
   height: 100%;
 }
 
-/* Fix for option key type error */
-select option {
-  value: any;
-}
-
 .pagination-buttons {
   display: flex;
   justify-content: center;
@@ -297,24 +376,5 @@ select option {
 .pagination-buttons .button.is-disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-
-/* Match deployment detail page responsive tab styling */
-@media screen and (max-width: 768px) {
-  .tab-button {
-    font-size: 0.875rem;
-    padding: 0.5rem 0.75rem;
-  }
-}
-
-@media screen and (max-width: 480px) {
-  .deployment-tabs {
-    gap: 0.25rem;
-  }
-
-  .tab-button {
-    font-size: 0.75rem;
-    padding: 0.375rem 0.5rem;
-  }
 }
 </style>

@@ -7,15 +7,17 @@ import type {
 export type { DeploymentStreamEvent };
 
 /**
- * Refetches the canonical record behind one kind of frame. A frame carries only
- * what changed, so the record it belongs to is read back alongside it — but
- * only that record: a job changing state says nothing about the event log.
+ * Read-back the stream can't cover on its own.
+ *
+ * Every frame carries its whole record, so all live state — deployment,
+ * endpoints, events, tasks, and the job list (job frames include revision and
+ * created_at) — is applied in place, and `active_jobs` is derived from the live
+ * job states. The only things a frame never describes are the History tab
+ * (server-paginated) and an open job subpage (its own polling is disabled under
+ * the parent), so those are read back once on (re)connect.
  */
 export interface DeploymentRefreshers {
-  deployment: () => Promise<void>;
   jobs: () => Promise<void>;
-  events: () => Promise<void>;
-  tasks: () => Promise<void>;
 }
 
 interface DeploymentStreamDeps {
@@ -39,7 +41,7 @@ function coalesce(task: () => Promise<void>) {
     try {
       do {
         queued = false;
-        await task().catch(() => {});
+        await task().catch(() => { });
       } while (queued);
     } finally {
       running = false;
@@ -69,10 +71,7 @@ export function useDeploymentStream(deps: DeploymentStreamDeps) {
   let subscription: DeploymentStreamSubscription | null = null;
 
   const refresh = {
-    deployment: coalesce(() => deps.refresh.deployment()),
     jobs: coalesce(() => deps.refresh.jobs()),
-    events: coalesce(() => deps.refresh.events()),
-    tasks: coalesce(() => deps.refresh.tasks()),
   };
 
   const stop = () => {
@@ -86,24 +85,22 @@ export function useDeploymentStream(deps: DeploymentStreamDeps) {
 
     subscription = deployment.stream({
       // An open is a resynchronisation point, reconnects included: the stream
-      // says nothing about what was missed while it was down.
-      onOpen: () => Object.values(refresh).forEach((r) => r.request()),
-      onDeployment: (event) => {
-        deps.applyEvent(event);
-        // The frame carries status and replicas; endpoints and active_jobs
-        // only come back with the record.
-        refresh.deployment.request();
-      },
-      onJob: (event) => {
-        deps.applyEvent(event);
-        refresh.jobs.request();
-      },
-      // An endpoint coming up or going down writes only the deployment's
-      // endpoints, so it arrives as its own frame and never as a deployment
-      // one — the deployment record has to be read back for the new `online`.
-      onEndpoint: () => refresh.deployment.request(),
-      onEvent: () => refresh.events.request(),
-      onTask: () => refresh.tasks.request(),
+      // says nothing about what was missed while it was down. It replays the
+      // deployment, its active-jobs snapshot, the per-job frames, tasks and
+      // endpoints — all applied directly — so only the History tab and the open
+      // job subpage still need a read-back here.
+      onOpen: () => refresh.jobs.request(),
+      // Every frame carries what its record needs (or, for a job, enough to
+      // update the live list in place), so apply them all directly — no
+      // per-frame read-back.
+      onDeployment: (event) => deps.applyEvent(event),
+      onJob: (event) => deps.applyEvent(event),
+      // Authoritative active-jobs snapshot, sent once on open before the per-job
+      // frames, so a stale "Running" row can be pruned.
+      onJobs: (event) => deps.applyEvent(event),
+      onEndpoint: (event) => deps.applyEvent(event),
+      onEvent: (event) => deps.applyEvent(event),
+      onTask: (event) => deps.applyEvent(event),
     });
   };
 
