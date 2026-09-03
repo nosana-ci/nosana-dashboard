@@ -167,8 +167,11 @@ defineExpose({
 
 <style lang="scss">
 /* Shared theme for the JSON code editor — used across the deploy and
-   configuration views. Follows the app's light/dark mode: the `jse-theme-dark`
-   class (toggled in the component) selects the palette. */
+   configuration views. Sits on the deployment logs' #0d1117 dark ground with
+   JetBrains Mono, and colours syntax tokens with the One Dark palette (coral
+   keys, green strings, orange numbers, purple booleans, cyan urls) so they pop
+   on the dark background. Follows the app's light/dark mode: the `jse-theme-dark`
+   class (toggled in the component) selects the palette (One Light for light). */
 
 /* Hide only repair buttons - keep error messages visible */
 .jse-actions button,
@@ -186,6 +189,8 @@ button[class*="repair"],
 
 /* --- structural (both themes) --- */
 .json-editor {
+  /* Match the deployment logs' terminal font (same fallback stack). */
+  --jse-font-family-mono: "JetBrains Mono", monospace;
   border-radius: 10px;
   overflow: hidden;
 }
@@ -193,31 +198,33 @@ button[class*="repair"],
   display: none !important;
 }
 .json-editor .cm-cursor {
-  border-left-color: $secondary;
+  border-left-color: #58a6ff;
 }
 
 /* --- DARK --- */
 .json-editor.jse-theme-dark {
-  --jse-background-color: #0c0e0c;
-  --jse-panel-background: #121612;
-  --jse-panel-border: #1e241e;
-  --jse-panel-color: #c9d3c6;
-  --jse-panel-color-readonly: #4a554a;
-  --jse-main-border: #1e241e;
-  --jse-text-color: #c9d3c6;
-  --jse-value-color: #c9d3c6;
-  --jse-key-color: #8bf58f;
-  --jse-value-color-string: #d7e7c8;
-  --jse-value-color-number: #7fd4ff;
-  --jse-value-color-boolean: #f5c36b;
-  --jse-value-color-null: #f5c36b;
-  --jse-value-color-url: #7fd4ff;
-  --jse-delimiter-color: #6e7a6c;
-  --jse-selection-background-color: rgba(52, 235, 74, 0.45);
-  --jse-selection-background-inactive-color: rgba(52, 235, 74, 0.28);
+  --jse-background-color: #0d1117;
+  --jse-panel-background: #161b22;
+  --jse-panel-border: #21262d;
+  --jse-panel-color: #c9d1d9;
+  --jse-panel-color-readonly: #6e7681;
+  --jse-main-border: #21262d;
+  --jse-text-color: #c9d1d9;
+  --jse-value-color: #c9d1d9;
+  /* One Dark syntax palette on the logs' dark ground — warm, distinct hues that
+     pop without washing out to a single colour. */
+  --jse-key-color: #e06c75;
+  --jse-value-color-string: #98c379;
+  --jse-value-color-number: #d19a66;
+  --jse-value-color-boolean: #c678dd;
+  --jse-value-color-null: #c678dd;
+  --jse-value-color-url: #56b6c2;
+  --jse-delimiter-color: #7f8896;
+  --jse-selection-background-color: rgba(88, 166, 255, 0.4);
+  --jse-selection-background-inactive-color: rgba(88, 166, 255, 0.24);
   --jse-active-line-background-color: rgba(255, 255, 255, 0.03);
-  --jse-input-background: #121612;
-  border: 1px solid #1e241e;
+  --jse-input-background: #161b22;
+  border: 1px solid #21262d;
 }
 /* Paint the dark background on the editor container only — NOT on .cm-content.
    CodeMirror draws the text selection in a layer at z-index -2 (behind the
@@ -227,7 +234,7 @@ button[class*="repair"],
 .json-editor.jse-theme-dark .jse-text-mode,
 .json-editor.jse-theme-dark .cm-editor,
 .json-editor.jse-theme-dark .cm-scroller {
-  background: #0c0e0c;
+  background: #0d1117;
 }
 .json-editor.jse-theme-dark .cm-content {
   background: transparent;
@@ -237,17 +244,19 @@ button[class*="repair"],
 .json-editor:not(.jse-theme-dark) {
   --jse-text-color: #1a1a1a;
   --jse-value-color: #1a1a1a;
-  --jse-key-color: #0a8f06;
-  --jse-value-color-string: #2e7d32;
-  --jse-value-color-number: #0b66c3;
-  --jse-value-color-boolean: #b5680a;
-  --jse-value-color-null: #b5680a;
-  --jse-value-color-url: #0b66c3;
-  --jse-delimiter-color: #8a938a;
-  --jse-selection-background-color: rgba(16, 232, 12, 0.32);
-  --jse-selection-background-inactive-color: rgba(16, 232, 12, 0.22);
+  /* One Light equivalent — same hue families shifted to tones that pop on white.
+     Key red is darkened from One Light's #e45649 for readable contrast on white. */
+  --jse-key-color: #b31d28;
+  --jse-value-color-string: #50a14f;
+  --jse-value-color-number: #986801;
+  --jse-value-color-boolean: #a626a4;
+  --jse-value-color-null: #a626a4;
+  --jse-value-color-url: #4078f2;
+  --jse-delimiter-color: #a0a1a7;
+  --jse-selection-background-color: rgba(88, 166, 255, 0.28);
+  --jse-selection-background-inactive-color: rgba(88, 166, 255, 0.18);
   --jse-active-line-background-color: rgba(0, 0, 0, 0.03);
-  border: 1px solid #e3e7df;
+  border: 1px solid #d0d7de;
 }
 /* Same reasoning as dark mode: keep .cm-content transparent so the selection
    layer (z-index -2) remains visible; paint the surface on the container. */
