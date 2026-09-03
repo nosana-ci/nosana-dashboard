@@ -58,6 +58,32 @@
           />
         </svg>
       </div>
+      <div v-if="showMarketFilter" class="th-select-control ml-2">
+        <select v-model="marketValue" class="th-select" aria-label="Market">
+          <option :value="null">All markets</option>
+          <option
+            v-for="market in marketOptions"
+            :key="market.value"
+            :value="market.value"
+          >
+            {{ market.label }}
+          </option>
+        </select>
+        <svg
+          class="th-select-caret"
+          viewBox="0 0 24 24"
+          fill="none"
+          aria-hidden="true"
+        >
+          <path
+            d="m6 9 6 6 6-6"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </div>
       <div v-if="filtersOptions" class="th-select-control ml-2">
         <select v-model="filterValue" class="th-select" aria-label="Status">
           <option
@@ -90,10 +116,12 @@
 import { useRouter } from "vue-router";
 import { useWallet } from "@nosana/solana-vue";
 import { filters } from "./filters";
+import { truncateMiddle } from "~/utils/solana";
 
 const { connected } = useWallet();
 const { isAuthenticated } = useSuperTokens();
 const { currentRoute, push, replace } = useRouter();
+const { nosana } = useKit();
 
 // The Vaults tab is an advanced view for custom/legacy vaults only; the
 // shared (main) vault is managed from the account page.
@@ -109,6 +137,63 @@ watch(connected, (isConnected) => {
   if (isConnected && !isAuthenticated.value) {
     ensureSharedVault();
   }
+});
+
+// Build the market filter dropdown from the markets the user actually has
+// deployments in (the list endpoint can't filter by market server-side).
+const { data: marketsMeta } = useAPI("/markets", { default: () => [] });
+const deploymentMarkets = ref<string[]>([]);
+
+const loadDeploymentMarkets = async () => {
+  try {
+    const result = await nosana.value.api.deployments.list({ limit: 100 });
+    const seen = new Set<string>();
+    for (const d of result.deployments || []) {
+      if (d.market) seen.add(d.market);
+    }
+    deploymentMarkets.value = [...seen];
+  } catch {
+    deploymentMarkets.value = [];
+  }
+};
+
+watch(
+  [isAuthenticated, connected],
+  ([auth, conn]) => {
+    if (auth || conn) loadDeploymentMarkets();
+  },
+  { immediate: true },
+);
+
+const marketOptions = computed(() =>
+  deploymentMarkets.value
+    .map((address) => {
+      const match = marketsMeta.value?.find((m: any) => m.address === address);
+      return {
+        label: match?.name || truncateMiddle(address, 6, 6),
+        value: address,
+      };
+    })
+    .sort((a, b) => a.label.localeCompare(b.label)),
+);
+
+const showMarketFilter = computed(
+  () =>
+    currentTab.value === "deployments" && deploymentMarkets.value.length > 1,
+);
+
+const marketValue = computed({
+  get() {
+    return currentRoute.value.query.market?.toString() || null;
+  },
+  set(newMarket: string | null) {
+    replace({
+      query: {
+        ...currentRoute.value.query,
+        market: newMarket ?? undefined,
+      },
+    });
+  },
 });
 
 const currentTab = computed(
