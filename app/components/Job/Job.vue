@@ -70,12 +70,6 @@
                 />
               </svg>
             </button>
-            <template v-if="props.job.timeStart">
-              <span class="id-sep">·</span>
-              <span class="updated-time"
-                >Started {{ formatTimeAgo(new Date(props.job.timeStart * 1000)) }}</span
-              >
-            </template>
             <template v-if="jobDurationData">
               <span class="id-sep">·</span>
               <span class="updated-time">
@@ -357,7 +351,6 @@ import JobDefinitionTab from "~/components/Job/Tabs/JobDefinition.vue";
 import JobEventTimeline from "~/components/Job/EventTimeline.vue";
 import SecondsFormatter from "~/components/SecondsFormatter.vue";
 import DeploymentStatusPill from "~/components/Deployment/DeploymentStatusPill.vue";
-import { formatTimeAgo } from "~/utils/relativeTime";
 import {
   resolveMetricFields,
   type MetricField,
