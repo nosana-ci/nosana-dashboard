@@ -2,7 +2,7 @@
   <div class="mb-5">
     <div class="da-head">
       <h2 class="title is-5 mb-0">Job activity</h2>
-      <div class="da-seg">
+      <div class="seg-tabs">
         <button
           :class="{ 'is-active': jobActivityTab === 'active' }"
           @click="$emit('update:jobActivityTab', 'active')"
@@ -123,35 +123,6 @@ defineEmits<{
   margin-bottom: 0.85rem;
 }
 
-.da-seg {
-  display: inline-flex;
-  background: $white-ter;
-  border-radius: 10px;
-  padding: 3px;
-  gap: 2px;
-  box-shadow: inset 0 0 0 1px rgba($black, 0.04);
-
-  button {
-    font-size: 0.78rem;
-    font-weight: 500;
-    color: $grey-dark;
-    border: 0;
-    background: none;
-    padding: 5px 14px;
-    border-radius: 7px;
-    cursor: pointer;
-    transition:
-      color 0.15s ease,
-      background 0.15s ease;
-
-    &.is-active {
-      background: $white;
-      color: $text;
-      box-shadow: 0 1px 2px rgba($black, 0.12);
-    }
-  }
-}
-
 .da-card {
   background: $white;
   border: 1px solid $grey-lighter;
@@ -164,21 +135,6 @@ defineEmits<{
   text-align: center;
   color: $grey;
   font-size: 0.9rem;
-}
-
-html.dark-mode .da-seg {
-  background: rgba($white, 0.06);
-  box-shadow: inset 0 0 0 1px rgba($white, 0.08);
-
-  button {
-    color: $grey-light;
-
-    &.is-active {
-      background: $black-ter;
-      color: $white;
-      box-shadow: 0 1px 2px rgba($black, 0.4);
-    }
-  }
 }
 
 html.dark-mode .da-card {

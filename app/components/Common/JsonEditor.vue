@@ -132,6 +132,15 @@ defineExpose({
 </script>
 
 <style lang="scss">
+/* Shared dark theme for the JSON code editor — used across the deploy and
+   configuration views so every instance looks the same. */
+$jse-bg: #0c0e0c;
+$jse-panel: #121612;
+$jse-border: #1e241e;
+$jse-text: #c9d3c6;
+$jse-key: #8bf58f;
+$jse-gutter: #4a554a;
+
 /* Hide only repair buttons - keep error messages visible */
 .jse-actions button,
 .jse-repair,
@@ -141,14 +150,64 @@ button[class*="repair"],
   display: none !important;
 }
 
-/* No line numbers in the code editor */
-.json-editor .cm-gutters {
-  display: none !important;
-}
-
 /* Hide the "Line / Column" status bar at the bottom */
 .json-editor .jse-status-bar {
   display: none !important;
+}
+
+/* Palette (text mode maps these vars into the CodeMirror highlight) */
+.json-editor.jse-theme-dark {
+  --jse-background-color: #{$jse-bg};
+  --jse-panel-background: #{$jse-panel};
+  --jse-panel-border: #{$jse-border};
+  --jse-panel-color: #{$jse-text};
+  --jse-panel-color-readonly: #{$jse-gutter};
+  --jse-main-border: #{$jse-border};
+  --jse-text-color: #{$jse-text};
+  --jse-value-color: #{$jse-text};
+  --jse-key-color: #{$jse-key};
+  --jse-value-color-string: #d7e7c8;
+  --jse-value-color-number: #7fd4ff;
+  --jse-value-color-boolean: #f5c36b;
+  --jse-value-color-null: #f5c36b;
+  --jse-value-color-url: #7fd4ff;
+  --jse-delimiter-color: #6e7a6c;
+  --jse-selection-background-color: rgba(16, 232, 12, 0.18);
+  --jse-active-line-background-color: rgba(255, 255, 255, 0.03);
+  --jse-input-background: #{$jse-panel};
+  border: 1px solid #{$jse-border};
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+/* Dark ground on every editor surface */
+.json-editor .jse-text-mode,
+.json-editor .cm-editor,
+.json-editor .cm-scroller,
+.json-editor .cm-content {
+  background: #{$jse-bg};
+}
+.json-editor .cm-cursor {
+  border-left-color: $secondary;
+}
+
+/* Line-number gutter */
+.json-editor .cm-gutters {
+  display: flex !important;
+  background: #{$jse-bg};
+  border-right: 1px solid #{$jse-border};
+  color: #{$jse-gutter};
+}
+.json-editor .cm-lineNumbers .cm-gutterElement {
+  color: #{$jse-gutter};
+  font-variant-numeric: tabular-nums;
+}
+.json-editor .cm-foldGutter {
+  display: none !important;
+}
+.json-editor .cm-activeLineGutter {
+  background: rgba(255, 255, 255, 0.03);
+  color: #{$jse-text};
 }
 </style>
 

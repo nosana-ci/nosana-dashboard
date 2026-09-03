@@ -252,20 +252,43 @@
               </svg>
             </span>
             <div style="min-width: 0">
-              <p class="eyebrow-label is-uppercase has-text-weight-semibold">
-                Job definition
-              </p>
-              <p class="modal-card-title title is-5 mb-0">{{ computedJobTitle }}</p>
+              <p class="modal-card-title title is-5 mb-0">Job definition</p>
             </div>
+          </div>
+          <div class="seg-tabs jobdef-seg" role="tablist" aria-label="Editor mode">
+            <button
+              type="button"
+              :class="{ 'is-active': editorMode === 'builder' }"
+              role="tab"
+              :aria-selected="editorMode === 'builder'"
+              @click="editorMode = 'builder'"
+            >
+              Builder
+            </button>
+            <button
+              type="button"
+              :class="{ 'is-active': editorMode === 'json' }"
+              role="tab"
+              :aria-selected="editorMode === 'json'"
+              @click="editorMode = 'json'"
+            >
+              JSON
+            </button>
           </div>
           <button class="delete" aria-label="close" @click="handleCancel"></button>
         </header>
         <section class="modal-card-body jobdef-body">
-          <PodConfigurationTab ref="podTab" v-model="editingJobDefinition" />
+          <DeployJobDefinitionBuilder
+            v-if="editorMode === 'builder'"
+            ref="builderTab"
+            v-model="editingJobDefinition"
+          />
+          <PodConfigurationTab v-else ref="podTab" v-model="editingJobDefinition" />
         </section>
         <footer class="modal-card-foot">
           <p class="has-text-grey is-size-7" style="flex: 1; min-width: 0">
-            Changes apply when you save. Invalid JSON is blocked.
+            Changes apply when you save.
+            {{ editorMode === 'json' ? 'Invalid JSON is blocked.' : 'Required fields are checked.' }}
           </p>
           <div class="buttons mb-0">
             <button class="button" @click="handleCancel">Cancel</button>
@@ -286,6 +309,7 @@
   import DeploySimpleGpuSelection from './SimpleGpuSelection.vue';
   import DeployAdvancedGpuSelection from './AdvancedGpuSelection.vue';
   import PodConfigurationTab from './PodConfigurationTab.vue';
+  import DeployJobDefinitionBuilder from './JobDefinitionBuilder.vue';
   import DeploymentConfigurationTab from './DeploymentConfigurationTab.vue';
   import NosanaMark from '@/assets/img/icon.svg?component';
   import { marked } from 'marked';
@@ -349,6 +373,10 @@ const props = defineProps<Props>();
 
 // Modal state
 const showEditorModal = ref(false);
+
+// Editor mode: schema-driven form builder (default) or raw JSON escape hatch
+const editorMode = ref<'builder' | 'json'>('builder');
+const builderTab = ref<{ canSave: () => boolean } | null>(null);
 
 // Inline "Configure" settings drawer in the banner
 const isConfigOpen = ref(false);
@@ -508,13 +536,15 @@ watch(
 const openEditorModal = () => {
   originalJobDefinition.value = JSON.parse(JSON.stringify(props.jobDefinition));
   editingJobDefinition.value = JSON.parse(JSON.stringify(props.jobDefinition));
+  editorMode.value = 'builder';
   showEditorModal.value = true;
 };
 
-// Handle save with validation
+// Handle save with validation (gate depends on the active editor)
 const podTab = ref<{ canSave: () => boolean } | null>(null);
 const handleSaveChanges = () => {
-  if (!podTab.value?.canSave?.()) return;
+  const activeEditor = editorMode.value === 'builder' ? builderTab.value : podTab.value;
+  if (!activeEditor?.canSave?.()) return;
   emit('update:jobDefinition', editingJobDefinition.value as JobDefinition);
   showEditorModal.value = false;
 };
@@ -1117,10 +1147,43 @@ html.dark-mode {
 /* ---------- Job definition modal (editor sizing) ---------- */
 /* The is-app-modal global styles the shell; here we just make the JSON
    editor fill the scrollable body. */
+/* Compact header now that it's a single "Job definition" title (the shared
+   is-app-modal head top-aligns for a two-line eyebrow+title we no longer use). */
+.jobdef-modal .modal-card-head {
+  align-items: center;
+  padding-top: 0.9rem;
+  padding-bottom: 0.9rem;
+}
+.jobdef-modal .app-modal-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+}
+.jobdef-modal .app-modal-icon svg {
+  width: 18px;
+  height: 18px;
+}
+.jobdef-modal .modal-card-title {
+  font-size: 1.05rem;
+}
+
 .jobdef-body {
   display: flex;
   overflow: hidden;
   min-height: 60vh;
+}
+
+/* The form builder fills the scrollable body like the JSON editor does */
+.jobdef-body :deep(.jdb) {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Builder / JSON toggle uses the shared .seg-tabs; just position it in the head */
+.jobdef-seg {
+  margin-left: auto;
+  margin-right: 0.85rem;
+  flex: none;
 }
 
 .jobdef-body :deep(.pod-configuration-tab),
@@ -1136,17 +1199,10 @@ html.dark-mode {
 .jobdef-body :deep(.json-editor) {
   flex: 1;
   min-width: 0;
-  border-radius: 10px;
-  overflow: hidden;
-  border: 1px solid $border;
 }
 
 .jobdef-body :deep(.jse-main) {
   min-height: 100%;
-}
-
-.dark-mode .jobdef-body :deep(.json-editor) {
-  border-color: #2c2c2c;
 }
 
 @media screen and (max-width: 768px) {
