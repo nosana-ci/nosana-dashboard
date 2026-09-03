@@ -33,7 +33,7 @@
           </tr>
           <template v-else>
             <tr
-              v-for="deployment in deployments"
+              v-for="deployment in sortedDeployments"
               :key="deployment.id"
               class="clickable-row"
               @click="openDeployment($event, deployment.id)"
@@ -172,6 +172,15 @@ const emit = defineEmits<{
 }>();
 
 const deployments = ref<ApiDeploymentListResult["deployments"]>([]);
+
+// Show the most recently updated deployments first.
+const sortedDeployments = computed(() =>
+  [...deployments.value].sort((a, b) => {
+    const ta = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+    const tb = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+    return tb - ta;
+  }),
+);
 const currentPage = ref(1);
 const hasLoadedOnce = ref(false);
 const router = useRouter();

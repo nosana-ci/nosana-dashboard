@@ -371,8 +371,15 @@ const applyStreamEvent = (event: DeploymentStreamEvent) => {
 
   // Scheduled task: upsert by id while pending/processing, drop it when done.
   if (event.type === "task") {
-    const list = [...((tasks.value ?? []) as Array<{ id?: string }>)];
-    const idx = list.findIndex((t) => t.id === event.id);
+    const list = [...((tasks.value ?? []) as Array<{ id?: string; task?: string }>)];
+    // getTasks() returns tasks with no `id` (and stream frames carry no
+    // `created_at`), so matching purely on `id` never reconciles a fetched task
+    // with its live frame and the frame gets appended as a duplicate. Match by
+    // `id` when both sides have one, otherwise by task type — a scheduled
+    // deployment has a single pending task per type (LIST / EXTEND / STOP).
+    const idx = list.findIndex((t) =>
+      t.id != null && event.id != null ? t.id === event.id : t.task === event.task,
+    );
     if (event.status === "DONE") {
       if (idx >= 0) list.splice(idx, 1);
     } else {

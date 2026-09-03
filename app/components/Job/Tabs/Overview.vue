@@ -108,7 +108,7 @@
             v-for="op in groupOps"
             :key="op.id"
             class="cc-op"
-            :class="{ 'is-open': expandedOps.has(op.id) }"
+            :class="{ 'is-open': isOpOpen(op) }"
           >
             <div
               class="cc-op-head is-flex is-align-items-center"
@@ -116,7 +116,7 @@
             >
               <svg
                 class="cc-chevron"
-                :class="{ 'is-open': expandedOps.has(op.id) }"
+                :class="{ 'is-open': isOpOpen(op) }"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -133,9 +133,9 @@
                 }}</span>
               </div>
               <span class="cc-op-status">
-                <StatusTag :status="op.status" />
+                <DeploymentStatusPill :status="pillStatus(op.status)" />
               </span>
-              <div class="cc-actions" @click.stop>
+              <div v-if="!isSingleOp" class="cc-actions" @click.stop>
                 <button
                   class="button is-small cc-btn"
                   @click="stopOperation(op)"
@@ -165,7 +165,7 @@
               </div>
             </div>
 
-            <div v-if="expandedOps.has(op.id)" class="cc-op-body">
+            <div v-if="isOpOpen(op)" class="cc-op-body">
               <!-- Timing + results -->
               <div class="cc-meta">
                 <div class="cc-meta-item">
@@ -220,6 +220,11 @@
                     :key="idx"
                     class="cc-endpoint is-flex is-align-items-center"
                   >
+                    <span
+                      class="cc-ep-status"
+                      :class="epDotClass(portInfo.status)"
+                      :title="endpointStatusLabel(portInfo.status)"
+                    ></span>
                     <span class="cc-port is-family-monospace"
                       >:{{ portInfo.port }}</span
                     >
@@ -230,7 +235,6 @@
                       :title="portInfo.url"
                       >{{ portInfo.url }}</a
                     >
-                    <StatusTag :status="portInfo.status" />
                   </div>
                 </div>
               </div>
@@ -318,7 +322,7 @@ import FullscreenModal from '~/components/Common/FullscreenModal.vue';
 import VueJsonPretty from 'vue-json-pretty';
 import FLogViewer from '../FLogViewer.vue';
 import 'vue-json-pretty/lib/styles.css';
-import StatusTag from "~/components/Common/StatusTag.vue";
+import DeploymentStatusPill from "~/components/Deployment/DeploymentStatusPill.vue";
 
 // Import icons as components
 import SquareIcon from '@/assets/img/icons/square.svg?component';
@@ -852,6 +856,37 @@ watch(groupedOperations, (newGroups) => {
   expandedGroups.value = next;
 }, { immediate: true });
 
+// Container/op status uses the shared status pill (same as the deployment and
+// job pages). Container "finished" maps to the pill's "completed" (green).
+const pillStatus = (s: unknown) =>
+  String(s ?? "").toLowerCase() === "finished" ? "completed" : String(s ?? "");
+
+// A job with a single operation doesn't need per-operation controls.
+const isSingleOp = computed(() => operations.value.length === 1);
+
+// Running operations stay expanded (their accordion is always open); other
+// operations expand/collapse on click.
+const runningOpStates = new Set(["running", "starting", "waiting", "pending", "init"]);
+const opIsRunning = (op: { status?: string | number }) =>
+  runningOpStates.has(String(op?.status ?? "").toLowerCase());
+const isOpOpen = (op: { id: string; status?: string | number }) =>
+  expandedOps.value.has(op.id) || opIsRunning(op);
+
+// Endpoint status as a colored circle dot (matches the deployment page).
+const epDotClass = (status?: string) => {
+  const s = String(status ?? "").toUpperCase();
+  if (s === "ONLINE") return "is-online";
+  if (s === "STARTING") return "is-starting";
+  return "is-off";
+};
+const endpointStatusLabel = (status?: string) => {
+  const s = String(status ?? "").toUpperCase();
+  if (s === "ONLINE") return "Online";
+  if (s === "STARTING") return "Starting";
+  if (s === "OFFLINE") return "Offline";
+  return "Unknown";
+};
+
 // Get status icon using the same logic as Job.vue for consistency
 const getStatusIcon = (status: string) => {
   switch (status?.toLowerCase()) {
@@ -1368,6 +1403,17 @@ html.dark-mode .cc-code {
 
 html.dark-mode .cc-endpoint {
   background: rgba($white, 0.04);
+}
+
+.cc-ep-status {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: none;
+  background: $grey-light;
+
+  &.is-online { background: $success; }
+  &.is-starting { background: $warning; }
 }
 
 .cc-port {
