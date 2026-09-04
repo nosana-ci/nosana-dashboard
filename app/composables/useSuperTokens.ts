@@ -238,6 +238,21 @@ export function useSuperTokens() {
       thirdPartyId,
       frontendRedirectURI: redirectUri,
     });
+
+    // Google reuses the single existing browser session and skips the account
+    // chooser, so after signing out a user gets silently logged back into the
+    // same account. `prompt=select_account` forces Google to show the picker
+    // so they can switch accounts.
+    if (thirdPartyId === "google") {
+      try {
+        const url = new URL(authUrl);
+        url.searchParams.set("prompt", "select_account");
+        return url.toString();
+      } catch {
+        return authUrl;
+      }
+    }
+
     return authUrl;
   };
 
