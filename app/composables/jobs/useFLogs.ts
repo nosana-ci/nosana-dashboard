@@ -27,7 +27,7 @@ export interface FLogOptions {
    * Set when the job runs in a confidential VM (CVM). The host node's /flog
    * stream then only carries the VM boot console, which is filed under system
    * logs, while a second socket to the CVM itself — same protocol, at
-   * wss://<jobAddress>.<nodeDomain> with the /log path and a job-address-signed
+   * wss://<jobAddress>.<nodeDomain> with the /flog path and a job-address-signed
    * auth header — carries the inner ops' container logs.
    */
   cvm?: { getAuth: () => Promise<string | Headers> };
@@ -454,7 +454,7 @@ export function useFLogs(
       createOnMessage('cvm'),
       30,
       5000,
-      { path: '/log', disableFallback: true }
+      { path: '/flog', disableFallback: true }
     )
     : null;
 
