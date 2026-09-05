@@ -145,7 +145,7 @@
               <span>Stop Deployment</span>
             </a>
 
-            <!-- Archive Action -->
+            <!-- Archive Action (wallet deployments) -->
             <a
               v-if="canArchive"
               class="dropdown-item is-danger-item"
@@ -287,6 +287,19 @@
               <span>Duplicate</span>
             </a>
 
+            <!-- Delete Action (non-wallet deployments) -->
+            <a
+              v-if="canDelete"
+              class="dropdown-item is-danger-item"
+              @click="emitAction('delete')"
+              :disabled="actionLoading"
+            >
+              <span class="icon is-small mr-2">
+                <TrashIcon />
+              </span>
+              <span>Delete</span>
+            </a>
+
             <div v-if="!hasAnyActions" class="dropdown-item has-text-grey">
               <span>No actions available</span>
             </div>
@@ -323,6 +336,7 @@ import ChevronDownIcon from "@/assets/img/icons/chevron-down.svg?component";
 import PlayIcon from "@/assets/img/icons/play.svg?component";
 import SquareIcon from "@/assets/img/icons/square.svg?component";
 import ArchiveIcon from "@/assets/img/icons/archive.svg?component";
+import TrashIcon from "@/assets/img/icons/trash.svg?component";
 import GridIcon from "@/assets/img/icons/grid.svg?component";
 import ClockIcon from "@/assets/img/icons/clock.svg?component";
 import CalendarIcon from "@/assets/img/icons/calendar.svg?component";
@@ -337,6 +351,7 @@ const props = defineProps<{
   canStart: boolean;
   canStop: boolean;
   canArchive: boolean;
+  canDelete: boolean;
   canDuplicate: boolean;
   hasAnyActions: boolean;
 }>();

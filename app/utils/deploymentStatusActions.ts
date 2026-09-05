@@ -13,3 +13,8 @@ export const canArchiveDeployment = (status: DeploymentStatusLike): boolean =>
   status !== "RUNNING" &&
   status !== "STOPPING" &&
   status !== "DRAFT";
+
+// Delete is only allowed once a deployment is fully stopped: the SDK's
+// `delete()` rejects any other status.
+export const canDeleteDeployment = (status: DeploymentStatusLike): boolean =>
+  status === "STOPPED";

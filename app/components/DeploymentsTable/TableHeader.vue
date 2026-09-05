@@ -65,7 +65,7 @@
           <div class="dropdown-menu" role="menu">
             <div class="dropdown-content">
               <a
-                v-for="action in bulkActions"
+                v-for="action in availableBulkActions"
                 :key="action.key"
                 class="dropdown-item"
                 :class="{
@@ -174,8 +174,8 @@ import ChevronDownIcon from "@/assets/img/icons/chevron-down.svg?component";
 import PlayIcon from "@/assets/img/icons/play.svg?component";
 import SquareIcon from "@/assets/img/icons/square.svg?component";
 import ArchiveIcon from "@/assets/img/icons/archive.svg?component";
+import TrashIcon from "@/assets/img/icons/trash.svg?component";
 import {
-  bulkActions,
   useDeploymentSelection,
   type BulkActionKey,
 } from "~/composables/useDeploymentSelection";
@@ -326,10 +326,21 @@ const pageSizeValue = computed({
 // Bulk actions for the deployments ticked in the list below. The button only
 // exists while something is selected; it sits before the filters and takes
 // its width from the flex spacer, so the filters never move.
-const { selectedIds, bulkTargets, bulkRunning, clearSelection, runBulkAction } =
-  useDeploymentSelection();
+const {
+  selectedIds,
+  availableBulkActions,
+  bulkTargets,
+  bulkRunning,
+  clearSelection,
+  runBulkAction,
+} = useDeploymentSelection();
 
-const bulkIcons = { start: PlayIcon, stop: SquareIcon, archive: ArchiveIcon };
+const bulkIcons = {
+  start: PlayIcon,
+  stop: SquareIcon,
+  archive: ArchiveIcon,
+  delete: TrashIcon,
+};
 
 const actionsOpen = ref(false);
 const actionsRef = ref<HTMLElement | null>(null);
