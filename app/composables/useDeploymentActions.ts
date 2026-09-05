@@ -1,4 +1,4 @@
-import type { Deployment } from "@nosana/kit";
+import type { Deployment, Market } from "@nosana/kit";
 import { useToast } from "vue-toastification";
 import { parseCronExpression } from "~/utils/parseCronExpression";
 
@@ -22,11 +22,21 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
   const showTimeoutModal = ref(false);
   const showScheduleModal = ref(false);
   const showRevisionDefinitionModal = ref(false);
+  const showMarketModal = ref(false);
+  const showDuplicateModal = ref(false);
 
   // Form state
   const newReplicaCount = ref<number | null>(null);
   const newTimeoutHours = ref<number | null>(null);
   const newSchedule = ref("");
+  const duplicateName = ref("");
+
+  // Hands a freshly duplicated deployment to the detail page so it renders
+  // without refetching (same hand-off the create page uses).
+  const preloadedDeployment = useState<Deployment | null>(
+    "preloadedDeployment",
+    () => null,
+  );
 
   // Revision state
   const switchingRevision = ref<number | null>(null);
@@ -51,11 +61,15 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
       deps.deploymentStatus.value !== "DRAFT",
   );
 
+  // Duplicating only reads the source, so it's offered for every status,
+  // archived included.
+  const canDuplicate = computed(() => deps.deployment.value !== null);
+
   const hasAnyActions = computed(() => {
     const status = deps.deploymentStatus.value;
     const hasMainActions = canStart.value || canStop.value || canArchive.value;
     const hasConfigActions = status !== "ARCHIVED";
-    return hasMainActions || hasConfigActions;
+    return hasMainActions || hasConfigActions || canDuplicate.value;
   });
 
   // Generic deployment action handler
@@ -229,6 +243,49 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
     newTimeoutHours.value = null;
   };
 
+  const updateMarket = async (market: Market) => {
+    const address = market.address?.toString();
+    if (!address) {
+      toast.error("Please select a market");
+      return;
+    }
+    if (address === deps.deployment.value?.market) return;
+
+    await executeDeploymentAction(
+      () => deps.deployment.value!.updateMarket(address),
+      "Deployment market updated",
+    );
+  };
+
+  const duplicateDeployment = async () => {
+    if (!deps.deployment.value || !deps.hasAnyAuth.value) {
+      toast.error("Please log in or connect wallet to perform this action");
+      return;
+    }
+
+    const name =
+      duplicateName.value.trim() ||
+      `${deps.deployment.value.name || "Deployment"} (copy)`;
+
+    try {
+      actionLoading.value = true;
+      const copy = await deps.deployment.value.duplicate({ name });
+
+      toast.success(`Deployment duplicated as ${name}`);
+      duplicateName.value = "";
+
+      preloadedDeployment.value = copy;
+      await router.push(`/deployments/${copy.id}`);
+    } catch (error: any) {
+      console.error("Duplicate deployment error:", error);
+      const errorMessage =
+        error.data?.message || error.message || "Failed to duplicate deployment";
+      toast.error(`Error duplicating deployment: ${errorMessage}`);
+    } finally {
+      actionLoading.value = false;
+    }
+  };
+
   const updateSchedule = async () => {
     if (!newSchedule.value || !isValidCronExpression(newSchedule.value)) {
       toast.error("Please enter a valid cron expression");
@@ -345,11 +402,14 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
     showTimeoutModal,
     showScheduleModal,
     showRevisionDefinitionModal,
+    showMarketModal,
+    showDuplicateModal,
 
     // Form state
     newReplicaCount,
     newTimeoutHours,
     newSchedule,
+    duplicateName,
 
     // Revision state
     switchingRevision,
@@ -359,6 +419,7 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
     canStart,
     canStop,
     canArchive,
+    canDuplicate,
     hasAnyActions,
 
     // Actions
@@ -370,6 +431,8 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
     updateName,
     updateReplicas,
     updateJobTimeout,
+    updateMarket,
+    duplicateDeployment,
     updateSchedule,
     switchToRevision,
     viewRevisionDefinition,

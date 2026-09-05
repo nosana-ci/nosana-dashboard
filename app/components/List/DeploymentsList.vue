@@ -153,6 +153,7 @@ import VaultOverviewRows from "@/components/Vault/VaultOverviewRows.vue";
 
 import { useWallet } from "@nosana/solana-vue";
 import { useKit } from "~/composables/useKit";
+import { DeploymentStatus } from "@nosana/kit";
 import type { ApiDeploymentListResult } from "@nosana/api";
 import { formatDate } from "~/utils/formatDate";
 import { formatTimeAgo } from "~/utils/relativeTime";
@@ -234,6 +235,13 @@ const marketQuery = computed(
   () => router.currentRoute.value.query.market?.toString() || "",
 );
 
+// Archived deployments stay out of the default list; they only show when the
+// status filter explicitly asks for them. The list endpoint accepts a
+// comma-separated status list, so ask for every status except ARCHIVED.
+const UNARCHIVED_STATUSES = Object.values(DeploymentStatus)
+  .filter((status) => status !== DeploymentStatus.ARCHIVED)
+  .join(",");
+
 const refreshDeployments = async (
   pageFunc?: (() => Promise<ApiDeploymentListResult>) | null,
 ) => {
@@ -246,7 +254,7 @@ const refreshDeployments = async (
     } else {
       items = await nosana.value.api.deployments.list({
         search: searchQuery.value || undefined,
-        status: statusQuery.value || undefined,
+        status: statusQuery.value || UNARCHIVED_STATUSES,
         // The list endpoint can't filter by market, so when one is selected we
         // pull a larger batch and filter client-side below.
         // @ts-ignore - API client types need to be updated to reflect new pagination params1

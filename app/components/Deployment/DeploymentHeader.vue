@@ -192,6 +192,34 @@
               <span>Update Timeout</span>
             </a>
 
+            <!-- Change Market Action -->
+            <a
+              v-if="deployment.status !== 'ARCHIVED'"
+              class="dropdown-item"
+              @click="emitAction('update-market')"
+              :disabled="actionLoading"
+            >
+              <span class="icon is-small mr-2">
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <rect x="4" y="4" width="16" height="16" rx="2" />
+                  <rect x="9" y="9" width="6" height="6" />
+                  <path
+                    d="M9 1v3M15 1v3M9 20v3M15 20v3M1 9h3M1 15h3M20 9h3M20 15h3"
+                  />
+                </svg>
+              </span>
+              <span>Change Market</span>
+            </a>
+
             <!-- Update Schedule Action (only for scheduled deployments) -->
             <a
               v-if="
@@ -219,6 +247,44 @@
                 <EditIcon />
               </span>
               <span>Create Revision</span>
+            </a>
+
+            <hr
+              class="dropdown-divider"
+              v-if="
+                canDuplicate &&
+                (canStart ||
+                  canStop ||
+                  canArchive ||
+                  deployment.status !== 'ARCHIVED')
+              "
+            />
+
+            <!-- Duplicate Action (any status, archived included) -->
+            <a
+              v-if="canDuplicate"
+              class="dropdown-item"
+              @click="emitAction('duplicate')"
+              :disabled="actionLoading"
+            >
+              <span class="icon is-small mr-2">
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <rect x="9" y="9" width="13" height="13" rx="2" />
+                  <path
+                    d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+                  />
+                </svg>
+              </span>
+              <span>Duplicate</span>
             </a>
 
             <div v-if="!hasAnyActions" class="dropdown-item has-text-grey">
@@ -271,6 +337,7 @@ const props = defineProps<{
   canStart: boolean;
   canStop: boolean;
   canArchive: boolean;
+  canDuplicate: boolean;
   hasAnyActions: boolean;
 }>();
 
