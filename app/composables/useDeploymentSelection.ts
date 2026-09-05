@@ -1,13 +1,15 @@
 import type { ApiDeploymentListResult } from "@nosana/api";
+import { useWallet } from "@nosana/solana-vue";
 import { useToast } from "vue-toastification";
 import {
   canArchiveDeployment,
+  canDeleteDeployment,
   canStartDeployment,
   canStopDeployment,
 } from "~/utils/deploymentStatusActions";
 
 export type ListedDeployment = ApiDeploymentListResult["deployments"][number];
-export type BulkActionKey = "start" | "stop" | "archive";
+export type BulkActionKey = "start" | "stop" | "archive" | "delete";
 
 // Same eligibility rules as the detail page's actions menu, so a bulk action
 // only touches the deployments the single-deployment action would allow.
@@ -39,6 +41,13 @@ export const bulkActions: {
     danger: true,
     eligible: canArchiveDeployment,
   },
+  {
+    key: "delete",
+    label: "Delete",
+    done: "Deleted",
+    danger: true,
+    eligible: canDeleteDeployment,
+  },
 ];
 
 // Module-level so the deployments list (checkboxes) and the table toolbar
@@ -52,6 +61,21 @@ let afterBulk: (() => Promise<void>) | null = null;
 
 export function useDeploymentSelection() {
   const toast = useToast();
+  const { connected } = useWallet();
+  const { isAuthenticated } = useSuperTokens();
+
+  // Wallet users archive; non-wallet (credit / Google-email) users delete.
+  // The two are mutually exclusive so the menu never shows both.
+  const isWalletMode = computed(
+    () => connected.value && !isAuthenticated.value,
+  );
+  const availableBulkActions = computed(() =>
+    bulkActions.filter((action) => {
+      if (action.key === "archive") return isWalletMode.value;
+      if (action.key === "delete") return !isWalletMode.value;
+      return true;
+    }),
+  );
 
   const selectedDeployments = computed(() =>
     listed.value.filter((d) => selectedIds.value.has(d.id)),
@@ -112,6 +136,15 @@ export function useDeploymentSelection() {
       return;
     }
 
+    if (
+      key === "delete" &&
+      !confirm(
+        `Delete ${targets.length} deployment${targets.length === 1 ? "" : "s"}? This permanently removes them and all their data and cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+
     bulkRunning.value = key;
     let succeeded = 0;
 
@@ -148,6 +181,7 @@ export function useDeploymentSelection() {
     selectedIds,
     selectedDeployments,
     allSelected,
+    availableBulkActions,
     bulkTargets,
     bulkRunning,
     setListed,

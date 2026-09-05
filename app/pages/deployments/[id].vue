@@ -25,6 +25,7 @@
             :canStart="canStart"
             :canStop="canStop"
             :canArchive="canArchive"
+            :canDelete="canDelete"
             :canDuplicate="canDuplicate"
             :hasAnyActions="hasAnyActions"
             @switchTab="switchTab"
@@ -439,6 +440,7 @@ const actions = useDeploymentActions({
   deployment,
   hasAnyAuth,
   isWalletMode,
+  isAuthenticated,
   deploymentStatus,
   loadDeployment,
 });
@@ -460,11 +462,13 @@ const {
   canStart,
   canStop,
   canArchive,
+  canDelete,
   canDuplicate,
   hasAnyActions,
   startDeployment,
   stopDeployment,
   archiveDeployment,
+  deleteDeployment,
   updateName,
   updateReplicas,
   updateJobTimeout,
@@ -665,6 +669,10 @@ const switchAction = (action: string) => {
   }
   if (action === "archive") {
     archiveDeployment();
+    return;
+  }
+  if (action === "delete") {
+    deleteDeployment();
     return;
   }
   if (action === "create-revision") {

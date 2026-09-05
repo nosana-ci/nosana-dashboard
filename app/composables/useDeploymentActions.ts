@@ -3,6 +3,7 @@ import { useToast } from "vue-toastification";
 import { parseCronExpression } from "~/utils/parseCronExpression";
 import {
   canArchiveDeployment,
+  canDeleteDeployment,
   canStartDeployment,
   canStopDeployment,
 } from "~/utils/deploymentStatusActions";
@@ -11,6 +12,7 @@ export interface DeploymentActionsDeps {
   deployment: Ref<Deployment | null>;
   hasAnyAuth: Ref<boolean>;
   isWalletMode: Ref<boolean>;
+  isAuthenticated: Ref<boolean>;
   deploymentStatus: ComputedRef<string | undefined>;
   loadDeployment: (silent?: boolean) => Promise<void>;
 }
@@ -56,8 +58,17 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
     canStopDeployment(deps.deploymentStatus.value),
   );
 
-  const canArchive = computed(() =>
-    canArchiveDeployment(deps.deploymentStatus.value),
+  // Wallet deployments archive; non-wallet (credit / Google-email) ones delete.
+  const canArchive = computed(
+    () =>
+      deps.isWalletMode.value &&
+      canArchiveDeployment(deps.deploymentStatus.value),
+  );
+
+  const canDelete = computed(
+    () =>
+      deps.isAuthenticated.value &&
+      canDeleteDeployment(deps.deploymentStatus.value),
   );
 
   // Duplicating only reads the source, so it's offered for every status,
@@ -66,7 +77,8 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
 
   const hasAnyActions = computed(() => {
     const status = deps.deploymentStatus.value;
-    const hasMainActions = canStart.value || canStop.value || canArchive.value;
+    const hasMainActions =
+      canStart.value || canStop.value || canArchive.value || canDelete.value;
     const hasConfigActions = status !== "ARCHIVED";
     return hasMainActions || hasConfigActions || canDuplicate.value;
   });
@@ -174,6 +186,25 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
     await executeDeploymentAction(
       () => deps.deployment.value!.archive(),
       "Deployment archived successfully",
+      true,
+    );
+  };
+
+  const deleteDeployment = async () => {
+    if (
+      !confirm(
+        "Are you sure you want to delete this deployment? This permanently removes it and all its data and cannot be undone.",
+      )
+    ) {
+      return;
+    }
+    if (!deps.deployment.value) {
+      toast.error("Deployment is not loaded yet");
+      return;
+    }
+    await executeDeploymentAction(
+      () => deps.deployment.value!.delete(),
+      "Deployment deleted successfully",
       true,
     );
   };
@@ -418,6 +449,7 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
     canStart,
     canStop,
     canArchive,
+    canDelete,
     canDuplicate,
     hasAnyActions,
 
@@ -426,6 +458,7 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
     startDeployment,
     stopDeployment,
     archiveDeployment,
+    deleteDeployment,
     withdrawVault,
     updateName,
     updateReplicas,
