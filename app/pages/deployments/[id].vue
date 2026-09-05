@@ -25,6 +25,7 @@
             :canStart="canStart"
             :canStop="canStop"
             :canArchive="canArchive"
+            :canDuplicate="canDuplicate"
             :hasAnyActions="hasAnyActions"
             @switchTab="switchTab"
             @action="switchAction"
@@ -160,6 +161,24 @@
           :actionLoading="actionLoading"
           :isValidCronExpression="isValidCronExpression"
           @confirm="updateSchedule()"
+        />
+
+        <DeploymentMarketModal
+          v-model="showMarketModal"
+          :currentMarket="deployment.market"
+          :deploymentStatus="deployment.status"
+          :testgridMarkets="testgridMarkets || []"
+          :jobDefinition="jobDefinitionModel"
+          :actionLoading="actionLoading"
+          @confirm="updateMarket($event)"
+        />
+
+        <DeploymentDuplicateModal
+          v-model="showDuplicateModal"
+          v-model:name="duplicateName"
+          :currentName="deployment.name || ''"
+          :actionLoading="actionLoading"
+          @confirm="duplicateDeployment()"
         />
 
         <DeploymentRevisionViewModal
@@ -430,14 +449,18 @@ const {
   showTimeoutModal,
   showScheduleModal,
   showRevisionDefinitionModal,
+  showMarketModal,
+  showDuplicateModal,
   newReplicaCount,
   newTimeoutHours,
   newSchedule,
+  duplicateName,
   switchingRevision,
   viewingRevision,
   canStart,
   canStop,
   canArchive,
+  canDuplicate,
   hasAnyActions,
   startDeployment,
   stopDeployment,
@@ -445,6 +468,8 @@ const {
   updateName,
   updateReplicas,
   updateJobTimeout,
+  updateMarket,
+  duplicateDeployment,
   updateSchedule,
   switchToRevision,
   viewRevisionDefinition,
@@ -492,6 +517,8 @@ const availableActions = [
   "update-replicas",
   "update-timeout",
   "update-schedule",
+  "update-market",
+  "duplicate",
 ];
 
 // Initialize action from URL query parameter
@@ -501,6 +528,8 @@ if (initialAction && availableActions.includes(initialAction)) {
   else if (initialAction === "update-replicas") showReplicasModal.value = true;
   else if (initialAction === "update-timeout") showTimeoutModal.value = true;
   else if (initialAction === "update-schedule") showScheduleModal.value = true;
+  else if (initialAction === "update-market") showMarketModal.value = true;
+  else if (initialAction === "duplicate") showDuplicateModal.value = true;
 }
 
 // --- Formatters ---
@@ -647,6 +676,8 @@ const switchAction = (action: string) => {
   if (action === "update-replicas") showReplicasModal.value = true;
   else if (action === "update-timeout") showTimeoutModal.value = true;
   else if (action === "update-schedule") showScheduleModal.value = true;
+  else if (action === "update-market") showMarketModal.value = true;
+  else if (action === "duplicate") showDuplicateModal.value = true;
 
   router.replace({
     query: {
@@ -674,6 +705,14 @@ watch(showTimeoutModal, (isOpen) => {
 
 watch(showScheduleModal, (isOpen) => {
   if (!isOpen && route.query.action === "update-schedule") clearAction();
+});
+
+watch(showMarketModal, (isOpen) => {
+  if (!isOpen && route.query.action === "update-market") clearAction();
+});
+
+watch(showDuplicateModal, (isOpen) => {
+  if (!isOpen && route.query.action === "duplicate") clearAction();
 });
 
 // Head
