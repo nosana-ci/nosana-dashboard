@@ -37,6 +37,59 @@
         </template>
       </div>
       <div class="is-flex-grow-1"></div>
+      <Transition name="th-actions">
+        <div
+          v-if="currentTab === 'deployments' && selectedIds.size"
+          ref="actionsRef"
+          class="dropdown is-right th-actions mr-2"
+          :class="{ 'is-active': actionsOpen }"
+        >
+          <div class="dropdown-trigger">
+            <button
+              type="button"
+              class="button th-actions-btn"
+              :class="{ 'is-loading': bulkRunning !== null }"
+              aria-haspopup="true"
+              @click="actionsOpen = !actionsOpen"
+            >
+              <span>Actions</span>
+              <span class="th-actions-count">{{ selectedIds.size }}</span>
+              <span
+                class="icon is-small th-actions-caret"
+                :class="{ 'is-rotated': actionsOpen }"
+              >
+                <ChevronDownIcon />
+              </span>
+            </button>
+          </div>
+          <div class="dropdown-menu" role="menu">
+            <div class="dropdown-content">
+              <a
+                v-for="action in bulkActions"
+                :key="action.key"
+                class="dropdown-item"
+                :class="{
+                  'is-danger-item': action.danger,
+                  'is-disabled': !bulkTargets[action.key].length,
+                }"
+                @click="pickAction(action.key)"
+              >
+                <span class="icon is-small mr-2">
+                  <component :is="bulkIcons[action.key]" />
+                </span>
+                <span>{{ action.label }}</span>
+                <span class="th-item-count">
+                  {{ bulkTargets[action.key].length }}
+                </span>
+              </a>
+              <hr class="dropdown-divider" />
+              <a class="dropdown-item" @click="pickAction('clear')">
+                <span>Clear selection</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </Transition>
       <div class="th-select-control">
         <select v-model="pageSizeValue" class="th-select" aria-label="Per page">
           <option value="10">10 per page</option>
@@ -117,6 +170,15 @@ import { useRouter } from "vue-router";
 import { useWallet } from "@nosana/solana-vue";
 import { filters } from "./filters";
 import { truncateMiddle } from "~/utils/solana";
+import ChevronDownIcon from "@/assets/img/icons/chevron-down.svg?component";
+import PlayIcon from "@/assets/img/icons/play.svg?component";
+import SquareIcon from "@/assets/img/icons/square.svg?component";
+import ArchiveIcon from "@/assets/img/icons/archive.svg?component";
+import {
+  bulkActions,
+  useDeploymentSelection,
+  type BulkActionKey,
+} from "~/composables/useDeploymentSelection";
 
 const { connected } = useWallet();
 const { isAuthenticated } = useSuperTokens();
@@ -260,6 +322,41 @@ const pageSizeValue = computed({
     });
   },
 });
+
+// Bulk actions for the deployments ticked in the list below. The button only
+// exists while something is selected; it sits before the filters and takes
+// its width from the flex spacer, so the filters never move.
+const { selectedIds, bulkTargets, bulkRunning, clearSelection, runBulkAction } =
+  useDeploymentSelection();
+
+const bulkIcons = { start: PlayIcon, stop: SquareIcon, archive: ArchiveIcon };
+
+const actionsOpen = ref(false);
+const actionsRef = ref<HTMLElement | null>(null);
+
+watch(
+  () => selectedIds.value.size,
+  (size) => {
+    if (!size) actionsOpen.value = false;
+  },
+);
+
+const pickAction = (key: BulkActionKey | "clear") => {
+  actionsOpen.value = false;
+  if (key === "clear") clearSelection();
+  else runBulkAction(key);
+};
+
+const closeActionsOnOutsideClick = (event: MouseEvent) => {
+  if (actionsRef.value && !actionsRef.value.contains(event.target as Node)) {
+    actionsOpen.value = false;
+  }
+};
+
+onMounted(() => document.addEventListener("click", closeActionsOnOutsideClick));
+onUnmounted(() =>
+  document.removeEventListener("click", closeActionsOnOutsideClick),
+);
 </script>
 <style scoped lang="scss">
 /* Search + dropdowns styled to match the Create Deployment "Select GPU" toolbar */
@@ -374,5 +471,191 @@ const pageSizeValue = computed({
 .dark-mode .th-search-icon,
 .dark-mode .th-select-caret {
   color: #80868b;
+}
+
+/* Bulk "Actions" menu for the selected deployments: same look as the
+   deployment page's actions menu, sized to sit with the toolbar controls. */
+.th-actions {
+  width: auto; /* defeat the app-wide `.dropdown { width: 100% }` */
+  flex-shrink: 0;
+}
+
+.th-actions-btn {
+  height: 40px;
+  padding: 0 0.85rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #1a1c1e;
+  background: #ffffff;
+  border: 1px solid #e1e3e6;
+  border-radius: 10px;
+  box-shadow: none;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease;
+
+  &:hover {
+    background: #f7f8f9;
+    border-color: #cfd3d7;
+    color: #1a1c1e;
+  }
+
+  &:focus-visible {
+    border-color: $secondary;
+    box-shadow: 0 0 0 3px rgba($secondary, 0.15);
+  }
+}
+
+.th-actions-enter-active {
+  transition: opacity 0.15s ease;
+}
+
+.th-actions-enter-from {
+  opacity: 0;
+}
+
+.th-actions-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  margin-left: 0.5rem;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #05230a;
+  background: $secondary;
+}
+
+.th-actions-caret {
+  margin-left: 0.35rem;
+  color: #80868b;
+  transition: transform 0.2s ease;
+
+  &.is-rotated {
+    transform: rotate(180deg);
+  }
+}
+
+.th-actions .dropdown-menu {
+  min-width: 210px;
+  padding-top: 8px;
+}
+
+.th-actions .dropdown-content {
+  background: #ffffff;
+  border: 1px solid $grey-lighter;
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba($black, 0.14);
+  padding: 6px;
+}
+
+.th-actions .dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 9px;
+  font-size: 0.9rem;
+  color: $text;
+  background: transparent;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+
+  .icon {
+    color: $grey;
+    transition: color 0.15s ease;
+  }
+
+  &:hover {
+    background: $white-ter;
+    color: $text;
+
+    .icon {
+      color: $secondary;
+    }
+  }
+
+  &.is-disabled {
+    opacity: 0.45;
+    pointer-events: none;
+  }
+}
+
+.th-actions .dropdown-item.is-danger-item {
+  color: $danger;
+
+  .icon {
+    color: $danger;
+  }
+
+  &:hover {
+    background: rgba($danger, 0.1);
+    color: $danger;
+
+    .icon {
+      color: $danger;
+    }
+  }
+}
+
+.th-item-count {
+  margin-left: auto;
+  padding-left: 1rem;
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  color: $grey;
+}
+
+.th-actions .dropdown-divider {
+  height: 1px;
+  margin: 5px 4px;
+  border: 0;
+  background: $grey-lighter;
+}
+
+.dark-mode .th-actions-btn {
+  background: #242526;
+  border-color: #3a3a3a;
+  color: #eceef0;
+
+  &:hover {
+    background: #2c2d2e;
+    border-color: #4a4a4a;
+    color: #eceef0;
+  }
+}
+
+.dark-mode .th-actions .dropdown-content {
+  background: $black-ter;
+  border-color: rgba($white, 0.1);
+  box-shadow: 0 14px 44px rgba($black, 0.55);
+}
+
+.dark-mode .th-actions .dropdown-item {
+  color: $white;
+
+  &:hover {
+    background: rgba($white, 0.06);
+  }
+}
+
+.dark-mode .th-actions .dropdown-item.is-danger-item {
+  color: $danger;
+
+  &:hover {
+    background: rgba($danger, 0.16);
+    color: $danger;
+  }
+}
+
+.dark-mode .th-actions .dropdown-divider {
+  background: rgba($white, 0.1);
 }
 </style>

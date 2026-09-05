@@ -4,6 +4,19 @@
       <table class="table is-fullwidth is-hoverable deployments-table">
         <thead>
           <tr>
+            <th class="select-col">
+              <label class="sel-label">
+                <input
+                  type="checkbox"
+                  class="sel-check"
+                  aria-label="Select all deployments on this page"
+                  :checked="allSelected"
+                  :indeterminate="selectedIds.size > 0 && !allSelected"
+                  :disabled="bulkRunning !== null || !deployments.length"
+                  @change="toggleAll"
+                />
+              </label>
+            </th>
             <th>Deployment</th>
             <th>Market</th>
             <th>Status</th>
@@ -15,20 +28,20 @@
         </thead>
         <tbody>
           <tr v-if="!hasLoadedOnce">
-            <td :colspan="isWalletMode ? 7 : 6" class="has-text-centered py-6">
+            <td :colspan="columnCount" class="has-text-centered py-6">
               Loading deployments...
             </td>
           </tr>
           <tr v-else-if="hasLoadedOnce && deploymentsError">
             <td
-              :colspan="isWalletMode ? 7 : 6"
+              :colspan="columnCount"
               class="has-text-centered has-text-danger"
             >
               Failed to load deployments: {{ deploymentsError }}
             </td>
           </tr>
           <tr v-else-if="hasLoadedOnce && !deployments.length">
-            <td :colspan="isWalletMode ? 7 : 6" class="has-text-centered">
+            <td :colspan="columnCount" class="has-text-centered">
               No deployments found
             </td>
           </tr>
@@ -37,8 +50,22 @@
               v-for="deployment in sortedDeployments"
               :key="deployment.id"
               class="clickable-row"
+              :class="{ 'is-selected': selectedIds.has(deployment.id) }"
               @click="openDeployment($event, deployment.id)"
             >
+              <!-- Stop the click here so ticking a box never opens the row -->
+              <td class="select-cell" @click.stop>
+                <label class="sel-label">
+                  <input
+                    type="checkbox"
+                    class="sel-check"
+                    :aria-label="`Select ${deployment.name || deployment.id}`"
+                    :checked="selectedIds.has(deployment.id)"
+                    :disabled="bulkRunning !== null"
+                    @change="toggleOne(deployment.id)"
+                  />
+                </label>
+              </td>
               <td>
                 <NuxtLink
                   :to="`/deployments/${deployment.id}`"
@@ -158,6 +185,10 @@ import type { ApiDeploymentListResult } from "@nosana/api";
 import { formatDate } from "~/utils/formatDate";
 import { formatTimeAgo } from "~/utils/relativeTime";
 import { truncateMiddle } from "~/utils/solana";
+import {
+  useDeploymentSelection,
+  type ListedDeployment,
+} from "~/composables/useDeploymentSelection";
 
 const { isAuthenticated, isLoading } = useSuperTokens();
 const { connected } = useWallet();
@@ -177,6 +208,8 @@ const isWalletMode = computed(() => {
   return connected.value && !isAuthenticated.value;
 });
 
+const columnCount = computed(() => (isWalletMode.value ? 8 : 7));
+
 // Props
 const props = withDefaults(
   defineProps<{
@@ -194,7 +227,7 @@ const emit = defineEmits<{
   "update:total-deployments": [count: number];
 }>();
 
-const deployments = ref<ApiDeploymentListResult["deployments"]>([]);
+const deployments = ref<ListedDeployment[]>([]);
 
 // Show the most recently updated deployments first.
 const sortedDeployments = computed(() =>
@@ -218,6 +251,24 @@ const openDeployment = (event: MouseEvent, id: string) => {
   if ((event.target as Element)?.closest("a")) return;
   router.push(`/deployments/${id}`);
 };
+
+// Multi-select shared with the table toolbar, which renders the bulk Actions
+// menu. Selection is scoped to the rows currently shown.
+const {
+  selectedIds,
+  allSelected,
+  bulkRunning,
+  setListed,
+  onAfterBulk,
+  toggleOne,
+  toggleAll,
+} = useDeploymentSelection();
+
+onAfterBulk(() => refreshDeployments());
+onUnmounted(() => {
+  setListed([]);
+  onAfterBulk(null);
+});
 
 const { nosana } = useKit();
 const loading = ref(false);
@@ -279,6 +330,7 @@ const refreshDeployments = async (
     nextPage.value = null;
     prevPage.value = null;
   } finally {
+    setListed(deployments.value);
     loading.value = false;
     hasLoadedOnce.value = true;
   }
@@ -336,6 +388,112 @@ watch(
 
 html.dark-mode .deployments-table tbody tr.clickable-row:hover {
   background: rgba($white, 0.03);
+}
+
+/* Selection column + custom checkboxes. The cell has no padding of its own so
+   the label can fill it and give the checkbox a comfortable hit area. */
+.deployments-table th.select-col,
+.deployments-table td.select-cell {
+  width: 1%;
+  padding: 0;
+  vertical-align: middle;
+}
+
+.sel-label {
+  display: flex;
+  align-items: center;
+  padding: 0.5em 0.5em 0.5em 0.75em;
+  cursor: pointer;
+}
+
+.sel-check {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  border: 1.5px solid #cfd3d7;
+  border-radius: 5px;
+  background: $white;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    box-shadow 0.15s ease;
+
+  &::after {
+    content: "";
+    width: 11px;
+    height: 11px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2305230a' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E")
+      center / contain no-repeat;
+    opacity: 0;
+    transform: scale(0.5);
+    transition:
+      opacity 0.12s ease,
+      transform 0.12s ease;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: $secondary;
+  }
+
+  &:focus-visible {
+    outline: none;
+    border-color: $secondary;
+    box-shadow: 0 0 0 3px rgba($secondary, 0.2);
+  }
+
+  &:checked,
+  &:indeterminate {
+    background: $secondary;
+    border-color: $secondary;
+  }
+
+  &:checked::after,
+  &:indeterminate::after {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  &:indeterminate::after {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2305230a' stroke-width='3.5' stroke-linecap='round'%3E%3Cpath d='M5 12h14'/%3E%3C/svg%3E");
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+html.dark-mode .sel-check {
+  background: #242526;
+  border-color: #4a4a4a;
+
+  &:checked,
+  &:indeterminate {
+    background: $secondary;
+    border-color: $secondary;
+  }
+}
+
+.deployments-table tbody tr.clickable-row.is-selected {
+  background: rgba($secondary, 0.07);
+
+  &:hover {
+    background: rgba($secondary, 0.11);
+  }
+}
+
+html.dark-mode .deployments-table tbody tr.clickable-row.is-selected {
+  background: rgba($secondary, 0.1);
+
+  &:hover {
+    background: rgba($secondary, 0.14);
+  }
 }
 
 .pagination-previous.is-disabled,

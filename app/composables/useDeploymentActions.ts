@@ -1,6 +1,11 @@
 import type { Deployment, Market } from "@nosana/kit";
 import { useToast } from "vue-toastification";
 import { parseCronExpression } from "~/utils/parseCronExpression";
+import {
+  canArchiveDeployment,
+  canStartDeployment,
+  canStopDeployment,
+} from "~/utils/deploymentStatusActions";
 
 export interface DeploymentActionsDeps {
   deployment: Ref<Deployment | null>;
@@ -43,22 +48,16 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
   const viewingRevision = ref<any>(null);
 
   // Action visibility
-  const canStart = computed(() => {
-    const status = deps.deploymentStatus.value;
-    return status === "DRAFT" || status === "STOPPED" || status === "ERROR";
-  });
+  const canStart = computed(() =>
+    canStartDeployment(deps.deploymentStatus.value),
+  );
 
-  const canStop = computed(() => {
-    const status = deps.deploymentStatus.value;
-    return status === "RUNNING" || status === "STARTING";
-  });
+  const canStop = computed(() =>
+    canStopDeployment(deps.deploymentStatus.value),
+  );
 
-  const canArchive = computed(
-    () =>
-      deps.deploymentStatus.value !== "ARCHIVED" &&
-      deps.deploymentStatus.value !== "RUNNING" &&
-      deps.deploymentStatus.value !== "STOPPING" &&
-      deps.deploymentStatus.value !== "DRAFT",
+  const canArchive = computed(() =>
+    canArchiveDeployment(deps.deploymentStatus.value),
   );
 
   // Duplicating only reads the source, so it's offered for every status,
