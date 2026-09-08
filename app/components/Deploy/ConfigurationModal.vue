@@ -49,6 +49,27 @@
               </svg>
               <span>Change template</span>
             </button>
+
+            <button
+              v-if="canCloneDeployment"
+              type="button"
+              class="banner-btn"
+              @click="$emit('showCloneDeploymentModal')"
+              title="Start from one of your existing deployments"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <rect x="9" y="9" width="12" height="12" rx="2" />
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+              </svg>
+              <span>Clone deployment</span>
+            </button>
           </div>
         </div>
 
@@ -378,7 +399,7 @@
           </p>
           <div class="buttons mb-0">
             <button class="button" @click="handleCancel">Cancel</button>
-            <button class="button is-secondary" @click="handleSaveChanges">
+            <button class="button is-success" @click="handleSaveChanges">
               Save changes
             </button>
           </div>
@@ -413,6 +434,8 @@ interface Props {
   replicas: number;
   timeout: number;
   deploymentName: string;
+  // Offer cloning an existing deployment (create page, signed-in users only)
+  canCloneDeployment?: boolean;
   // SSH public keys shown in the settings drawer (optional - create page only)
   sshPublicKeys?: string[];
   // GPU Selection props (optional - only for /deploy page)
@@ -437,6 +460,7 @@ interface Props {
 // Define emits
 const emit = defineEmits<{
   showTemplateModal: [];
+  showCloneDeploymentModal: [];
   "update:isEditorCollapsed": [value: boolean];
   "update:jobDefinition": [value: JobDefinition | null];
   // Advanced deployment emits
