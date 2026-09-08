@@ -46,30 +46,18 @@
         class="cc-group"
       >
         <header class="cc-group-head">
-          <button
-            type="button"
-            class="cc-group-toggle"
-            @click="toggleGroupExpansion(groupName)"
-          >
-            <svg
-              class="cc-chevron"
-              :class="{ 'is-open': expandedGroups.has(groupName) }"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path d="M9 18l6-6-6-6" />
-            </svg>
+          <!-- A single group is simply "Operations"; several keep their names. -->
+          <h2 v-if="isSingleGroup" class="title is-5 mb-0 cc-group-title">
+            Operations
+          </h2>
+          <div v-else class="cc-group-title">
             <span class="cc-group-name">{{ groupName }}</span>
             <span class="cc-group-count"
               >{{ groupOps.length }} operation{{
                 groupOps.length !== 1 ? "s" : ""
               }}</span
             >
-          </button>
+          </div>
 
           <div class="cc-actions" @click.stop>
             <button
@@ -103,7 +91,7 @@
           </div>
         </header>
 
-        <div v-if="expandedGroups.has(groupName)" class="cc-ops">
+        <div class="cc-ops">
           <article
             v-for="op in groupOps"
             :key="op.id"
@@ -165,7 +153,8 @@
               </div>
             </div>
 
-            <div v-if="isOpOpen(op)" class="cc-op-body">
+            <!-- Kept mounted (v-show) so an open shell survives collapsing the card -->
+            <div v-show="isOpOpen(op)" class="cc-op-body">
               <!-- Timing + results -->
               <div class="cc-meta">
                 <div class="cc-meta-item">
@@ -214,33 +203,21 @@
               <!-- Endpoints -->
               <div class="cc-section" v-if="op.ports && op.ports.length > 0">
                 <div class="cc-section-title">Endpoints</div>
-                <div class="cc-endpoints">
-                  <div
+                <!-- Same row as the deployment page's Endpoints card -->
+                <div class="cc-ep-card">
+                  <EndpointRow
                     v-for="(portInfo, idx) in op.ports"
                     :key="idx"
-                    class="cc-endpoint is-flex is-align-items-center"
-                  >
-                    <span
-                      class="cc-ep-status"
-                      :class="epDotClass(portInfo.status)"
-                      :title="endpointStatusLabel(portInfo.status)"
-                    ></span>
-                    <span class="cc-port is-family-monospace"
-                      >:{{ portInfo.port }}</span
-                    >
-                    <a
-                      :href="portInfo.url"
-                      target="_blank"
-                      class="cc-ep-url is-family-monospace"
-                      :title="portInfo.url"
-                      >{{ portInfo.url }}</a
-                    >
-                  </div>
+                    :name="op.id"
+                    :port="portInfo.port"
+                    :url="portInfo.url"
+                    :status="endpointStatus(op.id, portInfo.port, portInfo.status)"
+                  />
                 </div>
               </div>
 
-              <!-- Logs -->
-              <div class="cc-section">
+              <!-- Logs (the job panel has a Logs view instead) -->
+              <div v-if="showLogs" class="cc-section">
                 <div
                   class="cc-section-head is-flex is-align-items-center is-justify-content-space-between"
                 >
@@ -265,6 +242,28 @@
                 <p v-else class="has-text-grey has-text-centered py-4 mb-0">
                   No logs available
                 </p>
+              </div>
+
+              <!-- Shell into this operation (deployment jobs on a node) -->
+              <div
+                v-if="deploymentId && node && !isJobCompleted"
+                class="cc-section"
+              >
+                <div class="cc-section-title">Shell</div>
+                <JobAccessContent
+                  :job-address="jobAddress ?? ''"
+                  :node="node"
+                  :project-address="projectAddress ?? ''"
+                  :job-definition="accessDefinition ?? null"
+                  :is-running="!!isRunning"
+                  :deployment-id="deploymentId"
+                  :operation="op.id"
+                  :ssh-public-keys="sshPublicKeys"
+                  :ssh-keys-loading="sshKeysLoading"
+                  :ssh-keys-error="sshKeysError"
+                  :active="!!shellsActive && isOpOpen(op)"
+                  :auto-connect="autoOp === op.id"
+                />
               </div>
             </div>
           </article>
@@ -323,6 +322,11 @@ import VueJsonPretty from 'vue-json-pretty';
 import FLogViewer from '../FLogViewer.vue';
 import 'vue-json-pretty/lib/styles.css';
 import DeploymentStatusPill from "~/components/Deployment/DeploymentStatusPill.vue";
+import JobAccessContent from "~/components/Job/AccessContent.vue";
+import EndpointRow, {
+  type EndpointStatus,
+} from "~/components/Common/EndpointRow.vue";
+import type { JobDefinition } from "@nosana/kit";
 
 // Import icons as components
 import SquareIcon from '@/assets/img/icons/square.svg?component';
@@ -428,9 +432,31 @@ interface Props {
   logsByOp?: Map<string, AnyLogEntry[]>;
   systemLogsMap?: AnyLogEntry[];
   jobInfo?: LocalJobInfo | null;
+  // Per-operation shells (deployment jobs only)
+  deploymentId?: string | null;
+  jobAddress?: string;
+  node?: string;
+  projectAddress?: string;
+  accessDefinition?: JobDefinition | null;
+  isRunning?: boolean;
+  sshPublicKeys?: string[];
+  sshKeysLoading?: boolean;
+  sshKeysError?: string;
+  /** False while the tab is mounted but hidden, so no shell opens unseen. */
+  shellsActive?: boolean;
+  /** Operation whose shell opens on its own; "*" means the first one. */
+  autoConnectOp?: string;
+  /** Show each operation's log excerpt (off inside the job panel). */
+  showLogs?: boolean;
+  /** The deployment's endpoint status, matched to a card's port. */
+  deploymentEndpoints?: Array<{
+    opId: string;
+    port: number | string;
+    online: boolean;
+  }>;
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), { showLogs: true });
 
 const isJobCompleted = computed(() => {
   const job = (props && props.job) ? props.job : null;
@@ -450,8 +476,6 @@ const error = ref<string | null>(null);
 const loadingOps = ref(new Set<string>());
 const loadingGroups = ref(new Set<string>());
 const expandedOps = ref(new Set<string>());
-const expandedGroups = ref(new Set<string>());
-const hasInitializedGroupExpansion = ref(false);
 const clearedAtByOp = ref<Map<string, number>>(new Map());
 let pollInterval: NodeJS.Timeout | null = null;
 
@@ -489,16 +513,6 @@ const closeResultsModal = () => {
   resultsOpId.value = null;
 };
 
-// Toggle group expansion
-const toggleGroupExpansion = (groupName: string) => {
-  if (expandedGroups.value.has(groupName)) {
-    expandedGroups.value.delete(groupName);
-  } else {
-    expandedGroups.value.add(groupName);
-  }
-  expandedGroups.value = new Set(expandedGroups.value);
-};
-
 // Toggle operation expansion
 const toggleOpExpansion = (opId: string) => {
   if (expandedOps.value.has(opId)) {
@@ -508,6 +522,19 @@ const toggleOpExpansion = (opId: string) => {
   }
   expandedOps.value = new Set(expandedOps.value);
 };
+
+// The operation whose shell opens on its own; its card opens with it.
+const autoOp = computed(() =>
+  props.autoConnectOp === "*" ? operations.value[0]?.id : props.autoConnectOp,
+);
+watch(
+  [autoOp, () => operations.value.length],
+  ([opId]) => {
+    if (!opId || !operations.value.some((op) => op.id === opId)) return;
+    expandedOps.value = new Set([...expandedOps.value, opId]);
+  },
+  { immediate: true },
+);
 
 // Get logs for a specific operation
 const getOpLogs = (opId: string) => {
@@ -738,7 +765,14 @@ const buildOperations = () => {
       }
     }
     
-    // Build from SSE opStates / operations only
+    // The definition's container operations come first, so the cards exist
+    // before the node's status stream reports on them; SSE state then fills in.
+    const opIdsFromDefinition = (jobDefinition?.ops ?? [])
+      .filter((opDef) => {
+        const type = (opDef as { type?: string }).type;
+        return opDef?.id && (type ? type === 'container/run' : Boolean(opDef.args?.image));
+      })
+      .map((opDef) => opDef.id);
     const liveOpStates = jobInfo.value?.opStates ?? [];
     const opIdsFromStatuses = Object.keys(operationStatuses || {});
     const opIdsFromLive = Array.isArray(liveOpStates)
@@ -746,6 +780,7 @@ const buildOperations = () => {
       : [];
     const opIdsFromEndpoints = Array.from(endpointsByOpId.keys());
     const uniqueOpIds = Array.from(new Set([
+      ...opIdsFromDefinition,
       ...opIdsFromStatuses,
       ...opIdsFromLive,
       ...opIdsFromEndpoints,
@@ -833,22 +868,10 @@ const groupedOperations = computed(() => {
 });
 
 
-watch(groupedOperations, (newGroups) => {
-  if (!newGroups) return;
-  const allGroupNames = Object.keys(newGroups);
-
-  if (!hasInitializedGroupExpansion.value) {
-    expandedGroups.value = new Set(allGroupNames);
-    hasInitializedGroupExpansion.value = true;
-    return;
-  }
-
-  const next = new Set<string>();
-  for (const name of expandedGroups.value) {
-    if (allGroupNames.includes(name)) next.add(name);
-  }
-  expandedGroups.value = next;
-}, { immediate: true });
+// Most jobs have one group, which needs no name of its own.
+const isSingleGroup = computed(
+  () => Object.keys(groupedOperations.value).length === 1,
+);
 
 // Container/op status uses the shared status pill (same as the deployment and
 // job pages). Container "finished" maps to the pill's "completed" (green).
@@ -863,22 +886,30 @@ const isSingleOp = computed(() => operations.value.length === 1);
 const runningOpStates = new Set(["running", "starting", "waiting", "pending", "init"]);
 const opIsRunning = (op: { status?: string | number }) =>
   runningOpStates.has(String(op?.status ?? "").toLowerCase());
+// A lone operation is always open; there is nothing else to look at.
 const isOpOpen = (op: { id: string; status?: string | number }) =>
-  expandedOps.value.has(op.id) || opIsRunning(op);
+  isSingleOp.value || expandedOps.value.has(op.id) || opIsRunning(op);
 
 // Endpoint status as a colored circle dot (matches the deployment page).
-const epDotClass = (status?: string) => {
+// The deployment's own endpoint status wins, so the card agrees with the
+// deployment page; the node's report covers standalone jobs.
+const endpointStatus = (
+  opId: string,
+  port: number | string,
+  status?: string,
+): EndpointStatus => {
+  const known = props.deploymentEndpoints?.find(
+    (endpoint) =>
+      endpoint.opId === opId && String(endpoint.port) === String(port),
+  );
+  if (known) {
+    if (known.online) return "online";
+    return props.isRunning ? "starting" : "inactive";
+  }
   const s = String(status ?? "").toUpperCase();
-  if (s === "ONLINE") return "is-online";
-  if (s === "STARTING") return "is-starting";
-  return "is-off";
-};
-const endpointStatusLabel = (status?: string) => {
-  const s = String(status ?? "").toUpperCase();
-  if (s === "ONLINE") return "Online";
-  if (s === "STARTING") return "Starting";
-  if (s === "OFFLINE") return "Offline";
-  return "Unknown";
+  if (s === "ONLINE") return "online";
+  if (s === "STARTING") return "starting";
+  return "inactive";
 };
 
 // Get status icon using the same logic as Job.vue for consistency
@@ -1069,14 +1100,10 @@ const restartGroup = async (groupName: string) => {
   margin-bottom: 0.8rem;
 }
 
-.cc-group-toggle {
+.cc-group-title {
   display: inline-flex;
   align-items: center;
   gap: 0.55rem;
-  background: none;
-  border: 0;
-  padding: 2px 4px 2px 0;
-  cursor: pointer;
   min-width: 0;
   margin-right: auto;
 }
@@ -1340,56 +1367,17 @@ html.dark-mode .cc-code {
 }
 
 /* ---- Endpoints ---- */
-.cc-endpoints {
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-}
-
-.cc-endpoint {
-  gap: 0.7rem;
-  padding: 0.5rem 0.75rem;
-  background: $white-ter;
-  border-radius: 8px;
-}
-
-html.dark-mode .cc-endpoint {
-  background: rgba($white, 0.04);
-}
-
-.cc-ep-status {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  flex: none;
-  background: $grey-light;
-
-  &.is-online { background: $success; }
-  &.is-starting { background: $warning; }
-}
-
-.cc-port {
-  font-weight: 600;
-  font-size: 0.8rem;
-  color: $text;
-  flex: none;
-}
-
-html.dark-mode .cc-port {
-  color: $white;
-}
-
-.cc-ep-url {
-  font-size: 0.78rem;
-  color: $link;
+.cc-ep-card {
+  background: $white;
+  border: 1px solid $grey-lighter;
+  border-radius: 12px;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  margin-right: auto;
+  padding: 4px;
+}
 
-  &:hover {
-    text-decoration: underline;
-  }
+html.dark-mode .cc-ep-card {
+  background: rgba($white, 0.03);
+  border-color: rgba($white, 0.08);
 }
 
 /* ---- Logs ---- */

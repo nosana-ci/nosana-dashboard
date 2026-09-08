@@ -13,6 +13,7 @@ export interface CreateDeployDraft {
   schedule: string;
   gpuTypeCheckbox: string[];
   activeFilter: string;
+  sshPublicKeys: string[];
   timestamp: number;
 }
 

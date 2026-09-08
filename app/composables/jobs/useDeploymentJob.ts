@@ -1,11 +1,12 @@
-import { getDeploymentJobData } from "~/utils/kitJobAccess";
+import { getDeploymentJobData, getNodeJob } from "~/utils/kitJobAccess";
 import { useToast } from "vue-toastification";
 import { useWallet } from "@nosana/solana-vue";
 import type { Job, JobDefinition } from "@nosana/kit";
-import type { DeploymentJob as ApiDeploymentJob, NodeJobInfo, NodeStreamSubscription } from "@nosana/api";
+import type { DeploymentJob as ApiDeploymentJob, NodeJobInfo, NodeStreamSubscription, NosanaApiClient } from "@nosana/api";
 import type { JobInfo, JobViewModel, LiveEndpoints, ResultsSection } from "~/composables/jobs/types";
 import { applyResults, mergeEndpoints, servicesByPort, type PortMeta } from "~/composables/jobs/jobInfoFrame";
 import { useNodeJobResolver } from "~/composables/jobs/useNodeJobResolver";
+import { acquireJobFeeds, type JobFeeds } from "~/composables/jobs/useJobFeeds";
 
 const DEFAULT_NODE_ADDRESS = "11111111111111111111111111111111";
 
@@ -19,6 +20,44 @@ function getStateNumber(stateVal: string | number | undefined): number {
 
 // Use SDK type directly
 type DeploymentJobApiResponse = ApiDeploymentJob;
+
+// What a job view last knew, kept after it closes so the next open renders at
+// once and refreshes behind the scenes. The job panel opens and closes often.
+interface CachedJob {
+  api: DeploymentJobApiResponse;
+  jobInfo: JobInfo | null;
+  endpoints: LiveEndpoints;
+}
+const jobCache = new Map<string, CachedJob>();
+const prefetching = new Set<string>();
+const cacheKey = (deploymentId: string, jobId: string) => `${deploymentId}:${jobId}`;
+
+/**
+ * Warm the cache for a job before it is opened: its API record, and the
+ * node job resolution the info stream and shells will need.
+ */
+export async function prefetchDeploymentJob(
+  api: NosanaApiClient,
+  deploymentId: string,
+  jobId: string,
+): Promise<void> {
+  const key = cacheKey(deploymentId, jobId);
+  if (jobCache.has(key) || prefetching.has(key)) return;
+  prefetching.add(key);
+  try {
+    const data = await getDeploymentJobData(api, deploymentId, jobId);
+    if (!jobCache.has(key)) {
+      jobCache.set(key, { api: data, jobInfo: null, endpoints: new Map() });
+    }
+    if (getStateNumber(data.state) === 1 && data.node && data.node !== DEFAULT_NODE_ADDRESS) {
+      void getNodeJob(api, jobId, deploymentId).catch(() => {});
+    }
+  } catch {
+    // Opening the job will load it in the usual way.
+  } finally {
+    prefetching.delete(key);
+  }
+}
 
 export function useDeploymentJob(deploymentId: string, jobId: string) {
   const job = ref<JobViewModel | null>(null);
@@ -41,7 +80,9 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
 
   const resolveNodeJob = useNodeJobResolver(jobId, deploymentId);
 
-  let infoStream: NodeStreamSubscription | null = null;
+  // The job's shared feeds (see useJobFeeds); held while the job runs here.
+  let feeds: JobFeeds | null = null;
+  let unsubscribeInfo: (() => void) | null = null;
   let currentNodeAddress: string | null = null;
   let hasFetchedFinalInfo = false;
 
@@ -210,8 +251,7 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
 
     if (stateNum === 2 || stateNum === 3) {
       fetchFinalInfoOnce();
-      infoStream?.close();
-      infoStream = null;
+      disconnectInfo();
     }
   }
 
@@ -234,6 +274,11 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
     }
 
     mergeEndpoints(endpoints, info, jobId, metaByPort);
+    const cached = jobCache.get(cacheKey(deploymentId, jobId));
+    if (cached) {
+      cached.jobInfo = jobInfo.value;
+      cached.endpoints = new Map(endpoints.value);
+    }
 
     const results = (info as unknown as { results?: ResultsSection }).results;
     if (results && job.value) {
@@ -269,61 +314,71 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
     }
   }
 
+  function disconnectInfo() {
+    unsubscribeInfo?.();
+    unsubscribeInfo = null;
+    feeds?.release();
+    feeds = null;
+    currentNodeAddress = null;
+  }
+
+  // Attach to the job's shared info stream. If the deployment page already
+  // holds it, the latest frame is applied right away.
   function connectInfoStreamIfNeeded() {
     const nodeAddress = nodeAddressOf();
     if (!nodeAddress) {
       loading.value = false;
       return;
     }
-    if (infoStream && currentNodeAddress === nodeAddress) return;
-    infoStream?.close();
-    infoStream = null;
+    if (feeds && currentNodeAddress === nodeAddress) return;
+    disconnectInfo();
     currentNodeAddress = nodeAddress;
 
-    void (async () => {
-      try {
-        const metaByPort = servicesByPort(job.value?.jobDefinition, jobId);
-        const nodeJob = await resolveNodeJob();
-        if (currentNodeAddress !== nodeAddress) return;
-        infoStream = nodeJob.streamInfo({
-          onData: (frame) => {
-            applyInfo(frame, metaByPort);
-            loading.value = false;
-          },
-          onOpen: () => {
-            loading.value = false;
-          },
-          onError: () => {
-            loading.value = false;
-          },
-        });
-      } catch (error) {
-        console.error("Failed to open the job info stream:", error);
-        loading.value = false;
-      }
-    })();
+    const metaByPort = servicesByPort(job.value?.jobDefinition, jobId);
+    feeds = acquireJobFeeds(nosana.value.api, jobId, deploymentId);
+    const latest = feeds.info.latest.value;
+    if (latest) applyInfo(latest, metaByPort);
+    unsubscribeInfo = feeds.info.subscribe((frame) => {
+      applyInfo(frame, metaByPort);
+    });
+    loading.value = false;
+  }
+
+  function applyApi(api: DeploymentJobApiResponse) {
+    assignFromApi(api);
+    // The view is usable as soon as the job record is here; the node's info
+    // stream fills in operations and endpoints when it opens.
+    loading.value = false;
+    if (getStateNumber(api.state) === 1) connectInfoStreamIfNeeded();
   }
 
   async function init() {
-    loading.value = true;
-    const initial = await fetchDeploymentJob();
-    if (initial) {
-      assignFromApi(initial);
-      if (getStateNumber(initial.state) === 1) {
-        connectInfoStreamIfNeeded();
-      } else {
-        loading.value = false;
+    const key = cacheKey(deploymentId, jobId);
+    const cached = jobCache.get(key);
+    if (cached) {
+      // Show what was last known, then refresh behind it.
+      if (cached.jobInfo) {
+        jobInfo.value = cached.jobInfo;
+        endpoints.value = new Map(cached.endpoints);
       }
+      applyApi(cached.api);
+    } else {
+      loading.value = true;
+    }
+
+    const latest = await fetchDeploymentJob();
+    if (latest) {
+      const entry = jobCache.get(key);
+      if (entry) entry.api = latest;
+      else jobCache.set(key, { api: latest, jobInfo: null, endpoints: new Map() });
+      applyApi(latest);
     } else {
       loading.value = false;
     }
   }
 
   onMounted(() => { init(); });
-  onBeforeUnmount(() => {
-    infoStream?.close();
-    infoStream = null;
-  });
+  onBeforeUnmount(disconnectInfo);
 
   return {
     job,

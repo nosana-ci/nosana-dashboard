@@ -1,27 +1,81 @@
 <template>
   <div class="jrows">
-    <NuxtLink
+    <div
       v-for="job in jobs"
       :key="job.job"
-      :to="`/deployments/${deploymentId}/jobs/${job.job}`"
       class="jrow"
       :class="{ 'is-live': !showDuration && getJobStateNumber(job) === 1 }"
     >
       <div class="jrow-head">
-        <span class="jstat" :class="stateClass(getJobStateNumber(job))">
-          <span class="jdot"></span>
-          <span class="jlab">{{ stateLabel(getJobStateNumber(job)) }}</span>
-        </span>
-        <span class="jid is-family-monospace">{{ truncateMiddle(job.job) }}</span>
-        <span class="rev-chip is-family-monospace">Revision {{ job.revision ?? "-" }}</span>
-        <span
-          v-if="!showDuration && getJobStateNumber(job) === 0"
-          class="jwait-inline"
-          >awaiting node…</span
+        <!-- The button stretches over the whole row (see .jrow-link::after)
+             and opens the job panel; the action buttons sit above it. -->
+        <button
+          type="button"
+          class="jrow-link"
+          :aria-label="`Open job ${job.job}`"
+          @click="emit('open', job.job)"
         >
+          <span class="jstat" :class="stateClass(getJobStateNumber(job))">
+            <span class="jdot"></span>
+            <span class="jlab">{{ stateLabel(getJobStateNumber(job)) }}</span>
+          </span>
+          <span class="rev-chip is-family-monospace"
+            >Revision {{ job.revision ?? "-" }}</span
+          >
+          <!-- Same shape as the deployment id in the page header -->
+          <span class="jid is-family-monospace">{{
+            truncateMiddle(job.job, 8, 6)
+          }}</span>
+          <span
+            v-if="!showDuration && getJobStateNumber(job) === 0"
+            class="jwait-inline"
+            >awaiting node…</span
+          >
+        </button>
+
+        <div class="jrow-actions">
+          <!-- A queued job has produced no logs yet -->
+          <button
+            v-if="getJobStateNumber(job) !== 0"
+            type="button"
+            class="button is-small is-quiet"
+            :title="`Show logs for job ${job.job}`"
+            @click="emit('viewLogs', job.job)"
+          >
+            <span class="icon is-small">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M4 6h16M4 12h10M4 18h13" />
+              </svg>
+            </span>
+            <span class="is-hidden-mobile">Logs</span>
+          </button>
+          <button
+            v-if="canAccess(job)"
+            type="button"
+            class="button is-small is-quiet"
+            :title="`Open SSH access for job ${job.job}`"
+            @click="emit('openSsh', job.job)"
+          >
+            <span class="icon is-small"
+              ><TerminalIcon aria-hidden="true"
+            /></span>
+            <span class="is-hidden-mobile">SSH</span>
+          </button>
+        </div>
+
         <span class="jmeta">
           <span
-            v-if="showDuration && getJobDuration && getJobDuration(job.job) !== null"
+            v-if="
+              showDuration && getJobDuration && getJobDuration(job.job) !== null
+            "
             class="dur"
           >
             <SecondsFormatter
@@ -57,9 +111,9 @@
         v-if="!showDuration && getJobStateNumber(job) === 1 && hasNode(job)"
         :jobId="job.job"
         :deployment-id="deploymentId"
-        :node="(job.node as string)"
+        :node="job.node as string"
       />
-    </NuxtLink>
+    </div>
   </div>
 </template>
 
@@ -67,6 +121,7 @@
 import type { DeploymentJobItem } from "@nosana/api";
 import SecondsFormatter from "~/components/SecondsFormatter.vue";
 import JobUsageStrip from "~/components/Deployment/JobUsageStrip.vue";
+import TerminalIcon from "@/assets/img/icons/terminal.svg?component";
 import { NULL_ADDRESS, truncateMiddle } from "~/utils/solana";
 import { formatTimeAgo } from "~/utils/relativeTime";
 
@@ -74,13 +129,22 @@ import { formatTimeAgo } from "~/utils/relativeTime";
 const hasNode = (job: DeploymentJobItem) =>
   !!job.node && job.node !== NULL_ADDRESS;
 
-defineProps<{
+const props = defineProps<{
   jobs: DeploymentJobItem[];
   deploymentId: string;
   getJobStateNumber: (job: DeploymentJobItem) => number;
   getJobDuration?: (jobId: string) => number | null;
   showDuration?: boolean;
 }>();
+
+const emit = defineEmits<{
+  open: [jobId: string];
+  viewLogs: [jobId: string];
+  openSsh: [jobId: string];
+}>();
+
+const canAccess = (job: DeploymentJobItem) =>
+  !props.showDuration && props.getJobStateNumber(job) === 1 && hasNode(job);
 
 // Numeric job state (0-3) → presentation class + label.
 const stateClass = (n: number) =>
@@ -113,9 +177,53 @@ const stateLabel = (n: number) =>
 }
 
 .jrow-head {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 0.9rem;
+}
+
+/* Row order: status · revision · address · actions · (space) · time · chevron */
+.jrow-link {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  min-width: 0;
+  flex: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+
+  /* Stretch the click target over the whole row head. */
+  &::after {
+    content: "";
+    position: absolute;
+    inset: -0.95rem -1.1rem;
+    border-radius: 6px;
+  }
+
+  &:focus-visible {
+    outline: none;
+
+    &::after {
+      outline: 2px solid $secondary;
+      outline-offset: -3px;
+    }
+  }
+}
+
+/* Buttons stay clickable above the stretched link. */
+.jrow-actions {
+  position: relative;
+  z-index: 1;
+  flex: none;
+  display: flex;
+  gap: 0.4rem;
 }
 
 /* Status = colored dot + label (no heavy icon) */
@@ -124,7 +232,6 @@ const stateLabel = (n: number) =>
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  width: 118px;
 }
 
 .jdot {
@@ -190,6 +297,7 @@ const stateLabel = (n: number) =>
 }
 
 .jmeta {
+  flex: none;
   margin-left: auto;
   text-align: right;
   display: flex;

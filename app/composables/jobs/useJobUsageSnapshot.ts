@@ -1,8 +1,6 @@
-import { ref, shallowRef, computed, onUnmounted } from "vue";
-import { useNodeJobResolver } from "./useNodeJobResolver";
-import type { TaskStat } from "./types";
-import { useStatsFetch } from "./useStatsFetch";
-import { useStatsStream } from "./useStatsStream";
+import { ref, computed, onUnmounted } from "vue";
+import { useKit } from "~/composables/useKit";
+import { acquireJobFeeds } from "./useJobFeeds";
 
 // One shared 5s clock for every usage strip (used only to re-evaluate the
 // `connected` freshness flag), ref-counted so it ticks only while at least one
@@ -33,66 +31,28 @@ function useSharedClock() {
 /**
  * Lightweight per-job live usage snapshot for the deployment job list.
  *
- * Polls the node's recent stats (`/job/{id}/stats`, the same reliable source the
- * job page uses) and also opens the 5s SSE stream for finer updates. Keeps only
- * the latest reading per op and exposes a `connected` flag that is true only
- * while fresh data is arriving — so the caller can hide the usage bars until the
- * node is actually reporting.
+ * Reads the job's shared stats feed (stream plus a short poll) and keeps
+ * only the latest reading per op, with a `connected` flag that is true only
+ * while fresh data is arriving — so the caller can hide the usage bars until
+ * the node is actually reporting. Holding the feed here also means the job
+ * panel finds it already open.
  */
 export function useJobUsageSnapshot(jobId: string, deploymentId: string) {
-  const getJob = useNodeJobResolver(jobId, deploymentId);
-
-  const latestByOp = shallowRef<Record<string, TaskStat>>({});
-  const lastTs = ref(0);
+  const { nosana } = useKit();
   const now = useSharedClock();
-
-  // Merge in a reading only if it's newer than what we hold for that op.
-  function ingest(stats: TaskStat | TaskStat[]): void {
-    const items = Array.isArray(stats) ? stats : [stats];
-    const next = { ...latestByOp.value };
-    let changed = false;
-    for (const s of items) {
-      if (!s?.opId || !s?.timestamp) continue;
-      const prev = next[s.opId];
-      if (!prev || s.timestamp >= prev.timestamp) {
-        next[s.opId] = s;
-        changed = true;
-      }
-    }
-    if (changed) {
-      latestByOp.value = next;
-      lastTs.value = Date.now();
-    }
-  }
-
-  const { fetch: fetchRecent, abort } = useStatsFetch(getJob, ingest);
-  const { start: startStream, destroy: destroyStream } = useStatsStream(getJob, ingest);
-
-  let poll: ReturnType<typeof setInterval> | null = null;
-
-  if (import.meta.client) {
-    // Reliable path: pull the last ~30s of stats now and every 8s.
-    const pull = () => fetchRecent(5, 30).catch(() => {});
-    pull();
-    poll = setInterval(pull, 8000);
-    // Real-time bonus (may be quiet on some nodes; the poll covers it).
-    startStream().catch(() => {});
-  }
-
-  onUnmounted(() => {
-    if (poll) clearInterval(poll);
-    abort();
-    destroyStream();
-  });
+  const feeds = acquireJobFeeds(nosana.value.api, jobId, deploymentId);
+  onUnmounted(feeds.release);
 
   // Connected = a reading arrived within the last ~20s.
   const connected = computed(
-    () => lastTs.value > 0 && now.value - lastTs.value < 20000,
+    () =>
+      feeds.stats.lastTs.value > 0 &&
+      now.value - feeds.stats.lastTs.value < 20000,
   );
 
   // Aggregate the latest reading across the job's ops.
   const usage = computed(() => {
-    const ops = Object.values(latestByOp.value);
+    const ops = Object.values(feeds.stats.latestByOp.value);
     if (ops.length === 0) return null;
 
     let cpu = 0;

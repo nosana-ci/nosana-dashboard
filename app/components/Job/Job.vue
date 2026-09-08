@@ -1,7 +1,7 @@
 <template>
   <div class="job-detail">
-    <!-- Header Section -->
-    <div class="dep-header">
+    <!-- Header Section (the deployment job panel brings its own) -->
+    <div v-if="!isPanel" class="dep-header">
       <!-- Back link -->
       <button
         type="button"
@@ -144,7 +144,7 @@
           :key="tab"
           type="button"
           class="dep-tab"
-          :class="{ 'is-active': activeTab === tab }"
+          :class="{ 'is-active': effectiveTab === tab }"
           @click="activeTab = tab"
         >
           {{ getTabLabel(tab) }}
@@ -155,7 +155,13 @@
     <!-- Tab Content -->
     <div class="p-5">
       <!-- Overview Tab -->
-      <div v-if="activeTab === 'overview'" class="tab-pane">
+      <!-- In the panel this stays mounted (v-show) so the usage stream
+           survives switching views; the page mounts it per visit as before. -->
+      <div
+        v-if="isPanel || effectiveTab === 'overview'"
+        v-show="effectiveTab === 'overview'"
+        class="tab-pane"
+      >
         <!-- Job Details Section -->
         <div>
           <h2 class="title is-5 mb-3">Job details</h2>
@@ -199,7 +205,11 @@
               </div>
 
               <!-- Node / host specs -->
-              <div class="stat" v-for="field in resolvedMetricFields" :key="field.key">
+              <div
+                class="stat"
+                v-for="field in resolvedMetricFields"
+                :key="field.key"
+              >
                 <span class="k">{{ field.label }}</span>
                 <span class="v" :title="field.displayValue">{{
                   field.displayValue
@@ -222,14 +232,30 @@
             :opIds="props.job.jobDefinition.ops.map((op) => op.id)"
           />
         </div>
-        <!-- On-chain activity, hidden when the API has no events endpoint -->
-        <div v-if="jobEventsSupported && !loadingJobEvents">
+        <!-- On-chain activity, hidden when the API has no events endpoint.
+             The job panel shows it on its own Activity view instead. -->
+        <div v-if="!isPanel && jobEventsSupported && !loadingJobEvents">
           <JobEventTimeline :events="jobEvents" :markets="testgridMarkets" />
         </div>
       </div>
 
+      <!-- Activity (panel only) -->
+      <div v-if="isPanel && effectiveTab === 'activity'" class="tab-pane">
+        <p v-if="loadingJobEvents" class="section-empty" role="status">
+          Loading activity…
+        </p>
+        <JobEventTimeline
+          v-else-if="jobEventsSupported"
+          :events="jobEvents"
+          :markets="testgridMarkets"
+        />
+        <p v-else class="section-empty">
+          Activity is not available for this job.
+        </p>
+      </div>
+
       <!-- Configuration Tab -->
-      <div v-if="activeTab === 'configuration'">
+      <div v-if="effectiveTab === 'configuration'">
         <div v-if="jobDefinitionForTab">
           <JobDefinitionTab :job-definition="jobDefinitionForTab" />
         </div>
@@ -239,7 +265,17 @@
       </div>
 
       <!-- Container Controls Tab -->
-      <div v-if="activeTab === 'container-controls'">
+      <!-- The panel keeps this mounted (v-show) so per-operation shells
+           survive switching views, and shows it as soon as the definition is
+           known. The page waits for container logs and mounts it per visit. -->
+      <div
+        v-if="
+          isPanel
+            ? !!props.job.jobDefinition
+            : hasContainerControls && effectiveTab === 'container-controls'
+        "
+        v-show="effectiveTab === 'container-controls'"
+      >
         <div v-if="props.job.jobDefinition">
           <JobOverview
             :job="props.job"
@@ -252,12 +288,28 @@
             :logsByOp="flogLogsByOp"
             :systemLogsMap="flogSystemLogs"
             :jobInfo="props.jobInfo"
+            :deployment-id="props.deploymentId"
+            :job-address="props.job.address"
+            :node="hasRealNode ? String(props.job.node) : ''"
+            :project-address="props.job.project?.toString() ?? ''"
+            :access-definition="jobDefinitionForTab"
+            :is-running="props.job.isRunning"
+            :ssh-public-keys="props.sshPublicKeys"
+            :ssh-keys-loading="props.sshKeysLoading"
+            :ssh-keys-error="props.sshKeysError"
+            :shells-active="
+              !isPanel ||
+              (panelActive && effectiveTab === 'container-controls')
+            "
+            :auto-connect-op="autoConnectOp"
+            :show-logs="!isPanel"
+            :deployment-endpoints="deploymentEndpoints"
           />
         </div>
       </div>
 
       <!-- System Logs Tab -->
-      <div v-if="activeTab === 'system-logs'">
+      <div v-if="effectiveTab === 'system-logs'">
         <div v-if="props.job.jobDefinition">
           <JobTabs
             :job="props.job"
@@ -299,12 +351,31 @@
       </div>
 
       <!-- Results Tab -->
-      <div v-if="activeTab === 'results'">
+      <div v-if="effectiveTab === 'results'">
         <div v-if="props.job.results">
           <JobResult :ipfs-result="props.job.results" :ipfs-job="props.job" />
         </div>
         <div v-else class="notification is-light has-text-centered">
           <p class="has-text-grey">No results available</p>
+        </div>
+      </div>
+
+      <!-- Job access -->
+      <div v-if="effectiveTab === 'access'">
+        <h2 class="title is-5 mb-3">Job access</h2>
+
+        <div class="dep-card p-5">
+          <JobAccessContent
+            :job-address="props.job.address"
+            :node="props.job.node?.toString() ?? ''"
+            :project-address="props.job.project?.toString() ?? ''"
+            :job-definition="jobDefinitionForTab"
+            :is-running="props.job.isRunning"
+            :deployment-id="props.deploymentId"
+            :ssh-public-keys="props.sshPublicKeys"
+            :ssh-keys-loading="props.sshKeysLoading"
+            :ssh-keys-error="props.sshKeysError"
+          />
         </div>
       </div>
     </div>
@@ -350,6 +421,7 @@ import JobOverview from "~/components/Job/Tabs/Overview.vue";
 import JobResult from "~/components/Job/Result.vue";
 import JobDefinitionTab from "~/components/Job/Tabs/JobDefinition.vue";
 import JobEventTimeline from "~/components/Job/EventTimeline.vue";
+import JobAccessContent from "~/components/Job/AccessContent.vue";
 import SecondsFormatter from "~/components/SecondsFormatter.vue";
 import DeploymentStatusPill from "~/components/Deployment/DeploymentStatusPill.vue";
 import {
@@ -480,11 +552,27 @@ interface Props {
   isJobPoster: boolean;
   jobInfo?: JobInfo | null;
   deploymentId?: string | null;
+  sshPublicKeys?: string[];
+  sshKeysLoading?: boolean;
+  sshKeysError?: string;
   hideFields?: {
     marketAddress?: boolean;
     price?: boolean;
     gpuPoolName?: boolean;
   };
+  /** "panel": hosted in the deployment job panel, which owns header and tabs. */
+  mode?: "page" | "panel";
+  panelTab?: "details" | "containers" | "activity";
+  /** Panel mode: whether this job is the one on screen. */
+  panelActive?: boolean;
+  /** Operation whose shell opens on its own ("*" = the first). */
+  autoConnectOp?: string;
+  /** The deployment's endpoint status, shown on the container cards. */
+  deploymentEndpoints?: Array<{
+    opId: string;
+    port: number | string;
+    online: boolean;
+  }>;
 }
 
 const props = defineProps<Props>();
@@ -549,6 +637,9 @@ const hasRealNode = computed<boolean>(() =>
 // Do not gate on hasAuth; auth will be ensured during WS open
 const shouldConnect = computed(
   () => props.isJobPoster && props.job.isRunning && hasRealNode.value,
+);
+const canShowAccessTab = computed(
+  () => props.job.isRunning && hasRealNode.value,
 );
 
 // No local WS watchers; lifecycle handled inside useJobLogs
@@ -1107,6 +1198,10 @@ const availableTabs = computed(() => {
     tabs.push("results");
   }
 
+  if (canShowAccessTab.value) {
+    tabs.push("access");
+  }
+
   return tabs;
 });
 
@@ -1121,6 +1216,8 @@ const getTabLabel = (tab: string) => {
       return "Containers";
     case "results":
       return "Results";
+    case "access":
+      return "SSH";
     default:
       return tab.charAt(0).toUpperCase() + tab.slice(1);
   }
@@ -1391,6 +1488,19 @@ function activateChatAndClosePopup() {
 }
 
 const activeTab = ref("system-logs");
+
+// In the deployment job panel the panel picks the tab.
+const isPanel = computed(() => props.mode === "panel");
+const PANEL_TABS = {
+  details: "overview",
+  containers: "container-controls",
+  activity: "activity",
+} as const;
+const effectiveTab = computed(() =>
+  isPanel.value
+    ? PANEL_TABS[props.panelTab ?? "details"]
+    : activeTab.value,
+);
 
 // Watch for changes in available tabs and ensure active tab is valid
 watch(

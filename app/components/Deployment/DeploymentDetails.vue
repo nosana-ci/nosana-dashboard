@@ -21,7 +21,7 @@
           <span class="s" :title="scheduleTitle"
             ><template v-if="isScheduled && scheduleHuman"
               >{{ scheduleHuman }}<span class="sep">|</span></template
-            >{{ timeoutDisplay }} timeout</span
+            >{{ timeoutDisplay }} Timeout</span
           >
         </div>
 
