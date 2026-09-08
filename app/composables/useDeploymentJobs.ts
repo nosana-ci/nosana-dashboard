@@ -314,6 +314,10 @@ export function useDeploymentJobs(deps: DeploymentJobsDeps) {
   });
 
   // Fetch one server-side page of historical jobs (COMPLETED + STOPPED).
+  // Delisted jobs are excluded server-side: a delisted job was cancelled off the
+  // market before any node claimed it, so it never ran and its on-chain account is
+  // gone for good. Filtering it here rather than in the response keeps the page
+  // full — the server counts and paginates over the same set the tab shows.
   const loadHistory = async (pageFunc?: (() => Promise<any>) | null) => {
     const dep = deps.deployment.value;
     if (!dep || historyLoading.value) return;
@@ -324,6 +328,7 @@ export function useDeploymentJobs(deps: DeploymentJobsDeps) {
         : await dep.getJobs({
             // @ts-ignore - kit search-param types lag behind the API
             state: HISTORY_JOB_STATES,
+            include_delisted: false,
             limit: jobsPerPage,
             sort_order: "desc",
           });
