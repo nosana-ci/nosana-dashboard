@@ -111,25 +111,21 @@ const {
   height: 75vh;
 }
 
-// Always dark, like the terminal window it sits beside.
+// Always dark, on the same surface as the terminal and the JSON editor so the
+// panel's code surfaces read as one family.
 .log-frame {
+  @include code-surface-frame;
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
-  border: 1px solid rgba($white, 0.1);
-  border-radius: 12px;
-  overflow: hidden;
-  background: #0a0c0a;
-  box-shadow: inset 0 1px 0 rgba($white, 0.04);
 }
 
 // The filter strip: the selectors dress as the panel's quiet buttons and
 // the search as one of its dark inputs, spaced apart instead of joined.
 .log-frame-bar {
+  @include code-surface-bar;
   padding: 0.55rem 0.75rem;
-  background: rgba($white, 0.05);
-  border-bottom: 1px solid rgba($white, 0.08);
 
   :deep(.filter-bar) {
     padding: 0;

@@ -33,27 +33,29 @@
         <span v-else>No active jobs</span>
       </div>
 
-      <div v-else class="da-card">
-        <JobActivityTable
-          :jobs="activeJobs"
-          :deploymentId="deploymentId"
-          :getJobStateNumber="getJobStateNumber"
-          @open="$emit('open', $event)"
-          @viewLogs="$emit('viewLogs', $event)"
-          @openSsh="$emit('openSsh', $event)"
-          @openRevision="$emit('openRevision', $event)"
-        />
-        <div class="da-foot">
-          <JobStatusKey :states="statesIn(activeJobs)" />
-          <JobActivityPager
-            :hasPrev="activeHasPrev"
-            :hasNext="activeHasNext"
-            :loading="activeLoading"
-            @prev="$emit('active:prev')"
-            @next="$emit('active:next')"
+      <template v-else>
+        <div class="da-card">
+          <JobActivityTable
+            :jobs="activeJobs"
+            :deploymentId="deploymentId"
+            :getJobStateNumber="getJobStateNumber"
+            @open="$emit('open', $event)"
+            @viewLogs="$emit('viewLogs', $event)"
+            @openSsh="$emit('openSsh', $event)"
+            @openRevision="$emit('openRevision', $event)"
           />
+          <div v-if="activeHasPrev || activeHasNext" class="da-foot">
+            <JobActivityPager
+              :hasPrev="activeHasPrev"
+              :hasNext="activeHasNext"
+              :loading="activeLoading"
+              @prev="$emit('active:prev')"
+              @next="$emit('active:next')"
+            />
+          </div>
         </div>
-      </div>
+        <JobStatusKey class="da-key" :states="statesIn(activeJobs)" />
+      </template>
     </div>
 
     <!-- Historical Jobs -->
@@ -68,28 +70,30 @@
         No completed jobs yet
       </div>
 
-      <div v-else class="da-card">
-        <JobActivityTable
-          :jobs="historyJobs"
-          :deploymentId="deploymentId"
-          :getJobStateNumber="getJobStateNumber"
-          :getJobDuration="getJobDuration"
-          :showDuration="true"
-          @open="$emit('open', $event)"
-          @viewLogs="$emit('viewLogs', $event)"
-          @openRevision="$emit('openRevision', $event)"
-        />
-        <div class="da-foot">
-          <JobStatusKey :states="statesIn(historyJobs)" />
-          <JobActivityPager
-            :hasPrev="historyHasPrev"
-            :hasNext="historyHasNext"
-            :loading="historyLoading"
-            @prev="$emit('history:prev')"
-            @next="$emit('history:next')"
+      <template v-else>
+        <div class="da-card">
+          <JobActivityTable
+            :jobs="historyJobs"
+            :deploymentId="deploymentId"
+            :getJobStateNumber="getJobStateNumber"
+            :getJobDuration="getJobDuration"
+            :showDuration="true"
+            @open="$emit('open', $event)"
+            @viewLogs="$emit('viewLogs', $event)"
+            @openRevision="$emit('openRevision', $event)"
           />
+          <div v-if="historyHasPrev || historyHasNext" class="da-foot">
+            <JobActivityPager
+              :hasPrev="historyHasPrev"
+              :hasNext="historyHasNext"
+              :loading="historyLoading"
+              @prev="$emit('history:prev')"
+              @next="$emit('history:next')"
+            />
+          </div>
         </div>
-      </div>
+        <JobStatusKey class="da-key" :states="statesIn(historyJobs)" />
+      </template>
     </div>
   </div>
 </template>
@@ -152,10 +156,15 @@ defineEmits<{
 .da-foot {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
+  justify-content: flex-end;
   padding: 0.7rem 1.1rem;
   border-top: 1px solid $grey-lighter;
+}
+
+/* The status key sits outside the card, on the page background, inset to the
+   card's own row padding. */
+.da-key {
+  padding: 0.7rem 1.1rem 0;
 }
 
 .da-empty {

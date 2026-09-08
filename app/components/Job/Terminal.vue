@@ -277,11 +277,7 @@ onBeforeUnmount(() => {
 /* The session sits in its own always-dark window: a title strip with the
    status on the left and the action on the right, the shell below. */
 .job-terminal {
-  overflow: hidden;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: #0a0c0a;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  @include code-surface-frame;
 }
 
 .terminal-toolbar {
@@ -290,8 +286,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 0.75rem;
   padding: 0.55rem 0.85rem;
-  background: rgba(255, 255, 255, 0.05);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  @include code-surface-bar;
 
   > .button.is-quiet {
     background: rgba(255, 255, 255, 0.06);
@@ -396,7 +391,7 @@ onBeforeUnmount(() => {
 
 // Read by useXterm when the terminal is created.
 .terminal-surface {
-  --terminal-background: #0a0c0a;
+  --terminal-background: #{$code-surface};
   --terminal-foreground: #{$white-ter};
   --terminal-cursor: #{$secondary};
   width: 100%;

@@ -314,7 +314,7 @@ const {
   activeNext,
   activePrev,
   applyJobFrame,
-  applyActiveJobsSnapshot,
+  applyActiveSet,
   runningJobsCount,
   historyJobs,
   historyLoading,
@@ -354,8 +354,10 @@ const applyStreamEvent = (event: DeploymentStreamEvent) => {
   }
 
   if (event.type === "job") {
-    // Updates the live active list in place; new jobs render straight from the
-    // frame, which carries revision/created_at.
+    // Updates the live job list in place; new jobs render straight from the
+    // frame, which carries revision/created_at. Everything reading a job —
+    // the activity table, the panel's tabs, the open job's own record — hangs
+    // off that list, so there is nothing else to notify.
     applyJobFrame(event);
     return;
   }
@@ -363,7 +365,7 @@ const applyStreamEvent = (event: DeploymentStreamEvent) => {
   // Authoritative active-jobs snapshot, sent once on (re)connect ahead of the
   // per-job frames: prune anything we still show that's no longer active.
   if (event.type === "jobs") {
-    applyActiveJobsSnapshot(event.jobs);
+    applyActiveSet(event.jobs);
     return;
   }
 

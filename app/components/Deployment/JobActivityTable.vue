@@ -81,11 +81,13 @@
               @click="emit('viewLogs', job.job)"
             >
               <span class="icon is-small">
+                <!-- stroke-width 2 to match terminal.svg; a thinner stroke
+                     anti-aliases to a paler green at this size. -->
                 <svg
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
-                  stroke-width="1.8"
+                  stroke-width="2"
                   stroke-linecap="round"
                   stroke-linejoin="round"
                   aria-hidden="true"
@@ -311,8 +313,10 @@ $content-indent: 1.75rem;
   font-size: 0.72rem;
   font-weight: 600;
 
+  /* Green at rest: the icon is what carries the colour in an otherwise
+     monochrome row, and hover shifts the pill around it. */
   .icon {
-    color: $grey;
+    color: $secondary;
     /* Bulma pulls the leading icon outward; a pill wants it inset. */
     margin-inline: 0 0.3rem;
 
@@ -327,10 +331,6 @@ $content-indent: 1.75rem;
     border-color: rgba($secondary, 0.55);
     background: rgba($secondary, 0.08);
     color: $text;
-
-    .icon {
-      color: $secondary;
-    }
   }
 }
 
@@ -338,19 +338,11 @@ html.dark-mode .jrow-actions .button.is-quiet {
   border-color: rgba($white, 0.12);
   color: $grey-light;
 
-  .icon {
-    color: $grey-light;
-  }
-
   &:hover,
   &:focus-visible {
     border-color: rgba($secondary, 0.45);
     background: rgba($secondary, 0.12);
     color: $white;
-
-    .icon {
-      color: $secondary;
-    }
   }
 }
 

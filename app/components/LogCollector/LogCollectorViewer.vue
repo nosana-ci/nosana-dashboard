@@ -141,7 +141,7 @@ defineExpose({ scrollToBottom });
 <style lang="scss" scoped>
 .log-collector-viewer {
   font-family: $family-monospace;
-  background-color: #0a0c0a;
+  background-color: $code-surface;
   color: #e6ede6;
   border-radius: 0;
   overflow-y: auto;
@@ -158,10 +158,9 @@ defineExpose({ scrollToBottom });
   font-size: 0.75rem;
   font-weight: 600;
   color: #8a948a;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  @include code-surface-bar;
   position: sticky;
   top: 0;
-  background: #0a0c0a;
   z-index: 1;
   text-transform: uppercase;
   letter-spacing: 0.04em;

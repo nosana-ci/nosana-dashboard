@@ -33,6 +33,9 @@ const props = defineProps<{
   jobAddress: string;
   view: "details" | "containers" | "activity";
   active: boolean;
+  /** The job's state as the page's live job list holds it, so the record
+   *  refreshes when the deployment stream reports the replica changed. */
+  jobState?: string | number;
   autoConnectOp: string;
   /** The deployment's endpoint status, shown on the container cards. Named
    *  apart from the job's own `endpoints` map below. */
@@ -54,5 +57,9 @@ const {
   sshPublicKeys,
   sshKeysLoading,
   sshKeysError,
-} = useDeploymentJobPage(props.deploymentId, props.jobAddress);
+} = useDeploymentJobPage(
+  props.deploymentId,
+  props.jobAddress,
+  () => props.jobState,
+);
 </script>

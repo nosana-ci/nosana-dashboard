@@ -1,5 +1,5 @@
 <template>
-  <div v-if="hasPrev || hasNext" class="jpager">
+  <div class="jpager">
     <button
       class="jpg-btn"
       :disabled="!hasPrev || loading"
@@ -51,7 +51,8 @@ defineEmits<{
 </script>
 
 <style lang="scss" scoped>
-/* Sits in the card footer next to the status key, which owns the padding. */
+/* Sits alone in the card footer, which owns the padding and decides whether
+   there is anything to page through at all. */
 .jpager {
   display: flex;
   align-items: center;
