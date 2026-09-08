@@ -85,11 +85,7 @@
                                   <option value="http">HTTP</option>
                                   <option value="websocket">WebSocket</option>
                                 </select>
-                                <label class="switch sm hc-keep">
-                                  <input v-model="p.hc.continuous" type="checkbox" />
-                                  <span class="track"></span>
-                                  <span class="st">Keep checking</span>
-                                </label>
+                                <UIToggleSwitch v-model="p.hc.continuous" small class="hc-keep">Keep checking</UIToggleSwitch>
                               </div>
                               <div v-if="p.hc.type === 'http'" class="hc-grid">
                                 <input v-model="p.hc.path" class="jinput mono" placeholder="path — /health" />
@@ -167,7 +163,7 @@
                         <div v-if="r._adv" class="res-adv">
                           <div class="res-field wide"><label>Endpoint URL</label><input v-model="r.url" class="jinput mono" placeholder="https://s3.amazonaws.com (optional)" /></div>
                           <div class="res-field"><label>Access</label>
-                            <label class="switch sm"><input v-model="r.allowWrite" type="checkbox" /><span class="track"></span><span class="st">{{ r.allowWrite ? 'Read & write' : 'Read only' }}</span></label>
+                            <UIToggleSwitch v-model="r.allowWrite" small>{{ r.allowWrite ? 'Read & write' : 'Read only' }}</UIToggleSwitch>
                           </div>
                           <div class="res-field"><label>Files</label><input v-model="r.files" class="jinput mono" placeholder="comma-separated paths (optional)" /></div>
                           <div class="res-subhead">Credentials — only for private buckets</div>
@@ -242,6 +238,7 @@
 <script setup lang="ts">
 import type { JobDefinition } from '@nosana/kit';
 import { useToast } from 'vue-toastification';
+import UIToggleSwitch from '~/components/UI/ToggleSwitch.vue';
 
 const props = defineProps<{
   modelValue: JobDefinition | null | string;
@@ -822,24 +819,6 @@ code { font-family: monospace; font-size: 0.85em; color: #0a9e06; }
   background: rgba($warning, 0.06);
 }
 
-/* switch */
-.switch { display: inline-flex; align-items: center; gap: 11px; cursor: pointer;
-  input { position: absolute; opacity: 0; width: 0; height: 0; }
-  .track { position: relative; width: 38px; height: 22px; flex: none; background: $border; border-radius: 999px; transition: background 0.18s;
-    &::after { content: ''; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3); transition: transform 0.18s; }
-  }
-  input:checked + .track { background: $secondary; &::after { transform: translateX(16px); } }
-  input:focus-visible + .track { outline: 2px solid $secondary; outline-offset: 2px; }
-  .st { font-size: 0.8rem; color: $text-dark; b { color: $text; font-weight: 600; } }
-
-  &.sm {
-    gap: 8px;
-    .track { width: 32px; height: 18px; &::after { width: 14px; height: 14px; } }
-    input:checked + .track::after { transform: translateX(14px); }
-    .st { font-size: 0.74rem; }
-  }
-}
-
 /* rows */
 .rows { display: flex; flex-direction: column; gap: 7px; }
 /* breathing room before the "+ Add" affordance in collapsible sections */
@@ -936,6 +915,5 @@ html.dark-mode {
   .req, .op-badge, .res-type { color: #3df23a; }
   code, .linkbtn { color: #3df23a; }
   .linkbtn.danger { color: $text-light; }
-  .switch .track { background: #333; }
 }
 </style>

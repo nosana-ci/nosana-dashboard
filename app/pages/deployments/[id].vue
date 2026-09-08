@@ -62,6 +62,7 @@
 
                   <DeploymentJobActivity
                     :deploymentId="deployment.id"
+                    :project-address="deploymentVaultAddress"
                     :deploymentStatus="deployment.status"
                     :jobActivityTab="jobActivityTab"
                     :activeJobs="activeJobsPaged"
@@ -123,6 +124,8 @@
                 @reset="resetDefinition"
                 @makeRevision="makeRevision"
               />
+
+              <DeploymentSshKeys :deployment-id="deployment.id" />
 
               <DeploymentRevisions
                 :revisions="sortedRevisions"
@@ -541,6 +544,11 @@ const sortedRevisions = computed(() => {
   return deploymentRevisions.value || [];
 });
 
+const deploymentVaultAddress = computed(() => {
+  const vault = deploymentVault.value as { address?: string } | null;
+  return vault?.address || "";
+});
+
 // --- Auto-start DRAFT deployments ---
 const autostartTriggered = ref(false);
 watch(
@@ -783,6 +791,7 @@ useHead({
 .tab-pane :deep(.as-card),
 .tab-pane :deep(.task-card),
 .tab-pane :deep(.event-card),
+.tab-pane :deep(.section-card),
 .tab-pane :deep(.rev-card) {
   box-shadow:
     0 1px 3px rgba($black, 0.06),
@@ -797,6 +806,7 @@ html.dark-mode .tab-pane :deep(.da-card),
 html.dark-mode .tab-pane :deep(.as-card),
 html.dark-mode .tab-pane :deep(.task-card),
 html.dark-mode .tab-pane :deep(.event-card),
+html.dark-mode .tab-pane :deep(.section-card),
 html.dark-mode .tab-pane :deep(.rev-card) {
   border-color: rgba($white, 0.1);
   box-shadow:

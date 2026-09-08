@@ -31,6 +31,9 @@
         :isJobPoster="isJobPoster"
         :jobInfo="jobInfo"
         :deploymentId="deploymentId"
+        :sshPublicKeys="sshPublicKeys"
+        :sshKeysLoading="sshKeysLoading"
+        :sshKeysError="sshKeysError"
         :hideFields="{ marketAddress: true, price: true, gpuPoolName: true }"
       />
     </div>
@@ -48,8 +51,18 @@ const router = useRouter();
 const jobId = ref<string>(params.jobaddress as string);
 const deploymentId = ref<string | null>((params.id as string) || null);
 
-const { job, modal, endpoints, nosPrice, isJobPoster, loading, jobInfo } =
-  useDeploymentJobPage(deploymentId.value as string, jobId.value);
+const {
+  job,
+  modal,
+  endpoints,
+  nosPrice,
+  isJobPoster,
+  loading,
+  jobInfo,
+  sshPublicKeys,
+  sshKeysLoading,
+  sshKeysError,
+} = useDeploymentJobPage(deploymentId.value as string, jobId.value);
 </script>
 
 <style lang="scss" scoped>

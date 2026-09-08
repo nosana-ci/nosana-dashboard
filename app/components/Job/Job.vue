@@ -199,7 +199,11 @@
               </div>
 
               <!-- Node / host specs -->
-              <div class="stat" v-for="field in resolvedMetricFields" :key="field.key">
+              <div
+                class="stat"
+                v-for="field in resolvedMetricFields"
+                :key="field.key"
+              >
                 <span class="k">{{ field.label }}</span>
                 <span class="v" :title="field.displayValue">{{
                   field.displayValue
@@ -307,6 +311,25 @@
           <p class="has-text-grey">No results available</p>
         </div>
       </div>
+
+      <!-- Job access -->
+      <div v-if="activeTab === 'access'">
+        <h2 class="title is-5 mb-3">Job access</h2>
+
+        <div class="dep-card p-5">
+          <JobAccessContent
+            :job-address="props.job.address"
+            :node="props.job.node?.toString() ?? ''"
+            :project-address="props.job.project?.toString() ?? ''"
+            :job-definition="jobDefinitionForTab"
+            :is-running="props.job.isRunning"
+            :deployment-id="props.deploymentId"
+            :ssh-public-keys="props.sshPublicKeys"
+            :ssh-keys-loading="props.sshKeysLoading"
+            :ssh-keys-error="props.sshKeysError"
+          />
+        </div>
+      </div>
     </div>
   </div>
 
@@ -350,6 +373,7 @@ import JobOverview from "~/components/Job/Tabs/Overview.vue";
 import JobResult from "~/components/Job/Result.vue";
 import JobDefinitionTab from "~/components/Job/Tabs/JobDefinition.vue";
 import JobEventTimeline from "~/components/Job/EventTimeline.vue";
+import JobAccessContent from "~/components/Job/AccessContent.vue";
 import SecondsFormatter from "~/components/SecondsFormatter.vue";
 import DeploymentStatusPill from "~/components/Deployment/DeploymentStatusPill.vue";
 import {
@@ -480,6 +504,9 @@ interface Props {
   isJobPoster: boolean;
   jobInfo?: JobInfo | null;
   deploymentId?: string | null;
+  sshPublicKeys?: string[];
+  sshKeysLoading?: boolean;
+  sshKeysError?: string;
   hideFields?: {
     marketAddress?: boolean;
     price?: boolean;
@@ -549,6 +576,9 @@ const hasRealNode = computed<boolean>(() =>
 // Do not gate on hasAuth; auth will be ensured during WS open
 const shouldConnect = computed(
   () => props.isJobPoster && props.job.isRunning && hasRealNode.value,
+);
+const canShowAccessTab = computed(
+  () => props.job.isRunning && hasRealNode.value,
 );
 
 // No local WS watchers; lifecycle handled inside useJobLogs
@@ -1107,6 +1137,10 @@ const availableTabs = computed(() => {
     tabs.push("results");
   }
 
+  if (canShowAccessTab.value) {
+    tabs.push("access");
+  }
+
   return tabs;
 });
 
@@ -1121,6 +1155,8 @@ const getTabLabel = (tab: string) => {
       return "Containers";
     case "results":
       return "Results";
+    case "access":
+      return "SSH";
     default:
       return tab.charAt(0).toUpperCase() + tab.slice(1);
   }

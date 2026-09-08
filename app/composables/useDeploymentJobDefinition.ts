@@ -1,6 +1,10 @@
-import type { Deployment, JobDefinition } from "@nosana/kit";
+import { withSshPublicKeys, type Deployment, type JobDefinition } from "@nosana/kit";
 import type { DeploymentRevisionItem } from "@nosana/api";
 import { useToast } from "vue-toastification";
+
+/** Deployment SSH keys are managed separately, so the editor never shows them. */
+const withoutManagedSshKeys = (definition: JobDefinition) =>
+  withSshPublicKeys(definition, []);
 
 export interface DeploymentJobDefinitionDeps {
   deployment: Ref<Deployment | null>;
@@ -36,10 +40,9 @@ export function useDeploymentJobDefinition(deps: DeploymentJobDefinitionDeps) {
         ];
 
       if (activeRevision?.job_definition) {
-        jobDefinitionModel.value = activeRevision.job_definition;
-        originalDefinition.value = JSON.parse(
-          JSON.stringify(activeRevision.job_definition),
-        );
+        const definition = withoutManagedSshKeys(activeRevision.job_definition);
+        jobDefinitionModel.value = definition;
+        originalDefinition.value = JSON.parse(JSON.stringify(definition));
         return;
       }
     }
@@ -57,9 +60,12 @@ export function useDeploymentJobDefinition(deps: DeploymentJobDefinitionDeps) {
     try {
       loadingJobDefinition.value = true;
       const definition = await getIpfs(ipfsHash);
-      jobDefinitionModel.value = definition as JobDefinition;
+      const visibleDefinition = withoutManagedSshKeys(
+        definition as JobDefinition,
+      );
+      jobDefinitionModel.value = visibleDefinition;
       originalDefinition.value = JSON.parse(
-        JSON.stringify(definition),
+        JSON.stringify(visibleDefinition),
       ) as JobDefinition;
     } catch (err: any) {
       console.error("Error loading job definition:", err);

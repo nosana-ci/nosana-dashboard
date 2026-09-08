@@ -32,6 +32,13 @@
           @update:deploymentName="deploymentName = $event"
         />
 
+        <div class="box" style="border: none; margin-top: 1.5rem">
+          <DeploySSHAccessConfiguration
+            ref="sshAccessConfiguration"
+            v-model="sshPublicKeys"
+          />
+        </div>
+
         <!-- Select GPU -->
         <div class="box" style="border: none; margin-top: 1.5rem">
           <h2 class="title is-5 mb-4">Select GPU</h2>
@@ -328,6 +335,8 @@ import {
   type CreateDeployment,
   type Deployment,
   DeploymentStrategy,
+  getSshPublicKeys,
+  withSshPublicKeys,
 } from "@nosana/kit";
 import { useToast } from "vue-toastification";
 import { useWallet } from "@nosana/solana-vue";
@@ -337,6 +346,7 @@ import { useEstimatedCost } from "~/composables/useMarketPricing";
 import type { Template } from "~/composables/useTemplates";
 import Loader from "~/components/Loader.vue";
 import ConfigurationModal from "~/components/Deploy/ConfigurationModal.vue";
+import DeploySSHAccessConfiguration from "~/components/Deploy/SSHAccessConfiguration.vue";
 import VaultModal from "~/components/Vault/Modal/VaultModal.vue";
 import { parseCronExpression } from "~/utils/parseCronExpression";
 import {
@@ -569,6 +579,27 @@ const nosApiPrice = computed(() => stats.value?.price || 0);
 
 // Job definition - will be populated when PyTorch template loads
 const jobDefinition = ref<JobDefinition | null>(null);
+const sshPublicKeys = ref<string[]>([]);
+const sshAccessConfiguration = ref<InstanceType<
+  typeof DeploySSHAccessConfiguration
+> | null>(null);
+
+// Deployment SSH keys are managed separately by the Deployment Manager. If a
+// template or restored draft still contains the legacy job-definition field,
+// move it into the deployment-level form state and keep the visible definition
+// focused on the workload itself.
+watch(
+  jobDefinition,
+  (definition) => {
+    if (!definition) return;
+    const embeddedKeys = getSshPublicKeys(definition);
+    if (!embeddedKeys.length) return;
+
+    sshPublicKeys.value = [...embeddedKeys];
+    jobDefinition.value = withSshPublicKeys(definition, []);
+  },
+  { deep: true },
+);
 
 // Cache NOS price data
 interface CachedPrice {
@@ -811,6 +842,10 @@ const createDeployment = async () => {
     toast.error("Job definition is required");
     return;
   }
+  if (!sshAccessConfiguration.value?.canSave?.()) {
+    toast.error("Configure a valid SSH key or disable SSH access");
+    return;
+  }
 
   loading.value = true;
   isCreatingDeployment.value = true;
@@ -835,8 +870,8 @@ const createDeployment = async () => {
         ? { schedule: schedule.value }
         : {}),
       // Start immediately server-side instead of a separate start() call.
-      // Not yet in the vendored @nosana/types, hence the assertion.
       autostart: true,
+      ssh_public_keys: sshPublicKeys.value,
       job_definition: jobDefinition.value,
     } as Parameters<
       typeof nosana.value.api.deployments.create
@@ -906,6 +941,7 @@ const persistDraft = () => {
     schedule: schedule.value,
     gpuTypeCheckbox: gpuTypeCheckbox.value,
     activeFilter: activeFilter.value,
+    sshPublicKeys: sshPublicKeys.value,
   });
 };
 
@@ -932,6 +968,9 @@ const restoreDraftIfNeeded = () => {
     if (Array.isArray(draft.gpuTypeCheckbox))
       gpuTypeCheckbox.value = draft.gpuTypeCheckbox;
     if (draft.activeFilter) activeFilter.value = draft.activeFilter;
+    if (Array.isArray(draft.sshPublicKeys)) {
+      sshPublicKeys.value = draft.sshPublicKeys;
+    }
 
     if (draft.selectedMarketAddress && markets.value) {
       const match = markets.value.find(

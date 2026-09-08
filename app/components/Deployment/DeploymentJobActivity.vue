@@ -38,6 +38,7 @@
           :jobs="activeJobs"
           :deploymentId="deploymentId"
           :getJobStateNumber="getJobStateNumber"
+          :project-address="projectAddress"
         />
         <JobActivityPager
           :hasPrev="activeHasPrev"
@@ -57,10 +58,7 @@
       >
         Loading history…
       </div>
-      <div
-        v-else-if="historyJobs.length === 0"
-        class="da-card da-empty"
-      >
+      <div v-else-if="historyJobs.length === 0" class="da-card da-empty">
         No completed jobs yet
       </div>
 
@@ -91,6 +89,7 @@ import JobActivityPager from "~/components/Deployment/JobActivityPager.vue";
 
 defineProps<{
   deploymentId: string;
+  projectAddress: string;
   deploymentStatus: string;
   jobActivityTab: string;
   activeJobs: DeploymentJobItem[];
