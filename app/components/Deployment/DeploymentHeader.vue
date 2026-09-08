@@ -318,11 +318,7 @@
         :class="{ 'is-active': activeTab === tab }"
         @click="$emit('switchTab', tab)"
       >
-        {{
-          tab === "configuration"
-            ? "Configuration"
-            : tab.charAt(0).toUpperCase() + tab.slice(1)
-        }}
+        {{ tab.charAt(0).toUpperCase() + tab.slice(1) }}
       </button>
     </div>
   </div>

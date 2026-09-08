@@ -5,7 +5,6 @@
       <div class="row-title">
         {{ label }}
         <span class="chip">{{ algorithm }}</span>
-        <span v-if="isNew" class="chip is-accent">New</span>
       </div>
       <details class="row-subtitle">
         <summary class="is-clickable">
@@ -40,7 +39,6 @@ import {
 const props = defineProps<{
   publicKey: string;
   index: number;
-  isNew: boolean;
   disabled?: boolean;
 }>();
 const emit = defineEmits<{ remove: [] }>();

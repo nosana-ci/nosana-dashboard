@@ -30,14 +30,10 @@
           @update:timeout="timeout = $event"
           :deployment-name="deploymentName"
           @update:deploymentName="deploymentName = $event"
+          :ssh-public-keys="sshPublicKeys"
+          @update:sshPublicKeys="sshPublicKeys = $event"
+          @ssh-error="sshError = $event"
         />
-
-        <div class="box" style="border: none; margin-top: 1.5rem">
-          <DeploySSHAccessConfiguration
-            ref="sshAccessConfiguration"
-            v-model="sshPublicKeys"
-          />
-        </div>
 
         <!-- Select GPU -->
         <div class="box" style="border: none; margin-top: 1.5rem">
@@ -346,7 +342,6 @@ import { useEstimatedCost } from "~/composables/useMarketPricing";
 import type { Template } from "~/composables/useTemplates";
 import Loader from "~/components/Loader.vue";
 import ConfigurationModal from "~/components/Deploy/ConfigurationModal.vue";
-import DeploySSHAccessConfiguration from "~/components/Deploy/SSHAccessConfiguration.vue";
 import VaultModal from "~/components/Vault/Modal/VaultModal.vue";
 import { parseCronExpression } from "~/utils/parseCronExpression";
 import {
@@ -580,9 +575,8 @@ const nosApiPrice = computed(() => stats.value?.price || 0);
 // Job definition - will be populated when PyTorch template loads
 const jobDefinition = ref<JobDefinition | null>(null);
 const sshPublicKeys = ref<string[]>([]);
-const sshAccessConfiguration = ref<InstanceType<
-  typeof DeploySSHAccessConfiguration
-> | null>(null);
+// Set by the SSH form while it cannot be used yet (e.g. private key not downloaded).
+const sshError = ref("");
 
 // Deployment SSH keys are managed separately by the Deployment Manager. If a
 // template or restored draft still contains the legacy job-definition field,
@@ -842,8 +836,8 @@ const createDeployment = async () => {
     toast.error("Job definition is required");
     return;
   }
-  if (!sshAccessConfiguration.value?.canSave?.()) {
-    toast.error("Configure a valid SSH key or disable SSH access");
+  if (sshError.value) {
+    toast.error(sshError.value);
     return;
   }
 

@@ -56,21 +56,15 @@
               :key="key"
               :public-key="key"
               :index="index"
-              :is-new="!isSaved(key)"
               :disabled="saving"
               @remove="removeKey(index)"
             />
           </ul>
           <p v-else-if="!addingKey" class="section-empty">
-            <strong>{{
-              hasChanges ? "All keys removed" : "No public keys added"
-            }}</strong>
+            <strong>No public keys added</strong>
             <br />
-            {{
-              hasChanges
-                ? "Save your changes to remove these keys from the deployment."
-                : "Add a public key to use Direct SSH. Your private keys stay on your device."
-            }}
+            Add a public key to use Direct SSH. Your private keys stay on your
+            device.
           </p>
 
           <SshKeyForm
@@ -84,36 +78,23 @@
             @edit="inputError = ''"
           />
 
-          <div v-if="hasChanges || saving || saveError" class="section-row">
+          <div v-if="saving || saveError" class="section-row">
             <p
               class="row-subtitle mt-0"
               :class="{ 'has-text-danger': saveError }"
               :role="saveError ? 'alert' : 'status'"
               aria-live="polite"
             >
-              {{
-                saveError || (saving ? "Saving SSH keys…" : "Unsaved changes")
-              }}
+              {{ saveError || "Saving SSH keys…" }}
             </p>
-            <div class="buttons mb-0 ml-auto">
-              <button
-                type="button"
-                class="button is-small is-quiet"
-                :disabled="saving"
-                @click="discardChanges"
-              >
-                Discard
-              </button>
-              <button
-                type="button"
-                class="button is-small is-secondary"
-                :class="{ 'is-loading': saving }"
-                :disabled="saving || addingKey || !hasChanges"
-                @click="save"
-              >
-                Save changes
-              </button>
-            </div>
+            <button
+              v-if="saveError"
+              type="button"
+              class="button is-small is-quiet ml-auto"
+              @click="reload"
+            >
+              Reload keys
+            </button>
           </div>
         </template>
       </div>
@@ -150,15 +131,11 @@ const {
   error,
   reload,
   draftKeys,
-  hasChanges,
-  isSaved,
   addKeys,
   removeKey,
-  discard,
   saving,
   saveError,
   failedJobs,
-  save,
 } = useDeploymentSshKeys(() => props.deploymentId, hasSessionAuth);
 
 // Add-key form
@@ -181,11 +158,6 @@ function submitKey(text: string) {
     keyForm.value?.focus();
     return;
   }
-  void closeKeyForm();
-}
-
-function discardChanges() {
-  discard();
   void closeKeyForm();
 }
 

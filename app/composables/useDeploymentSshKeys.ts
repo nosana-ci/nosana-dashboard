@@ -7,11 +7,19 @@ import {
 } from "@nosana/kit";
 import { useToast } from "vue-toastification";
 import { useLatestRequest } from "./useLatestRequest";
+import { getDeployment } from "~/utils/kitJobAccess";
 import {
   failedSshJobs,
   saveDeploymentSshKeys,
   type DeploymentSshKeysProgress,
 } from "~/utils/deploymentSshKeys";
+
+// The keys last seen per deployment. A view that opens again shows them at
+// once and refreshes behind the scenes instead of flashing a loading state.
+const cachedKeys = new Map<string, string[]>();
+
+const sameKeys = (a: string[], b: string[]) =>
+  a.length === b.length && a.every((key, index) => key === b[index]);
 
 /**
  * The SSH public keys of one deployment: the saved set, a local draft that
@@ -52,20 +60,35 @@ export function useDeploymentSshKeys(
   const lastResult = ref<DeploymentSshKeysProgress | null>(null);
   const failedJobs = computed(() => failedSshJobs(lastResult.value));
 
+  /** Record the saved set; watchers only run when the keys actually differ. */
+  const setSavedKeys = (keys: string[]) => {
+    cachedKeys.set(toValue(deploymentId), [...keys]);
+    if (!sameKeys(sshPublicKeys.value, keys)) sshPublicKeys.value = [...keys];
+  };
+
+  const getSshApi = async () => {
+    if (!sshApi) {
+      const deployment = await getDeployment(
+        nosana.value.api,
+        toValue(deploymentId),
+      );
+      sshApi = deployment.ssh;
+    }
+    return sshApi;
+  };
+
   const reload = async () => {
     const request = loads.begin();
     if (!loads.isCurrent(request) || !toValue(enabled)) return;
-    loading.value = true;
+    // Only block the view while there is nothing to show yet.
+    loading.value = !cachedKeys.has(toValue(deploymentId));
     error.value = "";
     try {
-      const deployment = await nosana.value.api.deployments.get(
-        toValue(deploymentId),
-      );
+      const ssh = await getSshApi();
       if (!loads.isCurrent(request)) return;
-      const keys = await deployment.ssh.keys();
+      const keys = await ssh.keys();
       if (!loads.isCurrent(request)) return;
-      sshApi = deployment.ssh;
-      sshPublicKeys.value = [...keys];
+      setSavedKeys(keys);
     } catch (cause) {
       if (loads.isCurrent(request)) {
         error.value =
@@ -94,28 +117,25 @@ export function useDeploymentSshKeys(
 
     draftKeys.value = [...draftKeys.value, ...fresh];
     saveError.value = "";
+    void save();
     return "";
   };
 
   const removeKey = (index: number) => {
     draftKeys.value = draftKeys.value.filter((_, i) => i !== index);
     saveError.value = "";
+    void save();
   };
 
-  const discard = () => {
-    draftKeys.value = [...sshPublicKeys.value];
-    saveError.value = "";
-  };
+  // An edit made while a save is in flight is written once that one lands.
+  let resave = false;
 
   const save = async () => {
-    if (
-      saving.value ||
-      loading.value ||
-      error.value ||
-      !hasChanges.value ||
-      !sshApi ||
-      !toValue(enabled)
-    ) {
+    if (saving.value) {
+      resave = true;
+      return;
+    }
+    if (loading.value || error.value || !hasChanges.value || !toValue(enabled)) {
       return;
     }
     const request = saves.begin();
@@ -125,8 +145,10 @@ export function useDeploymentSshKeys(
     lastResult.value = null;
 
     try {
+      const ssh = await getSshApi();
+      if (!isCurrent()) return;
       const result = await saveDeploymentSshKeys(
-        sshApi,
+        ssh,
         sshPublicKeys.value,
         [...draftKeys.value],
         (progress) => {
@@ -134,7 +156,7 @@ export function useDeploymentSshKeys(
         },
       );
       if (!isCurrent()) return;
-      sshPublicKeys.value = [...result.public_keys];
+      setSavedKeys(result.public_keys);
       lastResult.value = result;
 
       const failed = failedSshJobs(result);
@@ -159,7 +181,13 @@ export function useDeploymentSshKeys(
         " Some changes may have been saved. Review the saved keys before retrying.";
       toast.error(saveError.value);
     } finally {
-      if (isCurrent()) saving.value = false;
+      if (isCurrent()) {
+        saving.value = false;
+        if (resave) {
+          resave = false;
+          void save();
+        }
+      }
     }
   };
 
@@ -176,9 +204,12 @@ export function useDeploymentSshKeys(
     () => {
       loads.cancel();
       saves.cancel();
+      resave = false;
       sshApi = null;
-      sshPublicKeys.value = [];
-      draftKeys.value = [];
+      // Start from the last known keys, if any, while the refresh runs.
+      const known = cachedKeys.get(toValue(deploymentId)) ?? [];
+      sshPublicKeys.value = [...known];
+      draftKeys.value = [...known];
       error.value = "";
       loading.value = false;
       saving.value = false;
@@ -195,14 +226,10 @@ export function useDeploymentSshKeys(
     error,
     reload,
     draftKeys,
-    hasChanges,
-    isSaved,
     addKeys,
     removeKey,
-    discard,
     saving,
     saveError,
     failedJobs,
-    save,
   };
 }
