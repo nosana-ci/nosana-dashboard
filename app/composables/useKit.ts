@@ -125,6 +125,7 @@ export function useKit() {
         apiBase,
         apiKey,
         includeCredentials: isAuthenticated.value,
+        nodeDomain: config.public.nodeDomain as string | undefined,
       });
 
       if (apiConfig) {

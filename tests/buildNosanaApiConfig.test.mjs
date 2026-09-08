@@ -1,23 +1,31 @@
-import test from 'node:test';
-import assert from 'node:assert/strict';
+import test from "node:test";
+import assert from "node:assert/strict";
 
-import { buildNosanaApiConfig } from '../app/utils/buildNosanaApiConfig.js';
+import { buildNosanaApiConfig } from "../app/utils/buildNosanaApiConfig.js";
 
-test('uses apiBase for both dashboard and client-manager SDK endpoints', () => {
+test("uses apiBase for both dashboard and client-manager SDK endpoints", () => {
   const config = buildNosanaApiConfig({
-    apiBase: 'http://localhost:3000',
+    apiBase: "http://localhost:3000",
     apiKey: null,
     includeCredentials: true,
   });
 
   assert.deepEqual(config, {
-    backend_url: 'http://localhost:3000',
-    client_manager_url: 'http://localhost:3000',
+    backend_url: "http://localhost:3000",
+    client_manager_url: "http://localhost:3000",
+    host_manager_url: "http://localhost:3000",
+    deployment_manager_url: "http://localhost:3000",
     include_credentials: true,
   });
 });
 
-test('returns undefined when no api settings are provided', () => {
+test("passes the configured node domain to Kit terminal clients", () => {
+  assert.deepEqual(buildNosanaApiConfig({ nodeDomain: "nodes.test" }), {
+    node_domain: "nodes.test",
+  });
+});
+
+test("returns undefined when no api settings are provided", () => {
   const config = buildNosanaApiConfig({
     apiBase: undefined,
     apiKey: null,

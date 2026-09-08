@@ -334,7 +334,7 @@ import DoneIcon from '@/assets/img/icons/status/done.svg?component';
 import QueuedIcon from '@/assets/img/icons/status/queued.svg?component';
 import FullscreenIcon from '@/assets/img/icons/fullscreen.svg?component';
 import { useStatus } from '~/composables/useStatus';
-import { useDeploymentAuth } from '~/composables/useDeploymentAuth';
+import { useNodeJobResolver } from '~/composables/jobs/useNodeJobResolver';
 
 type EndpointStatus = 'ONLINE' | 'OFFLINE' | 'UNKNOWN';
 
@@ -455,11 +455,12 @@ const hasInitializedGroupExpansion = ref(false);
 const clearedAtByOp = ref<Map<string, number>>(new Map());
 let pollInterval: NodeJS.Timeout | null = null;
 
-const { getAuthHeader } = useDeploymentAuth();
 const route = useRoute();
 const deploymentId = computed<string | undefined>(() => {
   return route.params?.id as string || undefined;
 });
+// Operation controls go to the job's node through Kit, signed as the poster or the deployment.
+const resolveNodeJob = useNodeJobResolver(props.job.address, deploymentId.value);
 
 const jobInfo = computed<LocalJobInfo | null>(() => props.jobInfo ?? null);
 
@@ -617,13 +618,6 @@ const formatTimestamp = (timestamp: number | null | undefined) => {
     minute: '2-digit',
     second: '2-digit',
   });
-};
-
-const getNodeUrl = () => {
-  const config = useRuntimeConfig();
-  const raw = props.job.node;
-  const nodeAddress = typeof raw === 'string' ? raw : raw?.toString?.();
-  return `https://${nodeAddress ?? ''}.${config.public.nodeDomain}`;
 };
 
 // Per-operation results accessors
@@ -962,18 +956,7 @@ const stopOperation = async (op: Operation) => {
   loadingOps.value.add(op.id);
   loadingOps.value = new Set(loadingOps.value);
   try {
-    const jobId = props.job.address;
-    const baseUrl = getNodeUrl();
-    const group = op.group || op.id;
-    const url = `${baseUrl}/job/${jobId}/group/${group}/operation/${op.id}/stop`;
-    const authHeader = await getAuthHeader(jobId);
-    
-    await $fetch(url, {
-      method: 'POST',
-      headers: {
-        authorization: authHeader,
-      },
-    });
+    await (await resolveNodeJob()).stopOperation(op.group || op.id, op.id);
   } catch (err) {
     console.error('Error stopping operation:', err);
   } finally {
@@ -991,18 +974,7 @@ const restartOperation = async (op: Operation) => {
     // This allows getOpLogs to filter out old logs from before the restart
     clearedAtByOp.value.set(op.id, Date.now());
 
-    const jobId = props.job.address;
-    const baseUrl = getNodeUrl();
-    const group = op.group || op.id;
-    const url = `${baseUrl}/job/${jobId}/group/${group}/operation/${op.id}/restart`;
-    const authHeader = await getAuthHeader(jobId);
-    
-    await $fetch(url, {
-      method: 'POST',
-      headers: {
-        authorization: authHeader,
-      },
-    });
+    await (await resolveNodeJob()).restartOperation(op.group || op.id, op.id);
   } catch (err) {
     console.error('Error restarting operation:', err);
   } finally {
@@ -1024,17 +996,7 @@ const stopGroup = async (groupName: string) => {
   loadingGroups.value.add(groupName);
   loadingGroups.value = new Set(loadingGroups.value);
   try {
-    const jobId = props.job.address;
-    const baseUrl = getNodeUrl();
-    const url = `${baseUrl}/job/${jobId}/group/${groupName}/stop`;
-    const authHeader = await getAuthHeader(jobId);
-    
-    await $fetch(url, {
-      method: 'POST',
-      headers: {
-        authorization: authHeader,
-      },
-    });
+    await (await resolveNodeJob()).stopGroup(groupName);
   } catch (err) {
     console.error('Error stopping group:', err);
   } finally {
@@ -1055,17 +1017,7 @@ const restartGroup = async (groupName: string) => {
       clearedAtByOp.value.set(op.id, timestamp);
     }
 
-    const jobId = props.job.address;
-    const baseUrl = getNodeUrl();
-    const url = `${baseUrl}/job/${jobId}/group/${groupName}/restart`;
-    const authHeader = await getAuthHeader(jobId);
-    
-    await $fetch(url, {
-      method: 'POST',
-      headers: {
-        authorization: authHeader,
-      },
-    });
+    await (await resolveNodeJob()).restartGroup(groupName);
   } catch (err) {
     console.error('Error restarting group:', err);
   } finally {

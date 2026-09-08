@@ -1,12 +1,11 @@
-import { EventSourcePolyfill } from "event-source-polyfill";
+import { getDeploymentJobData } from "~/utils/kitJobAccess";
 import { useToast } from "vue-toastification";
 import { useWallet } from "@nosana/solana-vue";
 import type { Job, JobDefinition } from "@nosana/kit";
-import { getJobExposedServices } from "@nosana/kit";
-import type { DeploymentJob as ApiDeploymentJob } from "@nosana/api";
+import type { DeploymentJob as ApiDeploymentJob, NodeJobInfo, NodeStreamSubscription } from "@nosana/api";
 import type { JobInfo, JobViewModel, LiveEndpoints, ResultsSection } from "~/composables/jobs/types";
-import { normalizeEndpoints } from "~/composables/jobs/normalizeEndpoints";
-import { useDeploymentAuth } from "~/composables/useDeploymentAuth";
+import { applyResults, mergeEndpoints, servicesByPort, type PortMeta } from "~/composables/jobs/jobInfoFrame";
+import { useNodeJobResolver } from "~/composables/jobs/useNodeJobResolver";
 
 const DEFAULT_NODE_ADDRESS = "11111111111111111111111111111111";
 
@@ -40,18 +39,15 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
     return null;
   });
 
-  // Use deployment auth composable for clean, reusable auth handling
-  const { getAuthHeader } = useDeploymentAuth();
+  const resolveNodeJob = useNodeJobResolver(jobId, deploymentId);
 
-  let eventSource: EventSourcePolyfill | null = null;
+  let infoStream: NodeStreamSubscription | null = null;
   let currentNodeAddress: string | null = null;
   let hasFetchedFinalInfo = false;
 
   async function fetchDeploymentJob(): Promise<DeploymentJobApiResponse | null> {
     try {
-      const dep = await nosana.value.api.deployments.get(deploymentId);
-      const response = await dep.getJob(jobId);
-      return response as ApiDeploymentJob;
+      return await getDeploymentJobData(nosana.value.api, deploymentId, jobId);
     } catch (e) {
       console.error("Failed to fetch deployment job:", e);
       return null;
@@ -214,144 +210,95 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
 
     if (stateNum === 2 || stateNum === 3) {
       fetchFinalInfoOnce();
-      if (eventSource) {
-        try { eventSource.close(); } catch { }
-        eventSource = null;
-      }
+      infoStream?.close();
+      infoStream = null;
     }
   }
 
+  function nodeAddressOf(): string | null {
+    const raw = job.value?.node as unknown as { toString?: () => string } | string | undefined;
+    const address = typeof raw === "string" ? raw : raw?.toString?.();
+    return address && address !== DEFAULT_NODE_ADDRESS ? address : null;
+  }
+
+  // One frame of the node's job info stream: endpoints, per-op state and results.
+  function applyInfo(frame: NodeJobInfo, metaByPort: PortMeta) {
+    const info = frame as unknown as JobInfo;
+    jobInfo.value = {
+      ...info,
+      jobDefinition: job.value?.jobDefinition ?? info.jobDefinition,
+    } as JobInfo;
+
+    if (job.value && !job.value.jobDefinition && info.jobDefinition) {
+      job.value = { ...job.value, jobDefinition: info.jobDefinition };
+    }
+
+    mergeEndpoints(endpoints, info, jobId, metaByPort);
+
+    const results = (info as unknown as { results?: ResultsSection }).results;
+    if (results && job.value) {
+      const isConfidentialJob = Boolean((job.value.jobDefinition as unknown as { logistics?: unknown })?.logistics);
+      const isPoster = Boolean(activeAddress.value && job.value.project && activeAddress.value === (job.value.project as unknown as { toString?: () => string })?.toString?.());
+      if (!isConfidentialJob || isPoster) applyResults(job.value, results);
+    }
+  }
+
+  // A finished job still reports its final endpoints and results once.
   async function fetchFinalInfoOnce() {
     if (hasFetchedFinalInfo) return;
+    hasFetchedFinalInfo = true;
+    if (!nodeAddressOf()) return;
     try {
-      if (!job.value) return;
-      const config = useRuntimeConfig();
-      const nodeAddress = (job.value.node as unknown as { toString?: () => string })?.toString?.() || (job.value.node as unknown as string);
-      if (!nodeAddress || nodeAddress === DEFAULT_NODE_ADDRESS) { hasFetchedFinalInfo = true; return; }
-      const authHeader = await getAuthHeader(deploymentId);
-      const sseUrl = `https://${nodeAddress}.${config.public.nodeDomain}/job/${jobId}/info`;
-
-      const sdkServices = job.value?.jobDefinition ? getJobExposedServices(job.value.jobDefinition, jobId) : [];
-      const metaByPort = new Map<number, { opId: string; opIndex: number; hasHealthCheck: boolean }>();
-      for (const { port, opId, opIndex, hasHealthCheck } of sdkServices) {
-        metaByPort.set(Number(port), { opId, opIndex, hasHealthCheck });
-      }
-
-      const finalEs = new EventSourcePolyfill(sseUrl, { headers: { Authorization: authHeader } });
-      const closeFinal = () => { try { (finalEs as unknown as EventSource).close?.(); } catch { } hasFetchedFinalInfo = true; };
-
-      const handleOnce = (event: MessageEvent) => {
-        try {
-          const info = JSON.parse(event.data) as JobInfo;
-          jobInfo.value = {
-            ...info,
-            jobDefinition: job.value?.jobDefinition ?? info.jobDefinition,
-          } as JobInfo;
-
-          const normalized = normalizeEndpoints(info, jobId, metaByPort);
-          if (normalized.size > 0) {
-            const newEndpoints = new Map(endpoints.value);
-            for (const [url, endpoint] of normalized.entries()) {
-              newEndpoints.set(url, endpoint);
-            }
-            endpoints.value = newEndpoints;
-          }
-
-          const sseResults = (info as unknown as { results?: ResultsSection }).results;
-          if (sseResults && job.value) {
-            job.value.results = sseResults;
-            job.value.hasResultsRegex = Array.isArray(sseResults.opStates)
-              ? sseResults.opStates.some((op) => (op as { results?: unknown }).results !== undefined)
-              : false;
-          }
-        } catch { }
-        closeFinal();
+      const metaByPort = servicesByPort(job.value?.jobDefinition, jobId);
+      const nodeJob = await resolveNodeJob();
+      let finalStream: NodeStreamSubscription | null = null;
+      const closeFinal = () => {
+        finalStream?.close();
+        finalStream = null;
       };
-
-      try { (finalEs as unknown as EventSource).addEventListener?.("message", handleOnce as EventListener); } catch { }
-      try { (finalEs as unknown as EventSource).addEventListener?.("flow:updated", handleOnce as EventListener); } catch { }
-      finalEs.onerror = () => { closeFinal(); };
-      setTimeout(() => { closeFinal(); }, 2500);
+      finalStream = nodeJob.streamInfo({
+        onData: (frame) => {
+          applyInfo(frame, metaByPort);
+          closeFinal();
+        },
+        onError: closeFinal,
+      });
+      setTimeout(closeFinal, 2500);
     } catch {
-      hasFetchedFinalInfo = true;
+      // The node may already have released a finished job; the API data stands.
     }
   }
 
-  function connectSseIfNeeded() {
-    if (!job.value) return;
-    const config = useRuntimeConfig();
-    const nodeAddress = (job.value.node as unknown as { toString?: () => string })?.toString?.() || (job.value.node as unknown as string);
-    if (!nodeAddress || nodeAddress === DEFAULT_NODE_ADDRESS) {
+  function connectInfoStreamIfNeeded() {
+    const nodeAddress = nodeAddressOf();
+    if (!nodeAddress) {
       loading.value = false;
       return;
     }
-    if (eventSource && currentNodeAddress === nodeAddress) return;
-    if (eventSource) {
-      try { eventSource.close(); } catch { }
-      eventSource = null;
-    }
+    if (infoStream && currentNodeAddress === nodeAddress) return;
+    infoStream?.close();
+    infoStream = null;
     currentNodeAddress = nodeAddress;
-    (async () => {
+
+    void (async () => {
       try {
-        const authHeader = await getAuthHeader(deploymentId);
-        const sseUrl = `https://${nodeAddress}.${config.public.nodeDomain}/job/${jobId}/info`;
-        eventSource = new EventSourcePolyfill(sseUrl, { headers: { Authorization: authHeader } });
-
-        const sdkServices = job.value?.jobDefinition ? getJobExposedServices(job.value.jobDefinition, jobId) : [];
-        const metaByPort = new Map<number, { opId: string; opIndex: number; hasHealthCheck: boolean }>();
-        for (const { port, opId, opIndex, hasHealthCheck } of sdkServices) {
-          metaByPort.set(Number(port), { opId, opIndex, hasHealthCheck });
-        }
-
-        const handleInfo = (event: MessageEvent) => {
-          try {
-            const info = JSON.parse(event.data) as JobInfo;
-            jobInfo.value = {
-              ...info,
-              jobDefinition: job.value?.jobDefinition ?? info.jobDefinition,
-            } as JobInfo;
-
-            if (!job.value?.jobDefinition && info.jobDefinition) {
-              try {
-                job.value = { ...(job.value as JobViewModel), jobDefinition: info.jobDefinition };
-              } catch { }
-            }
-
-            const normalized = normalizeEndpoints(info, jobId, metaByPort);
-            if (normalized.size > 0) {
-              const newEndpoints = new Map(endpoints.value);
-              for (const [url, endpoint] of normalized.entries()) {
-                newEndpoints.set(url, endpoint);
-              }
-              endpoints.value = newEndpoints;
-            }
-
-            const sseResults = (info as unknown as { results?: ResultsSection }).results;
-            if (sseResults && job.value) {
-              const isConfidentialJob = Boolean((job.value.jobDefinition as unknown as { logistics?: unknown })?.logistics);
-              const isPoster = Boolean(activeAddress.value && job.value.project && activeAddress.value === (job.value.project as unknown as { toString?: () => string })?.toString?.());
-              if (!isConfidentialJob || isPoster) {
-                job.value.results = sseResults;
-                job.value.hasResultsRegex = Array.isArray(sseResults.opStates)
-                  ? sseResults.opStates.some((op) => (op as { results?: unknown }).results !== undefined)
-                  : false;
-              }
-            }
+        const metaByPort = servicesByPort(job.value?.jobDefinition, jobId);
+        const nodeJob = await resolveNodeJob();
+        if (currentNodeAddress !== nodeAddress) return;
+        infoStream = nodeJob.streamInfo({
+          onData: (frame) => {
+            applyInfo(frame, metaByPort);
             loading.value = false;
-          } catch (err) {
-            console.error("Failed to parse SSE message:", err);
-          }
-        };
-
-        try { (eventSource as unknown as EventSource).addEventListener?.("message", handleInfo as EventListener); } catch { }
-        try { (eventSource as unknown as EventSource).addEventListener?.("flow:updated", handleInfo as EventListener); } catch { }
-
-        eventSource.onerror = () => {
-          loading.value = false;
-        };
-        eventSource.onopen = () => { loading.value = false; };
+          },
+          onOpen: () => {
+            loading.value = false;
+          },
+          onError: () => {
+            loading.value = false;
+          },
+        });
       } catch (error) {
-        console.error("Failed to create EventSource:", error);
+        console.error("Failed to open the job info stream:", error);
         loading.value = false;
       }
     })();
@@ -363,7 +310,7 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
     if (initial) {
       assignFromApi(initial);
       if (getStateNumber(initial.state) === 1) {
-        connectSseIfNeeded();
+        connectInfoStreamIfNeeded();
       } else {
         loading.value = false;
       }
@@ -373,7 +320,10 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
   }
 
   onMounted(() => { init(); });
-  onBeforeUnmount(() => { if (eventSource) { try { eventSource.close(); } catch { } eventSource = null; } });
+  onBeforeUnmount(() => {
+    infoStream?.close();
+    infoStream = null;
+  });
 
   return {
     job,

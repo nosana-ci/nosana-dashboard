@@ -1,61 +1,42 @@
-import { EventSourcePolyfill, type MessageEvent as PolyfillMessageEvent } from "event-source-polyfill";
+import type { NodeJobApi, NodeStreamSubscription } from "@nosana/api";
+import { useLatestRequest } from "../useLatestRequest.ts";
 import type { TaskStat } from "./types";
 
 export function useStatsStream(
-  baseUrl: string,
-  jobId: string,
-  getAuth: () => Promise<string>,
-  onData: (stat: TaskStat) => void,
+  getJob: () => Promise<NodeJobApi>,
+  onData: (stats: TaskStat | TaskStat[]) => void,
 ) {
-  let sse: EventSourcePolyfill | null = null;
+  let stream: NodeStreamSubscription | null = null;
   let destroyed = false;
+  const attempts = useLatestRequest();
 
   async function start(): Promise<void> {
     stop();
     if (destroyed) return;
-
+    const attempt = attempts.begin();
     try {
-      const auth = await getAuth();
-
-      const url = `${baseUrl}/job/${jobId}/stats/stream?interval=5`;
-      const es = new EventSourcePolyfill(url, {
-        headers: { Authorization: auth },
-      });
-
-      es.onopen = () => {
-        if (destroyed) es.close();
-      };
-
-      es.onmessage = (event: PolyfillMessageEvent) => {
-        if (destroyed) {
-          es.close();
-          return;
-        }
-
-        try {
-          const stat: TaskStat = JSON.parse(event.data);
-          if (stat?.timestamp && stat?.opId) {
-            onData(stat);
-          }
-        } catch {
-          /* ignore non-JSON heartbeats */
-        }
-      };
-
-      es.onerror = () => {
-        stop();
-      };
-
-      sse = es;
+      const job = await getJob();
+      if (!attempts.isCurrent(attempt)) return;
+      stream = job.streamStats(
+        {
+          onData: (stats) => {
+            if (attempts.isCurrent(attempt)) onData(stats);
+          },
+          onError: () => {
+            if (attempts.isCurrent(attempt)) stop();
+          },
+        },
+        { interval: 5 },
+      );
     } catch {
-      /* stream failed — historical data still works */
+      // Historical polling remains available when streaming cannot connect.
     }
   }
 
   function stop(): void {
-    if (sse === null) return;
-    sse.close();
-    sse = null;
+    attempts.cancel();
+    stream?.close();
+    stream = null;
   }
 
   function destroy(): void {

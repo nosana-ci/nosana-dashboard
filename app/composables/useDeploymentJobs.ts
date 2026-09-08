@@ -1,10 +1,10 @@
+import { getDeploymentJobData } from "~/utils/kitJobAccess";
 import type {
   DeploymentJobItem,
   DeploymentEventItem,
   DeploymentStreamEventOf,
 } from "@nosana/api";
 import type { Deployment } from "@nosana/kit";
-import type { DeploymentJob as ApiDeploymentJob } from "@nosana/api";
 import type { ResultsSection } from "~/composables/jobs/types";
 import { useTimestamp } from "@vueuse/core";
 import { useKit } from "~/composables/useKit";
@@ -372,10 +372,7 @@ export function useDeploymentJobs(deps: DeploymentJobsDeps) {
 
     loadingJobResults.value[jobId] = true;
     try {
-      const dep = await nosana.value.api.deployments.get(
-        deps.deployment.value.id,
-      );
-      const jobResponse = (await dep.getJob(jobId)) as ApiDeploymentJob;
+      const jobResponse = await getDeploymentJobData(nosana.value.api, deps.deployment.value.id, jobId);
       const jobResult = jobResponse?.jobResult;
 
       if (!jobResult) {

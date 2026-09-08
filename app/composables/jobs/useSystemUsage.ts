@@ -5,7 +5,7 @@ import {
   onUnmounted,
   triggerRef,
 } from "vue";
-import { useRuntimeConfig } from "#imports";
+import { useNodeJobResolver } from "./useNodeJobResolver";
 import type { TaskStat } from "./types";
 import { STATS_INTERVALS } from "./types";
 import { intervalForRange } from "./helpers/intervalForRange";
@@ -15,15 +15,13 @@ import { useStatsStream } from "./useStatsStream";
 
 export function useSystemUsage(
   jobId: string,
-  node: string,
   opIds: string[],
+  deploymentId?: string,
 ) {
-  const config = useRuntimeConfig();
-  const { getAuthHeader } = useDeploymentAuth();
+  const getJob = useNodeJobResolver(jobId, deploymentId);
 
   const timeframe = ref(STATS_INTERVALS[0] * 60);
   const rawData = shallowRef<Record<string, TaskStat[]>>({});
-  const nodeUrl = `https://${node}.${config.public.nodeDomain}`;
 
   function ingest(stats: TaskStat | TaskStat[]): void {
     const items = Array.isArray(stats) ? stats : [stats];
@@ -31,13 +29,8 @@ export function useSystemUsage(
     triggerRef(rawData);
   }
 
-  const { isLoading, fetch: fetchRange, abort: abortFetch } = useStatsFetch(
-    nodeUrl, jobId, getAuthHeader, (stats) => ingest(stats),
-  );
-
-  const { start: startStream, destroy: destroyStream } = useStatsStream(
-    nodeUrl, jobId, getAuthHeader, (stat) => ingest(stat),
-  );
+  const { isLoading, fetch: fetchRange, abort: abortFetch } = useStatsFetch(getJob, ingest);
+  const { start: startStream, destroy: destroyStream } = useStatsStream(getJob, ingest);
 
   const windowedByOp = computed(() => {
     const latest = opIds.reduce((max, id) => {
