@@ -1,5 +1,5 @@
 import type { NodeJobApi, NodeStreamSubscription } from "@nosana/api";
-import { useLatestRequest } from "../useLatestRequest.ts";
+import { useLatestRequest } from "../useLatestRequest";
 import type { TaskStat } from "./types";
 
 export function useStatsStream(
