@@ -498,7 +498,7 @@ const selectHost = (host: HostInterface) => {
 .gpu-box {
   position: relative;
   background: white;
-  border: 1px solid $grey-lighter;
+  border: 1px solid #e8e8e8;
   border-radius: 4px;
   padding: 1rem;
   cursor: pointer;

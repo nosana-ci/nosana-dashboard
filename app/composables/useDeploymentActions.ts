@@ -37,8 +37,6 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
   const newTimeoutHours = ref<number | null>(null);
   const newSchedule = ref("");
   const duplicateName = ref("");
-  // Empty means "duplicate onto the source deployment's market".
-  const duplicateMarket = ref("");
 
   // Hands a freshly duplicated deployment to the detail page so it renders
   // without refetching (same hand-off the create page uses).
@@ -301,15 +299,10 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
 
     try {
       actionLoading.value = true;
-      const market = duplicateMarket.value.trim();
-      const copy = await deps.deployment.value.duplicate({
-        name,
-        ...(market ? { market } : {}),
-      });
+      const copy = await deps.deployment.value.duplicate({ name });
 
       toast.success(`Deployment duplicated as ${name}`);
       duplicateName.value = "";
-      duplicateMarket.value = "";
 
       preloadedDeployment.value = copy;
       await router.push(`/deployments/${copy.id}`);
@@ -447,7 +440,6 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
     newTimeoutHours,
     newSchedule,
     duplicateName,
-    duplicateMarket,
 
     // Revision state
     switchingRevision,

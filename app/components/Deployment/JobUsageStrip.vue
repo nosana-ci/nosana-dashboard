@@ -25,9 +25,9 @@
 <script setup lang="ts">
 import { useJobUsageSnapshot } from "~/composables/jobs/useJobUsageSnapshot";
 
-const props = defineProps<{ jobId: string; node: string; deploymentId: string }>();
+const props = defineProps<{ jobId: string; node: string }>();
 
-const { connected, usage } = useJobUsageSnapshot(props.jobId, props.deploymentId);
+const { connected, usage } = useJobUsageSnapshot(props.jobId, props.node);
 
 // Static GPU spec (public endpoint) — the node's card + total VRAM.
 const { data: nodeMetrics } = useAPI(`/nodes/${props.node}/metrics`, {
@@ -97,7 +97,7 @@ const fmtMb = (mb: number) =>
   .ml {
     font-size: 0.62rem;
     letter-spacing: 0.05em;
-    color: $text-muted;
+    color: $grey;
     font-weight: 600;
     flex: none;
   }

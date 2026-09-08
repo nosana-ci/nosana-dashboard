@@ -1,5 +1,5 @@
 <template>
-  <div class="jpager">
+  <div v-if="hasPrev || hasNext" class="jpager">
     <button
       class="jpg-btn"
       :disabled="!hasPrev || loading"
@@ -51,14 +51,13 @@ defineEmits<{
 </script>
 
 <style lang="scss" scoped>
-/* Sits alone in the card footer, which owns the padding and decides whether
-   there is anything to page through at all. */
 .jpager {
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 0.5rem;
-  margin-left: auto;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid $grey-lighter;
 }
 
 .jpg-btn {
@@ -88,6 +87,10 @@ defineEmits<{
     width: 15px;
     height: 15px;
   }
+}
+
+html.dark-mode .jpager {
+  border-top-color: rgba($white, 0.08);
 }
 
 html.dark-mode .jpg-btn {

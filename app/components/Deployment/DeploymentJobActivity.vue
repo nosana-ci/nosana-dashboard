@@ -33,29 +33,20 @@
         <span v-else>No active jobs</span>
       </div>
 
-      <template v-else>
-        <div class="da-card">
-          <JobActivityTable
-            :jobs="activeJobs"
-            :deploymentId="deploymentId"
-            :getJobStateNumber="getJobStateNumber"
-            @open="$emit('open', $event)"
-            @viewLogs="$emit('viewLogs', $event)"
-            @openSsh="$emit('openSsh', $event)"
-            @openRevision="$emit('openRevision', $event)"
-          />
-          <div v-if="activeHasPrev || activeHasNext" class="da-foot">
-            <JobActivityPager
-              :hasPrev="activeHasPrev"
-              :hasNext="activeHasNext"
-              :loading="activeLoading"
-              @prev="$emit('active:prev')"
-              @next="$emit('active:next')"
-            />
-          </div>
-        </div>
-        <JobStatusKey class="da-key" :states="statesIn(activeJobs)" />
-      </template>
+      <div v-else class="da-card">
+        <JobActivityTable
+          :jobs="activeJobs"
+          :deploymentId="deploymentId"
+          :getJobStateNumber="getJobStateNumber"
+        />
+        <JobActivityPager
+          :hasPrev="activeHasPrev"
+          :hasNext="activeHasNext"
+          :loading="activeLoading"
+          @prev="$emit('active:prev')"
+          @next="$emit('active:next')"
+        />
+      </div>
     </div>
 
     <!-- Historical Jobs -->
@@ -66,34 +57,29 @@
       >
         Loading history…
       </div>
-      <div v-else-if="historyJobs.length === 0" class="da-card da-empty">
+      <div
+        v-else-if="historyJobs.length === 0"
+        class="da-card da-empty"
+      >
         No completed jobs yet
       </div>
 
-      <template v-else>
-        <div class="da-card">
-          <JobActivityTable
-            :jobs="historyJobs"
-            :deploymentId="deploymentId"
-            :getJobStateNumber="getJobStateNumber"
-            :getJobDuration="getJobDuration"
-            :showDuration="true"
-            @open="$emit('open', $event)"
-            @viewLogs="$emit('viewLogs', $event)"
-            @openRevision="$emit('openRevision', $event)"
-          />
-          <div v-if="historyHasPrev || historyHasNext" class="da-foot">
-            <JobActivityPager
-              :hasPrev="historyHasPrev"
-              :hasNext="historyHasNext"
-              :loading="historyLoading"
-              @prev="$emit('history:prev')"
-              @next="$emit('history:next')"
-            />
-          </div>
-        </div>
-        <JobStatusKey class="da-key" :states="statesIn(historyJobs)" />
-      </template>
+      <div v-else class="da-card">
+        <JobActivityTable
+          :jobs="historyJobs"
+          :deploymentId="deploymentId"
+          :getJobStateNumber="getJobStateNumber"
+          :getJobDuration="getJobDuration"
+          :showDuration="true"
+        />
+        <JobActivityPager
+          :hasPrev="historyHasPrev"
+          :hasNext="historyHasNext"
+          :loading="historyLoading"
+          @prev="$emit('history:prev')"
+          @next="$emit('history:next')"
+        />
+      </div>
     </div>
   </div>
 </template>
@@ -102,9 +88,8 @@
 import type { DeploymentJobItem } from "@nosana/api";
 import JobActivityTable from "~/components/Deployment/JobActivityTable.vue";
 import JobActivityPager from "~/components/Deployment/JobActivityPager.vue";
-import JobStatusKey from "~/components/Deployment/JobStatusKey.vue";
 
-const props = defineProps<{
+defineProps<{
   deploymentId: string;
   deploymentStatus: string;
   jobActivityTab: string;
@@ -120,16 +105,8 @@ const props = defineProps<{
   getJobDuration: (jobId: string) => number | null;
 }>();
 
-// The states actually present in a list, so the key only explains what is shown.
-const statesIn = (jobs: DeploymentJobItem[]) =>
-  [...new Set(jobs.map(props.getJobStateNumber))].sort((a, b) => a - b);
-
 defineEmits<{
   "update:jobActivityTab": [value: string];
-  open: [jobId: string];
-  viewLogs: [jobId: string];
-  openSsh: [jobId: string];
-  openRevision: [revision: number];
   "active:prev": [];
   "active:next": [];
   "history:prev": [];
@@ -150,37 +127,18 @@ defineEmits<{
   background: $white;
   border: 1px solid $grey-lighter;
   border-radius: 14px;
-  box-shadow: $panel-shadow;
   overflow: hidden;
-}
-
-.da-foot {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  padding: 0.7rem 1.1rem;
-  border-top: 1px solid $grey-lighter;
-}
-
-/* The status key sits outside the card, on the page background, inset to the
-   card's own row padding. */
-.da-key {
-  padding: 0.7rem 1.1rem 0;
 }
 
 .da-empty {
   padding: 2.75rem 1rem;
   text-align: center;
-  color: $text-muted;
+  color: $grey;
   font-size: 0.9rem;
 }
 
 html.dark-mode .da-card {
   background: $black-ter;
   border-color: rgba($white, 0.08);
-}
-
-html.dark-mode .da-foot {
-  border-top-color: rgba($white, 0.08);
 }
 </style>

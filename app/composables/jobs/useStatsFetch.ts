@@ -1,40 +1,45 @@
 import { ref } from "vue";
-import type { NodeJobApi } from "@nosana/api";
-import { useLatestRequest } from "../useLatestRequest";
 import type { TaskStat, StatsInterval } from "./types";
 
 export function useStatsFetch(
-  getJob: () => Promise<NodeJobApi>,
+  baseUrl: string,
+  jobId: string,
+  getAuth: () => Promise<string>,
   onData: (stats: TaskStat[]) => void,
 ) {
   const isLoading = ref(false);
-  const requests = useLatestRequest();
+  let abortController: AbortController | null = null;
 
-  async function fetchHandler(
-    interval: StatsInterval,
-    seconds: number,
-  ): Promise<void> {
-    const request = requests.begin();
+  async function fetchHandler(interval: StatsInterval, seconds: number): Promise<void> {
+    abort(true);
     isLoading.value = true;
 
     const now = Date.now();
     const start = now - seconds * 1000;
 
     try {
-      const job = await getJob();
-      if (!requests.isCurrent(request)) return;
-      const stats = await job.stats({ interval, start, end: now });
-      if (requests.isCurrent(request)) onData(stats);
-    } catch {
-      // A failed range leaves the previously loaded data in place.
+      const auth = await getAuth();
+      const url = `${baseUrl}/job/${jobId}/stats?interval=${interval}&start=${start}&end=${now}`;
+      const res = await fetch(url, {
+        headers: { authorization: auth },
+        signal: abortController!.signal,
+      });
+
+      if (!res.ok) return;
+
+      const stats: TaskStat[] = await res.json();
+      onData(stats);
+    } catch (e: unknown) {
+      if (e instanceof DOMException && e.name === "AbortError") return;
     } finally {
-      if (requests.isCurrent(request)) isLoading.value = false;
+      abortController = null;
+      isLoading.value = false;
     }
   }
 
-  function abort(): void {
-    requests.cancel();
-    isLoading.value = false;
+  function abort(refresh?: boolean): void {
+    if (abortController) abortController.abort();
+    abortController = refresh ? new AbortController() : null;
   }
 
   return { isLoading, fetch: fetchHandler, abort };

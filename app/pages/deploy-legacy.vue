@@ -1676,7 +1676,7 @@ const handleAdvancedMarketSelection = (marketInfo: any) => {
 .nav-tabs-item {
   border-top-left-radius: 6px;
   border-top-right-radius: 6px;
-  color: $text-muted;
+  color: $grey;
   cursor: pointer;
   border: none;
   border-bottom: 0px;

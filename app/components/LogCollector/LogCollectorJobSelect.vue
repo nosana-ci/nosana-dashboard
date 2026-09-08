@@ -160,7 +160,7 @@ function isStateSelected(state: JobState): boolean {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: $text-muted;
+  color: $text-light;
   border-bottom: 1px solid $border;
   display: flex;
   gap: 0.3rem;
@@ -178,7 +178,7 @@ function isStateSelected(state: JobState): boolean {
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
-  color: $text-muted;
+  color: $text-light;
   transition: all 0.15s;
 
   &:hover {
@@ -246,7 +246,7 @@ function isStateSelected(state: JobState): boolean {
     background: rgba($success, 0.12);
   }
   &.dot-completed {
-    color: $text-muted;
+    color: $grey;
     background: rgba($grey, 0.1);
   }
   &.dot-queued {
@@ -269,7 +269,7 @@ function isStateSelected(state: JobState): boolean {
 }
 .job-detail-label {
   font-size: 0.85rem;
-  color: $text-muted;
+  color: $text-light;
   flex-shrink: 0;
 }
 .job-detail-value {

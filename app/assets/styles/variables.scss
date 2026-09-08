@@ -13,23 +13,14 @@ $custom-colors: (
 );
 
 $text: #000;
-$text-light: hsl(220, 10%, 44%);
-// Muted body text and icons. A CSS variable rather than a plain Sass colour
-// because the two themes genuinely need different values: the light theme
-// wants 41% to clear AA on the page canvas, which is only 2.6:1 on a dark
-// card. Components used to hand-write `html.dark-mode ... { color: $grey-light }`
-// for this and most of them forgot.
-$text-muted: var(--app-text-muted, #{$grey});
+$text-light: #999999;
 $text-dark: #666666;
 $body-size: 14px !default;
 $link: $secondary;
 $link-hover: color.adjust($link, $lightness: -10%);
 $title-family: 'Space Grotesk', sans-serif;
 $subtitle-family: 'Space Grotesk', sans-serif;
-// The app canvas sits a clear step below the white panels that sit on it —
-// at $white-bis the two were within 2% lightness of each other and every
-// card, table and sidebar lost its edge.
-$body-background-color: hsl(220, 24%, 93.5%);
+$body-background-color: $white-bis;
 $body-background-color-dark: #181818;
 
 
@@ -59,10 +50,6 @@ $menu-item-hover-background-color: $grey-lightest;
 $radius-small: 4px;
 
 $box-shadow: none;
-// Every white panel that sits on the app canvas gets the same hairline lift,
-// so a page of stacked cards reads as layers rather than as one flat sheet.
-// Tinted to match the neutral ramp instead of a pure black shadow.
-$panel-shadow: 0 1px 2px rgba(hsl(220, 30%, 12%), 0.06);
 $box-padding: 1.6rem;
 $button-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 
@@ -74,27 +61,9 @@ $input-icon-active-color: $secondary;
 // $input-background-color: $white;
 // $input-border-color: $white-ter;
 $input-shadow: none;
-
-// Dialog chrome: Bulma's stock 2rem on every edge makes even a one-field
-// dialog look oversized. Head and foot share the head padding variable.
-$modal-card-head-padding: 1.15rem 1.5rem;
-$modal-card-body-padding: 1.5rem;
-// Text fields sit next to 8-12px rounded panels everywhere in the app; the
-// stock 6px corners read as a leftover from a different design.
-$input-radius: 10px;
-// Taller than Bulma's shared $control-height so text fields get more room
-// without changing every button on the page.
-$input-control-height: 2.75em;
 $input-focus-box-shadow-color: rgba($secondary, 0.25);
 $label-weight: 400;
 $label-color: $grey;
-
-// Always-dark code surfaces — the JSON editor, the log viewers and the web
-// terminal. A blue-tinted near-black so they read as one family in either
-// page theme.
-$code-surface: #0d1117;
-$code-surface-panel: #161b22;
-$code-surface-border: #21262d;
 
 $code: $danger;
 $code-background: $background;

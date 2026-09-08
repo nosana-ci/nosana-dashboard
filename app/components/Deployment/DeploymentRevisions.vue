@@ -4,13 +4,9 @@
     <div v-if="revisions && revisions.length > 0" class="rev-card">
       <div
         v-for="revision in revisions"
-        :id="`revision-${revision.revision}`"
         :key="revision.revision"
         class="revrow"
-        :class="{
-          'is-active': revision.revision === activeRevision,
-          'is-focused': revision.revision === focusedRevision,
-        }"
+        :class="{ 'is-active': revision.revision === activeRevision }"
       >
         <span class="rnum">{{ revision.revision }}</span>
         <div class="rmain">
@@ -64,8 +60,6 @@ defineProps<{
   activeRevision: number | undefined;
   switchingRevision: number | null;
   actionLoading: boolean;
-  // Briefly highlighted after a job row's revision chip jumps here.
-  focusedRevision?: number | null;
 }>();
 
 defineEmits<{
@@ -81,7 +75,6 @@ defineEmits<{
   background: $white;
   border: 1px solid $grey-lighter;
   border-radius: 14px;
-  box-shadow: $panel-shadow;
   overflow: hidden;
 }
 
@@ -108,27 +101,12 @@ defineEmits<{
   }
 }
 
-/* Fades out after a job row's revision chip jumps here. */
-.revrow.is-focused {
-  animation: revflash 2.5s ease-out;
-}
-
-@keyframes revflash {
-  0%,
-  60% {
-    background: rgba($secondary, 0.18);
-  }
-  100% {
-    background: transparent;
-  }
-}
-
 .rnum {
   width: 34px;
   height: 34px;
   border-radius: 10px;
   background: $white-ter;
-  color: $text-muted;
+  color: $grey;
   font-family: monospace;
   font-weight: 600;
   font-size: 13px;
@@ -159,7 +137,7 @@ defineEmits<{
 
 .rdate {
   font-size: 12.5px;
-  color: $text-muted;
+  color: $grey;
   margin-top: 2px;
   font-variant-numeric: tabular-nums;
 }

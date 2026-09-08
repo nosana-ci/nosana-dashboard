@@ -504,7 +504,7 @@ const formatDate = (dateStr: string) =>
 <style scoped>
 .saved-card {
   padding: 0.75rem 1rem;
-  border: 1px solid $grey-lighter;
+  border: 1px solid #dbdbdb;
   border-radius: 8px;
 }
 
@@ -558,7 +558,7 @@ const formatDate = (dateStr: string) =>
 }
 
 .stripe-card-element {
-  border: 1px solid $grey-lighter;
+  border: 1px solid #dbdbdb;
   border-radius: 8px;
   padding: 12px 10px;
   transition: border-color 0.15s ease;

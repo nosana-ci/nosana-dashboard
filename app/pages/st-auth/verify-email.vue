@@ -407,7 +407,7 @@ const handleVerifyEmail = async () => {
 
 .login-subtitle {
   font-size: 1rem;
-  color: $text-muted;
+  color: $grey;
   margin-bottom: 2rem;
   line-height: 1.5;
 
@@ -445,7 +445,7 @@ const handleVerifyEmail = async () => {
   }
 
   &::placeholder {
-    color: $text-muted;
+    color: $grey;
     letter-spacing: normal;
   }
 
@@ -470,7 +470,7 @@ const handleVerifyEmail = async () => {
 
 .form-toggle {
   font-size: 0.875rem;
-  color: $text-muted;
+  color: $grey;
 
   a {
     color: $primary;
@@ -569,7 +569,7 @@ const handleVerifyEmail = async () => {
 
 .success-subtext {
   font-size: 1rem;
-  color: $text-muted;
+  color: $grey;
   margin-bottom: 1.5rem;
   line-height: 1.5;
 

@@ -695,7 +695,7 @@ defineExpose({
 
 .dropdown-arrow {
   transition: transform 0.2s ease;
-  color: $text-muted;
+  color: $grey;
 }
 
 .dropdown-arrow.is-flipped {
@@ -770,7 +770,7 @@ defineExpose({
   .auth-icon {
     width: 20px;
     height: 20px;
-    color: $text-muted;
+    color: $grey;
   }
 }
 
@@ -859,14 +859,14 @@ defineExpose({
 
 .dropdown-icon {
   flex-shrink: 0;
-  color: $text-muted;
+  color: $grey;
   width: 17px;
   height: 17px;
   transition: color 0.15s ease;
 }
 
 .logout-item .dropdown-icon {
-  color: $text-muted;
+  color: $grey;
 }
 
 .dropdown-divider {
@@ -907,7 +907,7 @@ defineExpose({
   border-radius: 7px;
   background: none;
   cursor: pointer;
-  color: $text-muted;
+  color: $grey;
   transition:
     background-color 0.15s ease,
     color 0.15s ease,

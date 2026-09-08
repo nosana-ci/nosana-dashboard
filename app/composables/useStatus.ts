@@ -43,8 +43,8 @@ export function getStatusClass(status: string | number): string {
   if (typeof status === 'number') {
     switch (status) {
       case 0: return 'is-warning'  // QUEUED - Orange
-      case 1: return 'is-success'  // RUNNING - Green
-      case 2: return 'is-info'     // COMPLETED - Blue
+      case 1: return 'is-info'     // RUNNING - Blue  
+      case 2: return 'is-success'  // COMPLETED - Green
       case 3: return 'is-dark'     // STOPPED - Gray
       default: return 'is-light'   // UNKNOWN
     }
@@ -53,16 +53,13 @@ export function getStatusClass(status: string | number): string {
   // Handle string statuses
   const statusUpper = status?.toString().toUpperCase()
   switch (statusUpper) {
-    // Finished states - Blue
+    // Success states - Green
     case 'SUCCESS':
     case 'COMPLETED':
-      return 'is-info'
-    
-    // Running - Green: green means it is up and serving right now
-    case 'RUNNING':
       return 'is-success'
-
-    // Pending - Blue
+    
+    // Running states - Blue
+    case 'RUNNING':
     case 'PENDING':
       return 'is-info'
     
@@ -91,13 +88,13 @@ export function getStatusClass(status: string | number): string {
     
     // Revision states
     case 'ACTIVE':
-      return 'is-success'  // Green for active (like running)
+      return 'is-info'     // Blue for active (like running)
     case 'INACTIVE':
       return 'is-dark'     // Black for inactive
     
     // Endpoint states
     case 'ONLINE':
-      return 'is-success'  // Green: an endpoint that answers is serving, like running
+      return 'is-info'     // Blue: an endpoint that answers is serving, like running
     case 'OFFLINE':
       return 'is-dark'     // Gray for offline
     case 'UNKNOWN':

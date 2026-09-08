@@ -35,7 +35,6 @@ import { ref, watch, computed } from 'vue';
 import JobLogsView from './Tabs/SystemLogs.vue';
 import { useJob } from '~/composables/jobs/useJob';
 import { useFLogs } from '~/composables/jobs/useFLogs';
-import { useNodeJobResolver } from '~/composables/jobs/useNodeJobResolver';
 import { useWallet } from '@nosana/solana-vue';
 
 interface Props {
@@ -54,8 +53,11 @@ onMounted(() => {
   pausePolling();
 });
 
-// The job on its node through Kit, signed as the deployment when there is one.
-const resolveNodeJob = useNodeJobResolver(props.jobId, props.deploymentId);
+// Authentication setup using deployment auth composable
+const { getAuthHeader } = useDeploymentAuth();
+const getAuth = async () => {
+  return await getAuthHeader(props.deploymentId);
+};
 
 // Check if user is job poster
 const { isAuthenticated, userData } = useSuperTokens();
@@ -95,7 +97,12 @@ const {
   connectionEstablished: logConnectionEstablished,
   progressBars: flogProgressBarsRef,
   resourceProgressBars: flogResourceBarsRef,
-} = useFLogs(props.jobId, shouldConnect, { resolveNodeJob });
+} = useFLogs(
+  props.jobId,
+  computed(() => job.value?.node),
+  shouldConnect,
+  getAuth
+);
 
 // Map to expected interface for JobLogsView
 const activeLogs = flogActiveLogs;

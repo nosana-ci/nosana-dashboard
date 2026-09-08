@@ -50,7 +50,7 @@ function isActive(type: LogEntryType): boolean {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: $text-muted;
+  color: $text-light;
   border-bottom: 1px solid $border;
 }
 
@@ -105,7 +105,7 @@ function isActive(type: LogEntryType): boolean {
 .option-desc {
   flex: 1;
   font-size: 0.85rem;
-  color: $text-muted;
+  color: $text-light;
 }
 
 .level-select-footer {

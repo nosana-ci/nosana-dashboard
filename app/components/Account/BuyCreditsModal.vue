@@ -14,7 +14,7 @@
             {{ purchasedSublabel }}
           </p>
           <button
-            class="button is-success is-fullwidth is-medium"
+            class="button is-dark is-fullwidth is-medium"
             style="border-radius: 8px"
             @click="closeModal"
           >
@@ -173,7 +173,7 @@
             </div>
 
             <button
-              class="button is-success is-fullwidth is-medium"
+              class="button is-dark is-fullwidth is-medium"
               :disabled="!canSubmit || purchasing"
               :class="{ 'is-loading': purchasing }"
               @click="handlePurchase"
@@ -326,7 +326,7 @@
               </p>
 
               <button
-                class="button is-success is-fullwidth is-medium"
+                class="button is-dark is-fullwidth is-medium"
                 :disabled="!cryptoCanSubmit || cryptoPurchasing"
                 :class="{ 'is-loading': cryptoPurchasing }"
                 @click="handleCryptoPurchase"

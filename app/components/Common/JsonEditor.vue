@@ -200,12 +200,12 @@ button[class*="repair"],
 
 /* --- DARK --- */
 .json-editor.jse-theme-dark {
-  --jse-background-color: #{$code-surface};
-  --jse-panel-background: #{$code-surface-panel};
-  --jse-panel-border: #{$code-surface-border};
+  --jse-background-color: #0d1117;
+  --jse-panel-background: #161b22;
+  --jse-panel-border: #21262d;
   --jse-panel-color: #c9d1d9;
   --jse-panel-color-readonly: #6e7681;
-  --jse-main-border: #{$code-surface-border};
+  --jse-main-border: #21262d;
   --jse-text-color: #c9d1d9;
   --jse-value-color: #c9d1d9;
   /* One Dark syntax palette on the logs' dark ground — warm, distinct hues that
@@ -220,8 +220,8 @@ button[class*="repair"],
   --jse-selection-background-color: rgba(88, 166, 255, 0.4);
   --jse-selection-background-inactive-color: rgba(88, 166, 255, 0.24);
   --jse-active-line-background-color: rgba(255, 255, 255, 0.03);
-  --jse-input-background: #{$code-surface-panel};
-  border: 1px solid $code-surface-border;
+  --jse-input-background: #161b22;
+  border: 1px solid #21262d;
 }
 /* Paint the dark background on the editor container only — NOT on .cm-content.
    CodeMirror draws the text selection in a layer at z-index -2 (behind the
@@ -231,7 +231,7 @@ button[class*="repair"],
 .json-editor.jse-theme-dark .jse-text-mode,
 .json-editor.jse-theme-dark .cm-editor,
 .json-editor.jse-theme-dark .cm-scroller {
-  background: $code-surface;
+  background: #0d1117;
 }
 .json-editor.jse-theme-dark .cm-content {
   background: transparent;

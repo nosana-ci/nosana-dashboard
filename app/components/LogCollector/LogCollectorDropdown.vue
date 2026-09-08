@@ -3,8 +3,8 @@
     <div class="dropdown-trigger">
       <button class="dropdown-btn" @click="open = !open">
         <span class="dropdown-btn-label">{{ label }}</span>
-        <span class="icon is-small dropdown-btn-chevron">
-          <ChevronDownIcon aria-hidden="true" />
+        <span class="icon is-small">
+          <i class="fas fa-angle-down"></i>
         </span>
       </button>
     </div>
@@ -17,8 +17,6 @@
 </template>
 
 <script setup lang="ts">
-import ChevronDownIcon from "@/assets/img/icons/chevron-down.svg?component";
-
 defineProps<{
   label: string;
   menuClass?: string;
@@ -66,11 +64,6 @@ defineExpose({ open });
 
 .dropdown-btn-label {
   font-weight: 500;
-}
-
-.dropdown-btn-chevron svg {
-  width: 12px;
-  height: 12px;
 }
 
 html.dark-mode {
