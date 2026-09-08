@@ -41,14 +41,18 @@
           @open="$emit('open', $event)"
           @viewLogs="$emit('viewLogs', $event)"
           @openSsh="$emit('openSsh', $event)"
+          @openRevision="$emit('openRevision', $event)"
         />
-        <JobActivityPager
-          :hasPrev="activeHasPrev"
-          :hasNext="activeHasNext"
-          :loading="activeLoading"
-          @prev="$emit('active:prev')"
-          @next="$emit('active:next')"
-        />
+        <div class="da-foot">
+          <JobStatusKey :states="statesIn(activeJobs)" />
+          <JobActivityPager
+            :hasPrev="activeHasPrev"
+            :hasNext="activeHasNext"
+            :loading="activeLoading"
+            @prev="$emit('active:prev')"
+            @next="$emit('active:next')"
+          />
+        </div>
       </div>
     </div>
 
@@ -73,14 +77,18 @@
           :showDuration="true"
           @open="$emit('open', $event)"
           @viewLogs="$emit('viewLogs', $event)"
+          @openRevision="$emit('openRevision', $event)"
         />
-        <JobActivityPager
-          :hasPrev="historyHasPrev"
-          :hasNext="historyHasNext"
-          :loading="historyLoading"
-          @prev="$emit('history:prev')"
-          @next="$emit('history:next')"
-        />
+        <div class="da-foot">
+          <JobStatusKey :states="statesIn(historyJobs)" />
+          <JobActivityPager
+            :hasPrev="historyHasPrev"
+            :hasNext="historyHasNext"
+            :loading="historyLoading"
+            @prev="$emit('history:prev')"
+            @next="$emit('history:next')"
+          />
+        </div>
       </div>
     </div>
   </div>
@@ -90,8 +98,9 @@
 import type { DeploymentJobItem } from "@nosana/api";
 import JobActivityTable from "~/components/Deployment/JobActivityTable.vue";
 import JobActivityPager from "~/components/Deployment/JobActivityPager.vue";
+import JobStatusKey from "~/components/Deployment/JobStatusKey.vue";
 
-defineProps<{
+const props = defineProps<{
   deploymentId: string;
   deploymentStatus: string;
   jobActivityTab: string;
@@ -107,11 +116,16 @@ defineProps<{
   getJobDuration: (jobId: string) => number | null;
 }>();
 
+// The states actually present in a list, so the key only explains what is shown.
+const statesIn = (jobs: DeploymentJobItem[]) =>
+  [...new Set(jobs.map(props.getJobStateNumber))].sort((a, b) => a - b);
+
 defineEmits<{
   "update:jobActivityTab": [value: string];
   open: [jobId: string];
   viewLogs: [jobId: string];
   openSsh: [jobId: string];
+  openRevision: [revision: number];
   "active:prev": [];
   "active:next": [];
   "history:prev": [];
@@ -135,6 +149,15 @@ defineEmits<{
   overflow: hidden;
 }
 
+.da-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.7rem 1.1rem;
+  border-top: 1px solid $grey-lighter;
+}
+
 .da-empty {
   padding: 2.75rem 1rem;
   text-align: center;
@@ -145,5 +168,9 @@ defineEmits<{
 html.dark-mode .da-card {
   background: $black-ter;
   border-color: rgba($white, 0.08);
+}
+
+html.dark-mode .da-foot {
+  border-top-color: rgba($white, 0.08);
 }
 </style>

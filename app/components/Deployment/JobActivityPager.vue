@@ -51,13 +51,13 @@ defineEmits<{
 </script>
 
 <style lang="scss" scoped>
+/* Sits in the card footer next to the status key, which owns the padding. */
 .jpager {
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 0.5rem;
-  padding: 0.75rem 1rem;
-  border-top: 1px solid $grey-lighter;
+  margin-left: auto;
 }
 
 .jpg-btn {
@@ -87,10 +87,6 @@ defineEmits<{
     width: 15px;
     height: 15px;
   }
-}
-
-html.dark-mode .jpager {
-  border-top-color: rgba($white, 0.08);
 }
 
 html.dark-mode .jpg-btn {

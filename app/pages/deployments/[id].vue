@@ -78,6 +78,7 @@
                     @open="openJobPanel($event)"
                     @viewLogs="openJobPanel($event, 'logs')"
                     @openSsh="openJobPanel($event, 'containers', '*')"
+                    @openRevision="openRevision($event)"
                     @active:prev="activePrev"
                     @active:next="activeNext"
                     @history:prev="historyPrev"
@@ -123,6 +124,7 @@
               <DeploymentRevisions
                 :revisions="sortedRevisions"
                 :activeRevision="deployment.active_revision"
+                :focusedRevision="focusedRevision"
                 :switchingRevision="switchingRevision"
                 :actionLoading="actionLoading"
                 @switchToRevision="switchToRevision"
@@ -689,6 +691,21 @@ const switchTab = (tab: string) => {
       tab: tab === "overview" ? undefined : tab,
     },
   });
+};
+
+// A job row's revision chip jumps to that revision under Configuration.
+const focusedRevision = ref<number | null>(null);
+const openRevision = (revision: number) => {
+  switchTab("configuration");
+  focusedRevision.value = revision;
+  nextTick(() => {
+    document
+      .getElementById(`revision-${revision}`)
+      ?.scrollIntoView({ behavior: "smooth", block: "center" });
+  });
+  setTimeout(() => {
+    if (focusedRevision.value === revision) focusedRevision.value = null;
+  }, 2500);
 };
 
 // A link elsewhere on the page can change ?tab / ?job without remounting the
