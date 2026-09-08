@@ -1,5 +1,10 @@
-export function buildNosanaApiConfig({ apiBase, apiKey, includeCredentials }) {
-  if (!apiBase && !apiKey && !includeCredentials) {
+export function buildNosanaApiConfig({
+  apiBase,
+  apiKey,
+  includeCredentials,
+  nodeDomain,
+}) {
+  if (!apiBase && !apiKey && !includeCredentials && !nodeDomain) {
     return undefined;
   }
 
@@ -18,6 +23,10 @@ export function buildNosanaApiConfig({ apiBase, apiKey, includeCredentials }) {
 
   if (includeCredentials) {
     config.include_credentials = true;
+  }
+
+  if (nodeDomain) {
+    config.node_domain = nodeDomain;
   }
 
   return config;

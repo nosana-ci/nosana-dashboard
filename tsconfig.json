@@ -1,4 +1,9 @@
 {
   // https://nuxt.com/docs/guide/concepts/typescript
-  "extends": "./.nuxt/tsconfig.json"
+  "extends": "./.nuxt/tsconfig.json",
+  "compilerOptions": {
+    // Composables covered by `node --test` import each other with explicit
+    // .ts extensions so Node can resolve them without a bundler.
+    "allowImportingTsExtensions": true
+  }
 }

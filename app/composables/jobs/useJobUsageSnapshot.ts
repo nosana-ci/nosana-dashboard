@@ -1,5 +1,5 @@
 import { ref, shallowRef, computed, onUnmounted } from "vue";
-import { useRuntimeConfig } from "#imports";
+import { useNodeJobResolver } from "./useNodeJobResolver";
 import type { TaskStat } from "./types";
 import { useStatsFetch } from "./useStatsFetch";
 import { useStatsStream } from "./useStatsStream";
@@ -39,10 +39,8 @@ function useSharedClock() {
  * while fresh data is arriving — so the caller can hide the usage bars until the
  * node is actually reporting.
  */
-export function useJobUsageSnapshot(jobId: string, node: string) {
-  const config = useRuntimeConfig();
-  const { getAuthHeader } = useDeploymentAuth();
-  const nodeUrl = `https://${node}.${config.public.nodeDomain}`;
+export function useJobUsageSnapshot(jobId: string, deploymentId: string) {
+  const getJob = useNodeJobResolver(jobId, deploymentId);
 
   const latestByOp = shallowRef<Record<string, TaskStat>>({});
   const lastTs = ref(0);
@@ -67,19 +65,8 @@ export function useJobUsageSnapshot(jobId: string, node: string) {
     }
   }
 
-  const { fetch: fetchRecent, abort } = useStatsFetch(
-    nodeUrl,
-    jobId,
-    getAuthHeader,
-    (stats) => ingest(stats),
-  );
-
-  const { start: startStream, destroy: destroyStream } = useStatsStream(
-    nodeUrl,
-    jobId,
-    getAuthHeader,
-    (stat) => ingest(stat),
-  );
+  const { fetch: fetchRecent, abort } = useStatsFetch(getJob, ingest);
+  const { start: startStream, destroy: destroyStream } = useStatsStream(getJob, ingest);
 
   let poll: ReturnType<typeof setInterval> | null = null;
 

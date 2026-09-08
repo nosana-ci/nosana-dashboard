@@ -56,6 +56,7 @@
       <JobUsageStrip
         v-if="!showDuration && getJobStateNumber(job) === 1 && hasNode(job)"
         :jobId="job.job"
+        :deployment-id="deploymentId"
         :node="(job.node as string)"
       />
     </NuxtLink>

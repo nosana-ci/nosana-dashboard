@@ -25,9 +25,9 @@
 <script setup lang="ts">
 import { useJobUsageSnapshot } from "~/composables/jobs/useJobUsageSnapshot";
 
-const props = defineProps<{ jobId: string; node: string }>();
+const props = defineProps<{ jobId: string; node: string; deploymentId: string }>();
 
-const { connected, usage } = useJobUsageSnapshot(props.jobId, props.node);
+const { connected, usage } = useJobUsageSnapshot(props.jobId, props.deploymentId);
 
 // Static GPU spec (public endpoint) — the node's card + total VRAM.
 const { data: nodeMetrics } = useAPI(`/nodes/${props.node}/metrics`, {

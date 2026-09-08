@@ -71,14 +71,14 @@ import TimeSeriesChart from "./TimeSeriesChart.vue";
 
 const props = defineProps<{
   jobAddress: string;
-  node: string;
   opIds: string[];
+  deploymentId?: string;
 }>();
 
 const { windowedByOp, isLoading, timeframe, setTimeframe } = useSystemUsage(
   props.jobAddress,
-  props.node,
   props.opIds,
+  props.deploymentId,
 );
 
 const cpuData = computed(() => {

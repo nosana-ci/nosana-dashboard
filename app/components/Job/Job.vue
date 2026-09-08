@@ -216,8 +216,9 @@
           "
         >
           <SystemUsageCharts
+            :key="`${props.deploymentId || ''}-${props.job.address}`"
             :jobAddress="props.job.address"
-            :node="props.job.node"
+            :deployment-id="props.deploymentId ?? undefined"
             :opIds="props.job.jobDefinition.ops.map((op) => op.id)"
           />
         </div>
@@ -358,6 +359,7 @@ import {
 
 import LogSubscription from "./LogSubscription.vue";
 import { useFLogs } from "~/composables/jobs/useFLogs";
+import { useNodeJobResolver } from "~/composables/jobs/useNodeJobResolver";
 import { isCvmMarket } from "~/utils/cvm";
 import { useTemplates } from "~/composables/useTemplates";
 import { useToast } from "vue-toastification";
@@ -486,11 +488,14 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+const { nosana } = useKit();
 const { userBalances } = useNosanaWallet();
-const { getAuthHeader, getJobAuthHeader } = useDeploymentAuth();
-const getAuth = async () => {
-  return await getAuthHeader(props.deploymentId ?? undefined);
-};
+const { getJobAuthHeader } = useCvmAuth();
+// The job on its node through Kit, signed as the poster or the deployment.
+const resolveNodeJob = useNodeJobResolver(
+  props.job.address,
+  props.deploymentId ?? undefined,
+);
 const isCvmJob = computed(() => isCvmMarket(props.job.market));
 const { templates } = useTemplates();
 const { markets } = useMarkets();
@@ -679,14 +684,16 @@ const nodeSpecsUrl = computed(() =>
 );
 const { data: nodeMetrics, pending: loadingNodeSpecs } = useAPI(nodeSpecsUrl);
 
-const nodeInfoUrl = computed(() =>
-  hasRealNode.value
-    ? `https://${props.job.node}.${useRuntimeConfig().public.nodeDomain}/node/info`
-    : "",
+// Public node info (CPU, RAM, disk, country) through Kit's node client.
+const { data: nodeInfo } = useAsyncData<NodeInfoResponse | null>(
+  `node-info-${props.job.node}`,
+  async () => {
+    if (!hasRealNode.value) return null;
+    const info = await nosana.value.api.node(String(props.job.node));
+    return info as unknown as NodeInfoResponse;
+  },
+  { default: () => null, watch: [hasRealNode] },
 );
-const { data: nodeInfo } = useAPI<NodeInfoResponse | null>(nodeInfoUrl, {
-  credentials: false,
-});
 
 const jobDataForPriceComponent = computed(() => {
   return {
@@ -1260,15 +1267,12 @@ const {
   resourceProgressBars: flogResourceBarsRef,
   logsByOp: flogLogsByOp,
   systemLogs: flogSystemLogs,
-} = useFLogs(
-  props.job.address,
-  computed(() => props.job.node),
-  shouldConnect,
-  getAuth,
-  isCvmJob.value
+} = useFLogs(props.job.address, shouldConnect, {
+  resolveNodeJob,
+  ...(isCvmJob.value
     ? { cvm: { getAuth: () => getJobAuthHeader(props.job.address) } }
-    : undefined,
-);
+    : {}),
+});
 
 // Expose flog progress bars (directly from useFLogs)
 function getFlogProgressBars(): Map<string, ProgressBar> {
