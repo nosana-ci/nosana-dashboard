@@ -1,54 +1,90 @@
 <template>
   <div class="jrows">
-    <NuxtLink
+    <div
       v-for="job in jobs"
       :key="job.job"
-      :to="`/deployments/${deploymentId}/jobs/${job.job}`"
       class="jrow"
       :class="{ 'is-live': !showDuration && getJobStateNumber(job) === 1 }"
     >
       <div class="jrow-head">
-        <span class="jstat" :class="stateClass(getJobStateNumber(job))">
-          <span class="jdot"></span>
-          <span class="jlab">{{ stateLabel(getJobStateNumber(job)) }}</span>
-        </span>
-        <span class="jid is-family-monospace">{{ truncateMiddle(job.job) }}</span>
-        <span class="rev-chip is-family-monospace">Revision {{ job.revision ?? "-" }}</span>
-        <span
-          v-if="!showDuration && getJobStateNumber(job) === 0"
-          class="jwait-inline"
-          >awaiting node…</span
+        <NuxtLink
+          :to="`/deployments/${deploymentId}/jobs/${job.job}`"
+          class="jrow-link"
+          :aria-label="`View job ${job.job}`"
         >
-        <span class="jmeta">
-          <span
-            v-if="showDuration && getJobDuration && getJobDuration(job.job) !== null"
-            class="dur"
-          >
-            <SecondsFormatter
-              :seconds="getJobDuration(job.job) as number"
-              :showSeconds="true"
-            />
+          <span class="jstat" :class="stateClass(getJobStateNumber(job))">
+            <span class="jdot"></span>
+            <span class="jlab">{{ stateLabel(getJobStateNumber(job)) }}</span>
           </span>
-          <span>{{
-            showDuration
-              ? formatTimeAgo(job.created_at)
-              : `${getJobStateNumber(job) === 0 ? "listed" : "started"} ${formatTimeAgo(
-                  job.created_at,
-                )}`
+          <span class="jid is-family-monospace">{{
+            truncateMiddle(job.job)
           }}</span>
-        </span>
-        <span class="jchev">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
+          <span class="rev-chip is-family-monospace"
+            >Revision {{ job.revision ?? "-" }}</span
           >
-            <path d="M9 18l6-6-6-6" />
-          </svg>
-        </span>
+          <span
+            v-if="!showDuration && getJobStateNumber(job) === 0"
+            class="jwait-inline"
+            >awaiting node…</span
+          >
+          <span class="jmeta">
+            <span
+              v-if="
+                showDuration &&
+                getJobDuration &&
+                getJobDuration(job.job) !== null
+              "
+              class="dur"
+            >
+              <SecondsFormatter
+                :seconds="getJobDuration(job.job) as number"
+                :showSeconds="true"
+              />
+            </span>
+            <span>{{
+              showDuration
+                ? formatTimeAgo(job.created_at)
+                : `${getJobStateNumber(job) === 0 ? "listed" : "started"} ${formatTimeAgo(
+                    job.created_at,
+                  )}`
+            }}</span>
+          </span>
+          <span class="jchev">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M9 18l6-6-6-6" />
+            </svg>
+          </span>
+        </NuxtLink>
+        <div v-if="canAccess(job)" class="job-access-action">
+          <button
+            type="button"
+            class="button is-small is-quiet"
+            :aria-label="`${expandedJobs.has(job.job) ? 'Close' : 'Open'} SSH access for job ${job.job}`"
+            :aria-expanded="expandedJobs.has(job.job)"
+            :aria-controls="`${accessId}-${job.job}`"
+            :title="
+              expandedJobs.has(job.job)
+                ? 'Close access and disconnect'
+                : 'Open SSH access'
+            "
+            @click="toggleAccess(job.job)"
+          >
+            <span class="icon is-small"><TerminalIcon aria-hidden="true" /></span>
+            <span class="is-hidden-mobile">{{
+              expandedJobs.has(job.job) ? "Close access" : "SSH"
+            }}</span>
+            <span class="icon is-small access-chevron">
+              <ChevronDownIcon aria-hidden="true" />
+            </span>
+          </button>
+        </div>
       </div>
 
       <!-- Live per-job usage. The strip renders only while the node's stats
@@ -57,16 +93,31 @@
         v-if="!showDuration && getJobStateNumber(job) === 1 && hasNode(job)"
         :jobId="job.job"
         :deployment-id="deploymentId"
-        :node="(job.node as string)"
+        :node="job.node as string"
       />
-    </NuxtLink>
+      <section
+        v-if="expandedJobs.has(job.job) && canAccess(job)"
+        :id="`${accessId}-${job.job}`"
+        class="job-access-expanded"
+        :aria-label="`SSH access for job ${job.job}`"
+      >
+        <DeploymentJobAccessPanel
+          :deployment-id="deploymentId"
+          :job-address="job.job"
+          :project-address="projectAddress ?? ''"
+        />
+      </section>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import type { DeploymentJobItem } from "@nosana/api";
 import SecondsFormatter from "~/components/SecondsFormatter.vue";
+import DeploymentJobAccessPanel from "~/components/Deployment/DeploymentJobAccessPanel.vue";
 import JobUsageStrip from "~/components/Deployment/JobUsageStrip.vue";
+import ChevronDownIcon from "@/assets/img/icons/chevron-down.svg?component";
+import TerminalIcon from "@/assets/img/icons/terminal.svg?component";
 import { NULL_ADDRESS, truncateMiddle } from "~/utils/solana";
 import { formatTimeAgo } from "~/utils/relativeTime";
 
@@ -74,13 +125,42 @@ import { formatTimeAgo } from "~/utils/relativeTime";
 const hasNode = (job: DeploymentJobItem) =>
   !!job.node && job.node !== NULL_ADDRESS;
 
-defineProps<{
+const props = defineProps<{
   jobs: DeploymentJobItem[];
   deploymentId: string;
+  projectAddress?: string;
   getJobStateNumber: (job: DeploymentJobItem) => number;
   getJobDuration?: (jobId: string) => number | null;
   showDuration?: boolean;
 }>();
+
+const canAccess = (job: DeploymentJobItem) =>
+  !props.showDuration && props.getJobStateNumber(job) === 1 && hasNode(job);
+
+const accessId = `job-access-${useId()}`;
+const expandedJobs = ref(new Set<string>());
+
+const toggleAccess = (jobId: string) => {
+  const expanded = expandedJobs.value;
+  if (expanded.has(jobId)) expanded.delete(jobId);
+  else expanded.add(jobId);
+};
+
+// Removing a job, changing pages, or ending a job disposes its terminal session.
+watch(
+  () => props.jobs.filter(canAccess).map((job) => job.job),
+  (available) => {
+    expandedJobs.value = new Set(
+      [...expandedJobs.value].filter((id) => available.includes(id)),
+    );
+  },
+);
+watch(
+  () => props.deploymentId,
+  () => {
+    expandedJobs.value = new Set();
+  },
+);
 
 // Numeric job state (0-3) → presentation class + label.
 const stateClass = (n: number) =>
@@ -112,10 +192,47 @@ const stateLabel = (n: number) =>
   }
 }
 
+.jrow-link {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  min-width: 0;
+  flex: 1;
+  color: inherit;
+  text-decoration: none;
+
+  &:focus-visible {
+    outline: 2px solid $secondary;
+    outline-offset: 4px;
+    border-radius: 6px;
+  }
+}
+
 .jrow-head {
   display: flex;
   align-items: center;
   gap: 0.9rem;
+}
+
+.job-access-action {
+  flex: none;
+  padding-left: 0.9rem;
+  border-left: 1px solid $grey-lighter;
+}
+
+.job-access-expanded {
+  min-width: 0;
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid $grey-lighter;
+}
+
+[aria-expanded="true"] .access-chevron {
+  transform: rotate(180deg);
+}
+
+html.dark-mode .job-access-expanded {
+  border-top-color: rgba($white, 0.1);
 }
 
 /* Status = colored dot + label (no heavy icon) */
@@ -240,6 +357,10 @@ html.dark-mode .jrow:hover {
 
 html.dark-mode .jrow + .jrow::before {
   background: rgba($white, 0.08);
+}
+
+html.dark-mode .job-access-action {
+  border-left-color: rgba($white, 0.1);
 }
 
 html.dark-mode .jlab,

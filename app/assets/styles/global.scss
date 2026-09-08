@@ -2008,6 +2008,218 @@ html.dark-mode .seg-tabs {
   }
 }
 
+// Shared section vocabulary for the detail pages: the card a section sits in,
+// its rows, the chips inside a row, and the quiet buttons that act on a row.
+// Mirrors the per-section styles in the Deployment* components (ep-card,
+// rev-card, da-card, port-chip, active-chip, ep-icobtn, view-btn).
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.section-card {
+  background: $white;
+  border: 1px solid $grey-lighter;
+  border-radius: 14px;
+  overflow: hidden;
+  color: $text;
+}
+
+.section-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 15px 18px;
+
+  &.is-block {
+    display: block;
+  }
+
+  // Inset hairline between consecutive rows, as in the revision list.
+  &:not(:first-child)::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 18px;
+    right: 18px;
+    height: 1px;
+    background: $grey-lighter;
+  }
+}
+
+.section-empty {
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  color: $grey;
+  font-size: 0.9rem;
+}
+
+.row-tile {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: $white-ter;
+  color: $grey;
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.row-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.row-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+  font-family: $title-family;
+  font-weight: 600;
+  font-size: 14px;
+  color: $text;
+}
+
+.row-subtitle {
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: $grey;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: $white-ter;
+  color: $grey-dark;
+  font-family: $family-monospace;
+  font-size: 0.72rem;
+  vertical-align: middle;
+
+  &.is-accent {
+    background: rgba($secondary, 0.14);
+    color: color.adjust($secondary, $lightness: -18%);
+    font-family: $title-family;
+    font-weight: 600;
+    font-size: 11px;
+  }
+}
+
+.icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: $grey;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+
+  svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  &:hover,
+  &:focus-visible {
+    background: $white-ter;
+    color: $secondary;
+  }
+
+  &.is-danger:hover,
+  &.is-danger:focus-visible {
+    color: $danger;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// The bordered small button used beside rows ("View Configuration").
+.button.is-quiet {
+  border: 1px solid $grey-lighter;
+  border-radius: 8px;
+  background: $white;
+  color: $text;
+  font-weight: 500;
+  font-size: 0.8rem;
+  box-shadow: none;
+
+  &:hover {
+    border-color: $grey-light;
+    background: $white-ter;
+  }
+}
+
+html.dark-mode {
+  .section-card {
+    background: $black-ter;
+    border-color: rgba($white, 0.08);
+    color: $white;
+  }
+
+  .section-row:not(:first-child)::before {
+    background: rgba($white, 0.08);
+  }
+
+  .section-empty,
+  .row-subtitle,
+  .row-tile {
+    color: $grey-light;
+  }
+
+  .row-tile {
+    background: rgba($white, 0.07);
+  }
+
+  .row-title {
+    color: $white;
+  }
+
+  .chip {
+    background: rgba($white, 0.08);
+    color: $grey-light;
+
+    &.is-accent {
+      background: rgba($secondary, 0.18);
+      color: $secondary;
+    }
+  }
+
+  .icon-button:hover,
+  .icon-button:focus-visible {
+    background: rgba($white, 0.08);
+  }
+
+  .button.is-quiet {
+    background: rgba($white, 0.05);
+    border-color: rgba($white, 0.12);
+    color: $white;
+
+    &:hover {
+      background: rgba($white, 0.1);
+    }
+  }
+}
+
 // Subtle green glow for the primary CTA (e.g. Create Deployment) — a static
 // soft shadow, no animation. Pair with `is-secondary` so it inherits the green
 // and skips the neutral button hover overrides above.
