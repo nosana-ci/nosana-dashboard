@@ -747,7 +747,7 @@ const getWalletAddress = () => {
   background: white;
   border-radius: 8px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e5e7eb;
+  border: 1px solid $grey-lighter;
   padding: 0.25rem 0;
   width: 100%;
 }

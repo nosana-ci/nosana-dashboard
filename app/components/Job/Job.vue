@@ -267,7 +267,10 @@
       <!-- Container Controls Tab -->
       <!-- The panel keeps this mounted (v-show) so per-operation shells
            survive switching views, and shows it as soon as the definition is
-           known. The page waits for container logs and mounts it per visit. -->
+           known — it decides whether containers are offered at all, and only
+           routes here while the job runs. The shells stay idle until the tab
+           is actually on screen (`shells-active` below). The page waits for
+           container logs and mounts it per visit. -->
       <div
         v-if="
           isPanel
@@ -1668,7 +1671,7 @@ onUnmounted(() => {
   padding: 0;
   margin-bottom: 1rem;
   cursor: pointer;
-  color: $grey;
+  color: $text-muted;
   font-family: $family-sans-serif;
   font-size: 0.9rem;
   transition: color 0.15s ease;
@@ -1729,7 +1732,7 @@ html.dark-mode .dep-name {
   flex-wrap: wrap;
   margin-top: 0.5rem;
   font-size: 0.78rem;
-  color: $grey;
+  color: $text-muted;
 }
 
 .id-line .is-family-monospace {
@@ -1737,7 +1740,7 @@ html.dark-mode .dep-name {
 }
 
 .id-sep {
-  color: $grey-light;
+  color: $text-muted;
 }
 
 .updated-time {
@@ -1752,7 +1755,7 @@ html.dark-mode .dep-name {
   border-radius: 6px;
   border: 0;
   background: transparent;
-  color: $grey;
+  color: $text-muted;
   cursor: pointer;
   transition:
     background 0.15s ease,
@@ -1848,7 +1851,7 @@ html.dark-mode .header-action-btn {
     color 0.15s ease;
 
   .icon {
-    color: $grey;
+    color: $text-muted;
     transition: color 0.15s ease;
   }
 
@@ -2033,7 +2036,7 @@ html.dark-mode .stat::before {
 
 .k {
   font-size: 12px;
-  color: $grey;
+  color: $text-muted;
   margin-bottom: 7px;
 }
 
@@ -2057,7 +2060,7 @@ html.dark-mode .stat::before {
 
 .s {
   font-size: 12px;
-  color: $grey;
+  color: $text-muted;
   margin-top: 6px;
   overflow: hidden;
   text-overflow: ellipsis;

@@ -82,7 +82,7 @@ $command-padding-x: 1rem;
   position: absolute;
   top: 0.55rem;
   right: 0.55rem;
-  color: $grey;
+  color: $text-muted;
 
   // The copy glyph carries no fill of its own, so it would paint black.
   svg {
@@ -98,7 +98,7 @@ $command-padding-x: 1rem;
   margin: 0.5rem 0 0;
   padding: 0 $command-padding-x;
   font-size: 0.78rem;
-  color: $grey;
+  color: $text-muted;
 
   :deep(code) {
     font-size: 0.75rem;

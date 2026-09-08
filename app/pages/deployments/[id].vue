@@ -78,6 +78,7 @@
                     @open="openJobPanel($event)"
                     @viewLogs="openJobPanel($event, 'logs')"
                     @openSsh="openJobPanel($event, 'containers', '*')"
+                    @openRevision="openRevision($event)"
                     @active:prev="activePrev"
                     @active:next="activeNext"
                     @history:prev="historyPrev"
@@ -123,6 +124,7 @@
               <DeploymentRevisions
                 :revisions="sortedRevisions"
                 :activeRevision="deployment.active_revision"
+                :focusedRevision="focusedRevision"
                 :switchingRevision="switchingRevision"
                 :actionLoading="actionLoading"
                 @switchToRevision="switchToRevision"
@@ -312,7 +314,7 @@ const {
   activeNext,
   activePrev,
   applyJobFrame,
-  applyActiveJobsSnapshot,
+  applyActiveSet,
   runningJobsCount,
   historyJobs,
   historyLoading,
@@ -352,8 +354,10 @@ const applyStreamEvent = (event: DeploymentStreamEvent) => {
   }
 
   if (event.type === "job") {
-    // Updates the live active list in place; new jobs render straight from the
-    // frame, which carries revision/created_at.
+    // Updates the live job list in place; new jobs render straight from the
+    // frame, which carries revision/created_at. Everything reading a job —
+    // the activity table, the panel's tabs, the open job's own record — hangs
+    // off that list, so there is nothing else to notify.
     applyJobFrame(event);
     return;
   }
@@ -361,7 +365,7 @@ const applyStreamEvent = (event: DeploymentStreamEvent) => {
   // Authoritative active-jobs snapshot, sent once on (re)connect ahead of the
   // per-job frames: prune anything we still show that's no longer active.
   if (event.type === "jobs") {
-    applyActiveJobsSnapshot(event.jobs);
+    applyActiveSet(event.jobs);
     return;
   }
 
@@ -689,6 +693,21 @@ const switchTab = (tab: string) => {
       tab: tab === "overview" ? undefined : tab,
     },
   });
+};
+
+// A job row's revision chip jumps to that revision under Configuration.
+const focusedRevision = ref<number | null>(null);
+const openRevision = (revision: number) => {
+  switchTab("configuration");
+  focusedRevision.value = revision;
+  nextTick(() => {
+    document
+      .getElementById(`revision-${revision}`)
+      ?.scrollIntoView({ behavior: "smooth", block: "center" });
+  });
+  setTimeout(() => {
+    if (focusedRevision.value === revision) focusedRevision.value = null;
+  }, 2500);
 };
 
 // A link elsewhere on the page can change ?tab / ?job without remounting the

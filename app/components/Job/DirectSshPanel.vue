@@ -127,7 +127,7 @@ const command = computed(
 .ssh-empty-icon {
   width: 2rem;
   height: 2rem;
-  color: $grey-light;
+  color: $text-muted;
 }
 
 .ssh-empty-title {
@@ -140,7 +140,7 @@ const command = computed(
   margin-top: 0.35rem;
   max-width: 30rem;
   font-size: 0.85rem;
-  color: $grey;
+  color: $text-muted;
 }
 
 .ssh-empty-link {

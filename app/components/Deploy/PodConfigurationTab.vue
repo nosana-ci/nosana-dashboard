@@ -83,7 +83,7 @@ defineExpose({ jobDefEditor, canSave });
   display: grid;
   place-items: center;
   border-radius: 7px;
-  border: 1px solid #e3e7df;
+  border: 1px solid $grey-lighter;
   background: rgba(255, 255, 255, 0.85);
   color: #586155;
   cursor: pointer;
