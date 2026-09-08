@@ -372,7 +372,7 @@ watch(
     text-transform: uppercase;
     letter-spacing: 0.04em;
     font-weight: 600;
-    color: $grey;
+    color: $text-muted;
   }
 
   tbody tr.clickable-row:hover {
@@ -520,12 +520,12 @@ html.dark-mode .deployments-table tbody tr.clickable-row.is-selected {
 
 .deployment-id {
   font-size: 0.75rem;
-  color: $grey;
+  color: $text-muted;
   margin-top: 2px;
 }
 
 .updated-cell {
-  color: $grey;
+  color: $text-muted;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -547,7 +547,7 @@ html.dark-mode .deployments-table tbody tr.clickable-row.is-selected {
 
 .row-chev {
   display: inline-flex;
-  color: $grey-light;
+  color: $text-muted;
   transition: color 0.15s ease;
 
   svg {
@@ -557,7 +557,7 @@ html.dark-mode .deployments-table tbody tr.clickable-row.is-selected {
 }
 
 .clickable-row:hover .row-chev {
-  color: $grey;
+  color: $text-muted;
 }
 
 .min-height-container {

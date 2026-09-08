@@ -103,7 +103,7 @@ const statusKind = computed(() => {
 }
 .dep-status-pill.neutral {
   background: rgba($grey, 0.16);
-  color: $grey;
+  color: $text-muted;
 }
 .dep-status-pill.neutral .sdot {
   background: $grey;

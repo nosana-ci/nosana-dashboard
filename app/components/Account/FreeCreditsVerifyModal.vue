@@ -297,7 +297,7 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .stripe-card-element {
-  border: 1px solid #dbdbdb;
+  border: 1px solid $grey-lighter;
   border-radius: 8px;
   padding: 12px 10px;
   text-align: left;

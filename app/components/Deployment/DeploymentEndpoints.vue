@@ -52,6 +52,7 @@ const statusOf = (endpoint: Endpoint): EndpointStatus => {
   background: $white;
   border: 1px solid $grey-lighter;
   border-radius: 14px;
+  box-shadow: $panel-shadow;
   overflow: hidden;
   padding: 8px;
 }

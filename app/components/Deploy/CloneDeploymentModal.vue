@@ -363,7 +363,7 @@ const pick = (deployment: ListedDeployment) => {
   transform: translateY(-50%);
   width: 16px;
   height: 16px;
-  color: #9aa0a6;
+  color: $text-muted;
   pointer-events: none;
 }
 
@@ -374,7 +374,7 @@ const pick = (deployment: ListedDeployment) => {
   font-size: 0.875rem;
   color: #1a1c1e;
   background: #ffffff;
-  border: 1px solid #e1e3e6;
+  border: 1px solid $grey-lighter;
   border-radius: 10px;
   outline: none;
   transition:
@@ -383,7 +383,7 @@ const pick = (deployment: ListedDeployment) => {
 }
 
 .th-search-input::placeholder {
-  color: #9aa0a6;
+  color: $text-muted;
 }
 
 .th-search-input:focus {
@@ -397,7 +397,7 @@ const pick = (deployment: ListedDeployment) => {
   align-items: center;
   height: 40px;
   background: #ffffff;
-  border: 1px solid #e1e3e6;
+  border: 1px solid $grey-lighter;
   border-radius: 10px;
   transition:
     border-color 0.15s ease,
@@ -429,7 +429,7 @@ const pick = (deployment: ListedDeployment) => {
   right: 0.7rem;
   width: 16px;
   height: 16px;
-  color: #80868b;
+  color: $text-muted;
   pointer-events: none;
 }
 
@@ -470,7 +470,7 @@ const pick = (deployment: ListedDeployment) => {
     text-transform: uppercase;
     letter-spacing: 0.04em;
     font-weight: 600;
-    color: $grey;
+    color: $text-muted;
   }
 
   td {
@@ -502,12 +502,12 @@ html.dark-mode .deployments-table tbody tr.clickable-row:hover {
 
 .deployment-id {
   font-size: 0.75rem;
-  color: $grey;
+  color: $text-muted;
   margin-top: 2px;
 }
 
 .updated-cell {
-  color: $grey;
+  color: $text-muted;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -527,7 +527,7 @@ html.dark-mode .deployments-table tbody tr.clickable-row:hover {
 
 .row-chev {
   display: inline-flex;
-  color: $grey-light;
+  color: $text-muted;
   transition: color 0.15s ease;
 
   svg {
@@ -537,6 +537,6 @@ html.dark-mode .deployments-table tbody tr.clickable-row:hover {
 }
 
 .clickable-row:hover .row-chev {
-  color: $grey;
+  color: $text-muted;
 }
 </style>
