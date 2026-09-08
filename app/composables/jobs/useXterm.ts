@@ -24,6 +24,10 @@ export function useXterm(
 
   const fit = () => {
     if (!terminal || !fitAddon) return;
+    // Hidden (display: none) hosts measure 0×0; keep the PTY at its last
+    // size until the surface is shown again, when the observer fires anew.
+    const host = element.value;
+    if (!host || host.clientWidth === 0 || host.clientHeight === 0) return;
     try {
       fitAddon.fit();
       handlers.onResize(terminal.cols, terminal.rows);

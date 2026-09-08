@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div v-if="containerOperations.length > 1" class="field">
+    <div v-if="!operation && containerOperations.length > 1" class="field">
       <label class="label" :for="`${accessId}-operation`">
         Container operation
       </label>
@@ -23,13 +23,16 @@
       </p>
     </div>
 
-    <JobAccessMethodTabs
-      v-model="activeMethod"
-      :tabs="ACCESS_METHODS"
-      :id-prefix="accessId"
-      label="Access method"
-      class="mb-4"
-    />
+    <div class="access-toolbar mb-4">
+      <JobAccessMethodTabs
+        v-model="activeMethod"
+        :tabs="ACCESS_METHODS"
+        :id-prefix="accessId"
+        label="Access method"
+      />
+      <!-- Page-level controls that belong beside the tabs, e.g. a job picker -->
+      <slot name="toolbar" />
+    </div>
 
     <div
       :id="`${accessId}-panel`"
@@ -42,11 +45,10 @@
       </div>
 
       <template v-else>
-        <section v-if="activeMethod === 'terminal'">
-          <h3 class="title is-6 mb-3">
-            A shell in your browser
-            <span class="chip is-accent ml-2">Preview</span>
-          </h3>
+        <!-- Kept mounted (v-show) so the shell survives a look at the other
+             methods. Deployment-managed jobs need no wallet signature, so it
+             opens as soon as this view is active. -->
+        <section v-show="activeMethod === 'terminal'">
           <JobTerminal
             :key="`${deploymentId || ''}-${jobAddress}`"
             :job-address="jobAddress"
@@ -55,20 +57,19 @@
             :deployment-id="deploymentId || undefined"
             :can-connect="canUseTerminalAccess"
             :disabled-reason="terminalAccessReason"
+            :auto-connect="isDeploymentManaged && active && autoConnect"
           />
         </section>
 
-        <section v-else-if="activeMethod === 'cli'">
-          <h3 class="title is-6 mb-2">Nosana CLI</h3>
-          <CommandBlock :command="cliCommand" />
-          <p class="help mt-3">
+        <section v-if="activeMethod === 'cli'">
+          <CommandBlock :command="cliCommand">
             Run this on your device. The CLI wallet must match the wallet that
             posted this job.
-          </p>
+          </CommandBlock>
         </section>
 
         <JobDirectSshPanel
-          v-else
+          v-else-if="activeMethod === 'direct'"
           :job-address="jobAddress"
           :node="node"
           :operation-index="operationIndex"
@@ -76,6 +77,7 @@
           :loading="sshKeysLoading"
           :error="sshKeysError"
           :is-deployment-managed="isDeploymentManaged"
+          :deployment-id="deploymentId || undefined"
           @retry="emit('retry-ssh-keys')"
         />
       </template>
@@ -105,24 +107,33 @@ const ACCESS_METHODS: Array<{ id: AccessMethod; label: string }> = [
   { id: "direct", label: "Direct SSH" },
 ];
 
-const props = defineProps<{
-  jobAddress: string;
-  node: string;
-  projectAddress: string;
-  jobDefinition: JobDefinition | null;
-  isRunning: boolean;
-  deploymentId?: string | null;
-  sshPublicKeys?: string[];
-  sshKeysLoading?: boolean;
-  sshKeysError?: string;
-}>();
+const props = withDefaults(
+  defineProps<{
+    jobAddress: string;
+    node: string;
+    projectAddress: string;
+    jobDefinition: JobDefinition | null;
+    isRunning: boolean;
+    deploymentId?: string | null;
+    sshPublicKeys?: string[];
+    sshKeysLoading?: boolean;
+    sshKeysError?: string;
+    /** False while this view is mounted but hidden, so nothing auto-connects unseen. */
+    active?: boolean;
+    /** Pin the container operation instead of offering the selector. */
+    operation?: string;
+    /** Whether the web terminal may open on its own once active. */
+    autoConnect?: boolean;
+  }>(),
+  { active: true, autoConnect: true },
+);
 const emit = defineEmits<{ "retry-ssh-keys": [] }>();
 
 const config = useRuntimeConfig();
 const { account } = useWallet();
 const accessId = `ssh-access-${useId()}`;
 const activeMethod = ref<AccessMethod>("terminal");
-const selectedOperation = ref("");
+const selectedOperation = ref(props.operation ?? "");
 
 const isDeploymentManaged = computed(() => Boolean(props.deploymentId));
 
@@ -170,7 +181,9 @@ const cliCommand = computed(() =>
 watch(
   containerOperations,
   (operations) => {
-    if (operations.length === 1) {
+    if (props.operation) {
+      selectedOperation.value = props.operation;
+    } else if (operations.length === 1) {
       selectedOperation.value = operations[0] ?? "";
     } else if (!operations.includes(selectedOperation.value)) {
       selectedOperation.value = "";
@@ -190,3 +203,13 @@ watch(
   { immediate: true },
 );
 </script>
+
+<style scoped lang="scss">
+.access-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+</style>

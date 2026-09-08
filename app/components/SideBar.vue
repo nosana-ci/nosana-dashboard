@@ -14,6 +14,32 @@
     </div>
     <div class="menu">
       <ul class="menu-list is-size-5">
+        <!-- Straight to a new deployment, without the list page in between -->
+        <li>
+          <nuxt-link
+            to="/deployments/create"
+            class="create-link"
+            :active-class="isLoggedOut ? '' : 'is-active'"
+            :class="{ 'auth-disabled-link': isLoggedOut }"
+            :aria-disabled="isLoggedOut"
+            @click.capture="handleSidebarNav($event, '/deployments/create', true)"
+            style="padding-left: 1.1rem"
+          >
+            <span class="icon is-small mr-4">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.2"
+                stroke-linecap="round"
+                aria-hidden="true"
+              >
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+            </span>
+            <span>Create Deployment</span>
+          </nuxt-link>
+        </li>
         <li>
           <nuxt-link
             to="/deployments"
@@ -377,6 +403,7 @@ const getWalletAddress = () => {
   li:not(:last-child) {
     margin-bottom: 15px;
   }
+
 
   [disabled] {
     pointer-events: none;
@@ -929,5 +956,14 @@ const getWalletAddress = () => {
 .mobile-avatar-dropdown .dropdown-content {
   max-height: 60vh;
   overflow-y: auto;
+}
+
+// The create action: the page's green call to action, laid out as a menu item
+// so its icon and label line up with the entries below it. Declared last and
+// with !important because the dark-mode rules above flatten every menu link.
+// The inline plus glyph sizes like the sidebar's icon components.
+.sidebar .menu-list a.create-link .icon svg {
+  width: 14px;
+  height: 14px;
 }
 </style>

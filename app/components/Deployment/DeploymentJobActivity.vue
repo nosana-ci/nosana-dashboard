@@ -38,7 +38,9 @@
           :jobs="activeJobs"
           :deploymentId="deploymentId"
           :getJobStateNumber="getJobStateNumber"
-          :project-address="projectAddress"
+          @open="$emit('open', $event)"
+          @viewLogs="$emit('viewLogs', $event)"
+          @openSsh="$emit('openSsh', $event)"
         />
         <JobActivityPager
           :hasPrev="activeHasPrev"
@@ -69,6 +71,8 @@
           :getJobStateNumber="getJobStateNumber"
           :getJobDuration="getJobDuration"
           :showDuration="true"
+          @open="$emit('open', $event)"
+          @viewLogs="$emit('viewLogs', $event)"
         />
         <JobActivityPager
           :hasPrev="historyHasPrev"
@@ -89,7 +93,6 @@ import JobActivityPager from "~/components/Deployment/JobActivityPager.vue";
 
 defineProps<{
   deploymentId: string;
-  projectAddress: string;
   deploymentStatus: string;
   jobActivityTab: string;
   activeJobs: DeploymentJobItem[];
@@ -106,6 +109,9 @@ defineProps<{
 
 defineEmits<{
   "update:jobActivityTab": [value: string];
+  open: [jobId: string];
+  viewLogs: [jobId: string];
+  openSsh: [jobId: string];
   "active:prev": [];
   "active:next": [];
   "history:prev": [];
