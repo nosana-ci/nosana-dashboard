@@ -1,8 +1,9 @@
-import { ref, computed, watch, type ComputedRef, type Ref } from "vue";
+import { ref, computed, watch, type ComputedRef } from "vue";
 import AnsiUp from "ansi_up";
 import { sanitizeAnsiHtml, escapeHtml } from "~/utils/htmlSanitization";
+import type { NodeJobApi, NodeTaskLog } from "@nosana/api";
 import type { ProgressBar } from "./logTypes";
-import { useJobWebSocket } from "./useJobWebSocket";
+import { useNodeLogSocket } from "./useNodeLogSocket";
 
 export type FLogType = 'container' | 'info' | 'error';
 
@@ -22,6 +23,8 @@ export interface FLogEntry {
 }
 
 export interface FLogOptions {
+  /** The job on its node through Kit, signed as the poster or the deployment. */
+  resolveNodeJob: () => Promise<NodeJobApi>;
   onEntry?: (entry: FLogEntry, opId: string) => void;
   /**
    * Set when the job runs in a confidential VM (CVM). The host node's /flog
@@ -30,22 +33,21 @@ export interface FLogOptions {
    * wss://<jobAddress>.<nodeDomain> with the /flog path and a job-address-signed
    * auth header — carries the inner ops' container logs.
    */
-  cvm?: { getAuth: () => Promise<string | Headers> };
+  cvm?: { getAuth: () => Promise<string> };
 }
 
 type FLogSource = 'host' | 'cvm';
 
 export function useFLogs(
   jobAddress: string,
-  host: string | Ref<string>,
   shouldConnect: ComputedRef<boolean>,
-  getAuth: () => Promise<string | Headers>,
-  options?: FLogOptions,
+  options: FLogOptions,
 ) {
+  const nodeDomain = useRuntimeConfig().public.nodeDomain;
   const ansi = new AnsiUp();
   ansi.use_classes = true;
 
-  const isCvm = !!options?.cvm;
+  const isCvm = !!options.cvm;
 
   // Tabs: 'system' first, followed by opIds in first-seen order
   const tabs = ref<string[]>(['system']);
@@ -280,7 +282,7 @@ export function useFLogs(
     // remember fingerprint after successful add
     remember(fp);
 
-    options?.onEntry?.(entry, isCvm && source === 'host' ? 'system' : msg.opId);
+    options.onEntry?.(entry, isCvm && source === 'host' ? 'system' : msg.opId);
   }
 
   function capArray<T>(arr: T[], max: number) {
@@ -302,13 +304,10 @@ export function useFLogs(
 
   // Shared message handler for the host stream and (for CVM jobs) the CVM's
   // own stream — both speak the same flog message shape.
-  const createOnMessage =
+  const createOnLog =
     (source: FLogSource) =>
-    (event: MessageEvent) => {
+    (inner: NodeTaskLog) => {
       try {
-        const outer = JSON.parse(event.data);
-        const inner = outer.data ? JSON.parse(outer.data) : outer;
-        // Debug incoming shape
         // First, handle embedded progress events regardless of shape
         let possibleMsg = (inner && typeof inner === 'object') ? (inner as any).message : undefined;
         // If message is a JSON string representing a progress event, parse it
@@ -425,56 +424,48 @@ export function useFLogs(
       } catch { }
     };
 
-  // WebSocket wiring
-  const {
-    isConnecting: wsConnecting,
-    connectionEstablished: wsEstablished,
-    initConnection,
-    closeConnection,
-  } = useJobWebSocket(
-    jobAddress,
-    host,
-    getAuth,
-    // Suppress frontend connection/retry noise entirely for flogs
-    (_log: string) => { },
-    createOnMessage('host'),
+  // Socket wiring: the host node's flog stream through Kit.
+  const hostSocket = useNodeLogSocket(
+    async (handlers) => (await options.resolveNodeJob()).logs(handlers),
+    createOnLog('host'),
     3,
     3000,
-    { path: '/flog', disableFallback: true }
   );
 
-  // The CVM registers its own tunnel keyed on the job address. It only comes
-  // up once the VM has booted, so retry well past the host socket's window.
-  const cvmWs = options?.cvm
-    ? useJobWebSocket(
-      jobAddress,
-      jobAddress,
-      options.cvm.getAuth,
-      (_log: string) => { },
-      createOnMessage('cvm'),
-      30,
-      5000,
-      { path: '/flog', disableFallback: true }
-    )
+  // The CVM registers its own tunnel keyed on the job address and speaks the
+  // same protocol, so Kit's socket is reused with the CVM's URL and the
+  // job-signed header. It only comes up once the VM has booted, so retry well
+  // past the host socket's window.
+  const cvm = options.cvm;
+  const cvmSocket = cvm
+    ? useNodeLogSocket(
+        async (handlers) =>
+          (await options.resolveNodeJob()).logs(handlers, undefined, {
+            authorizationProvider: () => cvm.getAuth(),
+            webSocketFactory: () => new WebSocket(`wss://${jobAddress}.${nodeDomain}`),
+          }),
+        createOnLog('cvm'),
+        30,
+        5000,
+      )
     : null;
 
-  // proxy flags (a CVM job counts as connected once either stream is live)
-  if (cvmWs) {
-    watch([wsConnecting, cvmWs.isConnecting], ([a, b]) => { isConnecting.value = a || b; });
-    watch([wsEstablished, cvmWs.connectionEstablished], ([a, b]) => { connectionEstablished.value = a || b; });
-  } else {
-    watch(wsConnecting, (v) => { isConnecting.value = v; });
-    watch(wsEstablished, (v) => { connectionEstablished.value = v; });
-  }
+  // A CVM job counts as connected once either stream is live.
+  const sockets = cvmSocket ? [hostSocket, cvmSocket] : [hostSocket];
+  watch(
+    sockets.map((socket) => socket.isConnecting),
+    (flags) => { isConnecting.value = flags.some(Boolean); },
+  );
+  watch(
+    sockets.map((socket) => socket.connectionEstablished),
+    (flags) => { connectionEstablished.value = flags.some(Boolean); },
+  );
 
   // lifecycle control
   watch(shouldConnect, (next) => {
-    if (next) {
-      initConnection();
-      cvmWs?.initConnection();
-    } else {
-      closeConnection();
-      cvmWs?.closeConnection();
+    for (const socket of sockets) {
+      if (next) socket.initConnection();
+      else socket.closeConnection();
     }
   }, { immediate: true });
 

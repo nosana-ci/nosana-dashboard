@@ -38,6 +38,9 @@
           :jobs="activeJobs"
           :deploymentId="deploymentId"
           :getJobStateNumber="getJobStateNumber"
+          @open="$emit('open', $event)"
+          @viewLogs="$emit('viewLogs', $event)"
+          @openSsh="$emit('openSsh', $event)"
         />
         <JobActivityPager
           :hasPrev="activeHasPrev"
@@ -57,10 +60,7 @@
       >
         Loading history…
       </div>
-      <div
-        v-else-if="historyJobs.length === 0"
-        class="da-card da-empty"
-      >
+      <div v-else-if="historyJobs.length === 0" class="da-card da-empty">
         No completed jobs yet
       </div>
 
@@ -71,6 +71,8 @@
           :getJobStateNumber="getJobStateNumber"
           :getJobDuration="getJobDuration"
           :showDuration="true"
+          @open="$emit('open', $event)"
+          @viewLogs="$emit('viewLogs', $event)"
         />
         <JobActivityPager
           :hasPrev="historyHasPrev"
@@ -107,6 +109,9 @@ defineProps<{
 
 defineEmits<{
   "update:jobActivityTab": [value: string];
+  open: [jobId: string];
+  viewLogs: [jobId: string];
+  openSsh: [jobId: string];
   "active:prev": [];
   "active:next": [];
   "history:prev": [];
