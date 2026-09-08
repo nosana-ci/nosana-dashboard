@@ -64,13 +64,14 @@ const isDevnet = config.public.network === "devnet";
   background: $white;
   border: 1px solid $grey-lighter;
   border-radius: 14px;
+  box-shadow: $panel-shadow;
   overflow: hidden;
   padding: 6px 18px 14px;
 }
 
 .event-empty {
   text-align: center;
-  color: $grey;
+  color: $text-muted;
   padding: 2.5rem 1rem;
 }
 
@@ -139,7 +140,7 @@ const isDevnet = config.public.network === "devnet";
   font-size: 0.65rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: $grey;
+  color: $text-muted;
   border: 1px solid $grey-lighter;
   border-radius: 5px;
   padding: 1px 6px;
@@ -148,13 +149,13 @@ const isDevnet = config.public.network === "devnet";
 .tl-date {
   margin-left: auto;
   font-size: 0.75rem;
-  color: $grey;
+  color: $text-muted;
   white-space: nowrap;
 }
 
 .tl-msg {
   font-size: 0.85rem;
-  color: $grey;
+  color: $text-muted;
   margin-top: 3px;
   word-break: break-word;
 }
@@ -164,7 +165,7 @@ const isDevnet = config.public.network === "devnet";
   align-items: center;
   gap: 4px;
   font-size: 0.72rem;
-  color: $grey;
+  color: $text-muted;
   border: 1px solid $grey-lighter;
   border-radius: 6px;
   padding: 2px 8px;

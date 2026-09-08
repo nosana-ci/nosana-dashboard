@@ -261,7 +261,7 @@ $content-indent: 1.75rem;
 }
 
 .jtime {
-  color: $grey;
+  color: $text-muted;
   font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
 }
@@ -382,7 +382,7 @@ button.rev-chip {
 .jchev {
   flex: none;
   display: inline-flex;
-  color: $grey-light;
+  color: $text-muted;
 
   svg {
     width: 16px;
@@ -391,11 +391,11 @@ button.rev-chip {
 }
 
 .jrow:hover .jchev {
-  color: $grey;
+  color: $text-muted;
 }
 
 .jwait-inline {
-  color: $grey;
+  color: $text-muted;
   font-size: 0.75rem;
   font-style: italic;
   white-space: nowrap;

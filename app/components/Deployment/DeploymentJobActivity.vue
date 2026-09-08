@@ -150,6 +150,7 @@ defineEmits<{
   background: $white;
   border: 1px solid $grey-lighter;
   border-radius: 14px;
+  box-shadow: $panel-shadow;
   overflow: hidden;
 }
 
@@ -170,7 +171,7 @@ defineEmits<{
 .da-empty {
   padding: 2.75rem 1rem;
   text-align: center;
-  color: $grey;
+  color: $text-muted;
   font-size: 0.9rem;
 }
 

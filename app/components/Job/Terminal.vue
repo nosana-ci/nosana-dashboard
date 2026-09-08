@@ -355,7 +355,7 @@ onBeforeUnmount(() => {
   &::before {
     content: "·";
     margin-right: 0.5rem;
-    color: $grey-light;
+    color: $text-muted;
     font-weight: 400;
   }
 
@@ -365,7 +365,7 @@ onBeforeUnmount(() => {
   }
 
   &:disabled {
-    color: $grey-light;
+    color: $text-muted;
     cursor: not-allowed;
   }
 }

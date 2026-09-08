@@ -81,6 +81,7 @@ defineEmits<{
   background: $white;
   border: 1px solid $grey-lighter;
   border-radius: 14px;
+  box-shadow: $panel-shadow;
   overflow: hidden;
 }
 
@@ -127,7 +128,7 @@ defineEmits<{
   height: 34px;
   border-radius: 10px;
   background: $white-ter;
-  color: $grey;
+  color: $text-muted;
   font-family: monospace;
   font-weight: 600;
   font-size: 13px;
@@ -158,7 +159,7 @@ defineEmits<{
 
 .rdate {
   font-size: 12.5px;
-  color: $grey;
+  color: $text-muted;
   margin-top: 2px;
   font-variant-numeric: tabular-nums;
 }

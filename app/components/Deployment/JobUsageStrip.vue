@@ -97,7 +97,7 @@ const fmtMb = (mb: number) =>
   .ml {
     font-size: 0.62rem;
     letter-spacing: 0.05em;
-    color: $grey;
+    color: $text-muted;
     font-weight: 600;
     flex: none;
   }

@@ -59,6 +59,38 @@
   $white: $white
 );
 
+/* Bulma builds all of its own hairlines — inputs, selects, tables, hr,
+   dropdown dividers — from these two lightness stops, and its light theme
+   leaves them at 86% / 93%, which on a white panel is barely a line. Scoped
+   to light mode so the dark theme keeps its own stops. */
+/* Both halves live here, on equally specific selectors, so neither theme can
+   win by source order. */
+html.dark-mode {
+  --app-text-muted: #{$grey-light};
+}
+
+html:not(.dark-mode) {
+  --app-text-muted: #{$grey};
+  --bulma-border-l: 82%;
+  --bulma-border-weak-l: 89%;
+  /* Bulma's muted text (help text, table headers, .has-text-grey) sits at 48%
+     — 4.1:1 on the page canvas, under AA for the small labels that use it. */
+  --bulma-text-weak-l: 41%;
+  /* Bulma draws <hr> from --bulma-background (96%), which is invisible on a
+     white panel; the rule is a separator, so give it the weak hairline. */
+  --bulma-hr-background-color: var(--bulma-border-weak);
+
+  /* Placeholders are drawn as text at 30% alpha — about 2.3:1 on white. Bulma
+     declares the variable on the control itself, so the override has to sit on
+     the same elements rather than inherit from the root. */
+  .input,
+  .textarea,
+  .select,
+  .control {
+    --bulma-input-placeholder-color: #{hsl(220, 10%, 50%)};
+  }
+}
+
 .tag.is-success {
   background-color: $success !important;
 }
@@ -78,7 +110,7 @@
 
 // Section headers (reusable for consistent styling)
 .section-header {
-  color: $grey;
+  color: $text-muted;
   font-size: $size-6;
   letter-spacing: 0.5px;
   font-weight: 500;
@@ -127,7 +159,7 @@
     &:focus-visible,
     &:active,
     &:focus:not(:active) {
-      border-color: #dbdbdb !important;
+      border-color: $grey-lighter !important;
       border-width: 1px !important;
       background-color: inherit;
     }
@@ -577,6 +609,10 @@
 
 .box {
   position: relative;
+  /* On the tinted canvas a shadowless white box had no edge at all; the
+     hairline plus the shared panel lift give it one without a heavy border. */
+  border: 1px solid $grey-lighter;
+  box-shadow: $panel-shadow;
 }
 
 .menu {
@@ -962,7 +998,7 @@
     }
 
     a {
-      color: $grey;
+      color: $grey-light;
       border-bottom-width: 3px;
       border-bottom-color: transparent;
       margin-bottom: -3px;
@@ -1105,7 +1141,7 @@ button[disabled][data-tooltip] {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  border: 1px solid #e0e0e0;
+  border: 1px solid $grey-lighter;
   margin-right: 10px;
   vertical-align: middle;
 }
@@ -1346,7 +1382,7 @@ button[disabled][data-tooltip] {
   --bulma-delete-color: currentColor;
   border-radius: 8px;
   background-color: transparent;
-  color: $grey;
+  color: $text-muted;
 
   &:hover,
   &:focus-visible {
@@ -1730,7 +1766,7 @@ html.dark-mode .modal-card-head {
       font-size: 0.72rem;
       letter-spacing: 0.04em;
       font-weight: 600;
-      color: $grey;
+      color: $text-muted;
       border-bottom: 1px solid $border;
       padding: 0.85rem 1.1rem;
     }
@@ -1750,7 +1786,7 @@ html.dark-mode .modal-card-head {
   .action-btn {
     border: 1px solid $border;
     background: transparent;
-    color: $grey;
+    color: $text-muted;
     border-radius: 8px;
     transition:
       border-color 0.15s ease,
@@ -1786,7 +1822,7 @@ html.dark-mode .modal-card-head {
   }
 
   .empty-card .subtitle {
-    color: $grey;
+    color: $text-muted;
     max-width: 30rem;
     margin-left: auto;
     margin-right: auto;
@@ -1870,7 +1906,7 @@ html.dark-mode .modal-card-head {
     font-size: 0.72rem;
     letter-spacing: 0.04em;
     font-weight: 600;
-    color: $grey;
+    color: $text-muted;
     border-bottom: 1px solid $border;
     padding: 0.85rem 1.1rem;
     vertical-align: middle;
@@ -1931,7 +1967,7 @@ html.dark-mode .modal-card-head {
   .modal-card-head {
     align-items: flex-start;
     background-color: $box-background-color;
-    border-bottom: 1px solid $grey-lightest;
+    border-bottom: 1px solid $grey-lighter;
     border-radius: 16px 16px 0 0;
   }
 
@@ -1944,7 +1980,7 @@ html.dark-mode .modal-card-head {
     gap: 1rem;
     flex-wrap: wrap;
     background-color: $box-background-color;
-    border-top: 1px solid $grey-lightest;
+    border-top: 1px solid $grey-lighter;
     border-radius: 0 0 16px 16px;
   }
 }
@@ -2033,7 +2069,7 @@ html.dark-mode .modal-card-head {
   border-radius: 10px;
   padding: 3px;
   gap: 2px;
-  box-shadow: inset 0 0 0 1px rgba($black, 0.04);
+  box-shadow: inset 0 0 0 1px $grey-lighter;
 
   button {
     font-size: 0.78rem;
@@ -2087,6 +2123,7 @@ html.dark-mode .seg-tabs {
   background: $white;
   border: 1px solid $grey-lighter;
   border-radius: 14px;
+  box-shadow: $panel-shadow;
   overflow: hidden;
   color: $text;
 }
@@ -2117,7 +2154,7 @@ html.dark-mode .seg-tabs {
 .section-empty {
   padding: 2.5rem 1.5rem;
   text-align: center;
-  color: $grey;
+  color: $text-muted;
   font-size: 0.9rem;
 }
 
@@ -2129,7 +2166,7 @@ html.dark-mode .seg-tabs {
   height: 34px;
   border-radius: 10px;
   background: $white-ter;
-  color: $grey;
+  color: $text-muted;
 
   svg {
     width: 16px;
@@ -2156,7 +2193,7 @@ html.dark-mode .seg-tabs {
 .row-subtitle {
   margin-top: 2px;
   font-size: 12.5px;
-  color: $grey;
+  color: $text-muted;
 }
 
 .chip {
@@ -2188,7 +2225,7 @@ html.dark-mode .seg-tabs {
   border: 0;
   border-radius: 8px;
   background: transparent;
-  color: $grey;
+  color: $text-muted;
   cursor: pointer;
   transition:
     background 0.15s ease,

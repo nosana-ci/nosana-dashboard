@@ -296,7 +296,7 @@ onCreditRefresh(() => {
 }
 
 .credit-transaction-history-footer {
-  border-top: 1px solid #ededed;
+  border-top: 1px solid $grey-lighter;
 }
 </style>
 

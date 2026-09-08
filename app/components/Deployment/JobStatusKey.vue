@@ -20,7 +20,7 @@ defineProps<{ states: number[] }>();
   flex-wrap: wrap;
   align-items: center;
   gap: 0.35rem 1rem;
-  color: $grey;
+  color: $text-muted;
   font-size: 0.75rem;
 }
 
