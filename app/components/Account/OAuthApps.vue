@@ -221,7 +221,7 @@
         <footer class="modal-card-foot">
           <button
             @click="createApp"
-            class="button is-dark"
+            class="button is-success"
             :disabled="!canCreate"
             :class="{ 'is-loading': creating }"
           >
@@ -378,7 +378,7 @@
           </div>
         </section>
         <footer class="modal-card-foot">
-          <button @click="created = null" class="button is-dark">Done</button>
+          <button @click="created = null" class="button is-success">Done</button>
         </footer>
       </div>
     </div>

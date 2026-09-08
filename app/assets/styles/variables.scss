@@ -61,6 +61,17 @@ $input-icon-active-color: $secondary;
 // $input-background-color: $white;
 // $input-border-color: $white-ter;
 $input-shadow: none;
+
+// Dialog chrome: Bulma's stock 2rem on every edge makes even a one-field
+// dialog look oversized. Head and foot share the head padding variable.
+$modal-card-head-padding: 1.15rem 1.5rem;
+$modal-card-body-padding: 1.5rem;
+// Text fields sit next to 8-12px rounded panels everywhere in the app; the
+// stock 6px corners read as a leftover from a different design.
+$input-radius: 10px;
+// Taller than Bulma's shared $control-height so text fields get more room
+// without changing every button on the page.
+$input-control-height: 2.75em;
 $input-focus-box-shadow-color: rgba($secondary, 0.25);
 $label-weight: 400;
 $label-color: $grey;

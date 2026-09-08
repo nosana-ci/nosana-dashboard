@@ -253,19 +253,19 @@ const stateLabel = (n: number) =>
   background: $warning;
 }
 .jstat.running .jdot {
-  background: $info;
+  background: $success;
 }
 .jstat.running .jdot::after {
   content: "";
   position: absolute;
   inset: -4px;
   border-radius: 50%;
-  border: 1.5px solid $info;
+  border: 1.5px solid $success;
   opacity: 0.5;
   animation: jpulse 2.4s ease-out infinite;
 }
 .jstat.completed .jdot {
-  background: $success;
+  background: $info;
 }
 .jstat.stopped .jdot {
   background: $grey-light;

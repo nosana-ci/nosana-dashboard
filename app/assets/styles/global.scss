@@ -40,6 +40,9 @@
   $tabs-link-active-border-bottom-color: $tabs-link-active-border-bottom-color,
   $tabs-link-color: $tabs-link-color,
   $input-shadow: $input-shadow,
+  $input-radius: $input-radius,
+  $modal-card-head-padding: $modal-card-head-padding,
+  $modal-card-body-padding: $modal-card-body-padding,
   $label-weight: $label-weight,
   $label-color: $label-color,
   $black: $black,
@@ -1310,11 +1313,46 @@ button[disabled][data-tooltip] {
 
 /* Status color mapping to ensure consistency across all components */
 :root {
-  --status-success-color: #{$success}; // Green for completed/success
-  --status-info-color: #{$info}; // Blue for running/pending
+  --status-success-color: #{$success}; // Green for running/active/online
+  --status-info-color: #{$info}; // Blue for completed/pending
   --status-warning-color: #{$warning}; // Orange for queued
   --status-danger-color: #{$danger}; // Red for failed/error
   --status-dark-color: #{$dark}; // Gray for stopped/default
+}
+
+/* Text fields: roomier and more defined than the stock control box, so they
+   sit comfortably next to the rounded panels they share dialogs with. */
+.input,
+.textarea {
+  --bulma-control-height: #{$input-control-height};
+  padding-inline: calc(1em - 1px);
+  border-color: $grey-light;
+
+  &:hover:not(:focus) {
+    border-color: $grey;
+  }
+}
+
+/* Field icons are sized from the input height, and read it off .control. */
+.control.has-icons-left,
+.control.has-icons-right {
+  --bulma-input-height: #{$input-control-height};
+}
+
+/* Dialog close control: the borderless icon button the job side panel uses,
+   instead of Bulma's filled circle. */
+.modal-card-head .delete {
+  --bulma-delete-dimensions: 30px;
+  --bulma-delete-color: currentColor;
+  border-radius: 8px;
+  background-color: transparent;
+  color: $grey;
+
+  &:hover,
+  &:focus-visible {
+    background-color: $white-ter;
+    color: $secondary;
+  }
 }
 
 /* Global status tag styling with consistent colors */
@@ -1509,7 +1547,7 @@ html.dark-mode .modal-card-head {
 
 /* Ensure SMIL animations start immediately + CSS fallback for instant start */
 .tag.status-tag.is-warning .status-icon-wrap svg path:nth-child(2),
-.tag.status-tag.is-info .status-icon-wrap svg path:nth-child(2) {
+.tag.status-tag.is-success .status-icon-wrap svg path:nth-child(2) {
   /* CSS animation as fallback - will be overridden by SMIL if working */
   animation: statusSpinFallback 4s linear infinite;
   transform-origin: 8.95px 8.85px;
@@ -1526,13 +1564,13 @@ html.dark-mode .modal-card-head {
 
 /* Force SMIL animations to restart immediately when component mounts */
 .tag.status-tag.is-warning .status-icon-wrap svg,
-.tag.status-tag.is-info .status-icon-wrap svg {
+.tag.status-tag.is-success .status-icon-wrap svg {
   /* Force browser to recalculate animations */
   animation: none;
 }
 
 .tag.status-tag.is-warning .status-icon-wrap svg *,
-.tag.status-tag.is-info .status-icon-wrap svg * {
+.tag.status-tag.is-success .status-icon-wrap svg * {
   /* Ensure SMIL animations are not paused */
   animation-play-state: running !important;
 }
@@ -1872,6 +1910,14 @@ html.dark-mode .modal-card-head {
   overflow: hidden;
   box-shadow: 0 40px 80px -30px rgba($black, 0.35);
 
+  /* The .has-limited-width-* helpers lose to the bare .modal-card width rule
+     further down this file, so dialog widths live on this scale instead. */
+  &.is-small {
+    width: 480px;
+  }
+  &.is-normal {
+    width: 640px;
+  }
   &.is-medium {
     width: 900px;
   }
@@ -1903,6 +1949,17 @@ html.dark-mode .modal-card-head {
   }
 }
 
+.dark-mode .modal-card-head .delete:not(.light-mode) {
+  background-color: transparent;
+  color: $grey-light;
+
+  &:hover,
+  &:focus-visible {
+    background-color: rgba($white, 0.08);
+    color: $secondary;
+  }
+}
+
 .dark-mode .modal-card.is-app-modal {
   border: 1px solid #2c2c2c;
 
@@ -1917,12 +1974,18 @@ html.dark-mode .modal-card-head {
   // neutral ones (Cancel, Change template, inactive filter pills) a subtle
   // on-dark treatment. Coloured buttons (is-secondary/is-dark/…) keep theirs.
   .button:not(.is-secondary):not(.is-dark):not(.is-primary):not(.is-danger):not(
-      .is-outlined
-    ):not(.is-glow) {
+      .is-success
+    ):not(.is-outlined):not(.is-glow) {
     background-color: rgba(255, 255, 255, 0.05);
     border-color: rgba(255, 255, 255, 0.16);
     color: #e4e4e4;
   }
+}
+
+// Left-hand summary line in an app dialog footer, opposite the buttons.
+.modal-foot-summary {
+  flex: 1;
+  min-width: 0;
 }
 
 // Green accent chip for dialog headers / the deploy banner avatar.
