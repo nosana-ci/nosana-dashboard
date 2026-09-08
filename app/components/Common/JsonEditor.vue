@@ -15,6 +15,7 @@
 <script setup lang="ts">
 import { Mode, ValidationSeverity } from 'vanilla-jsoneditor';
 import JsonEditorVue from 'json-editor-vue';
+import { validateJobDefinition as validateJobDefinitionSchema } from '@nosana/kit';
 import 'vanilla-jsoneditor/themes/jse-theme-dark.css';
 
 interface ValidationError {
@@ -90,54 +91,50 @@ const hasSyntaxError = ref(false);
 // Expose whether there are any errors (validation OR syntax)
 const hasErrors = computed(() => validationErrors.value.length > 0 || hasSyntaxError.value);
 
+// Typia error paths look like "$input.ops[0].id" — strip the "$input" root
+// and split into the (string | number)[] segments vanilla-jsoneditor expects.
+function parseTypiaPath(path: string): (string | number)[] {
+  const withoutRoot = path.replace(/^\$input\.?/, '');
+  if (!withoutRoot) return [];
+
+  const segments: (string | number)[] = [];
+  const segmentPattern = /([^[.\]]+)|\[(\d+)\]/g;
+  let match: RegExpExecArray | null;
+  while ((match = segmentPattern.exec(withoutRoot))) {
+    segments.push(match[2] !== undefined ? Number(match[2]) : match[1]!);
+  }
+  return segments;
+}
+
+function describeError(path: (string | number)[], expected: string, value: unknown): string {
+  const isOpId = path.length === 3 && path[0] === 'ops' && typeof path[1] === 'number' && path[2] === 'id';
+  if (isOpId && expected.includes('TagBase')) {
+    return 'id must be a string and not contain spaces or full stops';
+  }
+
+  const isOps = path.length === 1 && path[0] === 'ops';
+  if (isOps && expected.includes('UniqueById')) {
+    return 'id values must be unique';
+  }
+
+  return `Expected ${expected}, but got ${JSON.stringify(value)}`;
+}
+
 /**
- * Built-in job definition validator
+ * Job definition validator backed by @nosana/kit's validateJobDefinition
  */
 function jobDefinitionValidator(json: any): ValidationError[] {
-  const errors: ValidationError[] = [];
-  
-  if (!json || typeof json !== 'object') {
-    errors.push({ path: [], message: 'Job definition must be an object', severity: ValidationSeverity.error });
-    return errors;
-  }
+  const result = validateJobDefinitionSchema(json);
+  if (result.success) return [];
 
-  // Check version
-  if (!json.version) {
-    errors.push({ path: ['version'], message: 'Missing required field: version', severity: ValidationSeverity.error });
-  }
-
-  // Check type
-  if (!json.type) {
-    errors.push({ path: ['type'], message: 'Missing required field: type', severity: ValidationSeverity.error });
-  } else if (json.type !== 'container') {
-    errors.push({ path: ['type'], message: 'Type must be "container"', severity: ValidationSeverity.error });
-  }
-
-  // Check ops
-  if (!json.ops) {
-    errors.push({ path: ['ops'], message: 'Missing required field: ops', severity: ValidationSeverity.error });
-  } else if (!Array.isArray(json.ops)) {
-    errors.push({ path: ['ops'], message: 'ops must be an array', severity: ValidationSeverity.error });
-  } else if (json.ops.length === 0) {
-    errors.push({ path: ['ops'], message: 'ops must contain at least one operation', severity: ValidationSeverity.error });
-  } else {
-    // Validate each operation
-    json.ops.forEach((op: any, index: number) => {
-      if (!op.type) {
-        errors.push({ path: ['ops', index, 'type'], message: `Operation ${index + 1}: missing type`, severity: ValidationSeverity.error });
-      }
-      if (!op.id && op.id !== '') {
-        errors.push({ path: ['ops', index, 'id'], message: `Operation ${index + 1}: missing id`, severity: ValidationSeverity.error });
-      }
-      if (op.type === 'container/run' && op.args) {
-        if (!op.args.image) {
-          errors.push({ path: ['ops', index, 'args', 'image'], message: `Operation ${index + 1}: missing image`, severity: ValidationSeverity.error });
-        }
-      }
-    });
-  }
-
-  return errors;
+  return result.errors.map((error) => {
+    const path = parseTypiaPath(error.path);
+    return {
+      path,
+      message: describeError(path, error.expected, error.value),
+      severity: ValidationSeverity.error,
+    };
+  });
 }
 
 // Wrapper validator that tracks errors
@@ -147,11 +144,11 @@ const wrappedValidator = (json: any): ValidationError[] => {
     validationErrors.value = [];
     return [];
   }
-  
-  const errors = props.validateJobDefinition 
+
+  const errors = props.validateJobDefinition
     ? jobDefinitionValidator(json)
     : props.validator?.(json) ?? [];
-  
+
   validationErrors.value = errors;
   return errors;
 };
