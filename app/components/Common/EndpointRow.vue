@@ -190,7 +190,7 @@ const onRowClick = () => {
   display: block;
   font-family: $family-monospace;
   font-size: 0.78rem;
-  color: $grey;
+  color: $text-muted;
   margin-top: 4px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -219,7 +219,7 @@ a.ep-url:hover {
   border-radius: 8px;
   border: 0;
   background: transparent;
-  color: $grey;
+  color: $text-muted;
   cursor: pointer;
   transition:
     background 0.15s ease,

@@ -153,7 +153,7 @@ html.dark-mode .lc-card {
 
 .lc-empty {
   text-align: center;
-  color: $grey;
+  color: $text-muted;
   padding: 1.75rem 1rem;
   margin: 0;
   font-size: 0.85rem;
@@ -213,7 +213,7 @@ html.dark-mode .lc-stage:not(:last-child)::before {
   /* A card-coloured ring lifts the node cleanly off the rail behind it. */
   border: 3px solid $white;
   background: rgba($grey, 0.16);
-  color: $grey;
+  color: $text-muted;
 }
 
 html.dark-mode .lc-node {
@@ -261,7 +261,7 @@ html.dark-mode .lc-node {
 }
 .lc-stage.is-grey .lc-node {
   background: rgba($grey, 0.16);
-  color: $grey;
+  color: $text-muted;
 }
 
 /* ---- Content ---- */
@@ -287,7 +287,7 @@ html.dark-mode .lc-node {
   margin-left: auto;
   flex: none;
   font-size: 0.72rem;
-  color: $grey;
+  color: $text-muted;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
@@ -299,7 +299,7 @@ html.dark-mode .lc-node {
 }
 
 .lc-detail-label {
-  color: $grey;
+  color: $text-muted;
   margin-right: 6px;
 }
 
@@ -317,7 +317,7 @@ html.dark-mode .lc-node {
   align-items: center;
   gap: 4px;
   font-size: 0.72rem;
-  color: $grey;
+  color: $text-muted;
   margin-top: 7px;
   text-decoration: none;
   transition: color 0.15s ease;

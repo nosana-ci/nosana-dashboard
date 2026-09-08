@@ -310,11 +310,11 @@ onBeforeUnmount(() => {
   gap: 0.4rem;
   margin: 0.5rem 0 0;
   font-size: 0.78rem;
-  color: $grey;
+  color: $text-muted;
 }
 
 .jp-sep {
-  color: $grey-light;
+  color: $text-muted;
 }
 
 .jp-link {

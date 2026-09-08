@@ -702,7 +702,7 @@ defineExpose({ canSave });
   padding: 10px 12px;
   background: rgba(0, 0, 0, 0.015);
 }
-.grip { color: $text-light; user-select: none; cursor: grab; font-size: 13px; }
+.grip { color: $text-muted; user-select: none; cursor: grab; font-size: 13px; }
 .op-badge {
   display: inline-flex;
   align-items: center;
@@ -724,7 +724,7 @@ defineExpose({ canSave });
   gap: 8px;
   flex: 1;
   min-width: 0;
-  label { font-family: monospace; font-size: 0.68rem; color: $text-light; flex: none; }
+  label { font-family: monospace; font-size: 0.68rem; color: $text-muted; flex: none; }
   .idinput {
     flex: 1;
     min-width: 0;
@@ -747,7 +747,7 @@ defineExpose({ canSave });
 .icon-btn {
   width: 30px; height: 30px;
   border: 0; background: transparent;
-  color: $text-light;
+  color: $text-muted;
   border-radius: 7px;
   display: grid; place-items: center;
   cursor: pointer;
@@ -774,7 +774,7 @@ defineExpose({ canSave });
 }
 .lab { padding-top: 8px;
   .name { display: block; font-size: 0.8rem; font-weight: 500; }
-  .desc { display: block; color: $text-light; font-size: 0.72rem; margin-top: 2px; line-height: 1.35; }
+  .desc { display: block; color: $text-muted; font-size: 0.72rem; margin-top: 2px; line-height: 1.35; }
 }
 .field.stack .lab { padding-top: 0; }
 .req { color: #0a9106; font-size: 0.6rem; font-weight: 700; font-family: $title-family; text-transform: uppercase; letter-spacing: 0.03em; }
@@ -792,7 +792,7 @@ code { font-family: monospace; font-size: 0.85em; color: #0a9e06; }
   transition: border-color 0.15s, box-shadow 0.15s;
   &:focus { outline: 0; border-color: $secondary; box-shadow: 0 0 0 3px rgba($secondary, 0.15); }
   &.mono { font-family: monospace; font-size: 0.78rem; }
-  &::placeholder { color: $text-light; }
+  &::placeholder { color: $text-muted; }
 }
 .jselect {
   border: 1px solid $border;
@@ -825,8 +825,8 @@ code { font-family: monospace; font-size: 0.85em; color: #0a9e06; }
 .fold-body .rows { margin-bottom: 12px; }
 .row { display: flex; align-items: center; gap: 7px; .jinput { flex: 1; } }
 .env-key { flex: none; width: 190px; }
-.eq { color: $text-light; font-family: monospace; flex: none; }
-.row-rm { width: 32px; height: 32px; flex: none; border: 1px solid transparent; background: transparent; color: $text-light; border-radius: 8px; display: grid; place-items: center; cursor: pointer; transition: background 0.15s, color 0.15s; svg { width: 15px; height: 15px; }
+.eq { color: $text-muted; font-family: monospace; flex: none; }
+.row-rm { width: 32px; height: 32px; flex: none; border: 1px solid transparent; background: transparent; color: $text-muted; border-radius: 8px; display: grid; place-items: center; cursor: pointer; transition: background 0.15s, color 0.15s; svg { width: 15px; height: 15px; }
   &:hover { background: rgba(#e5484d, 0.1); color: #e5484d; }
 }
 
@@ -835,8 +835,8 @@ code { font-family: monospace; font-size: 0.85em; color: #0a9e06; }
 .port-card { border: 1px solid $border; border-radius: 10px; background: rgba(0, 0, 0, 0.015); padding: 10px 11px; }
 .port-top { display: flex; align-items: center; gap: 8px; }
 .port-input { display: flex; align-items: center; flex: none; border: 1px solid $border; border-radius: 8px; background: $box-background-color; overflow: hidden; transition: border-color 0.15s, box-shadow 0.15s;
-  .pfx { padding-left: 11px; color: $text-light; font-family: monospace; font-size: 0.85rem; }
-  input { border: 0; background: transparent; padding: 9px 12px 9px 3px; width: 84px; font-family: monospace; font-size: 0.82rem; color: $text; &:focus { outline: 0; } &::placeholder { color: $text-light; } }
+  .pfx { padding-left: 11px; color: $text-muted; font-family: monospace; font-size: 0.85rem; }
+  input { border: 0; background: transparent; padding: 9px 12px 9px 3px; width: 84px; font-family: monospace; font-size: 0.82rem; color: $text; &:focus { outline: 0; } &::placeholder { color: $text-muted; } }
   &:focus-within { border-color: $secondary; box-shadow: 0 0 0 3px rgba($secondary, 0.15); }
 }
 .hc-line { margin-top: 10px; }
@@ -851,7 +851,7 @@ code { font-family: monospace; font-size: 0.85em; color: #0a9e06; }
 
 .linkbtn { border: 0; background: transparent; padding: 0; cursor: pointer; font-family: $title-family; font-weight: 500; font-size: 0.74rem; color: #0a9e06;
   &:hover { text-decoration: underline; }
-  &.danger { color: $text-light; &:hover { color: #e5484d; } }
+  &.danger { color: $text-muted; &:hover { color: #e5484d; } }
 }
 
 /* resources */
@@ -867,14 +867,14 @@ code { font-family: monospace; font-size: 0.85em; color: #0a9e06; }
 }
 .res-adv-toggle { grid-column: 1 / -1; justify-self: start; }
 .res-adv { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; align-items: start; padding-top: 10px; border-top: 1px dashed $border; }
-.res-subhead { grid-column: 1 / -1; font-family: $title-family; font-weight: 600; font-size: 0.68rem; color: $text-light; text-transform: uppercase; letter-spacing: 0.04em; margin-top: 3px; }
+.res-subhead { grid-column: 1 / -1; font-family: $title-family; font-weight: 600; font-size: 0.68rem; color: $text-muted; text-transform: uppercase; letter-spacing: 0.04em; margin-top: 3px; }
 
 /* collapsible sections */
 .fold { border-top: 1px solid $border; }
 .fold-head { width: 100%; display: flex; align-items: center; gap: 10px; padding: 13px 15px; background: transparent; border: 0; cursor: pointer; text-align: left; transition: background 0.15s;
-  .chev { color: $text-light; width: 15px; height: 15px; flex: none; transition: transform 0.18s; transform: rotate(-90deg); }
+  .chev { color: $text-muted; width: 15px; height: 15px; flex: none; transition: transform 0.18s; transform: rotate(-90deg); }
   .ft { font-family: $title-family; font-weight: 600; font-size: 0.85rem; }
-  .fs { margin-left: auto; color: $text-light; font-size: 0.74rem; }
+  .fs { margin-left: auto; color: $text-muted; font-size: 0.74rem; }
   &:hover { background: rgba(0, 0, 0, 0.02); }
 }
 .fold.open .chev { transform: rotate(0deg); }
@@ -890,7 +890,7 @@ code { font-family: monospace; font-size: 0.85em; color: #0a9e06; }
 .add-menu { margin-top: 8px; background: $box-background-color; border: 1px solid $border; border-radius: 10px; box-shadow: 0 8px 20px -14px rgba(0, 0, 0, 0.25); padding: 6px; max-width: 340px;
   button { display: flex; flex-direction: column; gap: 1px; width: 100%; text-align: left; background: transparent; border: 0; border-radius: 7px; padding: 8px 10px; cursor: pointer;
     b { font-family: $title-family; font-size: 0.8rem; }
-    small { color: $text-light; font-size: 0.7rem; }
+    small { color: $text-muted; font-size: 0.7rem; }
     &:hover { background: rgba(0, 0, 0, 0.04); }
   }
 }
@@ -914,6 +914,6 @@ html.dark-mode {
   .idfield .idinput { color: $white; border-bottom-color: #333; }
   .req, .op-badge, .res-type { color: #3df23a; }
   code, .linkbtn { color: #3df23a; }
-  .linkbtn.danger { color: $text-light; }
+  .linkbtn.danger { color: $text-muted; }
 }
 </style>

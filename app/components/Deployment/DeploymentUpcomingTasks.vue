@@ -84,6 +84,7 @@ defineEmits<{
   background: $white;
   border: 1px solid $grey-lighter;
   border-radius: 14px;
+  box-shadow: $panel-shadow;
   overflow: hidden;
 }
 
@@ -128,7 +129,7 @@ defineEmits<{
 
 .task-sub {
   font-size: 0.8rem;
-  color: $grey;
+  color: $text-muted;
   margin-top: 4px;
 }
 
@@ -164,7 +165,7 @@ defineEmits<{
 
 .task-empty {
   text-align: center;
-  color: $grey;
+  color: $text-muted;
   padding: 2.5rem 1rem;
 }
 

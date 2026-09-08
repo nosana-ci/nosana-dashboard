@@ -70,6 +70,7 @@
 
   .box {
     background-color: $box-background-color-dark;
+    border-color: rgba($white, 0.08);
   }
 
   .wallet-auth-banner {
@@ -114,6 +115,13 @@
     background-color: $grey-dark !important;
     color: $white !important;
     border: 1px solid $grey !important;
+  }
+
+  /* Bulma takes these from $label-color / $subtitle-color, which are compiled
+     Sass colours and so cannot follow --app-text-muted. */
+  .label:not(.light-mode),
+  .subtitle:not(.light-mode) {
+    color: $grey-light;
   }
 
   .title:not(.light-mode) {
@@ -183,13 +191,13 @@
     }
 
     a {
-      color: $grey;
+      color: $grey-light;
       border-bottom-width: 3px;
       border-bottom-color: transparent;
       margin-bottom: -3px;
 
       &:hover {
-        color: $grey-light;
+        color: $white;
         border-bottom-color: $grey;
         background-color: $black-ter;
       }

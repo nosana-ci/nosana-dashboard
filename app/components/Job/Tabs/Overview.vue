@@ -1122,7 +1122,7 @@ html.dark-mode .cc-group-name {
 
 .cc-group-count {
   font-size: 0.78rem;
-  color: $grey;
+  color: $text-muted;
   white-space: nowrap;
 }
 
@@ -1169,7 +1169,7 @@ html.dark-mode .cc-op-head:hover {
   width: 15px;
   height: 15px;
   flex: none;
-  color: $grey;
+  color: $text-muted;
   transition: transform 0.2s ease;
 
   &.is-open {
@@ -1201,7 +1201,7 @@ html.dark-mode .cc-op-name {
 
 .cc-op-image {
   font-size: 0.75rem;
-  color: $grey;
+  color: $text-muted;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1272,7 +1272,7 @@ html.dark-mode .cc-op-body {
 
 .cc-meta-item .k {
   font-size: 0.72rem;
-  color: $grey;
+  color: $text-muted;
 }
 
 .cc-meta-item .v {
@@ -1323,7 +1323,7 @@ html.dark-mode .cc-section {
   font-size: 0.72rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: $grey;
+  color: $text-muted;
   margin-bottom: 0.6rem;
 }
 
@@ -1347,7 +1347,7 @@ html.dark-mode .cc-section {
 
 .cc-cmd-label {
   font-size: 0.72rem;
-  color: $grey;
+  color: $text-muted;
 }
 
 .cc-code {

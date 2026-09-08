@@ -243,12 +243,12 @@ const configure = () => emit("configure");
   padding: 2px 7px;
   border-radius: 999px;
   background: rgba($grey, 0.16);
-  color: $grey;
+  color: $text-muted;
 }
 
 .dup-accordion-sub {
   font-size: 0.75rem;
-  color: $grey;
+  color: $text-muted;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -258,7 +258,7 @@ const configure = () => emit("configure");
   width: 18px;
   height: 18px;
   flex: none;
-  color: $grey;
+  color: $text-muted;
   transition: transform 0.18s ease;
 
   .is-open & {
@@ -268,7 +268,7 @@ const configure = () => emit("configure");
 
 .dup-accordion-panel {
   padding: 0 1rem 1rem;
-  border-top: 1px solid $grey-lightest;
+  border-top: 1px solid $grey-lighter;
   /* The grid can be long; keep the dialog itself a sane height. */
   max-height: 46vh;
   overflow-y: auto;

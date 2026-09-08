@@ -71,7 +71,7 @@ watch(model, (val) => {
   }
 
   &::placeholder {
-    color: $text-light;
+    color: $text-muted;
     opacity: 0.4;
   }
 }
@@ -83,7 +83,7 @@ watch(model, (val) => {
   transform: translateY(-50%);
   background: none;
   border: none;
-  color: $text-light;
+  color: $text-muted;
   cursor: pointer;
   font-size: 1.2rem;
   padding: 0 0.2rem;
