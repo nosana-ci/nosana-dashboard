@@ -1,6 +1,6 @@
 import { ref } from "vue";
 import type { NodeJobApi } from "@nosana/api";
-import { useLatestRequest } from "../useLatestRequest.ts";
+import { useLatestRequest } from "../useLatestRequest";
 import type { TaskStat, StatsInterval } from "./types";
 
 export function useStatsFetch(

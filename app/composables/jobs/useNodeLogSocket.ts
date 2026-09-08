@@ -4,7 +4,7 @@ import type {
   NodeStreamSubscription,
   NodeTaskLog,
 } from "@nosana/api";
-import { useLatestRequest } from "../useLatestRequest.ts";
+import { useLatestRequest } from "../useLatestRequest";
 
 type OpenLogSocket = (
   handlers: NodeStreamHandlers<NodeTaskLog>,
