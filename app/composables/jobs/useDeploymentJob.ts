@@ -59,7 +59,18 @@ export async function prefetchDeploymentJob(
   }
 }
 
-export function useDeploymentJob(deploymentId: string, jobId: string) {
+/**
+ * @param liveState The job's state as the page's live job list holds it, when
+ *   the caller has one. The view fetches once on mount and is then fed by the
+ *   node's info stream, which only exists while the job runs — so a replica
+ *   that starts (or stops) while it is open would otherwise keep showing what
+ *   it looked like on open. Watching the streamed state refreshes it instead.
+ */
+export function useDeploymentJob(
+  deploymentId: string,
+  jobId: string,
+  liveState?: () => string | number | undefined,
+) {
   const job = ref<JobViewModel | null>(null);
   const endpoints = ref<LiveEndpoints>(new Map());
   const jobInfo = ref<JobInfo | null>(null);
@@ -352,9 +363,22 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
     if (getStateNumber(api.state) === 1) connectInfoStreamIfNeeded();
   }
 
-  async function init() {
+  // Fetch the job record, cache it and render it. The view keeps showing the
+  // previous record until the new one lands, so this doubles as a background
+  // refresh; false means the fetch produced nothing.
+  async function fetchAndApply(): Promise<boolean> {
+    const latest = await fetchDeploymentJob();
+    if (!latest) return false;
     const key = cacheKey(deploymentId, jobId);
-    const cached = jobCache.get(key);
+    const entry = jobCache.get(key);
+    if (entry) entry.api = latest;
+    else jobCache.set(key, { api: latest, jobInfo: null, endpoints: new Map() });
+    applyApi(latest);
+    return true;
+  }
+
+  async function init() {
+    const cached = jobCache.get(cacheKey(deploymentId, jobId));
     if (cached) {
       // Show what was last known, then refresh behind it.
       if (cached.jobInfo) {
@@ -366,19 +390,17 @@ export function useDeploymentJob(deploymentId: string, jobId: string) {
       loading.value = true;
     }
 
-    const latest = await fetchDeploymentJob();
-    if (latest) {
-      const entry = jobCache.get(key);
-      if (entry) entry.api = latest;
-      else jobCache.set(key, { api: latest, jobInfo: null, endpoints: new Map() });
-      applyApi(latest);
-    } else {
-      loading.value = false;
-    }
+    if (!(await fetchAndApply())) loading.value = false;
   }
 
   onMounted(() => { init(); });
   onBeforeUnmount(disconnectInfo);
+
+  if (liveState) {
+    watch(liveState, (state, previous) => {
+      if (state !== undefined && state !== previous) void fetchAndApply();
+    });
+  }
 
   return {
     job,

@@ -76,6 +76,13 @@ $input-focus-box-shadow-color: rgba($secondary, 0.25);
 $label-weight: 400;
 $label-color: $grey;
 
+// Always-dark code surfaces — the JSON editor, the log viewers and the web
+// terminal. A blue-tinted near-black so they read as one family in either
+// page theme.
+$code-surface: #0d1117;
+$code-surface-panel: #161b22;
+$code-surface-border: #21262d;
+
 $code: $danger;
 $code-background: $background;
 $pre: $text;

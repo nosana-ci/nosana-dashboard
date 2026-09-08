@@ -267,7 +267,10 @@
       <!-- Container Controls Tab -->
       <!-- The panel keeps this mounted (v-show) so per-operation shells
            survive switching views, and shows it as soon as the definition is
-           known. The page waits for container logs and mounts it per visit. -->
+           known — it decides whether containers are offered at all, and only
+           routes here while the job runs. The shells stay idle until the tab
+           is actually on screen (`shells-active` below). The page waits for
+           container logs and mounts it per visit. -->
       <div
         v-if="
           isPanel

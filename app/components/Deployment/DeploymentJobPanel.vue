@@ -92,7 +92,7 @@
       <div class="jp-tabs">
         <div class="dep-tabs" role="tablist" aria-label="Job view">
           <button
-            v-for="tab in VIEWS"
+            v-for="tab in visibleViews"
             :key="tab.id"
             type="button"
             role="tab"
@@ -115,6 +115,7 @@
             :deployment-id="deploymentId"
             :job-address="job"
             :view="view === 'logs' ? 'details' : view"
+            :job-state="selected?.state"
             :active="view !== 'logs'"
             :auto-connect-op="autoConnectOp"
             :deployment-endpoints="endpoints"
@@ -177,6 +178,34 @@ const closeButton = ref<HTMLButtonElement | null>(null);
 
 const selected = computed(
   () => props.deploymentJobs.find((item) => item.job === props.job) ?? null,
+);
+
+const jobState = computed(() =>
+  selected.value ? normalizeStatus(selected.value.state) : "UNKNOWN",
+);
+
+// A queued replica hasn't been picked up by a node yet, so it has no details,
+// no containers and no logs — only the trail of it being listed. Once it runs
+// everything is available; after it finishes the containers (and the shells
+// and endpoint actions inside that tab) are dead controls.
+const visibleViews = computed(() => {
+  if (jobState.value === "QUEUED") {
+    return VIEWS.filter((tab) => tab.id === "activity");
+  }
+  return VIEWS.filter(
+    (tab) => tab.id !== "containers" || jobState.value === "RUNNING",
+  );
+});
+
+// The panel can be opened straight onto a view (the row's SSH button opens
+// Containers), and a job can change state while it is open.
+watch(
+  [() => props.view, visibleViews],
+  ([view, views]) => {
+    if (views.some((tab) => tab.id === view)) return;
+    emit("update:view", views[0]?.id ?? "details");
+  },
+  { immediate: true },
 );
 
 // The log collector mounts on first visit and stays until the panel closes.
