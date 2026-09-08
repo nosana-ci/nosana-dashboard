@@ -188,9 +188,14 @@
         <DeploymentDuplicateModal
           v-model="showDuplicateModal"
           v-model:name="duplicateName"
+          v-model:market="duplicateMarket"
           :currentName="deployment.name || ''"
+          :currentMarket="deployment.market"
+          :testgridMarkets="testgridMarkets || []"
+          :jobDefinition="jobDefinitionModel"
           :actionLoading="actionLoading"
           @confirm="duplicateDeployment()"
+          @configure="configureDuplicate"
         />
 
         <DeploymentRevisionViewModal
@@ -484,6 +489,7 @@ const {
   newTimeoutHours,
   newSchedule,
   duplicateName,
+  duplicateMarket,
   switchingRevision,
   viewingRevision,
   canStart,
@@ -841,6 +847,23 @@ watch(showMarketModal, (isOpen) => {
 watch(showDuplicateModal, (isOpen) => {
   if (!isOpen && route.query.action === "duplicate") clearAction();
 });
+
+// "Configure" hands the copy to the create page instead of deploying it now,
+// carrying over whatever was already filled in here.
+const configureDuplicate = async () => {
+  if (!deployment.value) return;
+  // The dialog stays open until this lands: closing it first would clear
+  // ?action=duplicate from this route, and that replace cancels the push.
+  const failure = await router.push({
+    path: "/deployments/create",
+    query: {
+      clone: deployment.value.id,
+      name: duplicateName.value.trim() || undefined,
+      market: duplicateMarket.value || undefined,
+    },
+  });
+  if (failure) showDuplicateModal.value = false;
+};
 
 // Head
 useHead({
