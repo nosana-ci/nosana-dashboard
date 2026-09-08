@@ -2,15 +2,19 @@ $black:        hsl(0, 0%, 4%) !default;
 $black-bis:    hsl(0, 0%, 7%) !default;
 $black-ter:    hsl(0, 0%, 14%) !default;
 
-$grey-darker:  hsl(0, 0%, 21%) !default;
-$grey-dark:    hsl(0, 0%, 29%) !default;
-$grey:         hsl(0, 0%, 48%) !default;
-$grey-light:   hsl(0, 0%, 71%) !default;
-$grey-lighter: hsl(0, 0%, 86%) !default;
-$grey-lightest: hsl(0, 0%, 93%) !default;
+// Neutral ramp. Slightly cool (hue 220) rather than pure greyscale so the
+// light theme reads as a tinted canvas under white panels instead of one flat
+// white, and the steps between the light end are spread wider than Bulma's
+// stock greys so page / panel / sunken surfaces stay visually separate.
+$grey-darker:  hsl(220, 13%, 20%) !default;
+$grey-dark:    hsl(220, 11%, 30%) !default;
+$grey:         hsl(220, 10%, 41%) !default;
+$grey-light:   hsl(220, 13%, 72%) !default;
+$grey-lighter: hsl(220, 17%, 82%) !default;
+$grey-lightest: hsl(220, 23%, 90%) !default;
 
-$white-ter:    hsl(0, 0%, 96%) !default;
-$white-bis:    hsl(0, 0%, 98%) !default;
+$white-ter:    hsl(220, 27%, 96%) !default;
+$white-bis:    hsl(220, 33%, 98%) !default;
 $white:        hsl(0, 0%, 100%) !default;
 
 $orange:       hsl(14,  100%, 53%) !default;

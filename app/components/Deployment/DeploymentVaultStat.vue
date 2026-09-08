@@ -25,7 +25,7 @@ const usd = computed(() => (balance.value?.NOS || 0) * nosPrice.value);
    only theme the label/value/sub text. */
 .k {
   font-size: 12px;
-  color: $grey;
+  color: $text-muted;
   margin-bottom: 7px;
 }
 
@@ -40,7 +40,7 @@ const usd = computed(() => (balance.value?.NOS || 0) * nosPrice.value);
 
 .s {
   font-size: 12px;
-  color: $grey;
+  color: $text-muted;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

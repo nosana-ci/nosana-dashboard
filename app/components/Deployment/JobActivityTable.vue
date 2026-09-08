@@ -1,27 +1,50 @@
 <template>
   <div class="jrows">
-    <NuxtLink
+    <div
       v-for="job in jobs"
       :key="job.job"
-      :to="`/deployments/${deploymentId}/jobs/${job.job}`"
       class="jrow"
       :class="{ 'is-live': !showDuration && getJobStateNumber(job) === 1 }"
     >
       <div class="jrow-head">
-        <span class="jstat" :class="stateClass(getJobStateNumber(job))">
-          <span class="jdot"></span>
-          <span class="jlab">{{ stateLabel(getJobStateNumber(job)) }}</span>
-        </span>
-        <span class="jid is-family-monospace">{{ truncateMiddle(job.job) }}</span>
-        <span class="rev-chip is-family-monospace">Revision {{ job.revision ?? "-" }}</span>
-        <span
-          v-if="!showDuration && getJobStateNumber(job) === 0"
-          class="jwait-inline"
-          >awaiting node…</span
-        >
-        <span class="jmeta">
+        <div class="jrow-main">
+          <!-- The label lives in the status key below the table; screen
+               readers still get it from the hidden span. -->
+          <JobStatusDot
+            :state="getJobStateNumber(job)"
+            :pulse="!showDuration"
+            :title="stateLabel(getJobStateNumber(job))"
+          />
+          <span class="is-sr-only">{{
+            stateLabel(getJobStateNumber(job))
+          }}</span>
+
+          <span class="jinfo">
+            <span class="jinfo-top">
+              <!-- Same shape as the deployment id in the page header -->
+              <span class="jid is-family-monospace">{{
+                truncateMiddle(job.job, 8, 6)
+              }}</span>
+              <button
+                v-if="job.revision != null"
+                type="button"
+                class="rev-chip is-family-monospace"
+                :title="`Revision ${job.revision} — open in Configuration`"
+                @click="emit('openRevision', job.revision as number)"
+              >
+                #{{ job.revision }}
+              </button>
+              <span v-else class="rev-chip is-family-monospace">#-</span>
+            </span>
+            <span class="jtime">{{ timeLabel(job) }}</span>
+          </span>
+        </div>
+
+        <div class="jrow-right">
           <span
-            v-if="showDuration && getJobDuration && getJobDuration(job.job) !== null"
+            v-if="
+              showDuration && getJobDuration && getJobDuration(job.job) !== null
+            "
             class="dur"
           >
             <SecondsFormatter
@@ -29,36 +52,89 @@
               :showSeconds="true"
             />
           </span>
-          <span>{{
-            showDuration
-              ? formatTimeAgo(job.created_at)
-              : `${getJobStateNumber(job) === 0 ? "listed" : "started"} ${formatTimeAgo(
-                  job.created_at,
-                )}`
-          }}</span>
-        </span>
-        <span class="jchev">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
+
+          <span
+            v-if="!showDuration && getJobStateNumber(job) === 0"
+            class="jwait-inline"
+            >awaiting node…</span
           >
-            <path d="M9 18l6-6-6-6" />
-          </svg>
-        </span>
+
+          <div class="jrow-actions">
+            <button
+              v-if="canAccess(job)"
+              type="button"
+              class="button is-small is-quiet"
+              :title="`Open SSH access for job ${job.job}`"
+              @click="emit('openSsh', job.job)"
+            >
+              <span class="icon is-small"
+                ><TerminalIcon aria-hidden="true"
+              /></span>
+              <span class="is-hidden-mobile">SSH</span>
+            </button>
+            <!-- A queued job has produced no logs yet -->
+            <button
+              v-if="getJobStateNumber(job) !== 0"
+              type="button"
+              class="button is-small is-quiet"
+              :title="`Show logs for job ${job.job}`"
+              @click="emit('viewLogs', job.job)"
+            >
+              <span class="icon is-small">
+                <!-- stroke-width 2 to match terminal.svg; a thinner stroke
+                     anti-aliases to a paler green at this size. -->
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M4 6h16M4 12h10M4 18h13" />
+                </svg>
+              </span>
+              <span class="is-hidden-mobile">Logs</span>
+            </button>
+          </div>
+
+          <span class="jchev">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M9 18l6-6-6-6" />
+            </svg>
+          </span>
+        </div>
+
+        <!-- Stretched click target for the row; last in the DOM so it sits
+             above the plain text but below the interactive bits. -->
+        <button
+          type="button"
+          class="jrow-link"
+          :aria-label="`Open job ${job.job}`"
+          @click="emit('open', job.job)"
+        ></button>
       </div>
 
-      <!-- Live per-job usage. The strip renders only while the node's stats
-           stream is actually connected (handled inside the component). -->
-      <JobUsageStrip
-        v-if="!showDuration && getJobStateNumber(job) === 1 && hasNode(job)"
-        :jobId="job.job"
-        :node="(job.node as string)"
-      />
-    </NuxtLink>
+      <!-- Live per-job usage, aligned to the revision chip. The strip renders
+           only while the node's stats stream is actually connected (handled
+           inside the component). -->
+      <div class="jrow-usage">
+        <JobUsageStrip
+          v-if="!showDuration && getJobStateNumber(job) === 1 && hasNode(job)"
+          :jobId="job.job"
+          :deployment-id="deploymentId"
+          :node="job.node as string"
+        />
+      </div>
+    </div>
   </div>
 </template>
 
@@ -66,6 +142,8 @@
 import type { DeploymentJobItem } from "@nosana/api";
 import SecondsFormatter from "~/components/SecondsFormatter.vue";
 import JobUsageStrip from "~/components/Deployment/JobUsageStrip.vue";
+import JobStatusDot from "~/components/Deployment/JobStatusDot.vue";
+import TerminalIcon from "@/assets/img/icons/terminal.svg?component";
 import { NULL_ADDRESS, truncateMiddle } from "~/utils/solana";
 import { formatTimeAgo } from "~/utils/relativeTime";
 
@@ -73,7 +151,7 @@ import { formatTimeAgo } from "~/utils/relativeTime";
 const hasNode = (job: DeploymentJobItem) =>
   !!job.node && job.node !== NULL_ADDRESS;
 
-defineProps<{
+const props = defineProps<{
   jobs: DeploymentJobItem[];
   deploymentId: string;
   getJobStateNumber: (job: DeploymentJobItem) => number;
@@ -81,11 +159,25 @@ defineProps<{
   showDuration?: boolean;
 }>();
 
-// Numeric job state (0-3) → presentation class + label.
-const stateClass = (n: number) =>
-  ({ 0: "queued", 1: "running", 2: "completed", 3: "stopped" })[n] || "stopped";
+const emit = defineEmits<{
+  open: [jobId: string];
+  viewLogs: [jobId: string];
+  openSsh: [jobId: string];
+  openRevision: [revision: number];
+}>();
+
+const canAccess = (job: DeploymentJobItem) =>
+  !props.showDuration && props.getJobStateNumber(job) === 1 && hasNode(job);
+
 const stateLabel = (n: number) =>
   ({ 0: "Queued", 1: "Running", 2: "Completed", 3: "Stopped" })[n] || "Unknown";
+
+const timeLabel = (job: DeploymentJobItem) =>
+  props.showDuration
+    ? formatTimeAgo(job.created_at)
+    : `${props.getJobStateNumber(job) === 0 ? "listed" : "started"} ${formatTimeAgo(
+        job.created_at,
+      )}`;
 </script>
 
 <style lang="scss" scoped>
@@ -111,103 +203,186 @@ const stateLabel = (n: number) =>
   }
 }
 
+/* Status dot (9px) plus its gutter; the usage strip lines up with the id. */
+$content-indent: 1.75rem;
+
 .jrow-head {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 0.9rem;
 }
 
-/* Status = colored dot + label (no heavy icon) */
-.jstat {
-  flex: none;
-  display: inline-flex;
+/* Row order: status dot · id over time · (space) · duration · actions · chevron */
+.jrow-main {
+  display: flex;
   align-items: center;
-  gap: 10px;
-  width: 118px;
+  gap: 0.75rem;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+/* Covers the whole row head, under the chip and the right-hand cluster. */
+.jrow-link {
+  position: absolute;
+  inset: -0.95rem -1.1rem;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid $secondary;
+    outline-offset: -3px;
+  }
 }
 
 .jdot {
-  position: relative;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
+  margin-right: calc(#{$content-indent} - 9px - 0.75rem);
+}
+
+.jinfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.jinfo-top {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.jrow-usage {
+  padding-left: $content-indent;
+}
+
+.jtime {
+  color: $text-muted;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.jrow-right {
   flex: none;
-  background: $grey-light;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
 
-.jlab {
-  font-size: 0.85rem;
-  font-weight: 500;
+/* Only the buttons lift above the stretched link; the duration, the wait note
+   and the chevron stay part of the row's own click target. */
+.jrow-actions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  gap: 0.4rem;
+
+  /* A queued job has no actions; don't leave its gap behind. */
+  &:empty {
+    display: none;
+  }
+}
+
+.dur {
   color: $text;
-}
-
-.jstat.queued .jdot {
-  background: $warning;
-}
-.jstat.running .jdot {
-  background: $info;
-}
-.jstat.running .jdot::after {
-  content: "";
-  position: absolute;
-  inset: -4px;
-  border-radius: 50%;
-  border: 1.5px solid $info;
-  opacity: 0.5;
-  animation: jpulse 2.4s ease-out infinite;
-}
-.jstat.completed .jdot {
-  background: $success;
-}
-.jstat.stopped .jdot {
-  background: $grey-light;
-}
-
-@keyframes jpulse {
-  0% {
-    transform: scale(0.5);
-    opacity: 0.6;
-  }
-  100% {
-    transform: scale(1.5);
-    opacity: 0;
-  }
+  font-weight: 500;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .jid {
   font-size: 0.8rem;
   color: $text;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
+/* Row actions: a matched pair of pills, quiet until hovered so they don't
+   compete with the job id in a dense table. */
+.jrow-actions .button.is-quiet {
+  height: 28px;
+  padding: 0 0.65rem;
+  border-radius: 999px;
+  border-color: $grey-lightest;
+  color: $grey-dark;
+  font-size: 0.72rem;
+  font-weight: 600;
+
+  /* Green at rest: the icon is what carries the colour in an otherwise
+     monochrome row, and hover shifts the pill around it. */
+  .icon {
+    color: $secondary;
+    /* Bulma pulls the leading icon outward; a pill wants it inset. */
+    margin-inline: 0 0.3rem;
+
+    svg {
+      width: 13px;
+      height: 13px;
+    }
+  }
+
+  &:hover,
+  &:focus-visible {
+    border-color: rgba($secondary, 0.55);
+    background: rgba($secondary, 0.08);
+    color: $text;
+  }
+}
+
+html.dark-mode .jrow-actions .button.is-quiet {
+  border-color: rgba($white, 0.12);
+  color: $grey-light;
+
+  &:hover,
+  &:focus-visible {
+    border-color: rgba($secondary, 0.45);
+    background: rgba($secondary, 0.12);
+    color: $white;
+  }
+}
+
+/* Sits above .jrow-link so it can jump to the revision instead of the job. */
+/* inline-flex + line-height:1 so the chip is a tight box the row can centre on
+   the job id, and so the `#-` fallback span matches the button. */
 .rev-chip {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+  border: 0;
+  font-family: inherit;
   font-size: 0.72rem;
   color: $grey-dark;
   background: $white-ter;
-  padding: 2px 9px;
+  padding: 2px 8px;
   border-radius: 999px;
   white-space: nowrap;
 }
 
-.jmeta {
-  margin-left: auto;
-  text-align: right;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  color: $grey;
-  font-size: 0.75rem;
-  font-variant-numeric: tabular-nums;
+button.rev-chip {
+  cursor: pointer;
 
-  .dur {
+  &:hover {
     color: $text;
-    font-weight: 500;
+    background: $grey-lighter;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $secondary;
+    outline-offset: 1px;
   }
 }
 
 .jchev {
   flex: none;
   display: inline-flex;
-  color: $grey-light;
+  color: $text-muted;
 
   svg {
     width: 16px;
@@ -216,18 +391,18 @@ const stateLabel = (n: number) =>
 }
 
 .jrow:hover .jchev {
-  color: $grey;
+  color: $text-muted;
 }
 
 .jwait-inline {
-  font-size: 0.72rem;
-  color: $grey;
+  color: $text-muted;
+  font-size: 0.75rem;
   font-style: italic;
   white-space: nowrap;
 }
 
 @media screen and (max-width: 768px) {
-  .jid {
+  .rev-chip {
     display: none;
   }
 }
@@ -241,7 +416,6 @@ html.dark-mode .jrow + .jrow::before {
   background: rgba($white, 0.08);
 }
 
-html.dark-mode .jlab,
 html.dark-mode .jid {
   color: $white;
 }
@@ -251,7 +425,12 @@ html.dark-mode .rev-chip {
   color: $grey-light;
 }
 
-html.dark-mode .jmeta .dur {
+html.dark-mode button.rev-chip:hover {
+  background: rgba($white, 0.16);
+  color: $white;
+}
+
+html.dark-mode .dur {
   color: $white;
 }
 </style>

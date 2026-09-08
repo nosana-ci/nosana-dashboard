@@ -20,7 +20,7 @@
           <DeploymentHeader
             :deployment="deployment"
             :activeTab="activeTab"
-            :availableTabs="availableTabs"
+            :availableTabs="DEPLOYMENT_TABS"
             :actionLoading="actionLoading"
             :canStart="canStart"
             :canStop="canStop"
@@ -75,6 +75,10 @@
                     :getJobStateNumber="getJobStateNumber"
                     :getJobDuration="getJobDuration"
                     @update:jobActivityTab="jobActivityTab = $event"
+                    @open="openJobPanel($event)"
+                    @viewLogs="openJobPanel($event, 'logs')"
+                    @openSsh="openJobPanel($event, 'containers', '*')"
+                    @openRevision="openRevision($event)"
                     @active:prev="activePrev"
                     @active:next="activeNext"
                     @history:prev="historyPrev"
@@ -103,17 +107,10 @@
               <DeploymentEventHistory :events="deploymentEvents" />
             </div>
 
-            <!-- Logs Tab -->
-            <div v-if="activeTab === 'logs'">
-              <DeploymentLogCollector
-                :deploymentId="deployment.id"
-                :jobs="deploymentJobs"
-                :market="deployment.market"
-              />
-            </div>
-
             <!-- Configuration Tab -->
             <div v-if="activeTab === 'configuration'" class="tab-pane">
+              <DeploymentSshKeys :deployment-id="deployment.id" />
+
               <DeploymentJobDefinitionEditor
                 ref="jobDefEditorComponent"
                 :jobDefinitionModel="jobDefinitionModel"
@@ -127,6 +124,7 @@
               <DeploymentRevisions
                 :revisions="sortedRevisions"
                 :activeRevision="deployment.active_revision"
+                :focusedRevision="focusedRevision"
                 :switchingRevision="switchingRevision"
                 :actionLoading="actionLoading"
                 @switchToRevision="switchToRevision"
@@ -136,6 +134,21 @@
           </div>
         </div>
       </div>
+
+      <!-- One job at a time, on top of the deployment: details, containers
+           with per-operation shells, and logs. Replaces the job page. -->
+      <DeploymentJobPanel
+        v-if="deployment"
+        :deployment-id="deployment.id"
+        :deployment-jobs="deploymentJobs"
+        :market="deployment.market"
+        :endpoints="deploymentEndpoints"
+        :job="panelJob"
+        :view="panelView"
+        :auto-connect-op="panelAutoConnect"
+        @update:view="setPanelView"
+        @close="closeJobPanel"
+      />
 
       <!-- Modals -->
       <template v-if="deployment">
@@ -177,9 +190,14 @@
         <DeploymentDuplicateModal
           v-model="showDuplicateModal"
           v-model:name="duplicateName"
+          v-model:market="duplicateMarket"
           :currentName="deployment.name || ''"
+          :currentMarket="deployment.market"
+          :testgridMarkets="testgridMarkets || []"
+          :jobDefinition="jobDefinitionModel"
           :actionLoading="actionLoading"
           @confirm="duplicateDeployment()"
+          @configure="configureDuplicate"
         />
 
         <DeploymentRevisionViewModal
@@ -204,6 +222,11 @@ import {
   type DeploymentStreamEvent,
 } from "~/composables/useDeploymentStream";
 import { useDeploymentJobDefinition } from "~/composables/useDeploymentJobDefinition";
+import type { JobPanelView } from "~/components/Deployment/DeploymentJobPanel.vue";
+import { useKit } from "~/composables/useKit";
+import { prefetchDeploymentJob } from "~/composables/jobs/useDeploymentJob";
+import { acquireJobFeeds } from "~/composables/jobs/useJobFeeds";
+import { NULL_ADDRESS } from "~/utils/solana";
 
 // --- Auth setup ---
 const route = useRoute();
@@ -218,19 +241,29 @@ const isWalletMode = computed(
 const hasAnyAuth = computed(() => isAuthenticated.value || isWalletMode.value);
 
 // --- Tab state ---
+const DEPLOYMENT_TABS = ["overview", "events", "configuration"];
 const activeTab = ref("overview");
-const availableTabs = computed(() => {
-  return ["overview", "logs", "events", "configuration"];
-});
 
 // Initialize activeTab from URL query parameter
 const initialTab = route.query.tab?.toString();
-if (
-  initialTab &&
-  ["overview", "logs", "events", "configuration"].includes(initialTab)
-) {
+if (initialTab && DEPLOYMENT_TABS.includes(initialTab)) {
   activeTab.value = initialTab;
 }
+
+// --- Job panel state (?job=…&view=…) ---
+const PANEL_VIEWS: JobPanelView[] = [
+  "details",
+  "containers",
+  "logs",
+  "activity",
+];
+const panelJob = ref(route.query.job?.toString() ?? "");
+const initialView = route.query.view?.toString() as JobPanelView | undefined;
+const panelView = ref<JobPanelView>(
+  initialView && PANEL_VIEWS.includes(initialView) ? initialView : "details",
+);
+// Operation whose shell opens on its own ("*" = first), set by a row's SSH button.
+const panelAutoConnect = ref("");
 
 // --- Composables ---
 const detail = useDeploymentDetail({
@@ -273,6 +306,7 @@ const {
   jobActivityTab,
   getJobDuration,
   getJobStateNumber,
+  activeJobs,
   activeJobsPaged,
   activeLoading,
   activeHasPrev,
@@ -280,7 +314,7 @@ const {
   activeNext,
   activePrev,
   applyJobFrame,
-  applyActiveJobsSnapshot,
+  applyActiveSet,
   runningJobsCount,
   historyJobs,
   historyLoading,
@@ -320,8 +354,10 @@ const applyStreamEvent = (event: DeploymentStreamEvent) => {
   }
 
   if (event.type === "job") {
-    // Updates the live active list in place; new jobs render straight from the
-    // frame, which carries revision/created_at.
+    // Updates the live job list in place; new jobs render straight from the
+    // frame, which carries revision/created_at. Everything reading a job —
+    // the activity table, the panel's tabs, the open job's own record — hangs
+    // off that list, so there is nothing else to notify.
     applyJobFrame(event);
     return;
   }
@@ -329,7 +365,7 @@ const applyStreamEvent = (event: DeploymentStreamEvent) => {
   // Authoritative active-jobs snapshot, sent once on (re)connect ahead of the
   // per-job frames: prune anything we still show that's no longer active.
   if (event.type === "jobs") {
-    applyActiveJobsSnapshot(event.jobs);
+    applyActiveSet(event.jobs);
     return;
   }
 
@@ -457,6 +493,7 @@ const {
   newTimeoutHours,
   newSchedule,
   duplicateName,
+  duplicateMarket,
   switchingRevision,
   viewingRevision,
   canStart,
@@ -658,6 +695,113 @@ const switchTab = (tab: string) => {
   });
 };
 
+// A job row's revision chip jumps to that revision under Configuration.
+const focusedRevision = ref<number | null>(null);
+const openRevision = (revision: number) => {
+  switchTab("configuration");
+  focusedRevision.value = revision;
+  nextTick(() => {
+    document
+      .getElementById(`revision-${revision}`)
+      ?.scrollIntoView({ behavior: "smooth", block: "center" });
+  });
+  setTimeout(() => {
+    if (focusedRevision.value === revision) focusedRevision.value = null;
+  }, 2500);
+};
+
+// A link elsewhere on the page can change ?tab / ?job without remounting the
+// page (the Direct SSH empty state points at Configuration), so follow the URL.
+watch(
+  () => [route.query.tab?.toString(), route.query.job?.toString()] as const,
+  ([tab, job]) => {
+    activeTab.value = tab && DEPLOYMENT_TABS.includes(tab) ? tab : "overview";
+    panelJob.value = job ?? "";
+    if (!panelJob.value) panelAutoConnect.value = "";
+  },
+);
+
+// --- Job panel ---
+const syncPanelQuery = () => {
+  router.replace({
+    query: {
+      ...route.query,
+      job: panelJob.value || undefined,
+      view: panelJob.value ? panelView.value : undefined,
+    },
+  });
+};
+
+const openJobPanel = (
+  jobId: string,
+  view: JobPanelView = "details",
+  autoConnectOp = "",
+) => {
+  panelJob.value = jobId;
+  panelView.value = view;
+  panelAutoConnect.value = autoConnectOp;
+  syncPanelQuery();
+};
+
+const closeJobPanel = () => {
+  panelJob.value = "";
+  panelAutoConnect.value = "";
+  syncPanelQuery();
+};
+
+const setPanelView = (view: JobPanelView) => {
+  panelView.value = view;
+  syncPanelQuery();
+};
+
+// Warm the panel for the jobs on screen, so opening one shows at once.
+const { nosana } = useKit();
+watch(
+  () => activeJobs.value.map((job) => job.job),
+  (jobIds) => {
+    const id = deployment.value?.id;
+    if (!id) return;
+    for (const jobId of jobIds) {
+      void prefetchDeploymentJob(nosana.value.api, id, jobId);
+    }
+  },
+  { immediate: true },
+);
+
+// Keep each running job's live feeds (usage stats, node info) open while the
+// page is, so the row strip and the panel share one connection. A job that
+// stops running leaves the set and its feeds close.
+const heldFeeds = new Map<string, () => void>();
+watch(
+  () =>
+    activeJobs.value
+      .filter(
+        (job) =>
+          getJobStateNumber(job) === 1 && !!job.node && job.node !== NULL_ADDRESS,
+      )
+      .map((job) => job.job),
+  (runningIds) => {
+    const id = deployment.value?.id;
+    for (const [jobId, release] of heldFeeds) {
+      if (!runningIds.includes(jobId)) {
+        release();
+        heldFeeds.delete(jobId);
+      }
+    }
+    if (!id) return;
+    for (const jobId of runningIds) {
+      if (!heldFeeds.has(jobId)) {
+        heldFeeds.set(jobId, acquireJobFeeds(nosana.value.api, jobId, id).release);
+      }
+    }
+  },
+  { immediate: true },
+);
+onBeforeUnmount(() => {
+  for (const release of heldFeeds.values()) release();
+  heldFeeds.clear();
+});
+
 const switchAction = (action: string) => {
   if (action === "start") {
     startDeployment();
@@ -723,6 +867,23 @@ watch(showDuplicateModal, (isOpen) => {
   if (!isOpen && route.query.action === "duplicate") clearAction();
 });
 
+// "Configure" hands the copy to the create page instead of deploying it now,
+// carrying over whatever was already filled in here.
+const configureDuplicate = async () => {
+  if (!deployment.value) return;
+  // The dialog stays open until this lands: closing it first would clear
+  // ?action=duplicate from this route, and that replace cancels the push.
+  const failure = await router.push({
+    path: "/deployments/create",
+    query: {
+      clone: deployment.value.id,
+      name: duplicateName.value.trim() || undefined,
+      market: duplicateMarket.value || undefined,
+    },
+  });
+  if (failure) showDuplicateModal.value = false;
+};
+
 // Head
 useHead({
   title: computed(() =>
@@ -783,6 +944,7 @@ useHead({
 .tab-pane :deep(.as-card),
 .tab-pane :deep(.task-card),
 .tab-pane :deep(.event-card),
+.tab-pane :deep(.section-card),
 .tab-pane :deep(.rev-card) {
   box-shadow:
     0 1px 3px rgba($black, 0.06),
@@ -797,6 +959,7 @@ html.dark-mode .tab-pane :deep(.da-card),
 html.dark-mode .tab-pane :deep(.as-card),
 html.dark-mode .tab-pane :deep(.task-card),
 html.dark-mode .tab-pane :deep(.event-card),
+html.dark-mode .tab-pane :deep(.section-card),
 html.dark-mode .tab-pane :deep(.rev-card) {
   border-color: rgba($white, 0.1);
   box-shadow:

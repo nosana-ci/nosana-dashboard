@@ -53,19 +53,19 @@ const statusKind = computed(() => {
 }
 
 .dep-status-pill.live {
-  background: rgba($info, 0.12);
-  color: $info;
+  background: rgba($success, 0.14);
+  color: color.adjust($success, $lightness: -16%);
 }
 .dep-status-pill.live .sdot {
   position: relative;
-  background: $info;
+  background: $success;
 }
 .dep-status-pill.live .sdot::after {
   content: "";
   position: absolute;
   inset: -4px;
   border-radius: 50%;
-  border: 1.5px solid $info;
+  border: 1.5px solid $success;
   opacity: 0.5;
   animation: sdot-pulse 2.4s ease-out infinite;
 }
@@ -95,15 +95,15 @@ const statusKind = computed(() => {
   background: $danger;
 }
 .dep-status-pill.ok {
-  background: rgba($success, 0.14);
-  color: color.adjust($success, $lightness: -16%);
+  background: rgba($info, 0.12);
+  color: $info;
 }
 .dep-status-pill.ok .sdot {
-  background: $success;
+  background: $info;
 }
 .dep-status-pill.neutral {
   background: rgba($grey, 0.16);
-  color: $grey;
+  color: $text-muted;
 }
 .dep-status-pill.neutral .sdot {
   background: $grey;
@@ -112,7 +112,7 @@ const statusKind = computed(() => {
 html.dark-mode .dep-status-pill.warn {
   color: $warning;
 }
-html.dark-mode .dep-status-pill.ok {
+html.dark-mode .dep-status-pill.live {
   color: $success;
 }
 </style>

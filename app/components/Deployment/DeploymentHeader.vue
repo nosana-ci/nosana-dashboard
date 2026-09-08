@@ -318,11 +318,7 @@
         :class="{ 'is-active': activeTab === tab }"
         @click="$emit('switchTab', tab)"
       >
-        {{
-          tab === "configuration"
-            ? "Configuration"
-            : tab.charAt(0).toUpperCase() + tab.slice(1)
-        }}
+        {{ tab.charAt(0).toUpperCase() + tab.slice(1) }}
       </button>
     </div>
   </div>
@@ -450,7 +446,7 @@ onUnmounted(() => {
   padding: 0;
   margin-bottom: 1rem;
   cursor: pointer;
-  color: $grey;
+  color: $text-muted;
   font-family: $family-sans-serif;
   font-size: 0.9rem;
   transition: color 0.15s ease;
@@ -545,7 +541,7 @@ html.dark-mode .dep-name {
   flex-wrap: wrap;
   margin-top: 0.5rem;
   font-size: 0.78rem;
-  color: $grey;
+  color: $text-muted;
 }
 
 .id-line .is-family-monospace {
@@ -553,7 +549,7 @@ html.dark-mode .dep-name {
 }
 
 .id-sep {
-  color: $grey-light;
+  color: $text-muted;
 }
 
 .updated-time {
@@ -568,7 +564,7 @@ html.dark-mode .dep-name {
   border-radius: 6px;
   border: 0;
   background: transparent;
-  color: $grey;
+  color: $text-muted;
   cursor: pointer;
   transition:
     background 0.15s ease,
@@ -580,7 +576,7 @@ html.dark-mode .dep-name {
   }
 
   &:hover {
-    background: $white-ter;
+    background: $grey-lightest;
     color: $text;
   }
 
@@ -607,12 +603,12 @@ html.dark-mode .copy-btn:hover {
   font-size: 0.9rem;
   border-radius: 10px;
   border: 1px solid $grey-lighter;
-  background: $white-ter;
+  background: $white;
   color: $text;
   box-shadow: none;
 
   &:hover {
-    background: $grey-lightest;
+    background: $white-ter;
     border-color: $grey-light;
   }
 }
@@ -664,7 +660,7 @@ html.dark-mode .header-action-btn {
     color 0.15s ease;
 
   .icon {
-    color: $grey;
+    color: $text-muted;
     transition: color 0.15s ease;
   }
 
@@ -740,13 +736,15 @@ html.dark-mode .header-main .dropdown-divider {
   padding: 5px;
   margin: 1.75rem 0 0.25rem;
   border-radius: 13px;
-  background: $grey-lightest;
+  background: $white-ter;
+  box-shadow: inset 0 0 0 1px $grey-lighter;
   max-width: 100%;
   overflow-x: auto;
 }
 
 html.dark-mode .dep-tabs {
   background: rgba($white, 0.08);
+  box-shadow: none;
 }
 
 .dep-tab {

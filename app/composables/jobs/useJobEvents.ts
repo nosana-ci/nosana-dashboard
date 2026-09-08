@@ -11,13 +11,17 @@ import type { JobEvent } from "~/utils/jobEvents";
  */
 const POLL_INTERVAL_MS = 20000;
 
+// Last events seen per job, so a reopened view shows them while it refreshes.
+const eventsCache = new Map<string, JobEvent[]>();
+
 export function useJobEvents(
   jobAddress: string,
   options: { isActive?: Ref<boolean> } = {},
 ) {
   const config = useRuntimeConfig();
-  const events = ref<JobEvent[]>([]);
-  const loading = ref(true);
+  const cached = eventsCache.get(jobAddress);
+  const events = ref<JobEvent[]>(cached ?? []);
+  const loading = ref(!cached);
   // Set to false when the API has no events endpoint (older deployments).
   const supported = ref(true);
 
@@ -33,6 +37,7 @@ export function useJobEvents(
         },
       );
       events.value = Array.isArray(response) ? response : [];
+      eventsCache.set(jobAddress, events.value);
     } catch (error: unknown) {
       const status =
         (error as { status?: number })?.status ??

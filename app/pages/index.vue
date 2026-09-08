@@ -1172,7 +1172,7 @@ const signAuthMessage = async (walletName: string) => {
 
 .login-subtitle {
   font-size: 1rem;
-  color: $grey;
+  color: $text-muted;
   margin-bottom: 2rem;
   line-height: 1.5;
 }
@@ -1224,7 +1224,7 @@ const signAuthMessage = async (walletName: string) => {
   }
 
   &::placeholder {
-    color: $grey;
+    color: $text-muted;
   }
 
   &:disabled {
@@ -1246,7 +1246,7 @@ const signAuthMessage = async (walletName: string) => {
   margin-bottom: 1rem;
   font-size: 0.75rem;
   line-height: 1.5;
-  color: $grey;
+  color: $text-muted;
 
   a {
     color: inherit;
@@ -1269,7 +1269,7 @@ const signAuthMessage = async (walletName: string) => {
 
   a {
     font-size: 0.875rem;
-    color: $grey;
+    color: $text-muted;
     text-decoration: none;
 
     &:hover {
@@ -1281,7 +1281,7 @@ const signAuthMessage = async (walletName: string) => {
 
 .form-toggle {
   font-size: 0.875rem;
-  color: $grey;
+  color: $text-muted;
 
   a {
     color: $primary;
@@ -1407,7 +1407,7 @@ const signAuthMessage = async (walletName: string) => {
   text-align: center;
 
   span {
-    color: $grey;
+    color: $text-muted;
     font-size: 0.875rem;
   }
 }
@@ -1564,7 +1564,7 @@ const signAuthMessage = async (walletName: string) => {
 
 .wallet-address {
   font-size: 0.85rem;
-  color: $grey;
+  color: $text-muted;
   font-family: monospace;
   margin-top: 0.25rem;
 }

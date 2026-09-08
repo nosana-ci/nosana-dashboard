@@ -1,21 +1,23 @@
 <template>
   <div class="filter-bar">
     <div class="search-combo" :class="{ focused: searchFocused }">
-      <LogCollectorDropdown
-        :label="activeJobLabel"
-        dropdown-class="dropdown--jobs"
-        menu-class="dropdown-menu--jobs"
-      >
-        <LogCollectorJobSelect
-          :jobs="jobs"
-          :selectedJobIds="selectedJobIds"
-          @toggle="$emit('toggleJob', $event)"
-          @selectState="$emit('selectState', $event)"
-          @selectAll="$emit('selectAllJobs')"
-        />
-      </LogCollectorDropdown>
+      <template v-if="showJobs">
+        <LogCollectorDropdown
+          :label="activeJobLabel"
+          dropdown-class="dropdown--jobs"
+          menu-class="dropdown-menu--jobs"
+        >
+          <LogCollectorJobSelect
+            :jobs="jobs"
+            :selectedJobIds="selectedJobIds"
+            @toggle="$emit('toggleJob', $event)"
+            @selectState="$emit('selectState', $event)"
+            @selectAll="$emit('selectAllJobs')"
+          />
+        </LogCollectorDropdown>
 
-      <span class="combo-sep"></span>
+        <span class="combo-sep"></span>
+      </template>
 
       <LogCollectorDropdown :label="activeLevelLabel">
         <LogCollectorLevelSelect
@@ -59,14 +61,19 @@ import LogCollectorJobSelect from './LogCollectorJobSelect.vue';
 import LogCollectorLevelSelect from './LogCollectorLevelSelect.vue';
 import LogCollectorOpSelect from './LogCollectorOpSelect.vue';
 
-const props = defineProps<{
-  jobs: JobItem[];
-  selectedJobIds: Set<string>;
-  opIds: string[];
-  selectedOpId: string;
-  activeTypes: Set<LogEntryType>;
-  searchText: string;
-}>();
+const props = withDefaults(
+  defineProps<{
+    jobs: JobItem[];
+    selectedJobIds: Set<string>;
+    opIds: string[];
+    selectedOpId: string;
+    activeTypes: Set<LogEntryType>;
+    searchText: string;
+    /** Off when the view is scoped to one job, as in the job panel. */
+    showJobs?: boolean;
+  }>(),
+  { showJobs: true },
+);
 
 const emit = defineEmits<{
   toggleJob: [jobId: string];

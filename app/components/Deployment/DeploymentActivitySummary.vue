@@ -144,13 +144,14 @@ const recentEvents = computed(() => props.events.slice(0, 4));
   background: $white;
   border: 1px solid $grey-lighter;
   border-radius: 14px;
+  box-shadow: $panel-shadow;
   overflow: hidden;
   padding: 6px 0 0;
 }
 
 .as-empty {
   text-align: center;
-  color: $grey;
+  color: $text-muted;
   padding: 2.25rem 1rem;
   font-size: 0.9rem;
 }
@@ -160,7 +161,7 @@ const recentEvents = computed(() => props.events.slice(0, 4));
   font-size: 0.7rem;
   letter-spacing: 0.03em;
   text-transform: uppercase;
-  color: $grey;
+  color: $text-muted;
   padding: 12px 18px 4px;
 }
 
@@ -207,7 +208,7 @@ const recentEvents = computed(() => props.events.slice(0, 4));
 
 .as-task-sub {
   font-size: 0.72rem;
-  color: $grey;
+  color: $text-muted;
   margin-top: 1px;
 }
 
@@ -241,7 +242,7 @@ const recentEvents = computed(() => props.events.slice(0, 4));
   font-size: 0.68rem;
   letter-spacing: 0.03em;
   text-transform: uppercase;
-  color: $grey;
+  color: $text-muted;
 
   .l {
     flex: 1;
@@ -324,7 +325,7 @@ const recentEvents = computed(() => props.events.slice(0, 4));
   margin-left: auto;
   flex: none;
   font-size: 0.72rem;
-  color: $grey;
+  color: $text-muted;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
@@ -345,7 +346,7 @@ const recentEvents = computed(() => props.events.slice(0, 4));
   align-items: center;
   gap: 4px;
   font-size: 0.72rem;
-  color: $grey;
+  color: $text-muted;
   margin-top: 6px;
   text-decoration: none;
   transition: color 0.15s ease;

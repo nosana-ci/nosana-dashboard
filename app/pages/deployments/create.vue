@@ -20,6 +20,8 @@
           v-model:jobDefinition="jobDefinition"
           v-model:isEditorCollapsed="isEditorCollapsed"
           @showTemplateModal="showTemplateModal = true"
+          :can-clone-deployment="hasAnyAuth"
+          @showCloneDeploymentModal="showCloneModal = true"
           :strategy="strategy"
           @update:strategy="strategy = $event"
           :schedule="schedule"
@@ -30,6 +32,9 @@
           @update:timeout="timeout = $event"
           :deployment-name="deploymentName"
           @update:deploymentName="deploymentName = $event"
+          :ssh-public-keys="sshPublicKeys"
+          @update:sshPublicKeys="sshPublicKeys = $event"
+          @ssh-error="sshError = $event"
         />
 
         <!-- Select GPU -->
@@ -317,6 +322,12 @@
       @select-template="selectTemplateFromModal"
     />
 
+    <!-- Clone an existing deployment into this form -->
+    <CloneDeploymentModal
+      v-model:showModal="showCloneModal"
+      @select="cloneDeployment"
+    />
+
     <VaultModal />
   </div>
 </template>
@@ -328,6 +339,8 @@ import {
   type CreateDeployment,
   type Deployment,
   DeploymentStrategy,
+  getSshPublicKeys,
+  withSshPublicKeys,
 } from "@nosana/kit";
 import { useToast } from "vue-toastification";
 import { useWallet } from "@nosana/solana-vue";
@@ -337,6 +350,7 @@ import { useEstimatedCost } from "~/composables/useMarketPricing";
 import type { Template } from "~/composables/useTemplates";
 import Loader from "~/components/Loader.vue";
 import ConfigurationModal from "~/components/Deploy/ConfigurationModal.vue";
+import CloneDeploymentModal from "~/components/Deploy/CloneDeploymentModal.vue";
 import VaultModal from "~/components/Vault/Modal/VaultModal.vue";
 import { parseCronExpression } from "~/utils/parseCronExpression";
 import {
@@ -404,6 +418,9 @@ const previousStrategyDefault = ref(INFINITE_TIMEOUT);
 const isCreatingDeployment = ref(false);
 const showSettingsModal = ref(false); // For priority fee settings (TopBar)
 const skipAutoSelection = ref(false);
+// Set while the form is filled from an existing deployment, so the template
+// fallback below never overwrites the cloned job definition.
+const skipTemplateAutoSelection = ref(false);
 const isUpdatingFromJobDef = ref(false);
 const isRestoringState = ref(false);
 const isEditorCollapsed = ref(false);
@@ -569,6 +586,26 @@ const nosApiPrice = computed(() => stats.value?.price || 0);
 
 // Job definition - will be populated when PyTorch template loads
 const jobDefinition = ref<JobDefinition | null>(null);
+const sshPublicKeys = ref<string[]>([]);
+// Set by the SSH form while it cannot be used yet (e.g. private key not downloaded).
+const sshError = ref("");
+
+// Deployment SSH keys are managed separately by the Deployment Manager. If a
+// template or restored draft still contains the legacy job-definition field,
+// move it into the deployment-level form state and keep the visible definition
+// focused on the workload itself.
+watch(
+  jobDefinition,
+  (definition) => {
+    if (!definition) return;
+    const embeddedKeys = getSshPublicKeys(definition);
+    if (!embeddedKeys.length) return;
+
+    sshPublicKeys.value = [...embeddedKeys];
+    jobDefinition.value = withSshPublicKeys(definition, []);
+  },
+  { deep: true },
+);
 
 // Cache NOS price data
 interface CachedPrice {
@@ -743,6 +780,9 @@ const isCreditMode = computed(() => {
   return superTokensAuth.value;
 });
 
+// Cloning lists the signed-in user's own deployments, so it needs either mode.
+const hasAnyAuth = computed(() => isCreditMode.value || isWalletMode.value);
+
 const canCreateDeployment = computed(() => {
   const basicRequirements =
     !isBanned.value &&
@@ -811,6 +851,10 @@ const createDeployment = async () => {
     toast.error("Job definition is required");
     return;
   }
+  if (sshError.value) {
+    toast.error(sshError.value);
+    return;
+  }
 
   loading.value = true;
   isCreatingDeployment.value = true;
@@ -835,8 +879,8 @@ const createDeployment = async () => {
         ? { schedule: schedule.value }
         : {}),
       // Start immediately server-side instead of a separate start() call.
-      // Not yet in the vendored @nosana/types, hence the assertion.
       autostart: true,
+      ssh_public_keys: sshPublicKeys.value,
       job_definition: jobDefinition.value,
     } as Parameters<
       typeof nosana.value.api.deployments.create
@@ -906,6 +950,7 @@ const persistDraft = () => {
     schedule: schedule.value,
     gpuTypeCheckbox: gpuTypeCheckbox.value,
     activeFilter: activeFilter.value,
+    sshPublicKeys: sshPublicKeys.value,
   });
 };
 
@@ -932,6 +977,9 @@ const restoreDraftIfNeeded = () => {
     if (Array.isArray(draft.gpuTypeCheckbox))
       gpuTypeCheckbox.value = draft.gpuTypeCheckbox;
     if (draft.activeFilter) activeFilter.value = draft.activeFilter;
+    if (Array.isArray(draft.sshPublicKeys)) {
+      sshPublicKeys.value = draft.sshPublicKeys;
+    }
 
     if (draft.selectedMarketAddress && markets.value) {
       const match = markets.value.find(
@@ -1030,7 +1078,8 @@ watch(
       Array.isArray(newTemplates) &&
       newTemplates.length > 0 &&
       !selectedTemplate.value &&
-      !isRestoringState.value
+      !isRestoringState.value &&
+      !skipTemplateAutoSelection.value
     ) {
       const templateQuery = route.query.template as string | undefined;
 
@@ -1115,8 +1164,21 @@ onMounted(async () => {
     await getMarkets();
   }
 
-  // Restore a persisted draft
-  restoreDraftIfNeeded();
+  // A ?clone= link fills the form from an existing deployment and wins over
+  // any stale draft, the same way an explicit ?template= link does.
+  const cloneQuery = route.query.clone?.toString();
+  if (cloneQuery) {
+    await cloneDeployment(
+      { id: cloneQuery },
+      {
+        name: route.query.name?.toString(),
+        market: route.query.market?.toString(),
+      },
+    );
+  } else {
+    // Restore a persisted draft
+    restoreDraftIfNeeded();
+  }
 
   // Load credit balance if authenticated
   if (isCreditMode.value) {
@@ -1160,7 +1222,9 @@ watch(
 const selectTemplateFromModal = (template: Template) => {
   selectedTemplate.value = template;
   showTemplateModal.value = false;
-  router.replace({ query: { ...route.query, template: String(template.id) } });
+  // Picking a template abandons any ?clone= handoff, so drop its params too.
+  const { clone, name, market, ...query } = route.query;
+  router.replace({ query: { ...query, template: String(template.id) } });
 };
 
 // Watch for template modal state to control body scroll
@@ -1171,6 +1235,93 @@ watch(showTemplateModal, (isOpen) => {
     unlockScroll("template-modal");
   }
 });
+
+// Clone an existing deployment: pull its configuration into this form so it
+// can be tweaked and deployed as a new one. Nothing is created here.
+const showCloneModal = ref(false);
+const { getIpfs } = useIpfs();
+
+watch(showCloneModal, (isOpen) => {
+  if (isOpen) {
+    lockScroll("clone-deployment-modal");
+  } else {
+    unlockScroll("clone-deployment-modal");
+  }
+});
+
+// The active revision holds the job definition; older deployments only carry
+// the IPFS hash, same fallback the deployment detail page uses.
+const loadClonedJobDefinition = async (
+  deployment: any,
+): Promise<JobDefinition | null> => {
+  try {
+    const { revisions } = await deployment.getRevisions();
+    const active =
+      revisions?.find((r: any) => r.revision === deployment.active_revision) ||
+      revisions?.[revisions.length - 1];
+    if (active?.job_definition) return active.job_definition as JobDefinition;
+  } catch (error) {
+    console.error("Error loading revisions to clone:", error);
+  }
+
+  const ipfsHash = deployment?.ipfs_definition_hash;
+  if (!ipfsHash) return null;
+  try {
+    return (await getIpfs(ipfsHash)) as JobDefinition;
+  } catch (error) {
+    console.error("Error loading job definition to clone:", error);
+    return null;
+  }
+};
+
+const cloneDeployment = async (
+  listed: { id: string; name?: string },
+  overrides: { name?: string; market?: string } = {},
+) => {
+  loading.value = true;
+  // A clone brings its own job definition, so never fall back to a template.
+  skipTemplateAutoSelection.value = true;
+  try {
+    const deployment: any = await nosana.value.api.deployments.get(listed.id);
+    const definition = await loadClonedJobDefinition(deployment);
+    if (!definition) {
+      throw new Error("This deployment has no job definition to clone");
+    }
+
+    skipAutoSelection.value = true;
+
+    // SSH keys are managed per deployment, so the copy starts without them.
+    jobDefinition.value = withSshPublicKeys(definition, []);
+    sshPublicKeys.value = [];
+    deploymentName.value =
+      overrides.name ||
+      `${deployment.name || listed.name || "Deployment"} (copy)`;
+    if (deployment.replicas) replicas.value = deployment.replicas;
+    if (deployment.strategy) strategy.value = deployment.strategy;
+    if (deployment.schedule) schedule.value = deployment.schedule;
+
+    // Changing the strategy re-applies its default timeout, so wait for that
+    // before restoring the clone's own timeout (stored in minutes, shown in hours).
+    await nextTick();
+    if (deployment.timeout) timeout.value = deployment.timeout / 60;
+
+    const marketAddress = overrides.market || deployment.market;
+    if (!markets.value) await getMarkets();
+    const market = markets.value?.find(
+      (m: Market) => m.address?.toString() === marketAddress,
+    );
+    if (market) selectedMarket.value = market;
+
+    toast.success(`Cloned configuration from ${deployment.name || listed.id}`);
+  } catch (error: any) {
+    console.error("Clone deployment error:", error);
+    toast.error(
+      `Error cloning deployment: ${error.message || error.toString()}`,
+    );
+  } finally {
+    loading.value = false;
+  }
+};
 
 </script>
 

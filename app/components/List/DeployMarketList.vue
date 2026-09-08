@@ -748,7 +748,7 @@ td {
   flex-direction: column;
   gap: 0.85rem;
   background: #ffffff;
-  border: 1px solid #e6e8eb;
+  border: 1px solid $grey-lighter;
   border-radius: 14px;
   padding: 1.15rem 1.15rem 1.25rem;
   cursor: pointer;
@@ -773,11 +773,11 @@ td {
 .gpu-card.is-incompatible {
   opacity: 0.45;
   cursor: not-allowed;
-  border-color: #e6e8eb;
+  border-color: $grey-lighter;
 }
 
 .gpu-card.is-incompatible:hover {
-  border-color: #e6e8eb;
+  border-color: $grey-lighter;
   box-shadow: none;
   transform: none;
 }
@@ -829,7 +829,7 @@ td {
   flex-shrink: 0;
   font-size: 0.7rem;
   font-weight: 600;
-  color: #80868b;
+  color: $text-muted;
   padding: 0.2rem 0.5rem 0.2rem 0.4rem;
   border-radius: 999px;
   background: #f1f3f4;
@@ -886,7 +886,7 @@ td {
   flex-direction: column;
   gap: 0.4rem;
   padding-top: 0.85rem;
-  border-top: 1px solid #eceef0;
+  border-top: 1px solid $grey-lighter;
 }
 
 .gpu-spec {
@@ -897,7 +897,7 @@ td {
 }
 
 .gpu-spec-label {
-  color: #80868b;
+  color: $text-muted;
   font-weight: 500;
 }
 
@@ -988,7 +988,7 @@ td {
   transform: translateY(-50%);
   width: 16px;
   height: 16px;
-  color: #9aa0a6;
+  color: $text-muted;
   pointer-events: none;
 }
 
@@ -999,7 +999,7 @@ td {
   font-size: 0.875rem;
   color: #1a1c1e;
   background: #ffffff;
-  border: 1px solid #e1e3e6;
+  border: 1px solid $grey-lighter;
   border-radius: 10px;
   outline: none;
   transition:
@@ -1008,7 +1008,7 @@ td {
 }
 
 .market-search-input::placeholder {
-  color: #9aa0a6;
+  color: $text-muted;
 }
 
 .market-search-input:focus {
@@ -1022,7 +1022,7 @@ td {
   align-items: center;
   height: 40px;
   background: #ffffff;
-  border: 1px solid #e1e3e6;
+  border: 1px solid $grey-lighter;
   border-radius: 10px;
   transition:
     border-color 0.15s ease,
@@ -1041,8 +1041,8 @@ td {
   padding: 0 0.7rem 0 0.85rem;
   font-size: 0.8125rem;
   font-weight: 600;
-  color: #80868b;
-  border-right: 1px solid #e1e3e6;
+  color: $text-muted;
+  border-right: 1px solid $grey-lighter;
 }
 
 .market-sort-select {
@@ -1065,7 +1065,7 @@ td {
   right: 0.7rem;
   width: 16px;
   height: 16px;
-  color: #80868b;
+  color: $text-muted;
   pointer-events: none;
 }
 
