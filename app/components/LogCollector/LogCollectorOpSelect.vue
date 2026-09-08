@@ -45,7 +45,7 @@ function selectOp(value: string) {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: $text-muted;
+  color: $text-light;
   border-bottom: 1px solid $border;
 }
 

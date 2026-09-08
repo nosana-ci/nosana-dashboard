@@ -129,13 +129,8 @@ export const formatMetricValue = (
     case "mb":
       return `${Math.round(Number(value))} MB`;
     case "country": {
-      // Nodes report free-form values; DisplayNames throws on non-region codes.
-      try {
-        const region = new Intl.DisplayNames(["en"], { type: "region" }).of(String(value));
-        return region || String(value);
-      } catch {
-        return String(value);
-      }
+      const region = new Intl.DisplayNames(["en"], { type: "region" }).of(String(value));
+      return region || String(value);
     }
     case "version":
     case "address":

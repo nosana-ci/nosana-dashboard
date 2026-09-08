@@ -74,7 +74,6 @@ defineExpose({ editorRef });
   background: $white;
   border: 1px solid $grey-lighter;
   border-radius: 14px;
-  box-shadow: $panel-shadow;
   overflow: hidden;
 }
 html.dark-mode .dep-card {

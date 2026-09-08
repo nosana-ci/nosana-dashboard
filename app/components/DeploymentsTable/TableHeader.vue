@@ -384,7 +384,7 @@ onUnmounted(() =>
   transform: translateY(-50%);
   width: 16px;
   height: 16px;
-  color: $text-muted;
+  color: #9aa0a6;
   pointer-events: none;
 }
 
@@ -395,7 +395,7 @@ onUnmounted(() =>
   font-size: 0.875rem;
   color: #1a1c1e;
   background: #ffffff;
-  border: 1px solid $grey-lighter;
+  border: 1px solid #e1e3e6;
   border-radius: 10px;
   outline: none;
   transition:
@@ -404,7 +404,7 @@ onUnmounted(() =>
 }
 
 .th-search-input::placeholder {
-  color: $text-muted;
+  color: #9aa0a6;
 }
 
 .th-search-input:focus {
@@ -418,7 +418,7 @@ onUnmounted(() =>
   align-items: center;
   height: 40px;
   background: #ffffff;
-  border: 1px solid $grey-lighter;
+  border: 1px solid #e1e3e6;
   border-radius: 10px;
   transition:
     border-color 0.15s ease,
@@ -450,7 +450,7 @@ onUnmounted(() =>
   right: 0.7rem;
   width: 16px;
   height: 16px;
-  color: $text-muted;
+  color: #80868b;
   pointer-events: none;
 }
 
@@ -498,7 +498,7 @@ onUnmounted(() =>
   font-weight: 500;
   color: #1a1c1e;
   background: #ffffff;
-  border: 1px solid $grey-lighter;
+  border: 1px solid #e1e3e6;
   border-radius: 10px;
   box-shadow: none;
   transition:
@@ -543,7 +543,7 @@ onUnmounted(() =>
 
 .th-actions-caret {
   margin-left: 0.35rem;
-  color: $text-muted;
+  color: #80868b;
   transition: transform 0.2s ease;
 
   &.is-rotated {
@@ -580,7 +580,7 @@ onUnmounted(() =>
     color 0.15s ease;
 
   .icon {
-    color: $text-muted;
+    color: $grey;
     transition: color 0.15s ease;
   }
 
@@ -621,7 +621,7 @@ onUnmounted(() =>
   padding-left: 1rem;
   font-size: 0.78rem;
   font-variant-numeric: tabular-nums;
-  color: $text-muted;
+  color: $grey;
 }
 
 .th-actions .dropdown-divider {

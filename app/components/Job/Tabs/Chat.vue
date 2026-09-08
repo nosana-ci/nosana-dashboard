@@ -448,7 +448,7 @@ watch(isLoading, (newValue) => {
   --chat-text-primary: #1f2937; 
   --chat-text-secondary: #6b7280; 
   --chat-accent: #16a34a; 
-  --chat-border: #{$grey-lighter}; 
+  --chat-border: #e5e7eb; 
 
   --chat-user-message-bg: #dcfce7; 
   --chat-user-message-border: #86efac; 

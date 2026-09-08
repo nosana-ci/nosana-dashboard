@@ -164,7 +164,13 @@
                 >
                   <div
                     class="tag is-outlined status-tag"
-                    :class="getStatusClass(job.state)"
+                    :class="{
+                      'is-success': job.state === 2,
+                      'is-info': job.state === 1,
+                      'is-warning': job.state === 0,
+                      'is-dark': job.state === 3,
+                      'is-light': ![0, 1, 2, 3].includes(job.state),
+                    }"
                   >
                     <component
                       class="mr-2 status-icon"
@@ -578,7 +584,7 @@ const isGHCR = (image: string) => {
 
 .template-icon {
   background-color: #ffffff;
-  border: 1px solid $grey-lighter;
+  border: 1px solid #dbdbdb;
   width: 24px;
   height: 24px;
   border-radius: 100%;
@@ -604,7 +610,7 @@ const isGHCR = (image: string) => {
 
 .container-icon {
   background-color: #ffffff;
-  border: 1px solid $grey-lighter;
+  border: 1px solid #dbdbdb;
   width: 24px;
   height: 24px;
   border-radius: 100%;

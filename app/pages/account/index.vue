@@ -1333,7 +1333,7 @@ watch(
   padding: 1.1rem;
   border-radius: 14px;
   background: #ffffff;
-  border: 1px solid $grey-lighter;
+  border: 1px solid #dbdbdb;
   color: inherit;
   font: inherit;
   text-align: left;
@@ -1466,7 +1466,7 @@ watch(
 }
 
 .usage-column-divider {
-  border-left: 1px solid $grey-lighter;
+  border-left: 1px solid #dbdbdb;
 }
 
 .balance-history-button {

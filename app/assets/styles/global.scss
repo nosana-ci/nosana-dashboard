@@ -40,9 +40,6 @@
   $tabs-link-active-border-bottom-color: $tabs-link-active-border-bottom-color,
   $tabs-link-color: $tabs-link-color,
   $input-shadow: $input-shadow,
-  $input-radius: $input-radius,
-  $modal-card-head-padding: $modal-card-head-padding,
-  $modal-card-body-padding: $modal-card-body-padding,
   $label-weight: $label-weight,
   $label-color: $label-color,
   $black: $black,
@@ -58,38 +55,6 @@
   $white-bis: $white-bis,
   $white: $white
 );
-
-/* Bulma builds all of its own hairlines — inputs, selects, tables, hr,
-   dropdown dividers — from these two lightness stops, and its light theme
-   leaves them at 86% / 93%, which on a white panel is barely a line. Scoped
-   to light mode so the dark theme keeps its own stops. */
-/* Both halves live here, on equally specific selectors, so neither theme can
-   win by source order. */
-html.dark-mode {
-  --app-text-muted: #{$grey-light};
-}
-
-html:not(.dark-mode) {
-  --app-text-muted: #{$grey};
-  --bulma-border-l: 82%;
-  --bulma-border-weak-l: 89%;
-  /* Bulma's muted text (help text, table headers, .has-text-grey) sits at 48%
-     — 4.1:1 on the page canvas, under AA for the small labels that use it. */
-  --bulma-text-weak-l: 41%;
-  /* Bulma draws <hr> from --bulma-background (96%), which is invisible on a
-     white panel; the rule is a separator, so give it the weak hairline. */
-  --bulma-hr-background-color: var(--bulma-border-weak);
-
-  /* Placeholders are drawn as text at 30% alpha — about 2.3:1 on white. Bulma
-     declares the variable on the control itself, so the override has to sit on
-     the same elements rather than inherit from the root. */
-  .input,
-  .textarea,
-  .select,
-  .control {
-    --bulma-input-placeholder-color: #{hsl(220, 10%, 50%)};
-  }
-}
 
 .tag.is-success {
   background-color: $success !important;
@@ -110,7 +75,7 @@ html:not(.dark-mode) {
 
 // Section headers (reusable for consistent styling)
 .section-header {
-  color: $text-muted;
+  color: $grey;
   font-size: $size-6;
   letter-spacing: 0.5px;
   font-weight: 500;
@@ -159,7 +124,7 @@ html:not(.dark-mode) {
     &:focus-visible,
     &:active,
     &:focus:not(:active) {
-      border-color: $grey-lighter !important;
+      border-color: #dbdbdb !important;
       border-width: 1px !important;
       background-color: inherit;
     }
@@ -609,10 +574,6 @@ html:not(.dark-mode) {
 
 .box {
   position: relative;
-  /* On the tinted canvas a shadowless white box had no edge at all; the
-     hairline plus the shared panel lift give it one without a heavy border. */
-  border: 1px solid $grey-lighter;
-  box-shadow: $panel-shadow;
 }
 
 .menu {
@@ -998,7 +959,7 @@ html:not(.dark-mode) {
     }
 
     a {
-      color: $grey-light;
+      color: $grey;
       border-bottom-width: 3px;
       border-bottom-color: transparent;
       margin-bottom: -3px;
@@ -1141,7 +1102,7 @@ button[disabled][data-tooltip] {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  border: 1px solid $grey-lighter;
+  border: 1px solid #e0e0e0;
   margin-right: 10px;
   vertical-align: middle;
 }
@@ -1349,46 +1310,11 @@ button[disabled][data-tooltip] {
 
 /* Status color mapping to ensure consistency across all components */
 :root {
-  --status-success-color: #{$success}; // Green for running/active/online
-  --status-info-color: #{$info}; // Blue for completed/pending
+  --status-success-color: #{$success}; // Green for completed/success
+  --status-info-color: #{$info}; // Blue for running/pending
   --status-warning-color: #{$warning}; // Orange for queued
   --status-danger-color: #{$danger}; // Red for failed/error
   --status-dark-color: #{$dark}; // Gray for stopped/default
-}
-
-/* Text fields: roomier and more defined than the stock control box, so they
-   sit comfortably next to the rounded panels they share dialogs with. */
-.input,
-.textarea {
-  --bulma-control-height: #{$input-control-height};
-  padding-inline: calc(1em - 1px);
-  border-color: $grey-light;
-
-  &:hover:not(:focus) {
-    border-color: $grey;
-  }
-}
-
-/* Field icons are sized from the input height, and read it off .control. */
-.control.has-icons-left,
-.control.has-icons-right {
-  --bulma-input-height: #{$input-control-height};
-}
-
-/* Dialog close control: the borderless icon button the job side panel uses,
-   instead of Bulma's filled circle. */
-.modal-card-head .delete {
-  --bulma-delete-dimensions: 30px;
-  --bulma-delete-color: currentColor;
-  border-radius: 8px;
-  background-color: transparent;
-  color: $text-muted;
-
-  &:hover,
-  &:focus-visible {
-    background-color: $white-ter;
-    color: $secondary;
-  }
 }
 
 /* Global status tag styling with consistent colors */
@@ -1583,7 +1509,7 @@ html.dark-mode .modal-card-head {
 
 /* Ensure SMIL animations start immediately + CSS fallback for instant start */
 .tag.status-tag.is-warning .status-icon-wrap svg path:nth-child(2),
-.tag.status-tag.is-success .status-icon-wrap svg path:nth-child(2) {
+.tag.status-tag.is-info .status-icon-wrap svg path:nth-child(2) {
   /* CSS animation as fallback - will be overridden by SMIL if working */
   animation: statusSpinFallback 4s linear infinite;
   transform-origin: 8.95px 8.85px;
@@ -1600,13 +1526,13 @@ html.dark-mode .modal-card-head {
 
 /* Force SMIL animations to restart immediately when component mounts */
 .tag.status-tag.is-warning .status-icon-wrap svg,
-.tag.status-tag.is-success .status-icon-wrap svg {
+.tag.status-tag.is-info .status-icon-wrap svg {
   /* Force browser to recalculate animations */
   animation: none;
 }
 
 .tag.status-tag.is-warning .status-icon-wrap svg *,
-.tag.status-tag.is-success .status-icon-wrap svg * {
+.tag.status-tag.is-info .status-icon-wrap svg * {
   /* Ensure SMIL animations are not paused */
   animation-play-state: running !important;
 }
@@ -1766,7 +1692,7 @@ html.dark-mode .modal-card-head {
       font-size: 0.72rem;
       letter-spacing: 0.04em;
       font-weight: 600;
-      color: $text-muted;
+      color: $grey;
       border-bottom: 1px solid $border;
       padding: 0.85rem 1.1rem;
     }
@@ -1786,7 +1712,7 @@ html.dark-mode .modal-card-head {
   .action-btn {
     border: 1px solid $border;
     background: transparent;
-    color: $text-muted;
+    color: $grey;
     border-radius: 8px;
     transition:
       border-color 0.15s ease,
@@ -1822,7 +1748,7 @@ html.dark-mode .modal-card-head {
   }
 
   .empty-card .subtitle {
-    color: $text-muted;
+    color: $grey;
     max-width: 30rem;
     margin-left: auto;
     margin-right: auto;
@@ -1906,7 +1832,7 @@ html.dark-mode .modal-card-head {
     font-size: 0.72rem;
     letter-spacing: 0.04em;
     font-weight: 600;
-    color: $text-muted;
+    color: $grey;
     border-bottom: 1px solid $border;
     padding: 0.85rem 1.1rem;
     vertical-align: middle;
@@ -1946,14 +1872,6 @@ html.dark-mode .modal-card-head {
   overflow: hidden;
   box-shadow: 0 40px 80px -30px rgba($black, 0.35);
 
-  /* The .has-limited-width-* helpers lose to the bare .modal-card width rule
-     further down this file, so dialog widths live on this scale instead. */
-  &.is-small {
-    width: 480px;
-  }
-  &.is-normal {
-    width: 640px;
-  }
   &.is-medium {
     width: 900px;
   }
@@ -1967,7 +1885,7 @@ html.dark-mode .modal-card-head {
   .modal-card-head {
     align-items: flex-start;
     background-color: $box-background-color;
-    border-bottom: 1px solid $grey-lighter;
+    border-bottom: 1px solid $grey-lightest;
     border-radius: 16px 16px 0 0;
   }
 
@@ -1980,19 +1898,8 @@ html.dark-mode .modal-card-head {
     gap: 1rem;
     flex-wrap: wrap;
     background-color: $box-background-color;
-    border-top: 1px solid $grey-lighter;
+    border-top: 1px solid $grey-lightest;
     border-radius: 0 0 16px 16px;
-  }
-}
-
-.dark-mode .modal-card-head .delete:not(.light-mode) {
-  background-color: transparent;
-  color: $grey-light;
-
-  &:hover,
-  &:focus-visible {
-    background-color: rgba($white, 0.08);
-    color: $secondary;
   }
 }
 
@@ -2010,18 +1917,12 @@ html.dark-mode .modal-card-head {
   // neutral ones (Cancel, Change template, inactive filter pills) a subtle
   // on-dark treatment. Coloured buttons (is-secondary/is-dark/…) keep theirs.
   .button:not(.is-secondary):not(.is-dark):not(.is-primary):not(.is-danger):not(
-      .is-success
-    ):not(.is-outlined):not(.is-glow) {
+      .is-outlined
+    ):not(.is-glow) {
     background-color: rgba(255, 255, 255, 0.05);
     border-color: rgba(255, 255, 255, 0.16);
     color: #e4e4e4;
   }
-}
-
-// Left-hand summary line in an app dialog footer, opposite the buttons.
-.modal-foot-summary {
-  flex: 1;
-  min-width: 0;
 }
 
 // Green accent chip for dialog headers / the deploy banner avatar.
@@ -2069,7 +1970,7 @@ html.dark-mode .modal-card-head {
   border-radius: 10px;
   padding: 3px;
   gap: 2px;
-  box-shadow: inset 0 0 0 1px $grey-lighter;
+  box-shadow: inset 0 0 0 1px rgba($black, 0.04);
 
   button {
     font-size: 0.78rem;
@@ -2103,219 +2004,6 @@ html.dark-mode .seg-tabs {
       background: $black-ter;
       color: $white;
       box-shadow: 0 1px 2px rgba($black, 0.4);
-    }
-  }
-}
-
-// Shared section vocabulary for the detail pages: the card a section sits in,
-// its rows, the chips inside a row, and the quiet buttons that act on a row.
-// Mirrors the per-section styles in the Deployment* components (ep-card,
-// rev-card, da-card, port-chip, active-chip, ep-icobtn, view-btn).
-.section-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  margin-bottom: 0.85rem;
-}
-
-.section-card {
-  background: $white;
-  border: 1px solid $grey-lighter;
-  border-radius: 14px;
-  box-shadow: $panel-shadow;
-  overflow: hidden;
-  color: $text;
-}
-
-.section-row {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  padding: 15px 18px;
-
-  &.is-block {
-    display: block;
-  }
-
-  // Inset hairline between consecutive rows, as in the revision list.
-  &:not(:first-child)::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 18px;
-    right: 18px;
-    height: 1px;
-    background: $grey-lighter;
-  }
-}
-
-.section-empty {
-  padding: 2.5rem 1.5rem;
-  text-align: center;
-  color: $text-muted;
-  font-size: 0.9rem;
-}
-
-.row-tile {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  background: $white-ter;
-  color: $text-muted;
-
-  svg {
-    width: 16px;
-    height: 16px;
-  }
-}
-
-.row-main {
-  flex: 1;
-  min-width: 0;
-}
-
-.row-title {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 9px;
-  font-family: $title-family;
-  font-weight: 600;
-  font-size: 14px;
-  color: $text;
-}
-
-.row-subtitle {
-  margin-top: 2px;
-  font-size: 12.5px;
-  color: $text-muted;
-}
-
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 2px 9px;
-  border-radius: 999px;
-  background: $white-ter;
-  color: $grey-dark;
-  font-family: $family-monospace;
-  font-size: 0.72rem;
-  vertical-align: middle;
-
-  &.is-accent {
-    background: rgba($secondary, 0.14);
-    color: color.adjust($secondary, $lightness: -18%);
-    font-family: $title-family;
-    font-weight: 600;
-    font-size: 11px;
-  }
-}
-
-.icon-button {
-  display: inline-grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: $text-muted;
-  cursor: pointer;
-  transition:
-    background 0.15s ease,
-    color 0.15s ease;
-
-  svg {
-    width: 15px;
-    height: 15px;
-  }
-
-  &:hover,
-  &:focus-visible {
-    background: $white-ter;
-    color: $secondary;
-  }
-
-  &.is-danger:hover,
-  &.is-danger:focus-visible {
-    color: $danger;
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-}
-
-// The bordered small button used beside rows ("View Configuration").
-.button.is-quiet {
-  border: 1px solid $grey-lighter;
-  border-radius: 8px;
-  background: $white;
-  color: $text;
-  font-weight: 500;
-  font-size: 0.8rem;
-  box-shadow: none;
-
-  &:hover {
-    border-color: $grey-light;
-    background: $white-ter;
-  }
-}
-
-html.dark-mode {
-  .section-card {
-    background: $black-ter;
-    border-color: rgba($white, 0.08);
-    color: $white;
-  }
-
-  .section-row:not(:first-child)::before {
-    background: rgba($white, 0.08);
-  }
-
-  .section-empty,
-  .row-subtitle,
-  .row-tile {
-    color: $grey-light;
-  }
-
-  .row-tile {
-    background: rgba($white, 0.07);
-  }
-
-  .row-title {
-    color: $white;
-  }
-
-  .chip {
-    background: rgba($white, 0.08);
-    color: $grey-light;
-
-    &.is-accent {
-      background: rgba($secondary, 0.18);
-      color: $secondary;
-    }
-  }
-
-  .icon-button:hover,
-  .icon-button:focus-visible {
-    background: rgba($white, 0.08);
-  }
-
-  .button.is-quiet {
-    background: rgba($white, 0.05);
-    border-color: rgba($white, 0.12);
-    color: $white;
-
-    &:hover {
-      background: rgba($white, 0.1);
     }
   }
 }

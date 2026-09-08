@@ -8,12 +8,11 @@
       <div class="banner-content">
         <div class="banner-top">
           <div class="banner-identity">
-            <div class="template-avatar" :class="{ 'is-brand': !templateIcon }">
-              <img
-                v-if="templateIcon"
-                :src="templateIcon"
-                alt="Template icon"
-              />
+            <div
+              class="template-avatar"
+              :class="{ 'is-brand': !templateIcon }"
+            >
+              <img v-if="templateIcon" :src="templateIcon" alt="Template icon" />
               <NosanaMark v-else class="brand-mark" />
             </div>
 
@@ -43,32 +42,9 @@
                 stroke-linecap="round"
                 stroke-linejoin="round"
               >
-                <path
-                  d="M12 2 2 7l10 5 10-5-10-5ZM2 17l10 5 10-5M2 12l10 5 10-5"
-                />
+                <path d="M12 2 2 7l10 5 10-5-10-5ZM2 17l10 5 10-5M2 12l10 5 10-5" />
               </svg>
               <span>Change template</span>
-            </button>
-
-            <button
-              v-if="canCloneDeployment"
-              type="button"
-              class="banner-btn"
-              @click="$emit('showCloneDeploymentModal')"
-              title="Start from one of your existing deployments"
-            >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.8"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <rect x="9" y="9" width="12" height="12" rx="2" />
-                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-              </svg>
-              <span>Clone deployment</span>
             </button>
           </div>
         </div>
@@ -203,26 +179,15 @@
               @update:replicas="replicasLocal = $event"
               @update:timeout="timeoutLocal = $event"
             />
-
-            <div v-if="sshPublicKeys !== undefined" class="config-section">
-              <DeploySSHAccessConfiguration
-                :model-value="sshPublicKeys"
-                @update:model-value="emit('update:sshPublicKeys', $event)"
-                @update:error="emit('sshError', $event)"
-              />
-            </div>
           </div>
         </div>
+
       </div>
     </section>
 
-    <!-- GPU Selection Section (only shown when markets prop is provided) -->
-    <div
-      v-if="markets !== undefined"
-      class="box"
-      style="border: none; margin-top: 1.5rem"
-    >
-      <h2 class="title is-5 mb-3">Select your GPU</h2>
+      <!-- GPU Selection Section (only shown when markets prop is provided) -->
+      <div v-if="markets !== undefined" class="box" style="border: none; margin-top: 1.5rem;">
+        <h2 class="title is-5 mb-3">Select your GPU</h2>
       <div class="nav-tabs is-flex">
         <div
           class="nav-tabs-item p-3 px-5 mr-3"
@@ -239,47 +204,39 @@
           Advanced Search
         </div>
       </div>
-      <div class="box" style="border: none; margin-top: 0">
+      <div class="box" style="border: none; margin-top: 0;">
         <DeploySimpleGpuSelection
-          v-if="gpuTab === 'simple'"
-          :markets="markets ?? null"
-          :testgridMarkets="testgridMarkets ?? []"
-          :loadingMarkets="loadingMarkets ?? false"
-          :gpuTypeCheckbox="gpuTypeCheckbox ?? []"
-          :activeFilter="activeFilter ?? 'ALL'"
-          :jobDefinition="
-            (typeof jobDefinition === 'string' || !jobDefinition
-              ? null
-              : jobDefinition) as JobDefinition | null
-          "
-          :skipAutoSelection="skipAutoSelection ?? false"
-          :selectedMarket="selectedMarket ?? null"
-          :activeFilterKey="activeFilterKey ?? ''"
-          @selectedMarket="$emit('selectedMarket', $event)"
-          @update:activeFilter="$emit('update:activeFilter', $event)"
-          @update:gpuTypeCheckbox="$emit('update:gpuTypeCheckbox', $event)"
-        />
-        <DeployAdvancedGpuSelection
-          v-else
-          :gpuFilters="gpuFilters ?? null"
-          :selectedGpuGroup="selectedGpuGroup ?? 'all'"
-          :filterValues="filterValues ?? {}"
-          :availableHosts="availableHosts ?? []"
-          :loadingHosts="loadingHosts ?? false"
-          :selectedHostAddress="selectedHostAddress ?? null"
-          :forceUpdateCounter="forceUpdateCounter ?? 0"
-          :marketsData="markets ?? null"
-          @update:selectedGpuGroup="$emit('update:selectedGpuGroup', $event)"
-          @update:filterValues="$emit('update:filterValues', $event)"
-          @update:selectedHostAddress="
-            $emit('update:selectedHostAddress', $event)
-          "
-          @update:forceUpdateCounter="
-            $emit('update:forceUpdateCounter', $event)
-          "
-          @selectedMarket="$emit('selectedMarket', $event)"
-          @searchGpus="$emit('searchGpus')"
-        />
+            v-if="gpuTab === 'simple'"
+            :markets="markets ?? null"
+            :testgridMarkets="testgridMarkets ?? []"
+            :loadingMarkets="loadingMarkets ?? false"
+            :gpuTypeCheckbox="gpuTypeCheckbox ?? []"
+            :activeFilter="activeFilter ?? 'ALL'"
+            :jobDefinition="(typeof jobDefinition === 'string' || !jobDefinition ? null : jobDefinition) as JobDefinition | null"
+            :skipAutoSelection="skipAutoSelection ?? false"
+            :selectedMarket="selectedMarket ?? null"
+            :activeFilterKey="activeFilterKey ?? ''"
+            @selectedMarket="$emit('selectedMarket', $event)"
+            @update:activeFilter="$emit('update:activeFilter', $event)"
+            @update:gpuTypeCheckbox="$emit('update:gpuTypeCheckbox', $event)"
+          />
+          <DeployAdvancedGpuSelection
+            v-else
+            :gpuFilters="gpuFilters ?? null"
+            :selectedGpuGroup="selectedGpuGroup ?? 'all'"
+            :filterValues="filterValues ?? {}"
+            :availableHosts="availableHosts ?? []"
+            :loadingHosts="loadingHosts ?? false"
+            :selectedHostAddress="selectedHostAddress ?? null"
+            :forceUpdateCounter="forceUpdateCounter ?? 0"
+            :marketsData="markets ?? null"
+            @update:selectedGpuGroup="$emit('update:selectedGpuGroup', $event)"
+            @update:filterValues="$emit('update:filterValues', $event)"
+            @update:selectedHostAddress="$emit('update:selectedHostAddress', $event)"
+            @update:forceUpdateCounter="$emit('update:forceUpdateCounter', $event)"
+            @selectedMarket="$emit('selectedMarket', $event)"
+            @searchGpus="$emit('searchGpus')"
+          />
       </div>
     </div>
 
@@ -288,19 +245,9 @@
       <div class="modal-background" @click="handleCancel"></div>
       <div class="modal-card is-app-modal is-large jobdef-modal">
         <header class="modal-card-head">
-          <div
-            class="is-flex is-align-items-center is-gap-2"
-            style="min-width: 0"
-          >
+          <div class="is-flex is-align-items-center is-gap-2" style="min-width: 0">
             <span class="app-modal-icon">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.8"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                 <path d="m16 18 6-6-6-6M8 6l-6 6 6 6" />
               </svg>
             </span>
@@ -308,11 +255,7 @@
               <p class="modal-card-title title is-5 mb-0">Job definition</p>
             </div>
           </div>
-          <div
-            class="seg-tabs jobdef-seg"
-            role="tablist"
-            aria-label="Editor mode"
-          >
+          <div class="seg-tabs jobdef-seg" role="tablist" aria-label="Editor mode">
             <button
               type="button"
               :class="{ 'is-active': editorMode === 'builder' }"
@@ -332,11 +275,7 @@
               JSON
             </button>
           </div>
-          <button
-            class="delete"
-            aria-label="close"
-            @click="handleCancel"
-          ></button>
+          <button class="delete" aria-label="close" @click="handleCancel"></button>
         </header>
         <section class="modal-card-body jobdef-body">
           <DeployJobDefinitionBuilder
@@ -344,62 +283,25 @@
             ref="builderTab"
             v-model="editingJobDefinition"
           />
-          <PodConfigurationTab
-            v-else
-            ref="podTab"
-            v-model="editingJobDefinition"
-            @update:valid="jsonValid = $event"
-          />
+          <PodConfigurationTab v-else ref="podTab" v-model="editingJobDefinition" @update:valid="jsonValid = $event" />
         </section>
         <footer class="modal-card-foot">
-          <p
-            class="has-text-grey is-size-7 jobdef-foot"
-            style="flex: 1; min-width: 0"
-          >
-            <span
-              >Changes apply when you save.
-              {{
-                editorMode === "json"
-                  ? "Invalid JSON is blocked."
-                  : "Required fields are checked."
-              }}</span
-            >
+          <p class="has-text-grey is-size-7 jobdef-foot" style="flex: 1; min-width: 0">
+            <span>Changes apply when you save.
+              {{ editorMode === 'json' ? 'Invalid JSON is blocked.' : 'Required fields are checked.' }}</span>
             <span
               v-if="editorMode === 'json'"
               class="jobdef-valid"
               :class="jsonValid ? 'is-ok' : 'is-bad'"
             >
-              <svg
-                v-if="jsonValid"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.6"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="M20 6L9 17l-5-5" />
-              </svg>
-              <svg
-                v-else
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="M12 9v4M12 17h.01" />
-                <path
-                  d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"
-                />
-              </svg>
-              {{ jsonValid ? "Valid" : "Invalid" }}
+              <svg v-if="jsonValid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
+              <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01" /><path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z" /></svg>
+              {{ jsonValid ? 'Valid' : 'Invalid' }}
             </span>
           </p>
           <div class="buttons mb-0">
             <button class="button" @click="handleCancel">Cancel</button>
-            <button class="button is-success" @click="handleSaveChanges">
+            <button class="button is-secondary" @click="handleSaveChanges">
               Save changes
             </button>
           </div>
@@ -410,18 +312,17 @@
 </template>
 
 <script setup lang="ts">
-import type { JobDefinition, Market } from "@nosana/kit";
-import { DeploymentStrategy } from "@nosana/kit";
-import type { Template } from "~/composables/useTemplates";
-import DeploySimpleGpuSelection from "./SimpleGpuSelection.vue";
-import DeployAdvancedGpuSelection from "./AdvancedGpuSelection.vue";
-import PodConfigurationTab from "./PodConfigurationTab.vue";
-import DeployJobDefinitionBuilder from "./JobDefinitionBuilder.vue";
-import DeploymentConfigurationTab from "./DeploymentConfigurationTab.vue";
-import DeploySSHAccessConfiguration from "./SSHAccessConfiguration.vue";
-import NosanaMark from "@/assets/img/icon.svg?component";
-import { marked } from "marked";
-import { MIN_INFINITE_TIMEOUT_HOURS } from "~/composables/useTimeoutConstants";
+  import type { JobDefinition, Market } from '@nosana/kit';
+  import { DeploymentStrategy } from '@nosana/kit';
+  import type { Template } from '~/composables/useTemplates';
+  import DeploySimpleGpuSelection from './SimpleGpuSelection.vue';
+  import DeployAdvancedGpuSelection from './AdvancedGpuSelection.vue';
+  import PodConfigurationTab from './PodConfigurationTab.vue';
+  import DeployJobDefinitionBuilder from './JobDefinitionBuilder.vue';
+  import DeploymentConfigurationTab from './DeploymentConfigurationTab.vue';
+  import NosanaMark from '@/assets/img/icon.svg?component';
+  import { marked } from 'marked';
+  import { MIN_INFINITE_TIMEOUT_HOURS } from '~/composables/useTimeoutConstants';
 
 // Define props
 interface Props {
@@ -434,54 +335,46 @@ interface Props {
   replicas: number;
   timeout: number;
   deploymentName: string;
-  // Offer cloning an existing deployment (create page, signed-in users only)
-  canCloneDeployment?: boolean;
-  // SSH public keys shown in the settings drawer (optional - create page only)
-  sshPublicKeys?: string[];
-  // GPU Selection props (optional - only for /deploy page)
-  markets?: Market[] | null;
-  testgridMarkets?: any;
-  loadingMarkets?: boolean;
-  gpuTypeCheckbox?: string[];
-  activeFilter?: string;
-  skipAutoSelection?: boolean;
-  selectedMarket?: Market | null;
-  activeFilterKey?: string;
-  // Advanced GPU Selection props (optional - only for /deploy page)
-  gpuFilters?: any;
-  selectedGpuGroup?: string;
-  filterValues?: any;
-  availableHosts?: any[];
-  loadingHosts?: boolean;
-  selectedHostAddress?: string | null;
-  forceUpdateCounter?: number;
+    // GPU Selection props (optional - only for /deploy page)
+    markets?: Market[] | null;
+    testgridMarkets?: any;
+    loadingMarkets?: boolean;
+    gpuTypeCheckbox?: string[];
+    activeFilter?: string;
+    skipAutoSelection?: boolean;
+    selectedMarket?: Market | null;
+    activeFilterKey?: string;
+    // Advanced GPU Selection props (optional - only for /deploy page)
+    gpuFilters?: any;
+    selectedGpuGroup?: string;
+    filterValues?: any;
+    availableHosts?: any[];
+    loadingHosts?: boolean;
+    selectedHostAddress?: string | null;
+    forceUpdateCounter?: number;
 }
 
 // Define emits
 const emit = defineEmits<{
   showTemplateModal: [];
-  showCloneDeploymentModal: [];
-  "update:isEditorCollapsed": [value: boolean];
-  "update:jobDefinition": [value: JobDefinition | null];
-  // Advanced deployment emits
-  "update:strategy": [strategy: DeploymentStrategy];
-  "update:schedule": [schedule: string];
-  "update:replicas": [replicas: number];
-  "update:timeout": [timeout: number];
-  "update:deploymentName": [name: string];
-  "update:sshPublicKeys": [keys: string[]];
-  // Why SSH blocks creating the deployment; empty when SSH is ready or unused.
-  sshError: [message: string];
-  // GPU Selection emits
-  selectedMarket: [market: Market | null];
-  "update:activeFilter": [filter: string];
-  "update:gpuTypeCheckbox": [types: string[]];
-  // Advanced GPU Selection emits
-  "update:selectedGpuGroup": [value: string];
-  "update:filterValues": [value: any];
-  "update:selectedHostAddress": [value: string | null];
-  "update:forceUpdateCounter": [value: number];
-  searchGpus: [];
+  'update:isEditorCollapsed': [value: boolean];
+  'update:jobDefinition': [value: JobDefinition | null];
+    // Advanced deployment emits
+    'update:strategy': [strategy: DeploymentStrategy];
+    'update:schedule': [schedule: string];
+    'update:replicas': [replicas: number];
+    'update:timeout': [timeout: number];
+    'update:deploymentName': [name: string];
+    // GPU Selection emits
+    selectedMarket: [market: Market | null];
+    'update:activeFilter': [filter: string];
+    'update:gpuTypeCheckbox': [types: string[]];
+    // Advanced GPU Selection emits
+    'update:selectedGpuGroup': [value: string];
+    'update:filterValues': [value: any];
+    'update:selectedHostAddress': [value: string | null];
+    'update:forceUpdateCounter': [value: number];
+    searchGpus: [];
 }>();
 
 // Get props
@@ -491,7 +384,7 @@ const props = defineProps<Props>();
 const showEditorModal = ref(false);
 
 // Editor mode: schema-driven form builder (default) or raw JSON escape hatch
-const editorMode = ref<"builder" | "json">("builder");
+const editorMode = ref<'builder' | 'json'>('builder');
 const builderTab = ref<{ canSave: () => boolean } | null>(null);
 // JSON validity, surfaced by PodConfigurationTab for the footer indicator.
 const jsonValid = ref(true);
@@ -509,35 +402,35 @@ const gpuTab = ref<"simple" | "advanced">("simple");
 // Create reactive refs for two-way binding
 const isEditorCollapsed = computed({
   get: () => props.isEditorCollapsed,
-  set: (value: boolean) => emit("update:isEditorCollapsed", value),
+  set: (value: boolean) => emit('update:isEditorCollapsed', value)
 });
 
 const jobDefinition = computed({
   get: () => (props.jobDefinition === null ? {} : props.jobDefinition),
   set: (value: any) => {
-    if (typeof value === "string" || value === undefined) {
+    if (typeof value === 'string' || value === undefined) {
       // Don't emit for string or undefined values - this causes loading state
       // The JSON editor will handle invalid JSON display
       return;
     } else {
-      emit("update:jobDefinition", value as JobDefinition);
+      emit('update:jobDefinition', value as JobDefinition);
     }
-  },
+  }
 });
 
 const strategyLocal = computed({
   get: () => props.strategy,
-  set: (value: DeploymentStrategy) => emit("update:strategy", value),
+  set: (value: DeploymentStrategy) => emit('update:strategy', value),
 });
 
 const scheduleLocal = computed({
   get: () => props.schedule,
-  set: (value: string) => emit("update:schedule", value),
+  set: (value: string) => emit('update:schedule', value),
 });
 
 const deploymentNameLocal = computed({
   get: () => props.deploymentName,
-  set: (value: string) => emit("update:deploymentName", value),
+  set: (value: string) => emit('update:deploymentName', value),
 });
 
 const clampNumber = (value: number, min: number, max: number) => {
@@ -548,7 +441,8 @@ const clampNumber = (value: number, min: number, max: number) => {
 
 const replicasLocal = computed({
   get: () => props.replicas,
-  set: (value: number) => emit("update:replicas", clampNumber(value, 1, 100)),
+  set: (value: number) =>
+    emit('update:replicas', clampNumber(value, 1, 100)),
 });
 
 const effectiveMinTimeout = computed(() =>
@@ -560,10 +454,7 @@ const effectiveMinTimeout = computed(() =>
 const timeoutLocal = computed({
   get: () => props.timeout,
   set: (value: number) =>
-    emit(
-      "update:timeout",
-      clampNumber(value, effectiveMinTimeout.value, MAX_TIMEOUT_HOURS),
-    ),
+    emit('update:timeout', clampNumber(value, effectiveMinTimeout.value, MAX_TIMEOUT_HOURS)),
 });
 
 // Computed properties for template info
@@ -613,14 +504,17 @@ watch(
     } else if (!isNameFocused.value) {
       displayName.value = computedJobTitle.value;
     }
-  },
+  }
 );
 
-watch(computedJobTitle, (value) => {
-  if (!deploymentNameLocal.value && !isNameFocused.value) {
-    displayName.value = value;
+watch(
+  computedJobTitle,
+  (value) => {
+    if (!deploymentNameLocal.value && !isNameFocused.value) {
+      displayName.value = value;
+    }
   }
-});
+);
 
 const computedDockerImage = computed(() => {
   if ((props.jobDefinition as any)?.ops?.[0]?.args) {
@@ -638,7 +532,7 @@ const isReadmeOpen = ref(false);
 const renderedReadme = computed(() =>
   props.selectedTemplate?.readme
     ? (marked(props.selectedTemplate.readme) as string)
-    : "",
+    : '',
 );
 
 // A freshly selected template starts minimized again
@@ -653,17 +547,16 @@ watch(
 const openEditorModal = () => {
   originalJobDefinition.value = JSON.parse(JSON.stringify(props.jobDefinition));
   editingJobDefinition.value = JSON.parse(JSON.stringify(props.jobDefinition));
-  editorMode.value = "builder";
+  editorMode.value = 'builder';
   showEditorModal.value = true;
 };
 
 // Handle save with validation (gate depends on the active editor)
 const podTab = ref<{ canSave: () => boolean } | null>(null);
 const handleSaveChanges = () => {
-  const activeEditor =
-    editorMode.value === "builder" ? builderTab.value : podTab.value;
+  const activeEditor = editorMode.value === 'builder' ? builderTab.value : podTab.value;
   if (!activeEditor?.canSave?.()) return;
-  emit("update:jobDefinition", editingJobDefinition.value as JobDefinition);
+  emit('update:jobDefinition', editingJobDefinition.value as JobDefinition);
   showEditorModal.value = false;
 };
 
@@ -722,7 +615,8 @@ html.dark-mode {
   overflow: hidden;
   border-radius: 18px;
   padding: 2rem 2.25rem;
-  background: radial-gradient(
+  background:
+    radial-gradient(
       circle at 90% 8%,
       rgba($secondary, 0.16),
       transparent 46%
@@ -1033,13 +927,6 @@ html.dark-mode {
   margin-bottom: 1rem;
 }
 
-/* Further groups inside the drawer, e.g. SSH access */
-.config-section {
-  margin-top: 1.5rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-}
-
 /* Dark-theme the reused Bulma form controls inside the drawer */
 .banner-config :deep(.deployment-configuration-tab) {
   display: grid;
@@ -1057,40 +944,11 @@ html.dark-mode {
 }
 
 .banner-config :deep(.input),
-.banner-config :deep(.textarea),
 .banner-config :deep(.select select) {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.12);
   color: #fff;
   box-shadow: none;
-}
-
-.banner-config :deep(.textarea.is-danger) {
-  border-color: $danger;
-}
-
-/* The banner is always dark, so neutral buttons take their dark-mode look */
-.banner-config :deep(.button.is-quiet) {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.12);
-  color: #fff;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.1);
-  }
-}
-
-.banner-config :deep(code) {
-  color: #c9d3c9;
-  background: rgba(255, 255, 255, 0.08);
-}
-
-/* The generated-key panel reads its text colours from these tokens */
-.banner-config :deep(.generated-key) {
-  --key-title: #f3f7f3;
-  --key-muted: #a3ada3;
-  --key-warn: #ffb547;
-  --key-ok: #{$secondary};
 }
 
 .banner-config :deep(.select select) {
@@ -1112,13 +970,11 @@ html.dark-mode {
   border-color: #8bf58f;
 }
 
-.banner-config :deep(.input::placeholder),
-.banner-config :deep(.textarea::placeholder) {
+.banner-config :deep(.input::placeholder) {
   color: #6f7a6e;
 }
 
 .banner-config :deep(.input:focus),
-.banner-config :deep(.textarea:focus),
 .banner-config :deep(.select select:focus) {
   border-color: $secondary;
   box-shadow: 0 0 0 3px rgba($secondary, 0.18);
@@ -1126,10 +982,6 @@ html.dark-mode {
 
 .banner-config :deep(.help) {
   color: #8a948a;
-}
-
-.banner-config :deep(.help.is-danger) {
-  color: #ff7b7b;
 }
 
 .banner-config :deep(.label .icon.has-text-grey) {
@@ -1362,20 +1214,9 @@ html.dark-mode {
   padding: 3px 9px;
   border-radius: 999px;
 
-  svg {
-    width: 11px;
-    height: 11px;
-  }
-  &.is-ok {
-    color: #0a8f06;
-    background: rgba($secondary, 0.1);
-    border: 1px solid rgba($secondary, 0.4);
-  }
-  &.is-bad {
-    color: #e5484d;
-    background: rgba(#e5484d, 0.1);
-    border: 1px solid rgba(#e5484d, 0.4);
-  }
+  svg { width: 11px; height: 11px; }
+  &.is-ok { color: #0a8f06; background: rgba($secondary, 0.1); border: 1px solid rgba($secondary, 0.4); }
+  &.is-bad { color: #e5484d; background: rgba(#e5484d, 0.1); border: 1px solid rgba(#e5484d, 0.4); }
 }
 html.dark-mode .jobdef-valid.is-ok {
   color: #8bf58f;

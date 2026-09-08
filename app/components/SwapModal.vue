@@ -419,7 +419,7 @@ watch(
 .source-token-container {
   border-bottom-left-radius: 0;
   border-bottom-right-radius: 0;
-  border-bottom: 1px solid $grey-lighter;
+  border-bottom: 1px solid #e0e0e0;
 }
 
 .destination-token-container {
@@ -467,7 +467,7 @@ watch(
 }
 
 .token-selector-button {
-  border: 1px solid $grey-lighter;
+  border: 1px solid #e0e0e0;
   border-radius: 8px;
   background-color: rgba(255, 255, 255, 0.5);
   padding: 0.375rem;
@@ -538,7 +538,7 @@ watch(
 }
 
 .dropdown-menu {
-  border: 1px solid $grey-lighter;
+  border: 1px solid #e0e0e0;
   border-radius: 8px;
   margin-top: 4px;
   overflow: hidden;
@@ -553,7 +553,7 @@ watch(
 
 .dropdown-item {
   padding: 8px 12px;
-  border-bottom: 1px solid $grey-lighter;
+  border-bottom: 1px solid #f0f0f0;
 }
 
 .dropdown-item:last-child {

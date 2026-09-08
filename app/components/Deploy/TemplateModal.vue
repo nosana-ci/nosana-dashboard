@@ -438,7 +438,7 @@ const sections = computed(() => [
   flex-shrink: 0;
   font-size: 0.8rem;
   font-weight: 600;
-  color: $text-muted;
+  color: $grey-light;
   transition: color 0.2s ease;
 
   svg {

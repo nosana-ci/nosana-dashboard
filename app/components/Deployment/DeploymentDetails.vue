@@ -21,7 +21,7 @@
           <span class="s" :title="scheduleTitle"
             ><template v-if="isScheduled && scheduleHuman"
               >{{ scheduleHuman }}<span class="sep">|</span></template
-            >{{ timeoutDisplay }} Timeout</span
+            >{{ timeoutDisplay }} timeout</span
           >
         </div>
 
@@ -120,7 +120,6 @@ const scheduleTitle = computed(() =>
   background: $white;
   border: 1px solid $grey-lighter;
   border-radius: 14px;
-  box-shadow: $panel-shadow;
   overflow: hidden;
   color: $text;
 }
@@ -177,7 +176,7 @@ html.dark-mode .stat + .stat::before {
 
 .k {
   font-size: 12px;
-  color: $text-muted;
+  color: $grey;
   margin-bottom: 7px;
 }
 
@@ -196,7 +195,7 @@ html.dark-mode .stat + .stat::before {
 .v .u {
   font-size: 13px;
   font-weight: 400;
-  color: $text-muted;
+  color: $grey;
   letter-spacing: 0;
 }
 
@@ -211,7 +210,7 @@ html.dark-mode .stat + .stat::before {
 
 .s {
   font-size: 12px;
-  color: $text-muted;
+  color: $grey;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -220,7 +219,7 @@ html.dark-mode .stat + .stat::before {
 .gpu-addr {
   font-family: $family-monospace;
   font-size: 11px;
-  color: $text-muted;
+  color: $grey;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

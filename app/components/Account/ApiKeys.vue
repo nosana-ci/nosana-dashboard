@@ -156,7 +156,7 @@
         <footer class="modal-card-foot">
           <button
             @click="createKey"
-            class="button is-success"
+            class="button is-dark"
             :disabled="!newKeyName || creatingKey"
             :class="{ 'is-loading': creatingKey }"
           >
@@ -314,7 +314,7 @@
         <footer class="modal-card-foot">
           <button
             @click="updateKey"
-            class="button is-success"
+            class="button is-dark"
             :disabled="!editKeyName || updatingKey"
             :class="{ 'is-loading': updatingKey }"
           >

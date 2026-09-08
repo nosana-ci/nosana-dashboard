@@ -1,6 +1,6 @@
-import { getDeploymentJobData } from "~/utils/kitJobAccess";
 import { ref, computed, type Ref, type ShallowRef, type ComputedRef } from 'vue';
 import { JobState, type NosanaClient } from '@nosana/kit';
+import type { DeploymentJob as ApiDeploymentJob } from '@nosana/api';
 import type { JobItem, UnifiedLogEntry } from './logCollectorTypes';
 import { resolveJobState, getJobTimeBounds } from './logCollectorUtils';
 import { insertSorted } from './logEntryUtils';
@@ -30,7 +30,8 @@ export function useHistoricalLogs(deps: UseHistoricalLogsDeps) {
     loadingOlderLogs.value = true;
 
     try {
-      const jobResponse = await getDeploymentJobData(deps.nosana.value.api, deps.deploymentId, jobId);
+      const dep = await deps.nosana.value.api.deployments.get(deps.deploymentId);
+      const jobResponse = (await dep.getJob(jobId)) as ApiDeploymentJob;
       const jobResult = jobResponse?.jobResult;
 
       if (jobResult) {

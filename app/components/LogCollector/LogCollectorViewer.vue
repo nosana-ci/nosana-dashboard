@@ -140,10 +140,10 @@ defineExpose({ scrollToBottom });
 
 <style lang="scss" scoped>
 .log-collector-viewer {
-  font-family: $family-monospace;
-  background-color: $code-surface;
-  color: #e6ede6;
-  border-radius: 0;
+  font-family: "JetBrains Mono", monospace;
+  background-color: #0d1117;
+  color: #c9d1d9;
+  border-radius: 4px;
   overflow-y: auto;
   height: 100%;
   min-width: 0;
@@ -157,10 +157,11 @@ defineExpose({ scrollToBottom });
   padding: 0.4rem 0.6rem;
   font-size: 0.75rem;
   font-weight: 600;
-  color: #8a948a;
-  @include code-surface-bar;
+  color: #6e7681;
+  border-bottom: 1px solid #21262d;
   position: sticky;
   top: 0;
+  background: #0d1117;
   z-index: 1;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -171,7 +172,7 @@ defineExpose({ scrollToBottom });
   align-items: flex-start;
   padding: 0.2rem 0.6rem;
   font-size: 0.85rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(#21262d, 0.5);
   line-height: 1.45;
 
   &.row-error {
@@ -193,7 +194,7 @@ defineExpose({ scrollToBottom });
 .col-date {
   width: 120px;
   flex-shrink: 0;
-  color: #8a948a;
+  color: #6e7681;
   font-size: 0.8rem;
   padding-right: 0.4rem;
 }
@@ -201,7 +202,7 @@ defineExpose({ scrollToBottom });
 .col-op {
   width: 100px;
   flex-shrink: 0;
-  color: #8a948a;
+  color: #6e7681;
   font-size: 0.8rem;
   padding-right: 0.4rem;
   overflow: hidden;
@@ -233,7 +234,7 @@ defineExpose({ scrollToBottom });
   }
 
   &.done {
-    color: #5f695f;
+    color: #3d434a;
   }
 }
 
@@ -247,20 +248,20 @@ defineExpose({ scrollToBottom });
   border-radius: 3px;
   line-height: 1.4;
 
-  &.level-container { color: #9aa79a; background: rgba(#9aa79a, 0.14); }
+  &.level-container { color: #8b949e; background: rgba(#8b949e, 0.12); }
   &.level-system { color: #58a6ff; background: rgba(#58a6ff, 0.12); }
   &.level-error { color: #f85149; background: rgba(#f85149, 0.15); }
 }
 
 .connecting-message {
-  color: #c9d3c9;
+  color: #ffffff;
   text-align: center;
   padding: 2rem;
   font-size: 0.9rem;
 }
 
 .empty-message {
-  color: #8a948a;
+  color: #6e7681;
   text-align: center;
   padding: 2rem;
   font-size: 0.9rem;

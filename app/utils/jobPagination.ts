@@ -42,17 +42,3 @@ export function paginate<T>(items: T[], page: number, perPage: number): T[] {
   const start = (page - 1) * perPage;
   return items.slice(start, start + perPage);
 }
-
-/**
- * Merge fetched job records into a store: a job already held takes the newer
- * record in place, one never seen is appended. Every job fetch lands here, so
- * the store is the union of what each of them has seen.
- */
-export function mergeJobRecords<T extends { job: string }>(
-  list: T[],
-  incoming: T[],
-): T[] {
-  const byId = new Map(list.map((job) => [job.job, job]));
-  for (const job of incoming) byId.set(job.job, job);
-  return [...byId.values()];
-}
