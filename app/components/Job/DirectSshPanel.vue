@@ -11,23 +11,11 @@
       </button>
     </p>
     <template v-else-if="publicKeys.length">
-      <div class="seg-tabs mb-3" role="group" aria-label="SSH proxy client">
-        <button
-          v-for="mode in PROXY_MODES"
-          :key="mode"
-          type="button"
-          :class="{ 'is-active': proxyMode === mode }"
-          :aria-pressed="proxyMode === mode"
-          @click="proxyMode = mode"
-        >
-          {{ mode }}
-        </button>
-      </div>
       <CommandBlock :command="command">
         {{ publicKeys.length }}
         {{ publicKeys.length === 1 ? "public key is" : "public keys are" }}
-        configured. Add <code>-i &lt;private-key-path&gt;</code> if the matching
-        key is not your default SSH identity.
+        configured. Replace <code>{{ SSH_PRIVATE_KEY_PLACEHOLDER }}</code> with
+        the private key that matches one of them.
       </CommandBlock>
     </template>
     <div v-else class="ssh-empty">
@@ -63,11 +51,11 @@
 </template>
 
 <script setup lang="ts">
-import { createSshCommand } from "@nosana/kit";
 import CommandBlock from "~/components/Common/CommandBlock.vue";
-
-const PROXY_MODES = ["socat", "nc"] as const;
-type ProxyMode = (typeof PROXY_MODES)[number];
+import {
+  buildDirectSshCommand,
+  SSH_PRIVATE_KEY_PLACEHOLDER,
+} from "~/utils/sshAccess";
 
 const props = defineProps<{
   jobAddress: string;
@@ -82,7 +70,6 @@ const props = defineProps<{
 const emit = defineEmits<{ retry: [] }>();
 
 const config = useRuntimeConfig();
-const proxyMode = ref<ProxyMode>("socat");
 
 // The deployment's SSH keys live on its configuration tab.
 const configurationLink = computed(() =>
@@ -94,20 +81,14 @@ const configurationLink = computed(() =>
     : null,
 );
 
-const command = computed(
-  () =>
-    createSshCommand(
-      {
-        job: props.jobAddress,
-        node: props.node,
-        nodeDomain: String(config.public.nodeDomain),
-      },
-      {
-        proxyPort: String(config.public.sshProxyPort),
-        proxyMode: proxyMode.value,
-        opIndex: props.operationIndex,
-      },
-    ).formattedCommand,
+const command = computed(() =>
+  buildDirectSshCommand({
+    job: props.jobAddress,
+    node: props.node,
+    nodeDomain: String(config.public.nodeDomain),
+    proxyPort: String(config.public.sshProxyPort),
+    opIndex: props.operationIndex,
+  }),
 );
 </script>
 

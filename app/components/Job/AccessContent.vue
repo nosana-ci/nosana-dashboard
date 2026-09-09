@@ -61,15 +61,8 @@
           />
         </section>
 
-        <section v-if="activeMethod === 'cli'">
-          <CommandBlock :command="cliCommand">
-            Run this on your device. The CLI wallet must match the wallet that
-            posted this job.
-          </CommandBlock>
-        </section>
-
         <JobDirectSshPanel
-          v-else-if="activeMethod === 'direct'"
+          v-if="activeMethod === 'direct'"
           :job-address="jobAddress"
           :node="node"
           :operation-index="operationIndex"
@@ -89,21 +82,18 @@
 import { getSshPublicKeys, type JobDefinition } from "@nosana/kit";
 import { useId } from "vue";
 import { useWallet } from "@nosana/solana-vue";
-import CommandBlock from "~/components/Common/CommandBlock.vue";
 import JobAccessMethodTabs from "~/components/Job/AccessMethodTabs.vue";
 import JobDirectSshPanel from "~/components/Job/DirectSshPanel.vue";
 import JobTerminal from "~/components/Job/Terminal.vue";
 import {
-  buildCliSshCommand,
   getTerminalAccessReason,
   getSshOperationIndex,
 } from "~/utils/sshAccess";
 
-type AccessMethod = "terminal" | "cli" | "direct";
+type AccessMethod = "terminal" | "direct";
 
 const ACCESS_METHODS: Array<{ id: AccessMethod; label: string }> = [
   { id: "terminal", label: "Web terminal" },
-  { id: "cli", label: "Nosana CLI" },
   { id: "direct", label: "Direct SSH" },
 ];
 
@@ -129,7 +119,6 @@ const props = withDefaults(
 );
 const emit = defineEmits<{ "retry-ssh-keys": [] }>();
 
-const config = useRuntimeConfig();
 const { account } = useWallet();
 const accessId = `ssh-access-${useId()}`;
 const activeMethod = ref<AccessMethod>("terminal");
@@ -169,14 +158,6 @@ const terminalAccessReason = computed(() =>
 );
 // The reason is empty exactly when terminal access is allowed.
 const canUseTerminalAccess = computed(() => !terminalAccessReason.value);
-
-const cliCommand = computed(() =>
-  buildCliSshCommand({
-    job: props.jobAddress,
-    network: String(config.public.network ?? "mainnet"),
-    op: selectedOperation.value || undefined,
-  }),
-);
 
 watch(
   containerOperations,

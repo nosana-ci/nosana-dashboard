@@ -1,4 +1,4 @@
-import { formatSshCommand, type JobDefinition } from "@nosana/kit";
+import { SSH_USERNAME, sshHostname, type JobDefinition } from "@nosana/kit";
 
 /** Preserve the index in the full definition, including non-container ops. */
 export function getSshOperationIndex(
@@ -36,21 +36,33 @@ export function getTerminalAccessReason({
   return "";
 }
 
-export interface CliSshCommandOptions {
+export interface DirectSshCommandOptions {
   job: string;
-  network: string;
-  op?: string;
+  node: string;
+  nodeDomain: string;
+  proxyPort: string;
+  opIndex?: number;
 }
 
-/** Presentation command for invoking the separate Nosana CLI application. */
-export function buildCliSshCommand({
+/** Placeholder for the private key that matches one of the job's public keys. */
+export const SSH_PRIVATE_KEY_PLACEHOLDER = "PATH_TO_PRIVATE_KEY";
+
+/** The `ssh` invocation that reaches a job through its node's socat proxy. */
+export function buildDirectSshCommand({
   job,
-  network,
-  op,
-}: CliSshCommandOptions): string {
-  const args = ["@nosana/cli", "job", "ssh", job, "--network", network];
-  if (op) args.push("--op", op);
-  return formatSshCommand("npx", args);
+  node,
+  nodeDomain,
+  proxyPort,
+  opIndex,
+}: DirectSshCommandOptions): string {
+  const hostname = sshHostname({ job, node, nodeDomain }, opIndex);
+  return [
+    "ssh -S none",
+    "-o StrictHostKeyChecking=accept-new",
+    `-o 'ProxyCommand=socat - PROXY:${nodeDomain}:%h:%p,proxyport=${proxyPort}'`,
+    `${SSH_USERNAME}@${hostname}`,
+    `-i ${SSH_PRIVATE_KEY_PLACEHOLDER}`,
+  ].join(" \\\n  ");
 }
 
 /**
