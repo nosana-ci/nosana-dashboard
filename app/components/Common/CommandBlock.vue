@@ -68,7 +68,7 @@ $command-padding-x: 1rem;
 .command-block {
   margin: 0;
   padding: 0.85rem 3.25rem 0.85rem $command-padding-x;
-  border: 1px solid $grey-lighter;
+  border: 1px solid $border-soft;
   border-radius: 10px;
   background: $white-ter;
   color: $text;

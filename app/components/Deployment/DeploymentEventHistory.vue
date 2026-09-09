@@ -4,7 +4,7 @@
 
     <div class="event-card">
       <div v-if="events.length === 0" class="event-empty">No events yet</div>
-      <div v-else class="timeline">
+      <div v-else class="event-list">
         <div
           v-for="(event, index) in events"
           :key="index"
@@ -61,11 +61,7 @@ const isDevnet = config.public.network === "devnet";
 
 <style lang="scss" scoped>
 .event-card {
-  background: $white;
-  border: 1px solid $grey-lighter;
-  border-radius: 14px;
-  box-shadow: $panel-shadow;
-  overflow: hidden;
+  @include soft-panel;
   padding: 6px 18px 14px;
 }
 
@@ -73,20 +69,6 @@ const isDevnet = config.public.network === "devnet";
   text-align: center;
   color: $text-muted;
   padding: 2.5rem 1rem;
-}
-
-.timeline {
-  position: relative;
-}
-
-.timeline::before {
-  content: "";
-  position: absolute;
-  left: 5px;
-  top: 20px;
-  bottom: 20px;
-  width: 1.5px;
-  background: $grey-lighter;
 }
 
 .tl-item {
@@ -101,25 +83,23 @@ const isDevnet = config.public.network === "devnet";
   width: 11px;
   height: 11px;
   border-radius: 50%;
-  background: $white;
-  border: 2px solid $grey;
-  box-shadow: 0 0 0 3px $white;
+  background: $status-neutral;
 }
 
 .tl-item.is-danger-kind .tl-node {
-  border-color: $danger;
+  background: $danger;
 }
 .tl-item.is-success-kind .tl-node {
-  border-color: $success;
+  background: $success;
 }
 .tl-item.is-warning-kind .tl-node {
-  border-color: $warning;
+  background: $warning;
 }
 .tl-item.is-info-kind .tl-node {
-  border-color: $info;
+  background: $info;
 }
 .tl-item.is-neutral-kind .tl-node {
-  border-color: $grey;
+  background: $status-neutral;
 }
 
 .tl-top {
@@ -141,7 +121,7 @@ const isDevnet = config.public.network === "devnet";
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: $text-muted;
-  border: 1px solid $grey-lighter;
+  border: 1px solid $border-soft;
   border-radius: 5px;
   padding: 1px 6px;
 }
@@ -166,7 +146,7 @@ const isDevnet = config.public.network === "devnet";
   gap: 4px;
   font-size: 0.72rem;
   color: $text-muted;
-  border: 1px solid $grey-lighter;
+  border: 1px solid $border-soft;
   border-radius: 6px;
   padding: 2px 8px;
   margin-top: 7px;
@@ -179,20 +159,6 @@ const isDevnet = config.public.network === "devnet";
 .tl-tx:hover {
   color: $secondary;
   border-color: $secondary;
-}
-
-html.dark-mode .event-card {
-  background: $black-ter;
-  border-color: rgba($white, 0.08);
-}
-
-html.dark-mode .timeline::before {
-  background: rgba($white, 0.1);
-}
-
-html.dark-mode .tl-node {
-  background: $black-ter;
-  box-shadow: 0 0 0 3px $black-ter;
 }
 
 html.dark-mode .tl-title {

@@ -59,7 +59,7 @@
 
       <div class="column is-3-fullhd is-12">
         <div class="summary">
-          <div class="box" style="border: none; padding: 1.5rem">
+          <div class="box">
             <h2 class="title is-5 mb-4">Summary</h2>
             <!-- Cost Summary -->
             <div class="mb-4">
@@ -1334,6 +1334,12 @@ const cloneDeployment = async (
   overflow-y: auto !important;
   z-index: 15;
   background: transparent;
+  /* The sticky column scrolls, and a scroll container clips whatever its child
+     paints outside itself — which swallowed the box's $panel-shadow. Pad the
+     scroller so the lift has room, then pull the same amount back off the
+     outside so the card still sits flush with the column. */
+  padding: 0 0.75rem 2rem;
+  margin: 0 -0.75rem -2rem;
 }
 
 .dark-mode .summary {

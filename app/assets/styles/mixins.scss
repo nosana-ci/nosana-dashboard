@@ -16,3 +16,23 @@
   background: $code-surface-panel;
   border-bottom: 1px solid $code-surface-border;
 }
+
+// The soft panel the deployment detail page established: a white card on the
+// tinted canvas, held by a hairline and a shallow lift rather than a heavy
+// border. Eight components each carried their own copy of this under their own
+// class name, which is how some of them drifted — the operations accordion and
+// the endpoints card ended up with the border but no lift. Included rather than
+// re-declared so they stay in step; each caller still owns its own padding.
+@mixin soft-panel($radius: 14px) {
+  background: $white;
+  border: 1px solid $border-soft;
+  border-radius: $radius;
+  box-shadow: $panel-shadow;
+  overflow: hidden;
+
+  html.dark-mode & {
+    background: $black-ter;
+    border-color: rgba($white, 0.1);
+    box-shadow: $panel-shadow-dark;
+  }
+}

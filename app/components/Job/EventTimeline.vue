@@ -135,7 +135,7 @@ const items = computed(() => buildJobTimeline(props.events, props.markets));
 .lc-card {
   max-width: 620px;
   background: $white;
-  border: 1px solid $grey-lighter;
+  border: 1px solid $border-soft;
   border-radius: 14px;
   padding: 20px 22px;
   box-shadow:

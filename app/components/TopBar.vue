@@ -828,7 +828,7 @@ defineExpose({
 }
 
 .dropdown-content .dropdown-item:hover {
-  background-color: $grey-lightest;
+  background-color: $surface-hover;
   color: $text;
 }
 

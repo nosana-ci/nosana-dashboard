@@ -548,7 +548,7 @@ const selectBestMarket = async () => {
 
   ul {
     position: static;
-    border-bottom: 3px solid $grey-lighter;
+    border-bottom: 3px solid $border-soft;
     margin-bottom: 0;
     width: 100%;
   }
@@ -621,7 +621,7 @@ const selectBestMarket = async () => {
 
         &::before {
           background: $white !important;
-          border: 1px solid $grey-lighter !important;
+          border: 1px solid $border-soft !important;
           border-radius: 4px !important;
           color: $grey-dark !important;
           font-size: 0.75rem !important;
@@ -748,8 +748,9 @@ td {
   flex-direction: column;
   gap: 0.85rem;
   background: #ffffff;
-  border: 1px solid $grey-lighter;
+  border: 1px solid $border-soft;
   border-radius: 14px;
+  box-shadow: $panel-shadow;
   padding: 1.15rem 1.15rem 1.25rem;
   cursor: pointer;
   transition:
@@ -773,11 +774,11 @@ td {
 .gpu-card.is-incompatible {
   opacity: 0.45;
   cursor: not-allowed;
-  border-color: $grey-lighter;
+  border-color: $border-soft;
 }
 
 .gpu-card.is-incompatible:hover {
-  border-color: $grey-lighter;
+  border-color: $border-soft;
   box-shadow: none;
   transform: none;
 }
@@ -886,7 +887,7 @@ td {
   flex-direction: column;
   gap: 0.4rem;
   padding-top: 0.85rem;
-  border-top: 1px solid $grey-lighter;
+  border-top: 1px solid $border-soft;
 }
 
 .gpu-spec {
@@ -911,6 +912,7 @@ td {
 .dark-mode .gpu-card {
   background: #242526;
   border-color: #383a3c;
+  box-shadow: $panel-shadow-dark;
 }
 
 .dark-mode .gpu-card:hover {
@@ -999,7 +1001,7 @@ td {
   font-size: 0.875rem;
   color: #1a1c1e;
   background: #ffffff;
-  border: 1px solid $grey-lighter;
+  border: 1px solid $border-soft;
   border-radius: 10px;
   outline: none;
   transition:
@@ -1022,7 +1024,7 @@ td {
   align-items: center;
   height: 40px;
   background: #ffffff;
-  border: 1px solid $grey-lighter;
+  border: 1px solid $border-soft;
   border-radius: 10px;
   transition:
     border-color 0.15s ease,
@@ -1042,7 +1044,7 @@ td {
   font-size: 0.8125rem;
   font-weight: 600;
   color: $text-muted;
-  border-right: 1px solid $grey-lighter;
+  border-right: 1px solid $border-soft;
 }
 
 .market-sort-select {

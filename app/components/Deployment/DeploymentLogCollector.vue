@@ -35,6 +35,7 @@
         :resourceProgressBars="allResourceProgressBars"
         :isConnecting="anyConnecting"
         :showJobBadges="selectedJobIds.size !== 1"
+        :show-level="!hideLevelColumn"
         :jobs="sortedJobs"
         :loadingOlderLogs="loadingOlderLogs"
         :allLogsLoaded="allLogsLoaded"
@@ -60,6 +61,8 @@ const props = defineProps<{
   jobFilter?: string[];
   /** Hide the job picker when the view is scoped to one job. */
   hideJobSelect?: boolean;
+  /** Hide the level column; the level filter in the bar still applies. */
+  hideLevelColumn?: boolean;
 }>();
 
 const jobsRef = computed(() => props.jobs);

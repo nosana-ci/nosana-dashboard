@@ -514,7 +514,7 @@ const handleResetPassword = async () => {
   position: relative;
 
   &:hover:not(:disabled) {
-    background: $white-ter;
+    background: $surface-hover;
     border-color: $grey;
   }
 

@@ -59,12 +59,11 @@
             >
           </div>
 
-          <div class="cc-actions" @click.stop>
+          <div v-if="!isJobCompleted" class="cc-actions" @click.stop>
             <button
               class="button is-small cc-btn"
               @click="stopGroup(groupName)"
               :disabled="
-                isJobCompleted ||
                 loadingGroups.has(groupName) ||
                 !hasStoppableOpsInGroup(groupOps)
               "
@@ -78,7 +77,6 @@
               class="button is-small cc-btn"
               @click="restartGroup(groupName)"
               :disabled="
-                isJobCompleted ||
                 loadingGroups.has(groupName) ||
                 !hasRestartableOpsInGroup(groupOps)
               "
@@ -100,7 +98,7 @@
           >
             <div
               class="cc-op-head is-flex is-align-items-center"
-              @click="toggleOpExpansion(op.id)"
+              @click="toggleOpExpansion(op)"
             >
               <svg
                 class="cc-chevron"
@@ -121,15 +119,23 @@
                 }}</span>
               </div>
               <span class="cc-op-status">
-                <DeploymentStatusPill :status="pillStatus(op.status)" />
+                <DeploymentStatusPill :status="pillStatus(displayStatus(op))" />
+                <span
+                  v-if="opExitCode(op.id) !== null"
+                  class="chip cc-exit"
+                  :class="{ 'is-bad': exitIsBad(op.id) }"
+                  >exit {{ opExitCode(op.id) }}</span
+                >
               </span>
-              <div v-if="!isSingleOp" class="cc-actions" @click.stop>
+              <div
+                v-if="!isSingleOp && !isJobCompleted"
+                class="cc-actions"
+                @click.stop
+              >
                 <button
                   class="button is-small cc-btn"
                   @click="stopOperation(op)"
-                  :disabled="
-                    isJobCompleted || !canStop(op.status) || loadingOps.has(op.id)
-                  "
+                  :disabled="!canStop(op.status) || loadingOps.has(op.id)"
                   :class="{ 'is-loading': loadingOps.has(op.id) }"
                   title="Stop operation"
                 >
@@ -139,11 +145,7 @@
                 <button
                   class="button is-small cc-btn"
                   @click="restartOperation(op)"
-                  :disabled="
-                    isJobCompleted ||
-                    !canRestart(op.status) ||
-                    loadingOps.has(op.id)
-                  "
+                  :disabled="!canRestart(op.status) || loadingOps.has(op.id)"
                   :class="{ 'is-loading': loadingOps.has(op.id) }"
                   title="Restart operation"
                 >
@@ -155,7 +157,16 @@
 
             <!-- Kept mounted (v-show) so an open shell survives collapsing the card -->
             <div v-show="isOpOpen(op)" class="cc-op-body">
-              <!-- Timing + results -->
+              <!-- Why it ended, when there is more to it than the status -->
+              <p
+                v-if="opOutcomes.get(op.id)"
+                class="cc-outcome"
+                :class="`is-${opOutcomes.get(op.id)?.tone}`"
+              >
+                {{ opOutcomes.get(op.id)?.message }}
+              </p>
+
+              <!-- Timing, and the captured results when the job asked for any -->
               <div class="cc-meta">
                 <div class="cc-meta-item">
                   <span class="k">Started</span>
@@ -169,39 +180,24 @@
                     formatTimestamp(getOpState(op.id)?.endTime) || "--"
                   }}</span>
                 </div>
-                <div class="cc-meta-item">
+                <div v-if="hasOpResults(op.id)" class="cc-meta-item">
                   <span class="k">Results</span>
                   <span class="v">
                     <button
-                      v-if="hasOpResults(op.id)"
                       class="button is-small is-ghost cc-view-btn"
                       @click.stop="openResultsModal(op.id)"
                     >
                       View results
                     </button>
-                    <span v-else class="has-text-grey">None available</span>
                   </span>
                 </div>
               </div>
 
-              <!-- Entrypoint / Command (only when overridden in the job definition) -->
-              <div class="cc-section" v-if="op.entrypoint || op.cmd">
-                <div class="cc-cmd">
-                  <div class="cc-cmd-item" v-if="op.entrypoint">
-                    <span class="cc-cmd-label">Entrypoint</span>
-                    <code class="cc-code is-family-monospace">{{
-                      op.entrypoint
-                    }}</code>
-                  </div>
-                  <div class="cc-cmd-item" v-if="op.cmd">
-                    <span class="cc-cmd-label">Command</span>
-                    <code class="cc-code is-family-monospace">{{ op.cmd }}</code>
-                  </div>
-                </div>
-              </div>
-
               <!-- Endpoints -->
-              <div class="cc-section" v-if="op.ports && op.ports.length > 0">
+              <div
+                class="cc-section"
+                v-if="op.ports && op.ports.length > 0 && !isJobCompleted"
+              >
                 <div class="cc-section-title">Endpoints</div>
                 <!-- Same row as the deployment page's Endpoints card -->
                 <div class="cc-ep-card">
@@ -239,9 +235,7 @@
                   :resourceProgressBars="new Map()"
                   class="cc-logs"
                 />
-                <p v-else class="has-text-grey has-text-centered py-4 mb-0">
-                  No logs available
-                </p>
+                <p v-else class="cc-empty">No logs available</p>
               </div>
 
               <!-- Shell into this operation (deployment jobs on a node) -->
@@ -371,6 +365,18 @@ interface SseOpState {
   exitCode?: number | null;
   results?: unknown;
   logs?: Array<{ log?: string; type?: string } | string>;
+  /** Why the operation ended, when it didn't end on its own terms. */
+  error?: { event?: string; message?: string; code?: number } | null;
+  errors?: unknown[] | null;
+  diagnostics?: {
+    reason?: {
+      hostShutDown?: boolean;
+      jobStopped?: boolean;
+      jobExpired?: boolean;
+      reason?: string;
+    } | null;
+    state?: { Error?: string; OOMKilled?: boolean; ExitCode?: number } | null;
+  } | null;
 }
 
 type TaskStatusMap = Record<string, string>;
@@ -389,7 +395,7 @@ interface LocalJobInfo {
   opStates?: SseOpState[];
   operations?: SseOperations | null;
   endpoints?: EndpointsSection;
-  results?: { status?: string; startTime?: number; endTime?: number; opStates?: SseOpState[] };
+  results?: { status?: string; startTime?: number; endTime?: number; opStates?: SseOpState[]; errors?: unknown[] };
 }
 
 interface JobLike {
@@ -397,14 +403,18 @@ interface JobLike {
   node?: string | { toString(): string };
   isCompleted?: boolean;
   timeEnd?: number;
-  results?: { opStates?: SseOpState[]; secrets?: SecretsPayload };
+  results?: {
+    opStates?: SseOpState[];
+    secrets?: SecretsPayload;
+    /** The node's verdict on the run as a whole, e.g. "init error". */
+    status?: string;
+    errors?: unknown[];
+  };
   jobDefinition?: {
     ops?: Array<{
       id: string;
       args?: {
         image?: string;
-        entrypoint?: string | string[];
-        cmd?: string | string[];
       };
     }>;
   };
@@ -416,8 +426,6 @@ interface Operation {
   id: string;
   name?: string;
   image?: string;
-  entrypoint?: string;
-  cmd?: string;
   ports?: Array<{ port: number; url: string; status: string }>;
   status: string;
   group: string;
@@ -458,10 +466,13 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), { showLogs: true });
 
+// Has the job ended, whatever the ending was? isCompleted is only set for a
+// job that ran to completion — a stopped one reports false — so timeEnd is
+// checked alongside it rather than behind it.
 const isJobCompleted = computed(() => {
   const job = (props && props.job) ? props.job : null;
-  if (job && job.isCompleted !== undefined) return Boolean(job.isCompleted);
-  if (job && job.timeEnd) return true;
+  if (job?.isCompleted) return true;
+  if (job?.timeEnd) return true;
   const completedStatuses = new Set(['finished', 'success']);
   if (Array.isArray(operations.value) && operations.value.length > 0) {
     const allCompleted = operations.value.every(op => completedStatuses.has(String(op.status).toLowerCase()));
@@ -475,7 +486,7 @@ const loading = ref(true);
 const error = ref<string | null>(null);
 const loadingOps = ref(new Set<string>());
 const loadingGroups = ref(new Set<string>());
-const expandedOps = ref(new Set<string>());
+const opOpenOverrides = ref(new Map<string, boolean>());
 const clearedAtByOp = ref<Map<string, number>>(new Map());
 let pollInterval: NodeJS.Timeout | null = null;
 
@@ -513,14 +524,12 @@ const closeResultsModal = () => {
   resultsOpId.value = null;
 };
 
-// Toggle operation expansion
-const toggleOpExpansion = (opId: string) => {
-  if (expandedOps.value.has(opId)) {
-    expandedOps.value.delete(opId);
-  } else {
-    expandedOps.value.add(opId);
-  }
-  expandedOps.value = new Set(expandedOps.value);
+// Toggle operation expansion. Records an explicit choice, so it also closes
+// operations the defaults below would otherwise hold open.
+const toggleOpExpansion = (op: { id: string; status?: string | number }) => {
+  const next = new Map(opOpenOverrides.value);
+  next.set(op.id, !isOpOpen(op));
+  opOpenOverrides.value = next;
 };
 
 // The operation whose shell opens on its own; its card opens with it.
@@ -531,7 +540,7 @@ watch(
   [autoOp, () => operations.value.length],
   ([opId]) => {
     if (!opId || !operations.value.some((op) => op.id === opId)) return;
-    expandedOps.value = new Set([...expandedOps.value, opId]);
+    opOpenOverrides.value = new Map(opOpenOverrides.value).set(opId, true);
   },
   { immediate: true },
 );
@@ -608,31 +617,108 @@ const getOpState = (opId: string) => {
     if (state) return state;
   }
   
-  // For completed jobs, use IPFS results
+  // For completed jobs, use IPFS results. Returned whole: this is the only
+  // record that carries why the operation ended.
   const jobResults = props.job?.results?.opStates;
   if (jobResults && Array.isArray(jobResults)) {
     const entry = jobResults.find((r) => r.operationId === opId);
-    if (entry) {
-      return {
-        operationId: entry.operationId,
-        status: entry.status,
-        startTime: entry.startTime,
-        endTime: entry.endTime,
-        exitCode: entry.exitCode
-      };
-    }
+    if (entry) return entry;
   }
-  
+
   return null;
 };
 
-// entrypoint/cmd are argv arrays (or a plain string) in the job definition;
-// render them as a single shell-style line, empty when unset.
-const argvToString = (value: unknown): string => {
-  if (Array.isArray(value)) return value.map((v) => String(v)).join(' ').trim();
-  if (typeof value === 'string') return value.trim();
-  return '';
+// The container's own exit status, present once an operation has finished.
+// 0 is a real code, so callers compare against null rather than falsiness.
+const opExitCode = (opId: string): number | null => {
+  const code = getOpState(opId)?.exitCode;
+  return typeof code === 'number' ? code : null;
 };
+
+// Why an operation ended, when it ended for a reason worth reading. Taken in
+// the order the node narrows it down: the operation's own error, then what
+// Docker said about the container, then the coarse reasons the host gives when
+// it tore the whole job down. Being stopped or hitting the timeout is the job
+// doing as it was told, so those read as plain notes; the rest are failures.
+type OpOutcome = { message: string; tone: 'danger' | 'neutral' };
+
+// The node writes errors as strings in some places and as objects in others.
+const messageOf = (entry: unknown): string | null => {
+  if (typeof entry === 'string') return entry.trim() || null;
+  if (entry && typeof entry === 'object') {
+    const shape = entry as { message?: string; event?: string };
+    return shape.message?.trim() || shape.event?.trim() || null;
+  }
+  return null;
+};
+
+const readOutcome = (state: SseOpState | null): OpOutcome | null => {
+  if (!state) return null;
+  const danger = (message: string): OpOutcome => ({ message, tone: 'danger' });
+
+  const error = state.error?.message?.trim();
+  if (error) return danger(error);
+
+  const listed = (state.errors ?? [])
+    .map(messageOf)
+    .filter((entry): entry is string => Boolean(entry));
+  if (listed.length) return danger(listed.join('; '));
+
+  const diagnostics = state.diagnostics;
+  if (diagnostics?.state?.OOMKilled) {
+    return danger('Out of memory — the host killed the container');
+  }
+  const containerError = diagnostics?.state?.Error?.trim();
+  if (containerError) return danger(containerError);
+
+  const reason = diagnostics?.reason;
+  const stated = reason?.reason?.trim();
+  if (stated) return danger(stated);
+  if (reason?.hostShutDown) return danger('The host shut down');
+  if (reason?.jobExpired) {
+    return { message: 'The job reached its timeout', tone: 'neutral' };
+  }
+  if (reason?.jobStopped) {
+    return { message: 'The job was stopped', tone: 'neutral' };
+  }
+  return null;
+};
+
+// The job's own failure, when the node reported one against the run rather
+// than against any one operation. An init error is exactly that shape: the
+// container itself ran, the node fell over around it, and the operation record
+// was left as the node last wrote it.
+const jobFailure = computed<string | null>(() => {
+  const results = jobInfo.value?.results ?? props.job?.results ?? null;
+  if (!results) return null;
+  const status = typeof results.status === 'string' ? results.status.trim() : '';
+  const detail = (results.errors ?? [])
+    .map(messageOf)
+    .filter((entry): entry is string => Boolean(entry))
+    .join('; ');
+  if (!detail && !/error|fail/i.test(status)) return null;
+  const headline = status ? status.charAt(0).toUpperCase() + status.slice(1) : '';
+  if (headline && detail) return `${headline}: ${detail}`;
+  return detail || headline || null;
+});
+
+const opOutcomes = computed(() => {
+  const byOp = new Map<string, OpOutcome>();
+  for (const op of operations.value) {
+    const outcome =
+      readOutcome(getOpState(op.id)) ??
+      (isJobCompleted.value && jobFailure.value
+        ? ({ message: jobFailure.value, tone: 'danger' } as OpOutcome)
+        : null);
+    if (outcome) byOp.set(op.id, outcome);
+  }
+  return byOp;
+});
+
+// A container that was told to stop exits non-zero by design (137 for a kill),
+// so the code only reads as a failure when nothing benign explains it.
+const exitIsBad = (opId: string) =>
+  opExitCode(opId) !== 0 && opOutcomes.value.get(opId)?.tone !== 'neutral';
 
 const formatTimestamp = (timestamp: number | null | undefined) => {
   if (!timestamp) return '-';
@@ -799,18 +885,12 @@ const buildOperations = () => {
       }
     }
 
-    // Optional image / entrypoint / cmd lookup from REST jobDefinition (not from SSE)
+    // Optional image lookup from REST jobDefinition (not from SSE)
     const imageByOpId: Record<string, string> = {};
-    const entrypointByOpId: Record<string, string> = {};
-    const cmdByOpId: Record<string, string> = {};
     if (jobDefinition?.ops && Array.isArray(jobDefinition.ops)) {
       for (const opDef of jobDefinition.ops) {
         if (!opDef?.id) continue;
         imageByOpId[opDef.id] = opDef?.args?.image || '--';
-        const entrypoint = argvToString(opDef?.args?.entrypoint);
-        if (entrypoint) entrypointByOpId[opDef.id] = entrypoint;
-        const cmd = argvToString(opDef?.args?.cmd);
-        if (cmd) cmdByOpId[opDef.id] = cmd;
       }
     }
 
@@ -824,8 +904,6 @@ const buildOperations = () => {
         id: opId,
         name: opId,
         image,
-        entrypoint: entrypointByOpId[opId],
-        cmd: cmdByOpId[opId],
         ports: endpointsByOpId.get(opId) || [],
         status: status,
         group: groupName,
@@ -874,7 +952,8 @@ const isSingleGroup = computed(
 );
 
 // Container/op status uses the shared status pill (same as the deployment and
-// job pages). Container "finished" maps to the pill's "completed" (green).
+// job pages). Container "finished" maps to the pill's "completed", which is
+// blue — green is reserved for what is running right now.
 const pillStatus = (s: unknown) =>
   String(s ?? "").toLowerCase() === "finished" ? "completed" : String(s ?? "");
 
@@ -886,9 +965,27 @@ const isSingleOp = computed(() => operations.value.length === 1);
 const runningOpStates = new Set(["running", "starting", "waiting", "pending", "init"]);
 const opIsRunning = (op: { status?: string | number }) =>
   runningOpStates.has(String(op?.status ?? "").toLowerCase());
-// A lone operation is always open; there is nothing else to look at.
+// The node writes an operation's terminal state when it tears the container
+// down. A node that crashes mid-run never gets to, so the last thing it wrote
+// stands — "running", indefinitely, on a job that ended hours ago. The job's
+// own end is the authority here: nothing is still running inside a job that
+// has finished, so a live status that outlived its job is reported as ended.
+const opOutlivedJob = (op: { status?: string | number }) =>
+  isJobCompleted.value && opIsRunning(op);
+const opIsLive = (op: { status?: string | number }) =>
+  opIsRunning(op) && !isJobCompleted.value;
+
+// Ended how, though? Failed when something explains it, stopped when nothing
+// does — either way not a green pill claiming it is still up.
+const displayStatus = (op: { id: string; status: string }) => {
+  if (!opOutlivedJob(op)) return op.status;
+  return opOutcomes.value.get(op.id)?.tone === 'danger' ? 'failed' : 'stopped';
+};
+
+// A lone operation and a genuinely live one open by default — but only by
+// default: an explicit toggle wins, so either can still be collapsed.
 const isOpOpen = (op: { id: string; status?: string | number }) =>
-  isSingleOp.value || expandedOps.value.has(op.id) || opIsRunning(op);
+  opOpenOverrides.value.get(op.id) ?? (isSingleOp.value || opIsLive(op));
 
 // Endpoint status as a colored circle dot (matches the deployment page).
 // The deployment's own endpoint status wins, so the card agrees with the
@@ -1134,20 +1231,7 @@ html.dark-mode .cc-group-name {
 }
 
 .cc-op {
-  background: $white;
-  border: 1px solid $grey-lighter;
-  border-radius: 12px;
-  overflow: hidden;
-  transition: border-color 0.15s ease;
-}
-
-.cc-op.is-open {
-  border-color: $grey-light;
-}
-
-html.dark-mode .cc-op {
-  background: $black-ter;
-  border-color: rgba($white, 0.1);
+  @include soft-panel;
 }
 
 .cc-op-head {
@@ -1157,7 +1241,7 @@ html.dark-mode .cc-op {
   transition: background 0.15s ease;
 
   &:hover {
-    background: $white-ter;
+    background: $surface-hover;
   }
 }
 
@@ -1209,6 +1293,23 @@ html.dark-mode .cc-op-name {
 
 .cc-op-status {
   flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+/* A non-zero exit reads as a failure even when the operation's status pill
+   says the job merely stopped, so it carries the danger tint. $danger is a
+   mid-light red picked to sit on a dark ground; on the tinted chip it has to
+   come down 25% to clear AA, and go up on the dark one. */
+.cc-exit.is-bad {
+  background: rgba($danger, 0.12);
+  color: color.adjust($danger, $lightness: -25%);
+}
+
+html.dark-mode .cc-exit.is-bad {
+  background: rgba($danger, 0.2);
+  color: color.adjust($danger, $lightness: 8%);
 }
 
 /* ---- Action buttons: Bulma .button base + a lighter, rounded skin ---- */
@@ -1222,11 +1323,11 @@ html.dark-mode .cc-op-name {
   font-family: $title-family;
   font-weight: 500;
   border-radius: 8px;
-  border-color: $grey-lighter;
+  border-color: $border-soft;
 
   &:hover:not([disabled]) {
-    background-color: $white-ter;
-    border-color: $grey-light;
+    background-color: $surface-hover;
+    border-color: $border-strong;
   }
 }
 
@@ -1249,25 +1350,84 @@ html.dark-mode .cc-btn.button {
 /* ---- Expanded body ---- */
 .cc-op-body {
   padding: 0 1rem 1.1rem;
-  border-top: 1px solid $grey-lighter;
+  border-top: 1px solid $border-soft;
 }
 
 html.dark-mode .cc-op-body {
   border-top-color: rgba($white, 0.08);
 }
 
+/* Why the operation ended. A quiet note for the endings the job asked for —
+   stopped, timed out — and a danger tint for the ones it did not: an OOM kill,
+   a Docker error, a host that went away. Sits above the timing band so the
+   first thing an expanded card says is what happened to it. */
+.cc-outcome {
+  margin: 0.9rem 0 0;
+  padding: 0.7rem 0.85rem;
+  border-radius: 9px;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+
+  &.is-neutral {
+    background: $white-ter;
+    color: $text-muted;
+  }
+
+  &.is-danger {
+    background: rgba($danger, 0.1);
+    color: color.adjust($danger, $lightness: -25%);
+  }
+}
+
+html.dark-mode .cc-outcome {
+  &.is-neutral {
+    background: rgba($white, 0.05);
+    color: $grey-light;
+  }
+
+  &.is-danger {
+    background: rgba($danger, 0.16);
+    color: color.adjust($danger, $lightness: 8%);
+  }
+}
+
+/* Timing band. Built like the deployment card's stat band — same label/value
+   pairing, same hairline between cells — at the smaller size this sits at. */
 .cc-meta {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
-  padding: 1rem 0;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  padding: 1.15rem 0 0.35rem;
 }
 
 .cc-meta-item {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   min-width: 0;
+  position: relative;
+  padding-right: 1rem;
+}
+
+/* The first cell keeps the body's own padding so it lines up with the section
+   titles below; only the later ones are inset by their divider. */
+.cc-meta-item + .cc-meta-item {
+  padding-left: 1rem;
+}
+
+.cc-meta-item + .cc-meta-item::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 1px;
+  bottom: 1px;
+  width: 1px;
+  background: $border-soft;
+}
+
+html.dark-mode .cc-meta-item + .cc-meta-item::before {
+  background: rgba($white, 0.08);
 }
 
 .cc-meta-item .k {
@@ -1276,20 +1436,36 @@ html.dark-mode .cc-op-body {
 }
 
 .cc-meta-item .v {
-  font-size: 0.85rem;
+  font-family: $title-family;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
   color: $text;
   font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 html.dark-mode .cc-meta-item .v {
   color: $white;
 }
 
+/* The Results cell holds a control where its neighbours hold a value, so the
+   button carries the band's metrics and sits on the same baseline. Colour is
+   left to Bulma's ghost token, which is contrast-corrected per scheme. */
 .cc-view-btn.button {
   height: auto;
   padding: 0;
+  border: 0;
+  background: none;
   justify-content: flex-start;
   text-decoration: none;
+  font-family: $title-family;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.2;
 
   &:hover {
     text-decoration: underline;
@@ -1298,19 +1474,19 @@ html.dark-mode .cc-meta-item .v {
 
 @media screen and (max-width: 620px) {
   .cc-meta {
+    grid-auto-flow: row;
     grid-template-columns: 1fr;
     gap: 0.75rem;
   }
 }
 
 /* ---- Sub-sections (endpoints / logs) ---- */
+/* Each section already announces itself with an uppercase title, so the rule
+   above it was redundant — and with four sections open they stacked into a
+   ladder of full-width lines that read as a ledger rather than a panel. Space
+   separates them now; the head/body rule is the only one left. */
 .cc-section {
-  padding-top: 1rem;
-  border-top: 1px solid $grey-lightest;
-}
-
-html.dark-mode .cc-section {
-  border-top-color: rgba($white, 0.06);
+  padding-top: 1.35rem;
 }
 
 .cc-section-head {
@@ -1331,59 +1507,34 @@ html.dark-mode .cc-section {
   margin-bottom: 0;
 }
 
-/* ---- Entrypoint / Command ---- */
-.cc-cmd {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.cc-cmd-item {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-
-.cc-cmd-label {
-  font-size: 0.72rem;
+.cc-empty {
+  background: $white-ter;
+  border-radius: 8px;
+  padding: 1.1rem;
+  margin: 0;
+  text-align: center;
+  font-size: 0.82rem;
   color: $text-muted;
 }
 
-.cc-code {
-  display: block;
-  background: $white-ter;
-  border-radius: 8px;
-  padding: 0.55rem 0.7rem;
-  font-size: 0.78rem;
-  color: $text;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-html.dark-mode .cc-code {
-  background: rgba($white, 0.04);
-  color: $white;
+html.dark-mode .cc-empty {
+  background: rgba($white, 0.03);
 }
 
 /* ---- Endpoints ---- */
+/* One of the sections inside an operation body, like Command and Logs, not a
+   panel in its own right — it used to carry the full card treatment, which read
+   as a card inside a card. The rows draw their own dividers, and the negative
+   inset lets them span the body's full width so their text still lines up with
+   the section title above. */
 .cc-ep-card {
-  background: $white;
-  border: 1px solid $grey-lighter;
-  border-radius: 12px;
-  overflow: hidden;
-  padding: 4px;
-}
-
-html.dark-mode .cc-ep-card {
-  background: rgba($white, 0.03);
-  border-color: rgba($white, 0.08);
+  margin: 0 -1rem;
 }
 
 /* ---- Logs ---- */
 .cc-icon-btn.button {
   border-radius: 8px;
-  border-color: $grey-lighter;
+  border-color: $border-soft;
 }
 
 .cc-icon-btn.button .icon svg {

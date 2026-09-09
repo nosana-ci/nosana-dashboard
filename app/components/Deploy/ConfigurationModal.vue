@@ -693,7 +693,7 @@ const handleCancel = () => {
   }
 
   &:hover {
-    background-color: $grey-lightest;
+    background-color: $surface-hover;
   }
 }
 

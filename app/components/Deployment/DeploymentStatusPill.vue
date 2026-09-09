@@ -19,12 +19,22 @@ const statusText = computed(() => {
   return (s.charAt(0) + s.slice(1).toLowerCase()).replace(/_/g, " ");
 });
 
+// Green is "up and serving right now", so it is only ever RUNNING/ONLINE/ACTIVE.
+// Blue is "finished cleanly" — deliberately not green, because the job activity
+// table lists running and completed jobs side by side and that is the one
+// distinction worth seeing at a glance. Orange is "on its way / waiting", red
+// is failure, grey is deliberately not running.
 const statusKind = computed(() => {
   const s = statusString.value.toUpperCase();
-  if (s === "RUNNING") return "live";
-  if (["STARTING", "DRAFT", "QUEUED"].includes(s)) return "warn";
-  if (["ERROR", "INSUFFICIENT_FUNDS", "FAILED"].includes(s)) return "danger";
+  if (["RUNNING", "ONLINE", "ACTIVE"].includes(s)) return "live";
+  // Operations report their own vocabulary (waiting/pending/init); without
+  // these they fell through to neutral and looked stopped while starting up.
+  if (["STARTING", "DRAFT", "QUEUED", "PENDING", "WAITING", "INIT"].includes(s))
+    return "warn";
+  if (["ERROR", "INSUFFICIENT_FUNDS", "FAILED", "YAML_ERROR"].includes(s))
+    return "danger";
   if (["COMPLETED", "SUCCESS"].includes(s)) return "ok";
+  // STOPPED, STOPPING, ARCHIVED, INACTIVE, OFFLINE and anything unrecognised.
   return "neutral";
 });
 </script>
@@ -102,11 +112,11 @@ const statusKind = computed(() => {
   background: $info;
 }
 .dep-status-pill.neutral {
-  background: rgba($grey, 0.16);
+  background: rgba($status-neutral, 0.16);
   color: $text-muted;
 }
 .dep-status-pill.neutral .sdot {
-  background: $grey;
+  background: $status-neutral;
 }
 
 html.dark-mode .dep-status-pill.warn {

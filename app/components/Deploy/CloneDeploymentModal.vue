@@ -374,7 +374,7 @@ const pick = (deployment: ListedDeployment) => {
   font-size: 0.875rem;
   color: #1a1c1e;
   background: #ffffff;
-  border: 1px solid $grey-lighter;
+  border: 1px solid $border-soft;
   border-radius: 10px;
   outline: none;
   transition:
@@ -397,7 +397,7 @@ const pick = (deployment: ListedDeployment) => {
   align-items: center;
   height: 40px;
   background: #ffffff;
-  border: 1px solid $grey-lighter;
+  border: 1px solid $border-soft;
   border-radius: 10px;
   transition:
     border-color 0.15s ease,
@@ -478,7 +478,7 @@ const pick = (deployment: ListedDeployment) => {
   }
 
   tbody tr.clickable-row:hover {
-    background: $white-bis;
+    background: $surface-hover;
   }
 
   :deep(.dep-status-pill) {

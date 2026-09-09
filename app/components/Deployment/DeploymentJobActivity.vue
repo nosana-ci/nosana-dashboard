@@ -147,11 +147,7 @@ defineEmits<{
 }
 
 .da-card {
-  background: $white;
-  border: 1px solid $grey-lighter;
-  border-radius: 14px;
-  box-shadow: $panel-shadow;
-  overflow: hidden;
+  @include soft-panel;
 }
 
 .da-foot {
@@ -159,7 +155,7 @@ defineEmits<{
   align-items: center;
   justify-content: flex-end;
   padding: 0.7rem 1.1rem;
-  border-top: 1px solid $grey-lighter;
+  border-top: 1px solid $border-soft;
 }
 
 /* The status key sits outside the card, on the page background, inset to the
@@ -173,11 +169,6 @@ defineEmits<{
   text-align: center;
   color: $text-muted;
   font-size: 0.9rem;
-}
-
-html.dark-mode .da-card {
-  background: $black-ter;
-  border-color: rgba($white, 0.08);
 }
 
 html.dark-mode .da-foot {

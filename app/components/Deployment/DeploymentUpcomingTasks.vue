@@ -81,11 +81,7 @@ defineEmits<{
 
 <style lang="scss" scoped>
 .task-card {
-  background: $white;
-  border: 1px solid $grey-lighter;
-  border-radius: 14px;
-  box-shadow: $panel-shadow;
-  overflow: hidden;
+  @include soft-panel;
 }
 
 .task-row {
@@ -141,7 +137,9 @@ defineEmits<{
   white-space: nowrap;
 }
 
-/* Task tone: list = green, extend = orange (the default above), stop = red. */
+/* Task tone: list = green, extend = orange (the default above), stop = grey.
+   A scheduled stop is requested work, not a failure, so it carries the same
+   neutral every other stopped state does. */
 .task-row.is-success-kind {
   .task-clock,
   .task-due {
@@ -152,14 +150,14 @@ defineEmits<{
     background: rgba($success, 0.14);
   }
 }
-.task-row.is-danger-kind {
+.task-row.is-neutral-kind {
   .task-clock,
   .task-due {
-    color: $danger;
+    color: $status-neutral;
   }
   .task-kind {
-    color: $danger;
-    background: rgba($danger, 0.14);
+    color: $status-neutral;
+    background: rgba($status-neutral, 0.14);
   }
 }
 
@@ -167,11 +165,6 @@ defineEmits<{
   text-align: center;
   color: $text-muted;
   padding: 2.5rem 1rem;
-}
-
-html.dark-mode .task-card {
-  background: $black-ter;
-  border-color: rgba($white, 0.08);
 }
 
 html.dark-mode .task-row + .task-row {
