@@ -83,7 +83,14 @@ $text-weak: $grey !default;
 $text-invert: $white !default;
 
 $background: $white-ter !default;
-$border: $grey-lighter !default;
+// Light-mode border colour. $grey-lighter (82%) stays where it is — it is also
+// a sunken background and a dark-mode text colour — but as a border it reads
+// too heavy against the near-white canvas, so borders use this step instead.
+$border-soft: hsl(220, 20%, 89%) !default;
+// One step up, for hover and open states. They used to jump straight to
+// $grey-light (72%), which reads as a hard outline next to an 89% hairline.
+$border-strong: $grey-lighter !default;
+$border: $border-soft !default;
 $border-light: $grey-lightest !default;
 $border-weak: $grey-lightest !default;
 

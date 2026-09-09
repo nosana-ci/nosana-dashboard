@@ -395,7 +395,7 @@ onUnmounted(() =>
   font-size: 0.875rem;
   color: #1a1c1e;
   background: #ffffff;
-  border: 1px solid $grey-lighter;
+  border: 1px solid $border-soft;
   border-radius: 10px;
   outline: none;
   transition:
@@ -418,7 +418,7 @@ onUnmounted(() =>
   align-items: center;
   height: 40px;
   background: #ffffff;
-  border: 1px solid $grey-lighter;
+  border: 1px solid $border-soft;
   border-radius: 10px;
   transition:
     border-color 0.15s ease,
@@ -498,7 +498,7 @@ onUnmounted(() =>
   font-weight: 500;
   color: #1a1c1e;
   background: #ffffff;
-  border: 1px solid $grey-lighter;
+  border: 1px solid $border-soft;
   border-radius: 10px;
   box-shadow: none;
   transition:
@@ -558,7 +558,7 @@ onUnmounted(() =>
 
 .th-actions .dropdown-content {
   background: #ffffff;
-  border: 1px solid $grey-lighter;
+  border: 1px solid $border-soft;
   border-radius: 12px;
   box-shadow: 0 12px 40px rgba($black, 0.14);
   padding: 6px;
@@ -585,7 +585,7 @@ onUnmounted(() =>
   }
 
   &:hover {
-    background: $white-ter;
+    background: $surface-hover;
     color: $text;
 
     .icon {

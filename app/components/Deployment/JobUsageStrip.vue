@@ -89,7 +89,7 @@ const fmtMb = (mb: number) =>
   display: flex;
   align-items: center;
   gap: 9px;
-  background: $grey-lightest;
+  background: $surface-sunken;
   border-radius: 9px;
   padding: 8px 11px;
   min-width: 0;
@@ -107,7 +107,7 @@ const fmtMb = (mb: number) =>
     min-width: 20px;
     height: 5px;
     border-radius: 3px;
-    background: $grey-lighter;
+    background: $surface-track;
     overflow: hidden;
 
     i {

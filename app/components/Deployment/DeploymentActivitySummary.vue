@@ -141,11 +141,7 @@ const recentEvents = computed(() => props.events.slice(0, 4));
 }
 
 .as-card {
-  background: $white;
-  border: 1px solid $grey-lighter;
-  border-radius: 14px;
-  box-shadow: $panel-shadow;
-  overflow: hidden;
+  @include soft-panel;
   padding: 6px 0 0;
 }
 
@@ -369,7 +365,7 @@ const recentEvents = computed(() => props.events.slice(0, 4));
   gap: 4px;
   width: 100%;
   border: 0;
-  border-top: 1px solid $grey-lighter;
+  border-top: 1px solid $border-soft;
   background: none;
   cursor: pointer;
   color: $grey-dark;
@@ -390,11 +386,6 @@ const recentEvents = computed(() => props.events.slice(0, 4));
 }
 
 /* ---- Dark mode ---- */
-html.dark-mode .as-card {
-  background: $black-ter;
-  border-color: rgba($white, 0.08);
-}
-
 html.dark-mode .as-task + .as-task::before,
 html.dark-mode .as-act + .as-act::before,
 html.dark-mode .as-divlabel .l {

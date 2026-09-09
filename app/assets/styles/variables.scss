@@ -2,14 +2,17 @@
 @use "bulma-defaults" as *;
 @forward "bulma-defaults";
 
-$family-sans-serif: 'Outfit', sans-serif;
+$family-sans-serif: "Outfit", sans-serif;
 $primary: black;
-$secondary: #10E80C;
-$info: #0066FF;
-$success: #04DE00;
-$warning: #FFB800;
+$secondary: #10e80c;
+$info: #0066ff;
+// One green. This was #04de00 while the brand green next to it was #10e80c —
+// four percent apart, indistinguishable on screen, but meaning "succeeded" and
+// "selected" respectively. Status green and brand green are now the same green.
+$success: $secondary;
+$warning: #ffb800;
 $custom-colors: (
-  'secondary': $secondary,
+  "secondary": $secondary,
 );
 
 $text: #000;
@@ -24,14 +27,13 @@ $text-dark: #666666;
 $body-size: 14px !default;
 $link: $secondary;
 $link-hover: color.adjust($link, $lightness: -10%);
-$title-family: 'Space Grotesk', sans-serif;
-$subtitle-family: 'Space Grotesk', sans-serif;
-// The app canvas sits a clear step below the white panels that sit on it —
-// at $white-bis the two were within 2% lightness of each other and every
-// card, table and sidebar lost its edge.
-$body-background-color: hsl(220, 24%, 93.5%);
+$title-family: "Space Grotesk", sans-serif;
+$subtitle-family: "Space Grotesk", sans-serif;
+// The app canvas is plain white. It used to be a tint below the white panels
+// because that gap was the only thing separating them; panels now carry a
+// hairline border and $panel-shadow, which does the separating on their own.
+$body-background-color: $white;
 $body-background-color-dark: #181818;
-
 
 $box-background-color: $white;
 $box-background-color-dark: $black-ter;
@@ -58,11 +60,40 @@ $menu-item-color: $text-dark;
 $menu-item-hover-background-color: $grey-lightest;
 $radius-small: 4px;
 
+// "Deliberately not running": stopped, stopping, archived, inactive, offline,
+// and a scheduled stop. Previously three greys did this job — $dark (#2c313a)
+// on tags, $grey on the pill, $grey-light on the dots — so the same state
+// looked like three different things. $dark read as emphasis and $grey-light
+// barely registered, so the middle one wins.
+$status-neutral: $grey;
+
 $box-shadow: none;
-// Every white panel that sits on the app canvas gets the same hairline lift,
-// so a page of stacked cards reads as layers rather than as one flat sheet.
-// Tinted to match the neutral ramp instead of a pure black shadow.
-$panel-shadow: 0 1px 2px rgba(hsl(220, 30%, 12%), 0.06);
+// Every white panel that sits on the app canvas gets the same lift, so a page
+// of stacked cards reads as layers rather than as one flat sheet: a contact
+// shadow for the edge, a wide ambient one for the lift. This was defined on the
+// deployment detail page and applied there through a list of :deep() selectors,
+// so panels it did not name — the operations accordion among them — kept a
+// flatter hairline lift and looked like a different component.
+$panel-shadow:
+  0 1px 3px rgba($black, 0.06),
+  0 14px 38px -6px rgba($black, 0.14);
+// Shadows read poorly on a dark ground, so there elevation comes from a lighter
+// surface and a crisper hairline instead.
+$panel-shadow-dark:
+  0 1px 3px rgba($black, 0.4),
+  0 16px 40px -8px rgba($black, 0.6);
+// One wash for every hover surface. This was four different greys spanning
+// 82%-98%: $grey-lighter read as a hard grey while $white-bis was almost
+// invisible. Same interaction, so it gets the same colour — kept close to the
+// light end of that range, since the canvas and the panels on it are both white
+// and anything heavier reads as a grey block rather than a hover.
+$surface-hover: hsl(220, 27%, 97.5%);
+// Inset surfaces — the fill of something that reads as recessed into a panel
+// rather than sitting on it: metric pills, chips, code blocks, empty states.
+$surface-sunken: hsl(220, 27%, 96.5%);
+// One step down again, for meter tracks and for hovering something already
+// sunken (where $surface-hover would lighten it instead of darkening it).
+$surface-track: hsl(220, 24%, 93%);
 $box-padding: 1.6rem;
 $button-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 

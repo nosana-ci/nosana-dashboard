@@ -18,6 +18,12 @@ export interface FLogMessage {
 export interface FLogEntry {
   id: number;
   content: string; // already sanitized HTML with timestamp prefix
+  /**
+   * The same HTML without the "[timestamp]" prefix, for views that show the
+   * time in a column of their own. Any timestamp the log line itself carries is
+   * part of this, since only the generated prefix is left off.
+   */
+  body: string;
   timestamp: number;
   html: true;
 }
@@ -257,6 +263,7 @@ export function useFLogs(
     const entry: FLogEntry = {
       id: ++seq,
       content: stamped,
+      body: stampedContent,
       timestamp: ts,
       html: true,
     };

@@ -189,7 +189,7 @@ const timeLabel = (job: DeploymentJobItem) =>
   text-decoration: none;
 
   &:hover {
-    background: $white-bis;
+    background: $surface-hover;
   }
 
   & + &::before {
@@ -199,7 +199,7 @@ const timeLabel = (job: DeploymentJobItem) =>
     left: 1.1rem;
     right: 1.1rem;
     height: 1px;
-    background: $grey-lighter;
+    background: $border-soft;
   }
 }
 
@@ -359,7 +359,7 @@ html.dark-mode .jrow-actions .button.is-quiet {
   font-family: inherit;
   font-size: 0.72rem;
   color: $grey-dark;
-  background: $white-ter;
+  background: $surface-sunken;
   padding: 2px 8px;
   border-radius: 999px;
   white-space: nowrap;
@@ -368,9 +368,10 @@ html.dark-mode .jrow-actions .button.is-quiet {
 button.rev-chip {
   cursor: pointer;
 
+  /* Already sunken, so it darkens on hover; $surface-hover is for white. */
   &:hover {
     color: $text;
-    background: $grey-lighter;
+    background: $surface-track;
   }
 
   &:focus-visible {

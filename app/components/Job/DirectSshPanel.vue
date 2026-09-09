@@ -119,7 +119,7 @@ const command = computed(
   align-items: center;
   text-align: center;
   padding: 2.75rem 1.5rem;
-  border: 1px dashed $grey-lighter;
+  border: 1px dashed $border-soft;
   border-radius: 14px;
   background: $white-bis;
 }

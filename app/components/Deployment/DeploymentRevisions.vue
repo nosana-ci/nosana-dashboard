@@ -78,11 +78,7 @@ defineEmits<{
 @use "sass:color";
 
 .rev-card {
-  background: $white;
-  border: 1px solid $grey-lighter;
-  border-radius: 14px;
-  box-shadow: $panel-shadow;
-  overflow: hidden;
+  @include soft-panel;
 }
 
 .revrow {
@@ -91,7 +87,6 @@ defineEmits<{
   gap: 15px;
   padding: 15px 18px;
   position: relative;
-  transition: background 0.12s ease;
 
   & + &::before {
     content: "";
@@ -100,11 +95,7 @@ defineEmits<{
     left: 18px;
     right: 18px;
     height: 1px;
-    background: $grey-lighter;
-  }
-
-  &:hover {
-    background: $white-ter;
+    background: $border-soft;
   }
 }
 
@@ -192,7 +183,7 @@ defineEmits<{
 
 .make-active-btn,
 .view-btn {
-  border: 1px solid $grey-lighter;
+  border: 1px solid $border-soft;
   border-radius: 8px;
   background: $white;
   color: $text;
@@ -201,8 +192,8 @@ defineEmits<{
   box-shadow: none;
 
   &:hover {
-    border-color: $grey-light;
-    background: $white-ter;
+    border-color: $border-strong;
+    background: $surface-hover;
   }
 }
 
@@ -220,10 +211,6 @@ html.dark-mode {
 
   .revrow + .revrow::before {
     background: rgba($white, 0.08);
-  }
-
-  .revrow:hover {
-    background: rgba($white, 0.04);
   }
 
   .rnum {

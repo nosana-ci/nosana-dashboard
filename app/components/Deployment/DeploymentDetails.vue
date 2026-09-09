@@ -117,17 +117,11 @@ const scheduleTitle = computed(() =>
 
 <style lang="scss" scoped>
 .dep-card {
-  background: $white;
-  border: 1px solid $grey-lighter;
-  border-radius: 14px;
-  box-shadow: $panel-shadow;
-  overflow: hidden;
+  @include soft-panel;
   color: $text;
 }
 
 html.dark-mode .dep-card {
-  background: $black-ter;
-  border-color: rgba($white, 0.08);
   color: $white;
 }
 

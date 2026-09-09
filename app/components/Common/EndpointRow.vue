@@ -121,11 +121,11 @@ const onRowClick = () => {
   transition: background 0.12s ease;
 
   & + & {
-    border-top: 1px solid $grey-lighter;
+    border-top: 1px solid $border-soft;
   }
 
   &:hover {
-    background: $white-bis;
+    background: $surface-hover;
   }
 
   &:focus-visible {
@@ -149,7 +149,7 @@ const onRowClick = () => {
   height: 9px;
   border-radius: 50%;
   flex: none;
-  background: $grey-light;
+  background: $status-neutral;
 }
 
 .ep-status.online .ep-dot {
@@ -231,7 +231,7 @@ a.ep-url:hover {
   }
 
   &:hover {
-    background: $white-ter;
+    background: $surface-hover;
     color: $secondary;
   }
 }

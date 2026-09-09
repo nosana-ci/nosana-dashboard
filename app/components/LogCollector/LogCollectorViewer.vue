@@ -20,7 +20,7 @@
       <span v-if="showJobBadges" class="col-job">Job</span>
       <span class="col-date">Date</span>
       <span class="col-op">Op</span>
-      <span class="col-level">Level</span>
+      <span v-if="showLevel" class="col-level">Level</span>
       <span class="col-desc">Log</span>
     </div>
 
@@ -59,7 +59,7 @@
         </span>
         <span class="col-date">{{ formatEpochMs(entries[item.index].timestamp) }}</span>
         <span class="col-op">{{ entries[item.index].opId || '-' }}</span>
-        <span class="col-level">
+        <span v-if="showLevel" class="col-level">
           <span class="level-tag" :class="'level-' + entries[item.index].type">
             {{ logTypeLabel(entries[item.index].type) }}
           </span>
@@ -85,16 +85,21 @@ import { useLogScroll } from '~/composables/jobs/useLogScroll';
 import LogCollectorJobBadge from './LogCollectorJobBadge.vue';
 import LogCollectorProgressBars from './LogCollectorProgressBars.vue';
 
-const props = defineProps<{
-  entries: UnifiedLogEntry[];
-  progressBars: Map<string, ProgressBar>;
-  resourceProgressBars: Map<string, Record<string, unknown>>;
-  isConnecting: boolean;
-  showJobBadges: boolean;
-  jobs: { job: string }[];
-  loadingOlderLogs: boolean;
-  allLogsLoaded: boolean;
-}>();
+const props = withDefaults(
+  defineProps<{
+    entries: UnifiedLogEntry[];
+    progressBars: Map<string, ProgressBar>;
+    resourceProgressBars: Map<string, Record<string, unknown>>;
+    isConnecting: boolean;
+    showJobBadges: boolean;
+    jobs: { job: string }[];
+    loadingOlderLogs: boolean;
+    allLogsLoaded: boolean;
+    /** Off where the level filter already scopes the view, e.g. the job panel. */
+    showLevel?: boolean;
+  }>(),
+  { showLevel: true },
+);
 
 const emit = defineEmits<{
   'scrolledNearTop': [];
@@ -139,6 +144,8 @@ defineExpose({ scrollToBottom });
 </script>
 
 <style lang="scss" scoped>
+@use "sass:color";
+
 .log-collector-viewer {
   font-family: $family-monospace;
   background-color: $code-surface;
@@ -247,9 +254,24 @@ defineExpose({ scrollToBottom });
   border-radius: 3px;
   line-height: 1.4;
 
-  &.level-container { color: #9aa79a; background: rgba(#9aa79a, 0.14); }
-  &.level-system { color: #58a6ff; background: rgba(#58a6ff, 0.12); }
-  &.level-error { color: #f85149; background: rgba(#f85149, 0.15); }
+  /* The same palette as every other status, lifted where it has to hold
+     contrast on the near-black code surface: $info at full strength is too dark
+     to read here, so it is lightened rather than replaced by an unrelated blue.
+     These were hardcoded as #9aa79a / #58a6ff / #f85149, which is within a
+     shade of what the palette gives — they just did not track it. */
+  &.level-container {
+    color: $grey-light;
+    background: rgba($grey-light, 0.14);
+  }
+  &.level-system {
+    $system: color.adjust($info, $lightness: 17%);
+    color: $system;
+    background: rgba($system, 0.12);
+  }
+  &.level-error {
+    color: $danger;
+    background: rgba($danger, 0.15);
+  }
 }
 
 .connecting-message {

@@ -376,7 +376,7 @@ watch(
   }
 
   tbody tr.clickable-row:hover {
-    background: $white-bis;
+    background: $surface-hover;
   }
 
   /* Give the status pills a shared minimum width so they line up down the

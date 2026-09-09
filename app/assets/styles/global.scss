@@ -159,7 +159,7 @@ html:not(.dark-mode) {
     &:focus-visible,
     &:active,
     &:focus:not(:active) {
-      border-color: $grey-lighter !important;
+      border-color: $border-soft !important;
       border-width: 1px !important;
       background-color: inherit;
     }
@@ -256,7 +256,7 @@ html:not(.dark-mode) {
 .dropdown-menu {
   .dropdown-content {
     background: $white;
-    border: 1px solid $grey-lighter;
+    border: 1px solid $border-soft;
     border-radius: $radius;
     box-shadow: $box-shadow;
     padding: 0.25rem;
@@ -281,7 +281,7 @@ html:not(.dark-mode) {
     }
 
     &:hover {
-      background: $grey-lightest;
+      background: $surface-hover;
       color: $text;
     }
   }
@@ -297,7 +297,7 @@ html:not(.dark-mode) {
 .group-action-btn {
   padding: 0.5rem 0.9rem;
   border-radius: $radius-small;
-  border: 1px solid $grey-lighter;
+  border: 1px solid $border-soft;
   background: $white;
   color: $text-dark;
   cursor: pointer;
@@ -327,8 +327,8 @@ html:not(.dark-mode) {
   }
 
   &:hover:not(:disabled) {
-    background: $grey-lightest;
-    border-color: $grey-light;
+    background: $surface-hover;
+    border-color: $border-strong;
   }
 
   &:disabled {
@@ -537,7 +537,7 @@ html:not(.dark-mode) {
 // Tab button styling (used for navigation tabs and toggle buttons)
 .tab-button {
   background: $white;
-  border: 1px solid $grey-lighter;
+  border: 1px solid $border-soft;
   color: $text-dark;
   padding: 0.5rem 1rem;
   border-radius: $radius;
@@ -572,7 +572,7 @@ html:not(.dark-mode) {
   }
 
   &:hover {
-    background: $grey-lightest;
+    background: $surface-hover;
   }
 
   &.is-active {
@@ -602,6 +602,72 @@ html:not(.dark-mode) {
   }
 }
 
+/* Segmented control, shared by the deployment header, the job page and the job
+   side panel. It lived in all three components' scoped blocks and the copies
+   drifted: only the header's was updated to the light track, so the two job
+   views kept a darker, borderless one. */
+.dep-tabs {
+  display: inline-flex;
+  gap: 3px;
+  padding: 5px;
+  margin: 1.75rem 0 0.25rem;
+  border-radius: 13px;
+  /* Sits at canvas level: the inset hairline does the containing, so the track
+     reads as an outline rather than a grey slab. */
+  background: $body-background-color;
+  box-shadow: inset 0 0 0 1px $border-soft;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.dep-tab {
+  font-family: $title-family;
+  font-weight: 500;
+  font-size: 0.9rem;
+  color: $grey-dark;
+  border: 0;
+  background: none;
+  padding: 0.6rem 1.35rem;
+  border-radius: 9px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease;
+
+  &:hover {
+    color: $text;
+  }
+
+  &.is-active {
+    background: $secondary;
+    color: #05230a;
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba($black, 0.12);
+  }
+}
+
+html.dark-mode {
+  .dep-tabs {
+    background: rgba($white, 0.08);
+    box-shadow: none;
+  }
+
+  .dep-tab {
+    color: $grey-light;
+
+    &:hover {
+      color: $white;
+    }
+
+    &.is-active {
+      background: $secondary;
+      color: #05230a;
+      box-shadow: 0 1px 3px rgba($black, 0.5);
+    }
+  }
+}
+
 .table.is-narrow td,
 .table.is-narrow th {
   line-height: 1;
@@ -611,7 +677,7 @@ html:not(.dark-mode) {
   position: relative;
   /* On the tinted canvas a shadowless white box had no edge at all; the
      hairline plus the shared panel lift give it one without a heavy border. */
-  border: 1px solid $grey-lighter;
+  border: 1px solid $border-soft;
   box-shadow: $panel-shadow;
 }
 
@@ -751,6 +817,11 @@ html:not(.dark-mode) {
 
 .has-background-body {
   background-color: $body-background-color !important;
+}
+
+// Light mode: the footer sits directly on the page background.
+.footer {
+  background-color: transparent;
 }
 
 .dark-mode {
@@ -1092,7 +1163,7 @@ html:not(.dark-mode) {
   overflow: visible; /* let bubbles extend over the header edge */
   position: relative;
   z-index: auto !important; /* avoid creating stacking context above tooltips */
-  border-bottom: 1px solid $grey-lighter;
+  border-bottom: 1px solid $border-soft;
 }
 .modal-card-head + .modal-card-body {
   padding-top: 1.5rem;
@@ -1141,7 +1212,7 @@ button[disabled][data-tooltip] {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  border: 1px solid $grey-lighter;
+  border: 1px solid $border-soft;
   margin-right: 10px;
   vertical-align: middle;
 }
@@ -1227,7 +1298,7 @@ button[disabled][data-tooltip] {
     text-align: left;
     text-align-last: left;
     border-radius: 4px;
-    border: 1px solid $grey-lighter;
+    border: 1px solid $border-soft;
     outline: none !important;
     box-shadow: none !important;
     padding-left: 12px;
@@ -1238,7 +1309,7 @@ button[disabled][data-tooltip] {
 
     option {
       text-align: left;
-      border: 1px solid $grey-lighter;
+      border: 1px solid $border-soft;
       border-radius: 4px;
       margin: 2px;
       padding: 4px 8px;
@@ -1353,7 +1424,7 @@ button[disabled][data-tooltip] {
   --status-info-color: #{$info}; // Blue for completed/pending
   --status-warning-color: #{$warning}; // Orange for queued
   --status-danger-color: #{$danger}; // Red for failed/error
-  --status-dark-color: #{$dark}; // Gray for stopped/default
+  --status-dark-color: #{$status-neutral}; // Neutral for stopped/inactive/offline
 }
 
 /* Text fields: roomier and more defined than the stock control box, so they
@@ -1533,7 +1604,7 @@ button[disabled][data-tooltip] {
 
 /* Shared header separator for top sections (deployments, jobs, etc.) */
 .deployment-header {
-  border-bottom: 1px solid $grey-lighter;
+  border-bottom: 1px solid $border-soft;
 }
 
 html.dark-mode .deployment-header {
@@ -1667,7 +1738,7 @@ html.dark-mode .modal-card-head {
 .category-tag {
   background-color: $grey-lightest !important;
   color: $text !important;
-  border: 1px solid $grey-lighter !important;
+  border: 1px solid $border-soft !important;
 }
 /* ==========================================================================
    Back Arrow Icon Styling (Global for all pages)
@@ -1967,7 +2038,7 @@ html.dark-mode .modal-card-head {
   .modal-card-head {
     align-items: flex-start;
     background-color: $box-background-color;
-    border-bottom: 1px solid $grey-lighter;
+    border-bottom: 1px solid $border-soft;
     border-radius: 16px 16px 0 0;
   }
 
@@ -1980,7 +2051,7 @@ html.dark-mode .modal-card-head {
     gap: 1rem;
     flex-wrap: wrap;
     background-color: $box-background-color;
-    border-top: 1px solid $grey-lighter;
+    border-top: 1px solid $border-soft;
     border-radius: 0 0 16px 16px;
   }
 }
@@ -2069,7 +2140,7 @@ html.dark-mode .modal-card-head {
   border-radius: 10px;
   padding: 3px;
   gap: 2px;
-  box-shadow: inset 0 0 0 1px $grey-lighter;
+  box-shadow: inset 0 0 0 1px $border-soft;
 
   button {
     font-size: 0.78rem;
@@ -2120,11 +2191,7 @@ html.dark-mode .seg-tabs {
 }
 
 .section-card {
-  background: $white;
-  border: 1px solid $grey-lighter;
-  border-radius: 14px;
-  box-shadow: $panel-shadow;
-  overflow: hidden;
+  @include soft-panel;
   color: $text;
 }
 
@@ -2255,7 +2322,7 @@ html.dark-mode .seg-tabs {
 
 // The bordered small button used beside rows ("View Configuration").
 .button.is-quiet {
-  border: 1px solid $grey-lighter;
+  border: 1px solid $border-soft;
   border-radius: 8px;
   background: $white;
   color: $text;
@@ -2264,8 +2331,8 @@ html.dark-mode .seg-tabs {
   box-shadow: none;
 
   &:hover {
-    border-color: $grey-light;
-    background: $white-ter;
+    border-color: $border-strong;
+    background: $surface-hover;
   }
 }
 

@@ -21,7 +21,7 @@ const stateClass = computed(
   height: 9px;
   border-radius: 50%;
   flex: none;
-  background: $grey-light;
+  background: $status-neutral;
 }
 
 .jdot.queued {
@@ -34,7 +34,7 @@ const stateClass = computed(
   background: $info;
 }
 .jdot.stopped {
-  background: $grey-light;
+  background: $status-neutral;
 }
 
 .jdot.running.is-pulsing::after {

@@ -1689,7 +1689,7 @@ const handleAdvancedMarketSelection = (marketInfo: any) => {
   }
 
   &:hover {
-    background-color: $white-ter;
+    background-color: $surface-hover;
   }
 }
 

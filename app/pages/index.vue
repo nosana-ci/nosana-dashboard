@@ -1313,7 +1313,7 @@ const signAuthMessage = async (walletName: string) => {
   position: relative;
 
   &:hover:not(:disabled) {
-    background: $white-ter;
+    background: $surface-hover;
     border-color: $grey;
   }
 
@@ -1386,7 +1386,7 @@ const signAuthMessage = async (walletName: string) => {
   border-color: $grey-light;
 
   &:hover:not(:disabled) {
-    background: $white-bis;
+    background: $surface-hover;
     border-color: $grey;
   }
 }
@@ -1497,7 +1497,7 @@ const signAuthMessage = async (walletName: string) => {
 
   &:hover {
     border-color: $secondary;
-    background: $white-ter;
+    background: $surface-hover;
   }
 }
 
@@ -1575,7 +1575,7 @@ const signAuthMessage = async (walletName: string) => {
   gap: 0.5rem;
   margin-top: 0.75rem;
   padding-top: 0.75rem;
-  border-top: 1px solid $grey-light;
+  border-top: 1px solid $border-soft;
   font-size: 0.9rem;
   color: $grey-dark;
 }
@@ -1586,7 +1586,7 @@ const signAuthMessage = async (walletName: string) => {
   gap: 0.75rem;
   margin-top: 0.75rem;
   padding-top: 0.75rem;
-  border-top: 1px solid $grey-light;
+  border-top: 1px solid $border-soft;
 }
 
 .error-text {
@@ -1598,7 +1598,7 @@ const signAuthMessage = async (walletName: string) => {
 .sign-message-section {
   margin-top: 0.75rem;
   padding-top: 0.75rem;
-  border-top: 1px solid $grey-light;
+  border-top: 1px solid $border-soft;
 }
 
 .sign-message-button {

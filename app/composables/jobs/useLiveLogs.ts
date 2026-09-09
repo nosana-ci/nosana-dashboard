@@ -43,11 +43,14 @@ export function useLiveLogs(deps: UseLiveLogsDeps) {
     const opId = flogOpId === 'system' ? null : flogOpId;
     if (opId) opIds.value.add(opId);
 
+    // The collector has a Date column, so it takes the body without the
+    // generated "[timestamp]" prefix. A timestamp printed by the log line
+    // itself is part of the body and stays.
     const entry = makeEntry(
       ++deps.seq.value, jobId, opId,
       opId ? 'container' : 'system',
       flog.timestamp,
-      flog.content,
+      flog.body,
     );
     deps.entries.value = insertSorted(deps.entries.value, [entry]);
   }

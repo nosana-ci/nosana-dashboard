@@ -196,7 +196,7 @@ const configure = () => emit("configure");
   overflow: hidden;
 
   &.is-open {
-    border-color: $grey-lighter;
+    border-color: $border-soft;
   }
 }
 
@@ -268,7 +268,7 @@ const configure = () => emit("configure");
 
 .dup-accordion-panel {
   padding: 0 1rem 1rem;
-  border-top: 1px solid $grey-lighter;
+  border-top: 1px solid $border-soft;
   /* The grid can be long; keep the dialog itself a sane height. */
   max-height: 46vh;
   overflow-y: auto;

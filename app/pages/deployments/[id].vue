@@ -936,34 +936,4 @@ useHead({
     gap: 2.25rem;
   }
 }
-
-/* A clear soft elevation lifts every section card off the near-white ground. */
-.tab-pane :deep(.dep-card),
-.tab-pane :deep(.ep-card),
-.tab-pane :deep(.da-card),
-.tab-pane :deep(.as-card),
-.tab-pane :deep(.task-card),
-.tab-pane :deep(.event-card),
-.tab-pane :deep(.section-card),
-.tab-pane :deep(.rev-card) {
-  box-shadow:
-    0 1px 3px rgba($black, 0.06),
-    0 14px 38px -6px rgba($black, 0.14);
-}
-
-/* Shadows read poorly on a dark ground, so there elevation comes from a
-   lighter surface + a crisper hairline instead. */
-html.dark-mode .tab-pane :deep(.dep-card),
-html.dark-mode .tab-pane :deep(.ep-card),
-html.dark-mode .tab-pane :deep(.da-card),
-html.dark-mode .tab-pane :deep(.as-card),
-html.dark-mode .tab-pane :deep(.task-card),
-html.dark-mode .tab-pane :deep(.event-card),
-html.dark-mode .tab-pane :deep(.section-card),
-html.dark-mode .tab-pane :deep(.rev-card) {
-  border-color: rgba($white, 0.1);
-  box-shadow:
-    0 1px 3px rgba($black, 0.4),
-    0 16px 40px -8px rgba($black, 0.6);
-}
 </style>

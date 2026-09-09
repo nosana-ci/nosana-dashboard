@@ -129,6 +129,7 @@
             :market="market"
             :job-filter="[job]"
             hide-job-select
+            hide-level-column
           />
         </div>
       </div>
@@ -186,15 +187,15 @@ const jobState = computed(() =>
 
 // A queued replica hasn't been picked up by a node yet, so it has no details,
 // no containers and no logs — only the trail of it being listed. Once it runs
-// everything is available; after it finishes the containers (and the shells
-// and endpoint actions inside that tab) are dead controls.
+// everything is available, and it stays available after it finishes: the
+// Containers tab is how you read each operation's exit code and results. The
+// live controls in there (shells, endpoints, stop/restart) hide themselves
+// once the job is done.
 const visibleViews = computed(() => {
   if (jobState.value === "QUEUED") {
     return VIEWS.filter((tab) => tab.id === "activity");
   }
-  return VIEWS.filter(
-    (tab) => tab.id !== "containers" || jobState.value === "RUNNING",
-  );
+  return VIEWS;
 });
 
 // The panel can be opened straight onto a view (the row's SSH button opens
@@ -264,7 +265,7 @@ onBeforeUnmount(() => {
   flex-direction: column;
   background: $body-background-color;
   color: $text;
-  border-left: 1px solid $grey-lighter;
+  border-left: 1px solid $border-soft;
   box-shadow: -40px 0 80px -30px rgba($black, 0.35);
   transition: width 0.25s ease;
 
@@ -332,47 +333,8 @@ onBeforeUnmount(() => {
   gap: 0.4rem;
 }
 
-/* ---- Tabs, the deployment page's segmented control ---- */
 .jp-tabs {
   padding: 0 1.75rem;
-}
-
-.dep-tabs {
-  display: inline-flex;
-  gap: 4px;
-  padding: 5px;
-  margin: 1.75rem 0 0.25rem;
-  border-radius: 13px;
-  background: $grey-lightest;
-  max-width: 100%;
-  overflow-x: auto;
-}
-
-.dep-tab {
-  font-family: $title-family;
-  font-weight: 500;
-  font-size: 0.9rem;
-  color: $grey-dark;
-  border: 0;
-  background: none;
-  padding: 0.6rem 1.35rem;
-  border-radius: 9px;
-  cursor: pointer;
-  white-space: nowrap;
-  transition:
-    color 0.15s ease,
-    background 0.15s ease;
-
-  &:hover {
-    color: $text;
-  }
-
-  &.is-active {
-    background: $secondary;
-    color: #05230a;
-    font-weight: 600;
-    box-shadow: 0 1px 3px rgba($black, 0.12);
-  }
 }
 
 .jp-body {
@@ -413,24 +375,6 @@ html.dark-mode {
 
   .jp-sep {
     color: rgba($white, 0.25);
-  }
-
-  .dep-tabs {
-    background: rgba($white, 0.08);
-  }
-
-  .dep-tab {
-    color: $grey-light;
-
-    &:hover {
-      color: $white;
-    }
-
-    &.is-active {
-      background: $secondary;
-      color: #05230a;
-      box-shadow: 0 1px 3px rgba($black, 0.5);
-    }
   }
 }
 

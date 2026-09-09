@@ -578,7 +578,7 @@ const isGHCR = (image: string) => {
 
 .template-icon {
   background-color: #ffffff;
-  border: 1px solid $grey-lighter;
+  border: 1px solid $border-soft;
   width: 24px;
   height: 24px;
   border-radius: 100%;
@@ -604,7 +604,7 @@ const isGHCR = (image: string) => {
 
 .container-icon {
   background-color: #ffffff;
-  border: 1px solid $grey-lighter;
+  border: 1px solid $border-soft;
   width: 24px;
   height: 24px;
   border-radius: 100%;

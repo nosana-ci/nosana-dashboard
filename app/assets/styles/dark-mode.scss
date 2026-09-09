@@ -70,7 +70,8 @@
 
   .box {
     background-color: $box-background-color-dark;
-    border-color: rgba($white, 0.08);
+    border-color: rgba($white, 0.1);
+    box-shadow: $panel-shadow-dark;
   }
 
   .wallet-auth-banner {
