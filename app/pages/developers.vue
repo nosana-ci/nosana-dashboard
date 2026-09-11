@@ -98,7 +98,7 @@
 
       <template v-if="isAuthenticated">
         <ApiKeys class="mb-6" />
-        <!-- <OAuthApps /> -->
+        <OAuthApps />
       </template>
 
       <div v-else class="box signin-prompt has-text-centered p-6">
