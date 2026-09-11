@@ -8,12 +8,13 @@
     >
       <div class="jrow-head">
         <div class="jrow-main">
-          <!-- The label lives in the status key below the table; screen
-               readers still get it from the hidden span. -->
-          <JobStatusDot
-            :state="getJobStateNumber(job)"
+          <!-- The mark's shape and colour carry the state: a dot is ongoing,
+               a checkmark has finished. The word itself is in the tooltip and
+               in the hidden span below, for screen readers. -->
+          <StatusMark
+            :tone="getStatusTone(getJobStateNumber(job))"
             :pulse="!showDuration"
-            :title="stateLabel(getJobStateNumber(job))"
+            :label="stateLabel(getJobStateNumber(job))"
           />
           <span class="is-sr-only">{{
             stateLabel(getJobStateNumber(job))
@@ -21,10 +22,10 @@
 
           <span class="jinfo">
             <span class="jinfo-top">
-              <!-- Same shape as the deployment id in the page header -->
-              <span class="jid is-family-monospace">{{
-                truncateMiddle(job.job, 8, 6)
-              }}</span>
+              <!-- The GPU names the row; the address identifies it, below. -->
+              <span class="jname">
+                <JobGpuName :node="job.node" :fallback="marketLabel" />
+              </span>
               <button
                 v-if="job.revision != null"
                 type="button"
@@ -36,7 +37,49 @@
               </button>
               <span v-else class="rev-chip is-family-monospace">#-</span>
             </span>
-            <span class="jtime">{{ timeLabel(job) }}</span>
+            <span class="jsub">
+              <!-- Same shape as the deployment id in the page header -->
+              <span class="jid is-family-monospace">{{
+                truncateMiddle(job.job, 8, 6)
+              }}</span>
+              <button
+                type="button"
+                class="copy-btn"
+                :class="{ 'is-copied': copiedJob === job.job }"
+                :title="`Copy job address ${job.job}`"
+                @click="copyJob(job.job)"
+              >
+                <svg
+                  v-if="copiedJob === job.job"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.4"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M20 6 9 17l-5-5" />
+                </svg>
+                <svg
+                  v-else
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <rect x="9" y="9" width="13" height="13" rx="2" />
+                  <path
+                    d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+                  />
+                </svg>
+              </button>
+              <span class="jsep" aria-hidden="true">·</span>
+              <span class="jtime">{{ timeLabel(job) }}</span>
+            </span>
           </span>
         </div>
 
@@ -142,7 +185,9 @@
 import type { DeploymentJobItem } from "@nosana/api";
 import SecondsFormatter from "~/components/SecondsFormatter.vue";
 import JobUsageStrip from "~/components/Deployment/JobUsageStrip.vue";
-import JobStatusDot from "~/components/Deployment/JobStatusDot.vue";
+import StatusMark from "~/components/Common/StatusMark.vue";
+import JobGpuName from "~/components/Deployment/JobGpuName.vue";
+import { getStatusTone } from "~/composables/useStatus";
 import TerminalIcon from "@/assets/img/icons/terminal.svg?component";
 import { NULL_ADDRESS, truncateMiddle } from "~/utils/solana";
 import { formatTimeAgo } from "~/utils/relativeTime";
@@ -157,6 +202,8 @@ const props = defineProps<{
   getJobStateNumber: (job: DeploymentJobItem) => number;
   getJobDuration?: (jobId: string) => number | null;
   showDuration?: boolean;
+  /** Names the row until its node reports a GPU. */
+  marketLabel: string;
 }>();
 
 const emit = defineEmits<{
@@ -168,6 +215,15 @@ const emit = defineEmits<{
 
 const canAccess = (job: DeploymentJobItem) =>
   !props.showDuration && props.getJobStateNumber(job) === 1 && hasNode(job);
+
+const copiedJob = ref("");
+const copyJob = (job: string) => {
+  navigator.clipboard?.writeText(job);
+  copiedJob.value = job;
+  setTimeout(() => {
+    if (copiedJob.value === job) copiedJob.value = "";
+  }, 1400);
+};
 
 const stateLabel = (n: number) =>
   ({ 0: "Queued", 1: "Running", 2: "Completed", 3: "Stopped" })[n] || "Unknown";
@@ -203,7 +259,8 @@ const timeLabel = (job: DeploymentJobItem) =>
   }
 }
 
-/* Status dot (9px) plus its gutter; the usage strip lines up with the id. */
+/* Status mark plus its gutter; the usage strip lines up with the id. */
+$mark-size: 14px;
 $content-indent: 1.75rem;
 
 .jrow-head {
@@ -213,7 +270,7 @@ $content-indent: 1.75rem;
   gap: 0.9rem;
 }
 
-/* Row order: status dot · id over time · (space) · duration · actions · chevron */
+/* Row order: status mark · id over time · (space) · duration · actions · chevron */
 .jrow-main {
   display: flex;
   align-items: center;
@@ -238,8 +295,8 @@ $content-indent: 1.75rem;
   }
 }
 
-.jdot {
-  margin-right: calc(#{$content-indent} - 9px - 0.75rem);
+.smark {
+  margin-right: calc(#{$content-indent} - #{$mark-size} - 0.75rem);
 }
 
 .jinfo {
@@ -254,6 +311,31 @@ $content-indent: 1.75rem;
   align-items: center;
   gap: 0.6rem;
   min-width: 0;
+}
+
+/* The GPU carries the row, so it gets the weight the address used to have. */
+.jname {
+  font-family: $title-family;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: $text;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Address, copy control and time on one line under the name — the same line
+   the deployment header runs beneath its own title. */
+.jsub {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.jsep {
+  color: $text-muted;
+  font-size: 0.75rem;
 }
 
 .jrow-usage {
@@ -295,11 +377,44 @@ $content-indent: 1.75rem;
 }
 
 .jid {
-  font-size: 0.8rem;
-  color: $text;
+  font-size: 0.75rem;
+  color: $text-muted;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Above the row's stretched click target, so it copies instead of opening. */
+.copy-btn {
+  position: relative;
+  z-index: 1;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: 0;
+  background: transparent;
+  color: $text-muted;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+
+  svg {
+    width: 11px;
+    height: 11px;
+  }
+
+  &:hover {
+    background: $surface-hover;
+    color: $text;
+  }
+
+  &.is-copied {
+    color: $secondary;
+  }
 }
 
 /* Row actions: a matched pair of pills, quiet until hovered so they don't
@@ -417,7 +532,12 @@ html.dark-mode .jrow + .jrow::before {
   background: rgba($white, 0.08);
 }
 
-html.dark-mode .jid {
+html.dark-mode .jname {
+  color: $white;
+}
+
+html.dark-mode .copy-btn:hover {
+  background: rgba($white, 0.08);
   color: $white;
 }
 

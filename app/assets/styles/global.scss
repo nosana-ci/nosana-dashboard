@@ -1418,13 +1418,14 @@ button[disabled][data-tooltip] {
    Global Status Colors and Icons
    ========================================================================== */
 
-/* Status color mapping to ensure consistency across all components */
+/* Status tag colours. See `getStatusTone` for what each one means and which
+   statuses map to it. Green covers both running and completed — the tag's
+   icon, a spinner against a checkmark, is what separates them. */
 :root {
-  --status-success-color: #{$success}; // Green for running/active/online
-  --status-info-color: #{$info}; // Blue for completed/pending
-  --status-warning-color: #{$warning}; // Orange for queued
-  --status-danger-color: #{$danger}; // Red for failed/error
-  --status-dark-color: #{$status-neutral}; // Neutral for stopped/inactive/offline
+  --status-success-color: #{$success}; // Green: running/active/online, and completed
+  --status-warning-color: #{$warning}; // Orange: queued/starting/pending
+  --status-danger-color: #{$danger}; // Red: failed/error
+  --status-dark-color: #{$status-neutral}; // Grey: stopped/inactive/offline
 }
 
 /* Text fields: roomier and more defined than the stock control box, so they
@@ -1472,15 +1473,6 @@ button[disabled][data-tooltip] {
 
     svg {
       color: var(--status-success-color) !important;
-    }
-  }
-
-  &.is-info {
-    color: var(--status-info-color) !important;
-    border-color: var(--status-info-color) !important;
-
-    svg {
-      color: var(--status-info-color) !important;
     }
   }
 

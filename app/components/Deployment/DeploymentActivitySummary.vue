@@ -33,7 +33,9 @@
               </svg>
             </span>
             <div class="as-task-main">
-              <div class="as-task-title">{{ humanizeEventType(task.task) }}</div>
+              <div class="as-task-title">
+                {{ humanizeEventType(task.task) }}
+              </div>
               <div class="as-task-sub">
                 Created {{ formatTimeAgo(task.created_at) }}
               </div>
@@ -52,9 +54,12 @@
               v-for="(event, i) in recentEvents"
               :key="`e-${i}`"
               class="as-act"
-              :class="eventKind(event)"
             >
-              <span class="as-adot"></span>
+              <StatusMark
+                class="as-amark"
+                :tone="eventTone(event)"
+                :size="12"
+              />
               <div class="as-act-main">
                 <div class="as-act-top">
                   <span class="as-act-title">{{
@@ -82,7 +87,9 @@
                     stroke-linecap="round"
                     stroke-linejoin="round"
                   >
-                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                    <path
+                      d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"
+                    />
                     <path d="M15 3h6v6M10 14 21 3" />
                   </svg>
                   View on Solscan
@@ -113,7 +120,12 @@
 <script setup lang="ts">
 import type { DeploymentEventItem } from "@nosana/api";
 import { formatTimeAgo, formatTimeUntil } from "~/utils/relativeTime";
-import { humanizeEventType, eventKind, taskKind } from "~/utils/deploymentEvents";
+import {
+  humanizeEventType,
+  eventTone,
+  taskKind,
+} from "~/utils/deploymentEvents";
+import StatusMark from "~/components/Common/StatusMark.vue";
 import { solscanTxUrl } from "~/utils/jobEvents";
 
 const props = defineProps<{
@@ -218,15 +230,10 @@ const recentEvents = computed(() => props.events.slice(0, 4));
   font-variant-numeric: tabular-nums;
 }
 
-/* Scheduled task tone: list = green, extend = orange (the default above),
-   stop = red. */
-.as-task.is-success-kind .as-clock,
-.as-task.is-success-kind .as-due {
-  color: $success;
-}
-.as-task.is-danger-kind .as-clock,
-.as-task.is-danger-kind .as-due {
-  color: $danger;
+/* Scheduled task tone: orange by default (above), a scheduled stop grey. */
+.as-task.is-neutral-kind .as-clock,
+.as-task.is-neutral-kind .as-due {
+  color: $status-neutral;
 }
 
 /* ---- Recent divider ---- */
@@ -270,29 +277,8 @@ const recentEvents = computed(() => props.events.slice(0, 4));
   background: $grey-lightest;
 }
 
-.as-adot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  margin-top: 5px;
-  flex: none;
-  background: $grey-light;
-}
-
-.as-act.is-info-kind .as-adot {
-  background: $info;
-}
-.as-act.is-success-kind .as-adot {
-  background: $success;
-}
-.as-act.is-warning-kind .as-adot {
-  background: $warning;
-}
-.as-act.is-danger-kind .as-adot {
-  background: $danger;
-}
-.as-act.is-neutral-kind .as-adot {
-  background: $grey;
+.as-amark {
+  margin-top: 3px;
 }
 
 .as-act-main {

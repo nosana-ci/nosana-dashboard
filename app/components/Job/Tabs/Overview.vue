@@ -325,13 +325,7 @@ import type { JobDefinition } from "@nosana/kit";
 // Import icons as components
 import SquareIcon from '@/assets/img/icons/square.svg?component';
 import RefreshIcon from '@/assets/img/icons/refresh.svg?component';
-import RunningIcon from '@/assets/img/icons/status/running.svg?component';
-import StoppedIcon from '@/assets/img/icons/status/stopped.svg?component';
-import FailedIcon from '@/assets/img/icons/status/failed.svg?component';
-import DoneIcon from '@/assets/img/icons/status/done.svg?component';
-import QueuedIcon from '@/assets/img/icons/status/queued.svg?component';
 import FullscreenIcon from '@/assets/img/icons/fullscreen.svg?component';
-import { useStatus } from '~/composables/useStatus';
 import { useNodeJobResolver } from '~/composables/jobs/useNodeJobResolver';
 
 type EndpointStatus = 'ONLINE' | 'OFFLINE' | 'UNKNOWN';
@@ -952,8 +946,9 @@ const isSingleGroup = computed(
 );
 
 // Container/op status uses the shared status pill (same as the deployment and
-// job pages). Container "finished" maps to the pill's "completed", which is
-// blue — green is reserved for what is running right now.
+// job pages). Container "finished" maps to the pill's "completed", so a
+// container that ran to the end gets the same green checkmark a completed job
+// does rather than a second word for the same thing.
 const pillStatus = (s: unknown) =>
   String(s ?? "").toLowerCase() === "finished" ? "completed" : String(s ?? "");
 
@@ -1007,61 +1002,6 @@ const endpointStatus = (
   if (s === "ONLINE") return "online";
   if (s === "STARTING") return "starting";
   return "inactive";
-};
-
-// Get status icon using the same logic as Job.vue for consistency
-const getStatusIcon = (status: string) => {
-  switch (status?.toLowerCase()) {
-    case 'running':
-    case 'starting':
-    case 'waiting':
-    case 'pending':
-    case 'init':
-      return RunningIcon;
-    case 'stopped':
-    case 'stopping':
-      return StoppedIcon;
-    case 'failed':
-      return FailedIcon;
-    case 'finished':
-    case 'success':
-      return DoneIcon;
-    case 'restarting':
-    case 'queued':
-      return QueuedIcon;
-    default:
-      return StoppedIcon;
-  }
-};
-
-// Use global status system for consistent colors
-const { getStatusClass } = useStatus();
-
-// Get status class for tag styling with mapping to global status strings
-// For outlined light tags, we want colored borders but white backgrounds
-const statusClass = (status: string) => {
-  // Map operation statuses to standard status strings that the global system understands
-  const statusLower = status?.toLowerCase();
-  switch (statusLower) {
-    case 'running':
-    case 'starting':
-    case 'waiting':
-    case 'pending':
-    case 'init':
-      return getStatusClass('RUNNING');
-    case 'stopped':
-    case 'stopping':
-      return getStatusClass('STOPPED');
-    case 'failed':
-      return getStatusClass('FAILED');
-    case 'finished':
-    case 'success':
-      return getStatusClass('SUCCESS');
-    case 'restarting':
-      return getStatusClass('QUEUED'); // Restarting is like queued
-    default:
-      return getStatusClass('STOPPED');
-  }
 };
 
 // Check if operation can be stopped

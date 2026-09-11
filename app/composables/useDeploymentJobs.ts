@@ -267,16 +267,15 @@ export function useDeploymentJobs(deps: DeploymentJobsDeps) {
     () => activeJobs.value.filter((j) => getJobStateNumber(j) === 1).length,
   );
 
-  // Active jobs, running first then queued. Running are newest-first; queued
-  // are oldest-first, so the replica that has waited longest heads the queue.
+  // Newest first, whatever the state — the same direction the History tab and
+  // the activity timelines read, so every list on the page agrees on which end
+  // is "most recent". Running jobs used to float above queued ones regardless
+  // of age, which put two orderings on one page.
   const activeJobsSorted = computed(() =>
     [...activeJobs.value].sort((a, b) => {
-      const ra = getJobStateNumber(a) === 1 ? 0 : 1;
-      const rb = getJobStateNumber(b) === 1 ? 0 : 1;
-      if (ra !== rb) return ra - rb;
       const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
       const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
-      return ra === 0 ? tb - ta : ta - tb;
+      return tb - ta;
     }),
   );
 

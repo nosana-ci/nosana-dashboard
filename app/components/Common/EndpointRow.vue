@@ -1,24 +1,26 @@
 <template>
   <div
     class="ep-row"
-    :class="{ 'is-off': status !== 'online' }"
+    :class="{ 'is-off': status === 'inactive' }"
     role="button"
     tabindex="0"
-    :title="status === 'online' ? 'Open endpoint in a new tab' : 'Copy URL'"
+    :title="reachable ? 'Open endpoint in a new tab' : 'Copy URL'"
     @click="onRowClick"
     @keydown.enter.prevent="onRowClick"
     @keydown.space.prevent="onRowClick"
   >
-    <span class="ep-status" :class="status">
-      <span class="ep-dot" :title="statusLabel"></span>
-    </span>
+    <StatusMark
+      :tone="tone"
+      :pulse="status === 'online'"
+      :label="statusLabel"
+    />
     <div class="ep-main">
       <div class="ep-top">
         <span class="ep-name">{{ name }}</span>
         <span class="port-chip">:{{ port }}</span>
       </div>
       <a
-        v-if="status === 'online'"
+        v-if="reachable"
         :href="url"
         target="_blank"
         rel="noopener"
@@ -48,7 +50,7 @@
         </svg>
       </button>
       <a
-        v-if="status === 'online'"
+        v-if="reachable"
         :href="url"
         target="_blank"
         rel="noopener"
@@ -74,9 +76,17 @@
 
 <script setup lang="ts">
 import { useToast } from "vue-toastification";
+import StatusMark from "~/components/Common/StatusMark.vue";
+import type { StatusTone } from "~/composables/useStatus";
 
-/** One exposed port: status dot, name, port chip, URL, copy and open. */
+/** One exposed port: status mark, name, port chip, URL, copy and open. */
 export type EndpointStatus = "online" | "starting" | "inactive";
+
+const TONES: Record<EndpointStatus, StatusTone> = {
+  online: "live",
+  starting: "warn",
+  inactive: "neutral",
+};
 
 const props = defineProps<{
   name: string;
@@ -89,6 +99,13 @@ const statusLabel = computed(
   () => props.status.charAt(0).toUpperCase() + props.status.slice(1),
 );
 
+const tone = computed(() => TONES[props.status]);
+
+// A starting endpoint's URL is worth offering even though the node's proxy may
+// not answer yet: waiting for it is the normal thing to do, and the orange mark
+// already says it is not up. Only a stopped one has nothing behind it.
+const reachable = computed(() => props.status !== "inactive");
+
 const toast = useToast();
 
 const copyUrl = async () => {
@@ -100,10 +117,10 @@ const copyUrl = async () => {
   }
 };
 
-// The whole bar is clickable: open the endpoint when it's live, otherwise copy
-// the URL (a dead endpoint can't be opened but is still worth copying).
+// The whole bar is clickable: open the endpoint when there is something to
+// open, otherwise copy the URL (a dead endpoint is still worth copying).
 const onRowClick = () => {
-  if (props.status === "online") {
+  if (reachable.value) {
     window.open(props.url, "_blank", "noopener");
   } else {
     copyUrl();
@@ -136,28 +153,6 @@ const onRowClick = () => {
   &.is-off {
     opacity: 0.55;
   }
-}
-
-.ep-status {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-}
-
-.ep-dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  flex: none;
-  background: $status-neutral;
-}
-
-.ep-status.online .ep-dot {
-  background: $success;
-}
-
-.ep-status.starting .ep-dot {
-  background: $warning;
 }
 
 .ep-main {

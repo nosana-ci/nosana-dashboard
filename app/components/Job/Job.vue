@@ -447,12 +447,6 @@ import { useJobEvents } from "~/composables/jobs/useJobEvents";
 import ChevronDownIcon from "@/assets/img/icons/chevron-down.svg?component";
 import ClockIcon from "@/assets/img/icons/clock.svg?component";
 import SquareIcon from "@/assets/img/icons/square.svg?component";
-import RunningIcon from "@/assets/img/icons/status/running.svg?component";
-import StoppedIcon from "@/assets/img/icons/status/stopped.svg?component";
-import FailedIcon from "@/assets/img/icons/status/failed.svg?component";
-import QueuedIcon from "@/assets/img/icons/status/queued.svg?component";
-import DoneIcon from "@/assets/img/icons/status/done.svg?component";
-import { useStatus } from "~/composables/useStatus";
 
 import type { UseModal } from "~/composables/jobs/useModal";
 import type { Endpoints, UseJob } from "~/composables/jobs/useJob";
@@ -1536,73 +1530,6 @@ watch(isMainContentOpen, (newValue) => {
   }
 });
 
-const getStatusIcon = (status: string | number) => {
-  // Handle both string (endpoint status) and number (job state)
-  if (typeof status === "number") {
-    // Job state mapping
-    switch (status) {
-      case 0: // QUEUED
-        return QueuedIcon;
-      case 1: // RUNNING
-        return RunningIcon;
-      case 2: // COMPLETED
-        return DoneIcon;
-      case 3: // STOPPED
-        return StoppedIcon;
-      default:
-        return StoppedIcon;
-    }
-  }
-
-  // Endpoint status mapping (legacy)
-  if (!props.job.isRunning || props.job.isCompleted) {
-    return StoppedIcon;
-  }
-
-  if (status === "ONLINE") {
-    return DoneIcon;
-  } else if (status === "UNKNOWN") {
-    return RunningIcon;
-  } else if (status === "OFFLINE") {
-    return FailedIcon;
-  }
-
-  return FailedIcon;
-};
-
-const getStatusText = (status: string | number) => {
-  // Handle both string (endpoint status) and number (job state)
-  if (typeof status === "number") {
-    // Job state mapping
-    switch (status) {
-      case 0:
-        return "QUEUED";
-      case 1:
-        return "RUNNING";
-      case 2:
-        return "COMPLETED";
-      case 3:
-        return "STOPPED";
-      default:
-        return "UNKNOWN";
-    }
-  }
-
-  // Endpoint status mapping (legacy)
-  if (!props.job.isRunning || props.job.isCompleted) {
-    return "OFFLINE";
-  }
-
-  if (status === "ONLINE") {
-    return "ONLINE";
-  } else if (status === "UNKNOWN") {
-    return "LOADING";
-  } else if (status === "OFFLINE") {
-    return "OFFLINE";
-  }
-  return "OFFLINE";
-};
-
 // Market address as a simple string
 const marketAddress = computed(() => String(props.job.market ?? "").trim());
 
@@ -1627,11 +1554,6 @@ const handleActionClick = (actionFn: () => void) => {
   showActionsDropdown.value = false;
   actionFn();
 };
-
-// Use global status system
-const { getStatusClass: statusClass } = useStatus();
-
-// getStatusText function already exists above, removed duplicate
 
 // Close dropdown when clicking outside
 const handleClickOutside = (event: MouseEvent) => {

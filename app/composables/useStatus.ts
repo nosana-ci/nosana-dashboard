@@ -36,77 +36,78 @@ export const States = {
 } as const
 
 /**
+ * The five tones every status surface draws from — pills, dots, tags, timeline
+ * nodes and endpoint rows.
+ *
+ * Colour says whether the state is good or bad; shape says whether it is still
+ * happening. `live` and `ok` are both green because both are good news, and
+ * `StatusMark` separates them by drawing a dot for one and a checkmark for the
+ * other: a dot is ongoing, a glyph has settled. That pairing is also what keeps
+ * the system readable without colour, since `ok` and `danger` differ by shape
+ * as well as hue.
+ */
+export type StatusTone = 'live' | 'warn' | 'ok' | 'danger' | 'neutral'
+
+const TONES: Record<string, StatusTone> = {
+  // Up and serving right now.
+  RUNNING: 'live',
+  ACTIVE: 'live',
+  ONLINE: 'live',
+
+  // On its way up, or waiting for something. Reads the same to someone
+  // watching, whichever stage of the climb it is in — including the statuses
+  // the node reports for an operation (waiting/pending/init).
+  QUEUED: 'warn',
+  DRAFT: 'warn',
+  STARTING: 'warn',
+  PENDING: 'warn',
+  WAITING: 'warn',
+  INIT: 'warn',
+  RESTARTING: 'warn',
+  LOADING: 'warn',
+
+  // Finished cleanly.
+  COMPLETED: 'ok',
+  SUCCESS: 'ok',
+  FINISHED: 'ok',
+
+  FAILED: 'danger',
+  ERROR: 'danger',
+  YAML_ERROR: 'danger',
+  INSUFFICIENT_FUNDS: 'danger',
+
+  // Deliberately not running.
+  STOPPED: 'neutral',
+  STOPPING: 'neutral',
+  ARCHIVED: 'neutral',
+  INACTIVE: 'neutral',
+  OFFLINE: 'neutral'
+}
+
+/**
+ * Get the tone for any status (string or number). Anything unrecognised is
+ * neutral: a status we cannot read is not evidence that something is wrong,
+ * and not evidence that it is starting either.
+ */
+export function getStatusTone(status: string | number): StatusTone {
+  return TONES[normalizeStatus(status)] ?? 'neutral'
+}
+
+// Tone → Bulma modifier, for the tag-shaped status surfaces. Green covers both
+// live and finished; the tag's icon is what separates them.
+const TONE_CLASSES: Record<StatusTone, string> = {
+  live: 'is-success',
+  ok: 'is-success',
+  warn: 'is-warning',
+  danger: 'is-danger',
+  neutral: 'is-dark'
+}
+
+/**
  * Get consistent status CSS class for any status (string or number)
  */
 export function getStatusClass(status: string | number): string {
-  // Handle numeric states (job states 0-3)
-  if (typeof status === 'number') {
-    switch (status) {
-      case 0: return 'is-warning'  // QUEUED - Orange
-      case 1: return 'is-success'  // RUNNING - Green
-      case 2: return 'is-info'     // COMPLETED - Blue
-      case 3: return 'is-dark'     // STOPPED - Gray
-      default: return 'is-light'   // UNKNOWN
-    }
-  }
-
-  // Handle string statuses
-  const statusUpper = status?.toString().toUpperCase()
-  switch (statusUpper) {
-    // Finished states - Blue
-    case 'SUCCESS':
-    case 'COMPLETED':
-      return 'is-info'
-    
-    // Running - Green: green means it is up and serving right now
-    case 'RUNNING':
-      return 'is-success'
-
-    // Pending - Blue
-    case 'PENDING':
-      return 'is-info'
-    
-    // Queued/Draft states - Orange  
-    case 'QUEUED':
-    case 'DRAFT':
-    // On its way up but not serving yet, which reads the same to someone waiting.
-    case 'STARTING':
-      return 'is-warning'
-    
-    // Stopping states - Black
-    case 'STOPPING':
-      return 'is-dark'
-    
-    // Error/Failed states - Red
-    case 'FAILED':
-    case 'YAML_ERROR':
-    case 'ERROR':
-    case 'INSUFFICIENT_FUNDS':
-      return 'is-danger'
-    
-    // Stopped/Archived states - Gray/Black
-    case 'STOPPED':
-    case 'ARCHIVED':
-      return 'is-dark'
-    
-    // Revision states
-    case 'ACTIVE':
-      return 'is-success'  // Green for active (like running)
-    case 'INACTIVE':
-      return 'is-dark'     // Black for inactive
-    
-    // Endpoint states
-    case 'ONLINE':
-      return 'is-success'  // Green: an endpoint that answers is serving, like running
-    case 'OFFLINE':
-      return 'is-dark'     // Gray for offline
-    case 'UNKNOWN':
-    case 'LOADING':
-      return 'is-warning'  // Orange for unknown/loading
-    
-    default:
-      return 'is-light'
-  }
+  return TONE_CLASSES[getStatusTone(status)]
 }
 
 /**
@@ -162,24 +163,14 @@ export function isActiveStatus(status: string | number): boolean {
  * Check if a status represents a completed state
  */
 export function isCompletedStatus(status: string | number): boolean {
-  const normalized = normalizeStatus(status)
-  return [
-    StatusStrings.COMPLETED,
-    StatusStrings.SUCCESS
-  ].includes(normalized as any)
+  return getStatusTone(status) === 'ok'
 }
 
 /**
  * Check if a status represents an error state
  */
 export function isErrorStatus(status: string | number): boolean {
-  const normalized = normalizeStatus(status)
-  return [
-    StatusStrings.FAILED,
-    StatusStrings.YAML_ERROR,
-    StatusStrings.ERROR,
-    StatusStrings.INSUFFICIENT_FUNDS
-  ].includes(normalized as any)
+  return getStatusTone(status) === 'danger'
 }
 
 /**
@@ -188,6 +179,7 @@ export function isErrorStatus(status: string | number): boolean {
 export function useStatus() {
   return {
     getStatusClass,
+    getStatusTone,
     getStatusText,
     normalizeStatus,
     isActiveStatus,

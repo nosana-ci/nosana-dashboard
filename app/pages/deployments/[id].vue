@@ -74,6 +74,7 @@
                     :historyHasNext="historyHasNext"
                     :getJobStateNumber="getJobStateNumber"
                     :getJobDuration="getJobDuration"
+                    :marketLabel="marketLabel"
                     @update:jobActivityTab="jobActivityTab = $event"
                     @open="openJobPanel($event)"
                     @viewLogs="openJobPanel($event, 'logs')"
@@ -142,6 +143,7 @@
         :deployment-id="deployment.id"
         :deployment-jobs="deploymentJobs"
         :market="deployment.market"
+        :testgridMarkets="testgridMarkets || []"
         :endpoints="deploymentEndpoints"
         :job="panelJob"
         :view="panelView"
@@ -226,7 +228,7 @@ import type { JobPanelView } from "~/components/Deployment/DeploymentJobPanel.vu
 import { useKit } from "~/composables/useKit";
 import { prefetchDeploymentJob } from "~/composables/jobs/useDeploymentJob";
 import { acquireJobFeeds } from "~/composables/jobs/useJobFeeds";
-import { NULL_ADDRESS } from "~/utils/solana";
+import { NULL_ADDRESS, marketName } from "~/utils/solana";
 
 // --- Auth setup ---
 const route = useRoute();
@@ -538,6 +540,12 @@ detail.setLoadJobDefinition(loadJobDefinition);
 
 // --- Remaining page-level state ---
 const { data: testgridMarkets } = useAPI("/markets", { default: () => [] });
+
+// Stands in for a job's GPU until its node reports one — a queued job has no
+// node to ask, and on mainnet the market is the GPU's name anyway.
+const marketLabel = computed(() =>
+  marketName(deployment.value?.market, testgridMarkets.value),
+);
 
 // Component refs for editor validation wiring
 const jobDefEditorComponent = ref<any>(null);
