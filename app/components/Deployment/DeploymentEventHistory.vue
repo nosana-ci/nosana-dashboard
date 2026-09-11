@@ -5,13 +5,10 @@
     <div class="event-card">
       <div v-if="events.length === 0" class="event-empty">No events yet</div>
       <div v-else class="event-list">
-        <div
-          v-for="(event, index) in events"
-          :key="index"
-          class="tl-item"
-          :class="eventKind(event)"
-        >
-          <span class="tl-node"></span>
+        <div v-for="(event, index) in events" :key="index" class="tl-item">
+          <span class="tl-node">
+            <StatusMark :tone="eventTone(event)" />
+          </span>
           <div class="tl-body">
             <div class="tl-top">
               <span class="tl-title">{{
@@ -48,7 +45,8 @@
 <script setup lang="ts">
 import type { DeploymentEventItem } from "@nosana/api";
 import { formatDate } from "~/utils/formatDate";
-import { humanizeEventType, eventKind } from "~/utils/deploymentEvents";
+import { humanizeEventType, eventTone } from "~/utils/deploymentEvents";
+import StatusMark from "~/components/Common/StatusMark.vue";
 import { solscanTxUrl } from "~/utils/jobEvents";
 
 defineProps<{
@@ -79,27 +77,8 @@ const isDevnet = config.public.network === "devnet";
 .tl-node {
   position: absolute;
   left: 0;
-  top: 17px;
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
-  background: $status-neutral;
-}
-
-.tl-item.is-danger-kind .tl-node {
-  background: $danger;
-}
-.tl-item.is-success-kind .tl-node {
-  background: $success;
-}
-.tl-item.is-warning-kind .tl-node {
-  background: $warning;
-}
-.tl-item.is-info-kind .tl-node {
-  background: $info;
-}
-.tl-item.is-neutral-kind .tl-node {
-  background: $status-neutral;
+  top: 18px;
+  line-height: 0;
 }
 
 .tl-top {
@@ -113,6 +92,7 @@ const isDevnet = config.public.network === "devnet";
   font-family: $title-family;
   font-weight: 600;
   font-size: 0.9rem;
+  line-height: 1.5;
   color: $text;
 }
 

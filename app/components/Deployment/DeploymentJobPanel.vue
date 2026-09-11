@@ -13,18 +13,59 @@
       <header class="jp-head">
         <div class="jp-heading">
           <div class="jp-title-row">
-            <h2 :id="`${panelId}-title`" class="jp-title is-family-monospace">
-              {{ truncateMiddle(job, 8, 6) }}
+            <!-- The GPU names the job: it is what the reader is here about,
+                 and it is the one thing the address cannot tell them. -->
+            <h2 :id="`${panelId}-title`" class="jp-title">
+              <JobGpuName :node="selected?.node" :fallback="marketLabel" />
             </h2>
             <DeploymentStatusPill v-if="selected" :status="selected.state" />
           </div>
           <p class="jp-meta">
+            <span class="is-family-monospace">{{
+              truncateMiddle(job, 8, 6)
+            }}</span>
+            <button
+              type="button"
+              class="copy-btn"
+              :class="{ 'is-copied': jobCopied }"
+              title="Copy job address"
+              @click="copyJob"
+            >
+              <svg
+                v-if="jobCopied"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.4"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M20 6 9 17l-5-5" />
+              </svg>
+              <svg
+                v-else
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <rect x="9" y="9" width="13" height="13" rx="2" />
+                <path
+                  d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+                />
+              </svg>
+            </button>
             <template v-if="selected">
+              <span class="jp-sep" aria-hidden="true">·</span>
               <span>Revision {{ selected.revision ?? "-" }}</span>
               <span class="jp-sep" aria-hidden="true">·</span>
               <span>started {{ formatTimeAgo(selected.created_at) }}</span>
-              <span class="jp-sep" aria-hidden="true">·</span>
             </template>
+            <span class="jp-sep" aria-hidden="true">·</span>
             <a
               :href="`https://explore.nosana.com/jobs/${job}`"
               target="_blank"
@@ -143,7 +184,8 @@ import type { DeploymentJobItem } from "@nosana/api";
 import DeploymentJobPanelBody from "~/components/Deployment/DeploymentJobPanelBody.vue";
 import DeploymentLogCollector from "~/components/Deployment/DeploymentLogCollector.vue";
 import DeploymentStatusPill from "~/components/Deployment/DeploymentStatusPill.vue";
-import { truncateMiddle } from "~/utils/solana";
+import JobGpuName from "~/components/Deployment/JobGpuName.vue";
+import { marketName, truncateMiddle } from "~/utils/solana";
 import { formatTimeAgo } from "~/utils/relativeTime";
 
 export type JobPanelView = "details" | "containers" | "logs" | "activity";
@@ -160,6 +202,8 @@ const props = defineProps<{
   /** Every job the page knows, for the header line and the log collector. */
   deploymentJobs: DeploymentJobItem[];
   market?: string;
+  /** Testgrid market records, to turn the market address into a GPU name. */
+  testgridMarkets?: Array<{ address?: string; name?: string }>;
   /** The deployment's endpoint status, shown on the container cards. */
   endpoints: Array<{ opId: string; port: number | string; online: boolean }>;
   /** Job on screen, "" when closed. */
@@ -174,11 +218,24 @@ const emit = defineEmits<{
 }>();
 
 const panelId = `job-panel-${useId()}`;
+
+const jobCopied = ref(false);
+const copyJob = () => {
+  navigator.clipboard?.writeText(props.job);
+  jobCopied.value = true;
+  setTimeout(() => (jobCopied.value = false), 1400);
+};
 const wide = ref(false);
 const closeButton = ref<HTMLButtonElement | null>(null);
 
 const selected = computed(
   () => props.deploymentJobs.find((item) => item.job === props.job) ?? null,
+);
+
+// Stands in for the GPU until the job's node reports one; JobGpuName picks
+// between the two.
+const marketLabel = computed(() =>
+  props.market ? marketName(props.market, props.testgridMarkets) : "Job",
 );
 
 const jobState = computed(() =>
@@ -316,6 +373,46 @@ onBeforeUnmount(() => {
 
 .jp-sep {
   color: $text-muted;
+}
+
+.jp-meta .is-family-monospace {
+  word-break: break-all;
+}
+
+/* Same control as the deployment header's id line, so the two headers read as
+   one pattern. */
+.copy-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 0;
+  background: transparent;
+  color: $text-muted;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+
+  svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  &:hover {
+    background: $surface-hover;
+    color: $text;
+  }
+
+  &.is-copied {
+    color: $secondary;
+  }
+}
+
+html.dark-mode .copy-btn:hover {
+  background: rgba($white, 0.08);
+  color: $white;
 }
 
 .jp-link {

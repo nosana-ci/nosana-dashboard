@@ -50,7 +50,7 @@ test('timeline keeps API order and labels each instruction', () => {
   );
   assert.deepEqual(
     items.map((i) => i.tone),
-    ['info', 'success', 'success', 'grey'],
+    ['ok', 'ok', 'ok', 'neutral'],
   );
 });
 
@@ -65,7 +65,7 @@ test('keys stay unique for several instructions in one transaction', () => {
 test('unknown instruction types fall back to the raw type', () => {
   const [item] = buildJobTimeline([event('SomethingNew')]);
   assert.equal(item.title, 'SomethingNew');
-  assert.equal(item.tone, 'grey');
+  assert.equal(item.tone, 'neutral');
   assert.equal(item.detail, null);
 });
 

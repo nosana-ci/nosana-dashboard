@@ -1,10 +1,6 @@
 <template>
   <!-- Only shown once the stats stream is actually delivering data. -->
   <div v-if="connected && usage" class="jmetrics">
-    <div v-if="gpuLabel" class="mcell">
-      <span class="ml">GPU</span>
-      <span class="mv" :title="gpuLabel">{{ gpuLabel }}</span>
-    </div>
     <div class="mcell">
       <span class="ml">CPU</span>
       <span class="mbar"><i :style="{ width: cpuBar + '%' }"></i></span>
@@ -29,19 +25,8 @@ const props = defineProps<{ jobId: string; node: string; deploymentId: string }>
 
 const { connected, usage } = useJobUsageSnapshot(props.jobId, props.deploymentId);
 
-// Static GPU spec (public endpoint) — the node's card + total VRAM.
-const { data: nodeMetrics } = useAPI(`/nodes/${props.node}/metrics`, {
-  default: () => null,
-});
-
-const gpuLabel = computed(() => {
-  const g = (nodeMetrics.value as any)?.metrics?.gpu?.devices?.[0];
-  if (!g?.name) return "";
-  const vram = g.vram_total_mb
-    ? ` · ${Math.round(g.vram_total_mb / 1024)} GB`
-    : "";
-  return `${g.name}${vram}`;
-});
+// Read for the memory ceiling; the card itself is shown in the panel header.
+const { metrics: nodeMetrics } = useNodeGpu(() => props.node);
 
 const cpuBar = computed(() => Math.min(100, usage.value?.cpu ?? 0));
 
@@ -80,7 +65,7 @@ const fmtMb = (mb: number) =>
 <style lang="scss" scoped>
 .jmetrics {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 8px;
   margin-top: 0.8rem;
 }
