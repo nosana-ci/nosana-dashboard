@@ -45,6 +45,7 @@
             <tr>
               <th>Name</th>
               <th>Key</th>
+              <th>Access</th>
               <th>Status</th>
               <th>Created</th>
               <th>Expires</th>
@@ -59,6 +60,7 @@
               <td>
                 <code class="is-family-monospace">{{ maskKey(key.key) }}</code>
               </td>
+              <td class="has-text-grey">{{ accessLabel(key) }}</td>
               <td>
                 <span
                   class="tag is-rounded is-light"
@@ -152,12 +154,18 @@
             </div>
             <p class="help">When should this key expire?</p>
           </div>
+
+          <ScopePicker
+            v-model="selectedScopes"
+            help="What this key is allowed to do. This cannot be changed later — create a new key instead."
+            unavailable-note="Couldn't load the permission list, so this key will be created with full access."
+          />
         </section>
         <footer class="modal-card-foot">
           <button
             @click="createKey"
             class="button is-success"
-            :disabled="!newKeyName || creatingKey"
+            :disabled="!newKeyName || !canSubmitScopes || creatingKey"
             :class="{ 'is-loading': creatingKey }"
           >
             Create Key
@@ -264,6 +272,23 @@
                 </div>
               </div>
             </div>
+
+            <div class="field">
+              <label class="label">Permissions</label>
+              <ul v-if="selectedKey.scopes?.length">
+                <li
+                  v-for="scope in selectedKey.scopes"
+                  :key="scope"
+                  class="is-flex is-flex-direction-column mb-2"
+                >
+                  <span class="is-family-monospace is-size-7">{{ scope }}</span>
+                  <span class="has-text-grey is-size-7">{{
+                    describeScope(scope)
+                  }}</span>
+                </li>
+              </ul>
+              <p v-else class="has-text-grey">Not recorded for this key.</p>
+            </div>
           </div>
         </section>
         <footer class="modal-card-foot">
@@ -332,6 +357,7 @@
 <script setup lang="ts">
 import { useToast } from "vue-toastification";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
+import ScopePicker from "~/components/Account/ScopePicker.vue";
 import {
   faPlus,
   faKey,
@@ -359,6 +385,41 @@ const deletingKeyId = ref<string | null>(null);
 const selectedKey = ref<any>(null);
 const editKeyName = ref("");
 const editKeyStatus = ref("active");
+
+const { scopes: scopeCatalogue, scopeNames } = useScopeCatalogue();
+
+// Everything ticked by default, so creating a key without thinking about permissions
+// yields the same full-access key it did before this picker existed. Narrowing is a
+// deliberate act.
+const selectedScopes = ref<string[]>([]);
+
+watch(
+  scopeNames,
+  (names) => {
+    if (names.length && !selectedScopes.value.length) {
+      selectedScopes.value = [...names];
+    }
+  },
+  { immediate: true },
+);
+
+// A key must hold at least one permission — but if the catalogue never loaded there is
+// nothing to tick, and blocking creation over that would be worse than the old behaviour.
+const canSubmitScopes = computed(
+  () => !scopeCatalogue.value.length || selectedScopes.value.length > 0,
+);
+
+const describeScope = (scope: string) =>
+  scopeCatalogue.value.find((entry) => entry.scope === scope)?.description ?? "";
+
+// A key holding everything is the common case and reads better than "8 scopes".
+const accessLabel = (key: { scopes?: string[] }) => {
+  const held = key.scopes?.length ?? 0;
+  if (!held) return "—";
+  if (scopeNames.value.length && held >= scopeNames.value.length)
+    return "Full access";
+  return held === 1 ? "1 permission" : `${held} permissions`;
+};
 
 // Track if authenticated (to trigger refetch after login)
 const wasAuthenticated = ref(isAuthenticated.value);
@@ -401,6 +462,11 @@ const createKey = async () => {
   try {
     creatingKey.value = true;
     const payload: any = { name: newKeyName.value };
+    // Omitted when there is no catalogue: the backend then falls back to the caller's own
+    // scopes, which is exactly how creation behaved before this picker.
+    if (selectedScopes.value.length) {
+      payload.scopes = [...selectedScopes.value];
+    }
     if (newKeyExpiration.value) {
       payload.expiresIn = parseInt(newKeyExpiration.value);
     }
@@ -422,6 +488,7 @@ const createKey = async () => {
 
     newKeyName.value = "";
     newKeyExpiration.value = "";
+    selectedScopes.value = [...scopeNames.value];
     await refreshKeys();
   } catch (error: any) {
     console.error("Error creating key:", error);
@@ -538,4 +605,5 @@ const maskKey = (key: string) => {
   return `${start}${masked}${end}`;
 };
 </script>
+
 
