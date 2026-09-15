@@ -5,7 +5,7 @@
     >
       <label class="label mb-0">Permissions</label>
       <button
-        v-if="scopes.length"
+        v-if="available.length"
         type="button"
         class="button is-small is-ghost has-text-weight-normal"
         @click="toggleAll"
@@ -16,13 +16,13 @@
 
     <p v-if="loading" class="has-text-grey is-size-7">Loading permissions…</p>
 
-    <p v-else-if="!scopes.length" class="has-text-grey is-size-7">
+    <p v-else-if="!available.length" class="has-text-grey is-size-7">
       {{ unavailableNote }}
     </p>
 
     <template v-else>
       <label
-        v-for="entry in scopes"
+        v-for="entry in available"
         :key="entry.scope"
         class="checkbox is-flex is-align-items-flex-start is-gap-2 py-1"
       >
@@ -53,16 +53,28 @@
 </template>
 
 <script setup lang="ts">
+import type { ScopeDescriptor } from "~/composables/useScopeCatalogue";
 
 const props = defineProps<{
   modelValue: string[];
   help: string;
   unavailableNote: string;
+  /**
+   * Restrict which scopes are offered. Defaults to the whole vocabulary, which is right
+   * for an API key; an OAuth app takes the grantable subset, since it cannot hold a scope
+   * whose routes only accept an API key.
+   */
+  options?: ScopeDescriptor[];
 }>();
 
 const emit = defineEmits<{ "update:modelValue": [string[]] }>();
 
-const { scopes, scopeNames, loading, spendsCredits } = useScopeCatalogue();
+const { scopes: allScopes, loading, spendsCredits } = useScopeCatalogue();
+
+const available = computed(() => props.options ?? allScopes.value);
+const availableNames = computed(() =>
+  available.value.map((entry) => entry.scope),
+);
 
 const selected = computed({
   get: () => props.modelValue,
@@ -71,10 +83,11 @@ const selected = computed({
 
 const allSelected = computed(
   () =>
-    scopes.value.length > 0 && selected.value.length === scopes.value.length,
+    available.value.length > 0 &&
+    selected.value.length === available.value.length,
 );
 
 const toggleAll = () => {
-  selected.value = allSelected.value ? [] : [...scopeNames.value];
+  selected.value = allSelected.value ? [] : [...availableNames.value];
 };
 </script>
