@@ -232,7 +232,7 @@
           <ScopePicker
             v-model="form.scopes"
             :options="oauthGrantableScopes"
-            help="The most this app can ever ask for. It still has to request what it needs — anything it doesn't ask for is never granted, and each user approves the request themselves."
+            help="What this app may ask users for. If it requests nothing specific, this is what the consent screen offers — apart from the credential-management permissions, which an app always has to request by name. Each user approves the request themselves."
             unavailable-note="Couldn't load the permission list, so this app will be created with the default ceiling."
           />
         </section>
