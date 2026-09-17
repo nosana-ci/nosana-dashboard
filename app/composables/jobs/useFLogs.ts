@@ -36,10 +36,11 @@ export interface FLogOptions {
    * Set when the job runs in a confidential VM (CVM). The host node's /flog
    * stream then only carries the VM boot console, which is filed under system
    * logs, while a second socket to the CVM itself — same protocol, at
-   * wss://<jobAddress>.<nodeDomain> with the /flog path and a job-address-signed
-   * auth header — carries the inner ops' container logs.
+   * wss://<jobAddress>.<nodeDomain> — carries the inner ops' container logs. It
+   * reuses the node job's own auth (the deployment manager, or the wallet for a
+   * standalone job), so only the URL differs from the host socket.
    */
-  cvm?: { getAuth: () => Promise<string> };
+  cvm?: boolean;
 }
 
 type FLogSource = 'host' | 'cvm';
@@ -440,15 +441,13 @@ export function useFLogs(
   );
 
   // The CVM registers its own tunnel keyed on the job address and speaks the
-  // same protocol, so Kit's socket is reused with the CVM's URL and the
-  // job-signed header. It only comes up once the VM has booted, so retry well
+  // same protocol, so Kit's socket is reused with the CVM's URL and the node
+  // job's own header. It only comes up once the VM has booted, so retry well
   // past the host socket's window.
-  const cvm = options.cvm;
-  const cvmSocket = cvm
+  const cvmSocket = options.cvm
     ? useNodeLogSocket(
         async (handlers) =>
           (await options.resolveNodeJob()).logs(handlers, undefined, {
-            authorizationProvider: () => cvm.getAuth(),
             webSocketFactory: () => new WebSocket(`wss://${jobAddress}.${nodeDomain}`),
           }),
         createOnLog('cvm'),
