@@ -389,6 +389,7 @@ import { useSuperTokens } from "~/composables/useSuperTokens";
 import { useOAuthLogin } from "~/composables/useOAuthLogin";
 import { useAPI } from "~/composables/useAPI";
 import { createAuthCookiesKey } from "~/utils/createAuthCookiesKey";
+import { rememberPostVerifyRedirect } from "~/utils/postVerifyRedirect";
 
 declare global {
   interface Window {
@@ -685,6 +686,10 @@ const handleEmailSubmit = async () => {
       // Check if email is verified, redirect to verification if not
       await checkSession(false);
       if (isEmailVerified.value === false) {
+        // Verification happens in whichever tab the emailed link opens, so the
+        // caller's destination has to be parked rather than carried in the URL.
+        rememberPostVerifyRedirect(route.query.redirect as string | undefined);
+
         // Send verification email on signup
         if (isSignUpMode.value) {
           try {
