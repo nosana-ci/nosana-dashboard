@@ -672,6 +672,12 @@ onMounted(async () => {
     // fetches are in-flight causes navigations that close it prematurely.
     await checkFreeCreditsEligibility(route.query.source === "free-credits");
     refreshSpendingHistory();
+
+    // The website's credits CTA deep-links here; the auth middleware carries
+    // the query through the login redirect, so this also runs after a sign-up.
+    if (route.query.topup === "1") {
+      openBuyCreditsModal();
+    }
   }
 
   // Add CSS to improve text rendering
