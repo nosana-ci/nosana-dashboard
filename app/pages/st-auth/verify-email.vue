@@ -151,6 +151,7 @@ import { useRouter, useRoute } from "vue-router";
 import { useToast } from "vue-toastification";
 import Logo from "~/components/Logo.vue";
 import { useSuperTokens } from "~/composables/useSuperTokens";
+import { takePostVerifyRedirect } from "~/utils/postVerifyRedirect";
 
 definePageMeta({
   layout: false,
@@ -200,7 +201,7 @@ const goToLogin = () => {
 };
 
 const goToAccount = () => {
-  router.push("/account");
+  router.push(takePostVerifyRedirect() ?? "/account");
 };
 
 const handleSendVerification = async () => {
