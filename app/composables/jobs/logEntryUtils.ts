@@ -52,30 +52,33 @@ function compareEntries(a: UnifiedLogEntry, b: UnifiedLogEntry): number {
   return a.timestamp - b.timestamp || a.id - b.id;
 }
 
-function binaryInsertionIndex(arr: UnifiedLogEntry[], entry: UnifiedLogEntry): number {
-  let lo = 0;
-  let hi = arr.length;
-  while (lo < hi) {
-    const mid = (lo + hi) >>> 1;
-    if (compareEntries(arr[mid]!, entry) <= 0) lo = mid + 1;
-    else hi = mid;
-  }
-  return lo;
-}
-
+/**
+ * Both sides are already in order — `arr` from the last call, the batch from
+ * the stream it arrived on — so they are merged rather than re-sorted, and the
+ * result costs one pass over a list that grows to the length of a run.
+ */
 export function insertSorted(arr: UnifiedLogEntry[], newEntries: UnifiedLogEntry[]): UnifiedLogEntry[] {
   if (newEntries.length === 0) return arr;
-  if (newEntries.length > 100) {
-    const merged = [...arr, ...newEntries];
-    merged.sort(compareEntries);
-    return merged;
+
+  const batch = [...newEntries].sort(compareEntries);
+  if (arr.length === 0) return batch;
+
+  // The overwhelmingly common case: everything in the batch is newer than
+  // everything already held.
+  if (compareEntries(arr[arr.length - 1]!, batch[0]!) <= 0) {
+    return arr.concat(batch);
   }
-  const result = [...arr];
-  for (const entry of newEntries) {
-    const idx = binaryInsertionIndex(result, entry);
-    result.splice(idx, 0, entry);
+
+  const merged: UnifiedLogEntry[] = new Array(arr.length + batch.length);
+  let i = 0;
+  let j = 0;
+  let k = 0;
+  while (i < arr.length && j < batch.length) {
+    merged[k++] = compareEntries(arr[i]!, batch[j]!) <= 0 ? arr[i++]! : batch[j++]!;
   }
-  return result;
+  while (i < arr.length) merged[k++] = arr[i++]!;
+  while (j < batch.length) merged[k++] = batch[j++]!;
+  return merged;
 }
 
 export function parseLogTs(ts: unknown): number {

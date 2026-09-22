@@ -11,11 +11,17 @@ interface UseLogScrollDeps {
   onScrolledNearTop: () => void;
 }
 
+/** Quiet needed after the last arrival before the first load counts as done. */
+const SETTLE_QUIET_MS = 800;
+/** How long that quiet is waited for before the load counts as done anyway. */
+const SETTLE_DEADLINE_MS = 5000;
+
 export function useLogScroll(deps: UseLogScrollDeps) {
   const shouldAutoScroll = ref(true);
 
   let initialSettled = false;
   let settleTimer: ReturnType<typeof setTimeout> | undefined;
+  let settleDeadline = 0;
   let prevEntryCount = 0;
   let anchorEntryId: number | null = null;
 
@@ -62,14 +68,24 @@ export function useLogScroll(deps: UseLogScrollDeps) {
     () => deps.entries.value.length,
     () => {
       if (!initialSettled) {
-        clearTimeout(settleTimer);
-        settleTimer = setTimeout(() => {
+        const settle = () => {
           initialSettled = true;
           nextTick(() => {
             scrollToBottom();
             captureAnchor();
           });
-        }, 800);
+        };
+
+        // The initial load counts as done once the arrivals pause, but a job
+        // that logs on a timer never pauses. Past the deadline the view stops
+        // being pulled to the bottom whether or not that pause ever comes.
+        if (settleDeadline === 0) settleDeadline = Date.now() + SETTLE_DEADLINE_MS;
+        clearTimeout(settleTimer);
+        settleTimer = setTimeout(
+          settle,
+          Math.max(0, Math.min(SETTLE_QUIET_MS, settleDeadline - Date.now())),
+        );
+
         nextTick(() => {
           scrollToBottom();
           prevEntryCount = deps.entries.value.length;
