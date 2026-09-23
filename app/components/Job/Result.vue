@@ -545,7 +545,7 @@ defineExpose({
   right: $size-7;
   z-index: 10;
   background-color: $white !important;
-  border: 1px solid $grey-lighter !important;
+  border: 1px solid $border-soft !important;
   padding: $size-7 $size-6 !important;
   box-shadow: $button-shadow !important;
   line-height: 1;
@@ -557,8 +557,8 @@ defineExpose({
   }
 
   &:hover {
-    background-color: $grey-lightest !important;
-    border-color: $grey-light !important;
+    background-color: $surface-hover !important;
+    border-color: $border-strong !important;
   }
 }
 

@@ -5,6 +5,7 @@ import type {
   DeploymentRevisionItem,
 } from "@nosana/api";
 import { useKit } from "~/composables/useKit";
+import { mergeJobRecords } from "~/utils/jobPagination";
 
 export interface DeploymentDetailDeps {
   hasAnyAuth: Ref<boolean>;
@@ -65,6 +66,7 @@ export function useDeploymentDetail(deps: DeploymentDetailDeps) {
     if (deployment.value?.id !== dep.id) {
       jobStates.value = {};
       allJobsData.value = {};
+      deploymentJobs.value = [];
     }
     deployment.value = dep;
   };
@@ -75,9 +77,16 @@ export function useDeploymentDetail(deps: DeploymentDetailDeps) {
     if (silent !== true) jobsLoading.value = true;
 
     try {
-      const result = await deployment.value.getJobs();
-      deploymentJobs.value = result?.jobs || [];
-      for (const job of deploymentJobs.value) {
+      // Delisted jobs are left out here too: they never ran, so they have no logs
+      // and no results — they'd only pad the logs list and the job totals.
+      // @ts-ignore - kit search-param types lag behind the API
+      const result = await deployment.value.getJobs({ include_delisted: false });
+      // This is the first page of every job; the full active set is fetched
+      // separately and merged into the same store. Merge rather than replace
+      // so neither fetch drops what the other found.
+      const jobs = result?.jobs || [];
+      deploymentJobs.value = mergeJobRecords(deploymentJobs.value, jobs);
+      for (const job of jobs) {
         jobStates.value[job.job] = jobStateStringToNumber(job.state);
         allJobsData.value[job.job] = job;
       }

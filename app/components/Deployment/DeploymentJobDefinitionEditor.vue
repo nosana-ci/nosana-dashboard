@@ -71,16 +71,8 @@ defineExpose({ editorRef });
 
 <style lang="scss" scoped>
 .dep-card {
-  background: $white;
-  border: 1px solid $grey-lighter;
-  border-radius: 14px;
-  overflow: hidden;
+  @include soft-panel;
 }
-html.dark-mode .dep-card {
-  background: $black-ter;
-  border-color: rgba($white, 0.08);
-}
-
 .cfg-actions {
   display: inline-flex;
   gap: 0.5rem;
@@ -100,13 +92,14 @@ html.dark-mode .dep-card {
 }
 
 .cfg-btn.ghost {
-  background: $white-ter;
-  border-color: $grey-lighter;
+  background: $surface-sunken;
+  border-color: $border-soft;
   color: $text;
 
+  /* Already sunken, so it darkens on hover; $surface-hover is for white. */
   &:hover {
-    background: $grey-lightest;
-    border-color: $grey-light;
+    background: $surface-track;
+    border-color: $border-strong;
   }
 }
 

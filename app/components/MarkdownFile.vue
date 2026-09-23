@@ -100,7 +100,7 @@ const markdown = computed(() => {
     padding-left: 1rem;
     margin-left: 0;
     margin-bottom: 1rem;
-    color: $text-light;
+    color: $text-muted;
   }
 
   :deep(a) {

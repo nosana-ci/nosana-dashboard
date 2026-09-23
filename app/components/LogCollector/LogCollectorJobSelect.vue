@@ -45,7 +45,7 @@
         :style="{ backgroundColor: jobColor(index) }"
       ></span>
       <span class="job-card-id">{{ job.job.slice(0, 12) }}</span>
-      <span class="job-status-badge" :class="stateClass(job)">
+      <span class="job-status-badge" :class="`is-${stateTone(job)}`">
         {{ stateLabel(job) }}
       </span>
     </div>
@@ -74,7 +74,11 @@
 <script setup lang="ts">
 import { JobState } from "@nosana/kit";
 import type { JobItem } from "~/composables/jobs/logCollectorTypes";
-import { getStatusText } from "~/composables/useStatus";
+import {
+  getStatusText,
+  getStatusTone,
+  type StatusTone,
+} from "~/composables/useStatus";
 import {
   resolveJobState,
   jobColor,
@@ -106,11 +110,8 @@ function stateLabel(job: JobItem): string {
   return getStatusText(resolveJobState(job.state));
 }
 
-function stateClass(job: JobItem): string {
-  const state = resolveJobState(job.state);
-  if (state === JobState.RUNNING) return "dot-running";
-  if (state >= JobState.COMPLETED) return "dot-completed";
-  return "dot-queued";
+function stateTone(job: JobItem): StatusTone {
+  return getStatusTone(resolveJobState(job.state));
 }
 
 function getJobDuration(job: JobItem): number | null {
@@ -160,7 +161,7 @@ function isStateSelected(state: JobState): boolean {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: $text-light;
+  color: $text-muted;
   border-bottom: 1px solid $border;
   display: flex;
   gap: 0.3rem;
@@ -178,7 +179,7 @@ function isStateSelected(state: JobState): boolean {
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
-  color: $text-light;
+  color: $text-muted;
   transition: all 0.15s;
 
   &:hover {
@@ -241,17 +242,20 @@ function isStateSelected(state: JobState): boolean {
   text-transform: uppercase;
   letter-spacing: 0.02em;
 
-  &.dot-running {
+  /* A running and a completed job share the green wash; the word in the badge
+     is what separates them. */
+  &.is-live,
+  &.is-ok {
     color: $success;
     background: rgba($success, 0.12);
   }
-  &.dot-completed {
-    color: $grey;
-    background: rgba($grey, 0.1);
-  }
-  &.dot-queued {
+  &.is-warn {
     color: $warning;
     background: rgba($warning, 0.12);
+  }
+  &.is-neutral {
+    color: $text-muted;
+    background: rgba($grey, 0.1);
   }
 }
 
@@ -269,7 +273,7 @@ function isStateSelected(state: JobState): boolean {
 }
 .job-detail-label {
   font-size: 0.85rem;
-  color: $text-light;
+  color: $text-muted;
   flex-shrink: 0;
 }
 .job-detail-value {

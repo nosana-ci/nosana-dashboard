@@ -21,7 +21,7 @@
           <span class="s" :title="scheduleTitle"
             ><template v-if="isScheduled && scheduleHuman"
               >{{ scheduleHuman }}<span class="sep">|</span></template
-            >{{ timeoutDisplay }} timeout</span
+            >{{ timeoutDisplay }} Timeout</span
           >
         </div>
 
@@ -39,9 +39,6 @@
             >{{ deployment.active_jobs ?? 0 }}
             <span class="u">/ {{ deployment.replicas }}</span></span
           >
-          <span class="rbar"
-            ><i :style="{ width: replicaFill + '%' }"></i
-          ></span>
         </div>
 
         <!-- Vault (wallet mode only; the composable runs only when mounted) -->
@@ -84,13 +81,6 @@ const gpuName = computed(() => {
   return match?.name || props.deployment?.market || "-";
 });
 
-const replicaFill = computed(() => {
-  const target = props.deployment?.replicas || 0;
-  const active = props.deployment?.active_jobs ?? 0;
-  if (!target) return 0;
-  return Math.min(100, Math.round((active / target) * 100));
-});
-
 
 // Container timeout (stored in minutes) → "1h", "1h 30m", or "45m" — no trailing 0m.
 const timeoutDisplay = computed(() => {
@@ -117,16 +107,11 @@ const scheduleTitle = computed(() =>
 
 <style lang="scss" scoped>
 .dep-card {
-  background: $white;
-  border: 1px solid $grey-lighter;
-  border-radius: 14px;
-  overflow: hidden;
+  @include soft-panel;
   color: $text;
 }
 
 html.dark-mode .dep-card {
-  background: $black-ter;
-  border-color: rgba($white, 0.08);
   color: $white;
 }
 
@@ -153,7 +138,6 @@ html.dark-mode .dep-card {
 
 /* Push every sub-line to the bottom so the band's bottom row aligns across
    columns regardless of value height. */
-.rbar,
 .s,
 .gpu-addr {
   margin-top: auto;
@@ -176,7 +160,7 @@ html.dark-mode .stat + .stat::before {
 
 .k {
   font-size: 12px;
-  color: $grey;
+  color: $text-muted;
   margin-bottom: 7px;
 }
 
@@ -195,7 +179,7 @@ html.dark-mode .stat + .stat::before {
 .v .u {
   font-size: 13px;
   font-weight: 400;
-  color: $grey;
+  color: $text-muted;
   letter-spacing: 0;
 }
 
@@ -210,7 +194,7 @@ html.dark-mode .stat + .stat::before {
 
 .s {
   font-size: 12px;
-  color: $grey;
+  color: $text-muted;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -219,7 +203,7 @@ html.dark-mode .stat + .stat::before {
 .gpu-addr {
   font-family: $family-monospace;
   font-size: 11px;
-  color: $grey;
+  color: $text-muted;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -229,30 +213,6 @@ html.dark-mode .k,
 html.dark-mode .s,
 html.dark-mode .gpu-addr {
   color: $grey-light;
-}
-
-.rbar {
-  /* content-box so the shared `padding-top: 8px` (bottom-align gap) sits above
-     the bar instead of collapsing its 5px height to 0 under border-box.
-     Clip the track background to the content box so the 8px gap stays empty
-     rather than painting a second grey band above the bar. */
-  box-sizing: content-box;
-  height: 5px;
-  border-radius: 3px;
-  background-color: $grey-lightest;
-  background-clip: content-box;
-  overflow: hidden;
-}
-
-.rbar i {
-  display: block;
-  height: 100%;
-  background: $secondary;
-  border-radius: 3px;
-}
-
-html.dark-mode .rbar {
-  background-color: rgba($white, 0.1);
 }
 
 /* Divider between the schedule and the timeout on scheduled deployments. */

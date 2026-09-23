@@ -20,7 +20,7 @@
       <span v-if="showJobBadges" class="col-job">Job</span>
       <span class="col-date">Date</span>
       <span class="col-op">Op</span>
-      <span class="col-level">Level</span>
+      <span v-if="showLevel" class="col-level">Level</span>
       <span class="col-desc">Log</span>
     </div>
 
@@ -59,7 +59,7 @@
         </span>
         <span class="col-date">{{ formatEpochMs(entries[item.index].timestamp) }}</span>
         <span class="col-op">{{ entries[item.index].opId || '-' }}</span>
-        <span class="col-level">
+        <span v-if="showLevel" class="col-level">
           <span class="level-tag" :class="'level-' + entries[item.index].type">
             {{ logTypeLabel(entries[item.index].type) }}
           </span>
@@ -85,16 +85,21 @@ import { useLogScroll } from '~/composables/jobs/useLogScroll';
 import LogCollectorJobBadge from './LogCollectorJobBadge.vue';
 import LogCollectorProgressBars from './LogCollectorProgressBars.vue';
 
-const props = defineProps<{
-  entries: UnifiedLogEntry[];
-  progressBars: Map<string, ProgressBar>;
-  resourceProgressBars: Map<string, Record<string, unknown>>;
-  isConnecting: boolean;
-  showJobBadges: boolean;
-  jobs: { job: string }[];
-  loadingOlderLogs: boolean;
-  allLogsLoaded: boolean;
-}>();
+const props = withDefaults(
+  defineProps<{
+    entries: UnifiedLogEntry[];
+    progressBars: Map<string, ProgressBar>;
+    resourceProgressBars: Map<string, Record<string, unknown>>;
+    isConnecting: boolean;
+    showJobBadges: boolean;
+    jobs: { job: string }[];
+    loadingOlderLogs: boolean;
+    allLogsLoaded: boolean;
+    /** Off where the level filter already scopes the view, e.g. the job panel. */
+    showLevel?: boolean;
+  }>(),
+  { showLevel: true },
+);
 
 const emit = defineEmits<{
   'scrolledNearTop': [];
@@ -139,11 +144,13 @@ defineExpose({ scrollToBottom });
 </script>
 
 <style lang="scss" scoped>
+@use "sass:color";
+
 .log-collector-viewer {
-  font-family: "JetBrains Mono", monospace;
-  background-color: #0d1117;
-  color: #c9d1d9;
-  border-radius: 4px;
+  font-family: $family-monospace;
+  background-color: $code-surface;
+  color: #e6ede6;
+  border-radius: 0;
   overflow-y: auto;
   height: 100%;
   min-width: 0;
@@ -157,11 +164,10 @@ defineExpose({ scrollToBottom });
   padding: 0.4rem 0.6rem;
   font-size: 0.75rem;
   font-weight: 600;
-  color: #6e7681;
-  border-bottom: 1px solid #21262d;
+  color: #8a948a;
+  @include code-surface-bar;
   position: sticky;
   top: 0;
-  background: #0d1117;
   z-index: 1;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -172,7 +178,7 @@ defineExpose({ scrollToBottom });
   align-items: flex-start;
   padding: 0.2rem 0.6rem;
   font-size: 0.85rem;
-  border-bottom: 1px solid rgba(#21262d, 0.5);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   line-height: 1.45;
 
   &.row-error {
@@ -194,7 +200,7 @@ defineExpose({ scrollToBottom });
 .col-date {
   width: 120px;
   flex-shrink: 0;
-  color: #6e7681;
+  color: #8a948a;
   font-size: 0.8rem;
   padding-right: 0.4rem;
 }
@@ -202,7 +208,7 @@ defineExpose({ scrollToBottom });
 .col-op {
   width: 100px;
   flex-shrink: 0;
-  color: #6e7681;
+  color: #8a948a;
   font-size: 0.8rem;
   padding-right: 0.4rem;
   overflow: hidden;
@@ -234,7 +240,7 @@ defineExpose({ scrollToBottom });
   }
 
   &.done {
-    color: #3d434a;
+    color: #5f695f;
   }
 }
 
@@ -248,20 +254,35 @@ defineExpose({ scrollToBottom });
   border-radius: 3px;
   line-height: 1.4;
 
-  &.level-container { color: #8b949e; background: rgba(#8b949e, 0.12); }
-  &.level-system { color: #58a6ff; background: rgba(#58a6ff, 0.12); }
-  &.level-error { color: #f85149; background: rgba(#f85149, 0.15); }
+  /* The same palette as every other status, lifted where it has to hold
+     contrast on the near-black code surface: $info at full strength is too dark
+     to read here, so it is lightened rather than replaced by an unrelated blue.
+     These were hardcoded as #9aa79a / #58a6ff / #f85149, which is within a
+     shade of what the palette gives — they just did not track it. */
+  &.level-container {
+    color: $grey-light;
+    background: rgba($grey-light, 0.14);
+  }
+  &.level-system {
+    $system: color.adjust($info, $lightness: 17%);
+    color: $system;
+    background: rgba($system, 0.12);
+  }
+  &.level-error {
+    color: $danger;
+    background: rgba($danger, 0.15);
+  }
 }
 
 .connecting-message {
-  color: #ffffff;
+  color: #c9d3c9;
   text-align: center;
   padding: 2rem;
   font-size: 0.9rem;
 }
 
 .empty-message {
-  color: #6e7681;
+  color: #8a948a;
   text-align: center;
   padding: 2rem;
   font-size: 0.9rem;

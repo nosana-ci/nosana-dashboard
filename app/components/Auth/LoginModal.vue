@@ -822,7 +822,7 @@ const signAuthMessage = async (walletName: string) => {
 
 .login-subtitle {
   font-size: 1rem;
-  color: $grey;
+  color: $text-muted;
   margin-bottom: 2rem;
   line-height: 1.5;
 }
@@ -854,7 +854,7 @@ const signAuthMessage = async (walletName: string) => {
   }
 
   &::placeholder {
-    color: $grey;
+    color: $text-muted;
   }
 
   &:disabled {
@@ -876,7 +876,7 @@ const signAuthMessage = async (walletName: string) => {
   margin-bottom: 1rem;
   font-size: 0.75rem;
   line-height: 1.5;
-  color: $grey;
+  color: $text-muted;
 
   a {
     color: inherit;
@@ -899,7 +899,7 @@ const signAuthMessage = async (walletName: string) => {
 
   a {
     font-size: 0.875rem;
-    color: $grey;
+    color: $text-muted;
     text-decoration: none;
 
     &:hover {
@@ -911,7 +911,7 @@ const signAuthMessage = async (walletName: string) => {
 
 .form-toggle {
   font-size: 0.875rem;
-  color: $grey;
+  color: $text-muted;
 
   a {
     color: $primary;
@@ -943,7 +943,7 @@ const signAuthMessage = async (walletName: string) => {
   position: relative;
 
   &:hover:not(:disabled) {
-    background: $white-ter;
+    background: $surface-hover;
     border-color: $grey;
   }
 
@@ -1015,7 +1015,7 @@ const signAuthMessage = async (walletName: string) => {
   border-color: $grey-light;
 
   &:hover:not(:disabled) {
-    background: $white-bis;
+    background: $surface-hover;
     border-color: $grey;
   }
 }
@@ -1036,7 +1036,7 @@ const signAuthMessage = async (walletName: string) => {
   text-align: center;
 
   span {
-    color: $grey;
+    color: $text-muted;
     font-size: 0.875rem;
   }
 }
@@ -1126,7 +1126,7 @@ const signAuthMessage = async (walletName: string) => {
 
   &:hover {
     border-color: $secondary;
-    background: $white-ter;
+    background: $surface-hover;
   }
 }
 
@@ -1193,7 +1193,7 @@ const signAuthMessage = async (walletName: string) => {
 
 .wallet-address {
   font-size: 0.85rem;
-  color: $grey;
+  color: $text-muted;
   font-family: monospace;
   margin-top: 0.25rem;
 }
@@ -1204,7 +1204,7 @@ const signAuthMessage = async (walletName: string) => {
   gap: 0.5rem;
   margin-top: 0.75rem;
   padding-top: 0.75rem;
-  border-top: 1px solid $grey-light;
+  border-top: 1px solid $border-soft;
   font-size: 0.9rem;
   color: $grey-dark;
 }
@@ -1215,7 +1215,7 @@ const signAuthMessage = async (walletName: string) => {
   gap: 0.75rem;
   margin-top: 0.75rem;
   padding-top: 0.75rem;
-  border-top: 1px solid $grey-light;
+  border-top: 1px solid $border-soft;
 }
 
 .error-text {
@@ -1227,7 +1227,7 @@ const signAuthMessage = async (walletName: string) => {
 .sign-message-section {
   margin-top: 0.75rem;
   padding-top: 0.75rem;
-  border-top: 1px solid $grey-light;
+  border-top: 1px solid $border-soft;
 }
 
 .sign-message-button {

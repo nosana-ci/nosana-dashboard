@@ -426,7 +426,7 @@ const handleResetPassword = async () => {
 
 .login-subtitle {
   font-size: 1rem;
-  color: $grey;
+  color: $text-muted;
   margin-bottom: 2rem;
   line-height: 1.5;
 }
@@ -458,7 +458,7 @@ const handleResetPassword = async () => {
   }
 
   &::placeholder {
-    color: $grey;
+    color: $text-muted;
   }
 
   &:disabled {
@@ -482,7 +482,7 @@ const handleResetPassword = async () => {
 
 .form-toggle {
   font-size: 0.875rem;
-  color: $grey;
+  color: $text-muted;
 
   a {
     color: $primary;
@@ -514,7 +514,7 @@ const handleResetPassword = async () => {
   position: relative;
 
   &:hover:not(:disabled) {
-    background: $white-ter;
+    background: $surface-hover;
     border-color: $grey;
   }
 
@@ -581,7 +581,7 @@ const handleResetPassword = async () => {
 
 .success-subtext {
   font-size: 1rem;
-  color: $grey;
+  color: $text-muted;
   margin-bottom: 1.5rem;
   line-height: 1.5;
 

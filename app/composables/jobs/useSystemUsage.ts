@@ -1,42 +1,31 @@
-import {
-  ref,
-  shallowRef,
-  computed,
-  onUnmounted,
-  triggerRef,
-} from "vue";
-import { useRuntimeConfig } from "#imports";
+import { ref, computed, onUnmounted } from "vue";
+import { useKit } from "~/composables/useKit";
+import { useNodeJobResolver } from "./useNodeJobResolver";
 import type { TaskStat } from "./types";
 import { STATS_INTERVALS } from "./types";
 import { intervalForRange } from "./helpers/intervalForRange";
-import { insertStat } from "./helpers/insertStat";
 import { useStatsFetch } from "./useStatsFetch";
-import { useStatsStream } from "./useStatsStream";
+import { acquireJobFeeds } from "./useJobFeeds";
 
 export function useSystemUsage(
   jobId: string,
-  node: string,
   opIds: string[],
+  deploymentId?: string,
 ) {
-  const config = useRuntimeConfig();
-  const { getAuthHeader } = useDeploymentAuth();
+  const { nosana } = useKit();
+  const getJob = useNodeJobResolver(jobId, deploymentId);
+
+  // The live readings come from the job's shared feed, which the deployment
+  // page may already be holding, so the charts have recent data at once.
+  const feeds = acquireJobFeeds(nosana.value.api, jobId, deploymentId);
+  const rawData = feeds.stats.series;
 
   const timeframe = ref(STATS_INTERVALS[0] * 60);
-  const rawData = shallowRef<Record<string, TaskStat[]>>({});
-  const nodeUrl = `https://${node}.${config.public.nodeDomain}`;
 
-  function ingest(stats: TaskStat | TaskStat[]): void {
-    const items = Array.isArray(stats) ? stats : [stats];
-    for (const s of items) insertStat(rawData.value, s);
-    triggerRef(rawData);
-  }
-
+  // History for the chosen window is fetched into the same feed.
   const { isLoading, fetch: fetchRange, abort: abortFetch } = useStatsFetch(
-    nodeUrl, jobId, getAuthHeader, (stats) => ingest(stats),
-  );
-
-  const { start: startStream, destroy: destroyStream } = useStatsStream(
-    nodeUrl, jobId, getAuthHeader, (stat) => ingest(stat),
+    getJob,
+    feeds.stats.ingest,
   );
 
   const windowedByOp = computed(() => {
@@ -60,18 +49,13 @@ export function useSystemUsage(
     fetchRange(intervalForRange(seconds * 1000), seconds);
   }
 
-  async function init(): Promise<void> {
-    const seconds = timeframe.value;
-    await fetchRange(intervalForRange(seconds * 1000), seconds);
-    await startStream();
-  }
-
-  init().catch(() => { });
+  fetchRange(intervalForRange(timeframe.value * 1000), timeframe.value).catch(
+    () => {},
+  );
 
   onUnmounted(() => {
     abortFetch();
-    destroyStream();
-    rawData.value = {};
+    feeds.release();
   });
 
   return {

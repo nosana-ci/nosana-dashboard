@@ -1,4 +1,5 @@
 import { ref, computed, type Ref, type ShallowRef } from 'vue';
+import type { NodeJobApi } from '@nosana/api';
 import { JobState } from '@nosana/kit';
 import type { JobItem, UnifiedLogEntry } from './logCollectorTypes';
 import type { FLogEntry } from './useFLogs';
@@ -21,11 +22,11 @@ export interface FLogInstance {
 interface UseLiveLogsDeps {
   entries: ShallowRef<UnifiedLogEntry[]>;
   seq: Ref<number>;
-  getAuth: () => Promise<string>;
+  /** A job on its node through Kit, signed as the deployment. */
+  resolveNodeJob: (jobId: string) => Promise<NodeJobApi>;
   // CVM deployments: each job's host stream is just the VM boot console, so
-  // useFLogs also opens the job's own CVM socket (authed per job address).
+  // useFLogs also opens the job's own CVM socket, reusing the node job's auth.
   isCvm?: Ref<boolean>;
-  getJobAuth?: (jobAddress: string) => Promise<string>;
 }
 
 export function useLiveLogs(deps: UseLiveLogsDeps) {
@@ -41,11 +42,14 @@ export function useLiveLogs(deps: UseLiveLogsDeps) {
     const opId = flogOpId === 'system' ? null : flogOpId;
     if (opId) opIds.value.add(opId);
 
+    // The collector has a Date column, so it takes the body without the
+    // generated "[timestamp]" prefix. A timestamp printed by the log line
+    // itself is part of the body and stays.
     const entry = makeEntry(
       ++deps.seq.value, jobId, opId,
       opId ? 'container' : 'system',
       flog.timestamp,
-      flog.content,
+      flog.body,
     );
     deps.entries.value = insertSorted(deps.entries.value, [entry]);
   }
@@ -55,12 +59,10 @@ export function useLiveLogs(deps: UseLiveLogsDeps) {
 
     const nodeRef = ref(node);
     const shouldConnect = computed(() => !!nodeRef.value && nodeRef.value !== NULL_ADDRESS);
-    const cvmEnabled = !!deps.isCvm?.value && !!deps.getJobAuth;
-    const flog = useFLogs(jobId, nodeRef, shouldConnect, deps.getAuth, {
+    const flog = useFLogs(jobId, shouldConnect, {
+      resolveNodeJob: () => deps.resolveNodeJob(jobId),
       onEntry: (entry, opId) => handleEntry(entry, jobId, opId),
-      ...(cvmEnabled
-        ? { cvm: { getAuth: () => deps.getJobAuth!(jobId) } }
-        : {}),
+      cvm: !!deps.isCvm?.value,
     });
 
     instances.set(jobId, {

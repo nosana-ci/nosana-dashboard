@@ -4,14 +4,11 @@
 
     <div class="event-card">
       <div v-if="events.length === 0" class="event-empty">No events yet</div>
-      <div v-else class="timeline">
-        <div
-          v-for="(event, index) in events"
-          :key="index"
-          class="tl-item"
-          :class="eventKind(event)"
-        >
-          <span class="tl-node"></span>
+      <div v-else class="event-list">
+        <div v-for="(event, index) in events" :key="index" class="tl-item">
+          <span class="tl-node">
+            <StatusMark :tone="eventTone(event)" />
+          </span>
           <div class="tl-body">
             <div class="tl-top">
               <span class="tl-title">{{
@@ -48,7 +45,8 @@
 <script setup lang="ts">
 import type { DeploymentEventItem } from "@nosana/api";
 import { formatDate } from "~/utils/formatDate";
-import { humanizeEventType, eventKind } from "~/utils/deploymentEvents";
+import { humanizeEventType, eventTone } from "~/utils/deploymentEvents";
+import StatusMark from "~/components/Common/StatusMark.vue";
 import { solscanTxUrl } from "~/utils/jobEvents";
 
 defineProps<{
@@ -61,31 +59,14 @@ const isDevnet = config.public.network === "devnet";
 
 <style lang="scss" scoped>
 .event-card {
-  background: $white;
-  border: 1px solid $grey-lighter;
-  border-radius: 14px;
-  overflow: hidden;
+  @include soft-panel;
   padding: 6px 18px 14px;
 }
 
 .event-empty {
   text-align: center;
-  color: $grey;
+  color: $text-muted;
   padding: 2.5rem 1rem;
-}
-
-.timeline {
-  position: relative;
-}
-
-.timeline::before {
-  content: "";
-  position: absolute;
-  left: 5px;
-  top: 20px;
-  bottom: 20px;
-  width: 1.5px;
-  background: $grey-lighter;
 }
 
 .tl-item {
@@ -96,29 +77,8 @@ const isDevnet = config.public.network === "devnet";
 .tl-node {
   position: absolute;
   left: 0;
-  top: 17px;
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
-  background: $white;
-  border: 2px solid $grey;
-  box-shadow: 0 0 0 3px $white;
-}
-
-.tl-item.is-danger-kind .tl-node {
-  border-color: $danger;
-}
-.tl-item.is-success-kind .tl-node {
-  border-color: $success;
-}
-.tl-item.is-warning-kind .tl-node {
-  border-color: $warning;
-}
-.tl-item.is-info-kind .tl-node {
-  border-color: $info;
-}
-.tl-item.is-neutral-kind .tl-node {
-  border-color: $grey;
+  top: 18px;
+  line-height: 0;
 }
 
 .tl-top {
@@ -132,6 +92,7 @@ const isDevnet = config.public.network === "devnet";
   font-family: $title-family;
   font-weight: 600;
   font-size: 0.9rem;
+  line-height: 1.5;
   color: $text;
 }
 
@@ -139,8 +100,8 @@ const isDevnet = config.public.network === "devnet";
   font-size: 0.65rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: $grey;
-  border: 1px solid $grey-lighter;
+  color: $text-muted;
+  border: 1px solid $border-soft;
   border-radius: 5px;
   padding: 1px 6px;
 }
@@ -148,13 +109,13 @@ const isDevnet = config.public.network === "devnet";
 .tl-date {
   margin-left: auto;
   font-size: 0.75rem;
-  color: $grey;
+  color: $text-muted;
   white-space: nowrap;
 }
 
 .tl-msg {
   font-size: 0.85rem;
-  color: $grey;
+  color: $text-muted;
   margin-top: 3px;
   word-break: break-word;
 }
@@ -164,8 +125,8 @@ const isDevnet = config.public.network === "devnet";
   align-items: center;
   gap: 4px;
   font-size: 0.72rem;
-  color: $grey;
-  border: 1px solid $grey-lighter;
+  color: $text-muted;
+  border: 1px solid $border-soft;
   border-radius: 6px;
   padding: 2px 8px;
   margin-top: 7px;
@@ -178,20 +139,6 @@ const isDevnet = config.public.network === "devnet";
 .tl-tx:hover {
   color: $secondary;
   border-color: $secondary;
-}
-
-html.dark-mode .event-card {
-  background: $black-ter;
-  border-color: rgba($white, 0.08);
-}
-
-html.dark-mode .timeline::before {
-  background: rgba($white, 0.1);
-}
-
-html.dark-mode .tl-node {
-  background: $black-ter;
-  box-shadow: 0 0 0 3px $black-ter;
 }
 
 html.dark-mode .tl-title {

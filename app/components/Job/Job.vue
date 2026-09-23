@@ -1,7 +1,7 @@
 <template>
   <div class="job-detail">
-    <!-- Header Section -->
-    <div class="dep-header">
+    <!-- Header Section (the deployment job panel brings its own) -->
+    <div v-if="!isPanel" class="dep-header">
       <!-- Back link -->
       <button
         type="button"
@@ -144,7 +144,7 @@
           :key="tab"
           type="button"
           class="dep-tab"
-          :class="{ 'is-active': activeTab === tab }"
+          :class="{ 'is-active': effectiveTab === tab }"
           @click="activeTab = tab"
         >
           {{ getTabLabel(tab) }}
@@ -155,7 +155,13 @@
     <!-- Tab Content -->
     <div class="p-5">
       <!-- Overview Tab -->
-      <div v-if="activeTab === 'overview'" class="tab-pane">
+      <!-- In the panel this stays mounted (v-show) so the usage stream
+           survives switching views; the page mounts it per visit as before. -->
+      <div
+        v-if="isPanel || effectiveTab === 'overview'"
+        v-show="effectiveTab === 'overview'"
+        class="tab-pane"
+      >
         <!-- Job Details Section -->
         <div>
           <h2 class="title is-5 mb-3">Job details</h2>
@@ -199,7 +205,11 @@
               </div>
 
               <!-- Node / host specs -->
-              <div class="stat" v-for="field in resolvedMetricFields" :key="field.key">
+              <div
+                class="stat"
+                v-for="field in resolvedMetricFields"
+                :key="field.key"
+              >
                 <span class="k">{{ field.label }}</span>
                 <span class="v" :title="field.displayValue">{{
                   field.displayValue
@@ -216,19 +226,36 @@
           "
         >
           <SystemUsageCharts
+            :key="`${props.deploymentId || ''}-${props.job.address}`"
             :jobAddress="props.job.address"
-            :node="props.job.node"
+            :deployment-id="props.deploymentId ?? undefined"
             :opIds="props.job.jobDefinition.ops.map((op) => op.id)"
           />
         </div>
-        <!-- On-chain activity, hidden when the API has no events endpoint -->
-        <div v-if="jobEventsSupported && !loadingJobEvents">
+        <!-- On-chain activity, hidden when the API has no events endpoint.
+             The job panel shows it on its own Activity view instead. -->
+        <div v-if="!isPanel && jobEventsSupported && !loadingJobEvents">
           <JobEventTimeline :events="jobEvents" :markets="testgridMarkets" />
         </div>
       </div>
 
+      <!-- Activity (panel only) -->
+      <div v-if="isPanel && effectiveTab === 'activity'" class="tab-pane">
+        <p v-if="loadingJobEvents" class="section-empty" role="status">
+          Loading activity…
+        </p>
+        <JobEventTimeline
+          v-else-if="jobEventsSupported"
+          :events="jobEvents"
+          :markets="testgridMarkets"
+        />
+        <p v-else class="section-empty">
+          Activity is not available for this job.
+        </p>
+      </div>
+
       <!-- Configuration Tab -->
-      <div v-if="activeTab === 'configuration'">
+      <div v-if="effectiveTab === 'configuration'">
         <div v-if="jobDefinitionForTab">
           <JobDefinitionTab :job-definition="jobDefinitionForTab" />
         </div>
@@ -238,7 +265,20 @@
       </div>
 
       <!-- Container Controls Tab -->
-      <div v-if="activeTab === 'container-controls'">
+      <!-- The panel keeps this mounted (v-show) so per-operation shells
+           survive switching views, and shows it as soon as the definition is
+           known — it decides whether containers are offered at all, and only
+           routes here while the job runs. The shells stay idle until the tab
+           is actually on screen (`shells-active` below). The page waits for
+           container logs and mounts it per visit. -->
+      <div
+        v-if="
+          isPanel
+            ? !!props.job.jobDefinition
+            : hasContainerControls && effectiveTab === 'container-controls'
+        "
+        v-show="effectiveTab === 'container-controls'"
+      >
         <div v-if="props.job.jobDefinition">
           <JobOverview
             :job="props.job"
@@ -251,12 +291,28 @@
             :logsByOp="flogLogsByOp"
             :systemLogsMap="flogSystemLogs"
             :jobInfo="props.jobInfo"
+            :deployment-id="props.deploymentId"
+            :job-address="props.job.address"
+            :node="hasRealNode ? String(props.job.node) : ''"
+            :project-address="props.job.project?.toString() ?? ''"
+            :access-definition="jobDefinitionForTab"
+            :is-running="props.job.isRunning"
+            :ssh-public-keys="props.sshPublicKeys"
+            :ssh-keys-loading="props.sshKeysLoading"
+            :ssh-keys-error="props.sshKeysError"
+            :shells-active="
+              !isPanel ||
+              (panelActive && effectiveTab === 'container-controls')
+            "
+            :auto-connect-op="autoConnectOp"
+            :show-logs="!isPanel"
+            :deployment-endpoints="deploymentEndpoints"
           />
         </div>
       </div>
 
       <!-- System Logs Tab -->
-      <div v-if="activeTab === 'system-logs'">
+      <div v-if="effectiveTab === 'system-logs'">
         <div v-if="props.job.jobDefinition">
           <JobTabs
             :job="props.job"
@@ -298,12 +354,31 @@
       </div>
 
       <!-- Results Tab -->
-      <div v-if="activeTab === 'results'">
+      <div v-if="effectiveTab === 'results'">
         <div v-if="props.job.results">
           <JobResult :ipfs-result="props.job.results" :ipfs-job="props.job" />
         </div>
         <div v-else class="notification is-light has-text-centered">
           <p class="has-text-grey">No results available</p>
+        </div>
+      </div>
+
+      <!-- Job access -->
+      <div v-if="effectiveTab === 'access'">
+        <h2 class="title is-5 mb-3">Job access</h2>
+
+        <div class="dep-card p-5">
+          <JobAccessContent
+            :job-address="props.job.address"
+            :node="props.job.node?.toString() ?? ''"
+            :project-address="props.job.project?.toString() ?? ''"
+            :job-definition="jobDefinitionForTab"
+            :is-running="props.job.isRunning"
+            :deployment-id="props.deploymentId"
+            :ssh-public-keys="props.sshPublicKeys"
+            :ssh-keys-loading="props.sshKeysLoading"
+            :ssh-keys-error="props.sshKeysError"
+          />
         </div>
       </div>
     </div>
@@ -349,6 +424,7 @@ import JobOverview from "~/components/Job/Tabs/Overview.vue";
 import JobResult from "~/components/Job/Result.vue";
 import JobDefinitionTab from "~/components/Job/Tabs/JobDefinition.vue";
 import JobEventTimeline from "~/components/Job/EventTimeline.vue";
+import JobAccessContent from "~/components/Job/AccessContent.vue";
 import SecondsFormatter from "~/components/SecondsFormatter.vue";
 import DeploymentStatusPill from "~/components/Deployment/DeploymentStatusPill.vue";
 import {
@@ -358,6 +434,7 @@ import {
 
 import LogSubscription from "./LogSubscription.vue";
 import { useFLogs } from "~/composables/jobs/useFLogs";
+import { useNodeJobResolver } from "~/composables/jobs/useNodeJobResolver";
 import { isCvmMarket } from "~/utils/cvm";
 import { useTemplates } from "~/composables/useTemplates";
 import { useToast } from "vue-toastification";
@@ -370,12 +447,6 @@ import { useJobEvents } from "~/composables/jobs/useJobEvents";
 import ChevronDownIcon from "@/assets/img/icons/chevron-down.svg?component";
 import ClockIcon from "@/assets/img/icons/clock.svg?component";
 import SquareIcon from "@/assets/img/icons/square.svg?component";
-import RunningIcon from "@/assets/img/icons/status/running.svg?component";
-import StoppedIcon from "@/assets/img/icons/status/stopped.svg?component";
-import FailedIcon from "@/assets/img/icons/status/failed.svg?component";
-import QueuedIcon from "@/assets/img/icons/status/queued.svg?component";
-import DoneIcon from "@/assets/img/icons/status/done.svg?component";
-import { useStatus } from "~/composables/useStatus";
 
 import type { UseModal } from "~/composables/jobs/useModal";
 import type { Endpoints, UseJob } from "~/composables/jobs/useJob";
@@ -478,19 +549,37 @@ interface Props {
   isJobPoster: boolean;
   jobInfo?: JobInfo | null;
   deploymentId?: string | null;
+  sshPublicKeys?: string[];
+  sshKeysLoading?: boolean;
+  sshKeysError?: string;
   hideFields?: {
     marketAddress?: boolean;
     price?: boolean;
     gpuPoolName?: boolean;
   };
+  /** "panel": hosted in the deployment job panel, which owns header and tabs. */
+  mode?: "page" | "panel";
+  panelTab?: "details" | "containers" | "activity";
+  /** Panel mode: whether this job is the one on screen. */
+  panelActive?: boolean;
+  /** Operation whose shell opens on its own ("*" = the first). */
+  autoConnectOp?: string;
+  /** The deployment's endpoint status, shown on the container cards. */
+  deploymentEndpoints?: Array<{
+    opId: string;
+    port: number | string;
+    online: boolean;
+  }>;
 }
 
 const props = defineProps<Props>();
+const { nosana } = useKit();
 const { userBalances } = useNosanaWallet();
-const { getAuthHeader, getJobAuthHeader } = useDeploymentAuth();
-const getAuth = async () => {
-  return await getAuthHeader(props.deploymentId ?? undefined);
-};
+// The job on its node through Kit, signed as the poster or the deployment.
+const resolveNodeJob = useNodeJobResolver(
+  props.job.address,
+  props.deploymentId ?? undefined,
+);
 const isCvmJob = computed(() => isCvmMarket(props.job.market));
 const { templates } = useTemplates();
 const { markets } = useMarkets();
@@ -544,6 +633,9 @@ const hasRealNode = computed<boolean>(() =>
 // Do not gate on hasAuth; auth will be ensured during WS open
 const shouldConnect = computed(
   () => props.isJobPoster && props.job.isRunning && hasRealNode.value,
+);
+const canShowAccessTab = computed(
+  () => props.job.isRunning && hasRealNode.value,
 );
 
 // No local WS watchers; lifecycle handled inside useJobLogs
@@ -679,14 +771,16 @@ const nodeSpecsUrl = computed(() =>
 );
 const { data: nodeMetrics, pending: loadingNodeSpecs } = useAPI(nodeSpecsUrl);
 
-const nodeInfoUrl = computed(() =>
-  hasRealNode.value
-    ? `https://${props.job.node}.${useRuntimeConfig().public.nodeDomain}/node/info`
-    : "",
+// Public node info (CPU, RAM, disk, country) through Kit's node client.
+const { data: nodeInfo } = useAsyncData<NodeInfoResponse | null>(
+  `node-info-${props.job.node}`,
+  async () => {
+    if (!hasRealNode.value) return null;
+    const info = await nosana.value.api.node(String(props.job.node));
+    return info as unknown as NodeInfoResponse;
+  },
+  { default: () => null, watch: [hasRealNode] },
 );
-const { data: nodeInfo } = useAPI<NodeInfoResponse | null>(nodeInfoUrl, {
-  credentials: false,
-});
 
 const jobDataForPriceComponent = computed(() => {
   return {
@@ -1100,6 +1194,10 @@ const availableTabs = computed(() => {
     tabs.push("results");
   }
 
+  if (canShowAccessTab.value) {
+    tabs.push("access");
+  }
+
   return tabs;
 });
 
@@ -1114,6 +1212,8 @@ const getTabLabel = (tab: string) => {
       return "Containers";
     case "results":
       return "Results";
+    case "access":
+      return "SSH";
     default:
       return tab.charAt(0).toUpperCase() + tab.slice(1);
   }
@@ -1260,15 +1360,10 @@ const {
   resourceProgressBars: flogResourceBarsRef,
   logsByOp: flogLogsByOp,
   systemLogs: flogSystemLogs,
-} = useFLogs(
-  props.job.address,
-  computed(() => props.job.node),
-  shouldConnect,
-  getAuth,
-  isCvmJob.value
-    ? { cvm: { getAuth: () => getJobAuthHeader(props.job.address) } }
-    : undefined,
-);
+} = useFLogs(props.job.address, shouldConnect, {
+  resolveNodeJob,
+  cvm: isCvmJob.value,
+});
 
 // Expose flog progress bars (directly from useFLogs)
 function getFlogProgressBars(): Map<string, ProgressBar> {
@@ -1388,6 +1483,19 @@ function activateChatAndClosePopup() {
 
 const activeTab = ref("system-logs");
 
+// In the deployment job panel the panel picks the tab.
+const isPanel = computed(() => props.mode === "panel");
+const PANEL_TABS = {
+  details: "overview",
+  containers: "container-controls",
+  activity: "activity",
+} as const;
+const effectiveTab = computed(() =>
+  isPanel.value
+    ? PANEL_TABS[props.panelTab ?? "details"]
+    : activeTab.value,
+);
+
 // Watch for changes in available tabs and ensure active tab is valid
 watch(
   availableTabs,
@@ -1419,73 +1527,6 @@ watch(isMainContentOpen, (newValue) => {
   }
 });
 
-const getStatusIcon = (status: string | number) => {
-  // Handle both string (endpoint status) and number (job state)
-  if (typeof status === "number") {
-    // Job state mapping
-    switch (status) {
-      case 0: // QUEUED
-        return QueuedIcon;
-      case 1: // RUNNING
-        return RunningIcon;
-      case 2: // COMPLETED
-        return DoneIcon;
-      case 3: // STOPPED
-        return StoppedIcon;
-      default:
-        return StoppedIcon;
-    }
-  }
-
-  // Endpoint status mapping (legacy)
-  if (!props.job.isRunning || props.job.isCompleted) {
-    return StoppedIcon;
-  }
-
-  if (status === "ONLINE") {
-    return DoneIcon;
-  } else if (status === "UNKNOWN") {
-    return RunningIcon;
-  } else if (status === "OFFLINE") {
-    return FailedIcon;
-  }
-
-  return FailedIcon;
-};
-
-const getStatusText = (status: string | number) => {
-  // Handle both string (endpoint status) and number (job state)
-  if (typeof status === "number") {
-    // Job state mapping
-    switch (status) {
-      case 0:
-        return "QUEUED";
-      case 1:
-        return "RUNNING";
-      case 2:
-        return "COMPLETED";
-      case 3:
-        return "STOPPED";
-      default:
-        return "UNKNOWN";
-    }
-  }
-
-  // Endpoint status mapping (legacy)
-  if (!props.job.isRunning || props.job.isCompleted) {
-    return "OFFLINE";
-  }
-
-  if (status === "ONLINE") {
-    return "ONLINE";
-  } else if (status === "UNKNOWN") {
-    return "LOADING";
-  } else if (status === "OFFLINE") {
-    return "OFFLINE";
-  }
-  return "OFFLINE";
-};
-
 // Market address as a simple string
 const marketAddress = computed(() => String(props.job.market ?? "").trim());
 
@@ -1510,11 +1551,6 @@ const handleActionClick = (actionFn: () => void) => {
   showActionsDropdown.value = false;
   actionFn();
 };
-
-// Use global status system
-const { getStatusClass: statusClass } = useStatus();
-
-// getStatusText function already exists above, removed duplicate
 
 // Close dropdown when clicking outside
 const handleClickOutside = (event: MouseEvent) => {
@@ -1554,7 +1590,7 @@ onUnmounted(() => {
   padding: 0;
   margin-bottom: 1rem;
   cursor: pointer;
-  color: $grey;
+  color: $text-muted;
   font-family: $family-sans-serif;
   font-size: 0.9rem;
   transition: color 0.15s ease;
@@ -1615,7 +1651,7 @@ html.dark-mode .dep-name {
   flex-wrap: wrap;
   margin-top: 0.5rem;
   font-size: 0.78rem;
-  color: $grey;
+  color: $text-muted;
 }
 
 .id-line .is-family-monospace {
@@ -1623,7 +1659,7 @@ html.dark-mode .dep-name {
 }
 
 .id-sep {
-  color: $grey-light;
+  color: $text-muted;
 }
 
 .updated-time {
@@ -1638,7 +1674,7 @@ html.dark-mode .dep-name {
   border-radius: 6px;
   border: 0;
   background: transparent;
-  color: $grey;
+  color: $text-muted;
   cursor: pointer;
   transition:
     background 0.15s ease,
@@ -1650,7 +1686,7 @@ html.dark-mode .dep-name {
   }
 
   &:hover {
-    background: $white-ter;
+    background: $surface-hover;
     color: $text;
   }
 
@@ -1676,14 +1712,15 @@ html.dark-mode .copy-btn:hover {
   font-weight: 500;
   font-size: 0.9rem;
   border-radius: 10px;
-  border: 1px solid $grey-lighter;
-  background: $white-ter;
+  border: 1px solid $border-soft;
+  background: $surface-sunken;
   color: $text;
   box-shadow: none;
 
+  /* Already sunken, so it darkens on hover; $surface-hover is for white. */
   &:hover {
-    background: $grey-lightest;
-    border-color: $grey-light;
+    background: $surface-track;
+    border-color: $border-strong;
   }
 }
 
@@ -1712,7 +1749,7 @@ html.dark-mode .header-action-btn {
 
 .header-main .dropdown-content {
   background: $white;
-  border: 1px solid $grey-lighter;
+  border: 1px solid $border-soft;
   border-radius: 12px;
   box-shadow: 0 12px 40px rgba($black, 0.14);
   padding: 6px;
@@ -1734,12 +1771,12 @@ html.dark-mode .header-action-btn {
     color 0.15s ease;
 
   .icon {
-    color: $grey;
+    color: $text-muted;
     transition: color 0.15s ease;
   }
 
   &:hover {
-    background: $white-ter;
+    background: $surface-hover;
     color: $text;
 
     .icon {
@@ -1789,61 +1826,7 @@ html.dark-mode .header-main .dropdown-item.is-danger-item {
 }
 
 /* Segmented tab control */
-.dep-tabs {
-  display: inline-flex;
-  gap: 3px;
-  padding: 5px;
-  margin: 1.75rem 0 0.25rem;
-  border-radius: 13px;
-  background: $grey-lightest;
-  max-width: 100%;
-  overflow-x: auto;
-}
 
-html.dark-mode .dep-tabs {
-  background: rgba($white, 0.08);
-}
-
-.dep-tab {
-  font-family: $title-family;
-  font-weight: 500;
-  font-size: 0.9rem;
-  color: $grey-dark;
-  border: 0;
-  background: none;
-  padding: 0.6rem 1.35rem;
-  border-radius: 9px;
-  cursor: pointer;
-  white-space: nowrap;
-  transition:
-    color 0.15s ease,
-    background 0.15s ease;
-
-  &:hover {
-    color: $text;
-  }
-
-  &.is-active {
-    background: $secondary;
-    color: #05230a;
-    font-weight: 600;
-    box-shadow: 0 1px 3px rgba($black, 0.12);
-  }
-}
-
-html.dark-mode .dep-tab {
-  color: $grey-light;
-}
-
-html.dark-mode .dep-tab:hover {
-  color: $white;
-}
-
-html.dark-mode .dep-tab.is-active {
-  background: $secondary;
-  color: #05230a;
-  box-shadow: 0 1px 3px rgba($black, 0.5);
-}
 
 /* ---- Tab content ---- */
 .tab-pane {
@@ -1860,7 +1843,7 @@ html.dark-mode .dep-tab.is-active {
    elevation the deployment page applies to its section cards. */
 .dep-card {
   background: $white;
-  border: 1px solid $grey-lighter;
+  border: 1px solid $border-soft;
   border-radius: 14px;
   overflow: hidden;
   color: $text;
@@ -1919,7 +1902,7 @@ html.dark-mode .stat::before {
 
 .k {
   font-size: 12px;
-  color: $grey;
+  color: $text-muted;
   margin-bottom: 7px;
 }
 
@@ -1943,7 +1926,7 @@ html.dark-mode .stat::before {
 
 .s {
   font-size: 12px;
-  color: $grey;
+  color: $text-muted;
   margin-top: 6px;
   overflow: hidden;
   text-overflow: ellipsis;

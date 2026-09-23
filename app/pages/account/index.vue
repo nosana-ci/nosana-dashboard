@@ -229,10 +229,10 @@
             </div>
           </div>
 
-          <div class="column is-4">
+          <div class="column is-4 history-column">
             <h3 class="title is-4 mb-0">Monthly History</h3>
             <div class="mb-4"></div>
-            <div class="box" style="height: 100%; position: relative">
+            <div class="box monthly-history-box" style="position: relative">
               <div class="content" style="height: 100%">
                 <div
                   class="field is-grouped is-justify-content-end"
@@ -266,7 +266,7 @@
                   v-else-if="
                     hasLoadedHistoryOnce || (!loadingHistory && monthlyHistory)
                   "
-                  style="height: 315px; position: relative"
+                  style="height: 100%; position: relative"
                 >
                   <Bar
                     v-if="chartData && chartData.labels.length"
@@ -280,7 +280,7 @@
             </div>
           </div>
 
-          <div class="column is-4">
+          <div class="column is-4 welcome-column">
             <h3 class="title is-4 mb-0">Welcome to Nosana</h3>
             <div class="mb-4"></div>
             <div class="quick-stack">
@@ -1307,7 +1307,7 @@ watch(
 );
 </script>
 
-<style scoped>
+<style scoped lang="scss">
 .heading {
   text-transform: uppercase;
   font-size: 0.8rem;
@@ -1339,7 +1339,8 @@ watch(
   padding: 1.1rem;
   border-radius: 14px;
   background: #ffffff;
-  border: 1px solid #dbdbdb;
+  border: 1px solid $border-soft;
+  box-shadow: $panel-shadow;
   color: inherit;
   font: inherit;
   text-align: left;
@@ -1364,6 +1365,7 @@ watch(
 .dark-mode .quick-card {
   background: #121212;
   border-color: rgba(255, 255, 255, 0.07);
+  box-shadow: $panel-shadow-dark;
 }
 
 .dark-mode .quick-card:hover {
@@ -1444,7 +1446,6 @@ watch(
 .credit-usage-box {
   flex: 1 1 auto;
   height: auto;
-  max-height: none !important;
   padding: 1.75rem;
 }
 
@@ -1472,7 +1473,7 @@ watch(
 }
 
 .usage-column-divider {
-  border-left: 1px solid #dbdbdb;
+  border-left: 1px solid $border-soft;
 }
 
 .balance-history-button {
@@ -1522,14 +1523,29 @@ watch(
   box-shadow: none;
 }
 
-/* Cap the data boxes so the overview row stays tidy */
-.column.is-4 .box {
-  max-height: 360px;
-}
-
 .box .content {
   flex: 1;
   overflow-y: auto;
+}
+
+/* The three overview panels stretch to a shared height, so each column is a
+   flex parent and its panel grows into it. */
+.history-column,
+.welcome-column {
+  display: flex;
+  flex-direction: column;
+}
+
+.monthly-history-box,
+.quick-stack {
+  flex: 1 1 auto;
+}
+
+/* The chart fills the panel rather than sitting at a fixed height, which is
+   what used to leave a gap under it — and .box .content must not scroll here,
+   or a sub-pixel rounding brings the scrollbar back. */
+.monthly-history-box .content {
+  overflow: hidden;
 }
 
 /* In any global .scss or in a <style scoped> block with deep selectors */

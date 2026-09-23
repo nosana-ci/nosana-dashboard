@@ -38,14 +38,21 @@
           :jobs="activeJobs"
           :deploymentId="deploymentId"
           :getJobStateNumber="getJobStateNumber"
+          :marketLabel="marketLabel"
+          @open="$emit('open', $event)"
+          @viewLogs="$emit('viewLogs', $event)"
+          @openSsh="$emit('openSsh', $event)"
+          @openRevision="$emit('openRevision', $event)"
         />
-        <JobActivityPager
-          :hasPrev="activeHasPrev"
-          :hasNext="activeHasNext"
-          :loading="activeLoading"
-          @prev="$emit('active:prev')"
-          @next="$emit('active:next')"
-        />
+        <div v-if="activeHasPrev || activeHasNext" class="da-foot">
+          <JobActivityPager
+            :hasPrev="activeHasPrev"
+            :hasNext="activeHasNext"
+            :loading="activeLoading"
+            @prev="$emit('active:prev')"
+            @next="$emit('active:next')"
+          />
+        </div>
       </div>
     </div>
 
@@ -57,10 +64,7 @@
       >
         Loading history…
       </div>
-      <div
-        v-else-if="historyJobs.length === 0"
-        class="da-card da-empty"
-      >
+      <div v-else-if="historyJobs.length === 0" class="da-card da-empty">
         No completed jobs yet
       </div>
 
@@ -71,14 +75,20 @@
           :getJobStateNumber="getJobStateNumber"
           :getJobDuration="getJobDuration"
           :showDuration="true"
+          :marketLabel="marketLabel"
+          @open="$emit('open', $event)"
+          @viewLogs="$emit('viewLogs', $event)"
+          @openRevision="$emit('openRevision', $event)"
         />
-        <JobActivityPager
-          :hasPrev="historyHasPrev"
-          :hasNext="historyHasNext"
-          :loading="historyLoading"
-          @prev="$emit('history:prev')"
-          @next="$emit('history:next')"
-        />
+        <div v-if="historyHasPrev || historyHasNext" class="da-foot">
+          <JobActivityPager
+            :hasPrev="historyHasPrev"
+            :hasNext="historyHasNext"
+            :loading="historyLoading"
+            @prev="$emit('history:prev')"
+            @next="$emit('history:next')"
+          />
+        </div>
       </div>
     </div>
   </div>
@@ -103,10 +113,16 @@ defineProps<{
   historyHasNext: boolean;
   getJobStateNumber: (job: DeploymentJobItem) => number;
   getJobDuration: (jobId: string) => number | null;
+  /** Names a job row until its node reports a GPU. */
+  marketLabel: string;
 }>();
 
 defineEmits<{
   "update:jobActivityTab": [value: string];
+  open: [jobId: string];
+  viewLogs: [jobId: string];
+  openSsh: [jobId: string];
+  openRevision: [revision: number];
   "active:prev": [];
   "active:next": [];
   "history:prev": [];
@@ -124,21 +140,25 @@ defineEmits<{
 }
 
 .da-card {
-  background: $white;
-  border: 1px solid $grey-lighter;
-  border-radius: 14px;
-  overflow: hidden;
+  @include soft-panel;
+}
+
+.da-foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0.7rem 1.1rem;
+  border-top: 1px solid $border-soft;
 }
 
 .da-empty {
   padding: 2.75rem 1rem;
   text-align: center;
-  color: $grey;
+  color: $text-muted;
   font-size: 0.9rem;
 }
 
-html.dark-mode .da-card {
-  background: $black-ter;
-  border-color: rgba($white, 0.08);
+html.dark-mode .da-foot {
+  border-top-color: rgba($white, 0.08);
 }
 </style>

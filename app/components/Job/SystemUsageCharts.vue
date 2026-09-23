@@ -71,14 +71,14 @@ import TimeSeriesChart from "./TimeSeriesChart.vue";
 
 const props = defineProps<{
   jobAddress: string;
-  node: string;
   opIds: string[];
+  deploymentId?: string;
 }>();
 
 const { windowedByOp, isLoading, timeframe, setTimeframe } = useSystemUsage(
   props.jobAddress,
-  props.node,
   props.opIds,
+  props.deploymentId,
 );
 
 const cpuData = computed(() => {
@@ -128,7 +128,7 @@ const network = computed(() =>
    instead of four boxes floating on the page. */
 .su-card {
   background: $white;
-  border: 1px solid $grey-lighter;
+  border: 1px solid $border-soft;
   border-radius: 14px;
   padding: 0.75rem;
   box-shadow:

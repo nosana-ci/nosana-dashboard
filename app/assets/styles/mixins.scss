@@ -1,0 +1,38 @@
+@use "@/assets/styles/variables.scss" as *;
+
+// The always-dark code surfaces — the web terminal, the log viewers and the
+// JSON editor — are one window shape: a framed panel with a header strip on
+// top. Included rather than re-declared so the two stay in step; each caller
+// still owns its own layout (flex, height, padding).
+@mixin code-surface-frame {
+  border: 1px solid $code-surface-border;
+  border-radius: 10px;
+  background: $code-surface;
+  box-shadow: inset 0 1px 0 rgba($white, 0.04);
+  overflow: hidden;
+}
+
+@mixin code-surface-bar {
+  background: $code-surface-panel;
+  border-bottom: 1px solid $code-surface-border;
+}
+
+// The soft panel the deployment detail page established: a white card on the
+// tinted canvas, held by a hairline and a shallow lift rather than a heavy
+// border. Eight components each carried their own copy of this under their own
+// class name, which is how some of them drifted — the operations accordion and
+// the endpoints card ended up with the border but no lift. Included rather than
+// re-declared so they stay in step; each caller still owns its own padding.
+@mixin soft-panel($radius: 14px) {
+  background: $white;
+  border: 1px solid $border-soft;
+  border-radius: $radius;
+  box-shadow: $panel-shadow;
+  overflow: hidden;
+
+  html.dark-mode & {
+    background: $black-ter;
+    border-color: rgba($white, 0.1);
+    box-shadow: $panel-shadow-dark;
+  }
+}

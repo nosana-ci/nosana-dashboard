@@ -8,39 +8,10 @@
       </p>
 
       <ol v-else class="lifecycle">
-        <li
-          v-for="(item, i) in items"
-          :key="item.key"
-          class="lc-stage"
-          :class="[`is-${item.tone}`, { 'is-current': i === items.length - 1 }]"
-        >
+        <li v-for="item in items" :key="item.key" class="lc-stage">
           <!-- Marker + connecting rail -->
           <div class="lc-rail">
-            <span class="lc-node">
-              <svg
-                v-if="item.tone === 'success'"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="3"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="M20 6 9 17l-5-5" />
-              </svg>
-              <svg
-                v-else-if="item.tone === 'danger'"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="3"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="M18 6 6 18M6 6l12 12" />
-              </svg>
-              <span v-else class="lc-dot"></span>
-            </span>
+            <StatusMark :tone="item.tone" :label="item.title" />
           </div>
 
           <!-- Stage content -->
@@ -115,6 +86,7 @@ import {
   type JobEvent,
   type MarketRef,
 } from "~/utils/jobEvents";
+import StatusMark from "~/components/Common/StatusMark.vue";
 
 const props = defineProps<{
   events: JobEvent[];
@@ -126,7 +98,12 @@ const props = defineProps<{
 const config = useRuntimeConfig();
 const isDevnet = config.public.network === "devnet";
 
-const items = computed(() => buildJobTimeline(props.events, props.markets));
+// Newest first, matching the deployment page's Activity and History. The
+// builder keeps the indexer's chronological order, since that is what the
+// on-chain sequence means; reading direction is this component's decision.
+const items = computed(() =>
+  buildJobTimeline(props.events, props.markets).reverse(),
+);
 </script>
 
 <style lang="scss" scoped>
@@ -135,7 +112,7 @@ const items = computed(() => buildJobTimeline(props.events, props.markets));
 .lc-card {
   max-width: 620px;
   background: $white;
-  border: 1px solid $grey-lighter;
+  border: 1px solid $border-soft;
   border-radius: 14px;
   padding: 20px 22px;
   box-shadow:
@@ -153,7 +130,7 @@ html.dark-mode .lc-card {
 
 .lc-empty {
   text-align: center;
-  color: $grey;
+  color: $text-muted;
   padding: 1.75rem 1rem;
   margin: 0;
   font-size: 0.85rem;
@@ -168,8 +145,10 @@ html.dark-mode .lc-card {
 
 .lc-stage {
   display: grid;
-  grid-template-columns: 30px 1fr;
-  gap: 15px;
+  /* Mark column plus gutter comes to the 26px the deployment history indents
+     its own event rows by, so the two activity lists line up. */
+  grid-template-columns: 14px 1fr;
+  gap: 12px;
   position: relative;
   padding-bottom: 22px;
   align-items: start;
@@ -184,9 +163,9 @@ html.dark-mode .lc-card {
 .lc-stage:not(:last-child)::before {
   content: "";
   position: absolute;
-  left: 15px;
+  left: 7px;
   transform: translateX(-50%);
-  top: 30px;
+  top: 24px;
   bottom: -3px;
   width: 2px;
   background: $grey-lighter;
@@ -199,69 +178,10 @@ html.dark-mode .lc-stage:not(:last-child)::before {
 .lc-rail {
   display: flex;
   justify-content: center;
-}
-
-.lc-node {
-  position: relative;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  flex: none;
-  z-index: 1;
-  /* A card-coloured ring lifts the node cleanly off the rail behind it. */
-  border: 3px solid $white;
-  background: rgba($grey, 0.16);
-  color: $grey;
-}
-
-html.dark-mode .lc-node {
-  border-color: $black-ter;
-}
-
-.lc-node svg {
-  width: 13px;
-  height: 13px;
-}
-
-.lc-dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: currentColor;
-}
-
-/* The newest event is the job's current state — mark it with a soft tinted ring. */
-.lc-stage.is-current .lc-node::after {
-  content: "";
-  position: absolute;
-  inset: -4px;
-  border-radius: 50%;
-  border: 2px solid currentColor;
-  opacity: 0.4;
-}
-
-/* Tone colours (shared with the status pill palette). */
-.lc-stage.is-success .lc-node {
-  background: rgba($success, 0.16);
-  color: $success;
-}
-.lc-stage.is-info .lc-node {
-  background: rgba($info, 0.16);
-  color: $info;
-}
-.lc-stage.is-warning .lc-node {
-  background: rgba($warning, 0.2);
-  color: $warning;
-}
-.lc-stage.is-danger .lc-node {
-  background: rgba($danger, 0.16);
-  color: $danger;
-}
-.lc-stage.is-grey .lc-node {
-  background: rgba($grey, 0.16);
-  color: $grey;
+  /* The mark sits on the title's optical centre, not on the top edge of the
+     content block: the block is offset 3px and the title's line box is taller
+     than the mark, so top-aligning the two leaves the mark riding high. */
+  padding-top: 7px;
 }
 
 /* ---- Content ---- */
@@ -280,6 +200,7 @@ html.dark-mode .lc-node {
   font-family: $title-family;
   font-weight: 600;
   font-size: 0.92rem;
+  line-height: 1.5;
   color: $text;
 }
 
@@ -287,7 +208,7 @@ html.dark-mode .lc-node {
   margin-left: auto;
   flex: none;
   font-size: 0.72rem;
-  color: $grey;
+  color: $text-muted;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
@@ -299,7 +220,7 @@ html.dark-mode .lc-node {
 }
 
 .lc-detail-label {
-  color: $grey;
+  color: $text-muted;
   margin-right: 6px;
 }
 
@@ -317,7 +238,7 @@ html.dark-mode .lc-node {
   align-items: center;
   gap: 4px;
   font-size: 0.72rem;
-  color: $grey;
+  color: $text-muted;
   margin-top: 7px;
   text-decoration: none;
   transition: color 0.15s ease;

@@ -18,7 +18,8 @@ export interface JobEvent {
   data: Record<string, unknown> | null;
 }
 
-export type JobEventTone = "success" | "info" | "warning" | "danger" | "grey";
+/** The same names `getStatusTone` uses, so StatusMark takes these as-is. */
+export type JobEventTone = "ok" | "warn" | "danger" | "neutral";
 
 export interface JobEventDetail {
   label: string;
@@ -46,25 +47,30 @@ export interface MarketRef {
  * Copy for every Nosana Jobs instruction the indexer can record against a job.
  * Node-queue and market instructions (Stop, Open, Close, Update) never carry a
  * job address, so they never show up on a job timeline.
+ *
+ * Every entry here is a step that already happened, so a step that did what it
+ * set out to do is `ok` and gets a checkmark — reaching the market counts,
+ * the same as being picked up does. `warn` is for a step that changed the
+ * plan, `neutral` for one that wound something down, `danger` for a failure.
  */
 export const JOB_EVENT_COPY: Record<
   string,
   { title: string; tone: JobEventTone }
 > = {
-  List: { title: "Posted to market", tone: "info" },
-  Assign: { title: "Assigned to node", tone: "info" },
-  Delist: { title: "Delisted from queue", tone: "grey" },
-  Work: { title: "Picked up by node", tone: "success" },
-  Claim: { title: "Claimed by node", tone: "success" },
-  Extend: { title: "Timeout extended", tone: "warning" },
-  End: { title: "Stopped by deployer", tone: "warning" },
-  Finish: { title: "Finished by node", tone: "success" },
-  Complete: { title: "Completed", tone: "success" },
+  List: { title: "Posted to market", tone: "ok" },
+  Assign: { title: "Assigned to node", tone: "ok" },
+  Delist: { title: "Delisted from queue", tone: "neutral" },
+  Work: { title: "Picked up by node", tone: "ok" },
+  Claim: { title: "Claimed by node", tone: "ok" },
+  Extend: { title: "Timeout extended", tone: "warn" },
+  End: { title: "Stopped by deployer", tone: "neutral" },
+  Finish: { title: "Finished by node", tone: "ok" },
+  Complete: { title: "Completed", tone: "ok" },
   Quit: { title: "Quit by node", tone: "danger" },
   QuitAdmin: { title: "Quit by admin", tone: "danger" },
-  Recover: { title: "Funds recovered", tone: "grey" },
-  Clean: { title: "Job account closed", tone: "grey" },
-  CleanAdmin: { title: "Job account closed by admin", tone: "grey" },
+  Recover: { title: "Funds recovered", tone: "neutral" },
+  Clean: { title: "Job account closed", tone: "neutral" },
+  CleanAdmin: { title: "Job account closed by admin", tone: "neutral" },
 };
 
 export const shortAddress = (address: string): string =>
@@ -166,7 +172,7 @@ export const buildJobTimeline = (
     // Unknown instruction: show the raw type rather than dropping the event.
     const copy = JOB_EVENT_COPY[event.type] ?? {
       title: event.type,
-      tone: "grey" as JobEventTone,
+      tone: "neutral" as JobEventTone,
     };
     return {
       key: `${event.signature}-${event.instructionIndex}`,

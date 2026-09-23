@@ -64,6 +64,7 @@
             <tr>
               <th>Name</th>
               <th>Client ID</th>
+              <th>Permissions</th>
               <th>Type</th>
               <th class="has-text-right">Actions</th>
             </tr>
@@ -84,6 +85,7 @@
               <td>
                 <code class="is-family-monospace">{{ app.clientId }}</code>
               </td>
+              <td class="has-text-grey">{{ ceilingLabel(app) }}</td>
               <td>
                 <span
                   class="tag is-rounded is-light"
@@ -101,6 +103,15 @@
                   >
                     <span class="icon is-small">
                       <FontAwesomeIcon :icon="faEye" />
+                    </span>
+                  </button>
+                  <button
+                    @click="editApp(app)"
+                    class="button is-small action-btn"
+                    title="Edit permissions"
+                  >
+                    <span class="icon is-small">
+                      <FontAwesomeIcon :icon="faEdit" />
                     </span>
                   </button>
                   <button
@@ -217,11 +228,18 @@
               server. Browser and mobile apps don’t need one.
             </p>
           </div>
+
+          <ScopePicker
+            v-model="form.scopes"
+            :options="oauthGrantableScopes"
+            help="What this app may ask users for. If it requests nothing specific, this is what the consent screen offers — apart from the credential-management permissions, which an app always has to request by name. Each user approves the request themselves."
+            unavailable-note="Couldn't load the permission list, so this app will be created with the default ceiling."
+          />
         </section>
         <footer class="modal-card-foot">
           <button
             @click="createApp"
-            class="button is-dark"
+            class="button is-success"
             :disabled="!canCreate"
             :class="{ 'is-loading': creating }"
           >
@@ -306,10 +324,94 @@
                 />
               </div>
             </div>
+
+            <div class="field">
+              <label class="label">Permissions</label>
+              <ul v-if="selectedApp.scopes?.length">
+                <li
+                  v-for="scope in selectedApp.scopes"
+                  :key="scope"
+                  class="is-flex is-flex-direction-column mb-2"
+                >
+                  <span class="is-family-monospace is-size-7">{{ scope }}</span>
+                  <span class="has-text-grey is-size-7">{{
+                    describeScope(scope)
+                  }}</span>
+                </li>
+              </ul>
+              <p v-else class="has-text-grey">No permissions recorded.</p>
+            </div>
+
+            <div class="field">
+              <label class="label">Scope parameter</label>
+              <div class="control">
+                <div class="is-flex">
+                  <input
+                    :value="scopeParam(selectedApp)"
+                    class="input is-family-monospace"
+                    type="text"
+                    readonly
+                    style="flex: 1"
+                  />
+                  <button
+                    @click="copy(scopeParam(selectedApp))"
+                    class="button is-light ml-2"
+                    title="Copy to clipboard"
+                  >
+                    <span class="icon">
+                      <FontAwesomeIcon :icon="faCopy" />
+                    </span>
+                  </button>
+                </div>
+              </div>
+              <p class="help">
+                Put this in your authorize URL’s <code>scope</code> parameter.
+                The permissions above are only a ceiling — your app is granted
+                nothing it does not ask for, so an authorize URL with no
+                <code>scope</code> yields a token that can’t call anything.
+              </p>
+            </div>
           </div>
         </section>
         <footer class="modal-card-foot">
           <button @click="showView = false" class="button">Close</button>
+        </footer>
+      </div>
+    </div>
+
+    <!-- Edit Modal — permissions only. Name, redirect URIs and app type are fixed
+         once integrators are relying on them; the ceiling is the part worth changing. -->
+    <div class="modal" :class="{ 'is-active': showEdit }">
+      <div class="modal-background" @click="showEdit = false"></div>
+      <div class="modal-card">
+        <header class="modal-card-head">
+          <p class="modal-card-title">Edit Permissions</p>
+          <button class="delete" @click="showEdit = false"></button>
+        </header>
+        <section class="modal-card-body">
+          <div v-if="selectedApp">
+            <p class="mb-4">
+              What <strong>{{ selectedApp.name }}</strong> may ask users for.
+            </p>
+
+            <ScopePicker
+              v-model="editScopes"
+              :options="oauthGrantableScopes"
+              help="Removing a permission stops the app asking for it from now on. Users who already granted it keep access until their token next refreshes."
+              unavailable-note="Couldn't load the permission list, so permissions can't be edited right now."
+            />
+          </div>
+        </section>
+        <footer class="modal-card-foot">
+          <button
+            @click="updateApp"
+            class="button is-success"
+            :disabled="!editScopes.length || updating"
+            :class="{ 'is-loading': updating }"
+          >
+            Save
+          </button>
+          <button @click="showEdit = false" class="button">Cancel</button>
         </footer>
       </div>
     </div>
@@ -378,7 +480,7 @@
           </div>
         </section>
         <footer class="modal-card-foot">
-          <button @click="created = null" class="button is-dark">Done</button>
+          <button @click="created = null" class="button is-success">Done</button>
         </footer>
       </div>
     </div>
@@ -392,10 +494,12 @@ import {
   faPlus,
   faPlug,
   faEye,
+  faEdit,
   faTrash,
   faCopy,
   faExclamationTriangle,
 } from "@fortawesome/free-solid-svg-icons";
+import ScopePicker from "~/components/Account/ScopePicker.vue";
 
 interface OAuthApp {
   clientId: string;
@@ -404,6 +508,7 @@ interface OAuthApp {
   logoUri?: string;
   confidential: boolean;
   clientSecret?: string;
+  scopes?: string[];
 }
 
 const config = useRuntimeConfig().public;
@@ -413,16 +518,40 @@ const toast = useToast();
 const hasLoadedOnce = ref(false);
 const showCreate = ref(false);
 const showView = ref(false);
+const showEdit = ref(false);
 const creating = ref(false);
+const updating = ref(false);
 const created = ref<OAuthApp | null>(null);
 const deletingId = ref<string | null>(null);
 const selectedApp = ref<OAuthApp | null>(null);
+const editScopes = ref<string[]>([]);
 const form = ref({
   name: "",
   redirectUris: [""] as string[],
   logoUri: "",
   confidential: false,
+  scopes: [] as string[],
 });
+
+// An app can only ever hold the OAuth-grantable subset — `inference:use` is API-key-only,
+// and asking for it is a 400. The backend flags which those are so this list never has to
+// hard-code the exclusion.
+const { scopes: scopeCatalogue, oauthGrantableScopes } = useScopeCatalogue();
+
+const describeScope = (scope: string) =>
+  scopeCatalogue.value.find((entry) => entry.scope === scope)?.description ?? "";
+
+/** The `scope` value an integrator puts in their authorize URL: identity plus the ceiling. */
+const scopeParam = (app: OAuthApp) =>
+  ["openid", "offline_access", ...(app.scopes ?? [])].join(" ");
+
+const ceilingLabel = (app: OAuthApp) => {
+  const held = app.scopes?.length ?? 0;
+  if (!held) return "—";
+  if (oauthGrantableScopes.value.length && held >= oauthGrantableScopes.value.length)
+    return "All available";
+  return held === 1 ? "1 permission" : `${held} permissions`;
+};
 
 const {
   data: appsData,
@@ -476,6 +605,7 @@ function openCreate() {
     redirectUris: [""],
     logoUri: "",
     confidential: false,
+    scopes: oauthGrantableScopes.value.map((entry) => entry.scope),
   };
   showCreate.value = true;
 }
@@ -483,6 +613,12 @@ function openCreate() {
 function viewApp(app: OAuthApp) {
   selectedApp.value = app;
   showView.value = true;
+}
+
+function editApp(app: OAuthApp) {
+  selectedApp.value = app;
+  editScopes.value = [...(app.scopes ?? [])];
+  showEdit.value = true;
 }
 
 async function createApp() {
@@ -495,6 +631,9 @@ async function createApp() {
       confidential: form.value.confidential,
     };
     if (form.value.logoUri.trim()) body.logoUri = form.value.logoUri.trim();
+    // Omitted when the catalogue never loaded: the backend then falls back to the
+    // caller's own grantable scopes, which is how creation behaved before this picker.
+    if (form.value.scopes.length) body.scopes = [...form.value.scopes];
 
     const response = await $fetch<OAuthApp>(`${config.apiBase}/oauth-apps`, {
       method: "POST",
@@ -512,6 +651,48 @@ async function createApp() {
     toast.error(e.data?.message || "Failed to create OAuth app");
   } finally {
     creating.value = false;
+  }
+}
+
+async function updateApp() {
+  if (!selectedApp.value || !editScopes.value.length || !isAuthenticated.value)
+    return;
+
+  // Narrowing stops the app asking for a permission from now on, but does not revoke
+  // tokens users already hold — those lapse on their next refresh. Worth a confirmation,
+  // since nothing here can tell you what is currently relying on it.
+  const removed = (selectedApp.value.scopes ?? []).filter(
+    (scope: string) => !editScopes.value.includes(scope),
+  );
+  if (
+    removed.length &&
+    !confirm(
+      `Remove ${removed.join(", ")} from “${selectedApp.value.name}”? It can no longer ask users for those. Anyone who already granted them keeps access until their token refreshes.`,
+    )
+  )
+    return;
+
+  try {
+    updating.value = true;
+    // Only the scopes: updateApp carries every other field over from the stored client.
+    await $fetch(
+      `${config.apiBase}/oauth-apps/${selectedApp.value.clientId}/update`,
+      {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: { scopes: [...editScopes.value] },
+      },
+    );
+
+    toast.success("Permissions updated");
+    showEdit.value = false;
+    await refresh();
+  } catch (error: unknown) {
+    const e = error as { data?: { message?: string } };
+    toast.error(e.data?.message || "Failed to update permissions");
+  } finally {
+    updating.value = false;
   }
 }
 

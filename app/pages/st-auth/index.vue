@@ -36,14 +36,42 @@
           </div>
 
           <h1 class="title is-5 has-text-weight-normal mb-2">
-            <strong>{{ info.clientName || 'An application' }}</strong> wants to access your Nosana account
+            <strong>{{ info.clientName || 'An application' }}</strong>
+            {{ requestedScopes.length ? 'wants to access your Nosana account' : 'wants to verify your identity' }}
           </h1>
 
           <p v-if="email" class="subtitle is-6 has-text-grey mb-4">Signed in as {{ email }}</p>
 
-          <div class="notification is-light oauth-scope">
-            This will let <strong>{{ info.clientName || 'this app' }}</strong> access and manage your
-            Nosana account on your behalf — including deployments, jobs, and credits.
+          <!-- Exactly what is being granted. Anything absent here is not authorized, so
+               this must never be padded out with a generic summary. -->
+          <div v-if="requestedScopes.length" class="notification is-light oauth-scope has-text-left">
+            <p class="is-size-7 mb-2">
+              This will let <strong>{{ info.clientName || 'this app' }}</strong> do the following on your behalf:
+            </p>
+            <ul>
+              <li
+                v-for="item in requestedScopes"
+                :key="item.scope"
+                class="is-flex is-align-items-flex-start is-gap-2 mb-2 is-size-7"
+                :class="{ 'has-text-weight-semibold': spendsCredits(item.description) }"
+              >
+                <span
+                  class="icon is-small mt-1"
+                  :class="spendsCredits(item.description) ? 'has-text-warning-dark' : 'has-text-grey'"
+                  aria-hidden="true"
+                >
+                  <FontAwesomeIcon :icon="spendsCredits(item.description) ? faCoins : faCheck" />
+                </span>
+                <span>{{ item.description }}</span>
+              </li>
+            </ul>
+          </div>
+
+          <!-- No resource scopes: a sign-in-only grant, which authorizes no API access.
+               Claiming account access here would be false. -->
+          <div v-else class="notification is-light oauth-scope has-text-left">
+            This will let <strong>{{ info.clientName || 'this app' }}</strong> confirm who you are. It gets
+            no access to your deployments, jobs, credits or wallet.
           </div>
 
           <div
@@ -75,6 +103,8 @@ import {
   getLoginChallengeInfo,
   getRedirectURLToContinueOAuthFlow,
 } from "supertokens-web-js/recipe/oauth2provider";
+import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
+import { faCheck, faCoins } from "@fortawesome/free-solid-svg-icons";
 import Loader from "~/components/Loader.vue";
 import { useSuperTokens } from "~/composables/useSuperTokens";
 
@@ -85,6 +115,12 @@ import { useSuperTokens } from "~/composables/useSuperTokens";
 // issues the authorization code.
 definePageMeta({ layout: false });
 
+/** One permission the client is asking for, as `loginInfoGET` reports it. */
+interface RequestedScope {
+  scope: string;
+  description: string;
+}
+
 interface ClientInfo {
   clientId: string;
   clientName: string;
@@ -92,6 +128,7 @@ interface ClientInfo {
   clientUri?: string;
   tosUri?: string;
   policyUri?: string;
+  requestedScopes?: RequestedScope[];
 }
 
 const route = useRoute();
@@ -107,6 +144,10 @@ const loginChallenge = (route.query.loginChallenge ?? route.query.login_challeng
   | undefined;
 
 const email = computed(() => userData.value?.email ?? null);
+const requestedScopes = computed<RequestedScope[]>(() => info.value?.requestedScopes ?? []);
+
+// The descriptions say so themselves; this only picks the icon.
+const spendsCredits = (description: string) => /credits/i.test(description);
 
 function fail(message: string) {
   error.value = message;

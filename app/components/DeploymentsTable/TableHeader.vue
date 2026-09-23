@@ -384,7 +384,7 @@ onUnmounted(() =>
   transform: translateY(-50%);
   width: 16px;
   height: 16px;
-  color: #9aa0a6;
+  color: $text-muted;
   pointer-events: none;
 }
 
@@ -395,7 +395,7 @@ onUnmounted(() =>
   font-size: 0.875rem;
   color: #1a1c1e;
   background: #ffffff;
-  border: 1px solid #e1e3e6;
+  border: 1px solid $border-soft;
   border-radius: 10px;
   outline: none;
   transition:
@@ -404,7 +404,7 @@ onUnmounted(() =>
 }
 
 .th-search-input::placeholder {
-  color: #9aa0a6;
+  color: $text-muted;
 }
 
 .th-search-input:focus {
@@ -418,7 +418,7 @@ onUnmounted(() =>
   align-items: center;
   height: 40px;
   background: #ffffff;
-  border: 1px solid #e1e3e6;
+  border: 1px solid $border-soft;
   border-radius: 10px;
   transition:
     border-color 0.15s ease,
@@ -450,7 +450,7 @@ onUnmounted(() =>
   right: 0.7rem;
   width: 16px;
   height: 16px;
-  color: #80868b;
+  color: $text-muted;
   pointer-events: none;
 }
 
@@ -498,7 +498,7 @@ onUnmounted(() =>
   font-weight: 500;
   color: #1a1c1e;
   background: #ffffff;
-  border: 1px solid #e1e3e6;
+  border: 1px solid $border-soft;
   border-radius: 10px;
   box-shadow: none;
   transition:
@@ -543,7 +543,7 @@ onUnmounted(() =>
 
 .th-actions-caret {
   margin-left: 0.35rem;
-  color: #80868b;
+  color: $text-muted;
   transition: transform 0.2s ease;
 
   &.is-rotated {
@@ -558,7 +558,7 @@ onUnmounted(() =>
 
 .th-actions .dropdown-content {
   background: #ffffff;
-  border: 1px solid $grey-lighter;
+  border: 1px solid $border-soft;
   border-radius: 12px;
   box-shadow: 0 12px 40px rgba($black, 0.14);
   padding: 6px;
@@ -580,12 +580,12 @@ onUnmounted(() =>
     color 0.15s ease;
 
   .icon {
-    color: $grey;
+    color: $text-muted;
     transition: color 0.15s ease;
   }
 
   &:hover {
-    background: $white-ter;
+    background: $surface-hover;
     color: $text;
 
     .icon {
@@ -621,7 +621,7 @@ onUnmounted(() =>
   padding-left: 1rem;
   font-size: 0.78rem;
   font-variant-numeric: tabular-nums;
-  color: $grey;
+  color: $text-muted;
 }
 
 .th-actions .dropdown-divider {

@@ -318,11 +318,7 @@
         :class="{ 'is-active': activeTab === tab }"
         @click="$emit('switchTab', tab)"
       >
-        {{
-          tab === "configuration"
-            ? "Configuration"
-            : tab.charAt(0).toUpperCase() + tab.slice(1)
-        }}
+        {{ tab.charAt(0).toUpperCase() + tab.slice(1) }}
       </button>
     </div>
   </div>
@@ -450,7 +446,7 @@ onUnmounted(() => {
   padding: 0;
   margin-bottom: 1rem;
   cursor: pointer;
-  color: $grey;
+  color: $text-muted;
   font-family: $family-sans-serif;
   font-size: 0.9rem;
   transition: color 0.15s ease;
@@ -545,7 +541,7 @@ html.dark-mode .dep-name {
   flex-wrap: wrap;
   margin-top: 0.5rem;
   font-size: 0.78rem;
-  color: $grey;
+  color: $text-muted;
 }
 
 .id-line .is-family-monospace {
@@ -553,7 +549,7 @@ html.dark-mode .dep-name {
 }
 
 .id-sep {
-  color: $grey-light;
+  color: $text-muted;
 }
 
 .updated-time {
@@ -568,7 +564,7 @@ html.dark-mode .dep-name {
   border-radius: 6px;
   border: 0;
   background: transparent;
-  color: $grey;
+  color: $text-muted;
   cursor: pointer;
   transition:
     background 0.15s ease,
@@ -580,7 +576,7 @@ html.dark-mode .dep-name {
   }
 
   &:hover {
-    background: $white-ter;
+    background: $surface-hover;
     color: $text;
   }
 
@@ -606,14 +602,14 @@ html.dark-mode .copy-btn:hover {
   font-weight: 500;
   font-size: 0.9rem;
   border-radius: 10px;
-  border: 1px solid $grey-lighter;
-  background: $white-ter;
+  border: 1px solid $border-soft;
+  background: $white;
   color: $text;
   box-shadow: none;
 
   &:hover {
-    background: $grey-lightest;
-    border-color: $grey-light;
+    background: $surface-hover;
+    border-color: $border-strong;
   }
 }
 
@@ -643,7 +639,7 @@ html.dark-mode .header-action-btn {
 
 .header-main .dropdown-content {
   background: $white;
-  border: 1px solid $grey-lighter;
+  border: 1px solid $border-soft;
   border-radius: 12px;
   box-shadow: 0 12px 40px rgba($black, 0.14);
   padding: 6px;
@@ -664,12 +660,12 @@ html.dark-mode .header-action-btn {
     color 0.15s ease;
 
   .icon {
-    color: $grey;
+    color: $text-muted;
     transition: color 0.15s ease;
   }
 
   &:hover {
-    background: $white-ter;
+    background: $surface-hover;
     color: $text;
 
     .icon {
@@ -734,61 +730,7 @@ html.dark-mode .header-main .dropdown-divider {
 }
 
 /* Segmented tab control */
-.dep-tabs {
-  display: inline-flex;
-  gap: 3px;
-  padding: 5px;
-  margin: 1.75rem 0 0.25rem;
-  border-radius: 13px;
-  background: $grey-lightest;
-  max-width: 100%;
-  overflow-x: auto;
-}
 
-html.dark-mode .dep-tabs {
-  background: rgba($white, 0.08);
-}
-
-.dep-tab {
-  font-family: $title-family;
-  font-weight: 500;
-  font-size: 0.9rem;
-  color: $grey-dark;
-  border: 0;
-  background: none;
-  padding: 0.6rem 1.35rem;
-  border-radius: 9px;
-  cursor: pointer;
-  white-space: nowrap;
-  transition:
-    color 0.15s ease,
-    background 0.15s ease;
-
-  &:hover {
-    color: $text;
-  }
-
-  &.is-active {
-    background: $secondary;
-    color: #05230a;
-    font-weight: 600;
-    box-shadow: 0 1px 3px rgba($black, 0.12);
-  }
-}
-
-html.dark-mode .dep-tab {
-  color: $grey-light;
-}
-
-html.dark-mode .dep-tab:hover {
-  color: $white;
-}
-
-html.dark-mode .dep-tab.is-active {
-  background: $secondary;
-  color: #05230a;
-  box-shadow: 0 1px 3px rgba($black, 0.5);
-}
 
 @media screen and (max-width: 768px) {
   .dep-header {

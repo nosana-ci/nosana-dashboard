@@ -4,9 +4,13 @@
     <div v-if="revisions && revisions.length > 0" class="rev-card">
       <div
         v-for="revision in revisions"
+        :id="`revision-${revision.revision}`"
         :key="revision.revision"
         class="revrow"
-        :class="{ 'is-active': revision.revision === activeRevision }"
+        :class="{
+          'is-active': revision.revision === activeRevision,
+          'is-focused': revision.revision === focusedRevision,
+        }"
       >
         <span class="rnum">{{ revision.revision }}</span>
         <div class="rmain">
@@ -60,6 +64,8 @@ defineProps<{
   activeRevision: number | undefined;
   switchingRevision: number | null;
   actionLoading: boolean;
+  // Briefly highlighted after a job row's revision chip jumps here.
+  focusedRevision?: number | null;
 }>();
 
 defineEmits<{
@@ -72,10 +78,7 @@ defineEmits<{
 @use "sass:color";
 
 .rev-card {
-  background: $white;
-  border: 1px solid $grey-lighter;
-  border-radius: 14px;
-  overflow: hidden;
+  @include soft-panel;
 }
 
 .revrow {
@@ -84,7 +87,6 @@ defineEmits<{
   gap: 15px;
   padding: 15px 18px;
   position: relative;
-  transition: background 0.12s ease;
 
   & + &::before {
     content: "";
@@ -93,11 +95,22 @@ defineEmits<{
     left: 18px;
     right: 18px;
     height: 1px;
-    background: $grey-lighter;
+    background: $border-soft;
   }
+}
 
-  &:hover {
-    background: $white-ter;
+/* Fades out after a job row's revision chip jumps here. */
+.revrow.is-focused {
+  animation: revflash 2.5s ease-out;
+}
+
+@keyframes revflash {
+  0%,
+  60% {
+    background: rgba($secondary, 0.18);
+  }
+  100% {
+    background: transparent;
   }
 }
 
@@ -106,7 +119,7 @@ defineEmits<{
   height: 34px;
   border-radius: 10px;
   background: $white-ter;
-  color: $grey;
+  color: $text-muted;
   font-family: monospace;
   font-weight: 600;
   font-size: 13px;
@@ -137,7 +150,7 @@ defineEmits<{
 
 .rdate {
   font-size: 12.5px;
-  color: $grey;
+  color: $text-muted;
   margin-top: 2px;
   font-variant-numeric: tabular-nums;
 }
@@ -170,7 +183,7 @@ defineEmits<{
 
 .make-active-btn,
 .view-btn {
-  border: 1px solid $grey-lighter;
+  border: 1px solid $border-soft;
   border-radius: 8px;
   background: $white;
   color: $text;
@@ -179,8 +192,8 @@ defineEmits<{
   box-shadow: none;
 
   &:hover {
-    border-color: $grey-light;
-    background: $white-ter;
+    border-color: $border-strong;
+    background: $surface-hover;
   }
 }
 
@@ -198,10 +211,6 @@ html.dark-mode {
 
   .revrow + .revrow::before {
     background: rgba($white, 0.08);
-  }
-
-  .revrow:hover {
-    background: rgba($white, 0.04);
   }
 
   .rnum {

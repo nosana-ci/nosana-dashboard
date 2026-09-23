@@ -98,7 +98,7 @@
 
       <template v-if="isAuthenticated">
         <ApiKeys class="mb-6" />
-        <!-- <OAuthApps /> -->
+        <OAuthApps />
       </template>
 
       <div v-else class="box signin-prompt has-text-centered p-6">
@@ -367,7 +367,7 @@ const resources = [
   font-family: var(--mono);
   font-size: 0.8rem;
   letter-spacing: 0.05em;
-  color: $grey;
+  color: $text-muted;
 }
 
 /* ---------- Resource cards ---------- */
@@ -415,14 +415,14 @@ const resources = [
 
 .res-desc {
   font-size: 0.875rem;
-  color: $text-light;
+  color: $text-muted;
   line-height: 1.4;
 }
 
 .res-meta {
   font-family: var(--mono);
   font-size: 0.75rem;
-  color: $grey;
+  color: $text-muted;
   border-top: 1px solid $border;
 }
 

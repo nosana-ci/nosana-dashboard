@@ -132,6 +132,7 @@ export default defineNuxtConfig({
       recaptcha_site_key: process.env.NUXT_PUBLIC_RECAPTCHA_SITE_KEY,
       network: process.env.NETWORK || "mainnet",
       nodeDomain: process.env.NODE_DOMAIN,
+      sshProxyPort: process.env.SSH_PROXY_PORT || "5002",
       frpServer: process.env.FRP_SERVER || "node.k8s.prd.nos.ci",
       cookie_domain: process.env.NUXT_PUBLIC_COOKIE_DOMAIN,
       stripe_publishable_key: process.env.NUXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
@@ -193,7 +194,8 @@ export default defineNuxtConfig({
       preprocessorOptions: {
         scss: {
           sourceMap: false,
-          additionalData: '@use "@/assets/styles/variables.scss" as *;',
+          additionalData:
+            '@use "@/assets/styles/variables.scss" as *; @use "@/assets/styles/mixins.scss" as *;',
           silenceDeprecations: ["slash-div"],
         },
       },
