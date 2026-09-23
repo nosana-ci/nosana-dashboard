@@ -25,9 +25,8 @@ interface UseLiveLogsDeps {
   /** A job on its node through Kit, signed as the deployment. */
   resolveNodeJob: (jobId: string) => Promise<NodeJobApi>;
   // CVM deployments: each job's host stream is just the VM boot console, so
-  // useFLogs also opens the job's own CVM socket (authed per job address).
+  // useFLogs also opens the job's own CVM socket, reusing the node job's auth.
   isCvm?: Ref<boolean>;
-  getJobAuth?: (jobAddress: string) => Promise<string>;
 }
 
 export function useLiveLogs(deps: UseLiveLogsDeps) {
@@ -60,13 +59,10 @@ export function useLiveLogs(deps: UseLiveLogsDeps) {
 
     const nodeRef = ref(node);
     const shouldConnect = computed(() => !!nodeRef.value && nodeRef.value !== NULL_ADDRESS);
-    const cvmEnabled = !!deps.isCvm?.value && !!deps.getJobAuth;
     const flog = useFLogs(jobId, shouldConnect, {
       resolveNodeJob: () => deps.resolveNodeJob(jobId),
       onEntry: (entry, opId) => handleEntry(entry, jobId, opId),
-      ...(cvmEnabled
-        ? { cvm: { getAuth: () => deps.getJobAuth!(jobId) } }
-        : {}),
+      cvm: !!deps.isCvm?.value,
     });
 
     instances.set(jobId, {

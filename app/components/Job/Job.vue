@@ -575,7 +575,6 @@ interface Props {
 const props = defineProps<Props>();
 const { nosana } = useKit();
 const { userBalances } = useNosanaWallet();
-const { getJobAuthHeader } = useCvmAuth();
 // The job on its node through Kit, signed as the poster or the deployment.
 const resolveNodeJob = useNodeJobResolver(
   props.job.address,
@@ -1363,9 +1362,7 @@ const {
   systemLogs: flogSystemLogs,
 } = useFLogs(props.job.address, shouldConnect, {
   resolveNodeJob,
-  ...(isCvmJob.value
-    ? { cvm: { getAuth: () => getJobAuthHeader(props.job.address) } }
-    : {}),
+  cvm: isCvmJob.value,
 });
 
 // Expose flog progress bars (directly from useFLogs)

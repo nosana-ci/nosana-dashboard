@@ -2,7 +2,6 @@ import { ref, shallowRef, computed, watch, onUnmounted, type Ref } from 'vue';
 import type { JobItem, UnifiedLogEntry } from './logCollectorTypes';
 import type { ProgressBar } from './logTypes';
 import { useKit } from '~/composables/useKit';
-import { useCvmAuth } from '~/composables/useCvmAuth';
 import { isCvmMarket } from '~/utils/cvm';
 import { getNodeJob } from '~/utils/kitJobAccess';
 import { useLiveLogs } from './useLiveLogs';
@@ -17,7 +16,6 @@ interface LogSourcesDeps {
 
 export function useLogSources(deps: LogSourcesDeps) {
   const { nosana } = useKit();
-  const { getJobAuthHeader } = useCvmAuth();
 
   const entries = shallowRef<UnifiedLogEntry[]>([]);
   const seq = ref(0);
@@ -44,7 +42,6 @@ export function useLogSources(deps: LogSourcesDeps) {
     seq,
     resolveNodeJob: (jobId) => getNodeJob(nosana.value.api, jobId, deps.deploymentId),
     isCvm: computed(() => isCvmMarket(deps.market?.value)),
-    getJobAuth: getJobAuthHeader,
   });
 
   const historical = useHistoricalLogs({
