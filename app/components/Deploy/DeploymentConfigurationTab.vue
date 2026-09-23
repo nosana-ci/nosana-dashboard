@@ -6,7 +6,7 @@
         <div class="select is-fullwidth">
           <select v-model="strategyLocal">
             <option value="SIMPLE">Simple</option>
-            <option value="SIMPLE-EXTEND">Simple Extend</option>
+            <option v-if="!isSpareCapacityOnly" value="SIMPLE-EXTEND">Simple Extend</option>
             <option value="SCHEDULED">Scheduled</option>
             <option value="INFINITE">Infinite</option>
           </select>
@@ -78,6 +78,8 @@ import {
   MIN_TIMEOUT_HOURS,
   MIN_INFINITE_TIMEOUT_HOURS,
 } from "~/composables/useTimeoutConstants";
+
+const { isSpareCapacityOnly } = useSuperTokens();
 
 const props = defineProps<{
   strategy: DeploymentStrategy;

@@ -107,7 +107,7 @@
           <div class="dropdown-menu">
             <div class="dropdown-content">
               <a
-                v-if="props.job.isRunning && props.isJobPoster"
+                v-if="canExtend"
                 class="dropdown-item"
                 @click="handleActionClick(openExtendModal)"
                 :disabled="loadingExtend"
@@ -1083,16 +1083,20 @@ const isQueuedJob = computed(() => {
   );
 });
 
+const { isSpareCapacityOnly } = useSuperTokens();
+
+// Extend action: available for running jobs if user is job poster
+const canExtend = computed(
+  () => props.job.isRunning && props.isJobPoster && !isSpareCapacityOnly.value,
+);
+
 // Check if any actions are available for the job
 const hasAnyActions = computed(() => {
-  // Extend action: available for running jobs if user is job poster
-  const canExtend = props.job.isRunning && props.isJobPoster;
-
   // Stop/Delist action: available for running or queued jobs if user is job poster
   const canStop =
     (props.job.isRunning || props.job.state === 0) && props.isJobPoster;
 
-  return canExtend || canStop;
+  return canExtend.value || canStop;
 });
 
 // Check if job has results to show

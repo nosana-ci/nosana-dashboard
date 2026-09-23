@@ -44,6 +44,16 @@
                 :hasErrorInLastEvent="hasErrorInLastEvent"
                 @viewEvents="switchTab('events')"
               />
+              <div
+                v-if="waitingForSpareCapacity"
+                class="notification is-info is-light mb-5"
+              >
+                <strong>Waiting for spare capacity</strong>
+                <p class="mt-1">
+                  This GPU has no spare capacity right now. Jobs will be posted
+                  automatically as soon as capacity frees up.
+                </p>
+              </div>
 
               <DeploymentDetails
                 :deployment="deployment"
@@ -352,6 +362,7 @@ const {
   deploymentEndpoints,
   deploymentEvents,
   hasErrorInLastEvent,
+  waitingForSpareCapacity,
 } = jobs;
 
 const streamUserId = computed(() =>

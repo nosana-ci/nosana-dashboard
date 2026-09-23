@@ -21,12 +21,15 @@
       >
         (${{ reservedCredits.toFixed(2) }} reserved in running/queued jobs)
       </p>
+      <p v-if="isSpareCapacityOnly" class="has-text-grey is-size-7 mt-2 mb-0">
+        Spare capacity account. {{ SPARE_CAPACITY_TOPUP_DISABLED }}
+      </p>
       <div class="buttons is-centered mt-5 mb-0">
         <button
           type="button"
           class="button is-primary"
           :class="{ 'is-loading': loading }"
-          :disabled="loading || isBanned"
+          :disabled="loading || isBanned || isSpareCapacityOnly"
           @click="openBuyCreditsModal"
         >
           Buy Credits
@@ -59,8 +62,9 @@
 import { onMounted, watch } from "vue";
 import AccountClaimModal from "./ClaimModal.vue";
 import WalletIcon from "@/assets/img/icons/wallet.svg?component";
+import { SPARE_CAPACITY_TOPUP_DISABLED } from "~/utils/spareCapacity";
 
-const { isAuthenticated, isLoading, isBanned } = useSuperTokens();
+const { isAuthenticated, isLoading, isBanned, isSpareCapacityOnly } = useSuperTokens();
 const { openBuyCreditsModal } = useBuyCreditsModal();
 const { onCreditRefresh } = useCreditRefresh();
 

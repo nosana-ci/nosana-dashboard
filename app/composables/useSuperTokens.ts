@@ -15,6 +15,7 @@ export interface User {
   generatedAddress: string;
   loginMethod?: string;
   banned?: boolean;
+  spareCapacityOnly?: boolean;
 }
 
 // Global state shared across all instances
@@ -360,6 +361,7 @@ export function useSuperTokens() {
     userId: readonly(userId),
     userData: readonly(userData) as Readonly<Ref<User | null>>,
     isBanned: computed(() => userData.value?.banned === true),
+    isSpareCapacityOnly: computed(() => userData.value?.spareCapacityOnly === true),
     checkSession,
     signIn,
     signUp,
