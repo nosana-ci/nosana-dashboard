@@ -93,6 +93,18 @@ const normalizeTemplates = (value: TemplatesResponse, grouped = false): Template
   return []
 }
 
+/**
+ * The GPU memory (MB) a job definition asks for, or null when it states none.
+ * Templates use `vram_total_mb`, or the legacy `required_vram` in GB.
+ */
+export const requiredVramMb = (jobDefinition?: JobDefinition | null): number | null => {
+  const reqs = (jobDefinition?.meta as { system_requirements?: Record<string, unknown> } | undefined)
+    ?.system_requirements
+  if (reqs?.vram_total_mb) return Number(reqs.vram_total_mb)
+  if (reqs?.required_vram) return Number(reqs.required_vram) * 1024
+  return null
+}
+
 // Keep original templates endpoint for backward compatibility
 const { data: rawTemplates, pending: loadingTemplates } = useAPI('/jobs/templates', {
   immediate: true

@@ -18,6 +18,9 @@
       <div class="ep-top">
         <span class="ep-name">{{ name }}</span>
         <span class="port-chip">:{{ port }}</span>
+        <span v-if="chat" class="llm-chip" title="Serves a chat model"
+          >LLM</span
+        >
       </div>
       <a
         v-if="reachable"
@@ -31,6 +34,30 @@
       <span v-else class="ep-url struck">{{ url }}</span>
     </div>
     <div class="ep-acts">
+      <button
+        v-if="chat && status === 'online'"
+        type="button"
+        class="ep-icobtn"
+        title="Chat with this model"
+        aria-label="Chat with this model"
+        @click.stop="emit('chat')"
+        @keydown.enter.stop
+        @keydown.space.stop
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path
+            d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+          />
+        </svg>
+      </button>
       <button
         type="button"
         class="ep-icobtn"
@@ -93,7 +120,10 @@ const props = defineProps<{
   port: number | string;
   url: string;
   status: EndpointStatus;
+  /** Serves a chat model: shows the LLM chip and a Chat button. */
+  chat?: boolean;
 }>();
+const emit = defineEmits<{ chat: [] }>();
 
 const statusLabel = computed(
   () => props.status.charAt(0).toUpperCase() + props.status.slice(1),
@@ -129,6 +159,8 @@ const onRowClick = () => {
 </script>
 
 <style lang="scss" scoped>
+@use "sass:color";
+
 .ep-row {
   display: flex;
   align-items: center;
@@ -206,6 +238,17 @@ a.ep-url:hover {
   flex: none;
 }
 
+.llm-chip {
+  font-family: $title-family;
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: color.adjust($secondary, $lightness: -18%);
+  background: rgba($secondary, 0.12);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
 .ep-icobtn {
   display: inline-grid;
   place-items: center;
@@ -249,6 +292,10 @@ html.dark-mode {
   .port-chip {
     background: rgba($white, 0.08);
     color: $grey-light;
+  }
+
+  .llm-chip {
+    color: $secondary;
   }
 
   .ep-icobtn:hover {

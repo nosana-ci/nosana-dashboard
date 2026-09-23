@@ -46,12 +46,6 @@
   </div>
   <div v-else-if="activeTab === 'logs' && !canShowLogsTab"></div>
 
-  <JobChatView
-    v-show="activeTab === 'chat' && showChatTab"
-    :job="props.job"
-    :chatServiceUrl="chatServiceUrl"
-    :chatApiConfig="chatApiConfig"
-  />
   <JobGroups
     v-if="activeTab === 'groups'"
     :job="props.job"
@@ -71,7 +65,6 @@ import type { JobDefinition } from "@nosana/kit";
 import CopyIcon from "@/assets/img/icons/copy.svg?component";
 
 import JobLogsView from "./Tabs/SystemLogs.vue";
-import JobChatView from "./Tabs/Chat.vue";
 import JobGroups from "./Tabs/Overview.vue";
 
 import type { Endpoints, UseJob } from "~/composables/jobs/useJob";
@@ -97,13 +90,6 @@ interface Props {
   containerLogs: AnyLogEntry[];
   progressBars: Map<string, ProgressBar>;
   resourceProgressBars: Map<string, any>;
-  showChatTab?: boolean;
-  chatServiceUrl?: string | null;
-  chatApiConfig?: {
-    path: string;
-    model: string;
-    headers?: Record<string, string>;
-  } | null;
   activeTab: string; // Prop for active tab
   logsTextForCopy?: string;
   copyToClipboard?: (text: string | undefined, type: string) => Promise<void>;
@@ -164,7 +150,6 @@ const visibleTabs = computed(() => {
   if (canShowGroupsTab.value) tabs.push("groups");
   if (canShowLogsTab.value) tabs.push("logs");
   if (!props.isConfidential) tabs.push("info");
-  if (props.showChatTab) tabs.push("chat");
   return tabs;
 });
 
@@ -180,7 +165,6 @@ watch(
     props.job.isCompleted,
     props.isConfidential,
     props.isJobPoster,
-    props.showChatTab,
     props.activeTab,
   ],
   () => {

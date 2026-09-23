@@ -19,19 +19,22 @@
     :panel-active="active"
     :auto-connect-op="autoConnectOp"
     :deployment-endpoints="deploymentEndpoints"
+    @chat="emit('chat', $event)"
+    @view="emit('view', $event)"
   />
 </template>
 
 <script setup lang="ts">
 import Job from "~/components/Job/Job.vue";
 import { useDeploymentJobPage } from "~/composables/jobs/useDeploymentJobPage";
+import type { LlmChatStatus } from "~/composables/jobs/useLlmEndpoint";
 
 // One replica's data, mounted once and kept while the panel is open so its
 // streams and shells survive switching to another replica.
 const props = defineProps<{
   deploymentId: string;
   jobAddress: string;
-  view: "details" | "containers" | "activity";
+  view: "details" | "containers" | "activity" | "chat";
   active: boolean;
   /** The job's state as the page's live job list holds it, so the record
    *  refreshes when the deployment stream reports the replica changed. */
@@ -44,6 +47,10 @@ const props = defineProps<{
     port: number | string;
     online: boolean;
   }>;
+}>();
+const emit = defineEmits<{
+  chat: [status: LlmChatStatus | null];
+  view: [view: "logs"];
 }>();
 
 const {
