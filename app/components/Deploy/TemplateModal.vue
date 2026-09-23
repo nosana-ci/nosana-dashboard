@@ -25,6 +25,14 @@
               <i class="fas fa-search"></i>
             </span>
           </p>
+          <div class="select tm-vram-filter">
+            <select v-model.number="maxVramGb" aria-label="Filter by GPU memory">
+              <option :value="0">Any GPU memory</option>
+              <option v-for="gb in VRAM_STEPS" :key="gb" :value="gb">
+                Fits in {{ gb }} GB VRAM
+              </option>
+            </select>
+          </div>
           <div class="is-flex is-align-items-center is-flex-wrap-wrap is-gap-1">
             <button
               type="button"
@@ -92,28 +100,37 @@
                     @click.stop
                   >
                     <select
-                      :value="selectedVariants[template.id] || template.variants[0].variant_id"
+                      :value="selectedVariantId(template)"
                       @change="updateSelectedVariant(template.id, ($event.target as HTMLSelectElement).value)"
                     >
                       <option
-                        v-for="variant in template.variants"
+                        v-for="variant in visibleVariants(template)"
                         :key="variant.variant_id"
                         :value="variant.variant_id"
                       >
-                        {{ variant.name }}
+                        {{ variantLabel(variant) }}
                       </option>
                     </select>
                   </div>
 
                   <div class="is-flex is-align-items-center is-justify-content-space-between is-gap-2">
-                    <div class="tm-tags">
+                    <div class="tm-foot-left">
                       <span
-                        v-for="cat in displayTags(template)"
-                        :key="cat"
-                        class="tag is-rounded"
+                        v-if="tileVram(template)"
+                        class="tm-vram"
+                        title="Minimum GPU memory (VRAM)"
                       >
-                        {{ cat }}
+                        {{ formatGb(tileVram(template)!) }} VRAM
                       </span>
+                      <div class="tm-tags">
+                        <span
+                          v-for="cat in displayTags(template)"
+                          :key="cat"
+                          class="tag is-rounded"
+                        >
+                          {{ cat }}
+                        </span>
+                      </div>
                     </div>
                     <span class="tm-tile-cta">
                       Use template
@@ -132,7 +149,9 @@
           v-if="officialTemplates.length === 0 && communityTemplates.length === 0"
           class="has-text-centered py-6"
         >
-          <p class="title is-6 mb-1">No templates match “{{ search }}”.</p>
+          <p class="title is-6 mb-1">
+            No templates match{{ search ? ` “${search}”` : " these filters" }}.
+          </p>
           <p class="has-text-grey">Try a different search or clear the filters.</p>
         </div>
       </section>
@@ -142,7 +161,11 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import type { Template } from '~/composables/useTemplates';
+import {
+  requiredVramMb,
+  type Template,
+  type TemplateVariant,
+} from '~/composables/useTemplates';
 
 // Define props
 const props = defineProps<{
@@ -160,6 +183,9 @@ const emit = defineEmits<{
 const selectedCategory = ref<string | null>(null);
 const search = ref("");
 const selectedVariants = ref<Record<string, string>>({});
+// GPU memory the reader has, in GB; 0 shows every template.
+const maxVramGb = ref(0);
+const VRAM_STEPS = [8, 12, 16, 24, 32, 48, 80, 96] as const;
 
 // Predefined categories
 const ALL_CATEGORIES = [
@@ -184,8 +210,8 @@ const selectTemplate = (template: Template) => {
 const handleTemplateClick = (template: Template) => {
   if (template.variants && template.variants.length > 0) {
     // For variants, select the currently selected variant
-    const variantId = selectedVariants.value[template.id] || template.variants[0].variant_id;
-    selectTemplateVariant(template, variantId);
+    const variantId = selectedVariantId(template);
+    if (variantId) selectTemplateVariant(template, variantId);
   } else {
     // For single templates, select directly
     selectTemplate(template);
@@ -209,6 +235,43 @@ const selectTemplateVariant = (template: Template, variantId: string) => {
     });
     closeModal();
   }
+};
+
+// A definition with no stated requirement fits any GPU.
+const fits = (jobDefinition: Template['jobDefinition']): boolean => {
+  const mb = requiredVramMb(jobDefinition);
+  return !maxVramGb.value || mb === null || mb <= maxVramGb.value * 1024;
+};
+
+const visibleVariants = (template: Template): TemplateVariant[] =>
+  (template.variants ?? []).filter((variant) => fits(variant.jobDefinition));
+
+// The reader's pick while it still fits the filter, else the first that does.
+const selectedVariantId = (template: Template): string | undefined => {
+  const variants = visibleVariants(template);
+  const chosen = selectedVariants.value[template.id];
+  return variants.some((v) => v.variant_id === chosen)
+    ? chosen
+    : variants[0]?.variant_id;
+};
+
+const selectedJobDefinition = (template: Template) =>
+  template.variants?.length
+    ? template.variants.find((v) => v.variant_id === selectedVariantId(template))
+        ?.jobDefinition
+    : template.jobDefinition;
+
+const tileVram = (template: Template) =>
+  requiredVramMb(selectedJobDefinition(template));
+
+const formatGb = (mb: number): string => {
+  const gb = mb / 1024;
+  return `${Number.isInteger(gb) ? gb : gb.toFixed(1)} GB`;
+};
+
+const variantLabel = (variant: TemplateVariant): string => {
+  const mb = requiredVramMb(variant.jobDefinition);
+  return mb ? `${variant.name} · ${formatGb(mb)}` : variant.name;
 };
 
 const getCategoryArray = (category: string | string[] | undefined): string[] => {
@@ -243,8 +306,7 @@ const getTemplateImage = (template: Template): string | null => {
 
 const getSelectedVariantDockerImage = (template: Template): string => {
   if (template.variants && template.variants.length > 0) {
-    const selectedVariantId = selectedVariants.value[template.id] || template.variants[0].variant_id;
-    const selectedVariant = template.variants.find(v => v.variant_id === selectedVariantId);
+    const selectedVariant = template.variants.find(v => v.variant_id === selectedVariantId(template));
     if (selectedVariant && selectedVariant.jobDefinition) {
       try {
         const dockerImage = selectedVariant.jobDefinition.ops?.[0]?.args?.image;
@@ -272,6 +334,13 @@ const filteredTemplates = computed(() => {
       (t: any) =>
         t.name.toLowerCase().includes(searchTerm) ||
         (t.description && t.description.toLowerCase().includes(searchTerm))
+    );
+  }
+
+  // Filter by GPU memory: keep a template while any variant fits
+  if (maxVramGb.value) {
+    templatesList = templatesList.filter((t) =>
+      t.variants?.length ? visibleVariants(t).length > 0 : fits(t.jobDefinition)
     );
   }
 
@@ -321,6 +390,32 @@ const sections = computed(() => [
   min-width: 0;
   max-width: 24rem;
   margin-bottom: 0;
+}
+
+.tm-vram-filter {
+  flex: 0 0 auto;
+  margin-bottom: 0;
+}
+
+/* GPU memory first in the footer; the tags give way to it when space runs out */
+.tm-foot-left {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.tm-vram {
+  flex-shrink: 0;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-family: $family-monospace;
+  font-size: 0.76rem;
+  font-weight: 600;
+  white-space: nowrap;
+  color: $text;
+  background: $surface-sunken;
+  border: 1px solid $border-soft;
 }
 
 .tm-grid {
@@ -469,6 +564,12 @@ const sections = computed(() => [
 
 .dark-mode .tm-tile-name {
   color: $white;
+}
+
+.dark-mode .tm-vram {
+  color: $white;
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .dark-mode .tm-tile-foot {
