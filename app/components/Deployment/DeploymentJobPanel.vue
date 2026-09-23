@@ -143,6 +143,11 @@
             @click="emit('update:view', tab.id)"
           >
             {{ tab.label }}
+            <span
+              v-if="tab.id === 'chat' && chatDot"
+              class="tab-dot"
+              title="The model is ready"
+            ></span>
           </button>
         </div>
       </div>
@@ -160,6 +165,8 @@
             :active="view !== 'logs'"
             :auto-connect-op="autoConnectOp"
             :deployment-endpoints="endpoints"
+            @chat="onChat"
+            @view="emit('update:view', $event)"
           />
         </div>
         <div v-if="logsVisited" v-show="view === 'logs'">
@@ -187,13 +194,20 @@ import DeploymentStatusPill from "~/components/Deployment/DeploymentStatusPill.v
 import JobGpuName from "~/components/Deployment/JobGpuName.vue";
 import { marketName, truncateMiddle } from "~/utils/solana";
 import { formatTimeAgo } from "~/utils/relativeTime";
+import type { LlmChatStatus } from "~/composables/jobs/useLlmEndpoint";
 
-export type JobPanelView = "details" | "containers" | "logs" | "activity";
+export type JobPanelView =
+  | "details"
+  | "containers"
+  | "logs"
+  | "chat"
+  | "activity";
 
 const VIEWS: Array<{ id: JobPanelView; label: string }> = [
   { id: "details", label: "Details" },
   { id: "containers", label: "Containers" },
   { id: "logs", label: "Logs" },
+  { id: "chat", label: "Chat" },
   { id: "activity", label: "Activity" },
 ];
 
@@ -248,12 +262,42 @@ const jobState = computed(() =>
 // Containers tab is how you read each operation's exit code and results. The
 // live controls in there (shells, endpoints, stop/restart) hide themselves
 // once the job is done.
+//
+// Chat is there only for a job serving a chat model, which the job reports
+// once it has loaded: undefined until then, null when it has no chat.
+const chatStatus = ref<LlmChatStatus | null | undefined>(undefined);
 const visibleViews = computed(() => {
   if (jobState.value === "QUEUED") {
     return VIEWS.filter((tab) => tab.id === "activity");
   }
-  return VIEWS;
+  return VIEWS.filter((tab) => tab.id !== "chat" || chatStatus.value);
 });
+
+// A dot on the tab when the model comes up while the reader is elsewhere.
+const chatDot = ref(false);
+const onChat = (status: LlmChatStatus | null) => {
+  if (
+    status === "ready" &&
+    chatStatus.value === "starting" &&
+    props.view !== "chat"
+  ) {
+    chatDot.value = true;
+  }
+  chatStatus.value = status;
+};
+watch(
+  () => props.view,
+  (view) => {
+    if (view === "chat") chatDot.value = false;
+  },
+);
+watch(
+  () => props.job,
+  () => {
+    chatStatus.value = undefined;
+    chatDot.value = false;
+  },
+);
 
 // The panel can be opened straight onto a view (the row's SSH button opens
 // Containers), and a job can change state while it is open.
@@ -261,6 +305,8 @@ watch(
   [() => props.view, visibleViews],
   ([view, views]) => {
     if (views.some((tab) => tab.id === view)) return;
+    // Opened onto Chat: wait for the job to say whether it has one.
+    if (view === "chat" && chatStatus.value === undefined) return;
     emit("update:view", views[0]?.id ?? "details");
   },
   { immediate: true },
@@ -432,6 +478,25 @@ html.dark-mode .copy-btn:hover {
 
 .jp-tabs {
   padding: 0 1.75rem;
+}
+
+.dep-tab {
+  position: relative;
+}
+
+.tab-dot {
+  position: absolute;
+  top: 7px;
+  right: 8px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: $secondary;
+  box-shadow: 0 0 0 2px $body-background-color;
+
+  html.dark-mode & {
+    box-shadow: 0 0 0 2px $body-background-color-dark;
+  }
 }
 
 .jp-body {

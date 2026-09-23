@@ -9,6 +9,8 @@
         :port="endpoint.port"
         :url="endpoint.url"
         :status="statusOf(endpoint)"
+        :chat="endpoint.chat"
+        @chat="emit('chat', endpoint)"
       />
     </div>
   </div>
@@ -24,6 +26,8 @@ type Endpoint = {
   port: number | string;
   url: string;
   online: boolean;
+  /** Serves a chat model. */
+  chat?: boolean;
 };
 
 const props = defineProps<{
@@ -35,6 +39,7 @@ const props = defineProps<{
    */
   activeJobs: number;
 }>();
+const emit = defineEmits<{ chat: [endpoint: Endpoint] }>();
 
 /**
  * `online` means the node's proxy for this op has registered, so the URL

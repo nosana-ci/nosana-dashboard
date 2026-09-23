@@ -20,7 +20,7 @@
           <DeploymentHeader
             :deployment="deployment"
             :activeTab="activeTab"
-            :availableTabs="DEPLOYMENT_TABS"
+            :availableTabs="visibleTabs"
             :actionLoading="actionLoading"
             :canStart="canStart"
             :canStop="canStop"
@@ -56,8 +56,9 @@
               <div class="overview-cols">
                 <div class="ov-main">
                   <DeploymentEndpoints
-                    :endpoints="deploymentEndpoints"
+                    :endpoints="overviewEndpoints"
                     :activeJobs="deployment.active_jobs ?? 0"
+                    @chat="switchTab('chat')"
                   />
 
                   <DeploymentJobActivity
@@ -132,6 +133,25 @@
                 @viewRevision="viewRevisionDefinition"
               />
             </div>
+
+            <!-- Chat with the deployment's endpoint. Kept mounted so the
+                 conversation survives switching tabs. -->
+            <ModelChat
+              v-if="deploymentChat.status.value"
+              v-show="activeTab === 'chat'"
+              class="deployment-chat"
+              scope="deployment"
+              :session-key="deployment.id"
+              :url="deploymentChat.endpoint.value?.url ?? ''"
+              :model="deploymentChat.model.value"
+              :headers="deploymentChat.headers.value"
+              v-model:api-key="deploymentChatKey"
+              :op-id="deploymentChat.candidate.value?.opId ?? ''"
+              :port="deploymentChat.candidate.value?.port ?? 0"
+              :status="deploymentChat.status.value"
+              :error="deploymentChat.error.value"
+              @retry="deploymentChat.retry()"
+            />
           </div>
         </div>
       </div>
@@ -229,6 +249,9 @@ import { useKit } from "~/composables/useKit";
 import { prefetchDeploymentJob } from "~/composables/jobs/useDeploymentJob";
 import { acquireJobFeeds } from "~/composables/jobs/useJobFeeds";
 import { NULL_ADDRESS, marketName } from "~/utils/solana";
+import { useLlmEndpoint } from "~/composables/jobs/useLlmEndpoint";
+import { chatKeyStorageKey } from "~/utils/llmChat";
+import ModelChat from "~/components/Common/ModelChat.vue";
 
 // --- Auth setup ---
 const route = useRoute();
@@ -243,7 +266,7 @@ const isWalletMode = computed(
 const hasAnyAuth = computed(() => isAuthenticated.value || isWalletMode.value);
 
 // --- Tab state ---
-const DEPLOYMENT_TABS = ["overview", "events", "configuration"];
+const DEPLOYMENT_TABS = ["overview", "events", "configuration", "chat"];
 const activeTab = ref("overview");
 
 // Initialize activeTab from URL query parameter
@@ -257,6 +280,7 @@ const PANEL_VIEWS: JobPanelView[] = [
   "details",
   "containers",
   "logs",
+  "chat",
   "activity",
 ];
 const panelJob = ref(route.query.job?.toString() ?? "");
@@ -762,6 +786,57 @@ const setPanelView = (view: JobPanelView) => {
   syncPanelQuery();
 };
 
+// --- Chat, with the deployment's own endpoint ---
+// One URL whichever replica is up, so there is no replica to pick. The job
+// panel has its own Chat for testing a single replica.
+// Shared with the job panel's Chat for this deployment's replicas.
+const deploymentChatKey = useSessionStorage(
+  chatKeyStorageKey(String(route.params.id)),
+  "",
+);
+const deploymentChat = useLlmEndpoint({
+  apiKey: () => deploymentChatKey.value,
+  definition: () => jobDefinitionModel.value,
+  endpoints: () => deploymentEndpoints.value,
+  running: () => (deployment.value?.active_jobs ?? 0) > 0,
+});
+
+// Opening the tab looks again if the model wasn't up yet; nothing polls.
+watch(
+  activeTab,
+  (tab) => tab === "chat" && deploymentChat.recheck(),
+  { immediate: true },
+);
+
+// The Chat tab is there only when the definition serves a chat model.
+const visibleTabs = computed(() =>
+  deploymentChat.candidate.value
+    ? DEPLOYMENT_TABS
+    : DEPLOYMENT_TABS.filter((tab) => tab !== "chat"),
+);
+// Opened on ?tab=chat: once the definition is in and has no chat, go back.
+watch(
+  [jobDefinitionModel, activeTab],
+  ([definition, tab]) => {
+    if (tab === "chat" && definition && !deploymentChat.candidate.value) {
+      switchTab("overview");
+    }
+  },
+  { immediate: true },
+);
+
+// That endpoint's row gets a Chat button, which opens the Chat tab.
+const overviewEndpoints = computed(() => {
+  const chat = deploymentChat.candidate.value;
+  return deploymentEndpoints.value.map((endpoint) => ({
+    ...endpoint,
+    chat:
+      !!chat &&
+      chat.opId === endpoint.opId &&
+      chat.port === Number(endpoint.port),
+  }));
+});
+
 // Warm the panel for the jobs on screen, so opening one shows at once.
 const { nosana } = useKit();
 watch(
@@ -903,6 +978,12 @@ useHead({
 </script>
 
 <style lang="scss" scoped>
+/* The chat sizes itself for the job panel; on the page, a tall fixed box.
+   Nested so it outranks the chat's own rule. */
+.deployment-detail .deployment-chat {
+  height: 70vh;
+}
+
 /* Even, generous spacing between the section cards (overrides the components'
    own bottom margins so gap is the single source of spacing). */
 .tab-pane {

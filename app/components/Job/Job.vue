@@ -254,6 +254,26 @@
         </p>
       </div>
 
+      <!-- Chat (panel only): stays mounted while the panel is open, so the
+           conversation survives switching views. -->
+      <ModelChat
+        v-if="isPanel && chatStatus"
+        v-show="effectiveTab === 'chat'"
+        scope="job"
+        :session-key="props.job.address"
+        :url="llm.endpoint.value?.url ?? ''"
+        :model="llm.model.value"
+        :headers="llm.headers.value"
+        v-model:api-key="chatKey"
+        :op-id="llm.candidate.value?.opId ?? ''"
+        :port="llm.candidate.value?.port ?? 0"
+        :status="chatStatus"
+        :error="llm.error.value"
+        @view-logs="emit('view', 'logs')"
+        @retry="llm.retry()"
+        @started="chatStarted = true"
+      />
+
       <!-- Configuration Tab -->
       <div v-if="effectiveTab === 'configuration'">
         <div v-if="jobDefinitionForTab">
@@ -327,9 +347,6 @@
             :containerLogs="[]"
             :progressBars="getFlogProgressBars()"
             :resourceProgressBars="flogResourceBarsRef"
-            :showChatTab="isChatServiceReady"
-            :chatServiceUrl="chatServiceUrl"
-            :chatApiConfig="chatApiConfig"
             :jobCombinedSpecs="combinedSpecs"
             :loadingJobNodeSpecs="loadingNodeSpecs"
             :isQueuedJob="isQueuedJob"
@@ -348,7 +365,6 @@
             :logsByOp="flogLogsByOp"
             :systemLogsMap="flogSystemLogs"
             :activeTab="'logs'"
-            ref="jobTabsRef"
           />
         </div>
       </div>
@@ -393,27 +409,6 @@
     :userBalances="userBalances"
   />
   <!-- Legacy log subscription removed for flog-only logs -->
-
-  <!-- Chat Popup -->
-  <div v-if="showChatPopup" class="modal is-active">
-    <div class="modal-background" @click="showChatPopup = false"></div>
-    <div class="modal-card">
-      <header class="modal-card-head">
-        <p class="modal-card-title">Test Chat Available</p>
-        <button
-          class="delete"
-          aria-label="close"
-          @click="showChatPopup = false"
-        ></button>
-      </header>
-      <footer class="modal-card-foot">
-        <button class="button is-success" @click="activateChatAndClosePopup">
-          Open Test Chat
-        </button>
-        <button class="button" @click="showChatPopup = false">Dismiss</button>
-      </footer>
-    </div>
-  </div>
 </template>
 <script setup lang="ts">
 import JobStatus from "~/components/Job/Status.vue";
@@ -442,6 +437,12 @@ import { useNosanaWallet } from "~/composables/useNosanaWallet";
 import { useAPI } from "~/composables/useAPI";
 import { useJobPricing } from "~/composables/useMarketPricing";
 import { useJobEvents } from "~/composables/jobs/useJobEvents";
+import {
+  useLlmEndpoint,
+  type LlmChatStatus,
+} from "~/composables/jobs/useLlmEndpoint";
+import ModelChat from "~/components/Common/ModelChat.vue";
+import { chatKeyStorageKey, hasChatHistory } from "~/utils/llmChat";
 
 // Import icons as components
 import ChevronDownIcon from "@/assets/img/icons/chevron-down.svg?component";
@@ -455,17 +456,13 @@ import {
   computed,
   ref,
   watch,
-  watchEffect,
-  nextTick,
   onMounted,
   onUnmounted,
 } from "vue";
 import type {
   JobDefinition,
-  ExposedPort,
   Operation,
   OperationArgsMap,
-  HttpHealthCheck,
 } from "@nosana/kit";
 import type { ProgressBar } from "~/composables/jobs/logTypes";
 import SystemUsageCharts from "./SystemUsageCharts.vue";
@@ -523,12 +520,6 @@ interface CombinedSpecs {
   systemEnvironment?: string | null;
 }
 
-interface JobTabsComponent {
-  logsView?: {
-    scrollToBottomOnOpen?: () => void;
-  };
-}
-
 interface ResourceProgressBar extends ProgressBar {
   metadata?: Record<string, unknown>;
 }
@@ -559,7 +550,7 @@ interface Props {
   };
   /** "panel": hosted in the deployment job panel, which owns header and tabs. */
   mode?: "page" | "panel";
-  panelTab?: "details" | "containers" | "activity";
+  panelTab?: "details" | "containers" | "activity" | "chat";
   /** Panel mode: whether this job is the one on screen. */
   panelActive?: boolean;
   /** Operation whose shell opens on its own ("*" = the first). */
@@ -573,6 +564,12 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+const emit = defineEmits<{
+  /** Panel mode: what the Chat tab shows, null for no tab. */
+  chat: [status: LlmChatStatus | null];
+  /** Panel mode: switch the panel to another view. */
+  view: [view: "logs"];
+}>();
 const { nosana } = useKit();
 const { userBalances } = useNosanaWallet();
 // The job on its node through Kit, signed as the poster or the deployment.
@@ -640,15 +637,7 @@ const canShowAccessTab = computed(
 
 // No local WS watchers; lifecycle handled inside useJobLogs
 
-const isChatServiceReady = ref(false); // Controls chat tab visibility
-
-const showChatPopup = ref(false);
-const chatServiceUrl = ref<string | null>(null);
-const popupAlreadyShown = ref(false);
-
 const isDetailsOpen = ref(false);
-
-const isMainContentOpen = ref(true);
 
 // Loading states for buttons
 const loading = ref<boolean>(false);
@@ -1286,56 +1275,6 @@ function openExtendModal() {
   props.modal.open();
 }
 
-const hasOpenaiEndpoint = computed(() => {
-  if (!props.job.jobDefinition || !props.job.jobDefinition.ops) {
-    return false;
-  }
-
-  for (const op of props.job.jobDefinition.ops) {
-    if (op.type === "container/run") {
-      const args = op.args as OperationArgsMap["container/run"];
-      if (args.expose && Array.isArray(args.expose)) {
-        const exposedPorts = args.expose.filter(
-          (e): e is ExposedPort =>
-            typeof e === "object" && e !== null && "health_checks" in e,
-        );
-        for (const exposedPort of exposedPorts) {
-          if (exposedPort.health_checks) {
-            for (const healthCheck of exposedPort.health_checks) {
-              if (healthCheck.type === "http") {
-                const httpCheck = healthCheck as HttpHealthCheck;
-                // Check for LLM chat endpoints - both vLLM and Ollama formats
-                if (httpCheck.method === "POST" && httpCheck.body) {
-                  try {
-                    const body = JSON.parse(httpCheck.body);
-                    // Check if it has LLM-style request format (model + messages)
-                    if (
-                      body.model &&
-                      body.messages &&
-                      Array.isArray(body.messages)
-                    ) {
-                      return true;
-                    }
-                  } catch (e) {
-                    // If body parsing fails, fall back to path-based detection
-                    if (
-                      httpCheck.path.includes("/chat") ||
-                      httpCheck.path.includes("/v1")
-                    ) {
-                      return true;
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-  return false;
-});
-
 const isConfidential = computed<boolean>(() => {
   try {
     const jd = props.job.jobDefinition;
@@ -1370,117 +1309,6 @@ function getFlogProgressBars(): Map<string, ProgressBar> {
   return flogProgressBarsRef.value;
 }
 
-// Structure to hold API configuration extracted from health check
-const chatApiConfig = ref<{
-  path: string;
-  model: string;
-  headers?: Record<string, string>;
-} | null>(null);
-
-watchEffect(() => {
-  if (hasOpenaiEndpoint.value && props.job?.jobDefinition && props.endpoints) {
-    for (const [url, endpointData] of props.endpoints.entries()) {
-      const op = props.job.jobDefinition.ops[endpointData.opIndex];
-      if (op && op.type === "container/run") {
-        const args = op.args as OperationArgsMap["container/run"];
-        if (args.expose && Array.isArray(args.expose)) {
-          const exposedPorts = args.expose.filter(
-            (e): e is ExposedPort =>
-              typeof e === "object" && e !== null && "health_checks" in e,
-          );
-          for (const exposedPort of exposedPorts) {
-            if (exposedPort.health_checks) {
-              for (const healthCheck of exposedPort.health_checks) {
-                if (healthCheck.type === "http") {
-                  const httpCheck = healthCheck as HttpHealthCheck;
-                  if (httpCheck.method === "POST" && httpCheck.body) {
-                    try {
-                      const body = JSON.parse(httpCheck.body);
-                      // Check if it has LLM-style request format
-                      if (
-                        body.model &&
-                        body.messages &&
-                        Array.isArray(body.messages)
-                      ) {
-                        chatServiceUrl.value = url;
-                        chatApiConfig.value = {
-                          path: httpCheck.path,
-                          model: body.model,
-                          headers: httpCheck.headers || {},
-                        };
-                        return; // Found our chat service with configuration
-                      }
-                    } catch (e) {
-                      // If body parsing fails, fall back to path-based detection
-                      if (
-                        httpCheck.path.includes("/chat") ||
-                        httpCheck.path.includes("/v1")
-                      ) {
-                        chatServiceUrl.value = url;
-                        chatApiConfig.value = {
-                          path: httpCheck.path,
-                          model: "unknown",
-                          headers: httpCheck.headers || {},
-                        };
-                        return;
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-});
-
-watch(
-  [
-    chatServiceUrl,
-    props.endpoints,
-    () => props.job.isRunning,
-    () => props.job.isCompleted,
-  ],
-  ([newUrl, currentEndpoints, isRunning, isCompleted]) => {
-    if (newUrl && currentEndpoints.has(newUrl)) {
-      const serviceInfo = currentEndpoints.get(newUrl);
-      if (
-        serviceInfo &&
-        serviceInfo.status === "ONLINE" &&
-        isRunning &&
-        !isCompleted
-      ) {
-        isChatServiceReady.value = true; // Enable the chat tab
-        if (!popupAlreadyShown.value) {
-          showChatPopup.value = true;
-          popupAlreadyShown.value = true; // Ensure popup is shown only once
-        }
-      } else {
-        isChatServiceReady.value = false; // Disable chat tab
-      }
-    } else {
-      isChatServiceReady.value = false;
-    }
-  },
-  { deep: true },
-); // deep true for endpoints map
-
-function activateChatAndClosePopup() {
-  showChatPopup.value = false;
-  isMainContentOpen.value = true; // Expand the job card
-  activeTab.value = "chat"; // Switch to chat tab
-
-  // Scroll to bottom to show the chat UI properly
-  nextTick(() => {
-    window.scrollTo({
-      top: document.body.scrollHeight,
-      behavior: "smooth",
-    });
-  });
-}
-
 const activeTab = ref("system-logs");
 
 // In the deployment job panel the panel picks the tab.
@@ -1489,11 +1317,42 @@ const PANEL_TABS = {
   details: "overview",
   containers: "container-controls",
   activity: "activity",
+  chat: "chat",
 } as const;
 const effectiveTab = computed(() =>
   isPanel.value
     ? PANEL_TABS[props.panelTab ?? "details"]
     : activeTab.value,
+);
+
+// The panel's Chat tab, for a job serving an OpenAI-compatible model.
+// One key per deployment, shared by its replicas and its own Chat tab.
+const chatKey = useSessionStorage(
+  chatKeyStorageKey(props.deploymentId || props.job.address),
+  "",
+);
+const llm = useLlmEndpoint({
+  apiKey: () => chatKey.value,
+  definition: () => (isPanel.value ? jobDefinitionForTab.value : null),
+  endpoints: () =>
+    [...props.endpoints.values()].map((endpoint) => ({
+      ...endpoint,
+      online: endpoint.status === "ONLINE",
+    })),
+  running: () => Boolean(props.job.isRunning),
+});
+// A conversation saved in this browser keeps the tab after the job stops.
+const chatStarted = ref(hasChatHistory(props.job.address));
+// A stopped job keeps its tab only while there is a conversation to read.
+const chatStatus = computed(() =>
+  llm.status.value === "ended" && !chatStarted.value ? null : llm.status.value,
+);
+watch(chatStatus, (status) => emit("chat", status), { immediate: true });
+// Opening the tab looks again if the model wasn't up yet; nothing polls.
+watch(
+  () => effectiveTab.value === "chat",
+  (open) => open && llm.recheck(),
+  { immediate: true },
 );
 
 // Watch for changes in available tabs and ensure active tab is valid
@@ -1509,24 +1368,6 @@ watch(
   },
   { immediate: true },
 );
-const jobTabsRef = ref<JobTabsComponent | null>(null); // Ref for the JobTabs component
-
-// Watch for changes in table content (for real-time updates) - REMOVING THIS SECTION
-
-watch(isMainContentOpen, (newValue) => {
-  if (newValue && activeTab.value === "logs") {
-    nextTick(() => {
-      if (
-        jobTabsRef.value &&
-        jobTabsRef.value.logsView &&
-        jobTabsRef.value.logsView.scrollToBottomOnOpen
-      ) {
-        jobTabsRef.value.logsView.scrollToBottomOnOpen();
-      }
-    });
-  }
-});
-
 // Market address as a simple string
 const marketAddress = computed(() => String(props.job.market ?? "").trim());
 
