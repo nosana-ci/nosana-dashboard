@@ -273,22 +273,11 @@
               </div>
             </div>
 
-            <div class="field">
-              <label class="label">Permissions</label>
-              <ul v-if="selectedKey.scopes?.length">
-                <li
-                  v-for="scope in selectedKey.scopes"
-                  :key="scope"
-                  class="is-flex is-flex-direction-column mb-2"
-                >
-                  <span class="is-family-monospace is-size-7">{{ scope }}</span>
-                  <span class="has-text-grey is-size-7">{{
-                    describeScope(scope)
-                  }}</span>
-                </li>
-              </ul>
-              <p v-else class="has-text-grey">Not recorded for this key.</p>
-            </div>
+            <ScopePicker
+              :model-value="selectedKey.scopes ?? []"
+              readonly
+              unavailable-note="Not recorded for this key."
+            />
           </div>
         </section>
         <footer class="modal-card-foot">
@@ -408,9 +397,6 @@ watch(
 const canSubmitScopes = computed(
   () => !scopeCatalogue.value.length || selectedScopes.value.length > 0,
 );
-
-const describeScope = (scope: string) =>
-  scopeCatalogue.value.find((entry) => entry.scope === scope)?.description ?? "";
 
 // A key holding everything is the common case and reads better than "8 scopes".
 const accessLabel = (key: { scopes?: string[] }) => {
