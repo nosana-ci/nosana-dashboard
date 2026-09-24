@@ -325,22 +325,12 @@
               </div>
             </div>
 
-            <div class="field">
-              <label class="label">Permissions</label>
-              <ul v-if="selectedApp.scopes?.length">
-                <li
-                  v-for="scope in selectedApp.scopes"
-                  :key="scope"
-                  class="is-flex is-flex-direction-column mb-2"
-                >
-                  <span class="is-family-monospace is-size-7">{{ scope }}</span>
-                  <span class="has-text-grey is-size-7">{{
-                    describeScope(scope)
-                  }}</span>
-                </li>
-              </ul>
-              <p v-else class="has-text-grey">No permissions recorded.</p>
-            </div>
+            <ScopePicker
+              :model-value="selectedApp.scopes ?? []"
+              :options="oauthGrantableScopes"
+              readonly
+              unavailable-note="No permissions recorded."
+            />
 
             <div class="field">
               <label class="label">Scope parameter</label>
@@ -536,10 +526,7 @@ const form = ref({
 // An app can only ever hold the OAuth-grantable subset — `inference:use` is API-key-only,
 // and asking for it is a 400. The backend flags which those are so this list never has to
 // hard-code the exclusion.
-const { scopes: scopeCatalogue, oauthGrantableScopes } = useScopeCatalogue();
-
-const describeScope = (scope: string) =>
-  scopeCatalogue.value.find((entry) => entry.scope === scope)?.description ?? "";
+const { oauthGrantableScopes } = useScopeCatalogue();
 
 /** The `scope` value an integrator puts in their authorize URL: identity plus the ceiling. */
 const scopeParam = (app: OAuthApp) =>
