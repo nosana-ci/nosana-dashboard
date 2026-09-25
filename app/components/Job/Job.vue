@@ -394,6 +394,7 @@
             :ssh-public-keys="props.sshPublicKeys"
             :ssh-keys-loading="props.sshKeysLoading"
             :ssh-keys-error="props.sshKeysError"
+            :cvm="isCvmJob"
           />
         </div>
       </div>

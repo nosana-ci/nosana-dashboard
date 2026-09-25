@@ -109,13 +109,16 @@ const props = withDefaults(
     disabledReason?: string;
     /** Open the session as soon as connecting is allowed, without a click. */
     autoConnect?: boolean;
+    /** The job runs in a confidential VM, whose terminal is served inside the VM. */
+    cvm?: boolean;
   }>(),
-  { canConnect: true, disabledReason: "", autoConnect: false },
+  { canConnect: true, disabledReason: "", autoConnect: false, cvm: false },
 );
 
 const { status, connect, sendInput, resize, closeConnection } = useJobTerminal(
   props.jobAddress,
   props.deploymentId,
+  props.cvm,
 );
 const terminalElement = ref<HTMLDivElement | null>(null);
 const xterm = useXterm(terminalElement, { onInput: sendInput, onResize: resize });

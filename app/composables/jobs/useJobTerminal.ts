@@ -5,6 +5,7 @@ import type {
 import { useLatestRequest } from "../useLatestRequest";
 import { getNodeJob } from "~/utils/kitJobAccess";
 import { translateTerminalError } from "~/utils/sshAccess";
+import { cvmTerminalSocket } from "~/utils/cvmSshAccess";
 
 export type TerminalStatus = "idle" | KitTerminalStatus;
 
@@ -17,9 +18,14 @@ export type TerminalConnectOptions = {
   onExit?: (code: number | null) => void;
 };
 
-/** Thin Vue lifecycle adapter around the framework-independent Kit terminal. */
-export function useJobTerminal(jobAddress: string, deploymentId?: string) {
+/**
+ * Thin Vue lifecycle adapter around the framework-independent Kit terminal.
+ * A CVM job's terminal is served inside the VM, so Kit's session is pointed at
+ * the job's own domain; Kit still signs the grant.
+ */
+export function useJobTerminal(jobAddress: string, deploymentId?: string, cvm = false) {
   const { nosana } = useKit();
+  const nodeDomain = useRuntimeConfig().public.nodeDomain;
   const attempts = useLatestRequest();
   const status = ref<TerminalStatus>("idle");
   const session = shallowRef<TerminalSession | null>(null);
@@ -50,6 +56,7 @@ export function useJobTerminal(jobAddress: string, deploymentId?: string) {
         cols: options.cols,
         rows: options.rows,
         signal: controller.signal,
+        ...(cvm ? { webSocketFactory: cvmTerminalSocket(jobAddress, nodeDomain) } : {}),
         onData: options.onData,
         onExit: options.onExit,
         onStatus: (nextStatus, detail) => {

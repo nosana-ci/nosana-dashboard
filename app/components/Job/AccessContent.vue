@@ -58,6 +58,7 @@
             :can-connect="canUseTerminalAccess"
             :disabled-reason="terminalAccessReason"
             :auto-connect="isDeploymentManaged && active && autoConnect"
+            :cvm="cvm"
           />
         </section>
 
@@ -114,6 +115,8 @@ const props = withDefaults(
     operation?: string;
     /** Whether the web terminal may open on its own once active. */
     autoConnect?: boolean;
+    /** The job runs in a confidential VM (CVM market). */
+    cvm?: boolean;
   }>(),
   { active: true, autoConnect: true },
 );

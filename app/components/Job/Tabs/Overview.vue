@@ -257,6 +257,7 @@
                   :ssh-keys-error="sshKeysError"
                   :active="!!shellsActive && isOpOpen(op)"
                   :auto-connect="autoOp === op.id"
+                  :cvm="isCvmJob"
                 />
               </div>
             </div>
@@ -327,6 +328,7 @@ import SquareIcon from '@/assets/img/icons/square.svg?component';
 import RefreshIcon from '@/assets/img/icons/refresh.svg?component';
 import FullscreenIcon from '@/assets/img/icons/fullscreen.svg?component';
 import { useNodeJobResolver } from '~/composables/jobs/useNodeJobResolver';
+import { isCvmMarket } from '~/utils/cvm';
 
 type EndpointStatus = 'ONLINE' | 'OFFLINE' | 'UNKNOWN';
 
@@ -395,6 +397,8 @@ interface LocalJobInfo {
 interface JobLike {
   address: string;
   node?: string | { toString(): string };
+  /** The market the job runs on; a CVM market's shell is served inside the VM. */
+  market?: unknown;
   isCompleted?: boolean;
   timeEnd?: number;
   results?: {
@@ -490,6 +494,7 @@ const deploymentId = computed<string | undefined>(() => {
 });
 // Operation controls go to the job's node through Kit, signed as the poster or the deployment.
 const resolveNodeJob = useNodeJobResolver(props.job.address, deploymentId.value);
+const isCvmJob = computed(() => isCvmMarket(props.job?.market));
 
 const jobInfo = computed<LocalJobInfo | null>(() => props.jobInfo ?? null);
 

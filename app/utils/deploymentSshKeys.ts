@@ -50,6 +50,42 @@ export async function saveDeploymentSshKeys(
   return result;
 }
 
+/**
+ * The deployment manager pushes a key change through each job's host node,
+ * which cannot reach a CVM job's SSH: that is served inside the VM. Apply the
+ * saved change to every job the push failed on through `push` (the VM's own
+ * API), and report each job the VM accepted as updated.
+ */
+export async function pushSshKeysToCvmJobs(
+  result: DeploymentSshKeysProgress,
+  previousKeys: string[],
+  push: (job: string, added: string[], removed: string[]) => Promise<void>,
+): Promise<DeploymentSshKeysProgress> {
+  const previousIds = new Set(previousKeys.map(getSshKeyIdentity));
+  const savedIds = new Set(result.public_keys.map(getSshKeyIdentity));
+  const added = result.public_keys.filter((key) => !previousIds.has(getSshKeyIdentity(key)));
+  const removed = previousKeys.filter((key) => !savedIds.has(getSshKeyIdentity(key)));
+  if (!added.length && !removed.length) return result;
+
+  const status = added.length ? "authorized" : "revoked";
+  const outcomes = new Map<string, DeploymentSshJobResult>();
+  for (const job of failedSshJobs(result)) {
+    try {
+      await push(job.job, added, removed);
+      outcomes.set(job.job, { job: job.job, node: job.node, status });
+    } catch (error) {
+      outcomes.set(job.job, {
+        ...job,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+  return {
+    ...result,
+    jobs: result.jobs.map((job) => outcomes.get(job.job) ?? job),
+  };
+}
+
 /** A job can fail both add and remove; show it once in the warning. */
 export function failedSshJobs(
   result: DeploymentSshKeysProgress | null | undefined,

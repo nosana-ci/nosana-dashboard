@@ -10,9 +10,12 @@ import { useLatestRequest } from "./useLatestRequest";
 import { getDeployment } from "~/utils/kitJobAccess";
 import {
   failedSshJobs,
+  pushSshKeysToCvmJobs,
   saveDeploymentSshKeys,
   type DeploymentSshKeysProgress,
 } from "~/utils/deploymentSshKeys";
+import { isCvmMarket } from "~/utils/cvm";
+import { applyCvmSshKeys } from "~/utils/cvmSshAccess";
 
 // The keys last seen per deployment. A view that opens again shows them at
 // once and refreshes behind the scenes instead of flashing a loading state.
@@ -31,6 +34,7 @@ export function useDeploymentSshKeys(
   enabled: MaybeRefOrGetter<boolean> = true,
 ) {
   const { nosana } = useKit();
+  const nodeDomain = useRuntimeConfig().public.nodeDomain;
   const toast = useToast();
   const loads = useLatestRequest();
   const saves = useLatestRequest();
@@ -147,15 +151,33 @@ export function useDeploymentSshKeys(
     try {
       const ssh = await getSshApi();
       if (!isCurrent()) return;
-      const result = await saveDeploymentSshKeys(
+      const previousKeys = [...sshPublicKeys.value];
+      let result = await saveDeploymentSshKeys(
         ssh,
-        sshPublicKeys.value,
+        previousKeys,
         [...draftKeys.value],
         (progress) => {
           if (isCurrent()) lastResult.value = progress;
         },
       );
       if (!isCurrent()) return;
+
+      // A CVM job's SSH lives inside the VM, out of reach of the deployment
+      // manager's push through the host node: apply the change there directly,
+      // signed by the deployment's vault as Kit signs its node requests.
+      const deployment = await getDeployment(nosana.value.api, toValue(deploymentId));
+      if (isCvmMarket(deployment.market)) {
+        result = await pushSshKeysToCvmJobs(result, previousKeys, async (job, added, removed) =>
+          applyCvmSshKeys({
+            jobAddress: job,
+            nodeDomain,
+            authorization: await deployment.generateAuthHeader({ message: job, includeTime: "true" }),
+            added,
+            removed,
+          }),
+        );
+        if (!isCurrent()) return;
+      }
       setSavedKeys(result.public_keys);
       lastResult.value = result;
 
