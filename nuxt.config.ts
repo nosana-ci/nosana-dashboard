@@ -54,6 +54,8 @@ export default defineNuxtConfig({
   },
   css: [
     "~/assets/styles/global.scss",
+    "highlight.js/styles/default.css",
+    "~/assets/styles/highlight.scss",
     "bulma-o-steps/bulma-steps.css",
     "@creativebulma/bulma-tooltip/dist/bulma-tooltip.min.css",
   ],
@@ -129,6 +131,7 @@ export default defineNuxtConfig({
       maintenance: process.env.NUXT_PUBLIC_MAINTENANCE === "true",
       rpcUrl: process.env.RPC_URL,
       apiBase: process.env.NUXT_PUBLIC_API_BASE,
+      inferenceBase: process.env.NUXT_PUBLIC_INFERENCE_BASE,
       recaptcha_site_key: process.env.NUXT_PUBLIC_RECAPTCHA_SITE_KEY,
       network: process.env.NETWORK || "mainnet",
       nodeDomain: process.env.NODE_DOMAIN,

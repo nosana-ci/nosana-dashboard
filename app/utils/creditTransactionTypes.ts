@@ -9,6 +9,8 @@ export type CreditTransactionType =
   | "job_extend"
   | "job_settlement"
   | "token_topup"
+  | "llm_debit"
+  | "llm_refund"
   | string;
 
 const CREDIT_IN_TYPES = new Set([
@@ -19,6 +21,8 @@ const CREDIT_IN_TYPES = new Set([
   "purchase",
   "job_refund",
   "token_topup",
+  // The unused part of an inference hold, returned when the request settles.
+  "llm_refund",
 ]);
 
 const TYPE_LABELS: Record<string, string> = {
@@ -32,6 +36,8 @@ const TYPE_LABELS: Record<string, string> = {
   job_extend: "Extension",
   job_settlement: "Settlement",
   token_topup: "Token topup",
+  llm_debit: "Inference",
+  llm_refund: "Refund",
 };
 
 export const getCreditTransactionLabel = (type: CreditTransactionType): string =>
