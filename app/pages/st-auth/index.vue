@@ -46,25 +46,38 @@
                this must never be padded out with a generic summary. -->
           <div v-if="requestedScopes.length" class="notification is-light oauth-scope has-text-left">
             <p class="is-size-7 mb-2">
-              This will let <strong>{{ info.clientName || 'this app' }}</strong> do the following on your behalf:
+              <strong>{{ info.clientName || 'This app' }}</strong> is asking to do the following on your
+              behalf. Untick anything you don't want to allow.
             </p>
             <ul>
               <li
                 v-for="item in requestedScopes"
                 :key="item.scope"
-                class="is-flex is-align-items-flex-start is-gap-2 mb-2 is-size-7"
+                class="mb-2 is-size-7"
                 :class="{ 'has-text-weight-semibold': spendsCredits(item.description) }"
               >
-                <span
-                  class="icon is-small mt-1"
-                  :class="spendsCredits(item.description) ? 'has-text-warning-dark' : 'has-text-grey'"
-                  aria-hidden="true"
-                >
-                  <FontAwesomeIcon :icon="spendsCredits(item.description) ? faCoins : faCheck" />
-                </span>
-                <span>{{ item.description }}</span>
+                <label class="checkbox is-flex is-align-items-flex-start is-gap-2">
+                  <input
+                    type="checkbox"
+                    class="mt-1"
+                    :checked="selectedScopes.has(item.scope)"
+                    @change="toggleScope(item.scope)"
+                  >
+                  <span
+                    class="icon is-small mt-1"
+                    :class="spendsCredits(item.description) ? 'has-text-warning-dark' : 'has-text-grey'"
+                    aria-hidden="true"
+                  >
+                    <FontAwesomeIcon :icon="spendsCredits(item.description) ? faCoins : faCheck" />
+                  </span>
+                  <span>{{ item.description }}</span>
+                </label>
               </li>
             </ul>
+            <p v-if="selectedScopes.size === 0" class="is-size-7 has-text-grey mt-2">
+              Nothing ticked: <strong>{{ info.clientName || 'this app' }}</strong> will only be able to confirm
+              who you are, with no access to your deployments, jobs, credits or wallet.
+            </p>
           </div>
 
           <!-- No resource scopes: a sign-in-only grant, which authorizes no API access.
@@ -146,6 +159,17 @@ const loginChallenge = (route.query.loginChallenge ?? route.query.login_challeng
 const email = computed(() => userData.value?.email ?? null);
 const requestedScopes = computed<RequestedScope[]>(() => info.value?.requestedScopes ?? []);
 
+// The resource scopes the user is granting. Everything requested starts ticked; the
+// provider grants exactly this set (identity scopes always go through).
+const selectedScopes = ref<Set<string>>(new Set());
+
+function toggleScope(scope: string) {
+  const next = new Set(selectedScopes.value);
+  if (next.has(scope)) next.delete(scope);
+  else next.add(scope);
+  selectedScopes.value = next;
+}
+
 // The descriptions say so themselves; this only picks the icon.
 const spendsCredits = (description: string) => /credits/i.test(description);
 
@@ -158,7 +182,22 @@ async function authorize() {
   if (!loginChallenge) return;
   status.value = "working";
   try {
-    const res = await getRedirectURLToContinueOAuthFlow({ loginChallenge });
+    // `?scopes=` tells the provider which of the requested scopes were ticked. Sent only
+    // when there was something to tick, so a sign-in-only request is unchanged.
+    const scopes = [...selectedScopes.value].join(" ");
+    const res = await getRedirectURLToContinueOAuthFlow({
+      loginChallenge,
+      ...(requestedScopes.value.length
+        ? {
+          options: {
+            preAPIHook: async ({ url, requestInit }) => ({
+              url: `${url}${url.includes("?") ? "&" : "?"}scopes=${encodeURIComponent(scopes)}`,
+              requestInit,
+            }),
+          },
+        }
+        : {}),
+    });
     if (res.status === "OK") {
       window.location.href = res.frontendRedirectTo;
       return;
@@ -201,6 +240,7 @@ onMounted(async () => {
     const res = await getLoginChallengeInfo({ loginChallenge });
     if (res.status === "OK") {
       info.value = res.info as ClientInfo;
+      selectedScopes.value = new Set((info.value.requestedScopes ?? []).map((item) => item.scope));
       status.value = "consent";
       return;
     }
