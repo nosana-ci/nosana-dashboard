@@ -21,7 +21,7 @@
             key, same credit balance, no separate signup.
           </p>
           <div class="is-flex is-flex-wrap-wrap is-gap-1.5">
-            <button class="button is-glow" @click="activeTab = 'playground'">
+            <button class="button is-glow" @click="openPlayground">
               <span>Open the playground</span>
               <ArrowRightIcon class="btn-arrow" />
             </button>
@@ -75,7 +75,7 @@ nosana.jobs.<span class="tok-fn">list</span>(def, 3600, market)</pre>
     </section>
 
     <!-- Tabs -->
-    <div class="tabs mb-5">
+    <div ref="tabBar" class="tabs mb-5">
       <ul>
         <li
           v-for="tab in tabs"
@@ -156,7 +156,7 @@ nosana.jobs.<span class="tok-fn">list</span>(def, 3600, market)</pre>
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, nextTick } from "vue";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { faKey, faBookOpen, faCube } from "@fortawesome/free-solid-svg-icons";
 import ApiKeys from "~/components/Account/ApiKeys.vue";
@@ -190,6 +190,25 @@ watch([activeTab, playgroundModel], ([tab, model]) => {
     query: { ...route.query, tab, ...(model ? { model } : {}) },
   });
 });
+
+const tabBar = ref<HTMLElement | null>(null);
+
+// On a phone the hero fills the screen, so switching tabs from it changes something the
+// reader cannot see. Bring the panel into view when it is not already near the top.
+const openPlayground = async () => {
+  activeTab.value = "playground";
+  await nextTick();
+  const el = tabBar.value;
+  if (!el) return;
+  const { top } = el.getBoundingClientRect();
+  if (top >= 0 && top < window.innerHeight * 0.5) return;
+  el.scrollIntoView({
+    behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      ? "auto"
+      : "smooth",
+    block: "start",
+  });
+};
 
 const shortBase = computed(() => inferenceBase.replace(/^https?:\/\//, ""));
 

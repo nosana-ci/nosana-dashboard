@@ -395,5 +395,10 @@ const reset = () => {
   .composer {
     border-top-color: rgba(255, 255, 255, 0.07);
   }
+  /* Bulma's $background is a light grey that does not follow the theme, so on the
+     dark card the bubble has to lift away from the surface rather than sit below it. */
+  .message-row.is-user .message-body {
+    background: rgba($white, 0.06);
+  }
 }
 </style>
