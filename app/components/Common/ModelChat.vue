@@ -291,8 +291,8 @@
           </svg>
         </button>
       </div>
-      <p v-if="status === 'ready'" class="chat-note">
-        Enter to send, Shift+Enter for a new line. {{ COPY[scope].note }}
+      <p v-if="status === 'ready' && COPY[scope].note" class="chat-note">
+        {{ COPY[scope].note }}
       </p>
     </form>
   </div>
@@ -373,19 +373,21 @@ const COPY = {
     ended:
       "This job has stopped. Your conversation is saved in this browser, but you can't send new messages.",
     empty: "Send a message to test the model on this job.",
-    note: "Messages go from your browser straight to this job.",
+    note: "Enter to send, Shift+Enter for a new line. Messages go from your browser straight to this job.",
   },
   deployment: {
     code: "This calls the deployment's endpoint, the URL to use from your own app.",
     ended: "This deployment isn't running. Start it to chat with the model.",
     empty: "Send a message to test the model on this deployment.",
-    note: "Messages go from your browser straight to this deployment.",
+    note: "Enter to send, Shift+Enter for a new line. Messages go from your browser straight to this deployment.",
   },
   playground: {
     code: "",
     ended: "No model is serving right now, so the playground has nothing to talk to.",
     empty: "Send a message to try the model. It runs on us, not your credits.",
-    note: "Nosana sponsors these messages, so they cost you nothing.",
+    // Nothing under the composer: the empty state already says who pays, and the
+    // keyboard hint is not worth a permanent line here.
+    note: "",
   },
 } as const;
 
