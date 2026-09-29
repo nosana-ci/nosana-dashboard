@@ -193,7 +193,7 @@
         v-if="messages.length === 0 && status === 'ready'"
         class="chat-empty"
       >
-        <p>{{ COPY[scope].empty }}</p>
+        <p v-if="COPY[scope].empty">{{ COPY[scope].empty }}</p>
         <div class="chat-suggest">
           <button
             v-for="text in SUGGESTIONS"
@@ -384,9 +384,9 @@ const COPY = {
   playground: {
     code: "",
     ended: "No model is serving right now, so the playground has nothing to talk to.",
-    empty: "Send a message to try the model. It runs on us, not your credits.",
-    // Nothing under the composer: the empty state already says who pays, and the
-    // keyboard hint is not worth a permanent line here.
+    // The suggestions are the whole prompt here; the picker above already names the
+    // model, and the page says what the playground is.
+    empty: "",
     note: "",
   },
 } as const;
