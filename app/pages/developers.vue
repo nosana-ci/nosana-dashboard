@@ -91,6 +91,7 @@ nosana.jobs.<span class="tok-fn">list</span>(def, 3600, market)</pre>
       <section v-show="activeTab === 'playground'" class="mb-6">
         <LlmPlayground
           :models="models"
+          :loading="loadingModels"
           :initial-model="playgroundModel"
           @model="playgroundModel = $event"
         />
@@ -170,7 +171,7 @@ const showSettingsModal = ref(false);
 const route = useRoute();
 const router = useRouter();
 
-const { inferenceBase, models } = useLlmGateway();
+const { inferenceBase, models, loadingModels } = useLlmGateway();
 
 const tabs = [
   { id: "keys", label: "API keys" },

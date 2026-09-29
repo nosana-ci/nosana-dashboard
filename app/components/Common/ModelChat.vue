@@ -1,5 +1,5 @@
 <template>
-  <div class="chat" :class="`is-${status}`">
+  <div class="chat" :class="[`is-${status}`, `is-scope-${scope}`]">
     <div class="chat-bar">
       <div class="chat-model">
         <StatusMark
@@ -7,10 +7,12 @@
           :pulse="status === 'ready'"
           :label="LABELS[status]"
         />
-        <span class="chat-model-name" :title="model">{{
-          model || "Model"
-        }}</span>
-        <span class="chat-via">via {{ opId }} :{{ port }}</span>
+        <slot name="model">
+          <span class="chat-model-name" :title="model">{{
+            model || "Model"
+          }}</span>
+          <span v-if="opId" class="chat-via">via {{ opId }} :{{ port }}</span>
+        </slot>
       </div>
       <div class="chat-acts">
         <button
@@ -29,6 +31,7 @@
         <button
           type="button"
           class="button is-small is-quiet"
+          v-if="scope !== 'playground'"
           :class="{ 'is-on': tray === 'code' }"
           :aria-pressed="tray === 'code'"
           title="Call this model from your own code"
@@ -78,7 +81,7 @@
             step="0.1"
           />
         </label>
-        <label class="chat-field">
+        <label v-if="scope !== 'playground'" class="chat-field">
           <span>Max tokens</span>
           <input
             v-model.number="settings.maxTokens"
@@ -87,7 +90,7 @@
             min="1"
           />
         </label>
-        <label class="chat-field">
+        <label v-if="scope !== 'playground'" class="chat-field">
           <span>API key</span>
           <input
             v-model.lazy="keyModel"
@@ -190,7 +193,7 @@
         v-if="messages.length === 0 && status === 'ready'"
         class="chat-empty"
       >
-        <p>Send a message to test the model on this {{ scope }}.</p>
+        <p>{{ COPY[scope].empty }}</p>
         <div class="chat-suggest">
           <button
             v-for="text in SUGGESTIONS"
@@ -289,8 +292,7 @@
         </button>
       </div>
       <p v-if="status === 'ready'" class="chat-note">
-        Enter to send, Shift+Enter for a new line. Messages go from your browser
-        straight to this {{ scope }}.
+        Enter to send, Shift+Enter for a new line. {{ COPY[scope].note }}
       </p>
     </form>
   </div>
@@ -314,8 +316,9 @@ import {
 } from "~/utils/llmChat";
 
 const props = defineProps<{
-  /** Which URL this talks to: one job's own, or the deployment's. */
-  scope: "job" | "deployment";
+  /** Which URL this talks to: one job's own, the deployment's, or the sponsored
+   *  playground, which authenticates the session rather than a key. */
+  scope: "job" | "deployment" | "playground";
   /** Keeps the settings apart per job or deployment. */
   sessionKey: string;
   url: string;
@@ -324,8 +327,8 @@ const props = defineProps<{
   headers: Record<string, string>;
   /** The key the reader entered, if any (v-model). */
   apiKey: string;
-  opId: string;
-  port: number;
+  opId?: string;
+  port?: number;
   status: LlmChatStatus;
   error: string;
 }>();
@@ -369,10 +372,20 @@ const COPY = {
     code: "This calls this replica directly. For production traffic, use the deployment's endpoint.",
     ended:
       "This job has stopped. Your conversation is saved in this browser, but you can't send new messages.",
+    empty: "Send a message to test the model on this job.",
+    note: "Messages go from your browser straight to this job.",
   },
   deployment: {
     code: "This calls the deployment's endpoint, the URL to use from your own app.",
     ended: "This deployment isn't running. Start it to chat with the model.",
+    empty: "Send a message to test the model on this deployment.",
+    note: "Messages go from your browser straight to this deployment.",
+  },
+  playground: {
+    code: "",
+    ended: "No model is serving right now, so the playground has nothing to talk to.",
+    empty: "Send a message to try the model. It runs on us, not your credits.",
+    note: "Nosana sponsors these messages, so they cost you nothing.",
   },
 } as const;
 
@@ -536,6 +549,7 @@ async function send(text?: string) {
       },
       controller.signal,
       props.headers,
+      props.scope === "playground" ? "include" : "same-origin",
     );
   } catch (error) {
     if (!controller.signal.aborted) {
@@ -710,6 +724,14 @@ $chat-muted: $grey-dark;
   // Down to the panel's bottom padding, below its header and tabs.
   height: calc(100vh - 190px);
   min-height: 420px;
+}
+
+// The developers page stacks this under a hero and a tab bar rather than giving it
+// the viewport, so it sizes to its content up to a cap instead.
+.chat.is-scope-playground {
+  height: auto;
+  min-height: 380px;
+  max-height: 60vh;
 }
 
 /* ---- Model bar ---- */
