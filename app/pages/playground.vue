@@ -43,19 +43,9 @@
            panels have to exist before the chat looks for them. -->
       <aside v-show="docked" class="playground-side">
         <section v-if="selectedModel" class="section-card model-card">
-          <h3 class="title is-5 mb-1">
+          <h3 class="title is-5 mb-0">
             {{ modelName(selectedModel) }}
           </h3>
-          <p class="model-id model-muted is-family-monospace is-size-7">
-            {{ selectedModel.id }}
-          </p>
-          <!-- The catalog fills the description with the name, which says nothing new. -->
-          <p
-            v-if="selectedModel.description && selectedModel.description !== selectedModel.name"
-            class="model-muted mt-2"
-          >
-            {{ selectedModel.description }}
-          </p>
           <dl class="model-facts mt-3">
             <div
               v-for="fact in modelFacts"
@@ -202,10 +192,6 @@ $chrome-touch: 150px;
   .title {
     color: inherit;
   }
-}
-
-.model-id {
-  overflow-wrap: anywhere;
 }
 
 // The theme's muted text; Bulma's grey helper is too dim on the dark card.
