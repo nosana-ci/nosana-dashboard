@@ -9,7 +9,7 @@
         :disabled="models.length === 0"
         @click="toggle"
       >
-        <span class="picker-name">{{ selected?.name || selected?.id || "No models available" }}</span>
+        <span class="picker-name">{{ selected ? modelName(selected) : "No models available" }}</span>
         <ChevronDownIcon aria-hidden="true" />
       </button>
     </div>
@@ -36,7 +36,7 @@
               @click="pick(entry.id)"
             >
               <StatusMark :tone="entry.available ? 'live' : 'neutral'" :size="12" />
-              <span class="picker-option-name">{{ entry.name || entry.id }}</span>
+              <span class="picker-option-name">{{ modelName(entry) }}</span>
               <span class="picker-option-price">
                 <template v-if="entry.available">
                   {{ formatUsd(pricePerMillion(entry.pricing.prompt)) }} in<br />
@@ -67,6 +67,7 @@ import {
   pricePerMillion,
   formatUsd,
   formatTokenCount,
+  modelName,
 } from "~/composables/useLlmGateway";
 
 const props = defineProps<{

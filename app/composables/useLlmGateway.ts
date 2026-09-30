@@ -25,6 +25,13 @@ export interface LlmModel {
  * The catalog carries no capability field. Embedding models are listed with a
  * one-token output limit, which the gateway enforces, so they cannot chat.
  */
+/**
+ * Catalog names are "<template> - <variant>", and gateway templates are all named
+ * "Managed … inference", so the variant alone is the model's name.
+ */
+export const modelName = (model: Pick<LlmModel, "id" | "name">): string =>
+  model.name?.replace(/^Managed .*? inference - /, "") || model.id;
+
 export const isChatModel = (model: LlmModel): boolean => model.max_output_tokens > 1;
 
 /** USD per token, as a decimal string, shown per million tokens like every other vendor. */
@@ -72,7 +79,8 @@ export const useLlmGateway = () => {
 
   return {
     inferenceBase,
-    models,
+    // useMyAsyncData is untyped; the default above guarantees an array.
+    models: models as Ref<LlmModel[]>,
     loadingModels,
     modelsError,
     refreshModels,
