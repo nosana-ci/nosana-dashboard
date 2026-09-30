@@ -99,7 +99,7 @@ nosana.jobs.<span class="tok-fn">list</span>(def, 3600, market)</pre>
           <h3 class="title is-5 mb-3">The same call, in your code</h3>
           <LlmCodeSnippets
             :base-url="inferenceBase"
-            :model="playgroundModel || models[0]?.id || 'model-id'"
+            :model="playgroundModel || models.find(isChatModel)?.id || 'model-id'"
           />
         </div>
       </section>
@@ -162,6 +162,7 @@ import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { faKey, faBookOpen, faCube } from "@fortawesome/free-solid-svg-icons";
 import ApiKeys from "~/components/Account/ApiKeys.vue";
 import OAuthApps from "~/components/Account/OAuthApps.vue";
+import { isChatModel } from "~/composables/useLlmGateway";
 import GithubIcon from "@/assets/img/icons/github.svg?component";
 import DiscordIcon from "@/assets/img/icons/discord.svg?component";
 import ArrowRightIcon from "@/assets/img/icons/arrow-right.svg?component";

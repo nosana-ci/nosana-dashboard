@@ -41,6 +41,7 @@ import {
   pricePerMillion,
   formatUsd,
   formatTokenCount,
+  isChatModel,
 } from "~/composables/useLlmGateway";
 
 const props = defineProps<{
@@ -58,7 +59,7 @@ const config = useRuntimeConfig().public;
 const playgroundUrl = `${config.apiBase}/playground`;
 
 const availableModels = computed(() =>
-  props.models.filter((entry) => entry.available),
+  props.models.filter((entry) => entry.available && isChatModel(entry)),
 );
 
 const model = ref(props.initialModel ?? "");
@@ -76,7 +77,9 @@ const status = computed(() => {
 watch(
   availableModels,
   (list) => {
-    if (!model.value && list.length > 0) model.value = list[0]!.id;
+    // Also replaces a model from the URL that cannot chat, such as an embedding model.
+    if (list.length > 0 && !list.some((entry) => entry.id === model.value))
+      model.value = list[0]!.id;
   },
   { immediate: true },
 );
