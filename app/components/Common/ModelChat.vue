@@ -16,6 +16,7 @@
       </div>
       <div class="chat-acts">
         <button
+          v-if="!settingsTo"
           type="button"
           class="button is-small is-quiet"
           :class="{ 'is-on': tray === 'settings' }"
@@ -30,8 +31,8 @@
         </button>
         <button
           type="button"
+          v-if="!codeTo"
           class="button is-small is-quiet"
-          v-if="scope !== 'playground'"
           :class="{ 'is-on': tray === 'code' }"
           :aria-pressed="tray === 'code'"
           title="Call this model from your own code"
@@ -54,82 +55,47 @@
           </svg>
           <span>Clear</span>
         </button>
+        <slot name="actions" />
       </div>
     </div>
 
-    <div v-if="tray === 'settings'" class="chat-tray chat-settings">
-      <label class="chat-field chat-field-wide">
-        <span>System prompt</span>
-        <textarea
-          v-model="settings.systemPrompt"
-          class="textarea"
-          rows="3"
-          placeholder="Optional. Sent before every conversation."
-        ></textarea>
-      </label>
-      <div class="chat-field-col">
-        <label class="chat-field">
-          <span
-            >Temperature
-            <b class="mono">{{ settings.temperature.toFixed(1) }}</b></span
-          >
-          <input
-            v-model.number="settings.temperature"
-            type="range"
-            min="0"
-            max="2"
-            step="0.1"
-          />
-        </label>
-        <label v-if="scope !== 'playground'" class="chat-field">
-          <span>Max tokens</span>
-          <input
-            v-model.number="settings.maxTokens"
-            class="input is-small"
-            type="number"
-            min="1"
-          />
-        </label>
-        <label v-if="scope !== 'playground'" class="chat-field">
-          <span>API key</span>
-          <input
-            v-model.lazy="keyModel"
-            class="input is-small"
-            type="password"
-            autocomplete="off"
-            placeholder="Only if the server asks for one"
-          />
-        </label>
+    <!-- Settings and code open as trays under the bar. A page with room for them
+         can dock either in a panel of its own instead; it is the same component
+         and the same state both ways. -->
+    <Teleport :to="settingsTo || 'body'" :disabled="!settingsTo" defer>
+      <div
+        v-if="settingsTo || tray === 'settings'"
+        :class="settingsTo ? 'chat-dock' : 'chat-tray'"
+      >
+        <ModelChatSettings
+          v-model="settings"
+          v-model:api-key="keyModel"
+          :show-max-tokens="scope !== 'playground'"
+          :show-api-key="scope !== 'playground'"
+          :stacked="!!settingsTo"
+        />
       </div>
-    </div>
+    </Teleport>
 
-    <div v-if="tray === 'code'" class="chat-tray">
-      <div class="chat-code-head">
-        <div class="chat-langs" role="tablist" aria-label="Language">
-          <button
-            v-for="(label, key) in LANGS"
-            :key="key"
-            type="button"
-            role="tab"
-            :aria-selected="lang === key"
-            :class="{ 'is-active': lang === key }"
-            @click="lang = key"
-          >
-            {{ label }}
-          </button>
-        </div>
-        <button type="button" class="button is-small is-quiet" @click="copyCode">
-          Copy
-        </button>
+    <Teleport :to="codeTo || 'body'" :disabled="!codeTo" defer>
+      <div
+        v-if="codeTo || tray === 'code'"
+        :class="codeTo ? 'chat-dock' : 'chat-tray is-code'"
+      >
+        <ModelChatCode
+          :url="codeUrl || url"
+          :model="model"
+          :headers="headers"
+          :key-env="codeKeyEnv ?? (usesKey ? 'VLLM_API_KEY' : null)"
+          :settings="settings"
+          :note="COPY[scope].code"
+        >
+          <template v-if="$slots['code-footer']" #footer>
+            <slot name="code-footer" />
+          </template>
+        </ModelChatCode>
       </div>
-      <pre class="chat-code"><code v-html="highlight(snippet)"></code></pre>
-      <p class="chat-note">
-        {{ COPY[scope].code }}
-        <template v-if="usesKey">
-          Set <span class="mono">VLLM_API_KEY</span> to your key first.
-        </template>
-      </p>
-    </div>
+    </Teleport>
 
     <div v-if="status === 'starting'" class="chat-banner is-warn">
       <StatusMark tone="warn" :size="12" />
@@ -193,10 +159,12 @@
         v-if="messages.length === 0 && status === 'ready'"
         class="chat-empty"
       >
-        <p v-if="COPY[scope].empty">{{ COPY[scope].empty }}</p>
+        <slot name="empty">
+          <p v-if="COPY[scope].empty">{{ COPY[scope].empty }}</p>
+        </slot>
         <div class="chat-suggest">
           <button
-            v-for="text in SUGGESTIONS"
+            v-for="text in suggestions ?? SUGGESTIONS"
             :key="text"
             type="button"
             @click="send(text)"
@@ -301,9 +269,9 @@
 <script setup lang="ts">
 import { Marked } from "marked";
 import DOMPurify from "dompurify";
-import { useToast } from "vue-toastification";
 import StatusMark from "~/components/Common/StatusMark.vue";
-import { escapeHtml } from "~/utils/htmlSanitization";
+import ModelChatSettings from "~/components/Common/ModelChatSettings.vue";
+import ModelChatCode from "~/components/Common/ModelChatCode.vue";
 import type { StatusTone } from "~/composables/useStatus";
 import type { LlmChatStatus } from "~/composables/jobs/useLlmEndpoint";
 import {
@@ -312,6 +280,7 @@ import {
   splitReasoning,
   streamChat,
   trimHistory,
+  type ChatSettings,
   type ChatTurn,
 } from "~/utils/llmChat";
 
@@ -331,6 +300,16 @@ const props = defineProps<{
   port?: number;
   status: LlmChatStatus;
   error: string;
+  /** Opening prompts for the empty state, in place of the endpoint-testing ones. */
+  suggestions?: string[];
+  /** Selector of an element to show the settings in, instead of the tray under the bar. */
+  settingsTo?: string | null;
+  /** The same for the code sample. */
+  codeTo?: string | null;
+  /** The URL the code sample calls, when it isn't the one the chat itself uses. */
+  codeUrl?: string;
+  /** The environment variable the code sample reads its key from. */
+  codeKeyEnv?: string;
 }>();
 const emit = defineEmits<{
   viewLogs: [];
@@ -366,7 +345,6 @@ const SUGGESTIONS = [
   "Write a haiku about idle GPUs",
   "Explain the KV cache in two sentences",
 ];
-const LANGS = { curl: "curl", python: "Python", js: "JavaScript" } as const;
 const COPY = {
   job: {
     code: "This calls this replica directly. For production traffic, use the deployment's endpoint.",
@@ -384,8 +362,7 @@ const COPY = {
   playground: {
     code: "",
     ended: "No model is serving right now, so the playground has nothing to talk to.",
-    // The suggestions are the whole prompt here; the picker above already names the
-    // model, and the page says what the playground is.
+    // The playground fills the empty slot with its own heading instead.
     empty: "",
     note: "",
   },
@@ -432,7 +409,7 @@ let controller: AbortController | null = null;
 let nextId = messages.value.reduce((next, m) => Math.max(next, m.id + 1), 0);
 
 // Per job or deployment, for this browser session.
-const settings = useSessionStorage(`nosana-chat:${props.sessionKey}`, {
+const settings = useSessionStorage<ChatSettings>(`nosana-chat:${props.sessionKey}`, {
   systemPrompt: "",
   temperature: 0.7,
   maxTokens: 1024,
@@ -614,100 +591,9 @@ const toggleTray = (name: "settings" | "code") => {
   tray.value = tray.value === name ? null : name;
 };
 
-const lang = ref<keyof typeof LANGS>("curl");
 const usesKey = computed(() =>
   Object.keys(props.headers).some((name) => name.toLowerCase() === "authorization"),
 );
-const snippet = computed(() => {
-  const base = props.url.replace(/\/+$/, "");
-  const { systemPrompt, temperature, maxTokens } = settings.value;
-  const turns: ChatTurn[] = [
-    ...(systemPrompt.trim()
-      ? [{ role: "system" as const, content: systemPrompt.trim() }]
-      : []),
-    { role: "user", content: "Hello!" },
-  ];
-  const json = JSON.stringify(
-    { model: props.model, temperature, max_tokens: maxTokens, messages: turns },
-    null,
-    2,
-  );
-  const list = (indent: string) =>
-    turns
-      .map((t) => `${indent}{"role": "${t.role}", "content": ${JSON.stringify(t.content)}},`)
-      .join("\n");
-
-  // The key itself is never printed; the snippet reads it from the
-  // environment instead.
-  const extra = Object.entries(props.headers).filter(
-    ([name]) => !["content-type", "authorization"].includes(name.toLowerCase()),
-  );
-  const auth = usesKey.value;
-  const headerArg = (open: string, close: string) =>
-    extra.length
-      ? `,\n  ${open}${JSON.stringify(Object.fromEntries(extra))}${close}`
-      : "";
-
-  if (lang.value === "curl") {
-    const lines =
-      (auth ? `  -H "Authorization: Bearer $VLLM_API_KEY" \\\n` : "") +
-      extra
-        .map(([name, value]) => `  -H ${JSON.stringify(`${name}: ${value}`)} \\\n`)
-        .join("");
-    return `curl ${base}/v1/chat/completions \\
-  -H "Content-Type: application/json" \\
-${lines}  -d '${json.replace(/'/g, "'\\''")}'`;
-  }
-  if (lang.value === "python") {
-    return `${auth ? "import os\n" : ""}from openai import OpenAI
-
-client = OpenAI(base_url="${base}/v1", api_key=${auth ? 'os.environ["VLLM_API_KEY"]' : '"unused"'}${headerArg("default_headers=", "")})
-reply = client.chat.completions.create(
-    model=${JSON.stringify(props.model)},
-    temperature=${temperature},
-    max_tokens=${maxTokens},
-    messages=[
-${list("        ")}
-    ],
-)
-print(reply.choices[0].message.content)`;
-  }
-  return `import OpenAI from "openai";
-
-const client = new OpenAI({ baseURL: "${base}/v1", apiKey: ${auth ? "process.env.VLLM_API_KEY" : '"unused"'}${headerArg("defaultHeaders: ", "")} });
-const reply = await client.chat.completions.create({
-  model: ${JSON.stringify(props.model)},
-  temperature: ${temperature},
-  max_tokens: ${maxTokens},
-  messages: [
-${list("    ")}
-  ],
-});
-console.log(reply.choices[0].message.content);`;
-});
-
-// Keywords green, strings amber, as in the terminal-style blocks elsewhere.
-const KEYWORDS = /("(?:[^"\\\n]|\\.)*")|\b(curl|from|import|const|new|await|print)\b/g;
-const highlight = (code: string) => {
-  let html = "";
-  let last = 0;
-  for (const match of code.matchAll(KEYWORDS)) {
-    html += escapeHtml(code.slice(last, match.index));
-    html += `<span class="${match[1] ? "tok-s" : "tok-k"}">${escapeHtml(match[0])}</span>`;
-    last = match.index + match[0].length;
-  }
-  return html + escapeHtml(code.slice(last));
-};
-
-const toast = useToast();
-const copyCode = async () => {
-  try {
-    await navigator.clipboard.writeText(snippet.value);
-    toast.success("Copied code");
-  } catch {
-    toast.error("Copy blocked by the browser");
-  }
-};
 </script>
 
 <style lang="scss" scoped>
@@ -728,12 +614,12 @@ $chat-muted: $grey-dark;
   min-height: 420px;
 }
 
-// The developers page stacks this under a hero and a tab bar rather than giving it
-// the viewport, so it sizes to its content up to a cap instead.
+// The playground page sizes the column this sits in, so it fills that instead.
+// Its model picker opens over the messages, so the panel can't clip.
 .chat.is-scope-playground {
-  height: auto;
-  min-height: 380px;
-  max-height: 60vh;
+  height: 100%;
+  min-height: 0;
+  overflow: visible;
 }
 
 /* ---- Model bar ---- */
@@ -770,11 +656,12 @@ $chat-muted: $grey-dark;
   white-space: nowrap;
 }
 
+// :deep so a button the page adds through the actions slot matches the others.
 .chat-acts {
   display: flex;
   gap: 4px;
 
-  .button {
+  :deep(.button) {
     gap: 6px;
 
     svg {
@@ -783,7 +670,7 @@ $chat-muted: $grey-dark;
     }
   }
 
-  .button.is-on {
+  :deep(.button.is-on) {
     background: $surface-sunken;
   }
 }
@@ -797,91 +684,24 @@ $chat-muted: $grey-dark;
   border-bottom: 1px solid $border-soft;
 }
 
-.chat-settings {
-  grid-template-columns: 1fr 200px;
-  gap: 14px;
+// The code sample brings its own header, surface and footer.
+.chat-tray.is-code {
+  display: block;
+  padding: 0;
+
+  :deep(.snippet-body) {
+    max-height: 260px;
+  }
+}
+
+// Shown in the page's panel, which supplies the surface: no box of its own.
+.chat-dock {
+  display: contents;
 }
 
 .chat-key .input {
   flex: 1 1 180px;
   max-width: 260px;
-}
-
-.chat-field-col {
-  display: grid;
-  gap: 10px;
-  align-content: start;
-}
-
-.chat-field {
-  display: grid;
-  gap: 5px;
-  font-size: 0.82rem;
-  color: $chat-muted;
-
-  b {
-    color: $text;
-    font-weight: 600;
-  }
-
-  .textarea {
-    font-size: 0.86rem;
-    min-height: 0;
-    resize: vertical;
-  }
-
-  input[type="range"] {
-    accent-color: $secondary;
-  }
-}
-
-.chat-code-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-}
-
-.chat-langs {
-  display: flex;
-  gap: 4px;
-
-  button {
-    border: 0;
-    background: none;
-    padding: 3px 10px;
-    border-radius: 7px;
-    font: inherit;
-    font-size: 0.82rem;
-    color: $chat-muted;
-    cursor: pointer;
-
-    &.is-active {
-      background: $white;
-      color: $text;
-      box-shadow: 0 0 0 1px $border-soft;
-    }
-  }
-}
-
-.chat-code {
-  margin: 0;
-  padding: 12px 14px;
-  border-radius: 10px;
-  background: #0f1012;
-  color: #e7e9ec;
-  font-size: 0.8rem;
-  line-height: 1.5;
-  max-height: 260px;
-  overflow: auto;
-
-  :deep(.tok-k) {
-    color: $secondary;
-  }
-
-  :deep(.tok-s) {
-    color: #ffd479;
-  }
 }
 
 .chat-note {
@@ -943,6 +763,19 @@ $chat-muted: $grey-dark;
   gap: 10px;
   color: $chat-muted;
   font-size: 0.9rem;
+}
+
+// The playground's empty state is its opening screen: a heading and the
+// suggestions, in the middle of the panel.
+.is-scope-playground .chat-empty {
+  margin: auto;
+  gap: 18px;
+  justify-items: center;
+  text-align: center;
+
+  .chat-suggest {
+    justify-content: center;
+  }
 }
 
 .chat-suggest {
@@ -1160,8 +993,6 @@ html.dark-mode {
   }
 
   .chat-via,
-  .chat-field,
-  .chat-langs button,
   .chat-note,
   .chat-empty,
   .chat-reason,
@@ -1182,7 +1013,7 @@ html.dark-mode {
   .chat-tray,
   .chat-banner,
   .chat-user,
-  .chat-acts .button.is-on {
+  .chat-acts :deep(.button.is-on) {
     background: rgba($white, 0.06);
   }
 
@@ -1194,12 +1025,6 @@ html.dark-mode {
     background: rgba($danger, 0.14);
   }
 
-  .chat-langs button.is-active {
-    background: rgba($white, 0.1);
-    color: $white;
-    box-shadow: none;
-  }
-
   .chat-suggest button,
   .chat-box {
     background: transparent;
@@ -1207,8 +1032,7 @@ html.dark-mode {
     color: $white;
   }
 
-  .chat-box textarea,
-  .chat-field b {
+  .chat-box textarea {
     color: $white;
   }
 
@@ -1227,12 +1051,8 @@ html.dark-mode {
 }
 
 @include touch {
-  .chat-settings {
-    grid-template-columns: 1fr;
-  }
-
   .chat-via,
-  .chat-acts .button span {
+  .chat-acts :deep(.button span) {
     display: none;
   }
 }

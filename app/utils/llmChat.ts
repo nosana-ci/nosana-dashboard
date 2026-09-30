@@ -22,6 +22,13 @@ export type ChatTurn = {
 };
 
 /** What one streamed chunk adds to the reply. */
+/** What the reader can tune about a conversation. */
+export type ChatSettings = {
+  systemPrompt: string;
+  temperature: number;
+  maxTokens: number;
+};
+
 export type ChatDelta = {
   content: string;
   reasoning: string;

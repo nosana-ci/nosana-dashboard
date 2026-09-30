@@ -26,66 +26,53 @@
     </p>
 
     <div v-else>
-      <div v-if="rows.length" class="scope-grid">
+      <div class="scope-grid">
         <table class="scope-table">
           <colgroup>
             <col />
             <col class="scope-col-verb" />
             <col class="scope-col-verb" />
           </colgroup>
-          <thead>
-            <tr>
-              <th><span class="is-sr-only">Resource</span></th>
-              <th class="has-text-centered">Read</th>
-              <th class="has-text-centered">Write</th>
-            </tr>
-          </thead>
+          <!-- No column headings: each checkbox is labelled by what it allows, so
+               read/write pairs and one-off permissions (use, sign, manage) line up
+               in the same two columns. -->
           <tbody>
             <tr v-for="row in rows" :key="row.key">
               <td class="has-text-weight-semibold scope-nowrap">
                 {{ row.label }}
               </td>
-              <td
-                v-for="(cell, index) in row.cells"
-                :key="cell.scope || index"
-                class="has-text-centered"
-              >
-                <span v-if="!cell.scope" class="has-text-grey-light">—</span>
+              <td v-for="(cell, index) in row.cells" :key="cell.scope || index">
                 <ScopeCheck
-                  v-else
+                  v-if="cell.scope"
                   :tooltip="cell.tooltip"
                   :credits="cell.credits"
                   :readonly="readonly"
                   :checked="isSelected(cell.scope)"
                   @toggle="toggle(cell.scope)"
-                />
+                >
+                  <span>{{ index === 0 ? "Read" : "Write" }}</span>
+                </ScopeCheck>
               </td>
+            </tr>
+            <tr v-for="entry in standalone" :key="entry.scope">
+              <td class="has-text-weight-semibold scope-nowrap">
+                {{ entry.label }}
+              </td>
+              <td>
+                <ScopeCheck
+                  :tooltip="entry.tooltip"
+                  :credits="entry.credits"
+                  :readonly="readonly"
+                  :checked="isSelected(entry.scope)"
+                  @toggle="toggle(entry.scope)"
+                >
+                  <span class="is-capitalized">{{ entry.verb }}</span>
+                </ScopeCheck>
+              </td>
+              <td></td>
             </tr>
           </tbody>
         </table>
-      </div>
-
-      <!-- Permissions that aren't a read/write pair over the same resource — one
-           checkbox each, in Bulma's flex-wrap checkbox-list container rather than
-           forced into a table column they don't belong to. -->
-      <div
-        v-if="standalone.length"
-        class="checkboxes"
-        :class="{ 'mt-3': rows.length }"
-      >
-        <ScopeCheck
-          v-for="entry in standalone"
-          :key="entry.scope"
-          :tooltip="entry.tooltip"
-          :credits="entry.credits"
-          :readonly="readonly"
-          :checked="isSelected(entry.scope)"
-          class="scope-standalone-row"
-          @toggle="toggle(entry.scope)"
-        >
-          <span class="has-text-weight-semibold">{{ entry.label }}</span>
-          <span class="has-text-grey is-size-7">{{ entry.verb }}</span>
-        </ScopeCheck>
       </div>
     </div>
 
@@ -95,7 +82,10 @@
 
 <script setup lang="ts">
 import ScopeCheck from "~/components/Account/ScopeCheck.vue";
-import type { ScopeDescriptor } from "~/composables/useScopeCatalogue";
+import {
+  scopeResourceLabel,
+  type ScopeDescriptor,
+} from "~/composables/useScopeCatalogue";
 
 const props = withDefaults(
   defineProps<{
@@ -134,15 +124,6 @@ const entries = computed<ScopeDescriptor[]>(() => {
   ];
 });
 
-const RESOURCE_LABELS: Record<string, string> = {
-  "api-keys": "API keys",
-  "oauth-apps": "OAuth apps",
-};
-
-const labelFor = (resource: string) =>
-  RESOURCE_LABELS[resource] ??
-  resource.replace(/-/g, " ").replace(/^./, (char) => char.toUpperCase());
-
 interface Cell {
   /** Empty when the resource has no read (or write) permission — the cell renders as a dash. */
   scope: string;
@@ -169,7 +150,7 @@ const rows = computed<Row[]>(() => {
     if (!row) {
       row = {
         key: resource,
-        label: labelFor(resource),
+        label: scopeResourceLabel(resource),
         cells: [{ scope: "" }, { scope: "" }],
       };
       byResource.set(resource, row);
@@ -207,7 +188,7 @@ const standalone = computed<StandaloneEntry[]>(() =>
       const [resource, verb] = entry.scope.split(":");
       return {
         scope: entry.scope,
-        label: labelFor(resource),
+        label: scopeResourceLabel(resource),
         verb,
         tooltip: [entry.scope, entry.description].filter(Boolean).join(" — "),
         credits: spendsCredits(entry.description),
@@ -253,37 +234,30 @@ const toggleAll = () =>
   background: transparent;
   margin-bottom: 0;
 
-  // Fixed narrow columns for the checkboxes — is-fullwidth on a 3-column table let
-  // Read/Write drift to the far edges with a canyon of empty space in between.
+  // Fixed columns for the checkboxes, so they sit in two straight lines whatever
+  // the label beside them says.
   table-layout: fixed;
 
   .scope-col-verb {
-    width: 108px;
+    width: 132px;
   }
 
-  th,
   td {
-    padding: 0.65rem 0.85rem;
+    padding: 0.3rem 0.85rem;
+    vertical-align: middle;
   }
 
-  thead th {
-    background: $surface-hover;
+  // The checkbox's own padding would push it right of the column's edge.
+  td + td {
+    padding-left: 0.35rem;
   }
 
-  thead tr:first-child th:first-child {
-    border-top-left-radius: 9px;
+  tr:first-child td {
+    padding-top: 0.6rem;
   }
 
-  thead tr:first-child th:last-child {
-    border-top-right-radius: 9px;
-  }
-
-  tbody tr:last-child td:first-child {
-    border-bottom-left-radius: 9px;
-  }
-
-  tbody tr:last-child td:last-child {
-    border-bottom-right-radius: 9px;
+  tr:last-child td {
+    padding-bottom: 0.6rem;
   }
 }
 
@@ -292,8 +266,10 @@ const toggleAll = () =>
   white-space: nowrap;
 }
 
-.scope-standalone-row {
-  border: 1px solid $border;
-  border-radius: 8px;
+// The light hairline reads as a hard outline on a dark dialog.
+html.dark-mode {
+  .scope-grid {
+    border-color: rgba($white, 0.12);
+  }
 }
 </style>

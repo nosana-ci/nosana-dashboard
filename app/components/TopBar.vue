@@ -92,7 +92,7 @@
               >${{ getCreditBalance().toFixed(2) }}</span
             >
             <div class="profile-avatar auth-avatar">
-              <UserIcon class="auth-icon has-text-grey" />
+              <AccountAvatar class="auth-icon" />
             </div>
           </template>
           <!-- Wallet User -->
@@ -143,7 +143,7 @@
                 :alt="wallet.name + ' icon'"
                 class="wallet-icon"
               />
-              <UserIcon v-else class="auth-icon" />
+              <AccountAvatar v-else class="auth-icon" />
             </div>
             <div class="dropdown-header-info">
               <span class="dropdown-header-name">{{ getUserName() }}</span>
@@ -169,13 +169,6 @@
             >
               <WalletIcon class="dropdown-icon" />
               <span class="dropdown-item-text">Billing</span>
-            </button>
-            <button
-              class="dropdown-item"
-              @click.stop="goTo('/developers')"
-            >
-              <CodeIcon class="dropdown-icon" />
-              <span class="dropdown-item-text">Developers</span>
             </button>
             <button
               class="dropdown-item"
@@ -236,10 +229,10 @@ import { SolanaWalletButton, useWallet } from "@nosana/solana-vue";
 import { computed, ref, onMounted, onUnmounted, watch } from "vue";
 import GoogleIcon from "@/assets/img/icons/google.svg?component";
 import UserIcon from "@/assets/img/icons/sidebar/user.svg?component";
+import AccountAvatar from "~/components/Common/AccountAvatar.vue";
 import SettingsIcon from "@/assets/img/icons/settings.svg?component";
 import LogoutIcon from "@/assets/img/icons/logout.svg?component";
 import WalletIcon from "@/assets/img/icons/wallet.svg?component";
-import CodeIcon from "@/assets/img/icons/sidebar/code.svg?component";
 import SupportIcon from "@/assets/img/icons/sidebar/support.svg?component";
 import SunIcon from "@/assets/img/icons/sun.svg?component";
 import MoonIcon from "@/assets/img/icons/moon.svg?component";

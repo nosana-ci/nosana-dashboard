@@ -10,6 +10,9 @@ $info: #0066ff;
 // four percent apart, indistinguishable on screen, but meaning "succeeded" and
 // "selected" respectively. Status green and brand green are now the same green.
 $success: $secondary;
+// The brand green is too pale to read as text on a light surface; this is the
+// same hue, dark enough for links and highlighted values there.
+$secondary-text: #0a8a08;
 $warning: #ffb800;
 $custom-colors: (
   "secondary": $secondary,

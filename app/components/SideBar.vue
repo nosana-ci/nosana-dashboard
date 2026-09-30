@@ -57,17 +57,17 @@
         </li>
         <li>
           <nuxt-link
-            to="/account"
+            to="/playground"
             :active-class="isLoggedOut ? '' : 'is-active'"
             :class="{ 'auth-disabled-link': isLoggedOut }"
             :aria-disabled="isLoggedOut"
-            @click.capture="handleSidebarNav($event, '/account', true)"
+            @click.capture="handleSidebarNav($event, '/playground', true)"
             style="padding-left: 1.1rem"
           >
             <span class="icon is-small mr-4">
-              <UserIcon />
+              <ChatIcon />
             </span>
-            <span>Account</span>
+            <span>Playground</span>
           </nuxt-link>
         </li>
         <li>
@@ -176,12 +176,7 @@
                 />
                 <span v-else>W</span>
               </template>
-              <template v-else>
-                {{
-                  (userData?.email && userData.email.charAt(0).toUpperCase()) ||
-                  "U"
-                }}
-              </template>
+              <AccountAvatar v-else />
             </span>
           </div>
           <div class="dropdown-menu">
@@ -192,6 +187,8 @@
                 </p>
               </div>
               <hr class="dropdown-divider" />
+              <!-- The sidebar has no Account entry; this menu is the way there. -->
+              <a class="dropdown-item" @click="openAccount">Account</a>
               <a class="dropdown-item logout-item" @click="handleLogout">
                 <svg
                   width="16"
@@ -236,9 +233,10 @@ const connectingFromSidebar = ref(false);
 const showMobileDropdown = ref(false);
 import ListIcon from "@/assets/img/icons/sidebar/list.svg?component";
 import ExplorerIcon from "@/assets/img/icons/sidebar/explorer.svg?component";
-import UserIcon from "@/assets/img/icons/sidebar/user.svg?component";
 import SupportIcon from "@/assets/img/icons/sidebar/support.svg?component";
 import CodeIcon from "@/assets/img/icons/sidebar/code.svg?component";
+import AccountAvatar from "~/components/Common/AccountAvatar.vue";
+import ChatIcon from "@/assets/img/icons/sidebar/chat.svg?component";
 import { useWallet } from "@nosana/solana-vue";
 import { computed, onMounted, watch, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
@@ -348,6 +346,12 @@ watch(connected, (isConnected, prevConnected) => {
 
 const isActive = (paths: string[]) => {
   return paths.includes(route.path);
+};
+
+const openAccount = () => {
+  showMobileDropdown.value = false;
+  showMenu.value = false;
+  router.push("/account");
 };
 
 // Handle logout
