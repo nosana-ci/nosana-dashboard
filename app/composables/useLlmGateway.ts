@@ -21,6 +21,12 @@ export interface LlmModel {
   available: boolean;
 }
 
+/**
+ * The catalog carries no capability field. Embedding models are listed with a
+ * one-token output limit, which the gateway enforces, so they cannot chat.
+ */
+export const isChatModel = (model: LlmModel): boolean => model.max_output_tokens > 1;
+
 /** USD per token, as a decimal string, shown per million tokens like every other vendor. */
 export const pricePerMillion = (perToken: string): number =>
   Number(perToken) * 1_000_000;
