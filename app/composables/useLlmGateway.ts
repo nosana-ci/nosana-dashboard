@@ -79,7 +79,8 @@ export const useLlmGateway = () => {
 
   return {
     inferenceBase,
-    models,
+    // useMyAsyncData is untyped; the default above guarantees an array.
+    models: models as Ref<LlmModel[]>,
     loadingModels,
     modelsError,
     refreshModels,
