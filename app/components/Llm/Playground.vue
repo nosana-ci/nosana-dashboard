@@ -9,60 +9,65 @@
     api-key=""
     :status="status"
     error=""
+    :suggestions="SUGGESTIONS"
+    :settings-to="dockTo?.settings"
+    :code-to="dockTo?.code"
+    :code-url="codeUrl"
+    code-key-env="NOSANA_API_KEY"
   >
     <template #model>
-      <div class="select is-small">
-        <select v-model="model" :disabled="availableModels.length === 0">
-          <option v-if="availableModels.length === 0" value="">
-            No models available
-          </option>
-          <option v-for="entry in availableModels" :key="entry.id" :value="entry.id">
-            {{ entry.name || entry.id }}
-          </option>
-        </select>
-      </div>
-
-      <span v-if="selectedModel" class="is-size-7 has-text-grey model-facts">
-        <span>{{ formatTokenCount(selectedModel.context_length) }} context</span>
-        <span>
-          {{ formatUsd(pricePerMillion(selectedModel.pricing.prompt)) }} in /
-          {{ formatUsd(pricePerMillion(selectedModel.pricing.completion)) }} out
-          per 1M
-        </span>
-      </span>
+      <LlmModelPicker v-model="model" :models="chatModels" />
+    </template>
+    <template #empty>
+      <h2 class="title is-2 mb-0 empty-title">
+        Ask {{ selectedModel?.name || "the model" }} anything
+      </h2>
+    </template>
+    <template #actions>
+      <slot name="actions" />
+    </template>
+    <!-- The sample calls the public API with the reader's own key, not the
+         session-authenticated proxy the chat itself uses. -->
+    <template #code-footer>
+      <LlmSnippetKeys />
     </template>
   </ModelChat>
 </template>
 
 <script setup lang="ts">
 import ModelChat from "~/components/Common/ModelChat.vue";
-import type { LlmModel } from "~/composables/useLlmGateway";
-import {
-  pricePerMillion,
-  formatUsd,
-  formatTokenCount,
-  isChatModel,
-} from "~/composables/useLlmGateway";
+import { isChatModel, type LlmModel } from "~/composables/useLlmGateway";
 
 const props = defineProps<{
   models: LlmModel[];
   loading?: boolean;
-  initialModel?: string | null;
+  /** The base URL the code sample calls. */
+  codeUrl: string;
+  /** Panels the page provides for the chat's settings and code; see ModelChat. */
+  dockTo?: { settings: string; code: string } | null;
 }>();
 
-// The page keeps the selected model so the code sample below matches the chat.
-const emit = defineEmits<{ model: [id: string] }>();
+// The page keeps the selected model so its details and code sample match the chat.
+const model = defineModel<string>({ default: "" });
 
 const config = useRuntimeConfig().public;
 
 /** ModelChat appends /v1/chat/completions, which is where the proxy serves it. */
 const playgroundUrl = `${config.apiBase}/playground`;
 
+// The catalog also lists embedding models, which cannot answer a chat request.
+const chatModels = computed(() => props.models.filter(isChatModel));
+
 const availableModels = computed(() =>
-  props.models.filter((entry) => entry.available && isChatModel(entry)),
+  chatModels.value.filter((entry) => entry.available),
 );
 
-const model = ref(props.initialModel ?? "");
+// Everyday asks rather than technical ones, so anyone has somewhere to start.
+const SUGGESTIONS = [
+  "How does GPU inference work?",
+  "Help me study for an exam",
+  "What can I cook tonight?",
+];
 
 const selectedModel = computed(
   () => props.models.find((entry) => entry.id === model.value) ?? null,
@@ -83,23 +88,16 @@ watch(
   },
   { immediate: true },
 );
-
-watch(model, (id) => {
-  if (id) emit("model", id);
-});
-
-watch(
-  () => props.initialModel,
-  (next) => {
-    if (next) model.value = next;
-  },
-);
 </script>
 
 <style scoped lang="scss">
-.model-facts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem 0.9rem;
+.empty-title {
+  font-weight: $weight-medium;
+  color: $text;
+  text-wrap: balance;
+}
+
+html.dark-mode .empty-title {
+  color: $white;
 }
 </style>

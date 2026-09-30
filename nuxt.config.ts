@@ -54,8 +54,6 @@ export default defineNuxtConfig({
   },
   css: [
     "~/assets/styles/global.scss",
-    "highlight.js/styles/default.css",
-    "~/assets/styles/highlight.scss",
     "bulma-o-steps/bulma-steps.css",
     "@creativebulma/bulma-tooltip/dist/bulma-tooltip.min.css",
   ],
