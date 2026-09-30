@@ -1,110 +1,125 @@
 <template>
   <section class="hero is-fullheight oauth-page">
     <div class="hero-body is-justify-content-center">
-      <div class="box has-text-centered oauth-card">
-        <!-- Loading challenge / redirecting -->
-        <div
-          v-if="status === 'loading' || status === 'working'"
-          class="is-flex is-flex-direction-column is-align-items-center"
-        >
-          <Loader />
-          <p class="mt-3 has-text-grey">
-            {{ status === 'working' ? 'Redirecting…' : 'Loading…' }}
-          </p>
-        </div>
+      <!-- Loading challenge / redirecting -->
+      <div
+        v-if="status === 'loading' || status === 'working'"
+        class="box oauth-state is-flex is-flex-direction-column is-align-items-center"
+      >
+        <Loader />
+        <p class="mt-3 has-text-grey">
+          {{ status === 'working' ? 'Redirecting…' : 'Loading…' }}
+        </p>
+      </div>
 
-        <!-- Error -->
-        <div
-          v-else-if="status === 'error'"
-          class="is-flex is-flex-direction-column is-align-items-center"
-        >
-          <p class="has-text-danger has-text-weight-medium mb-4">{{ error }}</p>
-          <NuxtLink to="/" class="button is-primary">Back to home</NuxtLink>
-        </div>
+      <!-- Error -->
+      <div
+        v-else-if="status === 'error'"
+        class="box oauth-state is-flex is-flex-direction-column is-align-items-center"
+      >
+        <p class="has-text-danger has-text-weight-medium mb-4">{{ error }}</p>
+        <NuxtLink to="/" class="button is-primary">Back to home</NuxtLink>
+      </div>
 
-        <!-- Consent -->
-        <div v-else-if="status === 'consent' && info">
-          <img
-            v-if="info.logoUri && !logoFailed"
-            :src="info.logoUri"
-            :alt="`${info.clientName} logo`"
-            class="oauth-logo"
-            @error="logoFailed = true"
-          />
-          <div v-else class="oauth-logo oauth-logo-fallback" aria-hidden="true">
-            {{ (info.clientName || '?').charAt(0).toUpperCase() }}
+      <!-- Consent: the same dialog shell as creating an API key. Bulma scopes the
+           shell's spacing to `.modal`, so it sits in one, without a backdrop. -->
+      <div v-else-if="status === 'consent' && info" class="modal is-active">
+      <div class="modal-card is-app-modal oauth-card">
+        <header class="modal-card-head">
+          <div class="is-flex is-align-items-center is-gap-2 is-flex-grow-1">
+            <img
+              v-if="info.logoUri && !logoFailed"
+              :src="info.logoUri"
+              :alt="`${info.clientName} logo`"
+              class="oauth-logo"
+              @error="logoFailed = true"
+            />
+            <span v-else class="app-modal-icon oauth-logo-fallback" aria-hidden="true">
+              {{ (info.clientName || '?').charAt(0).toUpperCase() }}
+            </span>
+            <div class="oauth-heading">
+              <h1 class="modal-card-title title is-5 mb-0">
+                {{ info.clientName || 'An application' }}
+              </h1>
+              <p class="has-text-grey is-size-7">
+                {{ requestedScopes.length ? 'wants to access your Nosana account' : 'wants to verify your identity' }}
+              </p>
+            </div>
           </div>
+        </header>
 
-          <h1 class="title is-5 has-text-weight-normal mb-2">
-            <strong>{{ info.clientName || 'An application' }}</strong>
-            {{ requestedScopes.length ? 'wants to access your Nosana account' : 'wants to verify your identity' }}
-          </h1>
-
-          <p v-if="email" class="subtitle is-6 has-text-grey mb-4">Signed in as {{ email }}</p>
-
+        <section class="modal-card-body">
           <!-- Exactly what is being granted. Anything absent here is not authorized, so
                this must never be padded out with a generic summary. -->
-          <div v-if="requestedScopes.length" class="notification is-light oauth-scope has-text-left">
-            <p class="is-size-7 mb-2">
-              <strong>{{ info.clientName || 'This app' }}</strong> is asking to do the following on your
-              behalf. Untick anything you don't want to allow.
-            </p>
-            <ul>
-              <li
-                v-for="item in requestedScopes"
-                :key="item.scope"
-                class="mb-2 is-size-7"
-                :class="{ 'has-text-weight-semibold': spendsCredits(item.description) }"
+          <template v-if="requestedScopes.length">
+            <label class="label">Access requested</label>
+            <!-- The same one-choice-first control as creating an API key. The list
+                 below stays visible at every level: it is what is being agreed to. -->
+            <div class="seg-tabs is-fullwidth" role="group" aria-label="Access">
+              <button
+                v-for="option in accessOptions"
+                :key="option.id"
+                type="button"
+                :class="{ 'is-active': access === option.id }"
+                :aria-pressed="access === option.id"
+                @click="setAccess(option.id)"
               >
-                <label class="checkbox is-flex is-align-items-flex-start is-gap-2">
-                  <input
-                    type="checkbox"
-                    class="mt-1"
-                    :checked="selectedScopes.has(item.scope)"
-                    @change="toggleScope(item.scope)"
-                  >
-                  <span
-                    class="icon is-small mt-1"
-                    :class="spendsCredits(item.description) ? 'has-text-warning-dark' : 'has-text-grey'"
-                    aria-hidden="true"
-                  >
-                    <FontAwesomeIcon :icon="spendsCredits(item.description) ? faCoins : faCheck" />
-                  </span>
+                {{ option.label }}
+              </button>
+            </div>
+            <p class="oauth-note my-3">
+              <strong>{{ currentAccess.lead }}</strong>
+              {{ info.clientName || 'This app' }} {{ currentAccess.detail }}
+            </p>
+            <ul class="oauth-scopes">
+              <li v-for="item in requestedScopes" :key="item.scope">
+                <ScopeCheck
+                  :checked="selectedScopes.has(item.scope)"
+                  :credits="spendsCredits(item.description)"
+                  :readonly="access !== 'custom'"
+                  @toggle="toggleScope(item.scope)"
+                >
                   <span>{{ item.description }}</span>
-                </label>
+                </ScopeCheck>
               </li>
             </ul>
-            <p v-if="selectedScopes.size === 0" class="is-size-7 has-text-grey mt-2">
+            <p v-if="selectedScopes.size === 0" class="oauth-note mt-3">
               Nothing ticked: <strong>{{ info.clientName || 'this app' }}</strong> will only be able to confirm
               who you are, with no access to your deployments, jobs, credits or wallet.
             </p>
-          </div>
+            <p v-else class="oauth-note is-size-7 mt-3">
+              <FontAwesomeIcon v-if="canSpendCredits" :icon="faCoins" class="has-text-warning mr-1" />
+              {{ canSpendCredits ? 'This app will be able to spend your credits.' : "This app can't spend your credits." }}
+            </p>
+          </template>
 
           <!-- No resource scopes: a sign-in-only grant, which authorizes no API access.
                Claiming account access here would be false. -->
-          <div v-else class="notification is-light oauth-scope has-text-left">
+          <p v-else class="oauth-note">
             This will let <strong>{{ info.clientName || 'this app' }}</strong> confirm who you are. It gets
             no access to your deployments, jobs, credits or wallet.
-          </div>
+          </p>
 
           <div
             v-if="info.clientUri || info.policyUri || info.tosUri"
-            class="is-flex is-justify-content-center mb-5 oauth-links"
+            class="is-flex mt-4 oauth-links"
           >
             <a v-if="info.clientUri" class="has-text-link" :href="info.clientUri" target="_blank" rel="noopener noreferrer">Website</a>
             <a v-if="info.tosUri" class="has-text-link" :href="info.tosUri" target="_blank" rel="noopener noreferrer">Terms</a>
             <a v-if="info.policyUri" class="has-text-link" :href="info.policyUri" target="_blank" rel="noopener noreferrer">Privacy</a>
           </div>
+        </section>
 
-          <div class="columns is-mobile">
-            <div class="column">
-              <button class="button is-fullwidth" @click="cancel">Cancel</button>
-            </div>
-            <div class="column">
-              <button class="button is-primary is-fullwidth" @click="authorize">Authorize</button>
-            </div>
+        <footer class="modal-card-foot">
+          <p class="has-text-grey is-size-7 modal-foot-summary">
+            <template v-if="email">Signed in as {{ email }}</template>
+          </p>
+          <div class="buttons mb-0">
+            <button class="button" @click="cancel">Cancel</button>
+            <button class="button is-success" @click="authorize">Authorize</button>
           </div>
-        </div>
+        </footer>
+      </div>
       </div>
     </div>
   </section>
@@ -117,8 +132,9 @@ import {
   getRedirectURLToContinueOAuthFlow,
 } from "supertokens-web-js/recipe/oauth2provider";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
-import { faCheck, faCoins } from "@fortawesome/free-solid-svg-icons";
+import { faCoins } from "@fortawesome/free-solid-svg-icons";
 import Loader from "~/components/Loader.vue";
+import ScopeCheck from "~/components/Account/ScopeCheck.vue";
 import { useSuperTokens } from "~/composables/useSuperTokens";
 
 // Authorization-server login + consent page for the client-manager OAuth 2.1
@@ -163,6 +179,54 @@ const requestedScopes = computed<RequestedScope[]>(() => info.value?.requestedSc
 // provider grants exactly this set (identity scopes always go through).
 const selectedScopes = ref<Set<string>>(new Set());
 
+type Access = "all" | "read" | "custom";
+
+const ACCESS: { id: Access; label: string; lead: string; detail: string }[] = [
+  {
+    id: "all",
+    label: "All requested",
+    lead: "Everything it asked for.",
+    detail: "can do all of the following on your behalf.",
+  },
+  {
+    id: "read",
+    label: "Read only",
+    lead: "Look, don't touch.",
+    detail: "can see the following but can't start or change anything.",
+  },
+  {
+    id: "custom",
+    label: "Custom",
+    lead: "Pick exactly what to allow.",
+    detail: "can do whatever you leave ticked.",
+  },
+];
+
+const isRead = (scope: string) => scope.endsWith(":read");
+
+// "Read only" is only a real choice when the request mixes reads with something else.
+const accessOptions = computed(() => {
+  const reads = requestedScopes.value.filter((item) => isRead(item.scope)).length;
+  const mixed = reads > 0 && reads < requestedScopes.value.length;
+  return ACCESS.filter((option) => option.id !== "read" || mixed);
+});
+
+const access = ref<Access>("all");
+const currentAccess = computed(
+  () => ACCESS.find((option) => option.id === access.value)!,
+);
+
+// Custom starts from whatever the previous choice held, so it can be trimmed.
+function setAccess(level: Access) {
+  access.value = level;
+  if (level === "custom") return;
+  selectedScopes.value = new Set(
+    requestedScopes.value
+      .map((item) => item.scope)
+      .filter((scope) => level === "all" || isRead(scope)),
+  );
+}
+
 function toggleScope(scope: string) {
   const next = new Set(selectedScopes.value);
   if (next.has(scope)) next.delete(scope);
@@ -172,6 +236,12 @@ function toggleScope(scope: string) {
 
 // The descriptions say so themselves; this only picks the icon.
 const spendsCredits = (description: string) => /credits/i.test(description);
+
+const canSpendCredits = computed(() =>
+  requestedScopes.value.some(
+    (item) => selectedScopes.value.has(item.scope) && spendsCredits(item.description),
+  ),
+);
 
 function fail(message: string) {
   error.value = message;
@@ -258,9 +328,58 @@ onMounted(async () => {
   background: #f9f9f9;
 }
 
-.oauth-card {
+.oauth-state {
   width: 100%;
   max-width: 420px;
+}
+
+// Narrower than the app's dialog sizes: a consent screen is a short read.
+.oauth-card {
+  width: 520px;
+}
+
+.oauth-heading {
+  min-width: 0;
+}
+
+.oauth-logo {
+  flex: none;
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
+  object-fit: cover;
+}
+
+.oauth-logo-fallback {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.oauth-note {
+  color: $grey-dark;
+
+  strong {
+    color: $text;
+  }
+}
+
+// One permission per row, in the same bordered list as the API key dialog.
+.oauth-scopes {
+  border: 1px solid $border;
+  border-radius: 10px;
+  padding: 0.4rem 0.45rem;
+
+  // The whole row is the target, and a long description wraps beside its box.
+  // !important because the component lays itself out with Bulma's helper classes.
+  :deep(.scope-cell) {
+    display: flex !important;
+    align-items: flex-start !important;
+    white-space: normal;
+  }
+
+  :deep(.scope-check) {
+    margin-top: 0.15rem;
+  }
 }
 
 .oauth-links {
@@ -268,38 +387,26 @@ onMounted(async () => {
   font-size: 0.85rem;
 }
 
-.oauth-logo {
-  width: 64px;
-  height: 64px;
-  border-radius: 14px;
-  object-fit: cover;
-  margin: 0 auto 1rem;
-  display: block;
-  background: #f2f2f2;
-}
-
-.oauth-logo-fallback {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: #555;
-}
-
 .dark-mode {
   .oauth-page {
     background: #121212;
   }
 
-  .box.oauth-card {
+  .box.oauth-state {
     background: #1c1c1c;
     border-color: #2a2a2a;
   }
 
-  .notification.oauth-scope {
-    background: #242424;
-    color: #bbb;
+  .oauth-note {
+    color: $text-muted;
+
+    strong {
+      color: $white;
+    }
+  }
+
+  .oauth-scopes {
+    border-color: rgba($white, 0.12);
   }
 }
 </style>

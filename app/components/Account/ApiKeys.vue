@@ -116,66 +116,7 @@
       </div>
     </div>
 
-    <!-- Create Key Modal -->
-    <div class="modal" :class="{ 'is-active': showCreateKeyModal }">
-      <div class="modal-background" @click="showCreateKeyModal = false"></div>
-      <div class="modal-card">
-        <header class="modal-card-head">
-          <p class="modal-card-title">Create API Key</p>
-          <button class="delete" @click="showCreateKeyModal = false"></button>
-        </header>
-        <section class="modal-card-body">
-          <div class="field">
-            <label class="label">Key Name</label>
-            <div class="control">
-              <input
-                v-model="newKeyName"
-                class="input"
-                type="text"
-                placeholder="e.g., My App Key"
-                maxlength="100"
-              />
-            </div>
-            <p class="help">A descriptive name to identify this key</p>
-          </div>
-
-          <div class="field">
-            <label class="label">Expiration</label>
-            <div class="control">
-              <div class="select is-fullwidth">
-                <select v-model="newKeyExpiration">
-                  <option value="">Never expires</option>
-                  <option :value="7 * 24 * 60 * 60">7 days</option>
-                  <option :value="30 * 24 * 60 * 60">30 days</option>
-                  <option :value="90 * 24 * 60 * 60">90 days</option>
-                  <option :value="365 * 24 * 60 * 60">1 year</option>
-                </select>
-              </div>
-            </div>
-            <p class="help">When should this key expire?</p>
-          </div>
-
-          <ScopePicker
-            v-model="selectedScopes"
-            help="What this key is allowed to do. This cannot be changed later — create a new key instead."
-            unavailable-note="Couldn't load the permission list, so this key will be created with full access."
-          />
-        </section>
-        <footer class="modal-card-foot">
-          <button
-            @click="createKey"
-            class="button is-success"
-            :disabled="!newKeyName || !canSubmitScopes || creatingKey"
-            :class="{ 'is-loading': creatingKey }"
-          >
-            Create Key
-          </button>
-          <button @click="showCreateKeyModal = false" class="button">
-            Cancel
-          </button>
-        </footer>
-      </div>
-    </div>
+    <ApiKeyCreateModal v-model="showCreateKeyModal" @created="onKeyCreated" />
 
     <!-- View Key Modal -->
     <div class="modal" :class="{ 'is-active': showViewKeyModal }">
@@ -347,6 +288,8 @@
 import { useToast } from "vue-toastification";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import ScopePicker from "~/components/Account/ScopePicker.vue";
+import ApiKeyCreateModal from "~/components/Account/ApiKeyCreateModal.vue";
+import { maskKey, type ApiKey } from "~/composables/useApiKeys";
 import {
   faPlus,
   faKey,
@@ -366,37 +309,13 @@ const hasLoadedOnce = ref(false);
 const showCreateKeyModal = ref(false);
 const showViewKeyModal = ref(false);
 const showEditKeyModal = ref(false);
-const newKeyName = ref("");
-const newKeyExpiration = ref("");
-const creatingKey = ref(false);
 const updatingKey = ref(false);
 const deletingKeyId = ref<string | null>(null);
 const selectedKey = ref<any>(null);
 const editKeyName = ref("");
 const editKeyStatus = ref("active");
 
-const { scopes: scopeCatalogue, scopeNames } = useScopeCatalogue();
-
-// Everything ticked by default, so creating a key without thinking about permissions
-// yields the same full-access key it did before this picker existed. Narrowing is a
-// deliberate act.
-const selectedScopes = ref<string[]>([]);
-
-watch(
-  scopeNames,
-  (names) => {
-    if (names.length && !selectedScopes.value.length) {
-      selectedScopes.value = [...names];
-    }
-  },
-  { immediate: true },
-);
-
-// A key must hold at least one permission — but if the catalogue never loaded there is
-// nothing to tick, and blocking creation over that would be worse than the old behaviour.
-const canSubmitScopes = computed(
-  () => !scopeCatalogue.value.length || selectedScopes.value.length > 0,
-);
+const { scopeNames } = useScopeCatalogue();
 
 // A key holding everything is the common case and reads better than "8 scopes".
 const accessLabel = (key: { scopes?: string[] }) => {
@@ -410,26 +329,7 @@ const accessLabel = (key: { scopes?: string[] }) => {
 // Track if authenticated (to trigger refetch after login)
 const wasAuthenticated = ref(isAuthenticated.value);
 
-const {
-  data: apiKeys,
-  pending: loadingKeys,
-  refresh: refreshKeys,
-} = useMyAsyncData(
-  "api-keys",
-  async () => {
-    if (!isAuthenticated.value) {
-      return { keys: [], total: 0 };
-    }
-
-    return await $fetch(`${config.apiBase}/api-keys`, {
-      credentials: "include",
-    });
-  },
-  {
-    default: () => ({ keys: [], total: 0 }),
-    watch: [isAuthenticated],
-  },
-);
+const { apiKeys, loadingKeys, refreshKeys } = useApiKeys();
 
 // Mark first successful resolution to keep UI stable on later refreshes
 watch(
@@ -442,46 +342,11 @@ watch(
   { immediate: true },
 );
 
-const createKey = async () => {
-  if (!newKeyName.value || !isAuthenticated.value) return;
-
-  try {
-    creatingKey.value = true;
-    const payload: any = { name: newKeyName.value };
-    // Omitted when there is no catalogue: the backend then falls back to the caller's own
-    // scopes, which is exactly how creation behaved before this picker.
-    if (selectedScopes.value.length) {
-      payload.scopes = [...selectedScopes.value];
-    }
-    if (newKeyExpiration.value) {
-      payload.expiresIn = parseInt(newKeyExpiration.value);
-    }
-
-    const response = await $fetch(`${config.apiBase}/api-keys`, {
-      method: "POST",
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: payload,
-    });
-
-    toast.success("API key created successfully!");
-
-    selectedKey.value = response;
-    showCreateKeyModal.value = false;
-    showViewKeyModal.value = true;
-
-    newKeyName.value = "";
-    newKeyExpiration.value = "";
-    selectedScopes.value = [...scopeNames.value];
-    await refreshKeys();
-  } catch (error: any) {
-    console.error("Error creating key:", error);
-    toast.error(error.data?.message || "Failed to create API key");
-  } finally {
-    creatingKey.value = false;
-  }
+// A new key is shown straight away, since this is the moment to copy it.
+const onKeyCreated = async (key: ApiKey) => {
+  selectedKey.value = key;
+  showViewKeyModal.value = true;
+  await refreshKeys();
 };
 
 const viewKey = (keyData: any) => {
@@ -578,17 +443,6 @@ const formatDate = (dateString: string) => {
     hour: "2-digit",
     minute: "2-digit",
   });
-};
-
-const maskKey = (key: string) => {
-  if (!key) return "";
-  if (key.length <= 8) return key;
-
-  const start = key.substring(0, 4);
-  const end = key.substring(key.length - 4);
-  const masked = "•".repeat(Math.min(key.length - 8, 20));
-
-  return `${start}${masked}${end}`;
 };
 </script>
 

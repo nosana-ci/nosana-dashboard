@@ -16,6 +16,16 @@ export interface ScopeDescriptor {
   oauthGrantable: boolean;
 }
 
+const RESOURCE_LABELS: Record<string, string> = {
+  "api-keys": "API keys",
+  "oauth-apps": "OAuth apps",
+};
+
+/** The display name of a scope's resource: `oauth-apps` → "OAuth apps". */
+export const scopeResourceLabel = (resource: string) =>
+  RESOURCE_LABELS[resource] ??
+  resource.replace(/-/g, " ").replace(/^./, (char) => char.toUpperCase());
+
 export const useScopeCatalogue = () => {
   const config = useRuntimeConfig().public;
 

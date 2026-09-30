@@ -97,6 +97,11 @@ defineEmits<{ toggle: [] }>();
   }
 }
 
+// The light hover wash is near-white, which hides the white text on a dark dialog.
+html.dark-mode .scope-cell:not(.is-static):hover {
+  background: rgba($white, 0.08);
+}
+
 .scope-cell.is-checked .scope-check {
   &::before {
     background: $secondary;

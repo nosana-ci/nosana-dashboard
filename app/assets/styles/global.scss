@@ -2155,6 +2155,18 @@ html.dark-mode .modal-card-head {
   }
 }
 
+// Stretched across its container with equal choices, for a form field.
+.seg-tabs.is-fullwidth {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+
+  button {
+    padding: 8px 10px;
+    font-size: 0.9rem;
+  }
+}
+
 html.dark-mode .seg-tabs {
   background: rgba($white, 0.06);
   box-shadow: inset 0 0 0 1px rgba($white, 0.08);
