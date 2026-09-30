@@ -44,12 +44,16 @@
       <aside v-show="docked" class="playground-side">
         <section v-if="selectedModel" class="section-card model-card">
           <h3 class="title is-5 mb-1">
-            {{ selectedModel.name || selectedModel.id }}
+            {{ modelName(selectedModel) }}
           </h3>
           <p class="model-id model-muted is-family-monospace is-size-7">
             {{ selectedModel.id }}
           </p>
-          <p v-if="selectedModel.description" class="model-muted mt-2">
+          <!-- The catalog fills the description with the name, which says nothing new. -->
+          <p
+            v-if="selectedModel.description && selectedModel.description !== selectedModel.name"
+            class="model-muted mt-2"
+          >
             {{ selectedModel.description }}
           </p>
           <dl class="model-facts mt-3">
@@ -98,6 +102,7 @@ import {
   pricePerMillion,
   formatUsd,
   formatTokenCount,
+  modelName,
 } from "~/composables/useLlmGateway";
 
 const { isAuthenticated } = useSuperTokens();

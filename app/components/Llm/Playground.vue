@@ -20,7 +20,7 @@
     </template>
     <template #empty>
       <h2 class="title is-2 mb-0 empty-title">
-        Ask {{ selectedModel?.name || "the model" }} anything
+        Ask {{ selectedModel ? modelName(selectedModel) : "the model" }} anything
       </h2>
     </template>
     <template #actions>
@@ -36,7 +36,7 @@
 
 <script setup lang="ts">
 import ModelChat from "~/components/Common/ModelChat.vue";
-import { isChatModel, type LlmModel } from "~/composables/useLlmGateway";
+import { isChatModel, modelName, type LlmModel } from "~/composables/useLlmGateway";
 
 const props = defineProps<{
   models: LlmModel[];
