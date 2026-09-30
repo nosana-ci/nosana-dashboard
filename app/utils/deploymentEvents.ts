@@ -1,5 +1,6 @@
 import type { DeploymentEventItem } from "@nosana/api";
 import type { StatusTone } from "~/composables/useStatus";
+import { isNoSpareCapacityError } from "~/utils/spareCapacity";
 
 // snake_case / UPPER_CASE event or task name → "Title case" label.
 export const humanizeEventType = (type?: string): string => {
@@ -36,6 +37,7 @@ export const taskKind = (task?: string): string => {
 // CONFIRMED has to be tested before LIST: "JOB_LIST_CONFIRMED" is a job that
 // reached the market, so it earns the checkmark rather than a dot.
 export const eventTone = (event: DeploymentEventItem): StatusTone => {
+  if (isNoSpareCapacityError(event.message)) return "warn";
   const t = `${event.type || ""} ${event.category || ""}`.toUpperCase();
   if (/ERROR|INSUFFICIENT|FAIL|REJECT/.test(t)) return "danger";
   if (/STOP|DELIST/.test(t)) return "neutral";

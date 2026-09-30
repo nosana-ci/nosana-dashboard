@@ -265,12 +265,15 @@ export async function streamChat(
   onDelta: (delta: ChatDelta) => void,
   signal: AbortSignal,
   headers: Record<string, string> = {},
+  /** "include" for an endpoint that authenticates the browser session rather than a key. */
+  credentials: RequestCredentials = "same-origin",
 ): Promise<void> {
   let response: Response;
   try {
     response = await fetch(`${url.replace(/\/+$/, "")}/v1/chat/completions`, {
       method: "POST",
       headers: { ...headers, "Content-Type": "application/json" },
+      credentials,
       body: JSON.stringify({
         ...body,
         stream: true,

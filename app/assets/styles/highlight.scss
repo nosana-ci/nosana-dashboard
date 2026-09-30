@@ -1,0 +1,115 @@
+/* ==========================================================================
+   highlight.js theming
+
+   `highlight.js/styles/default.css` is loaded before this file and supplies the
+   light-mode token colours. Two adjustments are made on top of it:
+
+   1. The theme paints its own background, as do Bulma's `pre` and `code`. A
+      snippet sits inside a `.box` and should take that box's colour, so the
+      background is cleared and only the token colours are kept.
+   2. Default is a light-only theme — its #880000 strings and #444 body text are
+      unreadable once the block takes a dark background. Dark mode therefore
+      switches to GitHub Dark, highlight.js's own dark theme, copied here rather
+      than loaded as a second stylesheet so it can be scoped to `.dark-mode`.
+
+   Both are stock highlight.js themes; nothing here invents a colour.
+   ========================================================================== */
+
+.hljs,
+pre code.hljs {
+  background: transparent;
+}
+
+.dark-mode {
+  /* Theme: GitHub Dark — github.com, maintained by @Hirse */
+  .hljs {
+    color: #c9d1d9;
+  }
+
+  .hljs-doctag,
+  .hljs-keyword,
+  .hljs-meta .hljs-keyword,
+  .hljs-template-tag,
+  .hljs-template-variable,
+  .hljs-type,
+  .hljs-variable.language_ {
+    color: #ff7b72;
+  }
+
+  .hljs-title,
+  .hljs-title.class_,
+  .hljs-title.class_.inherited__,
+  .hljs-title.function_ {
+    color: #d2a8ff;
+  }
+
+  .hljs-attr,
+  .hljs-attribute,
+  .hljs-literal,
+  .hljs-meta,
+  .hljs-number,
+  .hljs-operator,
+  .hljs-variable,
+  .hljs-selector-attr,
+  .hljs-selector-class,
+  .hljs-selector-id {
+    color: #79c0ff;
+  }
+
+  .hljs-regexp,
+  .hljs-string,
+  .hljs-meta .hljs-string {
+    color: #a5d6ff;
+  }
+
+  .hljs-built_in,
+  .hljs-symbol {
+    color: #ffa657;
+  }
+
+  .hljs-comment,
+  .hljs-code,
+  .hljs-formula {
+    color: #8b949e;
+  }
+
+  .hljs-name,
+  .hljs-quote,
+  .hljs-selector-tag,
+  .hljs-selector-pseudo {
+    color: #7ee787;
+  }
+
+  .hljs-subst {
+    color: #c9d1d9;
+  }
+
+  .hljs-section {
+    color: #1f6feb;
+    font-weight: bold;
+  }
+
+  .hljs-bullet {
+    color: #f2cc60;
+  }
+
+  .hljs-emphasis {
+    color: #c9d1d9;
+    font-style: italic;
+  }
+
+  .hljs-strong {
+    color: #c9d1d9;
+    font-weight: bold;
+  }
+
+  .hljs-addition {
+    color: #aff5b4;
+    background-color: #033a16;
+  }
+
+  .hljs-deletion {
+    color: #ffdcd7;
+    background-color: #67060c;
+  }
+}

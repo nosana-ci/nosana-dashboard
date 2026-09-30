@@ -12,114 +12,152 @@
       <div class="hero-grid"></div>
       <div class="columns is-vcentered is-variable is-5">
         <div class="column">
-          <p class="eyebrow mb-4">// developer portal</p>
-          <h1 class="hero-title mb-4">
-            Build on the<br />Nosana&nbsp;network.
+          <h1 class="title is-2 mb-4">
+            One key.<br />GPUs and&nbsp;inference.
           </h1>
-          <p class="hero-sub mb-5">
-            Ship AI workloads to decentralized GPUs. Grab an API key, drop in
-            the SDK, and let people sign in with their Nosana account.
+          <p class="subtitle is-5 hero-sub mb-5">
+            Your Nosana API key deploys workloads to decentralized GPUs
+            <em>and</em> calls our OpenAI-compatible inference endpoint. Same
+            key, same credit balance, no separate signup.
           </p>
           <div class="is-flex is-flex-wrap-wrap is-gap-1.5">
+            <button class="button is-glow" @click="openPlayground">
+              <span>Open the playground</span>
+              <ArrowRightIcon class="btn-arrow" />
+            </button>
             <a
               href="https://learn.nosana.com/"
               target="_blank"
               rel="noopener noreferrer"
-              class="btn-primary"
+              class="button is-white is-outlined"
             >
-              <span>Read the docs</span>
-              <ArrowRightIcon class="btn-arrow" />
-            </a>
-            <a
-              href="https://www.npmjs.com/package/@nosana/kit"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="btn-ghost"
-            >
-              Browse the SDK
+              Read the docs
             </a>
           </div>
         </div>
 
-        <!-- Terminal signature -->
+        <!-- One key, two ways -->
         <div class="column">
-          <div class="terminal" aria-hidden="true">
-            <div class="terminal-bar is-flex is-align-items-center is-gap-1">
-              <span class="dot dot-red"></span>
-              <span class="dot dot-amber"></span>
-              <span class="dot dot-green"></span>
-              <span class="terminal-path ml-2">~/my-app</span>
+          <div class="bridge">
+            <div class="bridge-head">
+              <span class="is-size-7 is-uppercase is-family-monospace has-text-grey">
+                your nosana api key
+              </span>
+              <code class="tag is-secondary is-light is-rounded is-family-monospace">
+                nos_{{ "•".repeat(24) }}
+              </code>
             </div>
-            <pre
-              class="terminal-body"
-            ><span class="ln"><span class="tok-prompt">$</span> npm install <span class="tok-pkg">@nosana/kit</span></span>
-<span class="ln ln-gap"></span>
-<span class="ln"><span class="tok-key">import</span> { createNosanaClient } <span class="tok-key">from</span> <span class="tok-str">'@nosana/kit'</span></span>
-<span class="ln ln-gap"></span>
-<span class="ln"><span class="tok-key">const</span> nosana = <span class="tok-fn">createNosanaClient</span>()</span>
-<span class="ln"><span class="tok-key">const</span> job = <span class="tok-key">await</span> nosana.jobs.<span class="tok-fn">get</span>(<span class="tok-str">'job-address'</span>)<span class="caret">▋</span></span></pre>
+            <div class="bridge-split" aria-hidden="true">
+              <span class="bridge-line"></span>
+              <span class="bridge-line"></span>
+            </div>
+            <div class="bridge-panes">
+              <div class="bridge-pane">
+                <span class="pane-title">Deploy to GPUs</span>
+                <pre class="pane-code is-family-monospace"><span class="tok-key">import</span> { createNosanaClient }
+<span class="tok-key">from</span> <span class="tok-str">'@nosana/kit'</span>
+
+nosana.jobs.<span class="tok-fn">list</span>(def, 3600, market)</pre>
+                <span class="is-size-7 is-family-monospace has-text-secondary">billed in credits</span>
+              </div>
+              <div class="bridge-pane">
+                <span class="pane-title">Call inference</span>
+                <pre class="pane-code is-family-monospace"><span class="tok-key">from</span> openai <span class="tok-key">import</span> OpenAI
+
+<span class="tok-fn">OpenAI</span>(base_url=<span class="tok-str">"{{ shortBase }}/v1"</span>,
+       api_key=<span class="tok-str">"nos_…"</span>)</pre>
+                <span class="is-size-7 is-family-monospace has-text-secondary">billed in credits</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </section>
 
+    <!-- Tabs -->
+    <div ref="tabBar" class="tabs mb-5">
+      <ul>
+        <li
+          v-for="tab in tabs"
+          :key="tab.id"
+          :class="{ 'is-active': activeTab === tab.id }"
+        >
+          <a @click="activeTab = tab.id">{{ tab.label }}</a>
+        </li>
+      </ul>
+    </div>
+
+    <template v-if="isAuthenticated">
+      <section v-show="activeTab === 'playground'" class="mb-6">
+        <LlmPlayground
+          :models="models"
+          :loading="loadingModels"
+          :initial-model="playgroundModel"
+          @model="playgroundModel = $event"
+        />
+        <div class="mt-5">
+          <h3 class="title is-5 mb-3">The same call, in your code</h3>
+          <LlmCodeSnippets
+            :base-url="inferenceBase"
+            :model="playgroundModel || models[0]?.id || 'model-id'"
+          />
+        </div>
+      </section>
+
+      <section v-show="activeTab === 'keys'" class="mb-6">
+        <ApiKeys />
+      </section>
+
+      <section v-show="activeTab === 'apps'" class="mb-6">
+        <OAuthApps />
+      </section>
+    </template>
+
+    <div v-else class="box signin-prompt has-text-centered p-6 mb-6">
+      <span class="icon is-large has-text-grey-light">
+        <FontAwesomeIcon :icon="faKey" size="2x" />
+      </span>
+      <h5 class="title is-5 mt-2 mb-2">Sign in to get a key</h5>
+      <p class="subtitle is-6 has-text-grey">
+        One Nosana API key covers GPU deployments and inference, drawn from the
+        same credit balance. Log in with email or Google to create one.
+      </p>
+      <nuxt-link to="/account" class="button is-dark">Go to account</nuxt-link>
+    </div>
+
     <!-- Resources -->
     <section class="mb-6">
-      <p class="section-eyebrow mb-4">// resources</p>
+      <h3 class="title is-4 mb-4">Resources</h3>
       <div class="fixed-grid has-1-cols has-2-cols-tablet has-4-cols-desktop">
-        <div class="grid is-gap-2">
+        <div class="grid resources-grid is-gap-2">
           <a
             v-for="res in resources"
             :key="res.title"
             :href="res.href"
             target="_blank"
             rel="noopener noreferrer"
-            class="cell res-card is-flex is-flex-direction-column is-gap-2 p-5"
+            class="cell box res-card is-flex is-flex-direction-column is-gap-2 p-5"
           >
-            <span class="res-icon">
+            <span class="res-icon icon is-medium has-text-secondary">
               <component :is="res.icon" v-if="res.svg" />
               <FontAwesomeIcon v-else :icon="res.icon" />
             </span>
             <span
               class="res-body is-flex is-flex-direction-column is-gap-0.5 is-flex-grow-1"
             >
-              <span class="res-title">{{ res.title }}</span>
-              <span class="res-desc">{{ res.desc }}</span>
+              <span class="title is-6 mb-0">{{ res.title }}</span>
+              <span class="is-size-7 has-text-grey">{{ res.desc }}</span>
             </span>
-            <span class="res-meta pt-3">{{ res.meta }}</span>
+            <span class="res-meta is-size-7 is-family-monospace has-text-grey pt-3">{{ res.meta }}</span>
           </a>
         </div>
-      </div>
-    </section>
-
-    <!-- Credentials -->
-    <section class="mb-6">
-      <p class="section-eyebrow mb-4">// manage</p>
-
-      <template v-if="isAuthenticated">
-        <ApiKeys class="mb-6" />
-        <OAuthApps />
-      </template>
-
-      <div v-else class="box signin-prompt has-text-centered p-6">
-        <span class="icon is-large has-text-grey-light">
-          <FontAwesomeIcon :icon="faKey" size="2x" />
-        </span>
-        <h5 class="title is-5 mt-2 mb-2">Sign in to manage credentials</h5>
-        <p class="subtitle is-6 has-text-grey">
-          API keys and connected apps are tied to a Nosana account. Log in with
-          email or Google to create and manage them.
-        </p>
-        <nuxt-link to="/account" class="button is-dark"
-          >Go to account</nuxt-link
-        >
       </div>
     </section>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, nextTick } from "vue";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { faKey, faBookOpen, faCube } from "@fortawesome/free-solid-svg-icons";
 import ApiKeys from "~/components/Account/ApiKeys.vue";
@@ -130,6 +168,50 @@ import ArrowRightIcon from "@/assets/img/icons/arrow-right.svg?component";
 
 const { isAuthenticated } = useSuperTokens();
 const showSettingsModal = ref(false);
+const route = useRoute();
+const router = useRouter();
+
+const { inferenceBase, models, loadingModels } = useLlmGateway();
+
+const tabs = [
+  { id: "keys", label: "API keys" },
+  { id: "playground", label: "Playground" },
+  { id: "apps", label: "Connected apps" },
+];
+
+const validTabs = tabs.map((tab) => tab.id);
+const activeTab = ref(
+  validTabs.includes(route.query.tab as string) ? (route.query.tab as string) : "keys",
+);
+const playgroundModel = ref<string | null>((route.query.model as string) ?? null);
+
+// Keep the tab and model in the URL so a playground link can be shared.
+watch([activeTab, playgroundModel], ([tab, model]) => {
+  router.replace({
+    query: { ...route.query, tab, ...(model ? { model } : {}) },
+  });
+});
+
+const tabBar = ref<HTMLElement | null>(null);
+
+// On a phone the hero fills the screen, so switching tabs from it changes something the
+// reader cannot see. Bring the panel into view when it is not already near the top.
+const openPlayground = async () => {
+  activeTab.value = "playground";
+  await nextTick();
+  const el = tabBar.value;
+  if (!el) return;
+  const { top } = el.getBoundingClientRect();
+  if (top >= 0 && top < window.innerHeight * 0.5) return;
+  el.scrollIntoView({
+    behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      ? "auto"
+      : "smooth",
+    block: "start",
+  });
+};
+
+const shortBase = computed(() => inferenceBase.replace(/^https?:\/\//, ""));
 
 const resources = [
   {
@@ -168,13 +250,9 @@ const resources = [
 </script>
 
 <style scoped lang="scss">
-.dev-portal {
-  // Monospace utility stack — the developer "voice" of the page.
-  --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", Menlo,
-    Consolas, monospace;
-}
-
 /* ---------- Hero ---------- */
+/* A dark banner on a light page, so it sets its own surface rather than using
+   `.box`; everything inside it uses Bulma classes. */
 .hero-banner {
   position: relative;
   overflow: hidden;
@@ -182,21 +260,18 @@ const resources = [
   padding: 3rem;
   background: radial-gradient(
       circle at 88% 12%,
-      rgba(16, 232, 12, 0.16),
+      rgba($secondary, 0.16),
       transparent 42%
     ),
     linear-gradient(135deg, #0a0c0a 0%, #0f130d 55%, #0b0d0b 100%);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba($white, 0.07);
   box-shadow: 0 24px 60px -28px rgba(0, 0, 0, 0.6);
 }
 
 .hero-grid {
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(
-    rgba(255, 255, 255, 0.05) 1px,
-    transparent 1px
-  );
+  background-image: radial-gradient(rgba($white, 0.05) 1px, transparent 1px);
   background-size: 22px 22px;
   mask-image: linear-gradient(to bottom, black, transparent 85%);
   pointer-events: none;
@@ -207,54 +282,27 @@ const resources = [
   position: relative;
 }
 
-.eyebrow {
-  font-family: var(--mono);
-  font-size: 0.8rem;
-  letter-spacing: 0.05em;
-  color: $secondary;
+/* The banner stays dark in both themes, so its text is pinned light. Bulma's
+   has-text-white resolves through the theme's lightness variables, which the
+   dark theme inverts — it renders dark here, which is the opposite of the ask. */
+.hero-banner .title,
+.hero-banner .pane-title {
+  color: $white;
 }
 
-.hero-title {
-  font-family: $title-family;
-  font-weight: 600;
-  font-size: 2.75rem;
-  line-height: 1.05;
-  color: #fff;
-  letter-spacing: -0.01em;
+.pane-title {
+  font-weight: $weight-semibold;
 }
 
+/* Bulma's subtitle colour is meant for the page canvas, not this banner. */
 .hero-sub {
-  color: #b7c0b6;
-  font-size: 1.0625rem;
-  line-height: 1.55;
   max-width: 30rem;
-}
+  color: $grey-lighter;
 
-.btn-primary,
-.btn-ghost {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.7rem 1.25rem;
-  border-radius: 9px;
-  font-weight: 600;
-  font-size: 0.95rem;
-  transition:
-    transform 0.15s ease,
-    box-shadow 0.2s ease,
-    background-color 0.2s ease,
-    border-color 0.2s ease;
-}
-
-.btn-primary {
-  background: $secondary;
-  color: #05230a;
-  box-shadow: 0 8px 24px -8px rgba(16, 232, 12, 0.6);
-
-  &:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 12px 28px -8px rgba(16, 232, 12, 0.75);
-    color: #05230a;
+  em {
+    color: $white;
+    font-style: normal;
+    font-weight: $weight-semibold;
   }
 }
 
@@ -266,81 +314,71 @@ const resources = [
   }
 }
 
-.btn-ghost {
-  color: #e8f0e8;
-  border: 1px solid rgba(255, 255, 255, 0.18);
+/* ---------- One key, two ways ---------- */
+.bridge {
+  border-radius: 14px;
+  background: rgba(6, 8, 6, 0.6);
+  border: 1px solid rgba($white, 0.09);
+  box-shadow: 0 20px 50px -20px rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(2px);
+  padding: 1.1rem;
+}
 
-  &:hover {
-    border-color: $secondary;
-    color: #fff;
-    transform: translateY(-1px);
+.bridge-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* The two rails make the "one key feeds both" point without a caption. */
+.bridge-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  height: 18px;
+  margin: 0.2rem 0 0.6rem;
+}
+
+.bridge-line {
+  border-top: 1px solid rgba($secondary, 0.3);
+  border-right: 1px solid rgba($secondary, 0.3);
+  margin-top: 8px;
+
+  &:last-child {
+    border-right: none;
+    border-left: 1px solid rgba($secondary, 0.3);
   }
 }
 
-/* ---------- Terminal ---------- */
-.terminal {
-  border-radius: 12px;
-  overflow: hidden;
-  background: #06080699;
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  box-shadow: 0 20px 50px -20px rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(2px);
+.bridge-panes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
 }
 
-.terminal-bar {
-  padding: 0.65rem 0.9rem;
-  background: rgba(255, 255, 255, 0.03);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+.bridge-pane {
+  border-radius: 10px;
+  border: 1px solid rgba($white, 0.08);
+  background: rgba($white, 0.02);
+  padding: 0.75rem 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
-.dot {
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
-  display: inline-block;
-}
-.dot-red {
-  background: #ff5f56;
-}
-.dot-amber {
-  background: #ffbd2e;
-}
-.dot-green {
-  background: #27c93f;
-}
-
-.terminal-path {
-  font-family: var(--mono);
-  font-size: 0.75rem;
-  color: #6f7a6e;
-}
-
-.terminal-body {
+/* Smaller than any Bulma size step, to fit two panes side by side. */
+.pane-code {
   margin: 0;
-  padding: 1.25rem 1.4rem;
-  font-family: var(--mono);
-  font-size: 0.82rem;
-  line-height: 1.25;
-  color: #dfe6de;
+  padding: 0;
   background: transparent;
-  overflow-x: auto;
-  white-space: pre;
+  font-size: 0.66rem;
+  line-height: 1.5;
+  color: $grey-lighter;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  flex-grow: 1;
 }
 
-.ln {
-  display: block;
-}
-.ln-gap {
-  height: 0.4rem;
-}
-
-.tok-prompt {
-  color: $secondary;
-  font-weight: 700;
-}
-.tok-pkg {
-  color: #8bf58f;
-}
 .tok-key {
   color: #9aa7f0;
 }
@@ -351,30 +389,12 @@ const resources = [
   color: #7fd7e6;
 }
 
-.caret {
-  color: $secondary;
-  animation: blink 1.1s step-end infinite;
-}
-
-@keyframes blink {
-  50% {
-    opacity: 0;
-  }
-}
-
-/* ---------- Section labels ---------- */
-.section-eyebrow {
-  font-family: var(--mono);
-  font-size: 0.8rem;
-  letter-spacing: 0.05em;
-  color: $text-muted;
-}
-
 /* ---------- Resource cards ---------- */
+.resources-grid > .res-card {
+  margin-bottom: 0;
+}
+
 .res-card {
-  border-radius: 14px;
-  background: $box-background-color;
-  border: 1px solid $border;
   transition:
     transform 0.15s ease,
     border-color 0.2s ease,
@@ -383,19 +403,16 @@ const resources = [
   &:hover {
     transform: translateY(-3px);
     border-color: $secondary;
-    box-shadow: 0 14px 30px -18px rgba(16, 232, 12, 0.5);
+    box-shadow: 0 14px 30px -18px rgba($secondary, 0.5);
   }
 }
 
+/* Bulma's `.icon` sizes the glyph; the tinted tile behind it is ours. */
 .res-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   width: 42px;
   height: 42px;
   border-radius: 11px;
-  background: rgba(16, 232, 12, 0.1);
-  color: $secondary;
+  background: rgba($secondary, 0.1);
 
   :deep(svg) {
     width: 20px;
@@ -406,66 +423,31 @@ const resources = [
   }
 }
 
-.res-title {
-  font-family: $title-family;
-  font-weight: 600;
-  font-size: 1.05rem;
-  color: $text;
-}
-
-.res-desc {
-  font-size: 0.875rem;
-  color: $text-muted;
-  line-height: 1.4;
-}
-
 .res-meta {
-  font-family: var(--mono);
-  font-size: 0.75rem;
-  color: $text-muted;
   border-top: 1px solid $border;
 }
 
-/* ---------- Dark mode ---------- */
-.dark-mode {
-  .res-card {
-    background: $black-bis;
-    border-color: rgba(255, 255, 255, 0.07);
-
-    &:hover {
-      border-color: $secondary;
-    }
-  }
-
-  .res-title {
-    color: $white;
-  }
-
-  .res-desc {
-    color: $grey-light;
-  }
-
-  .res-meta {
-    border-top-color: rgba(255, 255, 255, 0.08);
-  }
+.dark-mode .res-meta {
+  border-top-color: rgba($white, 0.08);
 }
 
 /* ---------- Responsive (values Bulma helpers can't express) ---------- */
+@media screen and (max-width: 768px) {
+  .bridge-panes {
+    grid-template-columns: 1fr;
+  }
+  .bridge-split {
+    display: none;
+  }
+}
+
 @media screen and (max-width: 600px) {
   .hero-banner {
     padding: 2rem 1.5rem;
   }
-  .hero-title {
-    font-size: 2.1rem;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .caret {
-    animation: none;
-  }
-  .btn-primary:hover,
-  .btn-ghost:hover,
   .res-card:hover {
     transform: none;
   }

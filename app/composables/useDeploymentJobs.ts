@@ -1,4 +1,5 @@
 import { getDeploymentJobData } from "~/utils/kitJobAccess";
+import { isNoSpareCapacityError } from "~/utils/spareCapacity";
 import type {
   DeploymentJobItem,
   DeploymentEventItem,
@@ -471,10 +472,14 @@ export function useDeploymentJobs(deps: DeploymentJobsDeps) {
     return deps.deploymentEventsData.value || [];
   });
 
+  const waitingForSpareCapacity = computed(() =>
+    isNoSpareCapacityError(deploymentEvents.value[0]?.message),
+  );
+
   // Check if last event contains ERROR
   const hasErrorInLastEvent = computed(() => {
     const events = deploymentEvents.value;
-    if (events.length === 0) return false;
+    if (events.length === 0 || waitingForSpareCapacity.value) return false;
     const lastEvent = events[0];
     return (
       lastEvent?.type.endsWith("ERROR") &&
@@ -545,6 +550,7 @@ export function useDeploymentJobs(deps: DeploymentJobsDeps) {
     deploymentEndpoints,
     deploymentEvents,
     hasErrorInLastEvent,
+    waitingForSpareCapacity,
 
     // Active jobs (full fetched set, client-side pagination)
     activeJobsPaged,

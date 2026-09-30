@@ -227,6 +227,19 @@
                 Your account is suspended. Creating deployments and topping up
                 funds are disabled.
               </div>
+              <div
+                v-else-if="spareCapacityError"
+                class="notification is-warning is-light mb-4"
+              >
+                {{ spareCapacityError }}
+              </div>
+              <div
+                v-else-if="spareSlots === 0"
+                class="notification is-info is-light mb-4"
+              >
+                No spare capacity on this GPU right now. Your deployment will
+                start its jobs as soon as capacity frees up.
+              </div>
 
               <!-- Credit Mode Actions -->
               <div v-if="isCreditMode">
@@ -252,7 +265,7 @@
                   <button
                     type="button"
                     class="button is-primary is-fullwidth mb-2"
-                    :disabled="isBanned"
+                    :disabled="isBanned || isSpareCapacityOnly"
                     @click="openBuyCreditsModal"
                   >
                     Buy Credits
@@ -373,6 +386,7 @@ const {
   isEmailVerified,
   userData,
   isBanned,
+  isSpareCapacityOnly,
 } = useSuperTokens();
 const { connected, account } = useWallet();
 const { openBuyCreditsModal } = useBuyCreditsModal();
@@ -724,6 +738,39 @@ const selectedMarketAddress = computed(
 );
 const testgridMarketsRef = computed(() => testgridMarkets.value);
 
+const spareCapacityError = computed(() => {
+  if (!isSpareCapacityOnly.value || !selectedMarketAddress.value) return null;
+  if (strategy.value === DeploymentStrategy["SIMPLE-EXTEND"]) {
+    return "Simple Extend is not available for spare capacity accounts.";
+  }
+  const market = testgridMarkets.value.find(
+    (tgm: any) => tgm.address === selectedMarketAddress.value,
+  );
+  if (market?.spare_utilization_percent == null) {
+    return "Spare capacity is not available on this GPU.";
+  }
+  const maxSeconds = market.spare_max_timeout_seconds;
+  if (maxSeconds != null && timeout.value * 3600 > maxSeconds) {
+    return `Timeout cannot exceed ${+(maxSeconds / 3600).toFixed(2)} hours on this GPU.`;
+  }
+  return null;
+});
+
+const spareSlots = ref<number | null>(null);
+watch(
+  [isSpareCapacityOnly, selectedMarketAddress],
+  async ([spareOnly, address]) => {
+    spareSlots.value = null;
+    if (!spareOnly || !address) return;
+    const { slots } = await $fetch<{ slots: number }>(
+      `/markets/${address}/spare-capacity`,
+      { baseURL: config.public.apiBase as string },
+    ).catch(() => ({ slots: null }));
+    if (address === selectedMarketAddress.value) spareSlots.value = slots;
+  },
+  { immediate: true },
+);
+
 const { estimatedCost, formattedCost, formattedHourlyRate, usdPricePerHour } =
   useEstimatedCost(
     selectedMarketAddress,
@@ -791,6 +838,7 @@ const canCreateDeployment = computed(() => {
     deploymentName.value.trim() !== "" &&
     replicas.value > 0 &&
     timeout.value > 0 &&
+    !spareCapacityError.value &&
     !isCreatingDeployment.value;
 
   if (isCreditMode.value) {
