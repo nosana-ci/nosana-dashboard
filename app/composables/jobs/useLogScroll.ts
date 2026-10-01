@@ -78,6 +78,11 @@ export function useLogScroll(deps: UseLogScrollDeps) {
     const { scrollTop, scrollHeight, clientHeight } = deps.outerRef.value;
     shouldAutoScroll.value = scrollHeight - (scrollTop + clientHeight) < 60;
 
+    // Scrolling is the other way the anchor moves. Left to the arrival of logs
+    // alone, the next batch would restore the row that was on top when the
+    // previous one landed, undoing the scroll.
+    captureAnchor();
+
     if (scrollTop < 100 && deps.entries.value.length > 0
       && !deps.allLogsLoaded.value && !deps.loadingOlderLogs.value) {
       deps.onScrolledNearTop();
