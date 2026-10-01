@@ -33,6 +33,8 @@ export type ChatDelta = {
   content: string;
   reasoning: string;
   usage: { completionTokens: number } | null;
+  /** "length" when the reply hit its token limit; null until the last chunk. */
+  finishReason: string | null;
 };
 
 const CHAT_PATH = /\/v1\/chat\/completions\b|\/api\/chat\b/;
@@ -190,6 +192,7 @@ export function parseStreamLine(line: string): ChatDelta | "done" | null {
   let chunk: {
     choices?: Array<{
       delta?: { content?: string | null; reasoning_content?: string | null; reasoning?: string | null };
+      finish_reason?: string | null;
     }>;
     usage?: { completion_tokens?: number } | null;
   };
@@ -199,7 +202,8 @@ export function parseStreamLine(line: string): ChatDelta | "done" | null {
     return null;
   }
 
-  const delta = chunk.choices?.[0]?.delta;
+  const choice = chunk.choices?.[0];
+  const delta = choice?.delta;
   return {
     content: delta?.content ?? "",
     reasoning: delta?.reasoning_content ?? delta?.reasoning ?? "",
@@ -207,6 +211,7 @@ export function parseStreamLine(line: string): ChatDelta | "done" | null {
       typeof chunk.usage?.completion_tokens === "number"
         ? { completionTokens: chunk.usage.completion_tokens }
         : null,
+    finishReason: choice?.finish_reason ?? null,
   };
 }
 

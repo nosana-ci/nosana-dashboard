@@ -38,6 +38,35 @@ export function useLiveLogs(deps: UseLiveLogsDeps) {
     [...instances.values()].some((inst) => inst.isConnecting.value),
   );
 
+  // A node replays a job's history one frame per line, so merging each line on
+  // arrival copies the whole list per line and re-renders the viewer per line.
+  // Lines are collected and merged a frame at a time instead.
+  let pending: UnifiedLogEntry[] = [];
+  let cancelScheduledFlush: (() => void) | null = null;
+
+  /** A hidden tab is given no frames, so this bounds what can pile up in one. */
+  const MAX_PENDING = 2000;
+
+  function flush() {
+    cancelScheduledFlush?.();
+    cancelScheduledFlush = null;
+    if (pending.length === 0) return;
+    const batch = pending;
+    pending = [];
+    deps.entries.value = insertSorted(deps.entries.value, batch);
+  }
+
+  function scheduleFlush() {
+    if (cancelScheduledFlush) return;
+    if (typeof requestAnimationFrame === 'function') {
+      const handle = requestAnimationFrame(flush);
+      cancelScheduledFlush = () => cancelAnimationFrame(handle);
+    } else {
+      const handle = setTimeout(flush, 16);
+      cancelScheduledFlush = () => clearTimeout(handle);
+    }
+  }
+
   function handleEntry(flog: FLogEntry, jobId: string, flogOpId: string) {
     const opId = flogOpId === 'system' ? null : flogOpId;
     if (opId) opIds.value.add(opId);
@@ -51,7 +80,9 @@ export function useLiveLogs(deps: UseLiveLogsDeps) {
       flog.timestamp,
       flog.body,
     );
-    deps.entries.value = insertSorted(deps.entries.value, [entry]);
+    pending.push(entry);
+    if (pending.length >= MAX_PENDING) flush();
+    else scheduleFlush();
   }
 
   function createInstance(jobId: string, node: string) {
@@ -105,6 +136,9 @@ export function useLiveLogs(deps: UseLiveLogsDeps) {
   }
 
   function dispose() {
+    cancelScheduledFlush?.();
+    cancelScheduledFlush = null;
+    pending = [];
     instances.clear();
   }
 
