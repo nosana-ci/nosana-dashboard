@@ -1,6 +1,7 @@
 import { ref, watch, nextTick, onMounted, onUnmounted, type Ref } from 'vue';
 import type { Virtualizer } from '@tanstack/vue-virtual';
 import type { UnifiedLogEntry } from './logCollectorTypes';
+import { indexOfEntry } from './logEntryUtils';
 
 interface UseLogScrollDeps {
   entries: Ref<UnifiedLogEntry[]>;
@@ -22,8 +23,12 @@ export function useLogScroll(deps: UseLogScrollDeps) {
   let initialSettled = false;
   let settleTimer: ReturnType<typeof setTimeout> | undefined;
   let settleDeadline = 0;
-  let prevEntryCount = 0;
-  let anchorEntryId: number | null = null;
+  /**
+   * The row at the top of the viewport and how far the viewport has scrolled
+   * into it. Both are needed: keeping only the row would snap it flush to the
+   * top on every restore, which reads as a jump of up to one row.
+   */
+  let anchor: { entry: UnifiedLogEntry; offsetIntoRow: number } | null = null;
 
   function scrollToBottom() {
     if (!deps.outerRef.value) return;
@@ -31,17 +36,32 @@ export function useLogScroll(deps: UseLogScrollDeps) {
   }
 
   function captureAnchor() {
-    const items = deps.virtualizer.value.getVirtualItems();
-    anchorEntryId = items.length > 0 ? deps.entries.value[items[0]!.index]?.id ?? null : null;
-    prevEntryCount = deps.entries.value.length;
+    const container = deps.outerRef.value;
+    const [first] = deps.virtualizer.value.getVirtualItems();
+    const entry = first ? deps.entries.value[first.index] : undefined;
+
+    anchor =
+      first && entry && container
+        ? { entry, offsetIntoRow: container.scrollTop - first.start }
+        : null;
   }
 
+  /**
+   * Logs arriving below the viewport move nothing that is on screen, so the
+   * scroll position is left exactly where it is and only the scrollbar changes.
+   * Anything landing above shifts the anchor down, and the viewport follows by
+   * the same amount so the same lines stay under the reader's eye.
+   */
   function restoreAnchor() {
-    if (anchorEntryId === null) return;
-    const idx = deps.entries.value.findIndex((e) => e.id === anchorEntryId);
-    if (idx >= 0) {
-      deps.virtualizer.value.scrollToIndex(idx, { align: 'start' });
-    }
+    const container = deps.outerRef.value;
+    if (!anchor || !container) return;
+
+    const index = indexOfEntry(deps.entries.value, anchor.entry);
+    const start = deps.virtualizer.value.getOffsetForIndex(index, 'start')?.[0];
+    if (start === undefined) return;
+
+    const target = start + anchor.offsetIntoRow;
+    if (Math.abs(container.scrollTop - target) > 1) container.scrollTop = target;
   }
 
   function checkNeedMoreLogs() {
@@ -86,31 +106,22 @@ export function useLogScroll(deps: UseLogScrollDeps) {
           Math.max(0, Math.min(SETTLE_QUIET_MS, settleDeadline - Date.now())),
         );
 
-        nextTick(() => {
-          scrollToBottom();
-          prevEntryCount = deps.entries.value.length;
-        });
+        nextTick(() => scrollToBottom());
         return;
       }
 
-      if (shouldAutoScroll.value) {
-        nextTick(() => {
-          scrollToBottom();
-          captureAnchor();
-          checkNeedMoreLogs();
-        });
-      } else if (deps.entries.value.length > prevEntryCount) {
-        nextTick(() => {
-          restoreAnchor();
-          captureAnchor();
-          checkNeedMoreLogs();
-        });
-      } else {
-        nextTick(() => {
-          captureAnchor();
-          checkNeedMoreLogs();
-        });
-      }
+      nextTick(() => {
+        // Reading along at the bottom means following the newest line; anywhere
+        // above it means staying put. Entries are removed as well as added — a
+        // completed job's logs are refetched and replace what was streamed —
+        // and a removal above the viewport shifts it just as an insert does, so
+        // the anchor is restored whichever way the count went.
+        if (shouldAutoScroll.value) scrollToBottom();
+        else restoreAnchor();
+
+        captureAnchor();
+        checkNeedMoreLogs();
+      });
     },
   );
 
