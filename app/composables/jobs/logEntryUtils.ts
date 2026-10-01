@@ -53,6 +53,22 @@ function compareEntries(a: UnifiedLogEntry, b: UnifiedLogEntry): number {
 }
 
 /**
+ * Where `entry` sits in a list `insertSorted` built, or where it would sit if
+ * it is no longer in one — so a caller holding an entry can find it again
+ * without scanning a list the length of a run.
+ */
+export function indexOfEntry(arr: UnifiedLogEntry[], entry: UnifiedLogEntry): number {
+  let lo = 0;
+  let hi = arr.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >>> 1;
+    if (compareEntries(arr[mid]!, entry) < 0) lo = mid + 1;
+    else hi = mid;
+  }
+  return lo;
+}
+
+/**
  * Both sides are already in order — `arr` from the last call, the batch from
  * the stream it arrived on — so they are merged rather than re-sorted, and the
  * result costs one pass over a list that grows to the length of a run.

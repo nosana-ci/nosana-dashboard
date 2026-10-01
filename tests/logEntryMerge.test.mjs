@@ -3,7 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { insertSorted, makeEntry } from '../app/composables/jobs/logEntryUtils';
+import { indexOfEntry, insertSorted, makeEntry } from '../app/composables/jobs/logEntryUtils';
 
 const entry = (id, timestamp) =>
   makeEntry(id, 'job', 'op', 'container', timestamp, `line ${id}`);
@@ -50,4 +50,44 @@ test('sorts entries without a timestamp ahead of stamped ones', () => {
   const held = [entry(1, 10), entry(2, 20)];
 
   assert.deepEqual(ids(insertSorted(held, [entry(3, 0)])), [3, 1, 2]);
+});
+
+test('finds an entry that is still in the list', () => {
+  const held = [entry(1, 10), entry(2, 20), entry(3, 30)];
+
+  assert.equal(indexOfEntry(held, held[1]), 1);
+  assert.equal(indexOfEntry(held, held[0]), 0);
+  assert.equal(indexOfEntry(held, held[2]), 2);
+});
+
+test('tracks an entry as older logs are inserted above it', () => {
+  const anchor = entry(3, 30);
+  const held = insertSorted([entry(1, 10), anchor], [entry(2, 20)]);
+
+  assert.equal(indexOfEntry(held, anchor), 2);
+});
+
+test('leaves an entry where it is as newer logs arrive below', () => {
+  const anchor = entry(1, 10);
+  const held = insertSorted([anchor, entry(2, 20)], [entry(3, 30), entry(4, 40)]);
+
+  assert.equal(indexOfEntry(held, anchor), 0);
+});
+
+test('gives the place an entry would sit once it is gone', () => {
+  const removed = entry(2, 20);
+  const held = [entry(1, 10), entry(3, 30)];
+
+  assert.equal(indexOfEntry(held, removed), 1);
+});
+
+test('finds an entry with no timestamp among the stamped ones', () => {
+  const unstamped = entry(5, 0);
+  const held = insertSorted([entry(1, 10), entry(2, 20)], [unstamped]);
+
+  assert.equal(indexOfEntry(held, unstamped), 0);
+});
+
+test('places an entry past the end of an empty list', () => {
+  assert.equal(indexOfEntry([], entry(1, 10)), 0);
 });
