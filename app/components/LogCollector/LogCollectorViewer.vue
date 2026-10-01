@@ -120,6 +120,11 @@ const virtualizer = useVirtualizer({
   getScrollElement: () => outerRef.value,
   estimateSize: () => 26,
   overscan: 30,
+  // Rows wrap, so their measured heights are cached. An older line arriving
+  // late is inserted by time rather than appended, which shifts every index
+  // after it: without a key of its own each row would inherit the height
+  // measured for whichever row used to sit at its index.
+  getItemKey: (index: number) => props.entries[index]?.id ?? index,
 });
 
 const virtualItems = computed(() => virtualizer.value.getVirtualItems());

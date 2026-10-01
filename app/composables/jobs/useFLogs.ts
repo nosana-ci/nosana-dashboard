@@ -1,9 +1,17 @@
 import { ref, computed, watch, type ComputedRef } from "vue";
 import AnsiUp from "ansi_up";
 import { sanitizeAnsiHtml, escapeHtml } from "~/utils/htmlSanitization";
-import type { NodeJobApi, NodeTaskLog } from "@nosana/api";
+import type { NodeJobApi, NodeLogsFilter, NodeTaskLog } from "@nosana/api";
 import type { ProgressBar } from "./logTypes";
 import { useNodeLogSocket } from "./useNodeLogSocket";
+
+/**
+ * Lines of history to open the stream with. A node otherwise replays the whole
+ * run, which for a long-lived service is more than the viewer can show and
+ * arrives one frame per line. `limit` ships in the node release that
+ * accompanies this change; an older node ignores it and replays everything.
+ */
+const REPLAY_WINDOW = { limit: 5000 } as NodeLogsFilter;
 
 export type FLogType = 'container' | 'info' | 'error';
 
@@ -59,6 +67,7 @@ export function useFLogs(
   // Tabs: 'system' first, followed by opIds in first-seen order
   const tabs = ref<string[]>(['system']);
   const activeTab = ref<string>('system');
+  let tabChosen = false;
 
   const systemLogs = ref<FLogEntry[]>([]);
   const logsByOp = ref<Map<string, FLogEntry[]>>(new Map());
@@ -112,7 +121,13 @@ export function useFLogs(
     return { value: Number((value / 1024).toFixed(2)), format: "gb" };
   }
 
-  function handleProgressEvent(event: any) {
+  /**
+   * `timestamp` is the node's, taken from the flog the event arrived on. A
+   * layer completing is a log line like any other and history replays long
+   * after the pull, so stamping it with the browser's clock files the whole
+   * image pull after the output of the service that pull started.
+   */
+  function handleProgressEvent(event: any, timestamp: number) {
     const { id: layerId, status, progressDetail } = event || {};
     if (!status) return;
 
@@ -121,7 +136,7 @@ export function useFLogs(
       // Emit a system log line like legacy (once per layer)
       if (layerId && !seenCompletedLayers.has(`${status}|${layerId}`)) {
         seenCompletedLayers.add(`${status}|${layerId}`);
-        addMessage({ opId: 'system', group: 'main', type: 'info', message: `${status}: ${layerId}`, timestamp: Date.now() });
+        addMessage({ opId: 'system', group: 'main', type: 'info', message: `${status}: ${layerId}`, timestamp });
       }
       const bar = progressBars.value.get(layerId);
       if (bar) {
@@ -175,8 +190,11 @@ export function useFLogs(
       // Register tab in first-seen order
       tabs.value = Array.from(new Set([...tabs.value, opId]));
 
-      // Auto-switch to first operation tab when available (if still on system)
-      if (activeTab.value === 'system' && opId !== 'system') {
+      // Land on the first operation rather than the system tab it defaults to,
+      // but only while that default still stands: an operation can appear at
+      // any point in a run, and picking a tab for someone reading another one
+      // takes the view away from them.
+      if (!tabChosen && activeTab.value === 'system' && opId !== 'system') {
         activeTab.value = opId;
       }
     }
@@ -318,6 +336,9 @@ export function useFLogs(
       try {
         // First, handle embedded progress events regardless of shape
         let possibleMsg = (inner && typeof inner === 'object') ? (inner as any).message : undefined;
+        const flogTimestamp = typeof (inner as any)?.timestamp === 'number'
+          ? (inner as any).timestamp
+          : Date.now();
         // If message is a JSON string representing a progress event, parse it
         if (possibleMsg && typeof possibleMsg === 'string' && possibleMsg.trim().startsWith('{')) {
           try {
@@ -374,7 +395,7 @@ export function useFLogs(
         }
 
         if (possibleMsg && typeof possibleMsg === 'object' && possibleMsg.type === 'multi-process-bar-update' && possibleMsg.payload?.event) {
-          handleProgressEvent(possibleMsg.payload.event);
+          handleProgressEvent(possibleMsg.payload.event, flogTimestamp);
           return;
         }
         if (possibleMsg && typeof possibleMsg === 'object' && possibleMsg.type === 'multi-process-bar-stop') {
@@ -398,7 +419,6 @@ export function useFLogs(
           const t = (inner as any).type;
           const validType = t === 'container' || t === 'info' || t === 'error';
           const msgVal = (inner as any).message;
-          const timestamp = typeof (inner as any).timestamp === 'number' ? (inner as any).timestamp : Date.now();
 
           // If no usable content, ignore
           if (msgVal === undefined || msgVal === null) return;
@@ -423,7 +443,7 @@ export function useFLogs(
             opId,
             group,
             type: validType ? t : 'info',
-            timestamp,
+            timestamp: flogTimestamp,
             message: asStringRaw,
           };
           addMessage(entry, source);
@@ -434,7 +454,7 @@ export function useFLogs(
 
   // Socket wiring: the host node's flog stream through Kit.
   const hostSocket = useNodeLogSocket(
-    async (handlers) => (await options.resolveNodeJob()).logs(handlers),
+    async (handlers) => (await options.resolveNodeJob()).logs(handlers, REPLAY_WINDOW),
     createOnLog('host'),
     3,
     3000,
@@ -447,7 +467,7 @@ export function useFLogs(
   const cvmSocket = options.cvm
     ? useNodeLogSocket(
         async (handlers) =>
-          (await options.resolveNodeJob()).logs(handlers, undefined, {
+          (await options.resolveNodeJob()).logs(handlers, REPLAY_WINDOW, {
             webSocketFactory: () => new WebSocket(`wss://${jobAddress}.${nodeDomain}`),
           }),
         createOnLog('cvm'),
@@ -481,6 +501,7 @@ export function useFLogs(
   });
 
   function setActiveTab(tab: string) {
+    tabChosen = true;
     activeTab.value = tab;
   }
 
