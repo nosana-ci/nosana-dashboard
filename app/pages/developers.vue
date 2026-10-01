@@ -121,7 +121,13 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
-import { faKey, faBookOpen, faCube } from "@fortawesome/free-solid-svg-icons";
+import {
+  faBookOpen,
+  faCode,
+  faCube,
+  faKey,
+  faRobot,
+} from "@fortawesome/free-solid-svg-icons";
 import ApiKeys from "~/components/Account/ApiKeys.vue";
 import OAuthApps from "~/components/Account/OAuthApps.vue";
 import GithubIcon from "@/assets/img/icons/github.svg?component";
@@ -145,6 +151,30 @@ const resources = [
     desc: "The TypeScript kit for jobs, markets, and runs.",
     meta: "@nosana/kit",
     href: "https://www.npmjs.com/package/@nosana/kit",
+    icon: faCube,
+    svg: false,
+  },
+  {
+    title: "API Reference",
+    desc: "Browse every public endpoint and its OpenAPI schema.",
+    meta: "api.nosana.com/docs",
+    href: "https://api.nosana.com/docs",
+    icon: faCode,
+    svg: false,
+  },
+  {
+    title: "MCP Server",
+    desc: "Manage Nosana from Codex, Claude, Cursor, or VS Code.",
+    meta: "OAuth · Streamable HTTP",
+    href: "https://learn.nosana.com/mcp/intro",
+    icon: faRobot,
+    svg: false,
+  },
+  {
+    title: "Agent Skill",
+    desc: "Teach coding agents to build with the Nosana SDK.",
+    meta: "Agent Skills · SKILL.md",
+    href: "https://learn.nosana.com/agents/skill",
     icon: faCube,
     svg: false,
   },
