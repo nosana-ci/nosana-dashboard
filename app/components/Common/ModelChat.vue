@@ -206,6 +206,14 @@
           >
             Waiting for the first token…
           </p>
+          <p v-if="message.stats?.truncated" class="chat-notice">
+            <template v-if="view(message).answer">
+              The reply reached the model's output limit and was cut off.
+            </template>
+            <template v-else>
+              The model spent its whole output limit reasoning and never answered.
+            </template>
+          </p>
           <p v-if="message.error" class="chat-error">{{ message.error }}</p>
           <div v-if="message.stats" class="chat-stats">
             <span v-if="message.stats.stopped">Stopped</span>
@@ -386,6 +394,8 @@ type Message = {
     /** Seconds spent reasoning before the answer began. */
     reasoning?: number;
     stopped?: boolean;
+    /** The server ended the reply at its token limit. */
+    truncated?: boolean;
   };
 };
 
@@ -501,6 +511,7 @@ async function send(text?: string) {
   let firstToken = 0;
   let firstAnswer = 0;
   let tokens = 0;
+  let finishReason: string | null = null;
   const system = settings.value.systemPrompt.trim();
 
   try {
@@ -524,6 +535,7 @@ async function send(text?: string) {
           firstAnswer = performance.now();
         }
         if (delta.usage) tokens = delta.usage.completionTokens;
+        if (delta.finishReason) finishReason = delta.finishReason;
         follow();
       },
       controller.signal,
@@ -550,6 +562,7 @@ async function send(text?: string) {
     reply.streaming = false;
     reply.stats = {
       stopped: controller?.signal.aborted,
+      truncated: finishReason === "length",
       ttft: firstToken ? (firstToken - started) / 1000 : undefined,
       reasoning:
         firstToken && view(reply).reasoning
@@ -892,6 +905,11 @@ $chat-muted: $grey-dark;
 
 .chat-error {
   color: $danger;
+  font-size: 0.86rem;
+}
+
+.chat-notice {
+  color: $chat-muted;
   font-size: 0.86rem;
 }
 

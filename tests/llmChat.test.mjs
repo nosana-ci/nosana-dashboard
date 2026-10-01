@@ -99,12 +99,17 @@ test('parseStreamLine: content, reasoning fields, usage and terminator', () => {
     content: 'Hi',
     reasoning: '',
     usage: null,
+    finishReason: null,
   });
   assert.equal(parseStreamLine('data: {"choices":[{"delta":{"reasoning_content":"hm"}}]}').reasoning, 'hm');
   assert.equal(parseStreamLine('data: {"choices":[{"delta":{"reasoning":"hm"}}]}').reasoning, 'hm');
   assert.deepEqual(parseStreamLine('data: {"choices":[],"usage":{"completion_tokens":42}}').usage, {
     completionTokens: 42,
   });
+  assert.equal(
+    parseStreamLine('data: {"choices":[{"delta":{},"finish_reason":"length"}]}').finishReason,
+    'length',
+  );
   assert.equal(parseStreamLine('data: [DONE]'), 'done');
   assert.equal(parseStreamLine(''), null);
   assert.equal(parseStreamLine(': keep-alive'), null);
