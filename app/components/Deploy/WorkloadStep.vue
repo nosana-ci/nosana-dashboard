@@ -275,6 +275,9 @@ const statusLabel = (status: ListedDeployment["status"]): string =>
 /* Hero: the developers-page hero with the recent deployments beside it */
 .workload-hero {
   padding: 3rem;
+  // Shared with the template hero: picking a template morphs one into the
+  // other (the transition itself is in deploy-surface.scss).
+  view-transition-name: deploy-hero;
 }
 
 .hero-body {
@@ -678,6 +681,7 @@ const statusLabel = (status: ListedDeployment["status"]): string =>
 
 /* Templates */
 .templates-section {
+  view-transition-name: deploy-body;
   display: flex;
   flex-direction: column;
   gap: 14px;

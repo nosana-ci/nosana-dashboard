@@ -59,28 +59,18 @@ export type CategoryIconName =
   | "compute"
   | "network"
   | "storage"
-  | "compliance"
-  | "benchmarks"
-  | "other"
   | "code"
   | "search"
   | "arrow";
 
-export type RequirementCategoryId =
-  | "gpu"
-  | "compute"
-  | "network"
-  | "storage"
-  | "compliance"
-  | "benchmarks"
-  | "other";
+export type RequirementCategoryId = "gpu" | "compute" | "network" | "storage";
 
 /** One panel of the requirements card: the metric keys it edits, in order. */
 export interface RequirementCategory {
   id: RequirementCategoryId;
   label: string;
   icon: CategoryIconName;
-  /** Fixed keys; benchmarks are discovered from the options (`categoryKeys`). */
+  /** The metric keys its panel edits, in panel order. */
   keys: string[];
 }
 
@@ -99,14 +89,6 @@ export const REQUIREMENT_CATEGORIES: RequirementCategory[] = [
     keys: ["country", "download_mbps", "upload_mbps", "ping_ms"],
   },
   { id: "storage", label: "Storage", icon: "storage", keys: ["disk_gb"] },
-  {
-    id: "compliance",
-    label: "Compliance",
-    icon: "compliance",
-    keys: ["CC", "soc_2"],
-  },
-  { id: "benchmarks", label: "Benchmarks", icon: "benchmarks", keys: [] },
-  { id: "other", label: "Other", icon: "other", keys: [] },
 ];
 
 /** "NVIDIA GeForce RTX 4090" → "RTX 4090". */
@@ -114,68 +96,12 @@ export function shortGpuName(name: string): string {
   return name.replace(/\b(NVIDIA|GeForce)\b\s*/g, "");
 }
 
-/** `<model>__tokens_per_second` and that model's average GPU temperature. */
-const BENCHMARK_KEY = /^(.+)__(tokens_per_second|gpu_temperature_avg)$/;
-
-/** Each benchmarked model's throughput key, followed by its temperature key when hosts report one. */
-function benchmarkKeys(options: RequirementOption[]): string[] {
-  return options
-    .filter(
-      (option) =>
-        option.group === "benchmarks" &&
-        option.key.endsWith("__tokens_per_second"),
-    )
-    .flatMap((option) => {
-      const temperature = `${benchmarkModelOf(option.key)}__gpu_temperature_avg`;
-      return options.some((candidate) => candidate.key === temperature)
-        ? [option.key, temperature]
-        : [option.key];
-    });
-}
-
-/** The metric keys a category's panel edits; benchmarks come from the options. */
-export function categoryKeys(
-  category: RequirementCategory,
-  options: RequirementOption[],
-): string[] {
-  return category.id === "benchmarks" ? benchmarkKeys(options) : category.keys;
-}
-
-/** The category a set requirement is shown under. */
-export function categoryOfKey(
-  key: string,
-  options: RequirementOption[],
-): RequirementCategoryId {
-  const fixed = REQUIREMENT_CATEGORIES.find((category) =>
-    category.keys.includes(key),
+/** The category a requirement is set under; null for a key no category edits. */
+export function categoryOfKey(key: string): RequirementCategoryId | null {
+  return (
+    REQUIREMENT_CATEGORIES.find((category) => category.keys.includes(key))
+      ?.id ?? null
   );
-  if (fixed) return fixed.id;
-  const option = options.find((candidate) => candidate.key === key);
-  return option?.group === "benchmarks" || BENCHMARK_KEY.test(key)
-    ? "benchmarks"
-    : "other";
-}
-
-/** "gemma4-26b__tokens_per_second" → "gemma4-26b". */
-export function benchmarkModelOf(key: string): string {
-  return key.replace(/__[^_].*$/, "");
-}
-
-/** "gemma4-26b" → "Gemma 4 26B"; "laguna-s-q4_k_m" → "Laguna S Q4 K M". */
-export function benchmarkModelLabel(key: string): string {
-  return benchmarkModelOf(key)
-    .split(/[-_]/)
-    .filter(Boolean)
-    .map((part) => {
-      const split = part.match(/^([a-z]{2,})(\d+)$/i);
-      if (split) return `${titleCase(split[1] ?? "")} ${split[2]}`;
-      return /\d/.test(part) ? part.toUpperCase() : titleCase(part);
-    })
-    .join(" ");
-}
-
-function titleCase(word: string) {
-  return word.charAt(0).toUpperCase() + word.slice(1);
 }
 
 export function countryName(code: string): string {
@@ -186,8 +112,7 @@ export function countryName(code: string): string {
  * The distinct values of each metric with host counts, for building controls,
  * scoped to the queued hosts that satisfy `scope` (the chosen GPU) so every
  * range and choice is one an available host meets. `keys` picks the metrics
- * (in that order); `null` asks for every usable metric, which is how the
- * benchmark keys are discovered. Refetches when the scope changes; the
+ * (in that order); `null` asks for every usable metric. Refetches when the scope changes; the
  * previous options stay in place until the new ones arrive.
  */
 export function useRequirementOptions(
@@ -324,11 +249,6 @@ const NUMERIC_FIELDS: Record<
   ping_ms: { label: "Ping", unit: "ms", bound: "≤" },
 };
 
-const FLAG_LABELS: Record<string, string> = {
-  CC: "Confidential computing",
-  soc_2: "SOC 2",
-};
-
 function describeRequirement(
   key: string,
   value: RequirementValue,
@@ -338,18 +258,6 @@ function describeRequirement(
     return {
       label: numeric.label,
       value: `${numeric.bound} ${value} ${numeric.unit}`.trim(),
-    };
-  }
-  const flag = FLAG_LABELS[key];
-  if (flag) return { label: flag, value: value ? "Yes" : "No" };
-  const benchmark = key.match(BENCHMARK_KEY);
-  if (benchmark) {
-    return {
-      label: benchmarkModelLabel(key),
-      value:
-        benchmark[2] === "tokens_per_second"
-          ? `≥ ${value} tok/s`
-          : `GPU under ${value} °C`,
     };
   }
   switch (key) {
@@ -369,36 +277,37 @@ function describeRequirement(
   }
 }
 
-/** One label/value pair per requirement for the summary, GPU first. */
-/** "RTX 4090", "CUDA ≥ 12.8", "Netherlands", "SOC 2", "≥ 60 tok/s (Gemma 4 26B)". */
+/** "RTX 4090", "CUDA ≥ 12.8", "Netherlands", "RAM ≥ 64 GB". */
 function requirementChipText(key: string, value: RequirementValue): string {
   const described = describeRequirement(key, value);
   if (key === "name" || key === "country" || key === "cpu_model") {
     return described.value;
   }
-  if (key in FLAG_LABELS) return described.label;
-  if (BENCHMARK_KEY.test(key)) return `${described.value} (${described.label})`;
   return `${described.label} ${described.value}`;
 }
 
 /**
  * The set requirements as chips, in category then panel order, without the
- * GPU, which the deploy card shows on its own line. Benchmark keys are matched
- * by their key pattern, so no option list is needed.
+ * GPU, which the deploy card shows on its own line.
  */
 export function listRequirementChips(
   requirements: Requirements,
 ): Array<{ key: string; text: string }> {
-  return REQUIREMENT_CATEGORIES.filter((category) => category.id !== "gpu")
-    .flatMap((category) => {
-      const order = categoryKeys(category, []);
-      const rank = (key: string) => {
-        const index = order.indexOf(key);
-        return index < 0 ? order.length : index;
-      };
-      return Object.entries(requirements)
-        .filter(([key]) => categoryOfKey(key, []) === category.id)
-        .sort(([a], [b]) => rank(a) - rank(b));
-    })
-    .map(([key, value]) => ({ key, text: requirementChipText(key, value) }));
+  return REQUIREMENT_CATEGORIES.flatMap((category) =>
+    category.id === "gpu" ? [] : category.keys,
+  ).flatMap((key) => {
+    const value = requirements[key];
+    return value === undefined
+      ? []
+      : [{ key, text: requirementChipText(key, value) }];
+  });
+}
+
+/** The requirements a category edits; anything else, e.g. from an old draft, is dropped. */
+export function keepCategorizedRequirements(
+  requirements: Requirements,
+): Requirements {
+  return Object.fromEntries(
+    Object.entries(requirements).filter(([key]) => categoryOfKey(key) !== null),
+  );
 }

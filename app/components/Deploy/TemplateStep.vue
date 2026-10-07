@@ -36,6 +36,7 @@
             <span v-if="ports.length" class="hero-chip is-plain">
               Port {{ ports.join(", ") }}
             </span>
+            <span v-if="vram" class="hero-chip is-plain">{{ vram }}</span>
             <button
               type="button"
               class="hero-chip is-action"
@@ -134,6 +135,7 @@
           <p v-if="deployNotice" class="deploy-notice">{{ deployNotice }}</p>
           <p v-if="deployNote" class="deploy-note">{{ deployNote }}</p>
           <button
+            ref="deployCta"
             type="button"
             class="deploy-cta"
             :disabled="deployDisabled"
@@ -150,34 +152,66 @@
             Have a code? Claim it
           </button>
         </aside>
+
+        <!-- The readme, under the template's identity: cut at about the
+             card's height until opened -->
+        <div v-if="readmeHtml" class="hero-readme">
+          <div class="hero-readme-fold" :class="{ 'is-folded': !readmeOpen }">
+            <div
+              ref="readmeBody"
+              class="hero-readme-body"
+              v-html="readmeHtml"
+            />
+            <span
+              v-if="!readmeOpen && readmeOverflows"
+              class="hero-readme-fade"
+              aria-hidden="true"
+            />
+          </div>
+          <button
+            v-if="readmeOpen || readmeOverflows"
+            type="button"
+            class="hero-readme-toggle"
+            :aria-expanded="readmeOpen"
+            @click="readmeOpen = !readmeOpen"
+          >
+            {{ readmeOpen ? "Show less" : "Read more" }}
+            <svg
+              viewBox="0 0 24 24"
+              :class="{ 'is-open': readmeOpen }"
+              aria-hidden="true"
+            >
+              <path d="m6 9 6 6 6-6" />
+            </svg>
+          </button>
+        </div>
       </div>
     </section>
 
-    <!-- The readme at full width, with the facts beside it -->
-    <div v-if="template" class="template-body">
-      <section
-        v-if="readmeHtml"
-        class="template-panel template-readme"
-        v-html="readmeHtml"
-      />
-      <section v-else class="template-panel template-readme">
-        <p>This template has no readme yet.</p>
-      </section>
-
-      <aside class="template-panel template-glance">
-        <span class="glance-eyebrow">At a glance</span>
-        <dl>
-          <div v-for="row in glance" :key="row.label" class="glance-row">
-            <dt>{{ row.label }}</dt>
-            <dd :class="{ 'is-mono': row.mono }">{{ row.value }}</dd>
-          </div>
-        </dl>
-      </aside>
+    <!-- The GPU choice is the page body, under the hero -->
+    <div ref="inlineCompute" class="template-body">
+      <slot name="compute" />
     </div>
 
-    <!-- Your own image has no readme: the GPU choice is the page body -->
-    <div v-else ref="inlineCompute">
-      <slot name="compute" :flat="false" />
+    <!-- Once the deploy card has scrolled away, its action follows. The
+         holder takes no height, so the page never jumps when it shows. -->
+    <div class="deploy-bar-holder">
+      <Transition name="deploy-bar">
+        <div v-if="!ctaInView && !panel" class="deploy-bar">
+          <span class="deploy-bar-text">
+            <strong>{{ title }}</strong>
+            <small>{{ barSummary }}</small>
+          </span>
+          <button
+            type="button"
+            class="deploy-cta deploy-bar-cta"
+            :disabled="deployDisabled"
+            @click="emit('deploy')"
+          >
+            {{ deployLabel }}
+          </button>
+        </div>
+      </Transition>
     </div>
 
     <!-- Editors slide in from the right, opened from the deploy card -->
@@ -186,22 +220,15 @@
         <div v-if="panel" class="sheet-layer" @click.self="emit('close')">
           <aside
             class="sheet"
-            :class="`is-${panel}`"
             role="dialog"
             aria-modal="true"
-            :aria-label="panel === 'compute' ? 'Choose your GPU' : 'Settings'"
+            aria-label="Settings"
           >
             <header class="sheet-head">
               <div>
-                <h3>
-                  {{ panel === "compute" ? "Choose your GPU" : "Settings" }}
-                </h3>
+                <h3>Settings</h3>
                 <p>
-                  {{
-                    panel === "compute"
-                      ? "The GPU sets the hourly price. Add requirements to narrow which hosts qualify."
-                      : "How your deployment runs. The defaults suit most workloads."
-                  }}
+                  How your deployment runs. The defaults suit most workloads.
                 </p>
               </div>
               <button
@@ -214,11 +241,10 @@
               </button>
             </header>
             <div class="sheet-body">
-              <slot v-if="panel === 'compute'" name="compute" :flat="true" />
-              <slot v-else name="settings" />
+              <slot name="settings" />
             </div>
             <footer class="sheet-foot">
-              <span>{{ panel === "compute" ? computeSummary : defaults }}</span>
+              <span>{{ defaults }}</span>
               <button type="button" class="sheet-done" @click="emit('close')">
                 Done
               </button>
@@ -249,9 +275,12 @@ import {
   type MarketRate,
 } from "~/composables/useNodeRequirements";
 import NvidiaIcon from "@/assets/img/icons/nvidia.svg?component";
-import { onKeyStroke } from "@vueuse/core";
+import {
+  onKeyStroke,
+  useIntersectionObserver,
+  useResizeObserver,
+} from "@vueuse/core";
 
-type WorkloadPanel = "compute" | "settings";
 type ComputeFocus = "gpu" | "requirements";
 
 const props = defineProps<{
@@ -263,7 +292,7 @@ const props = defineProps<{
   gpus: GpuModel[];
   requiredVramGb: number | null;
   /** The editor sliding in from the right, or none. */
-  panel: WorkloadPanel | null;
+  panel: "settings" | null;
   /** The GPU a deploy uses, with its short name, price and live host counts. */
   gpu: GpuModel | null;
   gpuName: string;
@@ -291,29 +320,38 @@ const emit = defineEmits<{
   deploy: [];
   claim: [];
   /** The GPU and Requirements lines open the same editor at different places. */
-  open: [panel: WorkloadPanel, focus?: ComputeFocus];
+  open: [panel: "compute" | "settings", focus?: ComputeFocus];
   close: [];
   back: [];
 }>();
 
-// For your own image the compute editor is already the page body, so its
-// lines scroll there instead of opening a panel.
+// The GPU and Requirements lines scroll to the selector under the hero; the
+// page points it at the GPU list or the requirement categories.
 const inlineCompute = ref<HTMLElement | null>(null);
 function openCompute(focus: ComputeFocus) {
   emit("open", "compute", focus);
-  if (!props.template) {
-    inlineCompute.value?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
+  inlineCompute.value?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-// The compute panel's footer: what the card will say once it closes.
-const computeSummary = computed(() => {
-  const gpu = props.gpu
-    ? `${props.gpuName}${props.gpuPrice !== null ? ` · $${props.gpuPrice.toFixed(2)}/h` : ""}`
-    : "No GPU chosen yet";
-  const extra = props.requirements.map((item) => item.text);
-  return [gpu, ...extra].join(" · ");
-});
+// The bar under the page shows once the card's deploy button is no longer
+// fully in view, so the action is always one click away.
+const deployCta = ref<HTMLElement | null>(null);
+const ctaInView = ref(true);
+useIntersectionObserver(
+  deployCta,
+  ([entry]) => {
+    ctaInView.value = (entry?.intersectionRatio ?? 1) > 0.99;
+  },
+  { threshold: [0, 1] },
+);
+const barSummary = computed(() =>
+  [
+    props.gpu
+      ? `${props.gpuName}${props.gpuPrice !== null ? ` · $${props.gpuPrice.toFixed(2)}/h` : ""}`
+      : "No GPU chosen yet",
+    props.settingsLine,
+  ].join(" · "),
+);
 
 // Escape closes the panel; the page behind does not scroll while it is open.
 const { lockScroll, unlockScroll } = useModalScrollLock();
@@ -412,38 +450,31 @@ const readmeHtml = computed(() => {
   return readme.trim() ? String(marked(readme)) : "";
 });
 
-const glance = computed(() => {
-  const variants = props.template?.variants ?? [];
-  const vrams = (
-    variants.length
-      ? variants.map((v) => v.jobDefinition)
-      : [props.jobDefinition]
-  ).flatMap((definition) => {
-    const mb = requiredVramMb(definition);
-    return mb === null ? [] : [mb];
-  });
-  const rows: Array<{ label: string; value: string; mono: boolean }> = [];
-  if (variants.length)
-    rows.push({
-      label: "Variants",
-      value: String(variants.length),
-      mono: false,
-    });
-  rows.push({
-    label: "Min. GPU memory",
-    value: vrams.length ? formatVram(Math.min(...vrams)) : "No GPU needed",
-    mono: false,
-  });
-  if (ports.value.length)
-    rows.push({
-      label: "Exposes",
-      value: `Port ${ports.value.join(", ")}`,
-      mono: false,
-    });
-  if (image.value)
-    rows.push({ label: "Image", value: image.value, mono: true });
-  return rows;
+// "12 GB VRAM": what the chosen variant asks of the GPU.
+const vram = computed(() => {
+  const mb = requiredVramMb(props.jobDefinition);
+  return mb ? formatVram(mb) : null;
 });
+
+// Folded, the readme shows only its start; the toggle appears once there is
+// more to show, and a new template starts folded again.
+const readmeOpen = ref(false);
+const readmeBody = ref<HTMLElement | null>(null);
+const readmeOverflows = ref(false);
+useResizeObserver(readmeBody, () => {
+  const fold = readmeBody.value?.parentElement;
+  readmeOverflows.value = Boolean(
+    fold &&
+      readmeBody.value &&
+      readmeBody.value.offsetHeight > fold.clientHeight,
+  );
+});
+watch(
+  () => props.template?.id,
+  () => {
+    readmeOpen.value = false;
+  },
+);
 </script>
 
 <style lang="scss" scoped>
@@ -456,22 +487,43 @@ const glance = computed(() => {
 /* ---------- Hero: the developers-page hero ---------- */
 .template-hero {
   padding: 3rem;
+  // Clipped, not a scroll container, so the deploy card can stick.
+  overflow: clip;
+  // The same name as the workload hero: switching steps morphs one into the
+  // other (the transition itself is in deploy-surface.scss).
+  view-transition-name: deploy-hero;
 }
 
+.template-body {
+  view-transition-name: deploy-body;
+}
+
+// The template's identity, then its readme, beside the deploy card, which
+// spans both and sticks to the top of the window while the readme scrolls.
 .hero-body {
   position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(360px, 400px);
-  gap: 3rem;
-  align-items: center;
+  grid-template-areas:
+    "text card"
+    "readme card";
+  grid-template-rows: auto 1fr;
+  column-gap: 3rem;
 }
 
+// Top-aligned with the deploy card: the back link starts on the line of the
+// card's "Your deployment" header, and the template info follows it.
 .hero-text {
+  grid-area: text;
   min-width: 0;
 }
 
 .hero-back {
+  display: block;
+  // The deploy card's border and padding, so both start on one line.
+  margin-top: 23px;
   margin-bottom: 1.4rem;
+  line-height: 1.5;
   padding: 0;
   border: 0;
   background: transparent;
@@ -578,6 +630,10 @@ const glance = computed(() => {
 
 /* The glass deploy card */
 .deploy-card {
+  grid-area: card;
+  align-self: start;
+  position: sticky;
+  top: 24px;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -588,8 +644,7 @@ const glance = computed(() => {
   box-shadow: 0 18px 40px -24px rgba(0, 0, 0, 0.8);
 }
 
-.deploy-eyebrow,
-.glance-eyebrow {
+.deploy-eyebrow {
   font-family: var(--mono, $family-monospace);
   font-size: 0.7rem;
   letter-spacing: 0.08em;
@@ -725,40 +780,54 @@ const glance = computed(() => {
   }
 }
 
-/* ---------- Readme + at a glance, on floating panels ---------- */
-.template-body {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 340px;
-  gap: 1.75rem;
-  align-items: start;
+/* ---------- Readme, in the always-dark hero ---------- */
+.hero-readme {
+  grid-area: readme;
+  min-width: 0;
+  max-width: 46rem;
+  margin-top: 1.75rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.template-panel {
-  @include soft-panel;
+.hero-readme-fold {
+  position: relative;
+
+  &.is-folded {
+    max-height: 11rem;
+    overflow: hidden;
+  }
 }
 
-.template-readme {
-  padding: 2rem 2.25rem;
-  color: $text;
+.hero-readme-fade {
+  position: absolute;
+  inset: auto 0 0;
+  height: 5rem;
+  background: linear-gradient(to bottom, rgba(13, 16, 12, 0), #0d100c 92%);
+  pointer-events: none;
+}
+
+.hero-readme-body {
+  color: #c3ccc2;
   font-size: 15px;
-  line-height: 1.65;
+  line-height: 1.7;
 
   :deep(h1),
   :deep(h2),
   :deep(h3) {
-    margin: 1.75rem 0 0.6rem;
+    margin: 1.5rem 0 0.5rem;
     font-family: $title-family;
     font-weight: 600;
     letter-spacing: -0.01em;
-    color: $text;
+    color: #fff;
   }
 
   :deep(h1) {
-    font-size: 1.35rem;
+    font-size: 1.3rem;
   }
 
   :deep(h2) {
-    font-size: 1.2rem;
+    font-size: 1.15rem;
   }
 
   :deep(h3) {
@@ -773,7 +842,6 @@ const glance = computed(() => {
   :deep(ul),
   :deep(ol) {
     margin: 0 0 0.85rem;
-    color: $text-dark;
   }
 
   :deep(ul),
@@ -790,20 +858,20 @@ const glance = computed(() => {
   }
 
   :deep(strong) {
-    color: $text;
+    color: #fff;
   }
 
   :deep(a) {
-    color: $secondary-text;
+    color: $secondary;
   }
 
   :deep(code) {
     padding: 1px 6px;
     border-radius: 5px;
-    background: $surface-sunken;
+    background: rgba(255, 255, 255, 0.08);
     font-family: $family-monospace;
     font-size: 13px;
-    color: $text;
+    color: #e8f0e8;
   }
 
   :deep(pre) {
@@ -820,99 +888,59 @@ const glance = computed(() => {
   }
 }
 
-.template-glance {
-  padding: 1.4rem;
+.hero-readme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 0.6rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: $secondary;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
 
-  dl {
-    margin: 0.9rem 0 0;
-  }
-}
-
-.glance-eyebrow {
-  color: $text-muted;
-}
-
-.glance-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 11px 0;
-  border-top: 1px solid $border-soft;
-  font-size: 13px;
-
-  &:first-child {
-    border-top: 0;
-    padding-top: 0;
+  &:hover {
+    color: #8bf58f;
   }
 
-  dt {
-    flex-shrink: 0;
-    color: $text-muted;
-  }
+  svg {
+    width: 15px;
+    height: 15px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: transform 0.2s ease;
 
-  dd {
-    min-width: 0;
-    margin: 0;
-    text-align: right;
-    font-weight: 500;
-    color: $text;
-    overflow-wrap: anywhere;
-
-    &.is-mono {
-      font-family: $family-monospace;
-      font-size: 12px;
+    &.is-open {
+      transform: rotate(180deg);
     }
-  }
-}
-
-html.dark-mode {
-  .template-readme {
-    color: $white;
-
-    :deep(h1),
-    :deep(h2),
-    :deep(h3),
-    :deep(strong) {
-      color: $white;
-    }
-
-    :deep(p),
-    :deep(ul),
-    :deep(ol) {
-      color: #c9d3c9;
-    }
-
-    :deep(a) {
-      color: $secondary;
-    }
-
-    :deep(code) {
-      background: rgba($white, 0.08);
-      color: #e8f0e8;
-    }
-  }
-
-  .glance-row {
-    border-color: rgba($white, 0.08);
-
-    dt {
-      color: #8a948a;
-    }
-
-    dd {
-      color: $white;
-    }
-  }
-
-  .glance-eyebrow {
-    color: #8a948a;
   }
 }
 
 @media screen and (max-width: 1100px) {
-  .hero-body,
-  .template-body {
+  // Stacked: identity, the card, then the readme; nothing sticks.
+  .hero-body {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "text"
+      "card"
+      "readme";
+    grid-template-rows: auto;
+    row-gap: 2rem;
+  }
+
+  .deploy-card {
+    position: static;
+  }
+
+  // Stacked, the card sits below: nothing to line up with.
+  .hero-back {
+    margin-top: 0;
   }
 }
 
@@ -1090,15 +1118,11 @@ html.dark-mode {
 .sheet {
   display: flex;
   flex-direction: column;
-  width: min(960px, 100vw);
+  width: min(720px, 100vw);
   height: 100%;
   background: $white;
   border-left: 1px solid $border-soft;
   box-shadow: -30px 0 60px -20px rgba(0, 0, 0, 0.35);
-
-  &.is-settings {
-    width: min(720px, 100vw);
-  }
 }
 
 .sheet-head {
@@ -1237,6 +1261,82 @@ html.dark-mode {
   .sheet-leave-active,
   .sheet-enter-active .sheet,
   .sheet-leave-active .sheet {
+    transition: none;
+  }
+}
+
+/* ---------- The deploy bar, once the card has scrolled away ---------- */
+.deploy-bar-holder {
+  position: sticky;
+  bottom: 16px;
+  z-index: 5;
+  height: 0;
+}
+
+.deploy-bar {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 14px 12px 20px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(20, 24, 19, 0.94);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 20px 50px -18px rgba(0, 0, 0, 0.9);
+  color: #fff;
+}
+
+.deploy-bar-text {
+  flex: 1;
+  min-width: 0;
+
+  strong,
+  small {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  strong {
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  small {
+    font-family: var(--mono, $family-monospace);
+    font-size: 12px;
+    color: #8a948a;
+  }
+}
+
+.deploy-cta.deploy-bar-cta {
+  flex-shrink: 0;
+  width: auto;
+  padding: 11px 18px;
+  font-size: 14px;
+}
+
+.deploy-bar-enter-active,
+.deploy-bar-leave-active {
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+
+.deploy-bar-enter-from,
+.deploy-bar-leave-to {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .deploy-bar-enter-active,
+  .deploy-bar-leave-active {
     transition: none;
   }
 }

@@ -1,5 +1,5 @@
 <template>
-  <div class="req-layout" :class="{ 'is-flat': flat }">
+  <div class="req-layout">
     <!-- Left card: one pill per requirement category, the GPU first -->
     <aside class="req-nav">
       <div
@@ -9,14 +9,14 @@
         aria-orientation="vertical"
       >
         <button
-          v-for="category in REQUIREMENT_CATEGORIES"
+          v-for="category in visibleCategories"
           :key="category.id"
           type="button"
           role="tab"
           class="req-pill"
           :class="{ 'is-active': activeCategory === category.id }"
           :aria-selected="activeCategory === category.id"
-          @click="activeCategory = category.id"
+          @click="pickedCategory = category.id"
         >
           <DeployCategoryIcon :icon="category.icon" />
           <span class="req-pill-label">{{ category.label }}</span>
@@ -129,155 +129,101 @@
 
         <div v-else class="req-body">
           <div
-            v-if="activePanel.id === 'benchmarks' && benchmarkModels.length"
+            v-for="control in panelControls"
+            :key="control.key"
             class="req-field"
           >
-            <span class="req-field-label">Benchmark model</span>
-            <div class="req-select">
-              <select
-                :value="benchmarkModel ?? ''"
-                aria-label="Benchmark model"
-                @change="onBenchmarkModel"
+            <span :id="`req-label-${control.key}`" class="req-field-label">
+              {{ control.label }}
+              <span v-if="control.note">{{ control.note }}</span>
+            </span>
+
+            <div
+              v-if="control.kind === 'segments'"
+              class="dep-tabs req-segments"
+              role="group"
+              :aria-labelledby="`req-label-${control.key}`"
+            >
+              <button
+                type="button"
+                class="dep-tab"
+                :class="{ 'is-active': !(control.key in modelValue) }"
+                :aria-pressed="!(control.key in modelValue)"
+                @click="setRequirement(control.key, undefined)"
               >
+                Any
+              </button>
+              <button
+                v-for="segment in control.segments"
+                :key="String(segment.value)"
+                type="button"
+                class="dep-tab"
+                :class="{
+                  'is-active': modelValue[control.key] === segment.value,
+                }"
+                :aria-pressed="modelValue[control.key] === segment.value"
+                @click="setRequirement(control.key, segment.value)"
+              >
+                {{ segment.label }}
+              </button>
+            </div>
+
+            <template v-else-if="control.kind === 'slider'">
+              <div class="req-range">
+                <div class="range-slider">
+                  <div
+                    class="range-slider__fill"
+                    :style="{ width: `${fillPercent(control)}%` }"
+                  ></div>
+                  <input
+                    type="range"
+                    class="range-slider__range"
+                    min="0"
+                    :max="control.max"
+                    :step="control.step"
+                    :value="sliderPosition(control)"
+                    :aria-label="control.label"
+                    :aria-valuetext="boxValue(control)"
+                    @input="onSlide(control, $event)"
+                  />
+                </div>
+                <span class="req-num">
+                  <input
+                    type="text"
+                    inputmode="decimal"
+                    :value="boxValue(control)"
+                    :aria-label="`${control.label} in ${control.unit}`"
+                    @change="onBox(control, $event)"
+                  />
+                  <span>{{ control.unit }}</span>
+                </span>
+              </div>
+              <div class="req-ticks">
+                <span v-for="tick in control.ticks" :key="tick.value">
+                  {{ tick.label }}
+                </span>
+              </div>
+            </template>
+
+            <div v-else class="req-select">
+              <select
+                :value="selectedIndex(control)"
+                :aria-labelledby="`req-label-${control.key}`"
+                @change="onSelect(control, $event)"
+              >
+                <option value="">{{ control.anyLabel }}</option>
                 <option
-                  v-for="model in benchmarkModels"
-                  :key="model.id"
-                  :value="model.id"
+                  v-for="(choice, index) in control.choices"
+                  :key="index"
+                  :value="String(index)"
                 >
-                  {{ model.label }} · {{ model.measured }} hosts measured
+                  {{ choice.label }}
                 </option>
               </select>
               <svg class="req-caret" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="m6 9 6 6 6-6" />
               </svg>
             </div>
-          </div>
-
-          <p v-if="!panelControls.length" class="req-hint">
-            {{ pending ? "Loading requirements…" : "Nothing here yet" }}
-          </p>
-
-          <div
-            v-for="control in panelControls"
-            :key="control.key"
-            class="req-field"
-          >
-            <div v-if="control.kind === 'toggle'" class="req-toggle-row">
-              <span>
-                <strong>{{ control.label }}</strong>
-                <small>{{ control.note }}</small>
-              </span>
-              <button
-                type="button"
-                class="req-toggle"
-                :class="{ 'is-on': modelValue[control.key] === true }"
-                role="switch"
-                :aria-checked="modelValue[control.key] === true"
-                :aria-label="control.label"
-                @click="
-                  setRequirement(
-                    control.key,
-                    modelValue[control.key] === true ? undefined : true,
-                  )
-                "
-              />
-            </div>
-
-            <template v-else>
-              <span :id="`req-label-${control.key}`" class="req-field-label">
-                {{ control.label }}
-                <span v-if="control.note">{{ control.note }}</span>
-              </span>
-
-              <div
-                v-if="control.kind === 'segments'"
-                class="dep-tabs req-segments"
-                role="group"
-                :aria-labelledby="`req-label-${control.key}`"
-              >
-                <button
-                  type="button"
-                  class="dep-tab"
-                  :class="{ 'is-active': !(control.key in modelValue) }"
-                  :aria-pressed="!(control.key in modelValue)"
-                  @click="setRequirement(control.key, undefined)"
-                >
-                  Any
-                </button>
-                <button
-                  v-for="segment in control.segments"
-                  :key="String(segment.value)"
-                  type="button"
-                  class="dep-tab"
-                  :class="{
-                    'is-active': modelValue[control.key] === segment.value,
-                  }"
-                  :aria-pressed="modelValue[control.key] === segment.value"
-                  @click="setRequirement(control.key, segment.value)"
-                >
-                  {{ segment.label }}
-                </button>
-              </div>
-
-              <template v-else-if="control.kind === 'slider'">
-                <div class="req-range">
-                  <div class="range-slider">
-                    <div
-                      class="range-slider__fill"
-                      :style="{ width: `${fillPercent(control)}%` }"
-                    ></div>
-                    <input
-                      type="range"
-                      class="range-slider__range"
-                      min="0"
-                      :max="control.max"
-                      :step="control.step"
-                      :value="sliderPosition(control)"
-                      :aria-label="control.label"
-                      :aria-valuetext="boxValue(control)"
-                      @input="onSlide(control, $event)"
-                    />
-                  </div>
-                  <span class="req-num">
-                    <input
-                      type="text"
-                      inputmode="decimal"
-                      :value="boxValue(control)"
-                      :aria-label="`${control.label} in ${control.unit}`"
-                      @change="onBox(control, $event)"
-                    />
-                    <span>{{ control.unit }}</span>
-                  </span>
-                </div>
-                <div class="req-ticks">
-                  <span v-for="tick in control.ticks" :key="tick.value">
-                    {{ tick.label }}
-                  </span>
-                </div>
-              </template>
-
-              <div v-else class="req-select">
-                <select
-                  :value="selectedIndex(control)"
-                  :aria-labelledby="`req-label-${control.key}`"
-                  @change="onSelect(control, $event)"
-                >
-                  <option value="">{{ control.anyLabel }}</option>
-                  <option
-                    v-for="(choice, index) in control.choices"
-                    :key="index"
-                    :value="String(index)"
-                  >
-                    {{ choice.label }}
-                  </option>
-                </select>
-                <svg class="req-caret" viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="m6 9 6 6 6-6" />
-                </svg>
-              </div>
-
-              <p v-if="control.hint" class="req-hint">{{ control.hint }}</p>
-            </template>
           </div>
         </div>
       </div>
@@ -290,9 +236,6 @@ import { watchDebounced } from "@vueuse/core";
 import NvidiaIcon from "@/assets/img/icons/nvidia.svg?component";
 import {
   REQUIREMENT_CATEGORIES,
-  benchmarkModelLabel,
-  benchmarkModelOf,
-  categoryKeys,
   categoryOfKey,
   countryName,
   gpuHourlyUsd,
@@ -316,10 +259,6 @@ interface Props {
   requiredVramGb: number | null;
   /** The GPU the page defaults to, labelled and listed first. */
   recommendedName?: string | null;
-  /** Where to start: the GPU list, or the first requirement category. */
-  focus?: "gpu" | "requirements";
-  /** Inside a panel that is already a card: the categories sit on it flat. */
-  flat?: boolean;
 }
 
 const props = defineProps<Props>();
@@ -336,23 +275,28 @@ const PANEL_SUBTITLES: Partial<Record<RequirementCategoryId, string>> = {
   compute: "Set compute related requirements for hosts.",
   network: "Where hosts are and how well they are connected.",
   storage: "Free disk the host must have for your image and model files.",
-  compliance: "Only hosts an admin has verified for the flag.",
-  benchmarks: "Require a measured throughput, not just a spec sheet.",
 };
 
-// Opened from the Requirements line, start on the first real requirement
-// category rather than the GPU list.
-const firstRequirementCategory =
-  REQUIREMENT_CATEGORIES.find((category) => category.id !== "gpu")?.id ?? "gpu";
-const activeCategory = ref<RequirementCategoryId>("gpu");
-watch(
-  () => props.focus,
-  (focus) => {
-    activeCategory.value =
-      focus === "requirements" ? firstRequirementCategory : "gpu";
-  },
-  { immediate: true },
-);
+// The category a pill click picked, and whether the page last asked for the
+// requirements rather than the GPU list.
+const pickedCategory = ref<RequirementCategoryId | null>(null);
+const wantsRequirements = ref(false);
+// The picked category while it is listed; otherwise, when the page asked for
+// the requirements, the first listed requirement category, else the GPU list.
+const activeCategory = computed<RequirementCategoryId>(() => {
+  const listed = visibleCategories.value.map((category) => category.id);
+  if (pickedCategory.value && listed.includes(pickedCategory.value)) {
+    return pickedCategory.value;
+  }
+  const first = listed.find((id) => id !== "gpu");
+  return wantsRequirements.value && first ? first : "gpu";
+});
+// The deploy card's GPU and Requirements lines point the selector here.
+function show(focus: "gpu" | "requirements") {
+  pickedCategory.value = null;
+  wantsRequirements.value = focus === "requirements";
+}
+defineExpose({ show });
 const activePanel = computed<RequirementCategory>(
   () =>
     REQUIREMENT_CATEGORIES.find(
@@ -463,7 +407,12 @@ const {
   pending,
   error,
   refresh: refreshOptions,
-} = useRequirementOptions(null, gpuScope);
+} = useRequirementOptions(
+  REQUIREMENT_CATEGORIES.flatMap((category) =>
+    category.id === "gpu" ? [] : category.keys,
+  ),
+  gpuScope,
+);
 const metrics = computed(() => options.value?.metrics ?? []);
 
 function retry() {
@@ -471,14 +420,16 @@ function retry() {
 }
 
 // When the GPU changes, a spec set for the old scope can sit outside the new
-// one (a minimum above every available host, a country no host is in): drop
-// those so the sheet never carries a boundary no available host meets.
+// one (a minimum above every available host, a country no host is in, a
+// metric no host reports): drop those so the sheet never carries a boundary
+// no available host meets. The GPU itself is the scope, so it always stays.
 watch(options, (next) => {
   if (!next) return;
   const kept = Object.fromEntries(
     Object.entries(props.modelValue).filter(([key, value]) => {
+      if (key === "name") return true;
       const option = next.metrics.find((metric) => metric.key === key);
-      if (!option) return true;
+      if (!option) return false;
       if (option.key === "cuda_driver_version") {
         return cudaVersions(option).includes(String(value));
       }
@@ -499,12 +450,10 @@ const categoryCounts = computed(() => {
     compute: 0,
     network: 0,
     storage: 0,
-    compliance: 0,
-    benchmarks: 0,
-    other: 0,
   };
   for (const key of Object.keys(props.modelValue)) {
-    counts[categoryOfKey(key, metrics.value)] += 1;
+    const category = categoryOfKey(key);
+    if (category) counts[category] += 1;
   }
   return counts;
 });
@@ -515,7 +464,6 @@ interface ControlText {
   note?: string;
   unit?: string;
   anyLabel?: string;
-  hint?: string;
 }
 
 const CONTROL_TEXT: Record<string, ControlText> = {
@@ -529,34 +477,16 @@ const CONTROL_TEXT: Record<string, ControlText> = {
   // Labelled as a maximum; host-manager still matches the number as a minimum.
   ping_ms: { label: "Maximum ping", unit: "ms" },
   disk_gb: { label: "Minimum disk space", unit: "GB" },
-  CC: {
-    label: "Confidential computing",
-    note: "Hosts with CC-capable GPUs and attestation",
-  },
-  soc_2: { label: "SOC 2", note: "Hosts in SOC 2 audited data centres" },
 };
 
 function controlText(key: string): ControlText {
-  const fixed = CONTROL_TEXT[key];
-  if (fixed) return fixed;
-  if (key.endsWith("__tokens_per_second")) {
-    return { label: "Minimum tokens per second", unit: "tok/s" };
-  }
-  if (key.endsWith("__gpu_temperature_avg")) {
-    return {
-      label: "Thermal headroom",
-      note: "(optional)",
-      hint: "Uses the average GPU temperature recorded during the benchmark.",
-    };
-  }
-  return { label: key.replace(/_/g, " ") };
+  return CONTROL_TEXT[key] ?? { label: key.replace(/_/g, " ") };
 }
 
 interface ControlBase {
   key: string;
   label: string;
   note: string;
-  hint: string;
 }
 interface SegmentsControl extends ControlBase {
   kind: "segments";
@@ -576,10 +506,7 @@ interface SelectControl extends ControlBase {
   anyLabel: string;
   choices: Array<{ value: RequirementValue; label: string }>;
 }
-interface ToggleControl extends ControlBase {
-  kind: "toggle";
-}
-type Control = SegmentsControl | SliderControl | SelectControl | ToggleControl;
+type Control = SegmentsControl | SliderControl | SelectControl;
 
 // CUDA is picked by major.minor: "12.8" is a minimum, so it covers 12.8 and up.
 function cudaVersions(option: RequirementOption): string[] {
@@ -638,24 +565,13 @@ function buildControl(option: RequirementOption): Control | null {
     key: option.key,
     label: text.label,
     note: text.note ?? "",
-    hint: text.hint ?? "",
   };
-  if (option.type === "boolean") return { ...base, kind: "toggle" };
   if (option.key === "cuda_driver_version") {
     const segments = cudaVersions(option).map((version) => ({
       value: version,
       label: `${version}+`,
     }));
     return segments.length ? { ...base, kind: "segments", segments } : null;
-  }
-  if (option.key.endsWith("__gpu_temperature_avg")) {
-    const segments = [75, 65].map((celsius) => ({
-      value: celsius,
-      label: `GPU under ${celsius} °C`,
-    }));
-    return option.values.length
-      ? { ...base, kind: "segments", segments }
-      : null;
   }
   if (option.match === "minimum" && option.type !== "text") {
     const max = sliderMax(option);
@@ -676,53 +592,30 @@ function buildControl(option: RequirementOption): Control | null {
     : null;
 }
 
-// Benchmarks: one model at a time; its throughput floor and thermal headroom.
-const benchmarkModels = computed(() =>
-  metrics.value
-    .filter(
-      (option) =>
-        option.group === "benchmarks" &&
-        option.key.endsWith("__tokens_per_second"),
-    )
-    .map((option) => ({
-      id: benchmarkModelOf(option.key),
-      label: benchmarkModelLabel(option.key),
-      measured: option.values.reduce(
-        (sum, { value, nodes }) =>
-          typeof value === "number" ? sum + nodes : sum,
-        0,
-      ),
-    })),
+// Every category's controls from the scoped options. A category whose
+// metrics no host in scope reports has none and is not listed.
+const controlsByCategory = computed(
+  () =>
+    new Map(
+      REQUIREMENT_CATEGORIES.map((category) => [
+        category.id,
+        category.keys.flatMap((key) => {
+          const option = metrics.value.find((metric) => metric.key === key);
+          const control = option ? buildControl(option) : null;
+          return control ? [control] : [];
+        }),
+      ]),
+    ),
 );
-const pickedBenchmarkModel = ref<string | null>(null);
-const benchmarkModel = computed(() => {
-  const ids = benchmarkModels.value.map((model) => model.id);
-  const picked = pickedBenchmarkModel.value;
-  if (picked && ids.includes(picked)) return picked;
-  const set = Object.keys(props.modelValue)
-    .map(benchmarkModelOf)
-    .find((id) => ids.includes(id));
-  return set ?? ids[0] ?? null;
-});
-
-function onBenchmarkModel(event: Event) {
-  if (!(event.target instanceof HTMLSelectElement)) return;
-  pickedBenchmarkModel.value = event.target.value;
-}
-
-const panelKeys = computed(() => {
-  const keys = categoryKeys(activePanel.value, metrics.value);
-  if (activePanel.value.id !== "benchmarks") return keys;
-  const model = benchmarkModel.value;
-  return model ? keys.filter((key) => benchmarkModelOf(key) === model) : [];
-});
-
-const panelControls = computed(() =>
-  panelKeys.value.flatMap((key) => {
-    const option = metrics.value.find((metric) => metric.key === key);
-    const control = option ? buildControl(option) : null;
-    return control ? [control] : [];
-  }),
+const visibleCategories = computed(() =>
+  REQUIREMENT_CATEGORIES.filter(
+    (category) =>
+      category.id === "gpu" ||
+      Boolean(controlsByCategory.value.get(category.id)?.length),
+  ),
+);
+const panelControls = computed(
+  () => controlsByCategory.value.get(activeCategory.value) ?? [],
 );
 
 function setRequirement(key: string, value: RequirementValue | undefined) {
@@ -854,18 +747,11 @@ $mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", Menlo,
 
 // --- Left card: categories ---
 .req-nav {
+  @include soft-panel;
   display: flex;
   flex-direction: column;
   gap: 4px;
   padding: 0.75rem 0.5rem;
-}
-
-.req-layout:not(.is-flat) .req-nav {
-  @include soft-panel;
-}
-
-.req-layout.is-flat .req-nav {
-  padding: 0;
 }
 
 .req-nav-list {
@@ -1319,64 +1205,6 @@ $mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", Menlo,
   pointer-events: none;
 }
 
-.req-toggle-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.625rem 0.75rem;
-  border-radius: 10px;
-  border: 1px solid $border-soft;
-  background: $white;
-
-  strong {
-    display: block;
-    font-size: 0.8125rem;
-    font-weight: 600;
-  }
-
-  small {
-    display: block;
-    margin-top: 1px;
-    font-size: 0.72rem;
-    color: $text-muted;
-  }
-}
-
-.req-toggle {
-  position: relative;
-  flex-shrink: 0;
-  width: 38px;
-  height: 21px;
-  padding: 0;
-  border: 0;
-  border-radius: 999px;
-  background: #c3c7cd;
-  cursor: pointer;
-  transition: background 0.2s ease;
-
-  &::after {
-    content: "";
-    position: absolute;
-    top: 3px;
-    left: 3px;
-    width: 15px;
-    height: 15px;
-    border-radius: 50%;
-    background: $white;
-    transition: left 0.2s ease;
-  }
-
-  &.is-on {
-    background: $secondary;
-
-    &::after {
-      left: 20px;
-      background: #000;
-    }
-  }
-}
-
 // The .range-slider pattern from AdvancedGpuSelection, in the brand green.
 @mixin thumb {
   width: 16px;
@@ -1425,9 +1253,7 @@ $mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", Menlo,
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .gpu-row,
-  .req-toggle,
-  .req-toggle::after {
+  .gpu-row {
     transition: none;
   }
 }
@@ -1504,21 +1330,8 @@ html.dark-mode {
     background: #242526;
   }
 
-  .req-toggle-row {
-    background: #1c1c1c;
-    border-color: rgba($white, 0.08);
-  }
-
   .req-dot {
     background: #5e6266;
-  }
-
-  .req-toggle {
-    background: rgba($white, 0.15);
-
-    &.is-on {
-      background: $secondary;
-    }
   }
 
   .range-slider {

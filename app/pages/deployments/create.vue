@@ -18,7 +18,7 @@
       :loading-recent="loadingRecent"
       :can-clone="hasAnyAuth"
       @select-template="selectTemplateFromModal"
-      @deploy-template="deployTemplate"
+      @deploy-template="selectTemplateFromModal"
       @configure-own="configureOwnJob"
       @clone="(deployment) => cloneDeployment(deployment)"
       @browse-deployments="showCloneModal = true"
@@ -66,13 +66,12 @@
       @close="goToStep(selectedTemplate ? 'template' : 'compute')"
       @back="goToStep('workload')"
     >
-      <template #compute="{ flat }">
+      <template #compute>
         <DeployRequirementsSelection
+          ref="requirementsEditor"
           v-model="advancedRequirements"
-          :flat="flat"
           :markets="testgridMarkets"
           :recommended-name="recommendedGpu?.name ?? null"
-          :focus="computeFocus"
           :required-vram-gb="requiredVramGb"
           @matching="advancedMatching = $event"
         />
@@ -139,6 +138,7 @@ import {
 import { trackPixelEvent } from "~/utils/analytics";
 import {
   cheapestPublicMarket,
+  keepCategorizedRequirements,
   listRequirementChips,
   gpuHourlyUsd,
   recommendGpu,
@@ -175,12 +175,29 @@ const step = computed<Step>(() => {
   if (route.query.clone) return "compute";
   return route.query.template ? "template" : "workload";
 });
+// The picker and a workload's page share one hero. Moving between them runs
+// the change inside a view transition, so the hero morphs in place and the
+// body under it swaps (deploy-surface.scss); without support it just switches.
+// Either way the new page starts at its top.
+const changeStep = async (next: Step, change: () => Promise<unknown>) => {
+  const swapsHero = (step.value === "workload") !== (next === "workload");
+  if (!swapsHero) return change();
+  const apply = async () => {
+    await change();
+    await nextTick();
+    window.scrollTo({ top: 0 });
+  };
+  if (typeof document.startViewTransition !== "function") return apply();
+  return document.startViewTransition(apply).updateCallbackDone;
+};
 const goToStep = (next: Step) => {
   // Going back to the picker abandons the deep link that lands on compute.
   const { step: _step, template, clone, name, market, ...query } = route.query;
-  return router.replace({
-    query: next === "workload" ? query : { ...route.query, step: next },
-  });
+  return changeStep(next, () =>
+    router.replace({
+      query: next === "workload" ? query : { ...route.query, step: next },
+    }),
+  );
 };
 const {
   isAuthenticated: superTokensAuth,
@@ -887,7 +904,9 @@ const restoreDraftIfNeeded = () => {
       clonedMarketAddress.value = draft.selectedMarketAddress;
     }
     if (draft.advancedRequirements) {
-      advancedRequirements.value = draft.advancedRequirements;
+      advancedRequirements.value = keepCategorizedRequirements(
+        draft.advancedRequirements,
+      );
     }
   } finally {
     nextTick(() => {
@@ -954,21 +973,20 @@ const deployAction = computed(() => {
   };
 });
 
-// The editor sliding over the page. For your own image the compute editor
-// is the page body, so only Settings slides in.
-const workloadPanel = computed(() => {
-  if (step.value === "settings") return "settings";
-  if (step.value === "compute" && selectedTemplate.value) return "compute";
-  return null;
-});
-// Which part of the compute editor the deploy card asked for.
-const computeFocus = ref<"gpu" | "requirements">("gpu");
+// Settings slides over the page; the compute editor is the page body under
+// the hero, so its lines point it at the GPU list or the requirements.
+const workloadPanel = computed(() =>
+  step.value === "settings" ? "settings" : null,
+);
+const requirementsEditor = ref<{
+  show: (focus: "gpu" | "requirements") => void;
+} | null>(null);
 const openPanel = (
   panel: "compute" | "settings",
   focus?: "gpu" | "requirements",
 ) => {
-  if (focus) computeFocus.value = focus;
-  goToStep(panel);
+  if (panel === "settings") goToStep("settings");
+  else requirementsEditor.value?.show(focus ?? "gpu");
 };
 const sshSummary = computed(() => {
   const count = sshPublicKeys.value.length;
@@ -1230,17 +1248,18 @@ watch(
 // Template selection handler: picking a workload lands on compute.
 // Picking a template abandons any ?clone= handoff, so drop its params too.
 const applyTemplate = (template: Template, next: Step) => {
-  selectedTemplate.value = template;
   const { clone, name, market, ...query } = route.query;
-  router.replace({
-    query: { ...query, template: String(template.id), step: next },
+  return changeStep(next, () => {
+    selectedTemplate.value = template;
+    return router.replace({
+      query: { ...query, template: String(template.id), step: next },
+    });
   });
 };
-// A gallery tile opens the template's page; the featured card's Use
-// template goes straight on to compute.
+// A gallery tile and the featured card's Use template both open the
+// template's page, where the GPU selector sits under the hero.
 const selectTemplateFromModal = (template: Template) =>
   applyTemplate(template, "template");
-const deployTemplate = (template: Template) => applyTemplate(template, "compute");
 
 // A variant picked in the deploy card: the selected template holds the parent
 // spread with the first variant flattened in, so rebuild from the parent.
