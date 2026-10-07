@@ -708,7 +708,8 @@ const handleEmailSubmit = async () => {
         return;
       }
 
-      const redirect = (route.query.redirect as string) || "/account";
+      const redirect =
+        (route.query.redirect as string) || "/deployments/create";
       router.replace(redirect);
     } else if (response.status === "WRONG_CREDENTIALS_ERROR") {
       authError.value = "Invalid email or password";
@@ -749,13 +750,13 @@ onMounted(async () => {
   const isAuthenticated =
     superTokensAuth.value || walletAuthenticated || hasSession;
 
-  // Only redirect to account if authenticated AND email is verified
+  // Only redirect to the create page if authenticated AND email is verified
   if (
     !providerSwitchInProgress.value &&
     isAuthenticated &&
     isEmailVerified.value !== false
   ) {
-    const redirect = (route.query.redirect as string) || "/account";
+    const redirect = (route.query.redirect as string) || "/deployments/create";
     router.replace(redirect);
     return;
   }
@@ -1024,7 +1025,7 @@ const signAuthMessage = async (walletName: string) => {
       console.warn("Error tracking wallet authorized:", error);
     }
 
-    const redirect = (route.query.redirect as string) || "/account";
+    const redirect = (route.query.redirect as string) || "/deployments/create";
     await navigateTo(redirect);
   } catch (error: any) {
     const errorMessage = error?.message || String(error);

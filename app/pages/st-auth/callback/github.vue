@@ -42,7 +42,8 @@ onMounted(async () => {
         console.warn("Error tracking event:", e);
       }
 
-      const redirect = sessionStorage.getItem("postLoginRedirect") || "/account";
+      const redirect =
+        sessionStorage.getItem("postLoginRedirect") || "/deployments/create";
       sessionStorage.removeItem("postLoginRedirect");
       router.replace(redirect);
     } else if (response.status === "SIGN_IN_UP_NOT_ALLOWED") {
