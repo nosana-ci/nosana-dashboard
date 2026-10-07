@@ -1,7 +1,7 @@
 <template>
   <div class="is-flex is-justify-content-space-between mb-5 is-flex-wrap-wrap">
     <div>
-      <h2 class="title">{{ title }}</h2>
+      <h2 v-if="title" class="title">{{ title }}</h2>
       <h3 v-if="subtitle" class="subtitle mb-2">
         {{ subtitle }}
       </h3>
@@ -573,9 +573,10 @@ const setPrioFeeConfig = (level: keyof typeof PRIO_FEE_CONFIGS) => {
 };
 
 const props = defineProps({
+  // Optional: a page can keep the account bar without a heading.
   title: {
     type: String,
-    required: true,
+    default: "",
   },
   subtitle: {
     type: String,

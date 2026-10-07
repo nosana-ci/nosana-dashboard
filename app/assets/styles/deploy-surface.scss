@@ -1,0 +1,33 @@
+@use "variables" as *;
+
+/* ---------- Deploy surface ----------
+   The always-dark hero surface shared by the deploy flow's workload and
+   template steps; it is dark in both themes. */
+.deploy-surface {
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", Menlo,
+    Consolas, monospace;
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px;
+  padding: 2rem 2.25rem;
+  background: radial-gradient(
+      circle at 90% 8%,
+      rgba($secondary, 0.16),
+      transparent 46%
+    ),
+    linear-gradient(135deg, #0a0c0a 0%, #0f130d 55%, #0b0d0b 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 24px 60px -30px rgba(0, 0, 0, 0.6);
+}
+
+.deploy-surface-grid {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(
+    rgba(255, 255, 255, 0.05) 1px,
+    transparent 1px
+  );
+  background-size: 22px 22px;
+  mask-image: linear-gradient(to bottom, black, transparent 92%);
+  pointer-events: none;
+}

@@ -105,6 +105,80 @@ export const requiredVramMb = (jobDefinition?: JobDefinition | null): number | n
   return null
 }
 
+/** The pipe-separated category string as tags; "Web UI" and friends stay as written. */
+export const templateTags = (template: Template): string[] =>
+  template.category ? template.category.split('|') : []
+
+/** The docker image of the first op, which is what a tile shows for the template. */
+/** Tags that group the catalogue rather than describe a template. */
+const GROUPING_TAGS = ['Featured', 'New', 'Official', 'Community']
+
+/** A template's tags without the grouping ones, for its small label. */
+export const descriptiveTags = (template: Template): string[] =>
+  templateTags(template).filter((tag) => !GROUPING_TAGS.includes(tag))
+
+export const templateDockerImage = (jobDefinition?: JobDefinition | null): string | null => {
+  const args = jobDefinition?.ops?.[0]?.args
+  return args && 'image' in args && args.image ? args.image : null
+}
+
+export const formatVram = (mb: number): string => {
+  const gb = mb / 1024
+  return `${Number.isInteger(gb) ? gb : gb.toFixed(1)} GB VRAM`
+}
+
+const SNIPPET_LENGTH = 220
+
+const readmeParagraphs = (readme: string): string[] =>
+  readme
+    .replace(/```[\s\S]*?```/g, '\n')
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .split(/\n\s*\n/)
+    .map((block) =>
+      block
+        .split('\n')
+        .map((line) => line.trim())
+        .filter((line) => line && !/^(#|[-*+]\s|\d+\.\s|>|\|)/.test(line))
+        .join(' ')
+        .replace(/[*_`~]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+    )
+    .filter(Boolean)
+
+/**
+ * The first prose paragraph of the README as plain text: headings, lists,
+ * code blocks, images and tables are dropped, inline markdown is unwrapped,
+ * and a paragraph that merely repeats the description is skipped.
+ */
+export const templateReadmeSnippet = (template: Template): string | null => {
+  const description = template.description?.trim() ?? ''
+  const paragraph = readmeParagraphs(template.readme ?? '').find(
+    (text) => !description || !text.startsWith(description)
+  )
+  if (!paragraph) return null
+  return paragraph.length > SNIPPET_LENGTH
+    ? `${paragraph.slice(0, SNIPPET_LENGTH).trimEnd()}…`
+    : paragraph
+}
+
+/** "Flux Schnell · 12 GB VRAM", or just the name when the variant states no VRAM. */
+export const variantLabel = (variant: TemplateVariant): string => {
+  const mb = requiredVramMb(variant.jobDefinition)
+  return mb ? `${variant.name} · ${formatVram(mb)}` : variant.name
+}
+
+/** A template flattened onto one of its variants, the shape the create flow works with. */
+export const withVariant = (template: Template, variant: TemplateVariant): Template => ({
+  ...template,
+  id: `${template.id}-${variant.variant_id}`,
+  name: `${template.name} - ${variant.name}`,
+  description: variant.description,
+  jobDefinition: variant.jobDefinition,
+  selectedVariant: variant,
+})
+
 // Keep original templates endpoint for backward compatibility
 const { data: rawTemplates, pending: loadingTemplates } = useAPI('/jobs/templates', {
   immediate: true
