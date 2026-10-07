@@ -156,16 +156,17 @@
         <!-- The readme, under the template's identity: cut at about the
              card's height until opened -->
         <div v-if="readmeHtml" class="hero-readme">
-          <div class="hero-readme-fold" :class="{ 'is-folded': !readmeOpen }">
+          <div
+            class="hero-readme-fold"
+            :class="{
+              'is-folded': !readmeOpen,
+              'is-faded': !readmeOpen && readmeOverflows,
+            }"
+          >
             <div
               ref="readmeBody"
               class="hero-readme-body"
               v-html="readmeHtml"
-            />
-            <span
-              v-if="!readmeOpen && readmeOverflows"
-              class="hero-readme-fade"
-              aria-hidden="true"
             />
           </div>
           <button
@@ -791,20 +792,16 @@ watch(
 }
 
 .hero-readme-fold {
-  position: relative;
-
   &.is-folded {
     max-height: 11rem;
     overflow: hidden;
   }
-}
 
-.hero-readme-fade {
-  position: absolute;
-  inset: auto 0 0;
-  height: 5rem;
-  background: linear-gradient(to bottom, rgba(13, 16, 12, 0), #0d100c 92%);
-  pointer-events: none;
+  // The text itself fades out, so the hero's glow and dot grid show through
+  // rather than a painted band of one colour.
+  &.is-faded {
+    mask-image: linear-gradient(to bottom, #000 45%, transparent);
+  }
 }
 
 .hero-readme-body {
