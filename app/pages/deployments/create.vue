@@ -1,10 +1,5 @@
 <template>
   <div>
-    <TopBar
-      ref="topBar"
-      :hide-buttons="false"
-      v-model="showSettingsModal"
-    ></TopBar>
 
     <!-- Show loader for external data only; editor always visible -->
     <Loader v-if="loadingTemplates" />
@@ -117,7 +112,6 @@ import {
 } from "@nosana/kit";
 import { useToast } from "vue-toastification";
 import { useWallet } from "@nosana/solana-vue";
-import TopBar from "~/components/TopBar.vue";
 import { useRouter, useRoute } from "vue-router";
 import { useEstimatedCost } from "~/composables/useMarketPricing";
 import {
@@ -276,7 +270,6 @@ const DEFAULT_TIMEOUT = 1;
 const timeout = ref(INFINITE_TIMEOUT);
 const previousStrategyDefault = ref(INFINITE_TIMEOUT);
 const isCreatingDeployment = ref(false);
-const showSettingsModal = ref(false); // For priority fee settings (TopBar)
 // Set while the form is filled from an existing deployment or your own
 // definition, so the template fallback below never overwrites it.
 const skipTemplateAutoSelection = ref(false);

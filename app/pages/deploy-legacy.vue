@@ -4,8 +4,6 @@
       :title="'Deploy a Job'"
       :subtitle="'Run a single job on the Nosana network'"
       ref="topBar"
-      :hide-buttons="false"
-      v-model="showSettingsModal"
     ></TopBar>
 
     <!-- Show loader until critical async data is loaded (templates/markets) -->
@@ -339,7 +337,6 @@ const selectedMarket = ref<Market | null>(null);
 const selectedTemplate = ref<Template | null>(null);
 const hours = ref(1);
 const isCreatingJob = ref(false);
-const showSettingsModal = ref(false);
 const showSwapModal = ref(false);
 const skipAutoSelection = ref(false);
 const isUpdatingFromJobDef = ref(false); // This flag will now be used by both watchers

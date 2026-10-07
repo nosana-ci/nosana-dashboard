@@ -4,7 +4,6 @@
       :title="'Playground'"
       :subtitle="'Chat with models running on Nosana'"
       ref="topBar"
-      v-model="showSettingsModal"
     />
 
     <div
@@ -96,7 +95,6 @@ import {
 } from "~/composables/useLlmGateway";
 
 const { isAuthenticated } = useSuperTokens();
-const showSettingsModal = ref(false);
 const route = useRoute();
 const router = useRouter();
 

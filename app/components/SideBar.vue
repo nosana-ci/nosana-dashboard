@@ -103,7 +103,7 @@
       </ul>
     </div>
     <div
-      class="is-flex is-justify-content-space-between is-align-items-center mt-auto"
+      class="is-flex is-justify-content-space-between is-align-items-center sidebar-foot"
     >
       <a
         href="https://nosana.statuspage.io"
@@ -140,6 +140,9 @@
         </svg>
       </button>
     </div>
+    <!-- The signed-in account, last in the sidebar. Touch screens use the
+         avatar menu in the top navbar instead. -->
+    <AccountMenu class="sidebar-account is-hidden-touch" />
   </aside>
   <nav class="navbar is-hidden-desktop is-fixed-top has-shadow">
     <div
@@ -848,6 +851,52 @@ const getWalletAddress = () => {
 
 .dark-mode .profile-avatar {
   background: #4b5563;
+}
+
+// The foot of the sidebar: a quiet status and theme row, then the signed-in
+// account on a hairline that sets it apart.
+.sidebar-foot {
+  margin-top: auto;
+  padding: 0 0.25rem 0 0.75rem;
+
+  .status-link {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: $text-muted;
+
+    &:hover {
+      color: $secondary-text;
+    }
+  }
+
+  .status-dot {
+    width: 7px;
+    height: 7px;
+    margin-right: 8px;
+    box-shadow: 0 0 0 3px rgba($success, 0.18);
+  }
+}
+
+.sidebar-account:not(:empty) {
+  margin-top: 10px;
+  padding-top: 12px;
+  border-top: 1px solid $border-soft;
+}
+
+.dark-mode {
+  .sidebar-foot .status-link {
+    color: #8a948a;
+
+    &:hover {
+      color: $secondary;
+    }
+  }
+
+  .sidebar-account:not(:empty) {
+    border-top-color: rgba($white, 0.08);
+  }
 }
 
 .sidebar-theme-toggle {

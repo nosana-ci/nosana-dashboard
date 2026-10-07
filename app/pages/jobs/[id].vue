@@ -4,7 +4,6 @@
       title="Job Overview"
       subtitle="Find information about your job here"
       ref="topBar"
-      v-model="showSettingsModal"
     />
 
     <Loader v-if="loading" />
@@ -33,7 +32,6 @@ import Job from "~/components/Job/Job.vue";
 import ArrowUpIcon from '@/assets/img/icons/arrow-up.svg?component';
 // Composables
 import { useJobPage } from "~/composables/jobs/useJobPage";
-const showSettingsModal = ref(false);
 const { params, query } = useRoute();
 
 const jobId = ref<string>(params.id as string);

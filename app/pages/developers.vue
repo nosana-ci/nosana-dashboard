@@ -4,7 +4,6 @@
       :title="'Developers'"
       :subtitle="'Build on the Nosana network'"
       ref="topBar"
-      v-model="showSettingsModal"
     />
 
     <!-- Hero banner -->
@@ -132,7 +131,6 @@ import DiscordIcon from "@/assets/img/icons/discord.svg?component";
 import ArrowRightIcon from "@/assets/img/icons/arrow-right.svg?component";
 
 const { isAuthenticated } = useSuperTokens();
-const showSettingsModal = ref(false);
 
 const resources = [
   {
