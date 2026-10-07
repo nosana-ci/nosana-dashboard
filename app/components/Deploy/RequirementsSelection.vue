@@ -734,7 +734,7 @@ $mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", Menlo,
 // --- Two cards side by side: the category list, then the active category ---
 .req-layout {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
+  grid-template-columns: 280px minmax(0, 1fr);
   gap: 1.5rem;
   align-items: start;
 }
