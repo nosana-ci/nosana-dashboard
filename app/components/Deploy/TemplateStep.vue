@@ -33,14 +33,18 @@
           <p v-if="lead" class="hero-lead">{{ lead }}</p>
           <div class="hero-chips">
             <span v-if="image" class="hero-chip">{{ image }}</span>
+            <span v-else-if="!template" class="hero-chip is-muted">
+              No image yet
+            </span>
             <span v-if="ports.length" class="hero-chip is-plain">
               Port {{ ports.join(", ") }}
             </span>
             <span v-if="vram" class="hero-chip is-plain">{{ vram }}</span>
             <button
+              v-if="template"
               type="button"
               class="hero-chip is-action"
-              @click="emit('edit-job')"
+              @click="emit('edit-job', 'builder')"
             >
               Edit job definition
             </button>
@@ -189,13 +193,30 @@
       </div>
     </section>
 
-    <!-- The GPU choice is the page body, under the hero -->
-    <div ref="inlineCompute" class="template-body">
-      <slot name="compute" />
+    <!-- The page body, under the hero: for your own image the container
+         first, then the GPU choice -->
+    <div class="template-body">
+      <section v-if="!template" ref="inlineJob" class="job-section">
+        <header class="job-head">
+          <h3>Container</h3>
+          <button
+            type="button"
+            class="job-json"
+            @click="emit('edit-job', 'json')"
+          >
+            Edit as JSON
+          </button>
+        </header>
+        <slot name="job" />
+      </section>
+      <div ref="inlineCompute">
+        <slot name="compute" />
+      </div>
     </div>
 
     <!-- Once the deploy card has scrolled away, its action follows. The
-         holder takes no height, so the page never jumps when it shows. -->
+         holder keeps the bar's height at the end of the page, so the page
+         never jumps when it shows and never hides the last content. -->
     <div class="deploy-bar-holder">
       <Transition name="deploy-bar">
         <div v-if="!ctaInView && !panel" class="deploy-bar">
@@ -317,7 +338,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   "select-variant": [variant: TemplateVariant];
   "remove-requirement": [key: string];
-  "edit-job": [];
+  "edit-job": [mode: "builder" | "json"];
   deploy: [];
   claim: [];
   /** The GPU and Requirements lines open the same editor at different places. */
@@ -333,6 +354,17 @@ function openCompute(focus: ComputeFocus) {
   emit("open", "compute", focus);
   inlineCompute.value?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
+
+// Your own image starts on the container's image field, the one thing it
+// needs before it can deploy.
+const inlineJob = ref<HTMLElement | null>(null);
+onMounted(async () => {
+  if (props.template || image.value) return;
+  await nextTick();
+  inlineJob.value
+    ?.querySelector<HTMLInputElement>("input.jinput")
+    ?.focus({ preventScroll: true });
+});
 
 // The bar under the page shows once the card's deploy button is no longer
 // fully in view, so the action is always one click away.
@@ -388,7 +420,7 @@ const tags = computed(() =>
 // The parent description, or the first readme paragraph when there is none.
 const lead = computed(() => {
   const template = props.template;
-  if (!template) return "Your own container image and job definition.";
+  if (!template) return "Run your own container image on a Nosana GPU.";
   return template.description?.trim() || templateReadmeSnippet(template) || "";
 });
 
@@ -497,6 +529,52 @@ watch(
 
 .template-body {
   view-transition-name: deploy-body;
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+/* ---------- Your own image: the container, edited in place ---------- */
+.job-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+
+  h3 {
+    margin: 0;
+    font-family: $title-family;
+    font-weight: 600;
+    font-size: 18px;
+    letter-spacing: -0.01em;
+    color: $text;
+  }
+}
+
+.job-json {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: $secondary-text;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+html.dark-mode {
+  .job-head h3 {
+    color: #fff;
+  }
+
+  .job-json {
+    color: $secondary;
+  }
 }
 
 // The template's identity, then its readme, beside the deploy card, which
@@ -626,6 +704,12 @@ watch(
 
   &.is-plain {
     color: #e8f0e8;
+  }
+
+  &.is-muted {
+    color: #8a948a;
+    font-family: inherit;
+    border-style: dashed;
   }
 }
 
@@ -1263,14 +1347,18 @@ html.dark-mode {
 }
 
 /* ---------- The deploy bar, once the card has scrolled away ---------- */
+// As tall as the bar, so the end of the page always has room for it and it
+// never covers the last content; clicks pass through everywhere but the bar.
 .deploy-bar-holder {
   position: sticky;
   bottom: 16px;
   z-index: 5;
-  height: 0;
+  height: 66px;
+  pointer-events: none;
 }
 
 .deploy-bar {
+  pointer-events: auto;
   position: absolute;
   right: 0;
   bottom: 0;
@@ -1302,6 +1390,7 @@ html.dark-mode {
   strong {
     font-size: 14px;
     font-weight: 600;
+    color: #fff;
   }
 
   small {

@@ -6,7 +6,7 @@ const emptyJobDefinition: JobDefinition = {
   "ops": [
     {
       "type": "container/run",
-      "id": "",
+      "id": "app",
       "args": {
         "image": "",
         "gpu": true

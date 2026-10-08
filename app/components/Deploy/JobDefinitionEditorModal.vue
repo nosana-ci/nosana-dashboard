@@ -145,10 +145,11 @@ const jsonValid = ref(true);
 // hand back a string while the JSON has a syntax error.
 const editingJobDefinition = ref<JobDefinition | null | string>(null);
 
-// Open the modal on a snapshot of the current job definition
-function open() {
+// Open the modal on a snapshot of the current job definition, in the
+// builder unless asked for the JSON.
+function open(mode: "builder" | "json" = "builder") {
   editingJobDefinition.value = JSON.parse(JSON.stringify(props.modelValue));
-  editorMode.value = "builder";
+  editorMode.value = mode;
   isOpen.value = true;
 }
 

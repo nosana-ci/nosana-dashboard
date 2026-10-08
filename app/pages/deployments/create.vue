@@ -54,13 +54,19 @@
       :settings-note="`${strategyWindow} · ${sshSummary}`"
       @select-variant="selectVariant"
       @remove-requirement="removeRequirement"
-      @edit-job="editor?.open()"
+      @edit-job="(mode) => editor?.open(mode)"
       @deploy="deployAction.run()"
       @claim="goToClaimCredits"
       @open="openPanel"
       @close="goToStep(selectedTemplate ? 'template' : 'compute')"
       @back="goToStep('workload')"
     >
+      <template #job>
+        <DeployJobDefinitionBuilder
+          :model-value="jobDefinition"
+          @update:model-value="setJobDefinition"
+        />
+      </template>
       <template #compute>
         <DeployRequirementsSelection
           ref="requirementsEditor"
@@ -455,6 +461,17 @@ const nosApiPrice = computed(() => stats.value?.price || 0);
 
 // Job definition - will be populated when PyTorch template loads
 const jobDefinition = ref<JobDefinition | null>(null);
+// What the job still needs before it can deploy, as the deploy button's
+// label: every operation an id, every container an image.
+const jobBlocker = computed(() => {
+  const ops = jobDefinition.value?.ops ?? [];
+  if (ops.some((op) => !op.id.trim())) return "Name each operation to deploy";
+  const imageless = ops.some(
+    (op) =>
+      op.type === "container/run" && !("image" in op.args && op.args.image),
+  );
+  return imageless ? "Add an image to deploy" : null;
+});
 const sshPublicKeys = ref<string[]>([]);
 // Set by the SSH form while it cannot be used yet (e.g. private key not downloaded).
 const sshError = ref("");
@@ -705,6 +722,7 @@ const canCreateDeployment = computed(() => {
     !isBanned.value &&
     selectedMarketAddress.value !== null &&
     jobDefinition.value !== null &&
+    !jobBlocker.value &&
     deploymentName.value.trim() !== "" &&
     replicas.value > 0 &&
     timeout.value > 0 &&
@@ -947,6 +965,8 @@ const deployAction = computed(() => {
   if (!hasAnyAuth.value)
     return { label: "Log in to deploy", disabled: false, run: handleLoginClick };
   if (isBanned.value) return { label: "Deploy now", disabled: true, run: idle };
+  if (jobBlocker.value)
+    return { label: jobBlocker.value, disabled: true, run: idle };
   if (!selectedMarketAddress.value)
     return { label: "Finding a GPU…", disabled: true, run: idle };
   if (isCreditMode.value && !canPostJob.value)
@@ -1266,14 +1286,19 @@ const selectVariant = (variant: TemplateVariant) => {
 
 // Bring your own image: land on compute with an empty definition and the
 // job editor already open, so the custom route is the same page as a template.
-const editor = ref<{ open: () => void } | null>(null);
+const editor = ref<{ open: (mode?: "builder" | "json") => void } | null>(
+  null,
+);
 const configureOwnJob = async () => {
   skipTemplateAutoSelection.value = true;
   selectedTemplate.value = null;
   jobDefinition.value = JSON.parse(JSON.stringify(emptyJobDefinition));
   await goToStep("compute");
-  await nextTick();
-  editor.value?.open();
+};
+// The builder on the page edits the job live; it only hands back a string
+// while JSON is invalid, which it never does itself.
+const setJobDefinition = (value: JobDefinition | string | null) => {
+  if (typeof value !== "string") jobDefinition.value = value;
 };
 
 // Clone an existing deployment: pull its configuration into this form so it
