@@ -1,45 +1,12 @@
 <template>
-  <div class="req-layout">
-    <!-- Left card: one pill per requirement category, the GPU first -->
-    <aside class="req-nav">
-      <div
-        class="req-nav-list"
-        role="tablist"
-        aria-label="Requirements"
-        aria-orientation="vertical"
-      >
-        <button
-          v-for="category in visibleCategories"
-          :key="category.id"
-          type="button"
-          role="tab"
-          class="req-pill"
-          :class="{ 'is-active': activeCategory === category.id }"
-          :aria-selected="activeCategory === category.id"
-          @click="pickedCategory = category.id"
-        >
-          <DeployCategoryIcon :icon="category.icon" />
-          <span class="req-pill-label">{{ category.label }}</span>
-          <span v-if="categoryCounts[category.id]" class="req-badge">
-            {{ categoryCounts[category.id] }}
-          </span>
-        </button>
-      </div>
-    </aside>
-
-    <!-- Centre card: the active category's header, then the GPU list or the
-         category's controls -->
-    <section class="req-main">
-      <!-- The GPU list needs no heading (the drawer names it); the other
-           categories say what they filter. -->
-      <div v-if="!isGpuPanel || showSearch" class="req-head">
-        <div v-if="!isGpuPanel" class="req-heading">
-          <h3>{{ activePanel.label }}</h3>
-          <p v-if="PANEL_SUBTITLES[activePanel.id]">
-            {{ PANEL_SUBTITLES[activePanel.id] }}
-          </p>
-        </div>
-        <label v-if="isGpuPanel && showSearch" class="req-search">
+  <div class="req-steps">
+    <!-- Step: the GPU, which sets the market and the hourly price -->
+    <section class="deploy-step">
+      <header class="deploy-step-head">
+        <span class="deploy-step-num">{{ stepNumber(0) }}</span>
+        <h3>Choose a GPU</h3>
+        <span class="deploy-step-hint">Sets the hourly price</span>
+        <label v-if="showSearch" class="req-search deploy-step-action">
           <DeployCategoryIcon icon="search" />
           <input
             v-model="gpuQuery"
@@ -48,12 +15,9 @@
             aria-label="Search GPUs"
           />
         </label>
-      </div>
+      </header>
 
-      <div
-        :role="isGpuPanel ? 'radiogroup' : undefined"
-        :aria-label="isGpuPanel ? 'GPU' : undefined"
-      >
+      <div class="req-main" role="radiogroup" aria-label="GPU">
         <div v-if="notice" class="section-row req-notice">
           <span class="req-dot" />
           <span>{{ notice.text }}</span>
@@ -62,72 +26,112 @@
           </button>
         </div>
 
-        <template v-if="isGpuPanel">
-          <p v-if="gpuPending && !gpus.length" class="section-row req-hint">
-            Loading GPUs…
-          </p>
-          <p v-else-if="gpuError && !gpus.length" class="section-row req-hint">
-            The GPU list needs host data
-          </p>
-          <p v-else-if="!listedGpus.length" class="section-row req-hint">
-            {{ gpuQuery ? `No GPUs match “${gpuQuery}”` : "No GPUs available" }}
-          </p>
+        <p v-if="gpuPending && !gpus.length" class="section-row req-hint">
+          Loading GPUs…
+        </p>
+        <p v-else-if="gpuError && !gpus.length" class="section-row req-hint">
+          The GPU list needs host data
+        </p>
+        <p v-else-if="!listedGpus.length" class="section-row req-hint">
+          {{ gpuQuery ? `No GPUs match “${gpuQuery}”` : "No GPUs available" }}
+        </p>
 
-          <label
-            v-for="row in listedGpus"
-            :key="`${row.gpu.name}-${row.gpu.vramGb}`"
-            class="section-row gpu-row"
-            :class="{ 'is-selected': row.selected, 'is-dim': row.dim }"
+        <label
+          v-for="row in listedGpus"
+          :key="`${row.gpu.name}-${row.gpu.vramGb}`"
+          class="section-row gpu-row"
+          :class="{ 'is-selected': row.selected, 'is-dim': row.dim }"
+        >
+          <input
+            type="radio"
+            name="gpu"
+            :value="row.gpu.name"
+            :checked="row.selected"
+            :disabled="row.dim"
+            @change="selectGpu(row.gpu)"
+          />
+          <span class="req-gpu-logo" aria-hidden="true">
+            <NvidiaIcon class="req-gpu-logo-mark" />
+          </span>
+          <span class="gpu-row-text">
+            <strong>
+              {{ row.gpu.name }}
+              <span v-if="row.gpu.name === recommendedName" class="gpu-row-rec">
+                Recommended
+              </span>
+            </strong>
+            <small>{{ row.subline }}</small>
+          </span>
+          <span class="gpu-row-price">
+            <template v-if="row.price !== null">
+              ${{ row.price }}<small>/h</small>
+            </template>
+            <template v-else>—</template>
+          </span>
+        </label>
+
+        <div v-if="hiddenGpus.length" class="section-row gpu-row-hidden">
+          <span>
+            {{ hiddenGpus.length }} GPU{{
+              hiddenGpus.length === 1 ? "" : "s"
+            }}
+            hidden: below your workload's {{ requiredVramGb }} GB VRAM
+          </span>
+          <button
+            type="button"
+            class="req-link"
+            @click="showHidden = !showHidden"
           >
-            <input
-              type="radio"
-              name="gpu"
-              :value="row.gpu.name"
-              :checked="row.selected"
-              :disabled="row.dim"
-              @change="selectGpu(row.gpu)"
-            />
-            <span class="req-gpu-logo" aria-hidden="true">
-              <NvidiaIcon class="req-gpu-logo-mark" />
-            </span>
-            <span class="gpu-row-text">
-              <strong>
-                {{ row.gpu.name }}
-                <span
-                  v-if="row.gpu.name === recommendedName"
-                  class="gpu-row-rec"
-                >
-                  Recommended
-                </span>
-              </strong>
-              <small>{{ row.subline }}</small>
-            </span>
-            <span class="gpu-row-price">
-              <template v-if="row.price !== null">
-                ${{ row.price }}<small>/h</small>
-              </template>
-              <template v-else>—</template>
-            </span>
-          </label>
+            {{ showHidden ? "Hide them" : "Show them" }}
+          </button>
+        </div>
+      </div>
+    </section>
 
-          <div v-if="hiddenGpus.length" class="section-row gpu-row-hidden">
-            <span>
-              {{ hiddenGpus.length }} GPU{{
-                hiddenGpus.length === 1 ? "" : "s"
-              }}
-              hidden: below your workload's {{ requiredVramGb }} GB VRAM
-            </span>
+    <!-- Step: optional host requirements, one category at a time -->
+    <section class="deploy-step">
+      <header class="deploy-step-head">
+        <span class="deploy-step-num">{{ stepNumber(1) }}</span>
+        <h3>Add requirements</h3>
+        <span class="deploy-step-tag">Optional</span>
+      </header>
+
+      <div class="req-main">
+        <template v-if="requirementCategories.length">
+          <div class="req-tabs" role="tablist" aria-label="Requirements">
             <button
+              v-for="category in requirementCategories"
+              :key="category.id"
               type="button"
-              class="req-link"
-              @click="showHidden = !showHidden"
+              role="tab"
+              class="req-pill"
+              :class="{ 'is-active': activeCategory === category.id }"
+              :aria-selected="activeCategory === category.id"
+              @click="pickedCategory = category.id"
             >
-              {{ showHidden ? "Hide them" : "Show them" }}
+              <DeployCategoryIcon :icon="category.icon" />
+              <span class="req-pill-label">{{ category.label }}</span>
+              <span v-if="categoryCounts[category.id]" class="req-badge">
+                {{ categoryCounts[category.id] }}
+              </span>
             </button>
           </div>
+          <p
+            v-if="activeCategory && PANEL_SUBTITLES[activeCategory]"
+            class="req-subtitle"
+          >
+            {{ PANEL_SUBTITLES[activeCategory] }}
+          </p>
         </template>
+        <p v-else class="section-row req-hint">
+          {{
+            pending
+              ? "Loading host details…"
+              : "Hosts with this GPU report nothing to filter on yet."
+          }}
+        </p>
 
-        <div v-else class="req-body">
+        <div v-if="panelControls.length" class="req-body">
           <div
             v-for="control in panelControls"
             :key="control.key"
@@ -244,7 +248,6 @@ import {
   useReservationLookups,
   type GpuModel,
   type MarketRate,
-  type RequirementCategory,
   type RequirementCategoryId,
   type RequirementOption,
   type RequirementValue,
@@ -259,6 +262,8 @@ interface Props {
   requiredVramGb: number | null;
   /** The GPU the page defaults to, labelled and listed first. */
   recommendedName?: string | null;
+  /** The number of the GPU step; the hosts step follows it. */
+  firstStep?: number;
 }
 
 const props = defineProps<Props>();
@@ -271,40 +276,25 @@ const emit = defineEmits<{
 }>();
 
 const PANEL_SUBTITLES: Partial<Record<RequirementCategoryId, string>> = {
-  gpu: "The GPU sets the hourly price. Add requirements to narrow which hosts qualify.",
   compute: "Set compute related requirements for hosts.",
   network: "Where hosts are and how well they are connected.",
   storage: "Free disk the host must have for your image and model files.",
 };
 
-// The category a pill click picked, and whether the page last asked for the
-// requirements rather than the GPU list.
+// "01", "02": the steps' numbers, from where the page puts the GPU step.
+const stepNumber = (offset: number) =>
+  String((props.firstStep ?? 1) + offset).padStart(2, "0");
+
+// The requirement category a pill click picked, while it is listed; else the
+// first listed one.
 const pickedCategory = ref<RequirementCategoryId | null>(null);
-const wantsRequirements = ref(false);
-// The picked category while it is listed; otherwise, when the page asked for
-// the requirements, the first listed requirement category, else the GPU list.
-const activeCategory = computed<RequirementCategoryId>(() => {
-  const listed = visibleCategories.value.map((category) => category.id);
+const activeCategory = computed<RequirementCategoryId | null>(() => {
+  const listed = requirementCategories.value.map((category) => category.id);
   if (pickedCategory.value && listed.includes(pickedCategory.value)) {
     return pickedCategory.value;
   }
-  const first = listed.find((id) => id !== "gpu");
-  return wantsRequirements.value && first ? first : "gpu";
+  return listed[0] ?? null;
 });
-// The deploy card's GPU and Requirements lines point the selector here.
-function show(focus: "gpu" | "requirements") {
-  pickedCategory.value = null;
-  wantsRequirements.value = focus === "requirements";
-}
-defineExpose({ show });
-const activePanel = computed<RequirementCategory>(
-  () =>
-    REQUIREMENT_CATEGORIES.find(
-      (category) => category.id === activeCategory.value,
-    ) ?? { id: "gpu", label: "GPU", icon: "gpu", keys: ["name"] },
-);
-// The GPU category is the list itself; every other one is a set of controls.
-const isGpuPanel = computed(() => activePanel.value.id === "gpu");
 
 // --- GPU: picked from the catalogue, stored as the `name` requirement ---
 const {
@@ -610,15 +600,18 @@ const controlsByCategory = computed(
       ]),
     ),
 );
-const visibleCategories = computed(() =>
+// The requirement categories with something to set for this GPU's hosts.
+const requirementCategories = computed(() =>
   REQUIREMENT_CATEGORIES.filter(
     (category) =>
-      category.id === "gpu" ||
+      category.id !== "gpu" &&
       Boolean(controlsByCategory.value.get(category.id)?.length),
   ),
 );
-const panelControls = computed(
-  () => controlsByCategory.value.get(activeCategory.value) ?? [],
+const panelControls = computed(() =>
+  activeCategory.value
+    ? (controlsByCategory.value.get(activeCategory.value) ?? [])
+    : [],
 );
 
 function setRequirement(key: string, value: RequirementValue | undefined) {
@@ -734,40 +727,31 @@ const notice = computed(() => {
 $mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", Menlo,
   Consolas, monospace;
 
-// --- Two cards side by side: the category list, then the active category ---
-.req-layout {
-  display: grid;
-  grid-template-columns: 280px minmax(0, 1fr);
-  gap: 1.5rem;
-  align-items: start;
-}
-
-@media screen and (max-width: 767px) {
-  .req-layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-// --- Left card: categories ---
-.req-nav {
-  @include soft-panel;
+// --- Two steps, one under the other: the GPU list, then the host requirements ---
+.req-steps {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 0.75rem 0.5rem;
+  gap: 2rem;
 }
 
-.req-nav-list {
+// --- The requirement categories, as a row of pills over their controls ---
+.req-tabs {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 18px 18px 0;
+}
+
+.req-subtitle {
+  margin: 12px 18px 0;
+  font-size: 0.8125rem;
+  color: $text-muted;
 }
 
 .req-pill {
   display: flex;
   align-items: center;
   gap: 8px;
-  width: 100%;
   padding: 9px 12px;
   border-radius: 999px;
   border: 1px solid $border-soft;
@@ -808,44 +792,11 @@ $mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", Menlo,
   white-space: nowrap;
 }
 
-// --- Centre card: a header with a hairline under it, then rows that run
-// edge to edge (the GPU list) or a padded body (a category's controls) ---
+// --- Each step's card: rows that run edge to edge (the GPU list), or the
+// category pills over a padded body (a category's controls) ---
 .req-main {
   @include soft-panel;
   padding: 0;
-}
-
-.req-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 1.25rem 18px;
-  border-bottom: 1px solid $border-soft;
-}
-
-// On the GPU list the head holds only the search, kept to the right.
-.req-head .req-search {
-  margin-left: auto;
-}
-
-.req-heading {
-  min-width: 0;
-
-  h3 {
-    margin: 0;
-    font-family: $title-family;
-    font-weight: 600;
-    font-size: 16px;
-    letter-spacing: -0.01em;
-    color: $text;
-  }
-
-  p {
-    margin: 3px 0 0;
-    font-size: 0.8125rem;
-    color: $text-muted;
-  }
 }
 
 // --- GPU list: one row per GPU ---
@@ -1267,13 +1218,12 @@ html.dark-mode {
     color: $secondary;
   }
 
-  .req-head,
   .section-row + .req-body {
     border-color: rgba($white, 0.1);
   }
 
-  .req-heading h3 {
-    color: $white;
+  .req-subtitle {
+    color: #8a948a;
   }
 
   .gpu-row-rec {

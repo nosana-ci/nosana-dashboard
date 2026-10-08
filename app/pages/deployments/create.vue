@@ -33,7 +33,6 @@
     <DeployTemplateStep
       v-else
       :template="selectedTemplate"
-      :panel="workloadPanel"
       :job-definition="jobDefinition"
       :markets="testgridMarkets"
       :gpus="gpuCatalogue"
@@ -41,24 +40,21 @@
       :gpu="advancedGpu"
       :gpu-name="gpuName"
       :gpu-price="gpuPrice"
-      :recommended="advancedGpu?.name === recommendedGpu?.name"
       :hosts="advancedMatching"
       :requirements="requirementChips"
+      :runs="`${settingsSummary} · ${strategyWindow}`"
+      :changes="setupChanges"
+      :start-cost="startCost"
       :deploy-label="deployAction.label"
       :deploy-disabled="deployAction.disabled"
       :deploy-note="deployNote"
       :deploy-notice="deployNotice"
       :show-claim="showClaim"
-      :defaults="`${settingsSummary} · ${strategyWindow}`"
-      :settings-line="settingsSummary"
-      :settings-note="`${strategyWindow} · ${sshSummary}`"
       @select-variant="selectVariant"
-      @remove-requirement="removeRequirement"
       @edit-job="(mode) => editor?.open(mode)"
+      @reset="resetToRecommended"
       @deploy="deployAction.run()"
       @claim="goToClaimCredits"
-      @open="openPanel"
-      @close="goToStep(selectedTemplate ? 'template' : 'compute')"
       @back="goToStep('workload')"
     >
       <template #job>
@@ -67,10 +63,10 @@
           @update:model-value="setJobDefinition"
         />
       </template>
-      <template #compute>
+      <template #compute="{ firstStep }">
         <DeployRequirementsSelection
-          ref="requirementsEditor"
           v-model="advancedRequirements"
+          :first-step="firstStep"
           :markets="testgridMarkets"
           :recommended-name="recommendedGpu?.name ?? null"
           :required-vram-gb="requiredVramGb"
@@ -211,7 +207,7 @@ const { openBuyCreditsModal } = useBuyCreditsModal();
 const { openBothModal } = useLoginModal();
 const {
   save: saveDraft,
-  load: loadDraft,
+  take: takeDraft,
   clear: clearDraft,
 } = useCreateDeployDraft();
 
@@ -244,11 +240,6 @@ const advancedMatching = ref<{
   available: number;
   working: number;
 } | null>(null);
-// Each chip's × drops just that key; the GPU stays.
-const removeRequirement = (key: string) => {
-  const { [key]: _removed, ...rest } = advancedRequirements.value;
-  advancedRequirements.value = rest;
-};
 // "RTX 4090": the chosen GPU, priced at its cheapest market below.
 const gpuName = computed(
   () => (advancedGpu.value ? shortGpuName(advancedGpu.value.name) : ""),
@@ -884,7 +875,7 @@ const persistDraft = () => {
 };
 
 const restoreDraftIfNeeded = () => {
-  const draft = loadDraft();
+  const draft = takeDraft();
   if (!draft) return;
 
   // An explicit ?template= deep link always wins over a stale draft
@@ -898,8 +889,19 @@ const restoreDraftIfNeeded = () => {
       if (draft.jobDefinition) {
         jobDefinition.value = draft.jobDefinition;
         // Back from logging in: the workload page with its deploy card, no
-        // panel open (your own image shows the GPU list as its body).
-        goToStep(draft.selectedTemplate ? "template" : "compute");
+        // panel open (your own image shows the GPU list as its body). The
+        // template goes in the address too, so a reload lands back on it.
+        const restored = draft.selectedTemplate;
+        const next = restored ? "template" : "compute";
+        changeStep(next, () =>
+          router.replace({
+            query: {
+              ...route.query,
+              step: next,
+              ...(restored ? { template: String(restored.id) } : {}),
+            },
+          }),
+        );
       }
     }
     if (draft.deploymentName) deploymentName.value = draft.deploymentName;
@@ -980,33 +982,34 @@ const deployAction = computed(() => {
   if (isCreatingDeployment.value)
     return { label: "Creating…", disabled: true, run: idle };
   return {
-    label: `Deploy now · ${startCost.value} to start`,
+    label: "Deploy now",
     disabled: !canCreateDeployment.value,
     run: createDeployment,
   };
 });
 
-// Settings slides over the page; the compute editor is the page body under
-// the hero, so its lines point it at the GPU list or the requirements.
-const workloadPanel = computed(() =>
-  step.value === "settings" ? "settings" : null,
-);
-const requirementsEditor = ref<{
-  show: (focus: "gpu" | "requirements") => void;
-} | null>(null);
-const openPanel = (
-  panel: "compute" | "settings",
-  focus?: "gpu" | "requirements",
-) => {
-  if (panel === "settings") goToStep("settings");
-  else requirementsEditor.value?.show(focus ?? "gpu");
+// What differs from the recommended setup, marked in the summary: the
+// recommended GPU, no host requirements, one stateless replica.
+const setupChanges = computed(() => ({
+  gpu:
+    Boolean(advancedGpu.value && recommendedGpu.value) &&
+    advancedGpu.value?.name !== recommendedGpu.value?.name,
+  hosts: requirementChips.value.length > 0,
+  runs:
+    replicas.value !== 1 ||
+    strategy.value !== "INFINITE" ||
+    timeout.value !== INFINITE_TIMEOUT,
+}));
+// Back to all of it, so Deploy now is the one click again.
+const resetToRecommended = () => {
+  const recommended = recommendedGpu.value;
+  defaultedGpuName.value = recommended?.name ?? null;
+  advancedRequirements.value = recommended ? { name: recommended.name } : {};
+  replicas.value = 1;
+  strategy.value = "INFINITE";
+  timeout.value = INFINITE_TIMEOUT;
 };
-const sshSummary = computed(() => {
-  const count = sshPublicKeys.value.length;
-  if (count === 0) return "no SSH";
-  return count === 1 ? "1 SSH key" : `${count} SSH keys`;
-});
-// The requirements beyond the GPU, flattened into the deploy card's chips.
+// The requirements beyond the GPU, as the summary's chips.
 const requirementChips = computed(() =>
   listRequirementChips(advancedRequirements.value),
 );

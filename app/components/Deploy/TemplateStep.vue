@@ -1,7 +1,43 @@
 <template>
   <div class="template-step">
-    <!-- Hero: the chosen workload and its deploy card -->
-    <section class="deploy-surface template-hero">
+    <!-- Once the hero has scrolled away, a slim header keeps which template
+         and which variant in view. The holder takes no height. -->
+    <div class="slim-holder">
+      <Transition name="slim">
+        <div v-if="!heroInView" class="deploy-surface slim-header">
+          <span class="deploy-surface-grid" aria-hidden="true"></span>
+          <div class="slim-body">
+            <img
+              v-if="template?.icon"
+              class="slim-logo"
+              :src="template.icon"
+              alt=""
+            />
+            <span v-else class="slim-logo hero-logo-fallback">
+              <DeployCategoryIcon v-if="!template" icon="code" />
+              <template v-else>{{ title.charAt(0).toUpperCase() }}</template>
+            </span>
+            <strong class="slim-title">{{ title }}</strong>
+            <DeployVariantSelect
+              v-if="template?.variants?.length"
+              class="slim-variant"
+              surface
+              :variants="template.variants"
+              :selected="selectedVariant"
+              :label="`${title} variant`"
+              @select="emit('select-variant', $event)"
+            />
+          </div>
+        </div>
+      </Transition>
+    </div>
+
+    <!-- Hero: only the template, what it is and what it does -->
+    <section
+      ref="hero"
+      class="deploy-surface template-hero"
+      :class="{ 'has-readme': readmeHtml }"
+    >
       <span class="deploy-surface-grid" aria-hidden="true"></span>
       <div class="hero-body">
         <div class="hero-text">
@@ -31,6 +67,15 @@
             </div>
           </div>
           <p v-if="lead" class="hero-lead">{{ lead }}</p>
+          <DeployVariantSelect
+            v-if="template?.variants?.length"
+            class="hero-variant"
+            surface
+            :variants="template.variants"
+            :selected="selectedVariant"
+            :label="`${title} variant`"
+            @select="emit('select-variant', $event)"
+          />
           <div class="hero-chips">
             <span v-if="image" class="hero-chip">{{ image }}</span>
             <span v-else-if="!template" class="hero-chip is-muted">
@@ -51,106 +96,7 @@
           </div>
         </div>
 
-        <!-- The deploy card: the summary of everything chosen, and the action -->
-        <aside class="deploy-card">
-          <span class="deploy-eyebrow">Your deployment</span>
-          <DeployVariantSelect
-            v-if="template?.variants?.length"
-            surface
-            :variants="template.variants"
-            :selected="selectedVariant"
-            :label="`${title} variant`"
-            @select="emit('select-variant', $event)"
-          />
-
-          <button type="button" class="deploy-line" @click="openCompute('gpu')">
-            <template v-if="gpu">
-              <span class="deploy-gpu-logo" aria-hidden="true">
-                <NvidiaIcon class="deploy-gpu-mark" />
-              </span>
-              <span class="deploy-line-value">
-                <strong>
-                  {{ gpuName }}
-                  <span v-if="recommended" class="deploy-gpu-rec"
-                    >Recommended</span
-                  >
-                </strong>
-                <small class="is-mono">
-                  {{ gpu.vramGb }} GB ·
-                  {{ hosts?.available ?? gpu.available }} available ·
-                  {{ hosts?.working ?? gpu.working }} working
-                </small>
-              </span>
-              <span v-if="gpuPrice !== null" class="deploy-gpu-price">
-                ${{ gpuPrice.toFixed(2) }}<small>/h</small>
-              </span>
-            </template>
-            <template v-else>
-              <span class="deploy-line-label">GPU</span>
-              <span class="deploy-line-value"
-                ><small>{{ runsOn }}</small></span
-              >
-            </template>
-            <DeployCategoryIcon icon="arrow" class="deploy-line-chevron" />
-          </button>
-
-          <button
-            type="button"
-            class="deploy-line"
-            @click="openCompute('requirements')"
-          >
-            <span class="deploy-line-label">Requirements</span>
-            <span class="deploy-line-value">
-              <template v-if="requirements.length">
-                <span
-                  v-for="item in requirements"
-                  :key="item.key"
-                  class="deploy-chip"
-                >
-                  {{ item.text }}
-                </span>
-              </template>
-              <small v-else>None · add requirements</small>
-            </span>
-            <DeployCategoryIcon icon="arrow" class="deploy-line-chevron" />
-          </button>
-
-          <button
-            type="button"
-            class="deploy-line"
-            @click="emit('open', 'settings')"
-          >
-            <span class="deploy-line-label">Settings</span>
-            <span class="deploy-line-value">
-              <strong>{{ settingsLine }}</strong>
-              <small>{{ settingsNote }}</small>
-            </span>
-            <DeployCategoryIcon icon="arrow" class="deploy-line-chevron" />
-          </button>
-
-          <p v-if="deployNotice" class="deploy-notice">{{ deployNotice }}</p>
-          <p v-if="deployNote" class="deploy-note">{{ deployNote }}</p>
-          <button
-            ref="deployCta"
-            type="button"
-            class="deploy-cta"
-            :disabled="deployDisabled"
-            @click="emit('deploy')"
-          >
-            {{ deployLabel }}
-          </button>
-          <button
-            v-if="showClaim"
-            type="button"
-            class="deploy-link deploy-claim"
-            @click="emit('claim')"
-          >
-            Have a code? Claim it
-          </button>
-        </aside>
-
-        <!-- The readme, under the template's identity: cut at about the
-             card's height until opened -->
+        <!-- The readme beside it, folded until opened -->
         <div v-if="readmeHtml" class="hero-readme">
           <div
             class="hero-readme-fold"
@@ -185,36 +131,138 @@
       </div>
     </section>
 
-    <!-- The page body, under the hero: for your own image the container
-         first, then the GPU choice -->
+    <!-- Deploying: the configurator, and the summary beside it -->
     <div class="template-body">
-      <section v-if="!template" ref="inlineJob" class="job-section">
-        <header class="section-head">
-          <h3>Container</h3>
+      <div class="configurator">
+        <header class="configurator-head">
+          <h2>Customise your deployment</h2>
+          <p>
+            Everything starts on the recommended setup, ready to deploy. Change
+            only what you need.
+          </p>
+        </header>
+
+        <section v-if="!template" ref="inlineJob" class="deploy-step">
+          <header class="deploy-step-head">
+            <span class="deploy-step-num">01</span>
+            <h3>Container</h3>
+            <span class="deploy-step-hint">What runs on the GPU</span>
+            <button
+              type="button"
+              class="deploy-step-action job-json"
+              @click="emit('edit-job', 'json')"
+            >
+              Edit as JSON
+            </button>
+          </header>
+          <slot name="job" />
+        </section>
+
+        <slot name="compute" :first-step="firstComputeStep" />
+
+        <section class="deploy-step">
+          <header class="deploy-step-head">
+            <span class="deploy-step-num">{{ settingsStep }}</span>
+            <h3>How it runs</h3>
+          </header>
+          <div class="settings-panel">
+            <slot name="settings" />
+          </div>
+        </section>
+      </div>
+
+      <!-- Your deployment: the recommended setup by default, so Deploy now
+           is one click; it follows every change and sticks while you scroll -->
+      <aside class="summary-card">
+        <div class="summary-head">
+          <span class="deploy-eyebrow">Your deployment</span>
+          <span v-if="isRecommended" class="summary-rec">
+            ✓ Recommended setup
+          </span>
           <button
+            v-else
             type="button"
-            class="job-json"
-            @click="emit('edit-job', 'json')"
+            class="deploy-link summary-reset"
+            @click="emit('reset')"
           >
-            Edit as JSON
+            Reset to recommended
           </button>
-        </header>
-        <slot name="job" />
-      </section>
-      <section ref="inlineCompute">
-        <header class="section-head">
-          <h3>Choose your GPU and optional requirements</h3>
-        </header>
-        <slot name="compute" />
-      </section>
+        </div>
+        <dl class="summary-rows">
+          <div>
+            <dt>GPU</dt>
+            <dd>
+              <template v-if="gpu">
+                <b>{{ gpuName }}</b> · {{ gpu.vramGb }} GB
+              </template>
+              <template v-else>{{ runsOn }}</template>
+              <span v-if="changes.gpu" class="summary-changed">Changed</span>
+            </dd>
+          </div>
+          <div>
+            <dt>Requirements</dt>
+            <dd>
+              <template v-if="requirements.length">
+                <span
+                  v-for="item in requirements"
+                  :key="item.key"
+                  class="summary-chip"
+                  >{{ item.text }}</span
+                >
+              </template>
+              <template v-else>None</template>
+            </dd>
+          </div>
+          <div v-if="gpu">
+            <dt>Matching</dt>
+            <dd>
+              {{ hosts?.available ?? gpu.available }} available ·
+              {{ hosts?.working ?? gpu.working }} working
+            </dd>
+          </div>
+          <div>
+            <dt>Runs</dt>
+            <dd>
+              {{ runs }}
+              <span v-if="changes.runs" class="summary-changed">Changed</span>
+            </dd>
+          </div>
+        </dl>
+        <div class="summary-price">
+          <span
+            >{{ gpuPrice !== null ? `$${gpuPrice.toFixed(2)}/h · ` : "" }}to
+            start</span
+          >
+          <strong>{{ startCost }}</strong>
+        </div>
+        <p v-if="deployNotice" class="deploy-notice">{{ deployNotice }}</p>
+        <p v-if="deployNote" class="deploy-note">{{ deployNote }}</p>
+        <button
+          ref="deployCta"
+          type="button"
+          class="deploy-cta"
+          :disabled="deployDisabled"
+          @click="emit('deploy')"
+        >
+          {{ deployLabel }}
+        </button>
+        <button
+          v-if="showClaim"
+          type="button"
+          class="deploy-link deploy-claim"
+          @click="emit('claim')"
+        >
+          Have a code? Claim it
+        </button>
+      </aside>
     </div>
 
-    <!-- Once the deploy card has scrolled away, its action follows. The
-         holder keeps the bar's height at the end of the page, so the page
-         never jumps when it shows and never hides the last content. -->
+    <!-- On narrow screens the summary sits below the settings: once its
+         button is out of view, the action follows in a bar. The holder keeps
+         the bar's height at the end of the page, so nothing jumps. -->
     <div class="deploy-bar-holder">
       <Transition name="deploy-bar">
-        <div v-if="!ctaInView && !panel" class="deploy-bar">
+        <div v-if="!ctaInView" class="deploy-bar">
           <span class="deploy-bar-text">
             <strong>{{ title }}</strong>
             <small>{{ barSummary }}</small>
@@ -230,46 +278,6 @@
         </div>
       </Transition>
     </div>
-
-    <!-- Editors slide in from the right, opened from the deploy card -->
-    <Teleport to="body">
-      <Transition name="sheet">
-        <div v-if="panel" class="sheet-layer" @click.self="emit('close')">
-          <aside
-            class="sheet"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Settings"
-          >
-            <header class="sheet-head">
-              <div>
-                <h3>Settings</h3>
-                <p>
-                  How your deployment runs. The defaults suit most workloads.
-                </p>
-              </div>
-              <button
-                type="button"
-                class="sheet-close"
-                aria-label="Close"
-                @click="emit('close')"
-              >
-                ×
-              </button>
-            </header>
-            <div class="sheet-body">
-              <slot name="settings" />
-            </div>
-            <footer class="sheet-foot">
-              <span>{{ defaults }}</span>
-              <button type="button" class="sheet-done" @click="emit('close')">
-                Done
-              </button>
-            </footer>
-          </aside>
-        </div>
-      </Transition>
-    </Teleport>
   </div>
 </template>
 
@@ -290,14 +298,7 @@ import {
   type GpuModel,
   type MarketRate,
 } from "~/composables/useNodeRequirements";
-import NvidiaIcon from "@/assets/img/icons/nvidia.svg?component";
-import {
-  onKeyStroke,
-  useIntersectionObserver,
-  useResizeObserver,
-} from "@vueuse/core";
-
-type ComputeFocus = "gpu" | "requirements";
+import { useIntersectionObserver, useResizeObserver } from "@vueuse/core";
 
 const props = defineProps<{
   /** The selected template, flattened onto its variant; null for your own. */
@@ -307,47 +308,46 @@ const props = defineProps<{
   /** The GPU catalogue and the VRAM the job asks for, to price the fit. */
   gpus: GpuModel[];
   requiredVramGb: number | null;
-  /** The editor sliding in from the right, or none. */
-  panel: "settings" | null;
   /** The GPU a deploy uses, with its short name, price and live host counts. */
   gpu: GpuModel | null;
   gpuName: string;
   gpuPrice: number | null;
-  recommended: boolean;
   hosts: { available: number; working: number } | null;
-  /** The requirements set beyond the GPU, as removable chips. */
+  /** The requirements set beyond the GPU, as chips. */
   requirements: Array<{ key: string; text: string }>;
+  /** "1 replica · Stateless · 6-hour rotation": how it runs. */
+  runs: string;
+  /** What differs from the recommended setup, marked in the summary. */
+  changes: { gpu: boolean; hosts: boolean; runs: boolean };
+  /** "$0.86": what deploying costs up front. */
+  startCost: string;
   /** The deploy button and the lines around it, decided by the page. */
   deployLabel: string;
   deployDisabled: boolean;
   deployNote: string;
   deployNotice: string;
   showClaim: boolean;
-  /** "1 replica · Stateless · 6-hour rotation": what a deploy will use. */
-  defaults: string;
-  settingsLine: string;
-  settingsNote: string;
 }>();
 
 const emit = defineEmits<{
   "select-variant": [variant: TemplateVariant];
-  "remove-requirement": [key: string];
   "edit-job": [mode: "builder" | "json"];
+  /** Back to the recommended GPU, no host requirements, default settings. */
+  reset: [];
   deploy: [];
   claim: [];
-  /** The GPU and Requirements lines open the same editor at different places. */
-  open: [panel: "compute" | "settings", focus?: ComputeFocus];
-  close: [];
   back: [];
 }>();
 
-// The GPU and Requirements lines scroll to the selector under the hero; the
-// page points it at the GPU list or the requirement categories.
-const inlineCompute = ref<HTMLElement | null>(null);
-function openCompute(focus: ComputeFocus) {
-  emit("open", "compute", focus);
-  inlineCompute.value?.scrollIntoView({ behavior: "smooth", block: "start" });
-}
+// The steps are numbered; your own image starts with its container.
+const firstComputeStep = computed(() => (props.template ? 1 : 2));
+const settingsStep = computed(() =>
+  String(firstComputeStep.value + 2).padStart(2, "0"),
+);
+
+const isRecommended = computed(
+  () => !props.changes.gpu && !props.changes.hosts && !props.changes.runs,
+);
 
 // Your own image starts on the container's image field, the one thing it
 // needs before it can deploy.
@@ -360,8 +360,15 @@ onMounted(async () => {
     ?.focus({ preventScroll: true });
 });
 
-// The bar under the page shows once the card's deploy button is no longer
-// fully in view, so the action is always one click away.
+// The slim header shows once the hero has scrolled out of view.
+const hero = ref<HTMLElement | null>(null);
+const heroInView = ref(true);
+useIntersectionObserver(hero, ([entry]) => {
+  heroInView.value = entry?.isIntersecting ?? true;
+});
+
+// The bar under the page shows once the summary's deploy button is no longer
+// fully in view (on narrow screens, where the summary is not beside you).
 const deployCta = ref<HTMLElement | null>(null);
 const ctaInView = ref(true);
 useIntersectionObserver(
@@ -376,22 +383,9 @@ const barSummary = computed(() =>
     props.gpu
       ? `${props.gpuName}${props.gpuPrice !== null ? ` · $${props.gpuPrice.toFixed(2)}/h` : ""}`
       : "No GPU chosen yet",
-    props.settingsLine,
+    props.runs,
   ].join(" · "),
 );
-
-// Escape closes the panel; the page behind does not scroll while it is open.
-const { lockScroll, unlockScroll } = useModalScrollLock();
-watch(
-  () => props.panel,
-  (panel) =>
-    panel ? lockScroll("workload-panel") : unlockScroll("workload-panel"),
-  { immediate: true },
-);
-onBeforeUnmount(() => unlockScroll("workload-panel"));
-onKeyStroke("Escape", () => {
-  if (props.panel) emit("close");
-});
 
 // The flattened name carries " - <variant>"; the page names the template.
 const title = computed(() => {
@@ -463,10 +457,22 @@ const runsOn = computed(() => {
 });
 
 // The readme as HTML, without its leading "# Title" (the hero names it).
+// Without its opening paragraph, too, when that only repeats the lead under
+// the title beside it (templates often open with their own description).
 const readmeHtml = computed(() => {
-  const readme = props.template?.readme?.replace(/^\s*#\s+[^\n]*\n/, "") ?? "";
+  const body =
+    props.template?.readme?.replace(/^\s*#\s+[^\n]*\n/, "").trim() ?? "";
+  const [first = "", ...rest] = body.split(/\n\s*\n/);
+  const lede = plainText(lead.value).replace(/…$/, "");
+  const readme =
+    lede && plainText(first).startsWith(lede) ? rest.join("\n\n") : body;
   return readme.trim() ? String(marked(readme)) : "";
 });
+
+// Markdown and spacing set aside, for comparing a paragraph with the lead.
+function plainText(text: string) {
+  return text.replace(/[*_`]/g, "").replace(/\s+/g, " ").trim().toLowerCase();
+}
 
 // "12 GB VRAM": what the chosen variant asks of the GPU.
 const vram = computed(() => {
@@ -502,90 +508,100 @@ watch(
   gap: 1.75rem;
 }
 
-/* ---------- Hero: the developers-page hero ---------- */
+/* ---------- Slim header: pinned once the hero has scrolled away ---------- */
+// No height of its own, so the page never moves when the header shows.
+.slim-holder {
+  position: sticky;
+  top: 16px;
+  z-index: 6;
+  height: 0;
+}
+
+.slim-header {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  padding: 10px 12px 10px 16px;
+  border-radius: 16px;
+  box-shadow: 0 18px 40px -16px rgba(0, 0, 0, 0.85);
+}
+
+.slim-body {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.slim-logo {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: #fff;
+  object-fit: contain;
+  padding: 6px;
+  box-sizing: border-box;
+}
+
+.slim-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: $title-family;
+  font-weight: 600;
+  font-size: 17px;
+  color: #fff;
+}
+
+.slim-variant {
+  flex-shrink: 0;
+  width: min(340px, 40%);
+  margin-left: auto;
+}
+
+.slim-enter-active,
+.slim-leave-active {
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+
+.slim-enter-from,
+.slim-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+/* ---------- Hero: only the template ---------- */
 .template-hero {
-  padding: 3rem;
-  // Clipped, not a scroll container, so the deploy card can stick.
-  overflow: clip;
+  padding: 2.5rem 3rem;
   // The same name as the workload hero: switching steps morphs one into the
   // other (the transition itself is in deploy-surface.scss).
   view-transition-name: deploy-hero;
 }
 
-.template-body {
-  view-transition-name: deploy-body;
-  display: flex;
-  flex-direction: column;
-  gap: 1.75rem;
-}
-
-/* ---------- Page sections: a title over each part of the body ---------- */
-.section-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 14px;
-
-  h3 {
-    margin: 0;
-    font-family: $title-family;
-    font-weight: 600;
-    font-size: 18px;
-    letter-spacing: -0.01em;
-    color: $text;
-  }
-}
-
-.job-json {
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: $secondary-text;
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-
-  &:hover {
-    text-decoration: underline;
-  }
-}
-
-html.dark-mode {
-  .section-head h3 {
-    color: #fff;
-  }
-
-  .job-json {
-    color: $secondary;
-  }
-}
-
-// The template's identity, then its readme, beside the deploy card, which
-// spans both and sticks to the top of the window while the readme scrolls.
+// The template's identity, and its readme beside it when it has one.
 .hero-body {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(360px, 400px);
-  grid-template-areas:
-    "text card"
-    "readme card";
-  grid-template-rows: auto 1fr;
-  column-gap: 3rem;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 3rem;
+  align-items: start;
+
+  .has-readme & {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
-// Top-aligned with the deploy card: the back link starts on the line of the
-// card's "Your deployment" header, and the template info follows it.
 .hero-text {
-  grid-area: text;
   min-width: 0;
 }
 
 .hero-back {
   display: block;
-  // The deploy card's border and padding, so both start on one line.
-  margin-top: 23px;
   margin-bottom: 1.4rem;
   line-height: 1.5;
   padding: 0;
@@ -698,132 +714,35 @@ html.dark-mode {
   }
 }
 
-/* The glass deploy card */
-.deploy-card {
-  grid-area: card;
-  align-self: start;
-  position: sticky;
-  top: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 22px;
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.05);
-  box-shadow: 0 18px 40px -24px rgba(0, 0, 0, 0.8);
+// The variant, chosen with the template it belongs to.
+.hero-variant {
+  max-width: 380px;
+  margin-bottom: 1rem;
 }
 
-.deploy-eyebrow {
-  font-family: var(--mono, $family-monospace);
-  font-size: 0.7rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: $secondary;
-}
-
-.deploy-gpu-logo {
-  flex-shrink: 0;
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: #0a0c0a;
-  border: 1px solid rgba($secondary, 0.2);
-  color: $secondary;
-}
-
-.deploy-gpu-mark {
-  width: 24px;
-  height: 24px;
-  fill: currentColor;
-}
-
-.deploy-gpu-rec {
-  margin-left: 4px;
-  font-family: $family-sans-serif;
-  font-size: 11px;
-  font-weight: 600;
-  color: $secondary;
-}
-
-.deploy-gpu-price {
-  font-family: $title-family;
-  font-weight: 700;
-  font-size: 16px;
-  color: #fff;
-
-  small {
-    font-family: $family-sans-serif;
-    font-size: 11px;
-    font-weight: 400;
-    color: #8a948a;
-  }
-}
-
-.deploy-link {
-  padding: 0;
-  border: 0;
+.hero-chip.is-action {
+  border: 1px solid rgba(255, 255, 255, 0.14);
   background: transparent;
   color: $secondary;
   font-family: inherit;
-  font-size: 12.5px;
   font-weight: 600;
-  white-space: nowrap;
   cursor: pointer;
 
   &:hover {
-    color: #8bf58f;
+    border-color: $secondary;
   }
 }
 
-.deploy-cta {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
-  padding: 13px 18px;
-  border: 0;
-  border-radius: 10px;
-  background: $secondary;
-  color: #05230a;
-  font-family: inherit;
-  font-weight: 700;
-  font-size: 15px;
-  cursor: pointer;
-  box-shadow: 0 8px 24px -8px rgba($secondary, 0.6);
-  transition:
-    transform 0.15s ease,
-    box-shadow 0.2s ease;
-
-  svg {
-    width: 15px;
-    height: 15px;
-  }
-
-  &:hover:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: 0 12px 28px -8px rgba($secondary, 0.75);
-  }
-
-  &:disabled {
-    opacity: 0.55;
-    cursor: default;
-    box-shadow: none;
-  }
+.hero-logo-fallback svg {
+  width: 26px;
+  height: 26px;
 }
 
-/* ---------- Readme, in the always-dark hero ---------- */
+/* ---------- Readme, in the hero's right half ---------- */
 .hero-readme {
-  grid-area: readme;
   min-width: 0;
-  max-width: 46rem;
-  margin-top: 1.75rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  // Level with the template's name, under the back link.
+  padding-top: 2.3rem;
 }
 
 .hero-readme-fold {
@@ -954,67 +873,300 @@ html.dark-mode {
   }
 }
 
-@media screen and (max-width: 1100px) {
-  // Stacked: identity, the card, then the readme; nothing sticks.
-  .hero-body {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas:
-      "text"
-      "card"
-      "readme";
-    grid-template-rows: auto;
-    row-gap: 2rem;
+/* ---------- Body: the configurator, and the summary beside it ---------- */
+.template-body {
+  view-transition-name: deploy-body;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  gap: 28px;
+  align-items: start;
+}
+
+.configurator {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  min-width: 0;
+}
+
+.configurator-head {
+  h2 {
+    margin: 0;
+    font-family: $title-family;
+    font-weight: 600;
+    font-size: 1.5rem;
+    letter-spacing: -0.01em;
+    color: $text;
   }
 
-  .deploy-card {
-    position: static;
-  }
-
-  // Stacked, the card sits below: nothing to line up with.
-  .hero-back {
-    margin-top: 0;
+  p {
+    margin: 6px 0 0;
+    font-size: 0.9rem;
+    color: $text-muted;
   }
 }
 
-@media screen and (max-width: 768px) {
-  .template-hero {
-    padding: 2rem 1.5rem;
-  }
+.job-json {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: $secondary-text;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
 
-  .hero-title {
-    font-size: 2.1rem;
+  &:hover {
+    text-decoration: underline;
   }
 }
 
-/* ---------- Deploy card extras ---------- */
-.deploy-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 4px 2px 9px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.06);
-  font-family: var(--mono);
-  font-size: 11.5px;
-  color: #fff;
-
-  button {
-    width: 16px;
-    height: 16px;
-    padding: 0;
-    border: 0;
-    border-radius: 50%;
-    background: transparent;
-    color: #8a948a;
-    font-size: 14px;
-    line-height: 1;
-    cursor: pointer;
-
-    &:hover {
-      background: rgba(255, 255, 255, 0.1);
+html.dark-mode {
+  .configurator-head {
+    h2 {
       color: #fff;
     }
+
+    p {
+      color: #8a948a;
+    }
+  }
+
+  .job-json {
+    color: $secondary;
+  }
+}
+
+.settings-panel {
+  @include soft-panel;
+  padding: 1.5rem;
+}
+
+/* ---------- The summary: your deployment, on the same panel as the steps ---------- */
+.summary-card {
+  @include soft-panel;
+  // Under the slim header, which pins at the top while the settings scroll.
+  position: sticky;
+  top: 96px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 22px;
+  overflow: visible;
+}
+
+.summary-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.summary-rec {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba($secondary, 0.12);
+  color: $secondary-text;
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+// A quiet way back, not a second call to action.
+.deploy-link.summary-reset {
+  color: $text-muted;
+
+  &:hover {
+    color: $text;
+  }
+}
+
+.summary-rows {
+  margin: 0;
+
+  > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 9px 0;
+    border-top: 1px solid $border-soft;
+    font-size: 13.5px;
+
+    &:first-child {
+      padding-top: 0;
+      border-top: 0;
+    }
+  }
+
+  dt {
+    flex-shrink: 0;
+    color: $text-muted;
+  }
+
+  dd {
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 4px;
+    text-align: right;
+    color: $text;
+
+    b {
+      font-weight: 600;
+    }
+  }
+}
+
+.summary-chip {
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 1px solid $border-soft;
+  background: $surface-sunken;
+  font-family: $family-monospace;
+  font-size: 11.5px;
+}
+
+.summary-changed {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(255, 170, 30, 0.16);
+  color: #9a5b00;
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+.summary-price {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid $border-soft;
+
+  span {
+    color: $text-muted;
+    font-size: 13px;
+  }
+
+  strong {
+    font-family: $title-family;
+    font-weight: 700;
+    font-size: 1.6rem;
+    color: $text;
+  }
+}
+
+html.dark-mode {
+  .summary-rec {
+    color: $secondary;
+  }
+
+  .deploy-link.summary-reset {
+    color: #8a948a;
+
+    &:hover {
+      color: #fff;
+    }
+  }
+
+  .summary-rows {
+    > div {
+      border-color: rgba(255, 255, 255, 0.08);
+    }
+
+    dt {
+      color: #8a948a;
+    }
+
+    dd {
+      color: #fff;
+    }
+  }
+
+  .summary-chip {
+    border-color: rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.06);
+    color: #fff;
+  }
+
+  .summary-changed {
+    background: rgba(255, 190, 60, 0.14);
+    color: #ffc24a;
+  }
+
+  .summary-price {
+    border-color: rgba(255, 255, 255, 0.08);
+
+    span {
+      color: #8a948a;
+    }
+
+    strong {
+      color: #fff;
+    }
+  }
+}
+
+.deploy-eyebrow {
+  font-family: var(--mono, $family-monospace);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: $secondary-text;
+}
+
+.deploy-link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: $secondary-text;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.deploy-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 13px 18px;
+  border: 0;
+  border-radius: 10px;
+  background: $secondary;
+  color: #05230a;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  box-shadow: 0 8px 24px -8px rgba($secondary, 0.6);
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.2s ease;
+
+  svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 28px -8px rgba($secondary, 0.75);
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: default;
+    box-shadow: none;
   }
 }
 
@@ -1028,271 +1180,71 @@ html.dark-mode {
 .deploy-notice {
   padding: 8px 10px;
   border-radius: 8px;
-  background: rgba(255, 181, 71, 0.1);
-  border: 1px solid rgba(255, 181, 71, 0.3);
-  color: #ffd38a;
+  background: rgba(255, 181, 71, 0.12);
+  border: 1px solid rgba(255, 181, 71, 0.4);
+  color: #8a5300;
 }
 
 .deploy-note {
-  color: #d7e0d7;
+  color: $text-muted;
+}
+
+html.dark-mode {
+  .deploy-eyebrow,
+  .deploy-link {
+    color: $secondary;
+  }
+
+  .deploy-notice {
+    background: rgba(255, 181, 71, 0.1);
+    border-color: rgba(255, 181, 71, 0.3);
+    color: #ffd38a;
+  }
+
+  .deploy-note {
+    color: #d7e0d7;
+  }
 }
 
 .deploy-claim {
   align-self: center;
 }
 
-.hero-chip.is-action {
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: transparent;
-  color: $secondary;
-  font-family: inherit;
-  font-weight: 600;
-  cursor: pointer;
+@media screen and (max-width: 1100px) {
+  // Stacked: the hero's readme under the identity, the summary under the
+  // settings (the bar carries the action there).
+  .hero-body,
+  .has-readme .hero-body,
+  .template-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
 
-  &:hover {
-    border-color: $secondary;
+  .hero-readme {
+    padding-top: 0;
+  }
+
+  .summary-card {
+    position: static;
+  }
+
+  .slim-variant {
+    display: none;
   }
 }
 
-.hero-logo-fallback svg {
-  width: 26px;
-  height: 26px;
-}
-
-/* ---------- Deploy card lines: each opens its editor ---------- */
-.deploy-line {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  box-sizing: border-box;
-  padding: 11px 12px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(0, 0, 0, 0.28);
-  color: #fff;
-  font-family: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition:
-    border-color 0.2s ease,
-    background-color 0.2s ease;
-
-  &:hover,
-  &:focus-visible {
-    border-color: $secondary;
-    background: rgba($secondary, 0.06);
-    outline: none;
-
-    .deploy-line-chevron {
-      color: $secondary;
-      transform: translateX(2px);
-    }
-  }
-}
-
-.deploy-line-label {
-  flex-shrink: 0;
-  width: 92px;
-  font-size: 12px;
-  color: #8a948a;
-}
-
-.deploy-line-value {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px;
-  flex: 1;
-  min-width: 0;
-
-  strong {
-    display: block;
-    width: 100%;
-    font-family: $title-family;
-    font-weight: 600;
-    font-size: 14.5px;
-    color: #fff;
+@media screen and (max-width: 768px) {
+  .template-hero {
+    padding: 2rem 1.5rem;
   }
 
-  small {
-    display: block;
-    width: 100%;
-    font-size: 12px;
-    color: #8a948a;
-
-    &.is-mono {
-      font-family: var(--mono);
-      font-size: 11.5px;
-    }
-  }
-}
-
-.deploy-line-chevron {
-  flex-shrink: 0;
-  font-size: 15px;
-  color: #6f7a6e;
-  transition:
-    color 0.2s ease,
-    transform 0.2s ease;
-}
-
-/* ---------- Slide-over editors ---------- */
-.sheet-layer {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
-  display: flex;
-  justify-content: flex-end;
-  background: rgba(0, 0, 0, 0.55);
-}
-
-.sheet {
-  display: flex;
-  flex-direction: column;
-  width: min(720px, 100vw);
-  height: 100%;
-  background: $white;
-  border-left: 1px solid $border-soft;
-  box-shadow: -30px 0 60px -20px rgba(0, 0, 0, 0.35);
-}
-
-.sheet-head {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 22px 26px;
-  border-bottom: 1px solid $border-soft;
-
-  h3 {
-    margin: 0;
-    font-family: $title-family;
-    font-weight: 600;
-    font-size: 20px;
-    color: $text;
-  }
-
-  p {
-    margin: 2px 0 0;
-    font-size: 13px;
-    color: $text-muted;
-  }
-}
-
-.sheet-close {
-  margin-left: auto;
-  width: 32px;
-  height: 32px;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: $text-muted;
-  font-size: 22px;
-  line-height: 1;
-  cursor: pointer;
-
-  &:hover {
-    background: $surface-hover;
-    color: $text;
-  }
-}
-
-.sheet-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 22px 26px;
-}
-
-.sheet-foot {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px 26px;
-  border-top: 1px solid $border-soft;
-  background: $surface-sunken;
-
-  span {
-    min-width: 0;
-    font-size: 13px;
-    color: $text-muted;
-  }
-}
-
-.sheet-done {
-  margin-left: auto;
-  flex-shrink: 0;
-  padding: 11px 24px;
-  border: 0;
-  border-radius: 10px;
-  background: $text;
-  color: $white;
-  font-family: inherit;
-  font-weight: 700;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.sheet-enter-active,
-.sheet-leave-active {
-  transition: background-color 0.25s ease;
-
-  .sheet {
-    transition: transform 0.25s ease;
-  }
-}
-
-.sheet-enter-from,
-.sheet-leave-to {
-  background: rgba(0, 0, 0, 0);
-
-  .sheet {
-    transform: translateX(100%);
-  }
-}
-
-html.dark-mode {
-  .sheet {
-    background: #1c1c1c;
-    border-color: rgba($white, 0.1);
-  }
-
-  .sheet-head {
-    border-color: rgba($white, 0.1);
-
-    h3 {
-      color: $white;
-    }
-
-    p {
-      color: #8a948a;
-    }
-  }
-
-  .sheet-close:hover {
-    background: rgba($white, 0.06);
-    color: $white;
-  }
-
-  .sheet-foot {
-    background: #191919;
-    border-color: rgba($white, 0.1);
-
-    span {
-      color: #8a948a;
-    }
-  }
-
-  .sheet-done {
-    background: $white;
-    color: #000;
+  .hero-title {
+    font-size: 2.1rem;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sheet-enter-active,
-  .sheet-leave-active,
-  .sheet-enter-active .sheet,
-  .sheet-leave-active .sheet {
+  .slim-enter-active,
+  .slim-leave-active {
     transition: none;
   }
 }

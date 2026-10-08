@@ -93,3 +93,68 @@
     animation: none !important;
   }
 }
+
+/* ---------- Configurator steps ----------
+   The numbered headings of the deploy configurator: shared by the template
+   page (container, how it runs) and the requirements selector (GPU, hosts). */
+.deploy-step-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin-bottom: 14px;
+
+  h3 {
+    margin: 0;
+    font-family: $title-family;
+    font-weight: 600;
+    font-size: 18px;
+    letter-spacing: -0.01em;
+    color: $text;
+  }
+}
+
+.deploy-step-num {
+  font-family: $family-monospace;
+  font-size: 13px;
+  color: $secondary-text;
+}
+
+.deploy-step-hint {
+  font-size: 13px;
+  color: $text-muted;
+}
+
+.deploy-step-tag {
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 1px solid $border-soft;
+  font-size: 11px;
+  font-weight: 600;
+  color: $text-muted;
+}
+
+// Pushed to the end of the heading, e.g. "Edit as JSON" or the GPU search.
+.deploy-step-action {
+  margin-left: auto;
+  align-self: center;
+}
+
+html.dark-mode {
+  .deploy-step-head h3 {
+    color: #fff;
+  }
+
+  .deploy-step-num {
+    color: $secondary;
+  }
+
+  .deploy-step-hint {
+    color: #8a948a;
+  }
+
+  .deploy-step-tag {
+    border-color: rgba(255, 255, 255, 0.14);
+    color: #b5b5b5;
+  }
+}
