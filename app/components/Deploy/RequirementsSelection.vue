@@ -521,17 +521,19 @@ function cudaVersions(option: RequirementOption): string[] {
   );
 }
 
-// The slider runs continuously from "Any" to the highest reported value;
-// wide ranges move in coarser steps so a drag lands on round numbers.
-function sliderMax(option: RequirementOption): number {
-  const top = option.max ?? 0;
-  return top > 0 ? Math.ceil(top) : 0;
+// The slider runs continuously from "Any" to the highest reported value,
+// rounded DOWN to its step: a minimum above every host matches none, so the
+// end of the slider must always be one the best host meets (62.5 GB of RAM
+// gives 62, not 63). Wide ranges move in coarser steps so a drag lands on
+// round numbers.
+function sliderStep(top: number): number {
+  if (top > 2000) return 50;
+  if (top > 500) return 10;
+  return 1;
 }
 
-function sliderStep(max: number): number {
-  if (max > 2000) return 50;
-  if (max > 500) return 10;
-  return 1;
+function sliderMax(option: RequirementOption, step: number): number {
+  return Math.floor((option.max ?? 0) / step) * step;
 }
 
 const numberFormat = new Intl.NumberFormat("en-US");
@@ -574,14 +576,15 @@ function buildControl(option: RequirementOption): Control | null {
     return segments.length ? { ...base, kind: "segments", segments } : null;
   }
   if (option.match === "minimum" && option.type !== "text") {
-    const max = sliderMax(option);
+    const step = sliderStep(option.max ?? 0);
+    const max = sliderMax(option, step);
     return max > 0
       ? {
           ...base,
           kind: "slider",
           unit: text.unit ?? "",
           max,
-          step: sliderStep(max),
+          step,
           ticks: sliderTicks(max, option.key !== "ping_ms"),
         }
       : null;
