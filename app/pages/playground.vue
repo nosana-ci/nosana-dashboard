@@ -7,7 +7,31 @@
     />
 
     <div
-      v-if="isAuthenticated"
+      v-if="isAuthenticated && nosaEnabled"
+      class="seg-tabs mb-4"
+      role="group"
+      aria-label="Playground"
+    >
+      <button
+        v-for="option in TABS"
+        :key="option.id"
+        type="button"
+        :class="{ 'is-active': tab === option.id }"
+        :aria-pressed="tab === option.id"
+        @click="tab = option.id"
+      >
+        {{ option.label }}
+      </button>
+    </div>
+
+    <div v-if="isAuthenticated && tab === 'nosa'" class="playground">
+      <div class="playground-chat">
+        <NosaChat />
+      </div>
+    </div>
+
+    <div
+      v-else-if="isAuthenticated"
       class="playground"
       :class="{ 'has-details': docked }"
     >
@@ -95,6 +119,7 @@ import {
 } from "~/composables/useLlmGateway";
 
 const { isAuthenticated } = useSuperTokens();
+const { enabled: nosaEnabled } = useNosa();
 const route = useRoute();
 const router = useRouter();
 
@@ -131,6 +156,16 @@ const DOCK = { settings: "#playground-settings", code: "#playground-code" };
 const isWide = useMediaQuery("(min-width: 1216px)");
 const showDetails = useLocalStorage("playground-details", true);
 const docked = computed(() => isWide.value && showDetails.value);
+
+// Nosa only appears where the dashboard is configured with its URL.
+const TABS = [
+  { id: "models", label: "Models" },
+  { id: "nosa", label: "Nosa" },
+] as const;
+const tab = computed({
+  get: () => (nosaEnabled && route.query.tab === "nosa" ? "nosa" : "models"),
+  set: (value) => router.replace({ query: { ...route.query, tab: value === "nosa" ? "nosa" : undefined } }),
+});
 
 // Keep the model in the URL so a playground link can be shared.
 watch(playgroundModel, (model) => {
