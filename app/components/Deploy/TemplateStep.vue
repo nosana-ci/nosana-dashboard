@@ -54,22 +54,14 @@
         <!-- The deploy card: the summary of everything chosen, and the action -->
         <aside class="deploy-card">
           <span class="deploy-eyebrow">Your deployment</span>
-          <label v-if="template?.variants?.length" class="deploy-field">
-            <span>Variant</span>
-            <select
-              :value="selectedVariantId"
-              aria-label="Variant"
-              @change="chooseVariant"
-            >
-              <option
-                v-for="variant in template.variants"
-                :key="variant.id"
-                :value="variant.id"
-              >
-                {{ variantLabel(variant) }}
-              </option>
-            </select>
-          </label>
+          <DeployVariantSelect
+            v-if="template?.variants?.length"
+            surface
+            :variants="template.variants"
+            :selected="selectedVariant"
+            :label="`${title} variant`"
+            @select="emit('select-variant', $event)"
+          />
 
           <button type="button" class="deploy-line" @click="openCompute('gpu')">
             <template v-if="gpu">
@@ -290,7 +282,6 @@ import {
   templateDockerImage,
   templateReadmeSnippet,
   templateTags,
-  variantLabel,
   type Template,
   type TemplateVariant,
 } from "~/composables/useTemplates";
@@ -446,19 +437,10 @@ const ports = computed(() =>
   }),
 );
 
-const selectedVariantId = computed(
-  () =>
-    props.template?.selectedVariant?.id ?? props.template?.variants?.[0]?.id,
+// The variant the template was flattened onto, else its first.
+const selectedVariant = computed(
+  () => props.template?.selectedVariant ?? props.template?.variants?.[0],
 );
-
-function chooseVariant(event: Event) {
-  if (!(event.target instanceof HTMLSelectElement)) return;
-  const id = event.target.value;
-  const variant = props.template?.variants?.find(
-    (candidate) => candidate.id === id,
-  );
-  if (variant) emit("select-variant", variant);
-}
 
 // Before a GPU resolves: "GPUs with 12 GB VRAM or more · from $0.14/h".
 const cheapestFit = computed(() => {
@@ -738,40 +720,6 @@ html.dark-mode {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: $secondary;
-}
-
-.deploy-field {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  height: 2.75rem;
-  padding: 0 12px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.05);
-
-  span {
-    font-size: 12px;
-    color: #8a948a;
-  }
-
-  select {
-    flex: 1;
-    min-width: 0;
-    border: 0;
-    outline: none;
-    background: transparent;
-    color: #fff;
-    color-scheme: dark;
-    font-family: inherit;
-    font-size: 14px;
-    cursor: pointer;
-  }
-
-  &:focus-within {
-    border-color: $secondary;
-    box-shadow: 0 0 0 3px rgba($secondary, 0.18);
-  }
 }
 
 .deploy-gpu-logo {

@@ -54,22 +54,14 @@
       <p v-if="tileSummary(template)" class="tile-desc">
         {{ tileSummary(template) }}
       </p>
-      <label v-if="template.variants?.length" class="tile-variant">
-        <span>Variant</span>
-        <select
-          :value="chosenVariant(template)?.variant_id"
-          :aria-label="`${template.name} variant`"
-          @change="chooseVariant(template, $event)"
-        >
-          <option
-            v-for="variant in template.variants"
-            :key="variant.variant_id"
-            :value="variant.variant_id"
-          >
-            {{ variantLabel(variant) }}
-          </option>
-        </select>
-      </label>
+      <DeployVariantSelect
+        v-if="template.variants?.length"
+        class="tile-variant"
+        :variants="template.variants"
+        :selected="chosenVariant(template)"
+        :label="`${template.name} variant`"
+        @select="chooseVariant(template, $event)"
+      />
       <span class="tile-foot">
         <span>{{ tileImage(template) }}</span>
         <span>{{ tileVram(template) }}</span>
@@ -87,7 +79,6 @@ import {
   templateDockerImage,
   templateReadmeSnippet,
   templateTags,
-  variantLabel,
   withVariant,
   type Template,
   type TemplateVariant,
@@ -148,11 +139,10 @@ const chosenVariant = (template: Template): TemplateVariant | undefined => {
   );
 };
 
-const chooseVariant = (template: Template, event: Event) => {
-  if (!(event.target instanceof HTMLSelectElement)) return;
+const chooseVariant = (template: Template, variant: TemplateVariant) => {
   selectedVariants.value = {
     ...selectedVariants.value,
-    [String(template.id)]: event.target.value,
+    [String(template.id)]: variant.variant_id,
   };
 };
 
@@ -279,28 +269,6 @@ const pick = (template: Template) => {
   position: relative;
   z-index: 1;
   margin-top: auto;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 0 10px;
-  border-radius: 9px;
-  border: 1px solid $border-soft;
-  background: $surface-sunken;
-  font-size: 12px;
-  color: $text-muted;
-
-  select {
-    flex: 1;
-    min-width: 0;
-    padding: 7px 0;
-    border: 0;
-    background: transparent;
-    color: $text;
-    font-family: inherit;
-    font-size: 13px;
-    outline: none;
-    cursor: pointer;
-  }
 }
 
 .tile-identity {
@@ -444,17 +412,6 @@ html.dark-mode {
 
   .tile-desc {
     color: #b5b5b5;
-  }
-
-  .tile-variant {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: rgba(255, 255, 255, 0.12);
-    color: #8a948a;
-
-    select {
-      color: #fff;
-      color-scheme: dark;
-    }
   }
 
   .tile-foot {

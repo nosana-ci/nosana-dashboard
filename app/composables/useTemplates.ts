@@ -163,12 +163,6 @@ export const templateReadmeSnippet = (template: Template): string | null => {
     : paragraph
 }
 
-/** "Flux Schnell · 12 GB VRAM", or just the name when the variant states no VRAM. */
-export const variantLabel = (variant: TemplateVariant): string => {
-  const mb = requiredVramMb(variant.jobDefinition)
-  return mb ? `${variant.name} · ${formatVram(mb)}` : variant.name
-}
-
 /** A template flattened onto one of its variants, the shape the create flow works with. */
 export const withVariant = (template: Template, variant: TemplateVariant): Template => ({
   ...template,

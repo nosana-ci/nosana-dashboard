@@ -72,25 +72,15 @@
             </span>
           </span>
           <div class="featured-foot">
-            <label
+            <DeployVariantSelect
               v-if="featuredTemplate.variants?.length"
               class="featured-variant"
-            >
-              <span>Variant</span>
-              <select
-                :value="featuredVariant?.variant_id"
-                :aria-label="`${featuredTemplate.name} variant`"
-                @change="chooseFeaturedVariant"
-              >
-                <option
-                  v-for="variant in featuredTemplate.variants"
-                  :key="variant.variant_id"
-                  :value="variant.variant_id"
-                >
-                  {{ variantLabel(variant) }}
-                </option>
-              </select>
-            </label>
+              surface
+              :variants="featuredTemplate.variants"
+              :selected="featuredVariant"
+              :label="`${featuredTemplate.name} variant`"
+              @select="featuredVariantId = $event.variant_id"
+            />
             <button
               type="button"
               class="featured-cta"
@@ -159,7 +149,6 @@ import {
   descriptiveTags,
   templateReadmeSnippet,
   templateTags,
-  variantLabel,
   withVariant,
   type Template,
   type TemplateVariant,
@@ -232,11 +221,6 @@ const featuredVariant = computed<TemplateVariant | undefined>(
       (variant) => variant.variant_id === featuredVariantId.value,
     ) ?? featuredTemplate.value?.variants?.[0],
 );
-
-const chooseFeaturedVariant = (event: Event) => {
-  if (!(event.target instanceof HTMLSelectElement)) return;
-  featuredVariantId.value = event.target.value;
-};
 
 const pickFeatured = (): Template => {
   const template = featuredTemplate.value;
@@ -503,45 +487,10 @@ const statusLabel = (status: ListedDeployment["status"]): string =>
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+// The variant picker takes the room left of the Use template button.
 .featured-variant {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 38px;
+  flex: 1;
   min-width: 0;
-  padding: 0 12px;
-  border-radius: 9px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.05);
-
-  > span {
-    padding-top: 2.5px;
-    font-family: var(--mono);
-    font-size: 0.65rem;
-    line-height: 1;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: #7c877b;
-  }
-
-  // Let the select keep its own height and be centred by the flex row;
-  // forcing a height makes browsers pin the text to the top.
-  select {
-    align-self: center;
-    height: auto;
-    min-width: 0;
-    padding: 0;
-    margin: 0;
-    border: 0;
-    outline: none;
-    background: transparent;
-    color: #fff;
-    color-scheme: dark;
-    font-family: $family-sans-serif;
-    font-size: 13.5px;
-    line-height: normal;
-    cursor: pointer;
-  }
 }
 
 .featured-cta {
