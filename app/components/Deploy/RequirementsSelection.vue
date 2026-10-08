@@ -5,16 +5,32 @@
       <header class="deploy-step-head">
         <span class="deploy-step-num">{{ stepNumber(0) }}</span>
         <h3>Choose a GPU</h3>
-        <span class="deploy-step-hint">Sets the hourly price</span>
-        <label v-if="showSearch" class="req-search deploy-step-action">
-          <DeployCategoryIcon icon="search" />
-          <input
-            v-model="gpuQuery"
-            type="search"
-            placeholder="Search GPUs"
-            aria-label="Search GPUs"
-          />
-        </label>
+        <div class="req-toolbar deploy-step-action">
+          <label class="req-search">
+            <DeployCategoryIcon icon="search" />
+            <input
+              v-model="gpuQuery"
+              type="search"
+              placeholder="Search GPUs"
+              aria-label="Search GPUs"
+            />
+          </label>
+          <label class="req-search req-sort">
+            <span class="req-sort-prefix">Sort</span>
+            <select v-model="gpuSort" aria-label="Sort GPUs">
+              <option
+                v-for="sort in GPU_SORTS"
+                :key="sort.value"
+                :value="sort.value"
+              >
+                {{ sort.label }}
+              </option>
+            </select>
+            <svg class="req-caret" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m6 9 6 6 6-6" />
+            </svg>
+          </label>
+        </div>
       </header>
 
       <div class="req-main" role="radiogroup" aria-label="GPU">
@@ -330,6 +346,8 @@ interface GpuRow {
   subline: string;
   /** Hourly USD, formatted; null when none of its markets is priced. */
   price: string | null;
+  /** The same, as a number for sorting. */
+  usd: number | null;
   /** Below the workload's VRAM: listed only on request, never selectable. */
   dim: boolean;
   selected: boolean;
@@ -356,6 +374,7 @@ const gpuRows = computed<GpuRow[]>(() =>
           ? `below ${required} GB VRAM`
           : `${gpu.vramGb} GB · ${gpu.available} available · ${gpu.working} working`,
         price: usd === null ? null : usd.toFixed(2),
+        usd,
         dim,
         selected: gpu.name === selectedGpuName.value,
       };
@@ -366,17 +385,66 @@ const gpuRows = computed<GpuRow[]>(() =>
 const compatibleGpus = computed(() => gpuRows.value.filter((row) => !row.dim));
 const hiddenGpus = computed(() => gpuRows.value.filter((row) => row.dim));
 
-// A search field only once the list is long; the query never applies without it.
-const showSearch = computed(() => compatibleGpus.value.length > 12);
+// --- Sorting the list, as on the Markets tab ---
+type GpuSort =
+  | "recommended"
+  | "series"
+  | "price-asc"
+  | "price-desc"
+  | "vram-desc"
+  | "vram-asc"
+  | "available";
 
-// The recommended GPU first, then the other compatible rows, then the hidden
-// ones once revealed.
+const GPU_SORTS: Array<{ value: GpuSort; label: string }> = [
+  { value: "recommended", label: "Recommended" },
+  { value: "series", label: "GPU series" },
+  { value: "price-asc", label: "Price: low to high" },
+  { value: "price-desc", label: "Price: high to low" },
+  { value: "vram-desc", label: "VRAM: high to low" },
+  { value: "vram-asc", label: "VRAM: low to high" },
+  { value: "available", label: "Most available" },
+];
+const gpuSort = ref<GpuSort>("recommended");
+
+// Prices compared in either direction; an unpriced GPU always goes last.
+function byPrice(a: GpuRow, b: GpuRow, direction: 1 | -1) {
+  if (a.usd === null || b.usd === null) {
+    return Number(a.usd === null) - Number(b.usd === null);
+  }
+  return (a.usd - b.usd) * direction;
+}
+
+// By model: 3060 < 3070 < 4090, datacenter cards after, then by name.
+function bySeries(a: GpuRow, b: GpuRow) {
+  return (
+    gpuModelRank(a.gpu.name) - gpuModelRank(b.gpu.name) ||
+    a.gpu.name.localeCompare(b.gpu.name)
+  );
+}
+
+// Each sort orders by exactly what it names; ties fall back to the series.
+const SORTERS: Record<GpuSort, (a: GpuRow, b: GpuRow) => number> = {
+  // The recommended GPU first, then those with a host free now, by series.
+  recommended: (a, b) =>
+    Number(b.gpu.name === props.recommendedName) -
+      Number(a.gpu.name === props.recommendedName) || compareGpus(a, b),
+  series: () => 0,
+  "price-asc": (a, b) => byPrice(a, b, 1),
+  "price-desc": (a, b) => byPrice(a, b, -1),
+  "vram-desc": (a, b) => b.gpu.vramGb - a.gpu.vramGb,
+  "vram-asc": (a, b) => a.gpu.vramGb - b.gpu.vramGb,
+  // Most hosts free now first, then most coming back as jobs finish.
+  available: (a, b) =>
+    b.gpu.available - a.gpu.available || b.gpu.working - a.gpu.working,
+};
+
+// The compatible rows in the chosen order, then the hidden ones once
+// revealed, all narrowed by the search.
 const listedGpus = computed(() => {
-  const query = showSearch.value ? gpuQuery.value.trim().toLowerCase() : "";
+  const query = gpuQuery.value.trim().toLowerCase();
+  const sorter = SORTERS[gpuSort.value];
   const compatible = [...compatibleGpus.value].sort(
-    (a, b) =>
-      Number(b.gpu.name === props.recommendedName) -
-      Number(a.gpu.name === props.recommendedName),
+    (a, b) => sorter(a, b) || bySeries(a, b),
   );
   const shown = showHidden.value
     ? [...compatible, ...hiddenGpus.value]
@@ -987,6 +1055,44 @@ $mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", Menlo,
 }
 
 // The slim search on the right of the centre card's header
+// Search and sort, at the end of the GPU step's heading.
+.req-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+// The sort reuses the search field's pill; sized to its choice instead.
+.req-search.req-sort {
+  position: relative;
+  width: auto;
+  padding-right: 0;
+
+  select {
+    appearance: none;
+    padding: 0.5625rem 2rem 0.5625rem 0;
+    border: 0;
+    background: transparent;
+    outline: none;
+    font-family: inherit;
+    font-size: 0.84rem;
+    font-weight: 600;
+    color: $text;
+    cursor: pointer;
+  }
+
+  .req-caret {
+    right: 0.75rem;
+  }
+}
+
+.req-sort-prefix {
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: $text-muted;
+}
+
 .req-search {
   display: flex;
   align-items: center;

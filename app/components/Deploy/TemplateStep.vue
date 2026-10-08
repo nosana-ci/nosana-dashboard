@@ -136,10 +136,6 @@
       <div class="configurator">
         <header class="configurator-head">
           <h2>Customise your deployment</h2>
-          <p>
-            Everything starts on the recommended setup, ready to deploy. Change
-            only what you need.
-          </p>
         </header>
 
         <section v-if="!template" ref="inlineJob" class="deploy-step">
@@ -199,18 +195,15 @@
               <span v-if="changes.gpu" class="summary-changed">Changed</span>
             </dd>
           </div>
-          <div>
+          <div v-if="requirements.length">
             <dt>Requirements</dt>
             <dd>
-              <template v-if="requirements.length">
-                <span
-                  v-for="item in requirements"
-                  :key="item.key"
-                  class="summary-chip"
-                  >{{ item.text }}</span
-                >
-              </template>
-              <template v-else>None</template>
+              <span
+                v-for="item in requirements"
+                :key="item.key"
+                class="summary-chip"
+                >{{ item.text }}</span
+              >
             </dd>
           </div>
           <div v-if="gpu">
@@ -229,11 +222,8 @@
           </div>
         </dl>
         <div class="summary-price">
-          <span
-            >{{ gpuPrice !== null ? `$${gpuPrice.toFixed(2)}/h · ` : "" }}to
-            start</span
-          >
-          <strong>{{ startCost }}</strong>
+          <span>Price</span>
+          <strong>{{ hourlyCost }}<small>/h</small></strong>
         </div>
         <p v-if="deployNotice" class="deploy-notice">{{ deployNotice }}</p>
         <p v-if="deployNote" class="deploy-note">{{ deployNote }}</p>
@@ -319,8 +309,8 @@ const props = defineProps<{
   runs: string;
   /** What differs from the recommended setup, marked in the summary. */
   changes: { gpu: boolean; hosts: boolean; runs: boolean };
-  /** "$0.86": what deploying costs up front. */
-  startCost: string;
+  /** "$0.28": every replica's hourly price together. */
+  hourlyCost: string;
   /** The deploy button and the lines around it, decided by the page. */
   deployLabel: string;
   deployDisabled: boolean;
@@ -898,12 +888,6 @@ watch(
     letter-spacing: -0.01em;
     color: $text;
   }
-
-  p {
-    margin: 6px 0 0;
-    font-size: 0.9rem;
-    color: $text-muted;
-  }
 }
 
 .job-json {
@@ -922,14 +906,8 @@ watch(
 }
 
 html.dark-mode {
-  .configurator-head {
-    h2 {
-      color: #fff;
-    }
-
-    p {
-      color: #8a948a;
-    }
+  .configurator-head h2 {
+    color: #fff;
   }
 
   .job-json {
@@ -1055,6 +1033,13 @@ html.dark-mode {
     font-weight: 700;
     font-size: 1.6rem;
     color: $text;
+
+    small {
+      font-family: $family-sans-serif;
+      font-size: 0.8rem;
+      font-weight: 400;
+      color: $text-muted;
+    }
   }
 }
 

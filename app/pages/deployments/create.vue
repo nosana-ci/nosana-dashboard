@@ -44,7 +44,7 @@
       :requirements="requirementChips"
       :runs="`${settingsSummary} · ${strategyWindow}`"
       :changes="setupChanges"
-      :start-cost="startCost"
+      :hourly-cost="hourlyCost"
       :deploy-label="deployAction.label"
       :deploy-disabled="deployAction.disabled"
       :deploy-note="deployNote"
@@ -933,12 +933,9 @@ const handleLoginClick = () => {
   openBothModal(route.fullPath);
 };
 
-// What deploying costs up front: the balance check's amount, in the
-// viewer's currency.
-const startCost = computed(() =>
-  isWalletMode.value && requiredNos.value
-    ? `${requiredNosTotal.value.toFixed(3)} NOS`
-    : `$${(unitPrice.value * replicas.value * timeout.value).toFixed(2)}`,
+// What the deployment costs an hour: every replica at the GPU's price.
+const hourlyCost = computed(
+  () => `$${(unitPrice.value * replicas.value).toFixed(2)}`,
 );
 const STRATEGY_NAMES: Record<DeploymentStrategy, string> = {
   SIMPLE: "Run once",
