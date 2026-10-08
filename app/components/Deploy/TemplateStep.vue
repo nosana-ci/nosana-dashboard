@@ -170,7 +170,7 @@
         <section class="deploy-step">
           <header class="deploy-step-head">
             <span class="deploy-step-num" aria-hidden="true"></span>
-            <h3>How it runs</h3>
+            <h3>Configure settings</h3>
           </header>
           <div class="settings-panel">
             <slot name="settings" />
@@ -253,7 +253,7 @@
             </dd>
           </div>
           <div>
-            <dt>Runs</dt>
+            <dt>Strategy</dt>
             <dd>
               {{ runs }}
               <span v-if="template && changes.runs" class="summary-changed"
