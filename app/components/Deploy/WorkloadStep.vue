@@ -128,7 +128,7 @@
               All
             </button>
             <button
-              v-for="category in COMBINED_CATEGORIES"
+              v-for="category in categories"
               :key="category"
               type="button"
               class="chip"
@@ -189,22 +189,21 @@ const emit = defineEmits<{
 const search = ref("");
 const selectedCategory = ref<string | null>(null);
 
-const ALL_CATEGORIES = [
-  "LLM",
-  "LLM Fine-tuning",
-  "Image Generation",
-  "Image Generation Fine-tuning",
-] as const;
-const INTERFACE_CATEGORIES = ["API", "Website"] as const;
-const COMBINED_CATEGORIES = [
-  ...ALL_CATEGORIES,
-  ...INTERFACE_CATEGORIES,
-] as const;
-
-const getCategoryArray = (category: string | undefined): string[] =>
-  category
-    ? category.split("|").map((cat) => (cat === "Web UI" ? "Website" : cat))
-    : [];
+// The filter chips are the templates' own tags, most used first, so every
+// chip matches at least one template and a new tag shows up by itself. The
+// grouping tags (Official, Featured, ...) are left out: they do not describe
+// what a template does.
+const categories = computed(() => {
+  const counts = new Map<string, number>();
+  for (const template of props.templates) {
+    for (const tag of descriptiveTags(template)) {
+      counts.set(tag, (counts.get(tag) ?? 0) + 1);
+    }
+  }
+  return [...counts.entries()]
+    .sort(([a, x], [b, y]) => y - x || a.localeCompare(b))
+    .map(([tag]) => tag);
+});
 
 const matchesSearch = (template: Template, term: string): boolean =>
   template.name.toLowerCase().includes(term) ||
@@ -257,7 +256,7 @@ const filteredTemplates = computed(() => {
     (template) =>
       (!term || matchesSearch(template, term)) &&
       (!selectedCategory.value ||
-        getCategoryArray(template.category).includes(selectedCategory.value)),
+        templateTags(template).includes(selectedCategory.value)),
   );
 });
 
@@ -672,10 +671,11 @@ const statusLabel = (status: ListedDeployment["status"]): string =>
     color: $text;
   }
 
+  // The chosen chip lights green, like the page's actions.
   &.is-active {
-    background: $text;
-    color: $white;
-    border-color: $text;
+    background: $secondary;
+    color: #05230a;
+    border-color: $secondary;
   }
 }
 
@@ -750,9 +750,9 @@ html.dark-mode {
     }
 
     &.is-active {
-      background: #fff;
-      color: #000;
-      border-color: #fff;
+      background: $secondary;
+      color: #05230a;
+      border-color: $secondary;
     }
   }
 

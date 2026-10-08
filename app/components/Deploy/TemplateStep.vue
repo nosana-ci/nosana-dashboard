@@ -197,7 +197,7 @@
          first, then the GPU choice -->
     <div class="template-body">
       <section v-if="!template" ref="inlineJob" class="job-section">
-        <header class="job-head">
+        <header class="section-head">
           <h3>Container</h3>
           <button
             type="button"
@@ -209,9 +209,12 @@
         </header>
         <slot name="job" />
       </section>
-      <div ref="inlineCompute">
+      <section ref="inlineCompute">
+        <header class="section-head">
+          <h3>Choose your GPU and optional requirements</h3>
+        </header>
         <slot name="compute" />
-      </div>
+      </section>
     </div>
 
     <!-- Once the deploy card has scrolled away, its action follows. The
@@ -534,8 +537,8 @@ watch(
   gap: 1.75rem;
 }
 
-/* ---------- Your own image: the container, edited in place ---------- */
-.job-head {
+/* ---------- Page sections: a title over each part of the body ---------- */
+.section-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -568,7 +571,7 @@ watch(
 }
 
 html.dark-mode {
-  .job-head h3 {
+  .section-head h3 {
     color: #fff;
   }
 
