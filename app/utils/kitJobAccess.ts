@@ -45,6 +45,18 @@ export function getDeployment(
 }
 
 /**
+ * Sign every running job's node header in one request. Kit stores them, so the
+ * jobs' feeds, logs and shells reuse them instead of each asking the deployment
+ * manager for a header until they expire (~4 min).
+ */
+export async function warmJobHeaders(
+  api: NosanaApiClient,
+  deploymentId: string,
+): Promise<void> {
+  await (await getDeployment(api, deploymentId)).generateAllJobAuthHeaders();
+}
+
+/**
  * Let Kit choose the signer: the deployment manager for managed jobs, and the
  * wallet or the client manager for standalone jobs. Each connection resolves
  * its node; a node answers 401 to a caller that cannot sign for the job.

@@ -264,6 +264,7 @@ import type { JobPanelView } from "~/components/Deployment/DeploymentJobPanel.vu
 import { useKit } from "~/composables/useKit";
 import { prefetchDeploymentJob } from "~/composables/jobs/useDeploymentJob";
 import { acquireJobFeeds } from "~/composables/jobs/useJobFeeds";
+import { warmJobHeaders } from "~/utils/kitJobAccess";
 import { NULL_ADDRESS, marketName } from "~/utils/solana";
 import { useLlmEndpoint } from "~/composables/jobs/useLlmEndpoint";
 import { chatKeyStorageKey } from "~/utils/llmChat";
@@ -891,17 +892,27 @@ watch(
 
 // Keep each running job's live feeds (usage stats, node info) open while the
 // page is, so the row strip and the panel share one connection. A job that
-// stops running leaves the set and its feeds close.
+// stops running leaves the set and its feeds close. Newly running jobs get
+// their node headers signed in one bulk request before their feeds connect,
+// and the headers are re-signed before they expire while the page is open.
+const HEADER_REFRESH_MS = 4 * 60_000;
+const runningJobIds = computed(() =>
+  activeJobs.value
+    .filter(
+      (job) =>
+        getJobStateNumber(job) === 1 && !!job.node && job.node !== NULL_ADDRESS,
+    )
+    .map((job) => job.job),
+);
 const heldFeeds = new Map<string, () => void>();
+let pageClosed = false;
+const warmHeaders = (id: string) =>
+  warmJobHeaders(nosana.value.api, id).catch(() => {
+    // Each job then signs its own header on first use.
+  });
 watch(
-  () =>
-    activeJobs.value
-      .filter(
-        (job) =>
-          getJobStateNumber(job) === 1 && !!job.node && job.node !== NULL_ADDRESS,
-      )
-      .map((job) => job.job),
-  (runningIds) => {
+  runningJobIds,
+  async (runningIds) => {
     const id = deployment.value?.id;
     for (const [jobId, release] of heldFeeds) {
       if (!runningIds.includes(jobId)) {
@@ -910,7 +921,12 @@ watch(
       }
     }
     if (!id) return;
-    for (const jobId of runningIds) {
+    if (!runningIds.some((jobId) => !heldFeeds.has(jobId))) return;
+
+    await warmHeaders(id);
+    // The page or the job set may have moved on while the headers were signed.
+    if (pageClosed) return;
+    for (const jobId of runningJobIds.value) {
       if (!heldFeeds.has(jobId)) {
         heldFeeds.set(jobId, acquireJobFeeds(nosana.value.api, jobId, id).release);
       }
@@ -918,7 +934,13 @@ watch(
   },
   { immediate: true },
 );
+const headerRefresh = setInterval(() => {
+  const id = deployment.value?.id;
+  if (id && runningJobIds.value.length > 0) void warmHeaders(id);
+}, HEADER_REFRESH_MS);
 onBeforeUnmount(() => {
+  pageClosed = true;
+  clearInterval(headerRefresh);
   for (const release of heldFeeds.values()) release();
   heldFeeds.clear();
 });
