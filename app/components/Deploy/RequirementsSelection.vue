@@ -252,18 +252,20 @@
 </template>
 
 <script setup lang="ts">
-import { watchDebounced } from "@vueuse/core";
 import NvidiaIcon from "@/assets/img/icons/nvidia.svg?component";
 import {
   REQUIREMENT_CATEGORIES,
   categoryOfKey,
   countryName,
+  cudaVersions,
   gpuHourlyUsd,
+  keepSupportedRequirements,
   useGpuModels,
+  useMatchingHosts,
   useRequirementOptions,
-  useReservationLookups,
   type GpuModel,
   type MarketRate,
+  type MatchingHosts,
   type RequirementCategoryId,
   type RequirementOption,
   type RequirementValue,
@@ -284,9 +286,7 @@ const props = defineProps<Props>();
 const emit = defineEmits<{
   "update:modelValue": [value: Requirements];
   /** The matching pool: every host, those free now, and those busy now. */
-  matching: [
-    value: { hosts: number; available: number; working: number } | null,
-  ];
+  matching: [value: MatchingHosts | null];
 }>();
 
 // The host requirement categories: everything but the GPU, which has its own
@@ -475,26 +475,10 @@ function retry() {
   void Promise.all([refreshGpus(), refreshOptions()]);
 }
 
-// When the GPU changes, a spec set for the old scope can sit outside the new
-// one (a minimum above every available host, a country no host is in, a
-// metric no host reports): drop those so the sheet never carries a boundary
-// no available host meets. The GPU itself is the scope, so it always stays.
+// When the GPU changes, drop what the new GPU's hosts cannot meet.
 watch(options, (next) => {
   if (!next) return;
-  const kept = Object.fromEntries(
-    Object.entries(props.modelValue).filter(([key, value]) => {
-      if (key === "name") return true;
-      const option = next.metrics.find((metric) => metric.key === key);
-      if (!option) return false;
-      if (option.key === "cuda_driver_version") {
-        return cudaVersions(option).includes(String(value));
-      }
-      if (option.match === "minimum" && typeof value === "number") {
-        return option.max !== undefined && value <= option.max;
-      }
-      return option.values.some((entry) => entry.value === value);
-    }),
-  );
+  const kept = keepSupportedRequirements(props.modelValue, next);
   if (Object.keys(kept).length !== Object.keys(props.modelValue).length) {
     emit("update:modelValue", kept);
   }
@@ -563,19 +547,6 @@ interface SelectControl extends ControlBase {
   choices: Array<{ value: RequirementValue; label: string }>;
 }
 type Control = SegmentsControl | SliderControl | SelectControl;
-
-// CUDA is picked by major.minor: "12.8" is a minimum, so it covers 12.8 and up.
-function cudaVersions(option: RequirementOption): string[] {
-  const versions = option.values.flatMap(({ value }) => {
-    const version = String(value).match(/^\d+\.\d+/);
-    return version ? [version[0]] : [];
-  });
-  const part = (version: string, index: number) =>
-    Number(version.split(".")[index]);
-  return [...new Set(versions)].sort(
-    (a, b) => part(a, 0) - part(b, 0) || part(a, 1) - part(b, 1),
-  );
-}
 
 // The slider runs continuously from "Any" to the highest reported value,
 // rounded DOWN to its step: a minimum above every host matches none, so the
@@ -732,44 +703,13 @@ function onBox(control: SliderControl, event: Event) {
   );
 }
 
-// --- Availability: debounced, only with a GPU picked, latest response wins ---
-// Two counts per change: the hosts that match at all (queued or working, the
-// pool a deployment draws from) and those a reservation would get right now.
-const { countMatchingHosts, findAvailableNodes } = useReservationLookups();
-const searchFailed = ref(false);
-const searches = useLatestRequest();
-
-async function search(requirements: Requirements) {
-  const id = searches.begin();
-  if (typeof requirements.name !== "string") {
-    emit("matching", null);
-    return;
-  }
-  try {
-    const [result, hosts] = await Promise.all([
-      findAvailableNodes(requirements),
-      countMatchingHosts(requirements),
-    ]);
-    if (!searches.isCurrent(id)) return;
-    emit("matching", {
-      hosts,
-      available: result.total,
-      working: Math.max(hosts - result.total, 0),
-    });
-    searchFailed.value = false;
-  } catch (e) {
-    console.error("Error finding available nodes:", e);
-    if (!searches.isCurrent(id)) return;
-    searchFailed.value = true;
-    emit("matching", null);
-  }
-}
-
-watchDebounced(() => props.modelValue, search, {
-  debounce: 300,
-  deep: true,
-  immediate: true,
-});
+// --- Availability: the hosts the requirements match, for the summary ---
+const {
+  matching,
+  failed: searchFailed,
+  refresh: refreshMatching,
+} = useMatchingHosts(() => props.modelValue);
+watch(matching, (value) => emit("matching", value));
 
 // One notice, shown above the GPU list: host data down, or a failed match.
 const notice = computed(() => {
@@ -777,10 +717,7 @@ const notice = computed(() => {
     return { text: "Host data is temporarily unavailable", retry };
   }
   if (searchFailed.value) {
-    return {
-      text: "Could not look up hosts",
-      retry: () => search(props.modelValue),
-    };
+    return { text: "Could not look up hosts", retry: refreshMatching };
   }
   return null;
 });

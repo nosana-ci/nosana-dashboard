@@ -6,6 +6,7 @@ import type {
   NosanaRequirementOptions,
   NosanaRequirements,
 } from "@nosana/kit";
+import { watchDebounced } from "@vueuse/core";
 import countries from "i18n-iso-countries";
 import en from "i18n-iso-countries/langs/en.json";
 import { NETWORK_FEE_MULTIPLIER } from "./useMarketPricing";
@@ -176,6 +177,99 @@ export function useReservationLookups() {
     findAvailableNodes: (requirements: Requirements) =>
       nosana.value.api.reservations.findAvailable({ requirements }),
   };
+}
+
+// CUDA is picked by major.minor: "12.8" is a minimum, so it covers 12.8 and up.
+export function cudaVersions(option: RequirementOption): string[] {
+  const versions = option.values.flatMap(({ value }) => {
+    const version = String(value).match(/^\d+\.\d+/);
+    return version ? [version[0]] : [];
+  });
+  const part = (version: string, index: number) =>
+    Number(version.split(".")[index]);
+  return [...new Set(versions)].sort(
+    (a, b) => part(a, 0) - part(b, 0) || part(a, 1) - part(b, 1),
+  );
+}
+
+/**
+ * The requirements the hosts in `options` can meet. A spec set for another
+ * scope can sit outside this one (a minimum above every host, a country no
+ * host is in, a metric no host reports): those are dropped, so a set never
+ * carries a boundary no host meets. The GPU is the scope, so it always stays.
+ */
+export function keepSupportedRequirements(
+  requirements: Requirements,
+  options: RequirementOptions,
+): Requirements {
+  return Object.fromEntries(
+    Object.entries(requirements).filter(([key, value]) => {
+      if (key === "name") return true;
+      const option = options.metrics.find((metric) => metric.key === key);
+      if (!option) return false;
+      if (option.key === "cuda_driver_version") {
+        return cudaVersions(option).includes(String(value));
+      }
+      if (option.match === "minimum" && typeof value === "number") {
+        return option.max !== undefined && value <= option.max;
+      }
+      return option.values.some((entry) => entry.value === value);
+    }),
+  );
+}
+
+/** The hosts a requirement set matches: every one, those free now, and those busy now. */
+export interface MatchingHosts {
+  hosts: number;
+  available: number;
+  working: number;
+}
+
+/**
+ * The hosts `requirements` matches, looked up again on every change:
+ * debounced, latest response wins. Null without a GPU (`name`), which scopes
+ * the count, and while a lookup has failed.
+ */
+export function useMatchingHosts(requirements: MaybeRefOrGetter<Requirements>) {
+  const { countMatchingHosts, findAvailableNodes } = useReservationLookups();
+  const matching = ref<MatchingHosts | null>(null);
+  const failed = ref(false);
+  const searches = useLatestRequest();
+
+  async function search() {
+    const id = searches.begin();
+    const current = toValue(requirements);
+    if (typeof current.name !== "string") {
+      matching.value = null;
+      return;
+    }
+    try {
+      const [result, hosts] = await Promise.all([
+        findAvailableNodes(current),
+        countMatchingHosts(current),
+      ]);
+      if (!searches.isCurrent(id)) return;
+      matching.value = {
+        hosts,
+        available: result.total,
+        working: Math.max(hosts - result.total, 0),
+      };
+      failed.value = false;
+    } catch (e) {
+      console.error("Error finding available nodes:", e);
+      if (!searches.isCurrent(id)) return;
+      failed.value = true;
+      matching.value = null;
+    }
+  }
+
+  watchDebounced(() => toValue(requirements), search, {
+    debounce: 300,
+    deep: true,
+    immediate: true,
+  });
+
+  return { matching, failed, refresh: search };
 }
 
 /**

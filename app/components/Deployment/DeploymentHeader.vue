@@ -192,11 +192,11 @@
               <span>Update Timeout</span>
             </a>
 
-            <!-- Change Market Action -->
+            <!-- Change Requirements Action: the GPU, and with it the market -->
             <a
               v-if="deployment.status !== 'ARCHIVED'"
               class="dropdown-item"
-              @click="emitAction('update-market')"
+              @click="emitAction('update-requirements')"
               :disabled="actionLoading"
             >
               <span class="icon is-small mr-2">
@@ -217,7 +217,7 @@
                   />
                 </svg>
               </span>
-              <span>Change Market</span>
+              <span>Change requirements</span>
             </a>
 
             <!-- Update Schedule Action (only for scheduled deployments) -->

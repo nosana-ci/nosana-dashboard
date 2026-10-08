@@ -1,4 +1,5 @@
-import type { Deployment, Market } from "@nosana/kit";
+import type { Deployment } from "@nosana/kit";
+import type { Requirements } from "~/composables/useNodeRequirements";
 import { useToast } from "vue-toastification";
 import { parseCronExpression } from "~/utils/parseCronExpression";
 import {
@@ -29,7 +30,7 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
   const showTimeoutModal = ref(false);
   const showScheduleModal = ref(false);
   const showRevisionDefinitionModal = ref(false);
-  const showMarketModal = ref(false);
+  const showRequirementsDrawer = ref(false);
   const showDuplicateModal = ref(false);
 
   // Form state
@@ -275,17 +276,19 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
     newTimeoutHours.value = null;
   };
 
-  const updateMarket = async (market: Market) => {
-    const address = market.address?.toString();
-    if (!address) {
-      toast.error("Please select a market");
-      return;
-    }
-    if (address === deps.deployment.value?.market) return;
-
+  // None left clears them: the deployment then runs on any host of its
+  // market. The market follows the GPU, as on create.
+  const updateRequirements = async (
+    requirements: Requirements,
+    market: string,
+  ) => {
     await executeDeploymentAction(
-      () => deps.deployment.value!.updateMarket(address),
-      "Deployment market updated",
+      () =>
+        deps.deployment.value!.updateRequirements(
+          Object.keys(requirements).length ? requirements : null,
+          market,
+        ),
+      "Deployment requirements updated",
     );
   };
 
@@ -316,7 +319,9 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
     } catch (error: any) {
       console.error("Duplicate deployment error:", error);
       const errorMessage =
-        error.data?.message || error.message || "Failed to duplicate deployment";
+        error.data?.message ||
+        error.message ||
+        "Failed to duplicate deployment";
       toast.error(`Error duplicating deployment: ${errorMessage}`);
     } finally {
       actionLoading.value = false;
@@ -439,7 +444,7 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
     showTimeoutModal,
     showScheduleModal,
     showRevisionDefinitionModal,
-    showMarketModal,
+    showRequirementsDrawer,
     showDuplicateModal,
 
     // Form state
@@ -471,7 +476,7 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
     updateName,
     updateReplicas,
     updateJobTimeout,
-    updateMarket,
+    updateRequirements,
     duplicateDeployment,
     updateSchedule,
     switchToRevision,
