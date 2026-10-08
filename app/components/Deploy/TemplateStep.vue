@@ -33,11 +33,7 @@
     </div>
 
     <!-- Hero: only the template, what it is and what it does -->
-    <section
-      ref="hero"
-      class="deploy-surface template-hero"
-      :class="{ 'has-readme': readmeHtml }"
-    >
+    <section ref="hero" class="deploy-surface template-hero">
       <span class="deploy-surface-grid" aria-hidden="true"></span>
       <div class="hero-body">
         <div class="hero-text">
@@ -67,36 +63,9 @@
             </div>
           </div>
           <p v-if="lead" class="hero-lead">{{ lead }}</p>
-          <DeployVariantSelect
-            v-if="template?.variants?.length"
-            class="hero-variant"
-            surface
-            :variants="template.variants"
-            :selected="selectedVariant"
-            :label="`${title} variant`"
-            @select="emit('select-variant', $event)"
-          />
-          <div class="hero-chips">
-            <span v-if="image" class="hero-chip">{{ image }}</span>
-            <span v-else-if="!template" class="hero-chip is-muted">
-              No image yet
-            </span>
-            <span v-if="ports.length" class="hero-chip is-plain">
-              Port {{ ports.join(", ") }}
-            </span>
-            <span v-if="vram" class="hero-chip is-plain">{{ vram }}</span>
-            <button
-              v-if="template"
-              type="button"
-              class="hero-chip is-action"
-              @click="emit('edit-job', 'builder')"
-            >
-              Edit job definition
-            </button>
-          </div>
         </div>
 
-        <!-- The readme beside it, folded until opened -->
+        <!-- The readme across the hero, folded until opened -->
         <div v-if="readmeHtml" class="hero-readme">
           <div
             class="hero-readme-fold"
@@ -128,6 +97,43 @@
             </svg>
           </button>
         </div>
+      </div>
+
+      <!-- Everything about running it, on one bar along the hero's foot -->
+      <div class="hero-specs">
+        <DeployVariantSelect
+          v-if="template?.variants?.length"
+          class="hero-variant"
+          surface
+          :variants="template.variants"
+          :selected="selectedVariant"
+          :label="`${title} variant`"
+          @select="emit('select-variant', $event)"
+        />
+        <div class="hero-spec">
+          <span>Image</span>
+          <span :class="{ 'is-muted': !image }">{{
+            image ?? "No image yet"
+          }}</span>
+        </div>
+        <div v-if="ports.length" class="hero-spec">
+          <span>Exposes</span>
+          <span>Port {{ ports.join(", ") }}</span>
+        </div>
+        <!-- With variants the picker shows the VRAM; without, it's a spec -->
+        <div v-if="vram && !template?.variants?.length" class="hero-spec">
+          <span>GPU memory</span>
+          <span>{{ vram }}</span>
+        </div>
+        <button
+          v-if="template"
+          type="button"
+          class="hero-edit"
+          @click="emit('edit-job', 'builder')"
+        >
+          <DeployCategoryIcon icon="code" />
+          Edit job definition
+        </button>
       </div>
     </section>
 
@@ -567,23 +573,20 @@ watch(
 
 /* ---------- Hero: only the template ---------- */
 .template-hero {
-  padding: 2.5rem 3rem;
+  // Shared with the spec bar, which runs to the hero's edges.
+  --hero-pad-x: 3rem;
+  padding: 2.5rem var(--hero-pad-x) 0;
   // The same name as the workload hero: switching steps morphs one into the
   // other (the transition itself is in deploy-surface.scss).
   view-transition-name: deploy-hero;
 }
 
-// The template's identity, and its readme beside it when it has one.
+// The template's identity, then its readme across the full width.
 .hero-body {
   position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 3rem;
-  align-items: start;
-
-  .has-readme & {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
 }
 
 .hero-text {
@@ -670,53 +673,80 @@ watch(
 }
 
 .hero-lead {
-  margin: 0 0 1.4rem;
+  margin: 0;
   max-width: 34rem;
   color: #b7c0b6;
   font-size: 1.0625rem;
   line-height: 1.55;
 }
 
-.hero-chips {
+/* ---------- Spec bar: the variant, image, port and the editor ---------- */
+.hero-specs {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  align-items: center;
+  gap: 1rem 2rem;
+  margin: 2rem calc(-1 * var(--hero-pad-x)) 0;
+  padding: 1.1rem var(--hero-pad-x);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.22);
 }
 
-.hero-chip {
-  padding: 5px 10px;
-  border-radius: 8px;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  font-family: var(--mono);
-  font-size: 12px;
-  color: #8bf58f;
-  word-break: break-all;
-
-  &.is-plain {
-    color: #e8f0e8;
-  }
-
-  &.is-muted {
-    color: #8a948a;
-    font-family: inherit;
-    border-style: dashed;
-  }
-}
-
-// The variant, chosen with the template it belongs to.
 .hero-variant {
-  max-width: 380px;
-  margin-bottom: 1rem;
+  flex: 0 1 360px;
+  min-width: 240px;
 }
 
-.hero-chip.is-action {
-  border: 1px solid rgba(255, 255, 255, 0.14);
+.hero-spec {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+
+  span:first-child {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #7c877b;
+  }
+
+  span:last-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: #e8f0e8;
+
+    &.is-muted {
+      color: #8a948a;
+    }
+  }
+}
+
+.hero-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 2.75rem;
+  margin-left: auto;
+  padding: 0 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
   background: transparent;
-  color: $secondary;
+  color: #fff;
   font-family: inherit;
+  font-size: 13.5px;
   font-weight: 600;
+  white-space: nowrap;
   cursor: pointer;
+  transition: border-color 0.2s ease;
+
+  svg {
+    color: $secondary;
+  }
 
   &:hover {
     border-color: $secondary;
@@ -731,8 +761,6 @@ watch(
 /* ---------- Readme, in the hero's right half ---------- */
 .hero-readme {
   min-width: 0;
-  // Level with the template's name, under the back link.
-  padding-top: 2.3rem;
 }
 
 .hero-readme-fold {
@@ -1196,16 +1224,9 @@ html.dark-mode {
 }
 
 @media screen and (max-width: 1100px) {
-  // Stacked: the hero's readme under the identity, the summary under the
-  // settings (the bar carries the action there).
-  .hero-body,
-  .has-readme .hero-body,
+  // Stacked: the summary under the settings (the bar carries the action).
   .template-body {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .hero-readme {
-    padding-top: 0;
   }
 
   .summary-card {
@@ -1219,7 +1240,12 @@ html.dark-mode {
 
 @media screen and (max-width: 768px) {
   .template-hero {
-    padding: 2rem 1.5rem;
+    --hero-pad-x: 1.5rem;
+    padding-top: 2rem;
+  }
+
+  .hero-edit {
+    margin-left: 0;
   }
 
   .hero-title {
