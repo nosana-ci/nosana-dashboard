@@ -163,6 +163,20 @@ export const templateReadmeSnippet = (template: Template): string | null => {
     : paragraph
 }
 
+/**
+ * The README as shown under a template's lead: without its "# Title" line (the
+ * page names the template) and without an opening paragraph that only repeats
+ * the lead, whether that lead is the description or the snippet above.
+ */
+export const templateReadmeBody = (template: Template, lead: string): string => {
+  const body = (template.readme ?? '').replace(/^\s*#\s+[^\n]*\n/, '').trim()
+  const [first = '', ...rest] = body.split(/\n\s*\n/)
+  const lede = lead.replace(/…$/, '').trim()
+  const repeatsLead =
+    Boolean(lede) && (readmeParagraphs(first)[0] ?? '').startsWith(lede)
+  return repeatsLead ? rest.join('\n\n') : body
+}
+
 /** A template flattened onto one of its variants, the shape the create flow works with. */
 export const withVariant = (template: Template, variant: TemplateVariant): Template => ({
   ...template,

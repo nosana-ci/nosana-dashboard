@@ -3,7 +3,7 @@
     <!-- Step: the GPU, which sets the market and the hourly price -->
     <section class="deploy-step">
       <header class="deploy-step-head">
-        <span class="deploy-step-num">{{ stepNumber(0) }}</span>
+        <span class="deploy-step-num" aria-hidden="true"></span>
         <h3>Choose a GPU</h3>
         <div class="req-toolbar deploy-step-action">
           <label class="req-search">
@@ -79,8 +79,8 @@
             <small>{{ row.subline }}</small>
           </span>
           <span class="gpu-row-price">
-            <template v-if="row.price !== null">
-              ${{ row.price }}<small>/h</small>
+            <template v-if="row.usd !== null">
+              ${{ row.usd.toFixed(2) }}<small>/h</small>
             </template>
             <template v-else>—</template>
           </span>
@@ -107,7 +107,7 @@
     <!-- Step: optional host requirements, one category at a time -->
     <section class="deploy-step">
       <header class="deploy-step-head">
-        <span class="deploy-step-num">{{ stepNumber(1) }}</span>
+        <span class="deploy-step-num" aria-hidden="true"></span>
         <h3>Add requirements</h3>
         <span class="deploy-step-tag">Optional</span>
       </header>
@@ -134,7 +134,7 @@
           </div>
           <p
             v-if="activeCategory && PANEL_SUBTITLES[activeCategory]"
-            class="req-subtitle"
+            class="deploy-step-hint req-subtitle"
           >
             {{ PANEL_SUBTITLES[activeCategory] }}
           </p>
@@ -278,8 +278,6 @@ interface Props {
   requiredVramGb: number | null;
   /** The GPU the page defaults to, labelled and listed first. */
   recommendedName?: string | null;
-  /** The number of the GPU step; the hosts step follows it. */
-  firstStep?: number;
 }
 
 const props = defineProps<Props>();
@@ -291,15 +289,17 @@ const emit = defineEmits<{
   ];
 }>();
 
+// The host requirement categories: everything but the GPU, which has its own
+// step.
+const HOST_CATEGORIES = REQUIREMENT_CATEGORIES.filter(
+  (category) => category.id !== "gpu",
+);
+
 const PANEL_SUBTITLES: Partial<Record<RequirementCategoryId, string>> = {
   compute: "Set compute related requirements for hosts.",
   network: "Where hosts are and how well they are connected.",
   storage: "Free disk the host must have for your image and model files.",
 };
-
-// "01", "02": the steps' numbers, from where the page puts the GPU step.
-const stepNumber = (offset: number) =>
-  String((props.firstStep ?? 1) + offset).padStart(2, "0");
 
 // The requirement category a pill click picked, while it is listed; else the
 // first listed one.
@@ -344,46 +344,34 @@ function gpuModelRank(name: string) {
 interface GpuRow {
   gpu: GpuModel;
   subline: string;
-  /** Hourly USD, formatted; null when none of its markets is priced. */
-  price: string | null;
-  /** The same, as a number for sorting. */
+  /** Hourly USD; null when none of its markets is priced. */
   usd: number | null;
   /** Below the workload's VRAM: listed only on request, never selectable. */
   dim: boolean;
   selected: boolean;
 }
 
-// Available first, then by model rank, then by name.
-function compareGpus(a: GpuRow, b: GpuRow) {
-  return (
-    Number(b.gpu.available > 0) - Number(a.gpu.available > 0) ||
-    gpuModelRank(a.gpu.name) - gpuModelRank(b.gpu.name) ||
-    a.gpu.name.localeCompare(b.gpu.name)
-  );
-}
-
 const gpuRows = computed<GpuRow[]>(() =>
-  gpus.value
-    .map((gpu) => {
-      const required = props.requiredVramGb;
-      const dim = required !== null && gpu.vramGb < required;
-      const usd = gpuHourlyUsd(gpu, props.markets);
-      return {
-        gpu,
-        subline: dim
-          ? `below ${required} GB VRAM`
-          : `${gpu.vramGb} GB · ${gpu.available} available · ${gpu.working} working`,
-        price: usd === null ? null : usd.toFixed(2),
-        usd,
-        dim,
-        selected: gpu.name === selectedGpuName.value,
-      };
-    })
-    .sort(compareGpus),
+  gpus.value.map((gpu) => {
+    const required = props.requiredVramGb;
+    const dim = required !== null && gpu.vramGb < required;
+    const usd = gpuHourlyUsd(gpu, props.markets);
+    return {
+      gpu,
+      subline: dim
+        ? `below ${required} GB VRAM`
+        : `${gpu.vramGb} GB · ${gpu.available} available · ${gpu.working} working`,
+      usd,
+      dim,
+      selected: gpu.name === selectedGpuName.value,
+    };
+  }),
 );
 
 const compatibleGpus = computed(() => gpuRows.value.filter((row) => !row.dim));
-const hiddenGpus = computed(() => gpuRows.value.filter((row) => row.dim));
+const hiddenGpus = computed(() =>
+  gpuRows.value.filter((row) => row.dim).sort(bySeries),
+);
 
 // --- Sorting the list, as on the Markets tab ---
 type GpuSort =
@@ -395,15 +383,20 @@ type GpuSort =
   | "vram-asc"
   | "available";
 
-const GPU_SORTS: Array<{ value: GpuSort; label: string }> = [
-  { value: "recommended", label: "Recommended" },
+// A custom deployment has no recommended GPU: its default sort is by
+// availability alone.
+const GPU_SORTS = computed<Array<{ value: GpuSort; label: string }>>(() => [
+  {
+    value: "recommended",
+    label: props.recommendedName ? "Recommended" : "Available first",
+  },
   { value: "series", label: "GPU series" },
   { value: "price-asc", label: "Price: low to high" },
   { value: "price-desc", label: "Price: high to low" },
   { value: "vram-desc", label: "VRAM: high to low" },
   { value: "vram-asc", label: "VRAM: low to high" },
   { value: "available", label: "Most available" },
-];
+]);
 const gpuSort = ref<GpuSort>("recommended");
 
 // Prices compared in either direction; an unpriced GPU always goes last.
@@ -422,13 +415,20 @@ function bySeries(a: GpuRow, b: GpuRow) {
   );
 }
 
+// Those with a host free now first, then by series.
+function compareGpus(a: GpuRow, b: GpuRow) {
+  return (
+    Number(b.gpu.available > 0) - Number(a.gpu.available > 0) || bySeries(a, b)
+  );
+}
+
 // Each sort orders by exactly what it names; ties fall back to the series.
 const SORTERS: Record<GpuSort, (a: GpuRow, b: GpuRow) => number> = {
   // The recommended GPU first, then those with a host free now, by series.
   recommended: (a, b) =>
     Number(b.gpu.name === props.recommendedName) -
       Number(a.gpu.name === props.recommendedName) || compareGpus(a, b),
-  series: () => 0,
+  series: bySeries,
   "price-asc": (a, b) => byPrice(a, b, 1),
   "price-desc": (a, b) => byPrice(a, b, -1),
   "vram-desc": (a, b) => b.gpu.vramGb - a.gpu.vramGb,
@@ -466,9 +466,7 @@ const {
   error,
   refresh: refreshOptions,
 } = useRequirementOptions(
-  REQUIREMENT_CATEGORIES.flatMap((category) =>
-    category.id === "gpu" ? [] : category.keys,
-  ),
+  HOST_CATEGORIES.flatMap((category) => category.keys),
   gpuScope,
 );
 const metrics = computed(() => options.value?.metrics ?? []);
@@ -658,7 +656,7 @@ function buildControl(option: RequirementOption): Control | null {
 const controlsByCategory = computed(
   () =>
     new Map(
-      REQUIREMENT_CATEGORIES.map((category) => [
+      HOST_CATEGORIES.map((category) => [
         category.id,
         category.keys.flatMap((key) => {
           const option = metrics.value.find((metric) => metric.key === key);
@@ -670,10 +668,8 @@ const controlsByCategory = computed(
 );
 // The requirement categories with something to set for this GPU's hosts.
 const requirementCategories = computed(() =>
-  REQUIREMENT_CATEGORIES.filter(
-    (category) =>
-      category.id !== "gpu" &&
-      Boolean(controlsByCategory.value.get(category.id)?.length),
+  HOST_CATEGORIES.filter((category) =>
+    Boolean(controlsByCategory.value.get(category.id)?.length),
   ),
 );
 const panelControls = computed(() =>
@@ -775,8 +771,7 @@ watchDebounced(() => props.modelValue, search, {
   immediate: true,
 });
 
-// One notice, shown above whichever category is open: host data down, or a
-// failed match.
+// One notice, shown above the GPU list: host data down, or a failed match.
 const notice = computed(() => {
   if (error.value || gpuError.value) {
     return { text: "Host data is temporarily unavailable", retry };
@@ -812,8 +807,6 @@ $mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", Menlo,
 
 .req-subtitle {
   margin: 12px 18px 0;
-  font-size: 0.8125rem;
-  color: $text-muted;
 }
 
 .req-pill {
@@ -1022,11 +1015,6 @@ $mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", Menlo,
   padding: 1.25rem 18px;
 }
 
-// A notice above the body sits on its own row, like one above the GPU list.
-.section-row + .req-body {
-  border-top: 1px solid $border-soft;
-}
-
 .req-hint {
   margin: 0;
   font-size: 0.78rem;
@@ -1054,7 +1042,6 @@ $mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", Menlo,
   background: #b8bcc2;
 }
 
-// The slim search on the right of the centre card's header
 // Search and sort, at the end of the GPU step's heading.
 .req-toolbar {
   display: flex;
@@ -1322,14 +1309,6 @@ $mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", Menlo,
 html.dark-mode {
   .req-link {
     color: $secondary;
-  }
-
-  .section-row + .req-body {
-    border-color: rgba($white, 0.1);
-  }
-
-  .req-subtitle {
-    color: #8a948a;
   }
 
   .gpu-row-rec {

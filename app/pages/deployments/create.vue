@@ -4,9 +4,9 @@
     <!-- Show loader for external data only; editor always visible -->
     <Loader v-if="loadingTemplates" />
 
-    <!-- Step 1: pick a workload -->
+    <!-- The template picker -->
     <DeployWorkloadStep
-      v-else-if="step === 'workload'"
+      v-else-if="!onWorkloadPage"
       :templates="groupedTemplates || []"
       :recent-deployments="recentDeployments"
       :markets="testgridMarkets"
@@ -21,15 +21,14 @@
 
     <!-- A template link before the templates load, or an unknown one -->
     <Loader
-      v-else-if="step === 'template' && !selectedTemplate && loadingGroupedTemplates"
+      v-else-if="route.query.template && !selectedTemplate && loadingGroupedTemplates"
     />
-    <p v-else-if="step === 'template' && !selectedTemplate" class="template-missing">
+    <p v-else-if="route.query.template && !selectedTemplate" class="template-missing">
       That template could not be found.
-      <button type="button" @click="goToStep('workload')">Browse templates</button>
+      <button type="button" @click="goToPicker()">Browse templates</button>
     </p>
 
-    <!-- Everything after picking a workload is one page: the hero and its
-         deploy card stay put, and the tabs switch the body underneath. -->
+    <!-- A workload's page: its hero, the configurator and the summary -->
     <DeployTemplateStep
       v-else
       :template="selectedTemplate"
@@ -39,10 +38,9 @@
       :required-vram-gb="requiredVramGb"
       :gpu="advancedGpu"
       :gpu-name="gpuName"
-      :gpu-price="gpuPrice"
       :hosts="advancedMatching"
       :requirements="requirementChips"
-      :runs="`${settingsSummary} · ${strategyWindow}`"
+      :runs="runsSummary"
       :changes="setupChanges"
       :hourly-cost="hourlyCost"
       :deploy-label="deployAction.label"
@@ -55,7 +53,7 @@
       @reset="resetToRecommended"
       @deploy="deployAction.run()"
       @claim="goToClaimCredits"
-      @back="goToStep('workload')"
+      @back="goToPicker()"
     >
       <template #job>
         <DeployJobDefinitionBuilder
@@ -63,12 +61,13 @@
           @update:model-value="setJobDefinition"
         />
       </template>
-      <template #compute="{ firstStep }">
+      <template #compute>
         <DeployRequirementsSelection
           v-model="advancedRequirements"
-          :first-step="firstStep"
           :markets="testgridMarkets"
-          :recommended-name="recommendedGpu?.name ?? null"
+          :recommended-name="
+            selectedTemplate ? (recommendedGpu?.name ?? null) : null
+          "
           :required-vram-gb="requiredVramGb"
           @matching="advancedMatching = $event"
         />
@@ -156,28 +155,23 @@ const router = useRouter();
 const route = useRoute();
 const toast = useToast();
 
-// The page is three steps: pick a workload (a template, your own definition,
-// or a clone), choose compute, then set how it runs. The step lives in the
-// URL so a reload and the browser's back button keep it; a deep link lands
-// on compute.
-type Step = "workload" | "template" | "compute" | "settings";
-const STEPS: readonly Step[] = ["workload", "template", "compute", "settings"];
-const step = computed<Step>(() => {
-  const requested = route.query.step?.toString();
-  const known = STEPS.find((candidate) => candidate === requested);
-  if (known) return known;
-  // A clone lands on compute; a template link (from marketing too) lands on
-  // the template's own page.
-  if (route.query.clone) return "compute";
-  return route.query.template ? "template" : "workload";
-});
+// Two pages share this route: the template picker, and a workload's page.
+// The address says which, so a reload and the browser's back button keep it:
+// a template (?template=, which marketing links use too), a clone (?clone=)
+// or your own image (?custom).
+const WORKLOAD_KEYS = ["template", "clone", "custom"];
+const onWorkloadPage = computed(() =>
+  WORKLOAD_KEYS.some((key) => key in route.query),
+);
 // The picker and a workload's page share one hero. Moving between them runs
 // the change inside a view transition, so the hero morphs in place and the
 // body under it swaps (deploy-surface.scss); without support it just switches.
 // Either way the new page starts at its top.
-const changeStep = async (next: Step, change: () => Promise<unknown>) => {
-  const swapsHero = (step.value === "workload") !== (next === "workload");
-  if (!swapsHero) return change();
+const changePage = async (
+  toWorkload: boolean,
+  change: () => Promise<unknown>,
+) => {
+  if (toWorkload === onWorkloadPage.value) return change();
   const apply = async () => {
     await change();
     await nextTick();
@@ -186,13 +180,17 @@ const changeStep = async (next: Step, change: () => Promise<unknown>) => {
   if (typeof document.startViewTransition !== "function") return apply();
   return document.startViewTransition(apply).updateCallbackDone;
 };
-const goToStep = (next: Step) => {
-  // Going back to the picker abandons the deep link that lands on compute.
-  const { step: _step, template, clone, name, market, ...query } = route.query;
-  return changeStep(next, () =>
-    router.replace({
-      query: next === "workload" ? query : { ...route.query, step: next },
-    }),
+// Back to the picker: the address drops the workload, and a clone's name
+// and market with it.
+const goToPicker = () => {
+  const { template, clone, custom, name, market, ...query } = route.query;
+  return changePage(false, () => router.replace({ query }));
+};
+// Your own image, or a clone made on this page: a workload without a template.
+const goToCustom = () => {
+  const { template, clone, name, market, ...query } = route.query;
+  return changePage(true, () =>
+    router.replace({ query: { ...query, custom: null } }),
   );
 };
 const {
@@ -245,7 +243,7 @@ const gpuName = computed(
   () => (advancedGpu.value ? shortGpuName(advancedGpu.value.name) : ""),
 );
 // Priced the way the GPU list prices it: the cheapest of the GPU's markets
-// plus the network fee, so the deploy card agrees with the row that was clicked.
+// plus the network fee, so the summary agrees with the row that was clicked.
 const gpuPrice = computed(() =>
   advancedGpu.value
     ? gpuHourlyUsd(advancedGpu.value, testgridMarkets.value)
@@ -263,8 +261,15 @@ const requiredVramGb = computed(() => {
 const selectedTemplate = ref<Template | null>(null);
 
 const INFINITE_TIMEOUT = 6;
+// How a deployment runs unless changed: the initial values, what the summary
+// marks as changed, and what Reset puts back.
+const RECOMMENDED_RUN: {
+  replicas: number;
+  strategy: DeploymentStrategy;
+  timeout: number;
+} = { replicas: 1, strategy: "INFINITE", timeout: INFINITE_TIMEOUT };
 const DEFAULT_TIMEOUT = 1;
-const timeout = ref(INFINITE_TIMEOUT);
+const timeout = ref(RECOMMENDED_RUN.timeout);
 const previousStrategyDefault = ref(INFINITE_TIMEOUT);
 const isCreatingDeployment = ref(false);
 // Set while the form is filled from an existing deployment or your own
@@ -405,8 +410,8 @@ const generateFunnyDeploymentName = (): string => {
 
 // Deployment-specific state
 const deploymentName = ref(generateFunnyDeploymentName());
-const replicas = ref(1);
-const strategy = ref<DeploymentStrategy>("INFINITE");
+const replicas = ref(RECOMMENDED_RUN.replicas);
+const strategy = ref<DeploymentStrategy>(RECOMMENDED_RUN.strategy);
 const schedule = ref("0 0 * * *"); // Default schedule
 const preloadedDeployment = useState<Deployment | null>(
   "preloadedDeployment",
@@ -888,20 +893,10 @@ const restoreDraftIfNeeded = () => {
         selectedTemplate.value = draft.selectedTemplate;
       if (draft.jobDefinition) {
         jobDefinition.value = draft.jobDefinition;
-        // Back from logging in: the workload page with its deploy card, no
-        // panel open (your own image shows the GPU list as its body). The
-        // template goes in the address too, so a reload lands back on it.
-        const restored = draft.selectedTemplate;
-        const next = restored ? "template" : "compute";
-        changeStep(next, () =>
-          router.replace({
-            query: {
-              ...route.query,
-              step: next,
-              ...(restored ? { template: String(restored.id) } : {}),
-            },
-          }),
-        );
+        // Back from logging in: the workload's page, with the template in
+        // the address so a reload lands back on it.
+        if (draft.selectedTemplate) applyTemplate(draft.selectedTemplate);
+        else goToCustom();
       }
     }
     if (draft.deploymentName) deploymentName.value = draft.deploymentName;
@@ -954,8 +949,10 @@ const strategyWindow = computed(() => {
   if (strategy.value === "SCHEDULED") return `${durationLabel.value} per run`;
   return `runs ${durationLabel.value}`;
 });
-const settingsSummary = computed(
-  () => `${replicasLabel.value} · ${STRATEGY_NAMES[strategy.value]}`,
+// "1 replica · Stateless · 6-hour rotation": how it runs, for the summary.
+const runsSummary = computed(
+  () =>
+    `${replicasLabel.value} · ${STRATEGY_NAMES[strategy.value]} · ${strategyWindow.value}`,
 );
 // The one-click button on the template page: what it does depends on who is
 // deploying and whether their balance covers it.
@@ -991,20 +988,19 @@ const setupChanges = computed(() => ({
   gpu:
     Boolean(advancedGpu.value && recommendedGpu.value) &&
     advancedGpu.value?.name !== recommendedGpu.value?.name,
-  hosts: requirementChips.value.length > 0,
   runs:
-    replicas.value !== 1 ||
-    strategy.value !== "INFINITE" ||
-    timeout.value !== INFINITE_TIMEOUT,
+    replicas.value !== RECOMMENDED_RUN.replicas ||
+    strategy.value !== RECOMMENDED_RUN.strategy ||
+    timeout.value !== RECOMMENDED_RUN.timeout,
 }));
 // Back to all of it, so Deploy now is the one click again.
 const resetToRecommended = () => {
   const recommended = recommendedGpu.value;
   defaultedGpuName.value = recommended?.name ?? null;
   advancedRequirements.value = recommended ? { name: recommended.name } : {};
-  replicas.value = 1;
-  strategy.value = "INFINITE";
-  timeout.value = INFINITE_TIMEOUT;
+  replicas.value = RECOMMENDED_RUN.replicas;
+  strategy.value = RECOMMENDED_RUN.strategy;
+  timeout.value = RECOMMENDED_RUN.timeout;
 };
 // The requirements beyond the GPU, as the summary's chips.
 const requirementChips = computed(() =>
@@ -1103,7 +1099,7 @@ watch(
   { deep: true },
 );
 
-// Auto-select template from URL query param or fall back to PyTorch
+// A ?template= link selects that template (or variant) once they load.
 watch(
   () => groupedTemplates.value,
   (newTemplates) => {
@@ -1159,17 +1155,6 @@ watch(
           }
         }
       }
-
-      const pytorchTemplate = newTemplates.find((template: any) =>
-        template.jobDefinition?.ops?.[0]?.args?.image?.includes(
-          "nosana/pytorch-jupyter",
-        ),
-      );
-
-      if (pytorchTemplate && pytorchTemplate.jobDefinition) {
-        selectedTemplate.value = pytorchTemplate as Template;
-        jobDefinition.value = pytorchTemplate.jobDefinition;
-      }
     }
   },
   { immediate: true },
@@ -1219,6 +1204,11 @@ onMounted(async () => {
     // Restore a persisted draft
     restoreDraftIfNeeded();
   }
+  // Your own image, reloaded without a draft: start from an empty job.
+  if ("custom" in route.query && !jobDefinition.value) {
+    skipTemplateAutoSelection.value = true;
+    jobDefinition.value = JSON.parse(JSON.stringify(emptyJobDefinition));
+  }
 
   // Load credit balance if authenticated
   if (isCreditMode.value) {
@@ -1258,34 +1248,32 @@ watch(
 
 // No swap modal in API mode
 
-// Template selection handler: picking a workload lands on compute.
-// Picking a template abandons any ?clone= handoff, so drop its params too.
-const applyTemplate = (template: Template, next: Step) => {
-  const { clone, name, market, ...query } = route.query;
-  return changeStep(next, () => {
+// A template's page. Picking a template abandons any clone or own image, so
+// their params go too.
+const applyTemplate = (template: Template) => {
+  const { clone, custom, name, market, ...query } = route.query;
+  return changePage(true, () => {
     selectedTemplate.value = template;
     return router.replace({
-      query: { ...query, template: String(template.id), step: next },
+      query: { ...query, template: String(template.id) },
     });
   });
 };
-// A gallery tile and the featured card's Use template both open the
-// template's page, where the GPU selector sits under the hero.
+// A gallery tile and the featured card's Use template both open it.
 const selectTemplateFromModal = (template: Template) =>
-  applyTemplate(template, "template");
+  applyTemplate(template);
 
-// A variant picked in the deploy card: the selected template holds the parent
+// A variant picked in the header: the selected template holds the parent
 // spread with the first variant flattened in, so rebuild from the parent.
 const selectVariant = (variant: TemplateVariant) => {
   const parent = (groupedTemplates.value || []).find((t: Template) =>
     t.variants?.some((candidate) => candidate.id === variant.id),
   );
   if (!parent) return;
-  applyTemplate(withVariant(parent, variant), step.value);
+  applyTemplate(withVariant(parent, variant));
 };
 
-// Bring your own image: land on compute with an empty definition and the
-// job editor already open, so the custom route is the same page as a template.
+// Bring your own image: its page, with an empty definition to fill in.
 const editor = ref<{ open: (mode?: "builder" | "json") => void } | null>(
   null,
 );
@@ -1293,7 +1281,7 @@ const configureOwnJob = async () => {
   skipTemplateAutoSelection.value = true;
   selectedTemplate.value = null;
   jobDefinition.value = JSON.parse(JSON.stringify(emptyJobDefinition));
-  await goToStep("compute");
+  await goToCustom();
 };
 // The builder on the page edits the job live; it only hands back a string
 // while JSON is invalid, which it never does itself.
@@ -1383,7 +1371,8 @@ const cloneDeployment = async (
     }
 
     toast.success(`Cloned configuration from ${deployment.name || listed.id}`);
-    goToStep("compute");
+    // A ?clone= link already names its page; a clone made here gets ?custom.
+    if (!route.query.clone) goToCustom();
   } catch (error: any) {
     console.error("Clone deployment error:", error);
     toast.error(

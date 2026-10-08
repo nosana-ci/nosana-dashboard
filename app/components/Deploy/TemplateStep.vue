@@ -9,13 +9,18 @@
           <div class="slim-body">
             <img
               v-if="template?.icon"
-              class="slim-logo"
+              class="hero-logo is-slim"
               :src="template.icon"
               alt=""
             />
-            <span v-else class="slim-logo hero-logo-fallback">
-              <DeployCategoryIcon v-if="!template" icon="code" />
-              <template v-else>{{ title.charAt(0).toUpperCase() }}</template>
+            <span
+              v-else-if="template"
+              class="hero-logo is-slim hero-logo-fallback"
+            >
+              {{ title.charAt(0).toUpperCase() }}
+            </span>
+            <span v-else class="hero-logo is-slim hero-logo-fallback">
+              <DeployCategoryIcon icon="code" />
             </span>
             <strong class="slim-title">{{ title }}</strong>
             <DeployVariantSelect
@@ -146,12 +151,12 @@
 
         <section v-if="!template" ref="inlineJob" class="deploy-step">
           <header class="deploy-step-head">
-            <span class="deploy-step-num">01</span>
+            <span class="deploy-step-num" aria-hidden="true"></span>
             <h3>Container</h3>
             <span class="deploy-step-hint">What runs on the GPU</span>
             <button
               type="button"
-              class="deploy-step-action job-json"
+              class="deploy-step-action deploy-link"
               @click="emit('edit-job', 'json')"
             >
               Edit as JSON
@@ -160,11 +165,11 @@
           <slot name="job" />
         </section>
 
-        <slot name="compute" :first-step="firstComputeStep" />
+        <slot name="compute" />
 
         <section class="deploy-step">
           <header class="deploy-step-head">
-            <span class="deploy-step-num">{{ settingsStep }}</span>
+            <span class="deploy-step-num" aria-hidden="true"></span>
             <h3>How it runs</h3>
           </header>
           <div class="settings-panel">
@@ -173,16 +178,17 @@
         </section>
       </div>
 
-      <!-- Your deployment: the recommended setup by default, so Deploy now
-           is one click; it follows every change and sticks while you scroll -->
+      <!-- Your deployment: ready to deploy in one click, following every
+           change and sticking while you scroll. A template starts on its
+           recommended setup and marks what differs; your own image has none. -->
       <aside class="summary-card">
         <div class="summary-head">
           <span class="deploy-eyebrow">Your deployment</span>
-          <span v-if="isRecommended" class="summary-rec">
+          <span v-if="template && isRecommended" class="summary-rec">
             ✓ Recommended setup
           </span>
           <button
-            v-else
+            v-else-if="template"
             type="button"
             class="deploy-link summary-reset"
             @click="emit('reset')"
@@ -198,7 +204,9 @@
                 <b>{{ gpuName }}</b> · {{ gpu.vramGb }} GB
               </template>
               <template v-else>{{ runsOn }}</template>
-              <span v-if="changes.gpu" class="summary-changed">Changed</span>
+              <span v-if="template && changes.gpu" class="summary-changed"
+                >Changed</span
+              >
             </dd>
           </div>
           <div v-if="requirements.length">
@@ -223,7 +231,9 @@
             <dt>Runs</dt>
             <dd>
               {{ runs }}
-              <span v-if="changes.runs" class="summary-changed">Changed</span>
+              <span v-if="template && changes.runs" class="summary-changed"
+                >Changed</span
+              >
             </dd>
           </div>
         </dl>
@@ -284,6 +294,7 @@ import {
   formatVram,
   requiredVramMb,
   templateDockerImage,
+  templateReadmeBody,
   templateReadmeSnippet,
   templateTags,
   type Template,
@@ -307,14 +318,13 @@ const props = defineProps<{
   /** The GPU a deploy uses, with its short name, price and live host counts. */
   gpu: GpuModel | null;
   gpuName: string;
-  gpuPrice: number | null;
   hosts: { available: number; working: number } | null;
   /** The requirements set beyond the GPU, as chips. */
   requirements: Array<{ key: string; text: string }>;
   /** "1 replica · Stateless · 6-hour rotation": how it runs. */
   runs: string;
   /** What differs from the recommended setup, marked in the summary. */
-  changes: { gpu: boolean; hosts: boolean; runs: boolean };
+  changes: { gpu: boolean; runs: boolean };
   /** "$0.28": every replica's hourly price together. */
   hourlyCost: string;
   /** The deploy button and the lines around it, decided by the page. */
@@ -335,14 +345,8 @@ const emit = defineEmits<{
   back: [];
 }>();
 
-// The steps are numbered; your own image starts with its container.
-const firstComputeStep = computed(() => (props.template ? 1 : 2));
-const settingsStep = computed(() =>
-  String(firstComputeStep.value + 2).padStart(2, "0"),
-);
-
 const isRecommended = computed(
-  () => !props.changes.gpu && !props.changes.hosts && !props.changes.runs,
+  () => !props.changes.gpu && !props.requirements.length && !props.changes.runs,
 );
 
 // Your own image starts on the container's image field, the one thing it
@@ -377,7 +381,7 @@ useIntersectionObserver(
 const barSummary = computed(() =>
   [
     props.gpu
-      ? `${props.gpuName}${props.gpuPrice !== null ? ` · $${props.gpuPrice.toFixed(2)}/h` : ""}`
+      ? `${props.gpuName} · ${props.hourlyCost}/h`
       : "No GPU chosen yet",
     props.runs,
   ].join(" · "),
@@ -452,23 +456,13 @@ const runsOn = computed(() => {
     : `${fit} · from $${cheapestFit.value.toFixed(2)}/h`;
 });
 
-// The readme as HTML, without its leading "# Title" (the hero names it).
-// Without its opening paragraph, too, when that only repeats the lead under
-// the title beside it (templates often open with their own description).
+// The readme as HTML: no title line, no opening paragraph repeating the lead.
 const readmeHtml = computed(() => {
-  const body =
-    props.template?.readme?.replace(/^\s*#\s+[^\n]*\n/, "").trim() ?? "";
-  const [first = "", ...rest] = body.split(/\n\s*\n/);
-  const lede = plainText(lead.value).replace(/…$/, "");
-  const readme =
-    lede && plainText(first).startsWith(lede) ? rest.join("\n\n") : body;
+  const readme = props.template
+    ? templateReadmeBody(props.template, lead.value)
+    : "";
   return readme.trim() ? String(marked(readme)) : "";
 });
-
-// Markdown and spacing set aside, for comparing a paragraph with the lead.
-function plainText(text: string) {
-  return text.replace(/[*_`]/g, "").replace(/\s+/g, " ").trim().toLowerCase();
-}
 
 // "12 GB VRAM": what the chosen variant asks of the GPU.
 const vram = computed(() => {
@@ -499,6 +493,9 @@ watch(
 
 <style lang="scss" scoped>
 .template-step {
+  // The slim header's place and size, which the summary sticks below.
+  --slim-top: 16px;
+  --slim-height: 64px;
   display: flex;
   flex-direction: column;
   gap: 1.75rem;
@@ -508,7 +505,7 @@ watch(
 // No height of its own, so the page never moves when the header shows.
 .slim-holder {
   position: sticky;
-  top: 16px;
+  top: var(--slim-top);
   z-index: 6;
   height: 0;
 }
@@ -518,27 +515,39 @@ watch(
   top: 0;
   right: 0;
   left: 0;
-  padding: 10px 12px 10px 16px;
+  display: flex;
+  align-items: center;
+  height: var(--slim-height);
+  box-sizing: border-box;
+  padding: 0 12px 0 16px;
   border-radius: 16px;
   box-shadow: 0 18px 40px -16px rgba(0, 0, 0, 0.85);
 }
 
 .slim-body {
   position: relative;
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 14px;
 }
 
-.slim-logo {
-  flex-shrink: 0;
+// The hero's logo, at the slim header's size.
+.hero-logo.is-slim {
   width: 38px;
   height: 38px;
   border-radius: 10px;
-  background: #fff;
-  object-fit: contain;
   padding: 6px;
-  box-sizing: border-box;
+
+  &.hero-logo-fallback {
+    font-size: 1rem;
+  }
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
 }
 
 .slim-title {
@@ -587,10 +596,6 @@ watch(
   display: flex;
   flex-direction: column;
   gap: 1.75rem;
-}
-
-.hero-text {
-  min-width: 0;
 }
 
 .hero-back {
@@ -758,11 +763,7 @@ watch(
   height: 26px;
 }
 
-/* ---------- Readme, in the hero's right half ---------- */
-.hero-readme {
-  min-width: 0;
-}
-
+/* ---------- Readme, across the hero ---------- */
 .hero-readme-fold {
   &.is-folded {
     max-height: 11rem;
@@ -900,11 +901,13 @@ watch(
   align-items: start;
 }
 
+// Set in from the hero and the readme, headings and panels alike.
 .configurator {
   display: flex;
   flex-direction: column;
   gap: 2rem;
   min-width: 0;
+  padding-left: 18px;
 }
 
 .configurator-head {
@@ -918,29 +921,8 @@ watch(
   }
 }
 
-.job-json {
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: $secondary-text;
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-
-  &:hover {
-    text-decoration: underline;
-  }
-}
-
-html.dark-mode {
-  .configurator-head h2 {
-    color: #fff;
-  }
-
-  .job-json {
-    color: $secondary;
-  }
+html.dark-mode .configurator-head h2 {
+  color: #fff;
 }
 
 .settings-panel {
@@ -953,7 +935,7 @@ html.dark-mode {
   @include soft-panel;
   // Under the slim header, which pins at the top while the settings scroll.
   position: sticky;
-  top: 96px;
+  top: calc(var(--slim-top) + var(--slim-height) + 16px);
   display: flex;
   flex-direction: column;
   gap: 16px;
