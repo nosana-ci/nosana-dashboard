@@ -43,6 +43,7 @@
       :runs="runsSummary"
       :changes="setupChanges"
       :hourly-cost="hourlyCost"
+      v-model:deployment-name="deploymentName"
       :deploy-label="deployAction.label"
       :deploy-disabled="deployAction.disabled"
       :deploy-note="deployNote"
@@ -74,7 +75,6 @@
       </template>
       <template #settings>
         <DeploySettingsStep
-          v-model:deployment-name="deploymentName"
           v-model:replicas="replicas"
           v-model:timeout="timeout"
           v-model:strategy="strategy"

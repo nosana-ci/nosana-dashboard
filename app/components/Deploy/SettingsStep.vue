@@ -1,18 +1,6 @@
 <template>
   <div class="settings-step">
     <div class="settings-card">
-      <h3 id="settings-name-heading" class="settings-heading">
-        Deployment name
-      </h3>
-      <input
-        id="settings-deployment-name"
-        v-model="deploymentNameModel"
-        class="input"
-        type="text"
-        placeholder="Deployment name"
-        aria-labelledby="settings-name-heading"
-      />
-
       <h3 class="settings-heading">Run strategy</h3>
       <div class="strategy-list">
         <div
@@ -159,7 +147,6 @@ import {
 import { parseCronExpression } from "~/utils/parseCronExpression";
 
 const props = defineProps<{
-  deploymentName: string;
   replicas: number;
   /** Hours. */
   timeout: number;
@@ -170,7 +157,6 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  "update:deploymentName": [string];
   "update:replicas": [number];
   /** Hours. */
   "update:timeout": [number];
@@ -216,11 +202,6 @@ const strategyOptions = computed(() =>
     (option) => option.id !== "SIMPLE-EXTEND" || !props.hideSimpleExtend,
   ),
 );
-
-const deploymentNameModel = computed({
-  get: () => props.deploymentName,
-  set: (value: string) => emit("update:deploymentName", value),
-});
 
 // Common schedules as presets, so a cron line is a click rather than a lookup.
 const SCHEDULE_EXAMPLES = [

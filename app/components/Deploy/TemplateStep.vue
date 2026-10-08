@@ -197,6 +197,31 @@
           </button>
         </div>
         <dl class="summary-rows">
+          <!-- The name, edited in place: always set, so it never blocks
+               the deploy. Cleared, it keeps the name it had. -->
+          <div class="summary-name">
+            <dt>Name</dt>
+            <dd>
+              <label class="summary-name-edit">
+                <input
+                  ref="nameInput"
+                  type="text"
+                  :value="deploymentName"
+                  :title="deploymentName"
+                  aria-label="Deployment name"
+                  spellcheck="false"
+                  @change="saveName"
+                  @keydown.enter="nameInput?.blur()"
+                  @keydown.esc="cancelName"
+                />
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"
+                  />
+                </svg>
+              </label>
+            </dd>
+          </div>
           <div>
             <dt>GPU</dt>
             <dd>
@@ -270,7 +295,7 @@
       <Transition name="deploy-bar">
         <div v-if="!ctaInView" class="deploy-bar">
           <span class="deploy-bar-text">
-            <strong>{{ title }}</strong>
+            <strong>{{ deploymentName }}</strong>
             <small>{{ barSummary }}</small>
           </span>
           <button
@@ -327,6 +352,7 @@ const props = defineProps<{
   changes: { gpu: boolean; runs: boolean };
   /** "$0.28": every replica's hourly price together. */
   hourlyCost: string;
+  deploymentName: string;
   /** The deploy button and the lines around it, decided by the page. */
   deployLabel: string;
   deployDisabled: boolean;
@@ -340,6 +366,7 @@ const emit = defineEmits<{
   "edit-job": [mode: "builder" | "json"];
   /** Back to the recommended GPU, no host requirements, default settings. */
   reset: [];
+  "update:deploymentName": [name: string];
   deploy: [];
   claim: [];
   back: [];
@@ -348,6 +375,22 @@ const emit = defineEmits<{
 const isRecommended = computed(
   () => !props.changes.gpu && !props.requirements.length && !props.changes.runs,
 );
+
+const nameInput = ref<HTMLInputElement | null>(null);
+
+function saveName() {
+  const input = nameInput.value;
+  if (!input) return;
+  const name = input.value.trim();
+  input.value = name || props.deploymentName;
+  if (name) emit("update:deploymentName", name);
+}
+
+function cancelName() {
+  if (!nameInput.value) return;
+  nameInput.value.value = props.deploymentName;
+  nameInput.value.blur();
+}
 
 // Your own image starts on the container's image field, the one thing it
 // needs before it can deploy.
@@ -1007,6 +1050,74 @@ html.dark-mode .configurator-head h2 {
   }
 }
 
+// A row like the others, its value a field only on hover and while editing.
+.summary-rows > .summary-name {
+  align-items: center;
+
+  dd {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.summary-name-edit {
+  position: relative;
+  display: block;
+  width: 100%;
+
+  input {
+    width: 100%;
+    margin: -5px 0;
+    padding: 4px 26px 4px 8px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-weight: 600;
+    text-align: right;
+    text-overflow: ellipsis;
+    outline: 0;
+    cursor: text;
+    transition:
+      background-color 0.2s ease,
+      border-color 0.2s ease,
+      box-shadow 0.2s ease;
+
+    &:hover {
+      background: $surface-hover;
+    }
+
+    &:focus {
+      text-align: left;
+      border-color: $secondary;
+      background: $surface-sunken;
+      box-shadow: 0 0 0 3px rgba($secondary, 0.18);
+    }
+  }
+
+  svg {
+    position: absolute;
+    top: 50%;
+    right: 8px;
+    width: 13px;
+    height: 13px;
+    transform: translateY(-50%);
+    fill: none;
+    stroke: $text-muted;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    pointer-events: none;
+    transition: stroke 0.2s ease;
+  }
+
+  &:hover svg,
+  &:focus-within svg {
+    stroke: $secondary-text;
+  }
+}
+
 .summary-chip {
   padding: 2px 9px;
   border-radius: 999px;
@@ -1056,6 +1167,25 @@ html.dark-mode .configurator-head h2 {
 html.dark-mode {
   .summary-rec {
     color: $secondary;
+  }
+
+  .summary-name-edit {
+    input:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    input:focus {
+      background: rgba(0, 0, 0, 0.25);
+    }
+
+    svg {
+      stroke: #8a948a;
+    }
+
+    &:hover svg,
+    &:focus-within svg {
+      stroke: $secondary;
+    }
   }
 
   .deploy-link.summary-reset {
