@@ -130,7 +130,7 @@ export default defineNuxtConfig({
       rpcUrl: process.env.RPC_URL,
       apiBase: process.env.NUXT_PUBLIC_API_BASE,
       inferenceBase: process.env.NUXT_PUBLIC_INFERENCE_BASE,
-      // Nosa's backend; unset hides the Nosa tab. Nosa runs in prd only.
+      // Nosa's backend; unset hides the Nosa tab.
       nosaUrl: process.env.NUXT_PUBLIC_NOSA_URL,
       recaptcha_site_key: process.env.NUXT_PUBLIC_RECAPTCHA_SITE_KEY,
       network: process.env.NETWORK || "mainnet",
