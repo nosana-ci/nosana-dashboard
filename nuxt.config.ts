@@ -56,6 +56,8 @@ export default defineNuxtConfig({
     "~/assets/styles/global.scss",
     "bulma-o-steps/bulma-steps.css",
     "@creativebulma/bulma-tooltip/dist/bulma-tooltip.min.css",
+    // Tailwind and Nuxt UI, scoped to the playground; see the file.
+    "~/assets/css/ui.css",
   ],
   dir: {
     public: "static",
@@ -105,7 +107,19 @@ export default defineNuxtConfig({
     "@nuxtjs/color-mode",
     "nuxt-gtag",
     "@vite-pwa/nuxt",
+    "@nuxt/ui",
+    "@comark/nuxt",
   ],
+  // Nuxt UI drives the playground chat. The app already loads its fonts and runs
+  // its own colour mode, so neither module is pulled in.
+  ui: {
+    fonts: false,
+  },
+  icon: {
+    // The site is static: bundle the icons the templates use, fetch any other from Iconify.
+    provider: "iconify",
+    clientBundle: { scan: true, sizeLimitKb: 512 },
+  },
   googleFonts: {
     preload: true,
     families: {

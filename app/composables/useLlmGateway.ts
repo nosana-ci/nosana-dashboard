@@ -55,7 +55,7 @@ export const usdToCredits = (usd: number): number => usd / 0.001;
 
 export const useLlmGateway = () => {
   const config = useRuntimeConfig().public;
-  const { isAuthenticated } = useSuperTokens();
+  const { apiKey } = usePlaygroundKey();
 
   const inferenceBase = (config.inferenceBase as string).replace(/\/$/, "");
 
@@ -67,14 +67,14 @@ export const useLlmGateway = () => {
   } = useMyAsyncData(
     "llm-models",
     async () => {
-      if (!isAuthenticated.value) return [] as LlmModel[];
+      if (!apiKey.value) return [] as LlmModel[];
       const response = await $fetch<{ data: LlmModel[] }>(
-        `${config.apiBase}/playground/v1/models`,
-        { credentials: "include" },
+        `${inferenceBase}/v1/models`,
+        { headers: { Authorization: `Bearer ${apiKey.value}` } },
       );
       return response.data ?? [];
     },
-    { default: () => [] as LlmModel[], watch: [isAuthenticated] },
+    { default: () => [] as LlmModel[], watch: [apiKey] },
   );
 
   return {

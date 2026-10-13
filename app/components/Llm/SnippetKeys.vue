@@ -30,24 +30,10 @@ import { maskKey, type ApiKey } from "~/composables/useApiKeys";
 
 // The reader's own keys under the playground's code, so the one to export as
 // NOSANA_API_KEY is a copy away, and a new one is made without leaving the page.
-const { apiKeys, loadingKeys, refreshKeys } = useApiKeys();
+// The chat calls the gateway with the same key.
+const { activeKeys, selectedKey, selectedKeyId, loadingKeys, refreshKeys } =
+  usePlaygroundKey();
 const showCreateKey = ref(false);
-const selectedKeyId = ref("");
-
-const activeKeys = computed(() =>
-  apiKeys.value.keys.filter((key: ApiKey) => key.status === "active"),
-);
-const selectedKey = computed(
-  () => activeKeys.value.find((key: ApiKey) => key.id === selectedKeyId.value) ?? null,
-);
-
-watch(
-  activeKeys,
-  (keys) => {
-    if (!selectedKey.value) selectedKeyId.value = keys[0]?.id ?? "";
-  },
-  { immediate: true },
-);
 
 const onKeyCreated = async (key: ApiKey) => {
   await refreshKeys();
