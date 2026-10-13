@@ -5,6 +5,14 @@
     </div>
 
     <div class="pg-side-scroll">
+      <ul class="pg-side-list pg-side-new">
+        <li class="pg-row">
+          <button type="button" class="pg-row-open pg-plain" @click="emit('create')">
+            <UIcon name="i-lucide-plus" class="pg-row-icon" />
+            <span class="pg-row-title">New chat</span>
+          </button>
+        </li>
+      </ul>
       <template v-for="group in groups" :key="group.label">
         <p class="pg-side-label">{{ group.label }}</p>
         <ul class="pg-side-list">
@@ -79,6 +87,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   open: [id: string];
+  create: [];
   rename: [id: string, title: string];
   remove: [id: string];
 }>();
@@ -247,6 +256,10 @@ const groups = computed(() => {
   flex: 1;
   min-width: 0;
   padding: 2px 4px;
+}
+
+.pg-side-new {
+  margin-top: 0.5rem;
 }
 
 .pg-side-empty {

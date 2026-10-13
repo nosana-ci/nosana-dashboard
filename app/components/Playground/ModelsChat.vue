@@ -10,6 +10,7 @@
         :chats="recent"
         :current-id="currentId"
         @open="open"
+        @create="newChat"
         @rename="rename"
         @remove="removeChat"
       />
@@ -27,8 +28,8 @@
         @regenerate="(id) => regenerate({ messageId: id })"
         @approve="(id, approved) => addToolApprovalResponse({ id, approved })"
       >
-        <template #header>
-          <UTooltip v-if="!wide" text="Chats">
+        <template v-if="!wide" #header>
+          <UTooltip text="Chats">
             <UButton
               icon="i-lucide-history"
               color="neutral"
@@ -36,26 +37,6 @@
               size="sm"
               aria-label="Chats"
               @click="historyOpen = true"
-            />
-          </UTooltip>
-          <UTooltip text="New chat">
-            <UButton
-              icon="i-lucide-square-pen"
-              color="neutral"
-              variant="ghost"
-              size="sm"
-              aria-label="New chat"
-              @click="newChat"
-            />
-          </UTooltip>
-          <UTooltip text="Delete chat">
-            <UButton
-              icon="i-lucide-trash-2"
-              color="neutral"
-              variant="ghost"
-              size="sm"
-              aria-label="Delete chat"
-              @click="deleteChat"
             />
           </UTooltip>
         </template>
@@ -151,6 +132,7 @@
           :chats="recent"
           :current-id="currentId"
           @open="(id) => closeHistory(() => open(id))"
+          @create="closeHistory(newChat)"
           @rename="rename"
           @remove="removeChat"
         />
@@ -299,10 +281,6 @@ function removeChat(id: string) {
   if (id === currentId.value) stop();
   remove(id);
   if (!current.value) create();
-}
-
-function deleteChat() {
-  if (current.value) removeChat(current.value.id);
 }
 
 // Escape stops a reply.

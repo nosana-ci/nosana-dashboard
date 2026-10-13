@@ -1,6 +1,6 @@
 <template>
   <div class="pg-chat">
-    <header class="pg-bar">
+    <header v-if="$slots.header || $slots.actions" class="pg-bar">
       <div class="pg-bar-main">
         <slot name="header" />
       </div>
