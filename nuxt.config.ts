@@ -110,13 +110,13 @@ export default defineNuxtConfig({
     "@nuxt/ui",
     "@comark/nuxt",
   ],
-  // Nuxt UI drives the playground chat. The app already loads its fonts and runs
-  // its own colour mode, so neither module is pulled in.
+  // Nuxt UI drives the playground chat. The app already loads its fonts.
   ui: {
     fonts: false,
   },
   icon: {
-    // The site is static: bundle the icons the templates use, fetch any other from Iconify.
+    // The site is static, so there is no icon server: bundle the icons the
+    // playground uses and fetch any other from Iconify.
     provider: "iconify",
     clientBundle: { scan: true, sizeLimitKb: 512 },
   },

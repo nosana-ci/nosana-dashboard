@@ -47,73 +47,6 @@
                 :streaming="streaming(part, message)"
               />
             </UChatReasoning>
-            <!-- The sub-agent: asks first, then shows its steps as it works. -->
-            <UChatTool
-              v-else-if="isToolUIPart(part) && getToolName(part) === 'delegate'"
-              :text="delegateLabel(part)"
-              icon="i-lucide-bot"
-              :loading="delegateBusy(part)"
-              :default-open="true"
-              :actions="delegateActions(part)"
-              class="my-1"
-            >
-              <div class="pg-delegate">
-                <template v-if="part.state === 'approval-requested' || !delegateAgents(part).length">
-                  <p
-                    v-for="(task, j) in delegateTasks(part)"
-                    :key="j"
-                    class="pg-delegate-task"
-                  >
-                    {{ task }}
-                  </p>
-                </template>
-                <div
-                  v-else
-                  class="pg-agents"
-                  :class="{ 'is-many': delegateAgents(part).length > 1 }"
-                >
-                  <article
-                    v-for="agent in delegateAgents(part)"
-                    :key="agent.name"
-                    class="pg-agent"
-                    :data-status="agent.status"
-                  >
-                    <header class="pg-agent-head">
-                      <span class="pg-agent-mark"><UIcon name="i-lucide-bot" /></span>
-                      <span class="pg-agent-name">{{ agent.name }}</span>
-                      <span class="pg-agent-status">
-                        <UIcon
-                          v-if="agent.status !== 'done' && agent.status !== 'failed'"
-                          name="i-lucide-loader-circle"
-                          class="pg-agent-spin"
-                        />
-                        {{ agentStatus(agent) }}
-                      </span>
-                    </header>
-                    <p class="pg-agent-task">{{ agent.task }}</p>
-                    <ul v-if="agent.steps.length" class="pg-delegate-steps">
-                      <li v-for="(step, j) in agent.steps" :key="j">
-                        <UIcon
-                          :name="step.state === 'done' ? 'i-lucide-check' : 'i-lucide-loader-circle'"
-                          :class="['pg-delegate-step-icon', { 'is-running': step.state !== 'done' }]"
-                        />
-                        {{ step.label }}
-                      </li>
-                    </ul>
-                    <PlaygroundMarkdown
-                      v-if="agent.text"
-                      :text="agent.text"
-                      :streaming="agent.status === 'writing'"
-                      class="pg-agent-text"
-                    />
-                    <p v-if="agent.error" class="pg-delegate-error">{{ agent.error }}</p>
-                  </article>
-                </div>
-                <p v-if="part.state === 'output-error'" class="pg-delegate-error">
-                  {{ part.errorText }}
-                </p>
-              </div>
-            </UChatTool>
             <UChatTool
               v-else-if="isToolUIPart(part)"
               :text="toolLabel(part)"
@@ -127,20 +60,6 @@
               <pre class="pg-tool-body">{{ toolBody(part) }}</pre>
             </UChatTool>
           </template>
-          <p
-            v-if="message.role === 'assistant' && statsOf(message)"
-            class="pg-stats"
-          >
-            {{ statsOf(message) }}
-          </p>
-          <!-- While the reply comes in: how fast, live. -->
-          <p
-            v-else-if="live && message.id === messages.at(-1)?.id"
-            class="pg-stats pg-live"
-          >
-            <UIcon name="i-lucide-zap" class="pg-live-icon" />
-            {{ live }}
-          </p>
         </template>
       </UChatMessages>
     </div>
@@ -177,8 +96,6 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from "vue";
-import { useNow } from "@vueuse/core";
 import {
   getToolName,
   isToolUIPart,
@@ -188,18 +105,12 @@ import {
   type UIMessage,
 } from "ai";
 import { getTextFromMessage } from "@nuxt/ui/utils/ai";
-import type { ReplyStats } from "~/utils/modelTransport";
-import {
-  TOOL_CATALOG,
-  type AgentProgress,
-  type DelegateProgress,
-} from "~/utils/playgroundTools";
-import { usdToCredits } from "~/composables/useLlmGateway";
+import { TOOL_CATALOG } from "~/utils/playgroundTools";
 
 type AnyToolPart = ToolUIPart | DynamicToolUIPart;
 
 const props = defineProps<{
-  messages: UIMessage<ReplyStats>[];
+  messages: UIMessage[];
   status: ChatStatus;
   error?: Error;
   placeholder?: string;
@@ -210,19 +121,11 @@ const emit = defineEmits<{
   send: [text: string];
   stop: [];
   regenerate: [messageId?: string];
-  /** Drop this message and everything after it; its text is back in the prompt. */
-  rewind: [messageId: string];
-  /** Read this reply aloud. */
-  speak: [text: string];
-  /** Copy the chat up to and including this message into a new one. */
-  branch: [messageId: string];
   /** The reader's answer to a tool that asked first. */
   approve: [approvalId: string, approved: boolean];
-  /** "/" alone in the prompt asks for the prompt palette. */
-  slash: [];
 }>();
 
-// The page can fill the prompt too, from a saved prompt or an edited message.
+// The page can fill the prompt too, from a starter card.
 const draft = defineModel<string>("draft", { default: "" });
 const toast = useToast();
 
@@ -237,38 +140,6 @@ function streaming(part: UIMessage["parts"][number], message: UIMessage): boolea
   );
 }
 
-watch(draft, (value) => {
-  if (value === "/") {
-    draft.value = "";
-    emit("slash");
-  }
-});
-
-// A live read on the reply as it streams: tokens are estimated from characters
-// until the gateway reports the real count at the end.
-const now = useNow({ interval: 250 });
-const streamStart = ref(0);
-watch(
-  () => props.status,
-  (status) => {
-    if (status === "submitted") streamStart.value = Date.now();
-  },
-);
-const live = computed(() => {
-  if (props.status !== "streaming" || !streamStart.value) return null;
-  const last = props.messages.at(-1);
-  if (!last || last.role !== "assistant") return null;
-  const chars = last.parts.reduce(
-    (sum, part) =>
-      sum + ("text" in part && typeof part.text === "string" ? part.text.length : 0),
-    0,
-  );
-  const seconds = Math.max(0.25, (now.value.getTime() - streamStart.value) / 1000);
-  const tokens = Math.round(chars / 4);
-  if (!tokens) return "Thinking…";
-  return `${Math.round(tokens / seconds)} tok/s · ~${tokens.toLocaleString()} tokens · ${seconds.toFixed(1)}s`;
-});
-
 function submit() {
   const text = draft.value.trim();
   if (!text) return;
@@ -276,46 +147,20 @@ function submit() {
   emit("send", text);
 }
 
-function focusPrompt() {
-  nextTick(() => {
-    document.querySelector<HTMLTextAreaElement>(".pg-composer textarea")?.focus();
-  });
-}
-
 const copy = (_: MouseEvent, message: UIMessage) => {
   navigator.clipboard.writeText(getTextFromMessage(message));
   toast.add({ title: "Copied", icon: "i-lucide-check", duration: 1500 });
 };
 
-const edit = (_: MouseEvent, message: UIMessage) => {
-  draft.value = getTextFromMessage(message);
-  emit("rewind", message.id);
-  focusPrompt();
-};
-
-const branchFrom = (_: MouseEvent, message: UIMessage) =>
-  emit("branch", message.id);
-
-const userActions = [
-  { label: "Edit", icon: "i-lucide-pencil", onClick: edit },
-  { label: "Copy", icon: "i-lucide-copy", onClick: copy },
-  { label: "Branch from here", icon: "i-lucide-git-branch", onClick: branchFrom },
-];
+const userActions = [{ label: "Copy", icon: "i-lucide-copy", onClick: copy }];
 const assistantActions = [
   { label: "Copy", icon: "i-lucide-copy", onClick: copy },
-  {
-    label: "Read aloud",
-    icon: "i-lucide-volume-2",
-    onClick: (_: MouseEvent, message: UIMessage) =>
-      emit("speak", getTextFromMessage(message)),
-  },
   {
     label: "Regenerate",
     icon: "i-lucide-refresh-cw",
     onClick: (_: MouseEvent, message: UIMessage) =>
       emit("regenerate", message.id),
   },
-  { label: "Branch from here", icon: "i-lucide-git-branch", onClick: branchFrom },
 ];
 
 // Tool calls, labelled by the catalog entry when they are one of ours.
@@ -400,79 +245,6 @@ function toolBody(part: AnyToolPart): string {
   return typeof value === "string" ? value : JSON.stringify(value, null, 2);
 }
 
-// The delegation's part: the tasks it was given and each agent's progress.
-const delegateTasks = (part: AnyToolPart): string[] => {
-  const input = part.input as { tasks?: string[]; task?: string } | undefined;
-  return input?.tasks ?? (input?.task ? [input.task] : []);
-};
-
-const delegateProgress = (part: AnyToolPart): DelegateProgress | null =>
-  part.state === "output-available"
-    ? (part.output as DelegateProgress)
-    : null;
-
-const delegateAgents = (part: AnyToolPart): AgentProgress[] =>
-  delegateProgress(part)?.agents ?? [];
-
-const delegateBusy = (part: AnyToolPart) =>
-  toolBusy(part) ||
-  (part.state === "output-available" && part.preliminary === true);
-
-const agentStatus = (agent: AgentProgress) =>
-  ({
-    thinking: "Thinking",
-    tool: "Using a tool",
-    writing: "Writing",
-    done: "Done",
-    failed: "Failed",
-  })[agent.status];
-
-function delegateLabel(part: AnyToolPart): string {
-  switch (part.state) {
-    case "approval-requested":
-      return delegateTasks(part).length > 1
-        ? `Wants to spin up ${delegateTasks(part).length} sub-agents`
-        : "Wants to hand this to a sub-agent";
-    case "approval-responded":
-      return part.approval?.approved ? "Delegation approved" : "Delegation declined";
-    case "output-denied":
-      return "Delegation declined";
-    case "output-error":
-      return "Sub-agent failed";
-    case "output-available": {
-      const n = delegateAgents(part).length;
-      const who = n > 1 ? `${n} sub-agents` : "Sub-agent";
-      return part.preliminary ? `${who} working` : `${who} finished`;
-    }
-    default:
-      return "Preparing a sub-agent";
-  }
-}
-
-const delegateActions = approvalActions;
-
-/** "1.2s to first token · 48 tok/s · 312 tokens · ≈ 0.4 credits", from what is known. */
-function statsOf(message: UIMessage<ReplyStats>): string | null {
-  const s = message.metadata;
-  if (!s) return null;
-  // Not while this reply is still coming in.
-  if (props.status !== "ready" && message.id === props.messages.at(-1)?.id)
-    return null;
-  const parts: string[] = [];
-  if (s.ttft !== undefined) parts.push(`${s.ttft.toFixed(1)}s to first token`);
-  if (s.outputTokens && s.duration)
-    parts.push(`${Math.round(s.outputTokens / s.duration)} tok/s`);
-  if (s.outputTokens) parts.push(`${s.outputTokens} tokens`);
-  if (s.costUsd !== undefined) parts.push(`≈ ${credits(s.costUsd)} credits`);
-  if (s.finishReason === "length") parts.push("cut off at the token limit");
-  return parts.length ? parts.join(" · ") : null;
-}
-
-function credits(usd: number): string {
-  const value = usdToCredits(usd);
-  if (value === 0) return "0";
-  return value < 0.01 ? "<0.01" : value.toFixed(2);
-}
 </script>
 
 <style scoped lang="scss">
@@ -563,170 +335,6 @@ function credits(usd: number): string {
   background: var(--ui-bg-muted);
   color: var(--ui-text);
   white-space: pre-wrap;
-}
-
-.pg-delegate {
-  display: grid;
-  gap: 0.6rem;
-  padding: 0.35rem 0;
-  font-size: 0.85rem;
-}
-
-.pg-delegate-task {
-  margin: 0;
-  padding: 0.55rem 0.75rem;
-  border-left: 2px solid var(--ui-primary);
-  background: var(--ui-bg-muted);
-  border-radius: 0 8px 8px 0;
-  color: var(--ui-text);
-}
-
-.pg-delegate-steps {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 0.3rem;
-  font-size: 0.8rem;
-  color: var(--ui-text-muted);
-
-  li {
-    display: flex;
-    align-items: center;
-    gap: 0.45rem;
-  }
-}
-
-.pg-delegate-step-icon {
-  width: 14px;
-  height: 14px;
-  color: var(--ui-primary);
-
-  &.is-running {
-    animation: pg-spin 1s linear infinite;
-  }
-}
-
-@keyframes pg-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-// One card per agent, side by side when there are several.
-.pg-agents {
-  display: grid;
-  gap: 0.6rem;
-
-  &.is-many {
-    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
-  }
-}
-
-.pg-agent {
-  display: grid;
-  gap: 0.5rem;
-  padding: 0.75rem 0.85rem;
-  border: 1px solid var(--ui-border);
-  border-radius: 12px;
-  background: var(--ui-bg-elevated);
-  transition: border-color 0.2s ease;
-
-  &[data-status="done"] {
-    border-color: rgba(16, 232, 12, 0.35);
-  }
-
-  &[data-status="failed"] {
-    border-color: color-mix(in srgb, var(--ui-error) 50%, transparent);
-  }
-}
-
-.pg-agent-head {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.pg-agent-mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, var(--pg-green) 0%, #0aa908 100%);
-  color: #05230a;
-  font-size: 0.9rem;
-}
-
-.pg-agent-name {
-  font-family: var(--pg-title);
-  font-weight: 600;
-  color: var(--ui-text-highlighted);
-}
-
-.pg-agent-status {
-  margin-left: auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  padding: 1px 8px;
-  border-radius: 999px;
-  background: var(--ui-bg-accented);
-  font-family: var(--pg-mono);
-  font-size: 0.64rem;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--ui-text-muted);
-
-  [data-status="done"] & {
-    color: var(--ui-primary);
-    background: var(--pg-chip-bg);
-  }
-}
-
-.pg-agent-spin {
-  width: 11px;
-  height: 11px;
-  animation: pg-spin 1s linear infinite;
-}
-
-.pg-agent-task {
-  margin: 0;
-  font-size: 0.78rem;
-  line-height: 1.4;
-  color: var(--ui-text-muted);
-}
-
-.pg-agent-text {
-  padding-top: 0.4rem;
-  border-top: 1px solid var(--ui-border-muted);
-  font-size: 0.82rem;
-}
-
-.pg-delegate-error {
-  margin: 0;
-  color: var(--ui-error);
-}
-
-.pg-stats {
-  margin: 0.6rem 0 0;
-  font-family: var(--pg-mono);
-  font-size: 0.68rem;
-  letter-spacing: 0.01em;
-  color: var(--ui-text-dimmed);
-}
-
-.pg-live {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  color: var(--ui-primary);
-}
-
-.pg-live-icon {
-  width: 12px;
-  height: 12px;
 }
 
 .pg-empty {

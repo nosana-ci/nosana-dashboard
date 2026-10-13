@@ -8,7 +8,6 @@
 @import "@nuxt/ui";
 
 @source "../../components/Playground";
-@source "../../pages/playground.vue";
 
 /* The app marks dark mode with `dark-mode` on <html>, not Nuxt UI's `dark`. */
 @custom-variant dark (&:where(.dark-mode, .dark-mode *));
@@ -91,19 +90,6 @@ html.dark-mode .pg-markdown pre.shiki {
   background-color: var(--shiki-dark-bg, var(--ui-bg-muted));
 }
 
-/* The main navigation on the playground page: a step darker than the chat list
-   beside it, with the softest of hairlines, so the two read as one sidebar in two
-   columns. Set on <html> so the layout can read them with the theme in effect. */
-html {
-  --pg-nav: #eef0f3;
-  --pg-nav-border: rgba(0, 0, 0, 0.06);
-}
-
-html.dark-mode {
-  --pg-nav: #0d0d0d;
-  --pg-nav-border: rgba(255, 255, 255, 0.06);
-}
-
 /* The playground's own palette: system type and the neutral greys of a native app.
    Unlayered, so it wins over the theme layer's tokens inside the workspace. */
 .pg-shell {
@@ -159,19 +145,4 @@ html.dark-mode .pg-shell {
   --pg-bubble: #262626;
   --pg-chip-bg: rgba(16, 232, 12, 0.12);
   --pg-chip-border: rgba(16, 232, 12, 0.28);
-}
-
-/* The palette's search line: the magnifier and the close button sit the same
-   distance in from either edge, and the text clears both. The dialog is portalled
-   out of the component, so this lives here rather than in a scoped style. */
-.pg-palette [data-slot="input"] > input {
-  padding-inline: 3.25rem;
-}
-
-.pg-palette [data-slot="input"] [data-slot="leading"] {
-  padding-inline-start: 1.15rem;
-}
-
-.pg-palette [data-slot="input"] [data-slot="trailing"] {
-  padding-inline-end: 1.15rem;
 }

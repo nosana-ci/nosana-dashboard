@@ -1,35 +1,7 @@
 <template>
   <aside class="pg-side">
     <div class="pg-side-top">
-      <UTooltip :text="navHidden ? 'Show navigation' : 'Hide navigation'">
-        <UButton
-          :icon="navHidden ? 'i-lucide-panel-left-open' : 'i-lucide-panel-left-close'"
-          color="neutral"
-          variant="ghost"
-          size="sm"
-          class="pg-nav-toggle"
-          :aria-pressed="navHidden"
-          aria-label="Toggle navigation"
-          @click="navHidden = !navHidden"
-        />
-      </UTooltip>
-      <button type="button" class="pg-search pg-plain" @click="emit('search')">
-        <UIcon name="i-lucide-search" class="pg-search-icon" />
-        <span class="pg-search-label">Search</span>
-        <span class="pg-kbds">
-          <UKbd value="meta" size="sm" /><UKbd value="k" size="sm" />
-        </span>
-      </button>
-      <UTooltip text="New chat" :kbds="['meta', 'shift', 'o']">
-        <UButton
-          icon="i-lucide-square-pen"
-          color="neutral"
-          variant="ghost"
-          size="sm"
-          aria-label="New chat"
-          @click="emit('create')"
-        />
-      </UTooltip>
+      <span class="pg-side-heading">Chats</span>
     </div>
 
     <div class="pg-side-scroll">
@@ -42,90 +14,91 @@
             class="pg-row"
             :class="{ 'is-active': chat.id === currentId }"
           >
+            <form v-if="editingId === chat.id" class="pg-row-edit" @submit.prevent="commit(chat.id)">
+              <UInput
+                v-model="draft"
+                size="xs"
+                autofocus
+                class="w-full"
+                @blur="commit(chat.id)"
+                @keydown.escape="editingId = null"
+              />
+            </form>
             <button
+              v-else
               type="button"
               class="pg-row-open pg-plain"
-              :title="branchNote(chat) ?? chat.title ?? 'New chat'"
+              :title="chat.title || 'New chat'"
               @click="emit('open', chat.id)"
+              @dblclick="edit(chat)"
             >
-              <UIcon
-                v-if="chat.parentId"
-                name="i-lucide-git-branch"
-                class="pg-row-icon"
-              />
               <span class="pg-row-title">{{ chat.title || "New chat" }}</span>
             </button>
-            <UTooltip text="Delete chat">
-              <UButton
-                icon="i-lucide-trash-2"
-                color="neutral"
-                variant="ghost"
-                size="xs"
-                class="pg-row-del"
-                aria-label="Delete chat"
-                @click.stop="emit('remove', chat.id)"
-              />
-            </UTooltip>
+            <span v-if="editingId !== chat.id" class="pg-row-acts">
+              <UTooltip text="Rename chat">
+                <UButton
+                  icon="i-lucide-pencil"
+                  color="neutral"
+                  variant="ghost"
+                  size="xs"
+                  aria-label="Rename chat"
+                  @click.stop="edit(chat)"
+                />
+              </UTooltip>
+              <UTooltip text="Delete chat">
+                <UButton
+                  icon="i-lucide-trash-2"
+                  color="neutral"
+                  variant="ghost"
+                  size="xs"
+                  aria-label="Delete chat"
+                  @click.stop="emit('remove', chat.id)"
+                />
+              </UTooltip>
+            </span>
           </li>
         </ul>
       </template>
       <p v-if="!chats.length" class="pg-side-empty">
         Your chats are kept in this browser and show up here.
       </p>
-
-      <p class="pg-side-label">Prompts</p>
-      <ul class="pg-side-list">
-        <li v-for="prompt in prompts" :key="prompt.label" class="pg-row">
-          <button
-            type="button"
-            class="pg-row-open pg-plain"
-            :title="prompt.text"
-            @click="emit('prompt', prompt.text)"
-          >
-            <UIcon name="i-lucide-sparkles" class="pg-row-icon" />
-            <span class="pg-row-title">{{ prompt.label }}</span>
-          </button>
-        </li>
-      </ul>
     </div>
-
-    <footer class="pg-side-foot">
-      <UKbd value="escape" size="sm" /> stops a reply ·
-      <UKbd value="enter" size="sm" /> sends
-    </footer>
   </aside>
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import type { PlaygroundChat } from "~/composables/usePlaygroundChats";
 
 const props = defineProps<{
   /** Most recent first. */
   chats: PlaygroundChat[];
   currentId: string;
-  prompts: { label: string; text: string }[];
 }>();
 
-// Hides the dashboard's navigation so the workspace takes the window.
-const navHidden = usePlaygroundNav();
 
 const emit = defineEmits<{
   open: [id: string];
-  create: [];
+  rename: [id: string, title: string];
   remove: [id: string];
-  prompt: [text: string];
-  search: [];
 }>();
 
-const DAY = 86_400_000;
+// The chat whose name is being edited in place, and the name typed so far.
+const editingId = ref<string | null>(null);
+const draft = ref("");
 
-/** "Branched from …", for the row's tooltip. */
-function branchNote(chat: PlaygroundChat): string | null {
-  if (!chat.parentId) return null;
-  const parent = props.chats.find((entry) => entry.id === chat.parentId);
-  return `Branched from “${parent?.title || "a deleted chat"}”`;
+function edit(chat: PlaygroundChat) {
+  editingId.value = chat.id;
+  draft.value = chat.title;
 }
+
+function commit(id: string) {
+  if (editingId.value !== id) return;
+  emit("rename", id, draft.value);
+  editingId.value = null;
+}
+
+const DAY = 86_400_000;
 
 
 /** Chats by when they were last touched, newest group first. */
@@ -165,55 +138,11 @@ const groups = computed(() => {
   border-bottom: 1px solid var(--ui-border);
 }
 
-.pg-nav-toggle {
-  display: none;
-}
-
-@media screen and (min-width: 1024px) {
-  .pg-nav-toggle {
-    display: inline-flex;
-  }
-}
-
-// The search field the window opens with; it runs the palette.
-.pg-search {
+// "Chats" on the left, the new-chat button on the right.
+.pg-side-heading {
   flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  height: 30px;
-  padding: 0 0.5rem 0 0.6rem;
-  border: 1px solid var(--ui-border);
-  border-radius: 8px;
-  background: var(--ui-bg);
-  color: var(--ui-text-dimmed);
-  font: inherit;
-  font-size: 0.85rem;
-  cursor: text;
-  transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
-
-  &:hover {
-    border-color: var(--ui-border-accented);
-  }
-}
-
-.pg-search-icon {
-  width: 14px;
-  height: 14px;
-}
-
-.pg-search-label {
-  flex: 1;
-  text-align: left;
-}
-
-.pg-kbds {
-  display: inline-flex;
-  gap: 2px;
-  opacity: 0.8;
+  padding-left: 0.5rem;
+  font-weight: 600;
 }
 
 .pg-side-scroll {
@@ -262,7 +191,8 @@ const groups = computed(() => {
     color: var(--ui-text-highlighted);
   }
 
-  .pg-row-del {
+  .pg-row-acts {
+    display: flex;
     position: absolute;
     top: 50%;
     right: 0.3rem;
@@ -270,14 +200,14 @@ const groups = computed(() => {
     opacity: 0;
   }
 
-  &:hover .pg-row-del,
-  &:focus-within .pg-row-del {
+  &:hover .pg-row-acts,
+  &:focus-within .pg-row-acts {
     opacity: 1;
   }
 
   &:hover .pg-row-open,
   &:focus-within .pg-row-open {
-    padding-right: 2.1rem;
+    padding-right: 3.8rem;
   }
 }
 
@@ -313,16 +243,15 @@ const groups = computed(() => {
   color: var(--ui-text);
 }
 
+.pg-row-edit {
+  flex: 1;
+  min-width: 0;
+  padding: 2px 4px;
+}
+
 .pg-side-empty {
   margin: 0.5rem 0.75rem;
   font-size: 0.8rem;
   color: var(--ui-text-muted);
-}
-
-.pg-side-foot {
-  flex: none;
-  padding: 0.7rem 1rem;
-  font-size: 0.72rem;
-  color: var(--ui-text-dimmed);
 }
 </style>
