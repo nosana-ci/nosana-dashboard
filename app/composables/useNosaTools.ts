@@ -7,17 +7,17 @@ type Persona = { systemPrompt: string; officialLinks: string };
 
 const SOURCE_KINDS = ["markdown", "tsdoc", "idl", "discord-qa", "manual", "blog"] as const;
 
-// Loaded once per page, the first time the playground runs as Nosa.
+// Loaded once per page, when the playground opens.
 const persona = ref<Persona | null>(null);
 const accountTools = shallowRef<{ client: McpClient; tools: McpToolInfo[] } | null>(null);
 const status = ref<"idle" | "loading" | "ready" | "error">("idle");
 const error = ref<string | null>(null);
 
 /**
- * What the playground needs to run as Nosa, all from Nosa's backend with the
- * dashboard session: the prompt admins edit, the user's account through the Nosana
- * MCP server, Nosana's knowledge base and the official links. The browser holds no
- * token for any of it.
+ * The Nosana tools every playground model can call, and Nosa's prompt, all from
+ * Nosa's backend with the dashboard session: the user's account through the Nosana
+ * MCP server, Nosana's knowledge base, the official links and the prompt admins edit.
+ * The browser holds no token for any of it.
  */
 export const useNosaTools = () => {
   const config = useRuntimeConfig().public;

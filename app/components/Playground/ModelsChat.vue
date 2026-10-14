@@ -47,7 +47,7 @@
           <div class="pg-hero">
             <div class="pg-cards">
               <button
-                v-for="card in starters"
+                v-for="card in STARTERS"
                 :key="card.title"
                 type="button"
                 class="pg-card pg-plain"
@@ -128,7 +128,7 @@ import {
   type LlmModel,
 } from "~/composables/useLlmGateway";
 import { PlaygroundTransport } from "~/utils/playgroundTransport";
-import { NOSA_STARTERS, STARTERS } from "~/utils/playgroundStarters";
+import { STARTERS } from "~/utils/playgroundStarters";
 import { titleOf } from "~/composables/usePlaygroundChats";
 
 const props = defineProps<{
@@ -220,13 +220,13 @@ const modelMenu = computed<ModelOption[][]>(() => [
   })),
 ]);
 
-watch(asNosa, (on) => on && nosa.load(), { immediate: true });
+// Every model gets the Nosana tools, so they load with the page.
+if (nosa.enabled) void nosa.load();
 watch(nosa.error, (message) => {
-  if (message) toast.add({ title: "Nosa's tools are not available", description: message, color: "error" });
+  if (message) toast.add({ title: "The Nosana tools are not available", description: message, color: "error" });
 });
 
 
-const starters = computed(() => (asNosa.value ? NOSA_STARTERS : STARTERS));
 
 const draft = ref("");
 
@@ -237,8 +237,8 @@ if (!current.value) create();
 const transport = new PlaygroundTransport(config.apiBase as string, () => ({
   model: runModel.value,
   system: asNosa.value ? nosa.system.value : undefined,
-  // Plain models chat without tools; Nosa's come from the Nosana MCP server.
-  tools: asNosa.value ? nosa.tools.value : undefined,
+  // Every model can use the Nosana tools; Nosa adds its instructions on top.
+  tools: nosa.tools.value,
 }));
 
 const { messages, status, error, sendMessage, stop, regenerate, addToolApprovalResponse } =
