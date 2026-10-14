@@ -94,6 +94,7 @@
     <section class="mb-6">
       <template v-if="isAuthenticated">
         <ApiKeys class="mb-6" />
+        <LlmInferenceCode class="mb-6" />
         <OAuthApps />
       </template>
 

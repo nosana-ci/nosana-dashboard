@@ -1,5 +1,5 @@
 <template>
-  <UApp>
+  <UApp :locale="locale">
     <div
       class="pg-shell pg-workspace"
       :class="{ 'has-side': wide }"
@@ -23,7 +23,9 @@
         :error="error"
         :placeholder="runModel ? `Ask ${modelLabel} anything` : 'No model is serving right now'"
         :disabled="!runModel"
-        @send="(text) => sendMessage({ text })"
+        :suggestions="suggestions"
+        :suggesting="suggesting"
+        @send="send"
         @stop="stop"
         @regenerate="(id) => regenerate({ messageId: id })"
         @approve="(id, approved) => addToolApprovalResponse({ id, approved })"
@@ -50,14 +52,11 @@
                 type="button"
                 class="pg-card pg-plain"
                 :disabled="!runModel"
-                @click="sendMessage({ text: card.text })"
+                @click="send(card.text)"
               >
                 <span class="pg-card-head">
                   <span class="pg-card-icon"><UIcon :name="card.icon" /></span>
-                  <span class="pg-card-titles">
-                    <span class="pg-card-kicker">{{ card.kicker }}</span>
-                    <span class="pg-card-title">{{ card.title }}</span>
-                  </span>
+                  <span class="pg-card-title">{{ card.title }}</span>
                 </span>
                 <span class="pg-card-text">{{ card.text }}</span>
               </button>
@@ -69,13 +68,23 @@
           <div class="pg-foot">
             <UDropdownMenu :items="modelMenu" :content="{ side: 'top', align: 'start' }" :ui="{ content: 'pg-shell' }">
               <UButton
-                icon="i-lucide-box"
                 :label="modelLabel"
                 trailing-icon="i-lucide-chevron-down"
                 color="neutral"
                 variant="ghost"
                 size="xs"
               />
+              <!-- As on the deployment pages: a status dot, the name, then its context. -->
+              <template #item-leading="{ item }">
+                <StatusMark :tone="item.live ? 'live' : 'neutral'" :size="12" />
+              </template>
+              <template #item-label="{ item }">
+                <span class="pg-model-option">
+                  <span class="pg-model-name">{{ item.label }}</span>
+                  <span class="pg-model-meta">{{ item.meta }}</span>
+                  <span v-if="item.price" class="pg-model-meta">{{ item.price }}</span>
+                </span>
+              </template>
             </UDropdownMenu>
           </div>
         </template>
@@ -108,10 +117,20 @@ import { computed, ref, watch } from "vue";
 import { useEventListener, useMediaQuery } from "@vueuse/core";
 import { useChat } from "@ai-sdk/vue";
 import { lastAssistantMessageIsCompleteWithApprovalResponses, type UIMessage } from "ai";
-import { isChatModel, modelName, type LlmModel } from "~/composables/useLlmGateway";
+import { en } from "@nuxt/ui/locale";
+import StatusMark from "~/components/Common/StatusMark.vue";
+import {
+  formatTokenCount,
+  formatUsd,
+  isChatModel,
+  modelName,
+  pricePerMillion,
+  type LlmModel,
+} from "~/composables/useLlmGateway";
 import { PlaygroundTransport } from "~/utils/playgroundTransport";
 import { buildTools } from "~/utils/playgroundTools";
 import { NOSA_STARTERS, STARTERS } from "~/utils/playgroundStarters";
+import { titleOf } from "~/composables/usePlaygroundChats";
 
 const props = defineProps<{
   models: LlmModel[];
@@ -122,11 +141,20 @@ const props = defineProps<{
 const model = defineModel<string>({ default: "" });
 
 const config = useRuntimeConfig().public;
+
+// "Reasoning · 3 seconds" over a reply's thinking, where Nuxt UI says "Thought for".
+const locale = {
+  ...en,
+  messages: {
+    ...en.messages,
+    chatReasoning: { thinking: "Reasoning…", thought: "Reasoning", thoughtFor: "Reasoning · {duration}" },
+  },
+};
 const nosa = useNosaTools();
 const toast = useToast();
 
 // The chats sit beside the chat when there is room, in a drawer otherwise.
-const wide = useMediaQuery("(min-width: 1150px)");
+const wide = useMediaQuery("(min-width: 1280px)");
 const historyOpen = ref(false);
 
 function closeHistory(action: () => void) {
@@ -151,10 +179,12 @@ const modelLabel = computed(() =>
   asNosa.value ? "Nosa" : selectedModel.value ? modelName(selectedModel.value) : "No model",
 );
 
+// Nosa is the default where it is available; otherwise, or when a remembered model is
+// no longer serving, the first model that is up.
+if (!model.value && nosa.enabled) model.value = NOSA;
 watch(
   upModels,
   (list) => {
-    // Also replaces a model from the URL that cannot chat, such as an embedding model.
     if (asNosa.value) return;
     if (list.length > 0 && !list.some((entry) => entry.id === model.value))
       model.value = list[0]!.id;
@@ -162,23 +192,34 @@ watch(
   { immediate: true },
 );
 
-const modelMenu = computed(() => [
+/** An entry in the model menu: a status dot, the name, its context and price. */
+type ModelOption = {
+  label: string;
+  meta: string;
+  price?: string;
+  live: boolean;
+  disabled?: boolean;
+  onSelect: () => void;
+};
+
+const modelMenu = computed<ModelOption[][]>(() => [
   ...(nosa.enabled
     ? [[{
         label: "Nosa",
-        description: "Nosana's assistant, with your account and the docs",
-        icon: asNosa.value ? "i-lucide-check" : "i-lucide-sparkles",
+        meta: "Nosana's assistant",
+        live: upModels.value.length > 0,
         onSelect: () => (model.value = NOSA),
       }]]
     : []),
   chatModels.value.map((entry) => ({
     label: modelName(entry),
-    icon: entry.id === model.value ? "i-lucide-check" : "i-lucide-box",
+    meta: entry.available ? `${formatTokenCount(entry.context_length)} context` : "Not serving",
+    price: `${formatUsd(pricePerMillion(entry.pricing.prompt))} in · ${formatUsd(pricePerMillion(entry.pricing.completion))} out per 1M`,
+    live: entry.available,
     disabled: !entry.available,
     onSelect: () => (model.value = entry.id),
   })),
 ]);
-
 
 watch(asNosa, (on) => on && nosa.load(), { immediate: true });
 watch(nosa.error, (message) => {
@@ -194,16 +235,18 @@ const draft = ref("");
 const { recent, current, currentId, create, open, remove, rename, save } = usePlaygroundChats();
 if (!current.value) create();
 
+const transport = new PlaygroundTransport(config.apiBase as string, () => ({
+  model: runModel.value,
+  system: asNosa.value ? nosa.system.value : undefined,
+  tools: {
+    ...buildTools(config.apiBase as string),
+    ...(asNosa.value ? nosa.tools.value : {}),
+  },
+}));
+
 const { messages, status, error, sendMessage, stop, regenerate, addToolApprovalResponse } =
   useChat({
-    transport: new PlaygroundTransport(config.apiBase as string, () => ({
-      model: runModel.value,
-      system: asNosa.value ? nosa.system.value : undefined,
-      tools: {
-        ...buildTools(config.apiBase as string),
-        ...(asNosa.value ? nosa.tools.value : {}),
-      },
-    })),
+    transport,
     messages: [...(current.value?.messages ?? [])],
     throttle: 50,
     // Once the reader has answered an approval, the reply carries on by itself.
@@ -219,12 +262,71 @@ watch(shown, (list) => save(list), { deep: true });
 
 watch(currentId, () => {
   stop();
+  clearSuggestions();
   messages.value = [...(current.value?.messages ?? [])];
 });
+
+// Follow-up questions, asked of the same model once a reply has settled. They go as
+// soon as the reader types, sends or moves to another chat.
+const suggestions = ref<string[]>([]);
+const suggesting = ref(false);
+let suggestAbort: AbortController | null = null;
+
+function clearSuggestions() {
+  suggestAbort?.abort();
+  suggestAbort = null;
+  suggesting.value = false;
+  suggestions.value = [];
+}
+
+watch(status, async (now, before) => {
+  if (now !== "ready" || before === "ready") return;
+  const last = messages.value.at(-1);
+  const answered =
+    last?.role === "assistant" &&
+    last.parts.some((part) => part.type === "text" && part.text.trim()) &&
+    !last.parts.some((part) => "state" in part && part.state === "approval-requested");
+  if (!answered) return;
+  clearSuggestions();
+  const abort = (suggestAbort = new AbortController());
+  suggesting.value = true;
+  try {
+    const list = await transport.suggest(messages.value, abort.signal);
+    if (!abort.signal.aborted) suggestions.value = list;
+  } catch {
+    // Suggestions are an extra; a failed one shows nothing.
+  } finally {
+    if (!abort.signal.aborted) suggesting.value = false;
+  }
+});
+
+watch(draft, (text) => {
+  if (text) clearSuggestions();
+});
+
+function send(text: string) {
+  clearSuggestions();
+  const first = !messages.value.some((message) => message.role === "user");
+  if (first && currentId.value) void nameChat(currentId.value, text);
+  sendMessage({ text });
+}
+
+/** Names a chat after its first question, alongside the answer. */
+async function nameChat(chatId: string, question: string) {
+  try {
+    const name = await transport.title(question);
+    const chat = recent.value.find((entry) => entry.id === chatId);
+    // A name the reader gave it in the meantime stays.
+    if (name && chat && chat.title === titleOf(chat.messages)) rename(chatId, name);
+  } catch {
+    // The question's own words stay as the name.
+  }
+}
 
 
 function newChat() {
   stop();
+  clearSuggestions();
   create();
 }
 
@@ -244,17 +346,18 @@ useEventListener(document, "keydown", (event: KeyboardEvent) => {
 <style scoped lang="scss">
 // The whole page, split into tinted side panes and the white (or near-black)
 // page of the conversation. No frame: it is the app, not a card in one.
+
+// The chat and its history are one card, like the model's cards beside them.
 .pg-workspace {
+  @include soft-panel;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   height: 100%;
   min-height: 0;
   overflow: hidden;
-  background: var(--ui-bg);
-
 
   &.has-side {
-    grid-template-columns: 264px minmax(0, 1fr);
+    grid-template-columns: 260px minmax(0, 1fr);
   }
 
 }
@@ -272,13 +375,13 @@ useEventListener(document, "keydown", (event: KeyboardEvent) => {
   border-right: 1px solid var(--ui-border);
 }
 
+// The starter cards line up with the reading column.
 .pg-hero {
   width: 100%;
-  max-width: 50rem;
+  max-width: 45rem;
   display: grid;
   gap: 1rem;
 }
-
 
 .pg-cards {
   display: grid;
@@ -338,19 +441,7 @@ useEventListener(document, "keydown", (event: KeyboardEvent) => {
   box-shadow: 0 8px 20px -10px rgba(16, 232, 12, 0.7);
 }
 
-.pg-card-titles {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
 
-.pg-card-kicker {
-  font-family: var(--pg-mono);
-  font-size: 0.62rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--ui-text-dimmed);
-}
 
 .pg-card-title {
   font-family: var(--pg-title);
@@ -368,6 +459,22 @@ useEventListener(document, "keydown", (event: KeyboardEvent) => {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+.pg-model-option {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.pg-model-name {
+  font-weight: 600;
+  color: var(--ui-text-highlighted);
+}
+
+.pg-model-meta {
+  font-size: 0.75rem;
+  color: var(--ui-text-muted);
 }
 
 .pg-foot {

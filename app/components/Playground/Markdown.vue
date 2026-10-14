@@ -1,48 +1,49 @@
 <template>
-  <ComarkMarkdown
-    :value="text"
-    :streaming="streaming"
-    :plugins="plugins"
-    :caret="streaming"
-    class="content pg-markdown"
-  />
+  <!-- eslint-disable-next-line vue/no-v-html -- sanitised by renderChatMarkdown -->
+  <div class="content pg-markdown" :class="{ 'is-streaming': streaming }" v-html="html" />
 </template>
 
 <script setup lang="ts">
-import shiki from "@comark/nuxt/plugins/shiki";
-import alert from "@comark/nuxt/plugins/alert";
-import taskList from "@comark/nuxt/plugins/task-list";
-import footnotes from "@comark/nuxt/plugins/footnotes";
-import math from "@comark/nuxt/plugins/math";
-import "katex/dist/katex.min.css";
-import { Markdown as ComarkMarkdown } from "@comark/vue";
+import { computed } from "vue";
+import { renderChatMarkdown } from "~/utils/chatMarkdown";
 
-defineProps<{ text: string; streaming?: boolean }>();
+const props = defineProps<{ text: string; streaming?: boolean }>();
 
-// Streaming markdown with highlighted code, maths, GitHub alerts, task lists and
-// footnotes. Comark renders tokens as they arrive and keeps the reading position.
-const plugins = [shiki(), alert(), taskList(), footnotes(), math()];
+// Rendered as the deployment pages' chat renders replies, in Bulma's `.content`.
+const html = computed(() => renderChatMarkdown(props.text));
 </script>
 
 <style scoped lang="scss">
-// Bulma's `.content` sizes the prose; a chat line is a touch tighter than a page.
 .pg-markdown {
-  font-size: 0.95rem;
-  line-height: 1.55;
+  overflow-wrap: anywhere;
 
   :deep(> :last-child) {
     margin-bottom: 0;
   }
 
   :deep(pre) {
-    font-size: 0.8rem;
+    font-size: 0.82rem;
     border-radius: 8px;
-    padding: 0.9rem 1.1rem;
   }
 
+  // A long formula scrolls sideways rather than widening the reply.
   :deep(.katex-display) {
     overflow-x: auto;
-    padding: 0.25rem 0;
+    overflow-y: hidden;
+  }
+
+  // A caret after the last word while the reply streams in.
+  &.is-streaming > :deep(:last-child)::after {
+    content: "▍";
+    margin-left: 1px;
+    color: $secondary;
+    animation: pg-caret 1s steps(2) infinite;
+  }
+}
+
+@keyframes pg-caret {
+  50% {
+    opacity: 0;
   }
 }
 </style>

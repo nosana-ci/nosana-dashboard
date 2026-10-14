@@ -1,28 +1,24 @@
 import { tool, type ToolSet } from "ai";
 import { z } from "zod";
 
-/** A built-in tool, labelled in the chat. Each one runs in the browser. */
+/** A built-in tool, by the name the chat shows for it. Each one runs in the browser. */
 export type PlaygroundTool = {
   id: string;
   label: string;
-  icon: string;
 };
 
 export const TOOL_CATALOG: PlaygroundTool[] = [
   {
     id: "current_time",
     label: "Current time",
-    icon: "i-lucide-clock",
   },
   {
     id: "calculate",
     label: "Calculator",
-    icon: "i-lucide-calculator",
   },
   {
     id: "nosana_gpu_markets",
     label: "Nosana GPU markets",
-    icon: "i-lucide-cpu",
   },
 ];
 

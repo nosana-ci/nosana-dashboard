@@ -108,7 +108,6 @@ export default defineNuxtConfig({
     "nuxt-gtag",
     "@vite-pwa/nuxt",
     "@nuxt/ui",
-    "@comark/nuxt",
   ],
   // Nuxt UI drives the playground chat. The app already loads its fonts.
   ui: {

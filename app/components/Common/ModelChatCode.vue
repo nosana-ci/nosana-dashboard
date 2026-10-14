@@ -19,11 +19,11 @@
       <pre class="snippet-body"><code v-html="highlighted"></code></pre>
       <CopyButton class="snippet-copy" :text="snippet.code" label="Copy code" />
     </div>
-    <footer v-if="$slots.footer || note || keyEnv" class="snippet-foot">
+    <footer v-if="$slots.footer || note || (keyEnv && keyHint)" class="snippet-foot">
       <slot name="footer">
         <p>
           {{ note }}
-          <template v-if="keyEnv">
+          <template v-if="keyEnv && keyHint">
             Set <span class="is-family-monospace">{{ keyEnv }}</span> to your key first.
           </template>
         </p>
@@ -41,17 +41,22 @@ import type { ChatSettings } from "~/utils/llmChat";
  * The call the chat is making, as code to copy: curl, Python and Node. ModelChat
  * shows it in the tray under its bar, or in a panel the page provides.
  */
-const props = defineProps<{
-  /** The endpoint's base URL; `/v1/chat/completions` is appended. */
-  url: string;
-  model: string;
-  /** Headers the endpoint needs, beyond content type and the key. */
-  headers?: Record<string, string>;
-  /** The environment variable the snippet reads the key from; none when no key is sent. */
-  keyEnv?: string | null;
-  settings: ChatSettings;
-  note?: string;
-}>();
+const props = withDefaults(
+  defineProps<{
+    /** The endpoint's base URL; `/v1/chat/completions` is appended. */
+    url: string;
+    model: string;
+    /** Headers the endpoint needs, beyond content type and the key. */
+    headers?: Record<string, string>;
+    /** The environment variable the snippet reads the key from; none when no key is sent. */
+    keyEnv?: string | null;
+    /** Whether the footer reminds the reader to set `keyEnv`. */
+    keyHint?: boolean;
+    settings: ChatSettings;
+    note?: string;
+  }>(),
+  { keyHint: true },
+);
 
 type Language = "curl" | "python" | "node";
 

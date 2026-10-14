@@ -15,7 +15,6 @@
         :status="status"
         should-auto-scroll
         :assistant="{
-          icon: 'i-lucide-sparkles',
           variant: 'naked',
           actions: assistantActions,
         }"
@@ -24,41 +23,45 @@
         class="pg-messages"
       >
         <template #content="{ message }">
-          <template
-            v-for="(part, i) in message.parts"
-            :key="`${message.id}-${i}`"
-          >
-            <template v-if="part.type === 'text'">
+          <template v-for="run in runs(message)" :key="run.key">
+            <template v-if="run.text">
               <PlaygroundMarkdown
                 v-if="message.role === 'assistant'"
-                :text="part.text"
-                :streaming="streaming(part, message)"
+                :text="run.text.text"
+                :streaming="streaming(run.text, message)"
               />
-              <p v-else class="pg-user-text">{{ part.text }}</p>
+              <p v-else class="pg-user-text">{{ run.text.text }}</p>
             </template>
-            <UChatReasoning
-              v-else-if="part.type === 'reasoning'"
-              :text="part.text"
-              :streaming="streaming(part, message)"
-              class="my-1"
-            >
-              <PlaygroundMarkdown
-                :text="part.text"
-                :streaming="streaming(part, message)"
-              />
-            </UChatReasoning>
-            <UChatTool
-              v-else-if="isToolUIPart(part)"
-              :text="toolLabel(part)"
-              :suffix="toolSuffix(part)"
-              :icon="toolIcon(part)"
-              :loading="toolBusy(part)"
-              :default-open="part.state === 'approval-requested'"
-              :actions="approvalActions(part)"
-              class="my-1"
-            >
-              <pre class="pg-tool-body">{{ toolBody(part) }}</pre>
-            </UChatTool>
+            <!-- Reasoning and tool calls in a row read as one indented thread. -->
+            <div v-else class="pg-steps">
+              <template v-for="(part, j) in run.steps" :key="j">
+                <UChatReasoning
+                  v-if="part.type === 'reasoning'"
+                  icon="i-lucide-brain"
+                  :text="part.text"
+                  :duration="reasoningSeconds(message, part)"
+                  :streaming="streaming(part, message)"
+                  class="my-1"
+                >
+                  <PlaygroundMarkdown
+                    :text="part.text"
+                    :streaming="streaming(part, message)"
+                  />
+                </UChatReasoning>
+                <UChatTool
+                  v-else-if="isToolUIPart(part)"
+                  :text="toolLabel(part)"
+                  icon="i-lucide-wrench"
+                  :suffix="toolSuffix(part)"
+                  :loading="toolBusy(part)"
+                  :default-open="part.state === 'approval-requested'"
+                  :actions="approvalActions(part)"
+                  class="my-1"
+                >
+                  <pre class="pg-tool-body">{{ toolBody(part) }}</pre>
+                </UChatTool>
+              </template>
+            </div>
           </template>
         </template>
       </UChatMessages>
@@ -69,6 +72,22 @@
     </div>
 
     <div class="pg-composer">
+      <p v-if="suggesting" class="pg-suggesting">
+        <UIcon name="i-lucide-loader-circle" class="pg-suggesting-icon" />
+        Suggesting follow-ups…
+      </p>
+      <div v-else-if="suggestions?.length" class="pg-suggestions">
+        <UButton
+          v-for="question in suggestions"
+          :key="question"
+          :label="question"
+          color="neutral"
+          variant="outline"
+          size="lg"
+          class="pg-suggestion"
+          @click="emit('send', question)"
+        />
+      </div>
       <UChatPrompt
         v-model="draft"
         :placeholder="placeholder"
@@ -101,13 +120,41 @@ import {
   isToolUIPart,
   type ChatStatus,
   type DynamicToolUIPart,
+  type TextUIPart,
   type ToolUIPart,
   type UIMessage,
 } from "ai";
 import { getTextFromMessage } from "@nuxt/ui/utils/ai";
+import type { ReplyMetadata } from "~/utils/playgroundTransport";
 import { TOOL_CATALOG } from "~/utils/playgroundTools";
 
 type AnyToolPart = ToolUIPart | DynamicToolUIPart;
+type Part = UIMessage["parts"][number];
+
+/** A stretch of a message: a text part on its own, or reasoning and tool calls in a row. */
+type Run = { key: string; text: TextUIPart; steps?: never } | { key: string; text?: never; steps: Part[] };
+
+/** How long a reasoning step took, as the transport recorded it with the reply. */
+function reasoningSeconds(message: UIMessage, part: Part): number | undefined {
+  const index = message.parts
+    .filter((entry) => entry.type === "reasoning")
+    .findIndex((entry) => entry === part);
+  return (message.metadata as ReplyMetadata | undefined)?.reasoningSeconds?.[index];
+}
+
+function runs(message: UIMessage): Run[] {
+  const out: Run[] = [];
+  message.parts.forEach((part, i) => {
+    const key = `${message.id}-${i}`;
+    if (part.type === "text") out.push({ key, text: part });
+    else if (part.type === "reasoning" || isToolUIPart(part)) {
+      const last = out.at(-1);
+      if (last?.steps) last.steps.push(part);
+      else out.push({ key, steps: [part] });
+    }
+  });
+  return out;
+}
 
 const props = defineProps<{
   messages: UIMessage[];
@@ -115,6 +162,10 @@ const props = defineProps<{
   error?: Error;
   placeholder?: string;
   disabled?: boolean;
+  /** Follow-up questions, offered above the prompt. */
+  suggestions?: string[];
+  /** The follow-up questions are being written. */
+  suggesting?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -232,8 +283,6 @@ function toolSuffix(part: AnyToolPart): string | undefined {
   return typeof first === "string" ? first : undefined;
 }
 
-const toolIcon = (part: AnyToolPart) =>
-  toolMeta(part)?.icon ?? (part.type === "dynamic-tool" ? "i-lucide-plug" : "i-lucide-wrench");
 
 function toolBody(part: AnyToolPart): string {
   const value =
@@ -289,11 +338,12 @@ function toolBody(part: AnyToolPart): string {
   overflow-y: auto;
 }
 
+// One reading column, as wide as ChatGPT's, shared with the composer.
 .pg-messages {
-  max-width: 54rem;
+  max-width: 48rem;
   margin: 0 auto;
   padding: 1.5rem 1.5rem 0.75rem;
-  font-size: 0.95rem;
+  font-size: 1rem;
 }
 
 // The reader's turn is a bubble; the model's is the page.
@@ -303,21 +353,21 @@ function toolBody(part: AnyToolPart): string {
   padding: 0.6rem 0.95rem;
 }
 
-.pg-messages :deep([data-role="assistant"] [data-slot="leading"]) {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #34d399, #0a8a08);
-  color: #fff;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+
+
+// The thread of reasoning and tool calls: indented beside a thin line, under which
+// the answer follows at full width.
+// The tool's argument after its name; Nuxt UI's `ms-1` is not among the utilities
+// generated for the playground.
+.pg-steps :deep([data-slot="suffix"]) {
+  margin-inline-start: 0.35rem;
 }
 
-.pg-messages :deep([data-role="assistant"] [data-slot="leadingIcon"]) {
-  width: 15px;
-  height: 15px;
+.pg-steps {
+  display: grid;
+  margin: 0.25rem 0 0.9rem 0.45rem;
+  padding-left: 0.9rem;
+  border-left: 2px solid var(--ui-border);
 }
 
 .pg-user-text {
@@ -352,9 +402,44 @@ function toolBody(part: AnyToolPart): string {
 // halo in the brand colour.
 .pg-composer {
   padding: 0.5rem 1.5rem 1.1rem;
-  max-width: 54rem;
+  max-width: 48rem;
   width: 100%;
   margin: 0 auto;
+}
+
+// Follow-up questions sit just above the prompt, left to right.
+.pg-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.6rem;
+}
+
+.pg-suggesting {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0 0 0.6rem;
+  font-size: 0.95rem;
+  color: var(--ui-text-muted);
+}
+
+.pg-suggesting-icon {
+  animation: pg-spin 0.9s linear infinite;
+}
+
+@keyframes pg-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// Read at the chat's own size.
+.pg-suggestion {
+  max-width: 100%;
+  border-radius: 999px;
+  font-size: 1rem;
+  padding: 0.45rem 0.95rem;
 }
 
 .pg-composer :deep([data-slot="root"]) {
@@ -379,7 +464,7 @@ function toolBody(part: AnyToolPart): string {
 // Nuxt UI gives the textarea a `px-0` class, which Bulma also defines, with
 // !important; the text then starts flush with the icon of the model menu below.
 .pg-composer :deep(textarea) {
-  font-size: 0.95rem;
+  font-size: 1rem;
   padding: 1.05rem 1.35rem 0.5rem;
   padding-left: 1.35rem !important;
   padding-right: 1.35rem !important;

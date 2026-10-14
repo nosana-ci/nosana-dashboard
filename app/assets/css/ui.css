@@ -81,14 +81,6 @@
   border: 1px solid var(--ui-border);
 }
 
-/* Shiki emits both themes on every token; Nuxt UI switches on `.dark`, we on `.dark-mode`. */
-html.dark-mode .pg-markdown .shiki span {
-  color: var(--shiki-dark) !important;
-}
-
-html.dark-mode .pg-markdown pre.shiki {
-  background-color: var(--shiki-dark-bg, var(--ui-bg-muted));
-}
 
 /* The playground's own palette: system type and the neutral greys of a native app.
    Unlayered, so it wins over the theme layer's tokens inside the workspace. */

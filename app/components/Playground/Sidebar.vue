@@ -225,7 +225,8 @@ const groups = computed(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.875rem;
+  // The same size as the chat beside it.
+  font-size: 1rem;
   font-weight: 500;
   line-height: 1.35;
   color: var(--ui-text);
