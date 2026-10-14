@@ -311,7 +311,7 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
     } catch (error: any) {
       console.error("Duplicate deployment error:", error);
       const errorMessage =
-        error.data?.message ||
+        error.data?.message || error.data?.error ||
         error.message ||
         "Failed to duplicate deployment";
       toast.error(`Error duplicating deployment: ${errorMessage}`);
@@ -346,7 +346,7 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
     } catch (error: any) {
       console.error("Update schedule error:", error);
       const errorMessage =
-        error.data?.message || error.message || "Failed to update schedule";
+        error.data?.message || error.data?.error || error.message || "Failed to update schedule";
       toast.error(`Error updating schedule: ${errorMessage}`);
     } finally {
       actionLoading.value = false;
@@ -369,7 +369,7 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
     } catch (error: any) {
       console.error("Switch revision error:", error);
       const errorMessage =
-        error.data?.message || error.message || "Failed to switch revision";
+        error.data?.message || error.data?.error || error.message || "Failed to switch revision";
       toast.error(`Error switching revision: ${errorMessage}`);
     } finally {
       switchingRevision.value = null;
