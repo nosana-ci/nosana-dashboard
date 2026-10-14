@@ -32,35 +32,51 @@
               />
               <p v-else class="pg-user-text">{{ run.text.text }}</p>
             </template>
-            <!-- Reasoning and tool calls in a row read as one indented thread. -->
-            <div v-else class="pg-steps">
-              <template v-for="(part, j) in run.steps" :key="j">
-                <UChatReasoning
-                  v-if="part.type === 'reasoning'"
-                  icon="i-lucide-brain"
-                  :text="part.text"
-                  :duration="reasoningSeconds(message, part)"
-                  :streaming="streaming(part, message)"
-                  class="my-1"
-                >
-                  <PlaygroundMarkdown
+            <!-- Reasoning and tool calls in a row read as one indented thread, folded
+                 to a summary line once the reply is done. -->
+            <div v-else class="pg-thread">
+              <button
+                v-if="run.steps.length > 1"
+                type="button"
+                class="pg-thread-head pg-plain"
+                :aria-expanded="threadOpen(message, run.key, run.steps)"
+                @click="toggleThread(run.key)"
+              >
+                <UIcon
+                  :name="threadOpen(message, run.key, run.steps) ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'"
+                  class="pg-thread-chevron"
+                />
+                {{ threadSummary(message, run.steps) }}
+              </button>
+              <div v-if="run.steps.length === 1 || threadOpen(message, run.key, run.steps)" class="pg-steps">
+                <template v-for="(part, j) in run.steps" :key="j">
+                  <UChatReasoning
+                    v-if="part.type === 'reasoning'"
+                    icon="i-lucide-brain"
                     :text="part.text"
+                    :duration="reasoningSeconds(message, part)"
                     :streaming="streaming(part, message)"
-                  />
-                </UChatReasoning>
-                <UChatTool
-                  v-else-if="isToolUIPart(part)"
-                  :text="toolLabel(part)"
-                  icon="i-lucide-wrench"
-                  :suffix="toolSuffix(part)"
-                  :loading="toolBusy(part)"
-                  :default-open="part.state === 'approval-requested'"
-                  :actions="approvalActions(part)"
-                  class="my-1"
-                >
-                  <pre class="pg-tool-body">{{ toolBody(part) }}</pre>
-                </UChatTool>
-              </template>
+                    class="my-1"
+                  >
+                    <PlaygroundMarkdown
+                      :text="part.text"
+                      :streaming="streaming(part, message)"
+                    />
+                  </UChatReasoning>
+                  <UChatTool
+                    v-else-if="isToolUIPart(part)"
+                    :text="toolLabel(part)"
+                    icon="i-lucide-wrench"
+                    :suffix="toolSuffix(part)"
+                    :loading="toolBusy(part)"
+                    :default-open="part.state === 'approval-requested'"
+                    :actions="approvalActions(part)"
+                    class="my-1"
+                  >
+                    <pre class="pg-tool-body">{{ toolBody(part) }}</pre>
+                  </UChatTool>
+                </template>
+              </div>
             </div>
           </template>
         </template>
@@ -115,6 +131,7 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from "vue";
 import {
   getToolName,
   isToolUIPart,
@@ -139,6 +156,46 @@ function reasoningSeconds(message: UIMessage, part: Part): number | undefined {
     .filter((entry) => entry.type === "reasoning")
     .findIndex((entry) => entry === part);
   return (message.metadata as ReplyMetadata | undefined)?.reasoningSeconds?.[index];
+}
+
+// Threads of several steps fold to one line once the reply is done. A reply still
+// running, or a step waiting on the reader, keeps its thread open.
+const expanded = ref(new Set<string>());
+
+function toggleThread(key: string) {
+  const next = new Set(expanded.value);
+  if (next.has(key)) next.delete(key);
+  else next.add(key);
+  expanded.value = next;
+}
+
+const isLive = (message: UIMessage) =>
+  (props.status === "submitted" || props.status === "streaming") &&
+  message.id === props.messages.at(-1)?.id;
+
+function threadOpen(message: UIMessage, key: string, steps: Part[]): boolean {
+  return (
+    isLive(message) ||
+    steps.some((part) => isToolUIPart(part) && part.state === "approval-requested") ||
+    expanded.value.has(key)
+  );
+}
+
+const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? "" : "s"}`;
+
+/** "Used 7 tools · reasoned 12 seconds", or how far a running reply has got. */
+function threadSummary(message: UIMessage, steps: Part[]): string {
+  const tools = steps.filter(isToolUIPart).length;
+  if (isLive(message)) return tools ? `Working… · ${plural(tools, "tool")}` : "Working…";
+  const seconds = steps
+    .filter((part) => part.type === "reasoning")
+    .reduce((sum, part) => sum + (reasoningSeconds(message, part) ?? 0), 0);
+  const parts = [
+    tools ? `Used ${plural(tools, "tool")}` : "",
+    seconds ? `reasoned ${plural(seconds, "second")}` : "",
+  ].filter(Boolean);
+  const text = parts.join(" · ") || "Reasoned";
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 function runs(message: UIMessage): Run[] {
@@ -356,6 +413,25 @@ function toolBody(part: AnyToolPart): string {
 // generated for the playground.
 .pg-steps :deep([data-slot="suffix"]) {
   margin-inline-start: 0.35rem;
+}
+
+.pg-thread-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0.25rem 0;
+  font-size: 0.9rem;
+  color: var(--ui-text-muted);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--ui-text-highlighted);
+  }
+}
+
+.pg-thread-chevron {
+  width: 14px;
+  height: 14px;
 }
 
 .pg-steps {

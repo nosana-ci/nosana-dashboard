@@ -1,7 +1,5 @@
 <template>
-  <div>
-    <TopBar :title="'Playground'" :subtitle="'Chat with models running on Nosana'" />
-
+  <div class="pg-root">
     <div v-if="isAuthenticated" class="playground">
       <PlaygroundModelsChat
         v-model="playgroundModel"
@@ -29,6 +27,8 @@ import { useLocalStorage } from "@vueuse/core";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { faComments } from "@fortawesome/free-solid-svg-icons";
 
+definePageMeta({ layout: "playground" });
+
 const { isAuthenticated } = useSuperTokens();
 const { models, loadingModels } = useLlmGateway();
 
@@ -37,10 +37,15 @@ const playgroundModel = useLocalStorage("playground-model", "");
 </script>
 
 <style scoped lang="scss">
-// What the layout puts above and below the playground: the top bar, the section's
-// padding and the footer. Taking it off the viewport fits the playground to the window.
+// The layout hands the page the whole window.
+.pg-root,
 .playground {
-  height: calc(100dvh - 190px);
-  min-height: 480px;
+  height: 100%;
+  min-height: 0;
+}
+
+// Signed out: the card sits in the window's top band rather than stretching.
+.box {
+  margin: 1.5rem;
 }
 </style>

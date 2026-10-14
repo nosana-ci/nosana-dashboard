@@ -86,6 +86,12 @@
                 </span>
               </template>
             </UDropdownMenu>
+            <UTooltip
+              v-if="nosa.enabled"
+              text="Answers as Nosa, the Nosana assistant: its instructions on top of the selected model."
+            >
+              <USwitch v-model="nosaOn" label="Nosa" size="sm" />
+            </UTooltip>
           </div>
         </template>
       </PlaygroundShell>
@@ -114,7 +120,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { useEventListener, useMediaQuery } from "@vueuse/core";
+import { useEventListener, useLocalStorage, useMediaQuery } from "@vueuse/core";
 import { useChat } from "@ai-sdk/vue";
 import { lastAssistantMessageIsCompleteWithApprovalResponses, type UIMessage } from "ai";
 import { en } from "@nuxt/ui/locale";
@@ -161,55 +167,43 @@ function closeHistory(action: () => void) {
   action();
 }
 
-/** Nosa is listed as a model: its prompt and tools, on the first model that is up. */
-const NOSA = "nosa";
-
 const chatModels = computed(() => props.models.filter(isChatModel));
 const upModels = computed(() => chatModels.value.filter((entry) => entry.available));
-const asNosa = computed(() => nosa.enabled && model.value === NOSA);
-const selectedModel = computed(() =>
-  asNosa.value
-    ? (upModels.value[0] ?? null)
-    : (props.models.find((entry) => entry.id === model.value) ?? null),
+const selectedModel = computed(
+  () => props.models.find((entry) => entry.id === model.value) ?? null,
 );
 /** The model the request goes to. */
 const runModel = computed(() => selectedModel.value?.id ?? "");
 const modelLabel = computed(() =>
-  asNosa.value ? "Nosa" : selectedModel.value ? modelName(selectedModel.value) : "No model",
+  selectedModel.value ? modelName(selectedModel.value) : "No model",
 );
 
-// Nosa is the default where it is available; otherwise, or when a remembered model is
-// no longer serving, the first model that is up.
-if (!model.value && nosa.enabled) model.value = NOSA;
+// A remembered model that is no longer serving gives way to the first that is up.
 watch(
   upModels,
   (list) => {
-    if (asNosa.value) return;
     if (list.length > 0 && !list.some((entry) => entry.id === model.value))
       model.value = list[0]!.id;
   },
   { immediate: true },
 );
 
+// Nosa is a switch on whichever model is selected: its instructions on top. On by
+// default, and remembered in this browser.
+const nosaOn = useLocalStorage("playground-nosa", true);
+const asNosa = computed(() => nosa.enabled && nosaOn.value);
+
 /** An entry in the model menu: a status dot, the name, its context and price. */
 type ModelOption = {
   label: string;
   meta: string;
-  price?: string;
+  price: string;
   live: boolean;
   disabled?: boolean;
   onSelect: () => void;
 };
 
 const modelMenu = computed<ModelOption[][]>(() => [
-  ...(nosa.enabled
-    ? [[{
-        label: "Nosa",
-        meta: "Nosana's assistant",
-        live: upModels.value.length > 0,
-        onSelect: () => (model.value = NOSA),
-      }]]
-    : []),
   chatModels.value.map((entry) => ({
     label: modelName(entry),
     meta: entry.available ? `${formatTokenCount(entry.context_length)} context` : "Not serving",
@@ -344,14 +338,13 @@ useEventListener(document, "keydown", (event: KeyboardEvent) => {
 // The whole page, split into tinted side panes and the white (or near-black)
 // page of the conversation. No frame: it is the app, not a card in one.
 
-// The chat and its history are one card, like the model's cards beside them.
 .pg-workspace {
-  @include soft-panel;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   height: 100%;
   min-height: 0;
   overflow: hidden;
+  background: var(--ui-bg);
 
   &.has-side {
     grid-template-columns: 260px minmax(0, 1fr);
