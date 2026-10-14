@@ -1,6 +1,7 @@
 <template>
-  <div v-if="model" class="box p-5">
+  <div v-if="model" class="box p-0">
     <CommonModelChatCode
+      title="Inference"
       :url="inferenceBase"
       :model="model.id"
       key-env="NOSANA_API_KEY"

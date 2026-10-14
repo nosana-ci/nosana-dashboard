@@ -9,6 +9,8 @@ export type PlaygroundChat = {
   createdAt: number;
   updatedAt: number;
   messages: UIMessage[];
+  /** Follow-up questions offered after the last reply, until the next one is sent. */
+  suggestions?: string[];
 };
 
 const TITLE_LENGTH = 48;
@@ -71,6 +73,11 @@ export const usePlaygroundChats = () => {
     if (chat) chat.title = title.trim() || chat.title;
   }
 
+  function suggest(id: string, suggestions: string[]) {
+    const chat = chats.value.find((entry) => entry.id === id);
+    if (chat) chat.suggestions = suggestions;
+  }
+
   /** Writes the chat's messages back; the first message names it. */
   function save(messages: UIMessage[]) {
     const chat = current.value ?? create();
@@ -90,5 +97,6 @@ export const usePlaygroundChats = () => {
     remove,
     rename,
     save,
+    suggest,
   };
 };

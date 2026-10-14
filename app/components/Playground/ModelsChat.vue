@@ -44,7 +44,14 @@
         </template>
 
         <template #empty>
-          <div class="pg-hero">
+          <section class="deploy-surface pg-hero">
+            <span class="deploy-surface-grid" aria-hidden="true"></span>
+            <h2 class="pg-hero-title">
+              What would you like to <span class="pg-hero-accent">build</span>?
+            </h2>
+            <p class="pg-hero-lead">
+              Ask about Nosana, your deployments and GPUs, or start with one of these.
+            </p>
             <div class="pg-cards">
               <button
                 v-for="card in STARTERS"
@@ -61,7 +68,7 @@
                 <span class="pg-card-text">{{ card.text }}</span>
               </button>
             </div>
-          </div>
+          </section>
         </template>
 
         <template #footer>
@@ -86,12 +93,6 @@
                 </span>
               </template>
             </UDropdownMenu>
-            <UTooltip
-              v-if="nosa.enabled"
-              text="Answers as Nosa, the Nosana assistant: its instructions on top of the selected model."
-            >
-              <USwitch v-model="nosaOn" label="Nosa" size="sm" />
-            </UTooltip>
           </div>
         </template>
       </PlaygroundShell>
@@ -120,7 +121,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { useEventListener, useLocalStorage, useMediaQuery } from "@vueuse/core";
+import { useEventListener, useMediaQuery } from "@vueuse/core";
 import { useChat } from "@ai-sdk/vue";
 import { lastAssistantMessageIsCompleteWithApprovalResponses, type UIMessage } from "ai";
 import { en } from "@nuxt/ui/locale";
@@ -188,11 +189,6 @@ watch(
   { immediate: true },
 );
 
-// Nosa is a switch on whichever model is selected: its instructions on top. On by
-// default, and remembered in this browser.
-const nosaOn = useLocalStorage("playground-nosa", true);
-const asNosa = computed(() => nosa.enabled && nosaOn.value);
-
 /** An entry in the model menu: a status dot, the name, its context and price. */
 type ModelOption = {
   label: string;
@@ -225,12 +221,14 @@ watch(nosa.error, (message) => {
 const draft = ref("");
 
 // Conversations live in this browser; one is open in the chat at a time.
-const { recent, current, currentId, create, open, remove, rename, save } = usePlaygroundChats();
+const { recent, current, currentId, create, open, remove, rename, save, suggest } =
+  usePlaygroundChats();
 if (!current.value) create();
 
 const transport = new PlaygroundTransport(config.apiBase as string, () => ({
   model: runModel.value,
-  system: asNosa.value ? nosa.system.value : undefined,
+  // Every model answers as Nosa, with the prompt admins edit.
+  system: nosa.system.value || undefined,
   // Every model can use the Nosana tools; Nosa adds its instructions on top.
   tools: nosa.tools.value,
 }));
@@ -251,15 +249,9 @@ const hasContent = (message: UIMessage) =>
 const shown = computed(() => messages.value.filter(hasContent));
 watch(shown, (list) => save(list), { deep: true });
 
-watch(currentId, () => {
-  stop();
-  clearSuggestions();
-  messages.value = [...(current.value?.messages ?? [])];
-});
-
-// Follow-up questions, asked of the same model once a reply has settled. They go as
-// soon as the reader types, sends or moves to another chat.
-const suggestions = ref<string[]>([]);
+// Follow-up questions, asked of the same model once a reply has settled and kept with
+// the chat. They are hidden while the reader types and replaced by the next reply's.
+const suggestions = ref<string[]>([...(current.value?.suggestions ?? [])]);
 const suggesting = ref(false);
 let suggestAbort: AbortController | null = null;
 
@@ -270,6 +262,13 @@ function clearSuggestions() {
   suggestions.value = [];
 }
 
+watch(currentId, () => {
+  stop();
+  clearSuggestions();
+  messages.value = [...(current.value?.messages ?? [])];
+  suggestions.value = [...(current.value?.suggestions ?? [])];
+});
+
 watch(status, async (now, before) => {
   if (now !== "ready" || before === "ready") return;
   const last = messages.value.at(-1);
@@ -279,11 +278,14 @@ watch(status, async (now, before) => {
     !last.parts.some((part) => "state" in part && part.state === "approval-requested");
   if (!answered) return;
   clearSuggestions();
+  const chatId = currentId.value;
   const abort = (suggestAbort = new AbortController());
   suggesting.value = true;
   try {
     const list = await transport.suggest(messages.value, abort.signal);
-    if (!abort.signal.aborted) suggestions.value = list;
+    if (abort.signal.aborted) return;
+    suggestions.value = list;
+    suggest(chatId, list);
   } catch {
     // Suggestions are an extra; a failed one shows nothing.
   } finally {
@@ -297,6 +299,7 @@ watch(draft, (text) => {
 
 function send(text: string) {
   clearSuggestions();
+  suggest(currentId.value, []);
   const first = !messages.value.some((message) => message.role === "user");
   if (first && currentId.value) void nameChat(currentId.value, text);
   sendMessage({ text });
@@ -366,48 +369,86 @@ useEventListener(document, "keydown", (event: KeyboardEvent) => {
 }
 
 // The starter cards line up with the reading column.
+// The deploy page's hero surface (deploy-surface.scss), always dark.
 .pg-hero {
   width: 100%;
-  max-width: 45rem;
+  max-width: 52rem;
   display: grid;
   gap: 1rem;
+  padding: 2.25rem;
+}
+
+.pg-hero-title {
+  position: relative;
+  margin: 0;
+  font-family: $title-family;
+  font-weight: 600;
+  font-size: 2.25rem;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  color: #fff;
+}
+
+.pg-hero-accent {
+  color: $secondary;
+}
+
+.pg-hero-lead {
+  position: relative;
+  margin: 0 0 0.5rem;
+  color: #b7c0b6;
+  font-size: 1.0625rem;
+  line-height: 1.55;
 }
 
 .pg-cards {
+  position: relative;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.85rem;
   text-align: left;
 }
 
-// Template tiles: an icon tile, an eyebrow, a name, two lines, a quiet call.
 .pg-card {
   display: flex;
   flex-direction: column;
   gap: 0.7rem;
   padding: 1.1rem 1.15rem 1rem;
-  border: 1px solid var(--ui-border);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 14px;
-  background: var(--ui-bg-elevated);
-  color: var(--ui-text);
+  background: rgba(255, 255, 255, 0.04);
+  color: #fff;
   font: inherit;
   text-align: left;
   cursor: pointer;
   transition:
     transform 0.16s ease,
     border-color 0.2s ease,
-    box-shadow 0.2s ease;
+    background 0.2s ease;
 
   &:hover:not(:disabled) {
     transform: translateY(-2px);
-    border-color: rgba(16, 232, 12, 0.45);
-    box-shadow: 0 16px 36px -22px rgba(0, 0, 0, 0.45);
+    border-color: rgba($secondary, 0.45);
+    background: rgba(255, 255, 255, 0.07);
   }
-
 
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .pg-hero {
+    padding: 1.5rem;
+  }
+
+  .pg-hero-title {
+    font-size: 1.75rem;
+  }
+
+  .pg-cards {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -438,13 +479,13 @@ useEventListener(document, "keydown", (event: KeyboardEvent) => {
   font-size: 1rem;
   font-weight: 600;
   line-height: 1.3;
-  color: var(--ui-text-highlighted);
+  color: #fff;
 }
 
 .pg-card-text {
   font-size: 0.85rem;
   line-height: 1.45;
-  color: var(--ui-text-muted);
+  color: #b7c0b6;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;

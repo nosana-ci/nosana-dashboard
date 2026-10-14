@@ -63,14 +63,34 @@
                       :streaming="streaming(part, message)"
                     />
                   </UChatReasoning>
+                  <!-- A call waiting on the reader stands on its own, inputs in full, with
+                       the buttons in reach rather than on the end of one long line. -->
+                  <div
+                    v-else-if="isToolUIPart(part) && part.state === 'approval-requested'"
+                    class="pg-approval"
+                  >
+                    <p class="pg-approval-title">
+                      <UIcon name="i-lucide-wrench" />
+                      Wants to run {{ humanize(getToolName(part)) }}
+                    </p>
+                    <pre class="pg-tool-body">{{ toolBody(part) }}</pre>
+                    <div class="pg-approval-actions">
+                      <UButton label="Confirm" icon="i-lucide-check" size="sm" @click="emit('approve', part.approval.id, true)" />
+                      <UButton
+                        label="Decline"
+                        color="neutral"
+                        variant="ghost"
+                        size="sm"
+                        @click="emit('approve', part.approval.id, false)"
+                      />
+                    </div>
+                  </div>
                   <UChatTool
                     v-else-if="isToolUIPart(part)"
                     :text="toolLabel(part)"
                     icon="i-lucide-wrench"
                     :suffix="toolSuffix(part)"
                     :loading="toolBusy(part)"
-                    :default-open="part.state === 'approval-requested'"
-                    :actions="approvalActions(part)"
                     class="my-1"
                   >
                     <pre class="pg-tool-body">{{ toolBody(part) }}</pre>
@@ -79,6 +99,10 @@
               </div>
             </div>
           </template>
+          <p v-if="stopNote(message)" class="pg-stopped">
+            <UIcon name="i-lucide-circle-alert" />
+            {{ stopNote(message) }}
+          </p>
         </template>
       </UChatMessages>
     </div>
@@ -142,7 +166,7 @@ import {
   type UIMessage,
 } from "ai";
 import { getTextFromMessage } from "@nuxt/ui/utils/ai";
-import type { ReplyMetadata } from "~/utils/playgroundTransport";
+import { MAX_STEPS, type ReplyMetadata } from "~/utils/playgroundTransport";
 
 type AnyToolPart = ToolUIPart | DynamicToolUIPart;
 type Part = UIMessage["parts"][number];
@@ -151,6 +175,24 @@ type Part = UIMessage["parts"][number];
 type Run = { key: string; text: TextUIPart; steps?: never } | { key: string; text?: never; steps: Part[] };
 
 /** How long a reasoning step took, as the transport recorded it with the reply. */
+/** Why a reply stopped short, said so the next step is obvious. */
+function stopNote(message: UIMessage): string | null {
+  const stopped = (message.metadata as ReplyMetadata | undefined)?.stopped;
+  if (!stopped) return null;
+  switch (stopped.cause) {
+    case "step-limit":
+      return `Stopped after ${MAX_STEPS} steps, the most one answer may take. Send "continue" to carry on.`;
+    case "length":
+      return "Stopped at the model's output limit. Send \"continue\" to carry on.";
+    case "content-filter":
+      return "Stopped by the model's content filter.";
+    case "error":
+      return "Stopped because the model reported an error.";
+    default:
+      return `Stopped early${stopped.detail ? ` (${stopped.detail})` : ""}.`;
+  }
+}
+
 function reasoningSeconds(message: UIMessage, part: Part): number | undefined {
   const index = message.parts
     .filter((entry) => entry.type === "reasoning")
@@ -183,7 +225,7 @@ function threadOpen(message: UIMessage, key: string, steps: Part[]): boolean {
 
 const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? "" : "s"}`;
 
-/** "Used 7 tools · reasoned 12 seconds", or how far a running reply has got. */
+/** "Reasoned 12 seconds · used 7 tools", or how far a running reply has got. */
 function threadSummary(message: UIMessage, steps: Part[]): string {
   const tools = steps.filter(isToolUIPart).length;
   if (isLive(message)) return tools ? `Working… · ${plural(tools, "tool")}` : "Working…";
@@ -191,8 +233,8 @@ function threadSummary(message: UIMessage, steps: Part[]): string {
     .filter((part) => part.type === "reasoning")
     .reduce((sum, part) => sum + (reasoningSeconds(message, part) ?? 0), 0);
   const parts = [
-    tools ? `Used ${plural(tools, "tool")}` : "",
     seconds ? `reasoned ${plural(seconds, "second")}` : "",
+    tools ? `used ${plural(tools, "tool")}` : "",
   ].filter(Boolean);
   const text = parts.join(" · ") || "Reasoned";
   return text.charAt(0).toUpperCase() + text.slice(1);
@@ -308,31 +350,15 @@ function humanize(name: string): string {
   return kept.join(" ");
 }
 
-/** Approve and decline, while a tool is waiting on the reader. */
-function approvalActions(part: AnyToolPart) {
-  if (part.state !== "approval-requested") return undefined;
-  const id = part.approval.id;
-  return [
-    {
-      label: "Confirm",
-      icon: "i-lucide-check",
-      color: "primary" as const,
-      onClick: () => emit("approve", id, true),
-    },
-    {
-      label: "Decline",
-      color: "neutral" as const,
-      variant: "ghost" as const,
-      onClick: () => emit("approve", id, false),
-    },
-  ];
-}
+/** Longer than this, an argument would push the label off its line. */
+const SUFFIX_CHARS = 48;
 
-/** The first string argument, such as the expression or the search. */
+/** The first string argument, such as the search or an id, cut to fit beside the label. */
 function toolSuffix(part: AnyToolPart): string | undefined {
   const input = part.input as Record<string, unknown> | undefined;
   const first = input && Object.values(input).find((v) => typeof v === "string");
-  return typeof first === "string" ? first : undefined;
+  if (typeof first !== "string") return undefined;
+  return first.length > SUFFIX_CHARS ? `${first.slice(0, SUFFIX_CHARS - 1)}…` : first;
 }
 
 
@@ -390,9 +416,9 @@ function toolBody(part: AnyToolPart): string {
   overflow-y: auto;
 }
 
-// One reading column, as wide as ChatGPT's, shared with the composer.
+// One reading column, a little wider than ChatGPT's, shared with the composer.
 .pg-messages {
-  max-width: 48rem;
+  max-width: 52rem;
   margin: 0 auto;
   padding: 1.5rem 1.5rem 0.75rem;
   font-size: 1rem;
@@ -413,6 +439,30 @@ function toolBody(part: AnyToolPart): string {
 // generated for the playground.
 .pg-steps :deep([data-slot="suffix"]) {
   margin-inline-start: 0.35rem;
+}
+
+.pg-approval {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0.4rem 0;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--ui-border-accented);
+  border-radius: 12px;
+  background: var(--ui-bg-elevated);
+}
+
+.pg-approval-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  font-weight: 600;
+  color: var(--ui-text-highlighted);
+}
+
+.pg-approval-actions {
+  display: flex;
+  gap: 0.4rem;
 }
 
 .pg-thread-head {
@@ -474,7 +524,7 @@ function toolBody(part: AnyToolPart): string {
 // halo in the brand colour.
 .pg-composer {
   padding: 0.5rem 1.5rem 1.1rem;
-  max-width: 48rem;
+  max-width: 52rem;
   width: 100%;
   margin: 0 auto;
 }
@@ -563,6 +613,15 @@ function toolBody(part: AnyToolPart): string {
 .pg-composer :deep(.pg-send:hover:not(:disabled)) {
   transform: translateY(-1px);
   box-shadow: 0 12px 28px -8px rgba(16, 232, 12, 0.75);
+}
+
+.pg-stopped {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.5rem 0 0;
+  font-size: 0.875rem;
+  color: var(--ui-text-muted);
 }
 
 .pg-error {

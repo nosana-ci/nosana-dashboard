@@ -85,6 +85,13 @@ export default defineNuxtConfig({
     },
   },
   pwa: {
+    workbox: {
+      // A static site: there is no server page to fall back to offline, and "/" is
+      // not among the precached files, so the fallback only made installing fail.
+      navigateFallback: null,
+      // Nuxt's build metadata changes every deploy and is fetched when needed.
+      globIgnores: ["**/_nuxt/builds/**"],
+    },
     manifest: {
       name: "Nosana Deploy",
       short_name: "nosana",

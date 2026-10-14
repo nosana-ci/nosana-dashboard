@@ -94,7 +94,16 @@
     <section class="mb-6">
       <template v-if="isAuthenticated">
         <ApiKeys class="mb-6" />
-        <LlmInferenceCode class="mb-6" />
+        <!-- What an API key does: call models, and manage deployments from code. -->
+        <h3 class="title is-4 mb-4">Use your API key</h3>
+        <div class="columns mb-5">
+          <div class="column is-half">
+            <LlmInferenceCode />
+          </div>
+          <div class="column is-half">
+            <LlmKitCode />
+          </div>
+        </div>
         <OAuthApps />
       </template>
 

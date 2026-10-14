@@ -1,6 +1,7 @@
 import {
   convertToModelMessages,
   stepCountIs,
+  type FinishReason,
   streamText,
   type ChatTransport,
   type ToolSet,
@@ -8,10 +9,15 @@ import {
 } from "ai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 
+/** Why a reply ended before the model finished its answer. */
+export type StopCause = "step-limit" | "length" | "content-filter" | "error" | "other";
+
 /** What a reply records about itself, kept with the chat. */
 export type ReplyMetadata = {
   /** Seconds each reasoning step took, in the order they appear. */
   reasoningSeconds?: number[];
+  /** Set only when the reply was cut short. */
+  stopped?: { cause: StopCause; detail?: string };
 };
 
 export type PlaygroundRequest = {
@@ -23,7 +29,7 @@ export type PlaygroundRequest = {
 };
 
 /** A reply may call tools a few times over before it answers. */
-const MAX_STEPS = 8;
+export const MAX_STEPS = 20;
 
 /** How much of the conversation the follow-up questions are drawn from. */
 const SUGGEST_TURNS = 6;
@@ -81,6 +87,7 @@ export class PlaygroundTransport implements ChatTransport<UIMessage> {
     // Timed here because the reply component only times what it watched stream live.
     const started = new Map<string, number>();
     const reasoningSeconds: number[] = [];
+    let steps = 0;
     return result.toUIMessageStream({
       sendReasoning: true,
       onError: (error) => (error instanceof Error ? error.message : String(error)),
@@ -91,7 +98,9 @@ export class PlaygroundTransport implements ChatTransport<UIMessage> {
           if (start !== undefined)
             reasoningSeconds.push(Math.max(1, Math.round((performance.now() - start) / 1000)));
         }
-        if (part.type === "finish") return { reasoningSeconds };
+        if (part.type === "finish-step") steps += 1;
+        if (part.type === "finish")
+          return { reasoningSeconds, stopped: stopCause(part.finishReason, part.rawFinishReason, steps) };
         return undefined;
       },
     });
@@ -134,4 +143,14 @@ export class PlaygroundTransport implements ChatTransport<UIMessage> {
       .filter((line) => line.endsWith("?") && line.length <= 120)
       .slice(0, 3);
   }
+}
+
+/**
+ * A reply that ends on tool calls is either waiting for the reader's approval, which
+ * resumes it, or out of steps; only the step count tells them apart.
+ */
+function stopCause(reason: FinishReason, raw: string | undefined, steps: number): ReplyMetadata["stopped"] {
+  if (reason === "stop") return undefined;
+  if (reason === "tool-calls") return steps >= MAX_STEPS ? { cause: "step-limit" } : undefined;
+  return { cause: reason, detail: reason === "other" ? raw : undefined };
 }
