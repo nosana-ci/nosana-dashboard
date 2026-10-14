@@ -43,24 +43,6 @@
 
         <template #empty>
           <div class="pg-hero">
-            <section class="pg-hero-surface">
-              <div class="pg-hero-grid" aria-hidden="true"></div>
-              <div class="pg-hero-copy">
-                <h2 class="pg-hero-title">
-                  <template v-if="asNosa">
-                    Ask <span class="pg-hero-accent">Nosa</span><br />about Nosana.
-                  </template>
-                  <template v-else>
-                    What would<br />you like to <span class="pg-hero-accent">ask</span>?
-                  </template>
-                </h2>
-                <p class="pg-hero-sub">
-                  {{ asNosa ? "Nosa" : selectedModel ? modelName(selectedModel) : "A model" }}
-                  runs on Nosana, free to try here. Pick a starting point, or
-                  write your own below.
-                </p>
-              </div>
-            </section>
             <div class="pg-cards">
               <button
                 v-for="card in starters"
@@ -78,10 +60,6 @@
                   </span>
                 </span>
                 <span class="pg-card-text">{{ card.text }}</span>
-                <span class="pg-card-cta">
-                  Send
-                  <UIcon name="i-lucide-arrow-right" />
-                </span>
               </button>
             </div>
           </div>
@@ -99,22 +77,6 @@
                 size="xs"
               />
             </UDropdownMenu>
-            <UPopover :content="{ side: 'top', align: 'start' }" :ui="{ content: 'pg-shell p-3 w-64' }">
-              <UButton icon="i-lucide-wrench" :label="toolsLabel" color="neutral" variant="ghost" size="xs" />
-              <template #content>
-                <div class="pg-foot-tools">
-                  <USwitch
-                    v-for="entry in TOOL_CATALOG"
-                    :key="entry.id"
-                    :model-value="toolIds.includes(entry.id)"
-                    :label="entry.label"
-                    :description="entry.description"
-                    size="sm"
-                    @update:model-value="(on) => toggleTool(entry.id, on)"
-                  />
-                </div>
-              </template>
-            </UPopover>
           </div>
         </template>
       </PlaygroundShell>
@@ -143,12 +105,12 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { useEventListener, useLocalStorage, useMediaQuery } from "@vueuse/core";
+import { useEventListener, useMediaQuery } from "@vueuse/core";
 import { useChat } from "@ai-sdk/vue";
 import { lastAssistantMessageIsCompleteWithApprovalResponses, type UIMessage } from "ai";
 import { isChatModel, modelName, type LlmModel } from "~/composables/useLlmGateway";
 import { PlaygroundTransport } from "~/utils/playgroundTransport";
-import { buildTools, DEFAULT_TOOLS, TOOL_CATALOG } from "~/utils/playgroundTools";
+import { buildTools } from "~/utils/playgroundTools";
 import { NOSA_STARTERS, STARTERS } from "~/utils/playgroundStarters";
 
 const props = defineProps<{
@@ -217,23 +179,12 @@ const modelMenu = computed(() => [
   })),
 ]);
 
-// The built-in tools switched on, remembered in this browser.
-const toolIds = useLocalStorage("playground-tools", DEFAULT_TOOLS);
 
 watch(asNosa, (on) => on && nosa.load(), { immediate: true });
 watch(nosa.error, (message) => {
   if (message) toast.add({ title: "Nosa's tools are not available", description: message, color: "error" });
 });
 
-function toggleTool(id: string, on: boolean) {
-  const rest = toolIds.value.filter((entry) => entry !== id);
-  toolIds.value = on ? [...rest, id] : rest;
-}
-
-const toolsLabel = computed(() => {
-  const on = toolIds.value.length;
-  return on === 0 ? "No tools" : `${on} tool${on === 1 ? "" : "s"} on`;
-});
 
 const starters = computed(() => (asNosa.value ? NOSA_STARTERS : STARTERS));
 
@@ -249,7 +200,7 @@ const { messages, status, error, sendMessage, stop, regenerate, addToolApprovalR
       model: runModel.value,
       system: asNosa.value ? nosa.system.value : undefined,
       tools: {
-        ...buildTools(toolIds.value, config.apiBase as string),
+        ...buildTools(config.apiBase as string),
         ...(asNosa.value ? nosa.tools.value : {}),
       },
     })),
@@ -321,9 +272,6 @@ useEventListener(document, "keydown", (event: KeyboardEvent) => {
   border-right: 1px solid var(--ui-border);
 }
 
-
-
-
 .pg-hero {
   width: 100%;
   max-width: 50rem;
@@ -331,53 +279,6 @@ useEventListener(document, "keydown", (event: KeyboardEvent) => {
   gap: 1rem;
 }
 
-// The dark, green-lit surface the deploy and developer pages open with.
-.pg-hero-surface {
-  position: relative;
-  overflow: hidden;
-  padding: 2.25rem 2.5rem;
-  border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background:
-    radial-gradient(circle at 88% 10%, rgba(16, 232, 12, 0.18), transparent 44%),
-    linear-gradient(135deg, #0a0c0a 0%, #0f130d 55%, #0b0d0b 100%);
-  box-shadow: 0 24px 60px -30px rgba(0, 0, 0, 0.6);
-}
-
-.pg-hero-grid {
-  position: absolute;
-  inset: 0;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
-  background-size: 22px 22px;
-  mask-image: linear-gradient(to bottom, black, transparent 90%);
-  pointer-events: none;
-}
-
-.pg-hero-copy {
-  position: relative;
-}
-
-.pg-hero-title {
-  margin: 0 0 0.6rem;
-  font-family: var(--pg-title);
-  font-size: 2.35rem;
-  font-weight: 600;
-  line-height: 1.05;
-  letter-spacing: -0.01em;
-  color: #fff;
-}
-
-.pg-hero-accent {
-  color: var(--pg-green);
-}
-
-.pg-hero-sub {
-  margin: 0;
-  max-width: 32rem;
-  font-size: 0.98rem;
-  line-height: 1.5;
-  color: #b7c0b6;
-}
 
 .pg-cards {
   display: grid;
@@ -410,14 +311,6 @@ useEventListener(document, "keydown", (event: KeyboardEvent) => {
     box-shadow: 0 16px 36px -22px rgba(0, 0, 0, 0.45);
   }
 
-  &:hover:not(:disabled) .pg-card-cta {
-    color: var(--ui-primary);
-
-    :deep(svg),
-    :deep(span) {
-      transform: translateX(3px);
-    }
-  }
 
   &:disabled {
     opacity: 0.6;
@@ -475,28 +368,6 @@ useEventListener(document, "keydown", (event: KeyboardEvent) => {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-}
-
-.pg-card-cta {
-  margin-top: auto;
-  padding-top: 0.75rem;
-  border-top: 1px solid var(--ui-border-muted);
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: var(--ui-text-dimmed);
-  transition: color 0.2s ease;
-
-  :deep(span) {
-    transition: transform 0.2s ease;
-  }
-}
-
-.pg-foot-tools {
-  display: grid;
-  gap: 0.6rem;
 }
 
 .pg-foot {

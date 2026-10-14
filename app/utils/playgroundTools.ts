@@ -1,11 +1,10 @@
 import { tool, type ToolSet } from "ai";
 import { z } from "zod";
 
-/** A tool the reader can switch on. Each one runs in the browser. */
+/** A built-in tool, labelled in the chat. Each one runs in the browser. */
 export type PlaygroundTool = {
   id: string;
   label: string;
-  description: string;
   icon: string;
 };
 
@@ -13,28 +12,23 @@ export const TOOL_CATALOG: PlaygroundTool[] = [
   {
     id: "current_time",
     label: "Current time",
-    description: "The date, time and time zone of this browser.",
     icon: "i-lucide-clock",
   },
   {
     id: "calculate",
     label: "Calculator",
-    description: "Exact arithmetic instead of a guess.",
     icon: "i-lucide-calculator",
   },
   {
     id: "nosana_gpu_markets",
     label: "Nosana GPU markets",
-    description: "GPU types, hourly prices and nodes online.",
     icon: "i-lucide-cpu",
   },
 ];
 
-export const DEFAULT_TOOLS = TOOL_CATALOG.map((entry) => entry.id);
-
-/** The tools the model may call, out of those switched on. */
-export function buildTools(ids: string[], apiBase: string): ToolSet {
-  const all: ToolSet = {
+/** The built-in tools the model may call. */
+export function buildTools(apiBase: string): ToolSet {
+  return {
     current_time: tool({
       description: "The current date and time where the user is.",
       inputSchema: z.object({}),
@@ -63,7 +57,6 @@ export function buildTools(ids: string[], apiBase: string): ToolSet {
       execute: ({ search }) => fetchMarkets(apiBase, search),
     }),
   };
-  return Object.fromEntries(ids.filter((id) => id in all).map((id) => [id, all[id]!]));
 }
 
 /** Arithmetic only: anything but numbers and operators is refused before it runs. */

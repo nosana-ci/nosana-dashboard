@@ -1,9 +1,5 @@
 <template>
   <aside class="pg-side">
-    <div class="pg-side-top">
-      <span class="pg-side-heading">Chats</span>
-    </div>
-
     <div class="pg-side-scroll">
       <ul class="pg-side-list pg-side-new">
         <li class="pg-row">
@@ -135,23 +131,6 @@ const groups = computed(() => {
   flex-direction: column;
   min-height: 0;
   height: 100%;
-}
-
-.pg-side-top {
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  height: var(--pg-toolbar);
-  padding: 0 0.5rem;
-  border-bottom: 1px solid var(--ui-border);
-}
-
-// "Chats" on the left, the new-chat button on the right.
-.pg-side-heading {
-  flex: 1;
-  padding-left: 0.5rem;
-  font-weight: 600;
 }
 
 .pg-side-scroll {
