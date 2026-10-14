@@ -8,7 +8,7 @@
       aria-labelledby="rq-title"
     >
       <header class="rq-head">
-        <h2 id="rq-title" class="rq-title">Change Requirements</h2>
+        <h2 id="rq-title" class="rq-title">Change GPU</h2>
         <button
           type="button"
           class="delete"
@@ -29,11 +29,8 @@
       <footer class="rq-foot">
         <div class="rq-status">
           <p v-if="matching" :class="{ 'is-none': matching.hosts === 0 }">
-            <strong>{{ hostsLabel(matching.hosts) }}</strong> match ·
+            <strong>{{ hostsLabel(matching.hosts) }}</strong> on this GPU ·
             {{ matching.available }} free now
-            <template v-if="changed && savedMatching">
-              (was {{ savedMatching.hosts }})
-            </template>
           </p>
           <p class="rq-note">{{ note }}</p>
         </div>
@@ -41,17 +38,17 @@
           v-if="changed"
           type="button"
           class="button is-text"
-          @click="draft = { ...requirements }"
+          @click="draft = market"
         >
           Undo
         </button>
         <button
           type="button"
           class="button is-success"
-          :disabled="!changed || !nextMarket || actionLoading"
+          :disabled="!changed || actionLoading"
           @click="save"
         >
-          Save requirements
+          Save GPU
         </button>
       </footer>
     </aside>
@@ -60,22 +57,16 @@
 
 <script setup lang="ts">
 import { useEventListener } from "@vueuse/core";
-import {
-  cheapestPublicMarket,
-  useGpuModels,
-  useMatchingHosts,
-  type MarketRate,
-  type MatchingHosts,
-  type Requirements,
+import type {
+  MarketRate,
+  MatchingHosts,
 } from "~/composables/useNodeRequirements";
 
-// Mounted while open: the draft starts from the saved requirements each time.
+// Mounted while open: the draft starts from the deployment's market each time.
 const props = defineProps<{
-  /** The saved requirements, the GPU (`name`) included: the draft starts here. */
-  requirements: Requirements;
-  /** The deployment's market, which serves the saved GPU. */
+  /** The deployment's market: the draft starts here. */
   market: string;
-  /** The testgrid `/markets` rows: a new GPU moves to its cheapest. */
+  /** The testgrid `/markets` rows: the markets to choose from. */
   markets: MarketRate[] | null;
   /** The VRAM the job definition asks for; GPUs below it are hidden. */
   requiredVramGb: number | null;
@@ -84,50 +75,24 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   close: [];
-  /** With the market that serves them, as on create. */
-  save: [requirements: Requirements, market: string];
+  /** The market to move the deployment to. */
+  save: [market: string];
 }>();
 
-const draft = ref<Requirements>({ ...props.requirements });
+const draft = ref(props.market);
 const matching = ref<MatchingHosts | null>(null);
-// What the saved requirements match, to compare a change against.
-const { matching: savedMatching } = useMatchingHosts(() => props.requirements);
+const changed = computed(() => draft.value !== props.market);
 
-// Key order is not a change: compare sorted entries.
-const entriesOf = (requirements: Requirements) =>
-  JSON.stringify(
-    Object.entries(requirements).sort(([a], [b]) => a.localeCompare(b)),
-  );
-const changed = computed(
-  () => entriesOf(draft.value) !== entriesOf(props.requirements),
-);
-
-// A different GPU is a different market: its cheapest public one. The same
-// GPU keeps the market it is on.
-const { gpus } = useGpuModels();
-const gpuChanged = computed(() => draft.value.name !== props.requirements.name);
-const nextMarket = computed(() => {
-  if (!gpuChanged.value) return props.market;
-  const gpu = gpus.value.find((model) => model.name === draft.value.name);
-  return gpu
-    ? (cheapestPublicMarket(gpu, props.markets)?.address ?? null)
-    : null;
-});
-
-const note = computed(() => {
-  if (!gpuChanged.value) {
-    return "Running jobs keep their hosts. New and replacement jobs use these requirements.";
-  }
-  return nextMarket.value
+const note = computed(() =>
+  changed.value
     ? "A new GPU moves the deployment to its market: running jobs restart on the new GPU's hosts."
-    : "No public market serves this GPU yet.";
-});
+    : "Pick another GPU to move the deployment to its market.",
+);
 
 const hostsLabel = (hosts: number) => `${hosts} host${hosts === 1 ? "" : "s"}`;
 
 function save() {
-  if (!nextMarket.value) return;
-  emit("save", draft.value, nextMarket.value);
+  emit("save", draft.value);
   emit("close");
 }
 

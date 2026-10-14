@@ -211,12 +211,11 @@
 
         <DeploymentRequirementsDrawer
           v-if="showRequirementsDrawer"
-          :requirements="deploymentRequirements"
           :market="deployment.market"
           :markets="testgridMarkets"
           :requiredVramGb="requiredVramGb"
           :actionLoading="actionLoading"
-          @save="updateRequirements"
+          @save="updateMarket"
           @close="showRequirementsDrawer = false"
         />
 
@@ -250,10 +249,6 @@ import { useSuperTokens } from "~/composables/useSuperTokens";
 import { useDeploymentDetail } from "~/composables/useDeploymentDetail";
 import { useDeploymentJobs } from "~/composables/useDeploymentJobs";
 import { useDeploymentActions } from "~/composables/useDeploymentActions";
-import {
-  useGpuModels,
-  type Requirements,
-} from "~/composables/useNodeRequirements";
 import { requiredVramMb } from "~/composables/useTemplates";
 import {
   useDeploymentStream,
@@ -553,27 +548,13 @@ const {
   updateName,
   updateReplicas,
   updateJobTimeout,
-  updateRequirements,
+  updateMarket,
   duplicateDeployment,
   updateSchedule,
   switchToRevision,
   viewRevisionDefinition,
   isValidCronExpression,
 } = actions;
-
-// --- Requirements: the saved ones, which the Change requirements drawer
-// starts from, with the GPU of the deployment's market when they name none ---
-const { gpus } = useGpuModels();
-const deploymentRequirements = computed<Requirements>(() => {
-  const market = deployment.value?.market;
-  const gpu = market
-    ? gpus.value.find((model) => model.markets.includes(market))
-    : undefined;
-  return {
-    ...(gpu ? { name: gpu.name } : {}),
-    ...(deployment.value?.requirements ?? {}),
-  };
-});
 
 const jobDef = useDeploymentJobDefinition({
   deployment,
@@ -591,7 +572,7 @@ const {
   makeRevision,
 } = jobDef;
 
-// The GPU memory the job asks for: the requirements drawer hides GPUs below it.
+// The GPU memory the job asks for: the Change GPU drawer hides GPUs below it.
 const requiredVramGb = computed(() => {
   const vramMb = requiredVramMb(jobDefinitionModel.value);
   return vramMb === null ? null : Math.ceil(vramMb / 1024);
@@ -628,7 +609,7 @@ const availableActions = [
   "update-replicas",
   "update-timeout",
   "update-schedule",
-  "update-requirements",
+  "update-market",
   "duplicate",
 ];
 
@@ -639,7 +620,7 @@ if (initialAction && availableActions.includes(initialAction)) {
   else if (initialAction === "update-replicas") showReplicasModal.value = true;
   else if (initialAction === "update-timeout") showTimeoutModal.value = true;
   else if (initialAction === "update-schedule") showScheduleModal.value = true;
-  else if (initialAction === "update-requirements")
+  else if (initialAction === "update-market")
     showRequirementsDrawer.value = true;
   else if (initialAction === "duplicate") showDuplicateModal.value = true;
 }
@@ -971,8 +952,7 @@ const switchAction = (action: string) => {
   if (action === "update-replicas") showReplicasModal.value = true;
   else if (action === "update-timeout") showTimeoutModal.value = true;
   else if (action === "update-schedule") showScheduleModal.value = true;
-  else if (action === "update-requirements")
-    showRequirementsDrawer.value = true;
+  else if (action === "update-market") showRequirementsDrawer.value = true;
   else if (action === "duplicate") showDuplicateModal.value = true;
 
   router.replace({
@@ -1004,7 +984,7 @@ watch(showScheduleModal, (isOpen) => {
 });
 
 watch(showRequirementsDrawer, (isOpen) => {
-  if (!isOpen && route.query.action === "update-requirements") clearAction();
+  if (!isOpen && route.query.action === "update-market") clearAction();
 });
 
 watch(showDuplicateModal, (isOpen) => {

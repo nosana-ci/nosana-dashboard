@@ -33,13 +33,9 @@
       v-else
       :template="selectedTemplate"
       :job-definition="jobDefinition"
-      :markets="testgridMarkets"
-      :gpus="gpuCatalogue"
+      :listings="marketListings"
       :required-vram-gb="requiredVramGb"
-      :gpu="advancedGpu"
-      :gpu-name="gpuName"
-      :hosts="advancedMatching"
-      :requirements="requirementChips"
+      :gpu="selectedListing"
       :runs="runsSummary"
       :changes="setupChanges"
       :hourly-cost="hourlyCost"
@@ -64,13 +60,14 @@
       </template>
       <template #compute>
         <DeployRequirementsSelection
-          v-model="advancedRequirements"
+          v-model="selectedMarketAddress"
           :markets="testgridMarkets"
-          :recommended-name="
-            selectedTemplate ? (recommendedGpu?.name ?? null) : null
+          :recommended-market="
+            selectedTemplate
+              ? (recommendedMarket?.market.address ?? null)
+              : null
           "
           :required-vram-gb="requiredVramGb"
-          @matching="advancedMatching = $event"
         />
       </template>
       <template #settings>
@@ -132,14 +129,9 @@ import {
 } from "~/composables/useTimeoutConstants";
 import { trackPixelEvent } from "~/utils/analytics";
 import {
-  cheapestPublicMarket,
-  keepCategorizedRequirements,
-  listRequirementChips,
-  gpuHourlyUsd,
-  recommendGpu,
-  useGpuModels,
-  type GpuModel,
-  type Requirements,
+  marketFitsVram,
+  recommendMarket,
+  useMarketListings,
 } from "~/composables/useNodeRequirements";
 
 // Setup composables
@@ -227,32 +219,17 @@ const { lockScroll, unlockScroll } = useModalScrollLock();
 
 // State
 const config = useRuntimeConfig();
-// A cloned or restored deployment's market, read once by the GPU default
-// below to pick that market's GPU when no GPU is chosen yet.
+// A cloned or restored deployment's market, applied by the GPU default
+// below once it resolves.
 const clonedMarketAddress = ref<string | null>(null);
-// The requirements card calls host-manager; the GPU is the `name` key.
-const advancedRequirements = ref<Requirements>({});
-// The matching pool: every host, those free now, and those busy now.
-const advancedMatching = ref<{
-  hosts: number;
-  available: number;
-  working: number;
-} | null>(null);
-// "RTX 4090": the chosen GPU, priced at its cheapest market below.
-const gpuName = computed(
-  () => (advancedGpu.value ? shortGpuName(advancedGpu.value.name) : ""),
-);
-// Priced the way the GPU list prices it: the cheapest of the GPU's markets
-// plus the network fee, so the summary agrees with the row that was clicked.
-const gpuPrice = computed(() =>
-  advancedGpu.value
-    ? gpuHourlyUsd(advancedGpu.value, testgridMarkets.value)
-    : null,
-);
+// The GPU is picked as its market; the deployment manager reserves within it.
+const selectedMarketAddress = ref<string | null>(null);
 // One price per replica-hour for the whole card: the selected market's rate,
-// which the balance check uses, or the GPU's cheapest market while that
-// market is still resolving.
-const unitPrice = computed(() => hourlyPrice.value || gpuPrice.value || 0);
+// which the balance check uses, or the GPU list's price for it while that
+// rate is still resolving.
+const unitPrice = computed(
+  () => hourlyPrice.value || selectedListing.value?.usd || 0,
+);
 // The VRAM the job definition asks for, so the card can dim GPUs below it.
 const requiredVramGb = computed(() => {
   const vramMb = requiredVramMb(jobDefinition.value);
@@ -473,51 +450,53 @@ const sshPublicKeys = ref<string[]>([]);
 const sshError = ref("");
 
 // One click: with nothing chosen yet the GPU defaults to the recommended one
-// (a clone keeps its own market's GPU), and a default that stops fitting the
+// (a clone keeps its own market), and a default that stops fitting the
 // workload is replaced. A GPU the user picked stays while it fits.
-const { gpus: gpuCatalogue } = useGpuModels();
-// The GPU follows its name, so the template page, which has no GPU list
-// mounted, still knows the market and the price.
-const advancedGpu = computed<GpuModel | null>(
+const { listings: marketListings, listingFor } = useMarketListings(
+  () => testgridMarkets.value,
+);
+// The chosen market as the GPU list shows it, so the template page, which
+// has no GPU list mounted, still knows the GPU, its hosts and the price.
+const selectedListing = computed(
   () =>
-    gpuCatalogue.value.find(
-      (gpu) => gpu.name === advancedRequirements.value.name,
+    marketListings.value.find(
+      (listing) => listing.market.address === selectedMarketAddress.value,
     ) ?? null,
 );
-// The market is not picked by hand: it is the GPU's cheapest public market,
-// and the deployment manager reserves within it. Derived from the GPU rather
-// than from current availability, so it is known even while every matching
-// host is busy.
-const selectedMarketAddress = computed(() =>
-  advancedGpu.value
-    ? (cheapestPublicMarket(advancedGpu.value, testgridMarkets.value)?.address ??
-      null)
-    : null,
+const recommendedMarket = computed(() =>
+  recommendMarket(marketListings.value, requiredVramGb.value),
 );
-const recommendedGpu = computed(() =>
-  recommendGpu(gpuCatalogue.value, testgridMarkets.value, requiredVramGb.value),
-);
-const defaultedGpuName = ref<string | null>(null);
+const defaultedMarket = ref<string | null>(null);
 watch(
-  [recommendedGpu, gpuCatalogue, requiredVramGb],
+  [marketListings, requiredVramGb, clonedMarketAddress],
   () => {
-    if (!gpuCatalogue.value.length) return;
-    const name = advancedRequirements.value.name;
-    const current = gpuCatalogue.value.find((gpu) => gpu.name === name);
-    const fits = Boolean(
-      current && current.vramGb >= (requiredVramGb.value ?? 0),
-    );
-    if (typeof name === "string" && name !== defaultedGpuName.value && fits) {
+    if (!marketListings.value.length) return;
+    // A clone's market counts as chosen: applied once it resolves (its GPU
+    // may still be loading), then forgotten so a reset goes to the
+    // recommendation.
+    const cloned = clonedMarketAddress.value
+      ? listingFor(clonedMarketAddress.value)
+      : undefined;
+    if (cloned) {
+      clonedMarketAddress.value = null;
+      defaultedMarket.value = null;
+      selectedMarketAddress.value = cloned.market.address;
       return;
     }
-    const clonedMarket = name ? undefined : (clonedMarketAddress.value ?? undefined);
-    const cloned = clonedMarket
-      ? gpuCatalogue.value.find((gpu) => gpu.markets.includes(clonedMarket))
-      : undefined;
-    const next = cloned ?? recommendedGpu.value;
-    if (!next || next.name === name) return;
-    defaultedGpuName.value = cloned ? null : next.name;
-    advancedRequirements.value = { ...advancedRequirements.value, name: next.name };
+    const address = selectedMarketAddress.value;
+    const defaulted = !address || address === defaultedMarket.value;
+    const current = selectedListing.value;
+    if (
+      !defaulted &&
+      current &&
+      marketFitsVram(current, requiredVramGb.value)
+    ) {
+      return;
+    }
+    const next = recommendedMarket.value;
+    if (!next || next.market.address === address) return;
+    defaultedMarket.value = next.market.address;
+    selectedMarketAddress.value = next.market.address;
   },
   { immediate: true },
 );
@@ -806,11 +785,6 @@ const createDeployment = async () => {
       ...(strategy.value === DeploymentStrategy.SCHEDULED
         ? { schedule: schedule.value }
         : {}),
-      // The market above came from the chosen GPU's hosts; the requirements
-      // narrow which of its hosts the deployment manager reserves.
-      ...(typeof advancedRequirements.value.name === "string"
-        ? { requirements: advancedRequirements.value }
-        : {}),
       // Start immediately server-side instead of a separate start() call.
       autostart: true,
       ssh_public_keys: sshPublicKeys.value,
@@ -875,7 +849,6 @@ const persistDraft = () => {
     strategy: strategy.value,
     schedule: schedule.value,
     sshPublicKeys: sshPublicKeys.value,
-    advancedRequirements: advancedRequirements.value,
   });
 };
 
@@ -910,11 +883,6 @@ const restoreDraftIfNeeded = () => {
 
     if (draft.selectedMarketAddress) {
       clonedMarketAddress.value = draft.selectedMarketAddress;
-    }
-    if (draft.advancedRequirements) {
-      advancedRequirements.value = keepCategorizedRequirements(
-        draft.advancedRequirements,
-      );
     }
   } finally {
     nextTick(() => {
@@ -986,8 +954,8 @@ const deployAction = computed(() => {
 // recommended GPU, no host requirements, one stateless replica.
 const setupChanges = computed(() => ({
   gpu:
-    Boolean(advancedGpu.value && recommendedGpu.value) &&
-    advancedGpu.value?.name !== recommendedGpu.value?.name,
+    Boolean(selectedMarketAddress.value && recommendedMarket.value) &&
+    selectedMarketAddress.value !== recommendedMarket.value?.market.address,
   runs:
     replicas.value !== RECOMMENDED_RUN.replicas ||
     strategy.value !== RECOMMENDED_RUN.strategy ||
@@ -995,17 +963,13 @@ const setupChanges = computed(() => ({
 }));
 // Back to all of it, so Deploy now is the one click again.
 const resetToRecommended = () => {
-  const recommended = recommendedGpu.value;
-  defaultedGpuName.value = recommended?.name ?? null;
-  advancedRequirements.value = recommended ? { name: recommended.name } : {};
+  const recommended = recommendedMarket.value?.market.address ?? null;
+  defaultedMarket.value = recommended;
+  selectedMarketAddress.value = recommended;
   replicas.value = RECOMMENDED_RUN.replicas;
   strategy.value = RECOMMENDED_RUN.strategy;
   timeout.value = RECOMMENDED_RUN.timeout;
 };
-// The requirements beyond the GPU, as the summary's chips.
-const requirementChips = computed(() =>
-  listRequirementChips(advancedRequirements.value),
-);
 const isShort = computed(
   () =>
     Boolean(selectedMarketAddress.value) &&
@@ -1358,17 +1322,6 @@ const cloneDeployment = async (
 
     const marketAddress = overrides.market || deployment.market;
     if (marketAddress) clonedMarketAddress.value = String(marketAddress);
-    // The clone's GPU counts as chosen, so the default never replaces it.
-    const clonedGpu = gpuCatalogue.value.find((gpu) =>
-      gpu.markets.includes(String(marketAddress)),
-    );
-    if (clonedGpu) {
-      defaultedGpuName.value = null;
-      advancedRequirements.value = {
-        ...advancedRequirements.value,
-        name: clonedGpu.name,
-      };
-    }
 
     toast.success(`Cloned configuration from ${deployment.name || listed.id}`);
     // A ?clone= link already names its page; a clone made here gets ?custom.

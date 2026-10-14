@@ -6,7 +6,11 @@ import type {
   NosanaRequirementOptions,
   NosanaRequirements,
 } from "@nosana/kit";
-import { watchDebounced } from "@vueuse/core";
+import {
+  useDocumentVisibility,
+  useIntervalFn,
+  watchDebounced,
+} from "@vueuse/core";
 import countries from "i18n-iso-countries";
 import en from "i18n-iso-countries/langs/en.json";
 import { NETWORK_FEE_MULTIPLIER } from "./useMarketPricing";
@@ -52,6 +56,183 @@ export interface MarketRate {
   usd_reward_per_hour: number;
   /** A private market reserved for one client; public jobs cannot use it. */
   client?: boolean;
+  /** Hardware notes on the market, e.g. `{ key: "vram", value: "24GB" }`. */
+  metadata?: Array<{ key: string; value: string }>;
+}
+
+/**
+ * A market as the GPU list shows it: its VRAM, the hosts free and busy on
+ * it right now, and its hourly price.
+ */
+export interface MarketListing {
+  market: MarketRate;
+  /** From the market's metadata, else from the GPU model its hosts report. */
+  vramGb: number | null;
+  /** Hosts queued on the market now, which a new job starts on at once. */
+  available: number;
+  /** Hosts running a job on the market, back in its queue as they finish. */
+  working: number;
+  /** Hourly USD, network fee included; null when the market is unpriced. */
+  usd: number | null;
+}
+
+/** "24GB" → 24, "24576 MB" → 24; null when the text names no size. */
+export function parseVramGb(text: string | undefined): number | null {
+  const match = text?.match(/(\d+(?:\.\d+)?)\s*(GB|MB)?/i);
+  if (!match) return null;
+  const size = Number(match[1]);
+  return match[2]?.toUpperCase() === "MB" ? Math.round(size / 1024) : size;
+}
+
+/** The market types a deployment can be created on: every public type on devnet, premium on mainnet. */
+export function deployableMarketTypes(): string[] {
+  return useRuntimeConfig().public.network === "devnet"
+    ? ["PREMIUM", "COMMUNITY"]
+    : ["PREMIUM"];
+}
+
+/** How often a mounted GPU list refreshes its host counts. */
+const HOST_COUNT_REFRESH_MS = 10_000;
+
+/** Per market address: hosts queued now, and hosts running a job. */
+interface MarketHosts {
+  available: Record<string, number>;
+  working: Record<string, number>;
+}
+
+/**
+ * The markets a deployment can be created on, with live host counts: the
+ * public markets of the deployable types. Hosts come from host-manager's
+ * queue (`available`) and the running-job counts (`working`); VRAM from the
+ * market's metadata, else from the GPU model whose hosts serve it.
+ *
+ * `live` keeps the counts fresh while the caller is mounted: they are fetched
+ * again on mount and every few seconds after, while the tab is visible.
+ * Callers that only read what a live list already keeps fresh (the deploy
+ * summary) leave it off.
+ */
+export function useMarketListings(
+  markets: MaybeRefOrGetter<MarketRate[] | null>,
+  { live = false }: { live?: boolean } = {},
+) {
+  const types = deployableMarketTypes();
+  const config = useRuntimeConfig();
+  const { nosana } = useKit();
+  const { gpus, error: gpuError, refresh: refreshGpus } = useGpuModels();
+  // Both counts in one fetch, so a refresh changes the listings once. The
+  // key is shared between the GPU list and the page around it: `defer` joins
+  // a request already in flight instead of restarting it.
+  const {
+    data: hosts,
+    pending,
+    error: hostsError,
+    refresh: refreshHosts,
+  } = useAsyncData<MarketHosts | null>(
+    "market-hosts",
+    async () => {
+      const [queued, running] = await Promise.all([
+        nosana.value.api.reservations.findAvailable({ requirements: {} }),
+        $fetch<Record<string, { running?: number }>>("/jobs/running", {
+          baseURL: config.public.apiBase as string,
+        }),
+      ]);
+      const available: Record<string, number> = {};
+      for (const node of queued.nodes) {
+        available[node.market] = (available[node.market] ?? 0) + 1;
+      }
+      const working = Object.fromEntries(
+        Object.entries(running).map(([market, count]) => [
+          market,
+          count.running ?? 0,
+        ]),
+      );
+      return { available, working };
+    },
+    { default: () => null, dedupe: "defer" },
+  );
+  if (live) {
+    // Counts kept from an earlier visit are fetched again right away.
+    if (hosts.value !== null) void refreshHosts();
+    const visibility = useDocumentVisibility();
+    useIntervalFn(() => {
+      if (visibility.value === "visible") void refreshHosts();
+    }, HOST_COUNT_REFRESH_MS);
+  }
+
+  const listings = computed<MarketListing[]>(() =>
+    (toValue(markets) ?? [])
+      .filter((market) => !market.client && types.includes(market.type))
+      .map((market) => ({
+        market,
+        vramGb:
+          parseVramGb(
+            market.metadata?.find((entry) => entry.key === "vram")?.value,
+          ) ??
+          gpus.value.find((gpu) => gpu.markets.includes(market.address))
+            ?.vramGb ??
+          null,
+        available: hosts.value?.available[market.address] ?? 0,
+        working: hosts.value?.working[market.address] ?? 0,
+        usd:
+          market.usd_reward_per_hour > 0
+            ? market.usd_reward_per_hour * NETWORK_FEE_MULTIPLIER
+            : null,
+      })),
+  );
+
+  /**
+   * A market as listed; one not listed (a client's private market) gives a
+   * listed market of the same GPU, if the catalogue knows one.
+   */
+  const listingFor = (address: string): MarketListing | undefined => {
+    const listed = listings.value.find(
+      (listing) => listing.market.address === address,
+    );
+    if (listed) return listed;
+    const gpu = gpus.value.find((model) => model.markets.includes(address));
+    return gpu
+      ? listings.value.find((listing) =>
+          gpu.markets.includes(listing.market.address),
+        )
+      : undefined;
+  };
+
+  return {
+    listings,
+    listingFor,
+    pending,
+    /** Until the first host counts arrive, every listing reads 0 and 0. */
+    counting: computed(() => hosts.value === null && !hostsError.value),
+    error: computed(() => hostsError.value || gpuError.value),
+    refresh: () => Promise.all([refreshHosts(), refreshGpus()]),
+  };
+}
+
+/** Whether a market is known to meet the job's VRAM; unknown VRAM never is. */
+export function marketFitsVram(
+  listing: MarketListing,
+  requiredGb: number | null,
+): boolean {
+  return (
+    !requiredGb || (listing.vramGb !== null && listing.vramGb >= requiredGb)
+  );
+}
+
+/**
+ * The market a deployment gets by default: the cheapest that fits the job's
+ * VRAM with a host free now, else the cheapest that fits at all. Only priced
+ * markets qualify, since that price is what the deployment will pay.
+ */
+export function recommendMarket(
+  listings: MarketListing[],
+  requiredGb: number | null,
+): MarketListing | null {
+  const priced = listings
+    .filter(
+      (listing) => listing.usd !== null && marketFitsVram(listing, requiredGb),
+    )
+    .sort((a, b) => (a.usd as number) - (b.usd as number));
+  return priced.find((listing) => listing.available > 0) ?? priced[0] ?? null;
 }
 
 /** The line icons drawn by the deploy flow's CategoryIcon component. */
@@ -141,7 +322,7 @@ export function useGpuModels() {
   const { data, pending, error, refresh } = useAsyncData<GpuModels | null>(
     "gpu-models",
     () => nosana.value.api.reservations.listGpus(),
-    { default: () => null },
+    { default: () => null, dedupe: "defer" },
   );
 
   return {
@@ -270,63 +451,6 @@ export function useMatchingHosts(requirements: MaybeRefOrGetter<Requirements>) {
   });
 
   return { matching, failed, refresh: search };
-}
-
-/**
- * The cheapest priced public market a GPU's hosts are assigned to; null when
- * none is. A client market is reserved for one customer, so it never counts.
- */
-export function cheapestPublicMarket(
-  gpu: GpuModel,
-  markets: MarketRate[] | null,
-): MarketRate | null {
-  return (markets ?? [])
-    .filter(
-      (market) =>
-        gpu.markets.includes(market.address) &&
-        !market.client &&
-        market.usd_reward_per_hour > 0,
-    )
-    .reduce<MarketRate | null>(
-      (cheapest, market) =>
-        !cheapest || market.usd_reward_per_hour < cheapest.usd_reward_per_hour
-          ? market
-          : cheapest,
-      null,
-    );
-}
-
-/**
- * The hourly USD price, network fee included, of a GPU's cheapest public
- * market; null when none of them is priced.
- */
-export function gpuHourlyUsd(
-  gpu: GpuModel,
-  markets: MarketRate[] | null,
-): number | null {
-  const market = cheapestPublicMarket(gpu, markets);
-  return market ? market.usd_reward_per_hour * NETWORK_FEE_MULTIPLIER : null;
-}
-
-/**
- * The GPU a deployment gets by default: the cheapest that fits the job's VRAM
- * with a host free now, else the cheapest that fits at all. Only GPUs with a
- * market price qualify, since that price is what the deployment will pay.
- */
-export function recommendGpu(
-  gpus: GpuModel[],
-  markets: MarketRate[] | null,
-  requiredGb: number | null,
-): GpuModel | null {
-  const priced = gpus
-    .filter((gpu) => gpu.vramGb >= (requiredGb ?? 0))
-    .flatMap((gpu) => {
-      const price = gpuHourlyUsd(gpu, markets);
-      return price === null ? [] : [{ gpu, price }];
-    })
-    .sort((a, b) => a.price - b.price);
-  const pick = priced.find(({ gpu }) => gpu.available > 0) ?? priced[0];
-  return pick ? pick.gpu : null;
 }
 
 // --- Formatting a requirement for the summary ---

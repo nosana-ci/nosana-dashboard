@@ -1,6 +1,5 @@
 import type { JobDefinition } from "@nosana/kit";
 import type { Template } from "./useTemplates";
-import type { Requirements } from "./useNodeRequirements";
 import { useLocalStorage } from "@vueuse/core";
 
 export interface CreateDeployDraft {
@@ -13,8 +12,6 @@ export interface CreateDeployDraft {
   strategy: string;
   schedule: string;
   sshPublicKeys: string[];
-  // Optional: drafts saved before the requirements card existed lack it.
-  advancedRequirements?: Requirements;
   timestamp: number;
 }
 

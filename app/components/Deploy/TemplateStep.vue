@@ -226,7 +226,10 @@
             <dt>GPU</dt>
             <dd>
               <template v-if="gpu">
-                <b>{{ gpuName }}</b> · {{ gpu.vramGb }} GB
+                <b>{{ gpu.market.name }}</b>
+                <template v-if="gpu.vramGb !== null">
+                  · {{ gpu.vramGb }} GB
+                </template>
               </template>
               <template v-else>{{ runsOn }}</template>
               <span v-if="template && changes.gpu" class="summary-changed"
@@ -234,23 +237,9 @@
               >
             </dd>
           </div>
-          <div v-if="requirements.length">
-            <dt>Requirements</dt>
-            <dd>
-              <span
-                v-for="item in requirements"
-                :key="item.key"
-                class="summary-chip"
-                >{{ item.text }}</span
-              >
-            </dd>
-          </div>
           <div v-if="gpu">
             <dt>Matching</dt>
-            <dd>
-              {{ hosts?.available ?? gpu.available }} available ·
-              {{ hosts?.working ?? gpu.working }} working
-            </dd>
+            <dd>{{ gpu.available }} available · {{ gpu.working }} working</dd>
           </div>
           <div>
             <dt>Strategy</dt>
@@ -326,9 +315,8 @@ import {
   type TemplateVariant,
 } from "~/composables/useTemplates";
 import {
-  gpuHourlyUsd,
-  type GpuModel,
-  type MarketRate,
+  marketFitsVram,
+  type MarketListing,
 } from "~/composables/useNodeRequirements";
 import { useIntersectionObserver, useResizeObserver } from "@vueuse/core";
 
@@ -336,16 +324,11 @@ const props = defineProps<{
   /** The selected template, flattened onto its variant; null for your own. */
   template: Template | null;
   jobDefinition: JobDefinition | null;
-  markets: MarketRate[] | null;
-  /** The GPU catalogue and the VRAM the job asks for, to price the fit. */
-  gpus: GpuModel[];
+  /** The deployable markets and the VRAM the job asks for, to price the fit. */
+  listings: MarketListing[];
   requiredVramGb: number | null;
-  /** The GPU a deploy uses, with its short name, price and live host counts. */
-  gpu: GpuModel | null;
-  gpuName: string;
-  hosts: { available: number; working: number } | null;
-  /** The requirements set beyond the GPU, as chips. */
-  requirements: Array<{ key: string; text: string }>;
+  /** The market a deploy uses: its GPU, price and live host counts. */
+  gpu: MarketListing | null;
   /** "1 replica · Stateless · 6-hour rotation": how it runs. */
   runs: string;
   /** What differs from the recommended setup, marked in the summary. */
@@ -372,9 +355,7 @@ const emit = defineEmits<{
   back: [];
 }>();
 
-const isRecommended = computed(
-  () => !props.changes.gpu && !props.requirements.length && !props.changes.runs,
-);
+const isRecommended = computed(() => !props.changes.gpu && !props.changes.runs);
 
 const nameInput = ref<HTMLInputElement | null>(null);
 
@@ -424,7 +405,7 @@ useIntersectionObserver(
 const barSummary = computed(() =>
   [
     props.gpu
-      ? `${props.gpuName} · ${props.hourlyCost}/h`
+      ? `${props.gpu.market.name} · ${props.hourlyCost}/h`
       : "No GPU chosen yet",
     props.runs,
   ].join(" · "),
@@ -481,13 +462,9 @@ const selectedVariant = computed(
 
 // Before a GPU resolves: "GPUs with 12 GB VRAM or more · from $0.14/h".
 const cheapestFit = computed(() => {
-  const needed = props.requiredVramGb ?? 0;
-  const prices = props.gpus
-    .filter((gpu) => gpu.vramGb >= needed)
-    .flatMap((gpu) => {
-      const price = gpuHourlyUsd(gpu, props.markets);
-      return price === null ? [] : [price];
-    });
+  const prices = props.listings
+    .filter((listing) => marketFitsVram(listing, props.requiredVramGb))
+    .flatMap((listing) => (listing.usd === null ? [] : [listing.usd]));
   return prices.length ? Math.min(...prices) : null;
 });
 const runsOn = computed(() => {
@@ -1118,15 +1095,6 @@ html.dark-mode .configurator-head h2 {
   }
 }
 
-.summary-chip {
-  padding: 2px 9px;
-  border-radius: 999px;
-  border: 1px solid $border-soft;
-  background: $surface-sunken;
-  font-family: $family-monospace;
-  font-size: 11.5px;
-}
-
 .summary-changed {
   padding: 1px 7px;
   border-radius: 999px;
@@ -1208,12 +1176,6 @@ html.dark-mode {
     dd {
       color: #fff;
     }
-  }
-
-  .summary-chip {
-    border-color: rgba(255, 255, 255, 0.12);
-    background: rgba(255, 255, 255, 0.06);
-    color: #fff;
   }
 
   .summary-changed {

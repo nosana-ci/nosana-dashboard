@@ -1,5 +1,4 @@
 import type { Deployment } from "@nosana/kit";
-import type { Requirements } from "~/composables/useNodeRequirements";
 import { useToast } from "vue-toastification";
 import { parseCronExpression } from "~/utils/parseCronExpression";
 import {
@@ -276,19 +275,12 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
     newTimeoutHours.value = null;
   };
 
-  // None left clears them: the deployment then runs on any host of its
-  // market. The market follows the GPU, as on create.
-  const updateRequirements = async (
-    requirements: Requirements,
-    market: string,
-  ) => {
+  // Moves the deployment to another market. Host requirements set against
+  // the old market's hosts go with it, so the new market's hosts all qualify.
+  const updateMarket = async (market: string) => {
     await executeDeploymentAction(
-      () =>
-        deps.deployment.value!.updateRequirements(
-          Object.keys(requirements).length ? requirements : null,
-          market,
-        ),
-      "Deployment requirements updated",
+      () => deps.deployment.value!.updateRequirements(null, market),
+      "Deployment market updated",
     );
   };
 
@@ -476,7 +468,7 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
     updateName,
     updateReplicas,
     updateJobTimeout,
-    updateRequirements,
+    updateMarket,
     duplicateDeployment,
     updateSchedule,
     switchToRevision,

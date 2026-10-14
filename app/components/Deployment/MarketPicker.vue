@@ -18,6 +18,7 @@
 <script setup lang="ts">
 import type { JobDefinition, Market } from "@nosana/kit";
 import { useMarkets } from "~/composables/useMarkets";
+import { deployableMarketTypes } from "~/composables/useNodeRequirements";
 
 // GPU picker shared by the change-market and duplicate dialogs. It owns the
 // on-chain market fetch, so mounting it only while a picker is on screen keeps
@@ -31,13 +32,10 @@ const props = defineProps<{
 
 const emit = defineEmits<{ select: [market: Market | null] }>();
 
-const config = useRuntimeConfig();
 const { markets, getMarkets, loadingMarkets } = useMarkets();
 
-// Same market visibility as the create page: everything on devnet, premium
-// on mainnet.
-const typeFilter =
-  config.public.network === "devnet" ? ["PREMIUM", "COMMUNITY"] : ["PREMIUM"];
+// Same market visibility as the create page.
+const typeFilter = deployableMarketTypes();
 
 const initialMarket = computed<Market | null>(
   () =>
