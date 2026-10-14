@@ -126,7 +126,6 @@ import {
 } from "ai";
 import { getTextFromMessage } from "@nuxt/ui/utils/ai";
 import type { ReplyMetadata } from "~/utils/playgroundTransport";
-import { TOOL_CATALOG } from "~/utils/playgroundTools";
 
 type AnyToolPart = ToolUIPart | DynamicToolUIPart;
 type Part = UIMessage["parts"][number];
@@ -214,16 +213,12 @@ const assistantActions = [
   },
 ];
 
-// Tool calls, labelled by the catalog entry when they are one of ours.
-const toolMeta = (part: AnyToolPart) =>
-  TOOL_CATALOG.find((entry) => entry.id === getToolName(part));
-
 const toolBusy = (part: AnyToolPart) =>
   part.state === "input-streaming" || part.state === "input-available";
 
 function toolLabel(part: AnyToolPart): string {
   // An MCP tool's name reads as words rather than an identifier.
-  const name = toolMeta(part)?.label ?? humanize(getToolName(part));
+  const name = humanize(getToolName(part));
   switch (part.state) {
     case "approval-requested":
       return `Wants to run ${name}`;

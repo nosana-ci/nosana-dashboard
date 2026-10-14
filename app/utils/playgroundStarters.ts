@@ -1,26 +1,26 @@
 export type Starter = { icon: string; title: string; text: string };
 
-/** The empty chat's cards; they lean on the built-in tools for live numbers. */
+/** The empty chat's cards for a plain model, answered from what the model knows. */
 export const STARTERS: Starter[] = [
-  {
-    icon: "i-lucide-cpu",
-    title: "Cheapest GPU",
-    text: "Which Nosana GPU market is the cheapest per hour right now, and how many nodes does it have online?",
-  },
-  {
-    icon: "i-lucide-calculator",
-    title: "Price a run",
-    text: "What would a 72-hour job cost on the cheapest Nosana market with an RTX 4090? Show the sum.",
-  },
   {
     icon: "i-lucide-gauge",
     title: "Pick a GPU",
-    text: "How much VRAM does a 70B model need at 16-bit, 8-bit and 4-bit, and which Nosana GPU markets could run the 4-bit version?",
+    text: "How much VRAM does a 70B model need at 16-bit, 8-bit and 4-bit, and which GPUs could run each?",
   },
   {
-    icon: "i-lucide-table",
-    title: "Compare markets",
-    text: "Make a table of the five cheapest Nosana GPU markets with their hourly price, the price for a full day and the nodes online.",
+    icon: "i-lucide-cpu",
+    title: "How inference works",
+    text: "Explain how a GPU runs a large language model, for someone who knows how a CPU works.",
+  },
+  {
+    icon: "i-lucide-scale",
+    title: "A100 or H100",
+    text: "Compare the A100 and the H100 for serving LLMs: memory, throughput and when each is worth it.",
+  },
+  {
+    icon: "i-lucide-file-code-2",
+    title: "Serve with vLLM",
+    text: "Write a Dockerfile that serves a model with vLLM's OpenAI-compatible server, and explain each line.",
   },
 ];
 

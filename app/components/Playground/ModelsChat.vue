@@ -128,7 +128,6 @@ import {
   type LlmModel,
 } from "~/composables/useLlmGateway";
 import { PlaygroundTransport } from "~/utils/playgroundTransport";
-import { buildTools } from "~/utils/playgroundTools";
 import { NOSA_STARTERS, STARTERS } from "~/utils/playgroundStarters";
 import { titleOf } from "~/composables/usePlaygroundChats";
 
@@ -238,10 +237,8 @@ if (!current.value) create();
 const transport = new PlaygroundTransport(config.apiBase as string, () => ({
   model: runModel.value,
   system: asNosa.value ? nosa.system.value : undefined,
-  tools: {
-    ...buildTools(config.apiBase as string),
-    ...(asNosa.value ? nosa.tools.value : {}),
-  },
+  // Plain models chat without tools; Nosa's come from the Nosana MCP server.
+  tools: asNosa.value ? nosa.tools.value : undefined,
 }));
 
 const { messages, status, error, sendMessage, stop, regenerate, addToolApprovalResponse } =
