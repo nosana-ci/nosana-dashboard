@@ -94,12 +94,13 @@
     <section class="mb-6">
       <template v-if="isAuthenticated">
         <ApiKeys class="mb-6" />
-        <!-- What an API key does: call models, and manage deployments from code. -->
-        <h3 class="title is-4 mb-4">Use your API key</h3>
+        <!-- What an API key does from code; calling models has its own page. -->
+        <h3 class="title is-4 mb-2">Use your API key</h3>
+        <p class="mb-4">
+          Manage deployments from code with the Nosana Kit. To call Nosana's models, try one
+          in the <nuxt-link to="/playground">Playground</nuxt-link> and copy its code.
+        </p>
         <div class="columns mb-5">
-          <div class="column is-half">
-            <LlmInferenceCode />
-          </div>
           <div class="column is-half">
             <LlmKitCode />
           </div>

@@ -57,6 +57,21 @@
         </li>
         <li>
           <nuxt-link
+            to="/ask-nosa"
+            :active-class="isLoggedOut ? '' : 'is-active'"
+            :class="{ 'auth-disabled-link': isLoggedOut }"
+            :aria-disabled="isLoggedOut"
+            @click.capture="handleSidebarNav($event, '/ask-nosa', true)"
+            style="padding-left: 1.1rem"
+          >
+            <span class="icon is-small mr-4">
+              <ChatIcon />
+            </span>
+            <span>Ask Nosa</span>
+          </nuxt-link>
+        </li>
+        <li>
+          <nuxt-link
             to="/playground"
             :active-class="isLoggedOut ? '' : 'is-active'"
             :class="{ 'auth-disabled-link': isLoggedOut }"
@@ -65,7 +80,7 @@
             style="padding-left: 1.1rem"
           >
             <span class="icon is-small mr-4">
-              <ChatIcon />
+              <BlocksIcon />
             </span>
             <span>Playground</span>
           </nuxt-link>
@@ -240,6 +255,7 @@ import SupportIcon from "@/assets/img/icons/sidebar/support.svg?component";
 import CodeIcon from "@/assets/img/icons/sidebar/code.svg?component";
 import AccountAvatar from "~/components/Common/AccountAvatar.vue";
 import ChatIcon from "@/assets/img/icons/sidebar/chat.svg?component";
+import BlocksIcon from "@/assets/img/icons/sidebar/blocks.svg?component";
 import { useWallet } from "@nosana/solana-vue";
 import { computed, onMounted, watch, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";

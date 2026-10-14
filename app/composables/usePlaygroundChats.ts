@@ -36,12 +36,12 @@ export function titleOf(messages: UIMessage[]): string {
 }
 
 /**
- * The reader's conversations, kept in this browser. One is current; the chat edits
- * its messages and saves them back here.
+ * The reader's conversations, kept in this browser under `storageKey`, so each page
+ * keeps its own. One is current; the chat edits its messages and saves them back here.
  */
-export const usePlaygroundChats = () => {
-  const chats = useLocalStorage<PlaygroundChat[]>("playground-ui-chats", []);
-  const currentId = useLocalStorage("playground-ui-chat", "");
+export const usePlaygroundChats = (storageKey = "playground-ui") => {
+  const chats = useLocalStorage<PlaygroundChat[]>(`${storageKey}-chats`, []);
+  const currentId = useLocalStorage(`${storageKey}-chat`, "");
 
   const current = computed(
     () => chats.value.find((chat) => chat.id === currentId.value) ?? null,

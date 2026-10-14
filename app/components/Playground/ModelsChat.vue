@@ -2,10 +2,10 @@
   <UApp :locale="locale">
     <div
       class="pg-shell pg-workspace"
-      :class="{ 'has-side': wide }"
+      :class="{ 'has-side': wide && isNosa }"
     >
       <PlaygroundSidebar
-        v-if="wide"
+        v-if="wide && isNosa"
         class="pg-pane pg-pane-side"
         :chats="recent"
         :current-id="currentId"
@@ -21,7 +21,7 @@
         :messages="shown"
         :status="status"
         :error="error"
-        :placeholder="runModel ? `Ask ${modelLabel} anything` : 'No model is serving right now'"
+        :placeholder="placeholder"
         :disabled="!runModel"
         :suggestions="suggestions"
         :suggesting="suggesting"
@@ -30,7 +30,7 @@
         @regenerate="(id) => regenerate({ messageId: id })"
         @approve="(id, approved) => addToolApprovalResponse({ id, approved })"
       >
-        <template v-if="!wide" #header>
+        <template v-if="isNosa && !wide" #header>
           <UTooltip text="Chats">
             <UButton
               icon="i-lucide-history"
@@ -42,45 +42,28 @@
             />
           </UTooltip>
         </template>
-
-        <template #empty>
-          <section class="deploy-surface pg-hero">
-            <span class="deploy-surface-grid" aria-hidden="true"></span>
-            <h2 class="pg-hero-title">
-              What would you like to <span class="pg-hero-accent">build</span>?
-            </h2>
-            <p class="pg-hero-lead">
-              Ask about Nosana, your deployments and GPUs, or start with one of these.
-            </p>
-            <div class="pg-cards">
-              <button
-                v-for="card in STARTERS"
-                :key="card.title"
-                type="button"
-                class="pg-card pg-plain"
-                :disabled="!runModel"
-                @click="send(card.text)"
-              >
-                <span class="pg-card-head">
-                  <span class="pg-card-icon"><UIcon :name="card.icon" /></span>
-                  <span class="pg-card-title">{{ card.title }}</span>
-                </span>
-                <span class="pg-card-text">{{ card.text }}</span>
-              </button>
-            </div>
-          </section>
-        </template>
-
-        <template #footer>
-          <div class="pg-foot">
-            <UDropdownMenu :items="modelMenu" :content="{ side: 'top', align: 'start' }" :ui="{ content: 'pg-shell' }">
+        <!-- The model to chat with, top left as on the deployment pages. -->
+        <template v-else-if="!isNosa" #header>
+          <div class="pg-model-pick">
+            <!-- Not modal: a modal menu locks the page's scroll, which shifts the whole page. -->
+            <UDropdownMenu
+              :items="modelMenu"
+              :modal="false"
+              :content="{ side: 'bottom', align: 'start' }"
+              :ui="{ content: 'pg-shell' }"
+            >
               <UButton
                 :label="modelLabel"
                 trailing-icon="i-lucide-chevron-down"
                 color="neutral"
                 variant="ghost"
-                size="xs"
-              />
+                size="md"
+                class="pg-model-button"
+              >
+                <template #leading>
+                  <StatusMark :tone="selectedModel?.available ? 'live' : 'neutral'" :size="12" />
+                </template>
+              </UButton>
               <!-- As on the deployment pages: a status dot, the name, then its context. -->
               <template #item-leading="{ item }">
                 <StatusMark :tone="item.live ? 'live' : 'neutral'" :size="12" />
@@ -95,11 +78,72 @@
             </UDropdownMenu>
           </div>
         </template>
+        <template v-if="!isNosa && shown.length" #actions>
+          <UButton
+            label="New chat"
+            icon="i-lucide-plus"
+            color="neutral"
+            variant="ghost"
+            size="sm"
+            @click="newChat"
+          />
+        </template>
+
+        <template #empty>
+          <section v-if="isNosa" class="deploy-surface pg-hero">
+            <span class="deploy-surface-grid" aria-hidden="true"></span>
+            <h2 class="pg-hero-title">
+              Ask <span class="pg-hero-accent">Nosa</span>
+            </h2>
+            <p class="pg-hero-lead">
+              Nosa knows Nosana and works with your account: it looks up your deployments,
+              markets and credits, and makes changes once you confirm them.
+            </p>
+            <p v-if="!runModel" class="pg-hero-lead">
+              Nosa is not available right now. Check back soon.
+            </p>
+            <div v-else class="pg-cards">
+              <button
+                v-for="card in STARTERS"
+                :key="card.title"
+                type="button"
+                class="pg-card pg-plain"
+                @click="send(card.text)"
+              >
+                <span class="pg-card-head">
+                  <span class="pg-card-icon"><UIcon :name="card.icon" /></span>
+                  <span class="pg-card-title">{{ card.title }}</span>
+                </span>
+                <span class="pg-card-text">{{ card.text }}</span>
+              </button>
+            </div>
+          </section>
+
+          <section v-else class="pg-ask">
+            <h2 class="pg-ask-title">
+              {{ runModel ? `Ask ${modelLabel} anything` : "No model is serving right now" }}
+            </h2>
+            <div v-if="runModel" class="pg-ask-chips">
+              <UButton
+                v-for="question in EVERYDAY_QUESTIONS"
+                :key="question"
+                :label="question"
+                color="neutral"
+                variant="outline"
+                class="pg-ask-chip"
+                @click="send(question)"
+              />
+            </div>
+          </section>
+        </template>
+
+
       </PlaygroundShell>
     </div>
 
-    <!-- Narrower windows keep the same panes, as drawers. -->
+    <!-- Narrower windows keep Nosa's chats, as a drawer. -->
     <USlideover
+      v-if="isNosa"
       v-model:open="historyOpen"
       side="left"
       title="Chats"
@@ -137,13 +181,32 @@ import {
 import { PlaygroundTransport } from "~/utils/playgroundTransport";
 import { STARTERS } from "~/utils/playgroundStarters";
 import { titleOf } from "~/composables/usePlaygroundChats";
+import type { ChatSettings } from "~/utils/llmChat";
+
+// The playground's empty chat: everyday asks rather than technical ones, so anyone
+// has somewhere to start.
+const EVERYDAY_QUESTIONS = [
+  "How does GPU inference work?",
+  "Help me study for an exam",
+  "What can I cook tonight?",
+];
 
 const props = defineProps<{
+  /**
+   * `nosa`: Nosa on the chat model admins chose, with its prompt and the Nosana tools,
+   * and the chats kept in a list. `model`: the selected model on its own, as an API key
+   * calls it, with the page's settings and one chat at a time.
+   */
+  variant: "nosa" | "model";
   models: LlmModel[];
   loading?: boolean;
+  /** The `model` variant's system prompt and temperature. */
+  settings?: Pick<ChatSettings, "systemPrompt" | "temperature">;
 }>();
 
-// The page keeps the selected model, remembered in this browser.
+const isNosa = computed(() => props.variant === "nosa");
+
+// In the `model` variant the page keeps the selected model.
 const model = defineModel<string>({ default: "" });
 
 const config = useRuntimeConfig().public;
@@ -173,16 +236,27 @@ const upModels = computed(() => chatModels.value.filter((entry) => entry.availab
 const selectedModel = computed(
   () => props.models.find((entry) => entry.id === model.value) ?? null,
 );
-/** The model the request goes to. */
-const runModel = computed(() => selectedModel.value?.id ?? "");
+/** The model the request goes to; empty while it is not serving. */
+const runModel = computed(() => {
+  if (!isNosa.value) return selectedModel.value?.id ?? "";
+  // Nosa runs on the model admins chose; while that one is not serving, on the first
+  // chat model that is, so Nosa stays available.
+  const chosen = upModels.value.find((entry) => entry.id === nosa.model.value);
+  return (chosen ?? upModels.value[0])?.id ?? "";
+});
 const modelLabel = computed(() =>
   selectedModel.value ? modelName(selectedModel.value) : "No model",
 );
+const placeholder = computed(() => {
+  if (isNosa.value) return runModel.value ? "Ask Nosa anything" : "Nosa is not available right now";
+  return runModel.value ? `Ask ${modelLabel.value} anything` : "No model is serving right now";
+});
 
 // A remembered model that is no longer serving gives way to the first that is up.
 watch(
   upModels,
   (list) => {
+    if (isNosa.value) return;
     if (list.length > 0 && !list.some((entry) => entry.id === model.value))
       model.value = list[0]!.id;
   },
@@ -210,28 +284,29 @@ const modelMenu = computed<ModelOption[][]>(() => [
   })),
 ]);
 
-// Every model gets the Nosana tools, so they load with the page.
-if (nosa.enabled) void nosa.load();
+if (isNosa.value && nosa.enabled) void nosa.load();
 watch(nosa.error, (message) => {
-  if (message) toast.add({ title: "The Nosana tools are not available", description: message, color: "error" });
+  if (message) toast.add({ title: "Nosa is not available", description: message, color: "error" });
 });
-
-
 
 const draft = ref("");
 
 // Conversations live in this browser; one is open in the chat at a time.
+// Each page keeps its own conversations in this browser.
 const { recent, current, currentId, create, open, remove, rename, save, suggest } =
-  usePlaygroundChats();
+  usePlaygroundChats(props.variant === "nosa" ? "playground-ui" : "playground-models");
 if (!current.value) create();
 
-const transport = new PlaygroundTransport(config.apiBase as string, () => ({
-  model: runModel.value,
-  // Every model answers as Nosa, with the prompt admins edit.
-  system: nosa.system.value || undefined,
-  // Every model can use the Nosana tools; Nosa adds its instructions on top.
-  tools: nosa.tools.value,
-}));
+const transport = new PlaygroundTransport(config.apiBase as string, () =>
+  isNosa.value
+    ? // Nosa answers with the prompt admins edit, and can use the Nosana tools.
+      { model: runModel.value, system: nosa.system.value || undefined, tools: nosa.tools.value }
+    : {
+        model: runModel.value,
+        system: props.settings?.systemPrompt.trim() || undefined,
+        temperature: props.settings?.temperature,
+      },
+);
 
 const { messages, status, error, sendMessage, stop, regenerate, addToolApprovalResponse } =
   useChat({
@@ -508,12 +583,48 @@ useEventListener(document, "keydown", (event: KeyboardEvent) => {
   color: var(--ui-text-muted);
 }
 
-.pg-foot {
+.pg-model-button {
+  font-weight: 600;
+}
+
+.pg-model-pick {
   flex: 1;
   min-width: 0;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 0.25rem;
+  gap: 0.25rem 0.75rem;
 }
+
+.pg-ask {
+  width: 100%;
+  max-width: 52rem;
+  display: grid;
+  justify-items: center;
+  gap: 1.25rem;
+  text-align: center;
+}
+
+.pg-ask-title {
+  margin: 0;
+  font-family: var(--pg-title);
+  font-size: 2.25rem;
+  font-weight: 600;
+  line-height: 1.15;
+  color: var(--ui-text-highlighted);
+}
+
+.pg-ask-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.6rem;
+}
+
+.pg-ask-chip {
+  border-radius: 999px;
+  font-size: 1rem;
+  padding: 0.45rem 0.95rem;
+}
+
 </style>

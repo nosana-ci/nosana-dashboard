@@ -1,11 +1,49 @@
 <template>
-  <div class="pg-root">
+  <div>
+    <TopBar title="Playground" subtitle="Chat with models running on Nosana" />
+
     <div v-if="isAuthenticated" class="playground">
-      <PlaygroundModelsChat
-        v-model="playgroundModel"
-        :models="models"
-        :loading="loadingModels"
-      />
+      <div class="playground-chat section-card">
+        <PlaygroundModelsChat
+          v-model="playgroundModel"
+          variant="model"
+          :models="models"
+          :loading="loadingModels"
+          :settings="settings"
+        />
+      </div>
+
+      <aside class="playground-side">
+        <section v-if="selectedModel" class="section-card model-card">
+          <h3 class="title is-5 mb-0">{{ modelName(selectedModel) }}</h3>
+          <dl class="model-facts mt-3">
+            <div
+              v-for="fact in modelFacts"
+              :key="fact.label"
+              class="is-flex is-justify-content-space-between is-align-items-baseline is-gap-2 py-2"
+            >
+              <dt class="model-muted">{{ fact.label }}</dt>
+              <dd class="is-family-monospace has-text-weight-semibold">{{ fact.value }}</dd>
+            </div>
+          </dl>
+        </section>
+
+        <section class="section-card settings-card">
+          <h3 class="title is-6 mb-0">Settings</h3>
+          <CommonModelChatSettings v-model="settings" stacked />
+        </section>
+
+        <section v-if="selectedModel" class="section-card playground-code">
+          <CommonModelChatCode
+            title="Use it in code"
+            :url="inferenceBase"
+            :model="selectedModel.id"
+            key-env="NOSANA_API_KEY"
+            :key-hint="false"
+            :settings="codeSettings"
+          />
+        </section>
+      </aside>
     </div>
 
     <div v-else class="box has-text-centered p-6 mb-6">
@@ -23,29 +61,141 @@
 </template>
 
 <script setup lang="ts">
+import { computed, ref, watch } from "vue";
 import { useLocalStorage } from "@vueuse/core";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { faComments } from "@fortawesome/free-solid-svg-icons";
-
-definePageMeta({ layout: "playground" });
+import {
+  formatTokenCount,
+  formatUsd,
+  modelName,
+  pricePerMillion,
+} from "~/composables/useLlmGateway";
+import type { ChatSettings } from "~/utils/llmChat";
 
 const { isAuthenticated } = useSuperTokens();
-const { models, loadingModels } = useLlmGateway();
+const route = useRoute();
+const router = useRouter();
+const { inferenceBase, models, loadingModels } = useLlmGateway();
 
-// The chosen model is remembered in this browser.
-const playgroundModel = useLocalStorage("playground-model", "");
+// The model is kept in the URL, so a playground link can be shared.
+const playgroundModel = ref((route.query.model as string) ?? "");
+watch(playgroundModel, (model) => {
+  if (model) router.replace({ query: { ...route.query, model } });
+});
+
+const selectedModel = computed(
+  () => models.value.find((entry) => entry.id === playgroundModel.value) ?? null,
+);
+
+const modelFacts = computed(() => {
+  const model = selectedModel.value;
+  if (!model) return [];
+  return [
+    { label: "Context window", value: formatTokenCount(model.context_length) },
+    { label: "Max output", value: formatTokenCount(model.max_output_tokens) },
+    { label: "Input, per 1M tokens", value: formatUsd(pricePerMillion(model.pricing.prompt)) },
+    { label: "Output, per 1M tokens", value: formatUsd(pricePerMillion(model.pricing.completion)) },
+  ];
+});
+
+// The sponsored playground sets no output limit, so only the prompt and temperature
+// are settings; the code still shows a limit, as a caller paying per token sets one.
+const settings = useLocalStorage<ChatSettings>("playground-model-settings", {
+  systemPrompt: "",
+  temperature: 0.7,
+  maxTokens: 1024,
+});
+const codeSettings = computed<ChatSettings>(() => ({
+  ...settings.value,
+  maxTokens: Math.min(1024, selectedModel.value?.max_output_tokens ?? 1024),
+}));
 </script>
 
 <style scoped lang="scss">
-// The layout hands the page the whole window.
-.pg-root,
+// What the layout puts above and below the workspace: the top bar, the section's
+// padding and the footer. Taking it off the viewport fits the page to the window.
+$chrome: 190px;
+$chrome-touch: 150px;
+
 .playground {
-  height: 100%;
-  min-height: 0;
+  display: grid;
+  gap: 1.25rem;
 }
 
-// Signed out: the card sits in the window's top band rather than stretching.
-.box {
-  margin: 1.5rem;
+// The chat is a card; the conversation scrolls inside it.
+.playground-chat {
+  height: calc(100dvh - #{$chrome-touch});
+  min-height: 420px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.playground-side {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 0;
+  min-height: 0;
+  // On a short window the column scrolls rather than squeezing the code away.
+  overflow-y: auto;
+}
+
+// The code takes what the cards above leave.
+.playground-code {
+  flex: 1 0 220px;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+
+.model-card {
+  flex: none;
+  padding: 1rem 1.15rem 0.35rem;
+
+  .title {
+    color: inherit;
+  }
+}
+
+.settings-card {
+  flex: none;
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem 1.15rem 1.15rem;
+
+  .title {
+    color: inherit;
+  }
+}
+
+// The theme's muted text; Bulma's grey helper is too dim on the dark card.
+.model-muted {
+  color: $text-muted;
+}
+
+// Bulma's helpers lay the rows out; the hairline between them is the one thing
+// it has no class for.
+.model-facts div {
+  border-top: 1px solid $border-soft;
+}
+
+html.dark-mode .model-facts div {
+  border-top-color: rgba($white, 0.1);
+}
+
+// Side by side, both columns share the window's height.
+@include from($widescreen) {
+  .playground {
+    height: calc(100dvh - #{$chrome});
+    min-height: 480px;
+    grid-template-columns: minmax(0, 1fr) 400px;
+  }
+
+  .playground-chat {
+    height: auto;
+    min-height: 0;
+  }
 }
 </style>

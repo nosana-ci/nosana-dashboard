@@ -130,6 +130,8 @@
       </div>
       <UChatPrompt
         v-model="draft"
+        class="pg-prompt"
+        :class="{ 'pg-prompt-single': !$slots.footer }"
         :placeholder="placeholder"
         variant="subtle"
         :disabled="disabled"
@@ -137,7 +139,7 @@
       >
         <!-- The send button sits on the footer row with the page's controls,
              not in the corner of the text. -->
-        <template #footer>
+        <template v-if="$slots.footer" #footer>
           <div class="pg-composer-foot">
             <slot name="footer" />
             <UChatPromptSubmit
@@ -147,6 +149,15 @@
               @reload="emit('regenerate')"
             />
           </div>
+        </template>
+        <!-- Nothing below the text: the box is one line, the send button at its end. -->
+        <template v-else #trailing>
+          <UChatPromptSubmit
+            :status="status"
+            class="pg-send"
+            @stop="emit('stop')"
+            @reload="emit('regenerate')"
+          />
         </template>
       </UChatPrompt>
       <p v-if="error" class="pg-error">{{ error.message }}</p>
@@ -564,7 +575,7 @@ function toolBody(part: AnyToolPart): string {
   padding: 0.45rem 0.95rem;
 }
 
-.pg-composer :deep([data-slot="root"]) {
+.pg-composer :deep(.pg-prompt) {
   border-radius: 22px;
   background: var(--ui-bg);
   border: 1px solid var(--ui-border-accented);
@@ -576,7 +587,7 @@ function toolBody(part: AnyToolPart): string {
     border-color 0.2s ease;
 }
 
-.pg-composer :deep([data-slot="root"]:focus-within) {
+.pg-composer :deep(.pg-prompt:focus-within) {
   border-color: color-mix(in srgb, var(--ui-primary) 55%, transparent);
   box-shadow:
     0 1px 2px rgba(0, 0, 0, 0.04),
@@ -590,6 +601,17 @@ function toolBody(part: AnyToolPart): string {
   padding: 1.05rem 1.35rem 0.5rem;
   padding-left: 1.35rem !important;
   padding-right: 1.35rem !important;
+}
+
+// One line with the send button at its end: even padding, room on the right for it.
+.pg-composer :deep(.pg-prompt.pg-prompt-single textarea) {
+  padding: 0.95rem 1.35rem;
+  padding-right: 3.75rem !important;
+}
+
+.pg-composer :deep(.pg-prompt.pg-prompt-single [data-slot="trailing"]) {
+  align-items: center;
+  padding-right: 0.7rem;
 }
 
 .pg-composer-foot {

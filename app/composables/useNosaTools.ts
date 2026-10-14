@@ -2,7 +2,8 @@ import { computed, ref, shallowRef } from "vue";
 import type { ToolSet } from "ai";
 import { McpClient, mcpToolSet, type McpToolInfo } from "~/utils/mcpClient";
 
-type Persona = { systemPrompt: string };
+/** Nosa's prompt, and the chat model admins chose to run it on. */
+type Persona = { systemPrompt: string; model?: string };
 
 // Loaded once per page, when the playground opens.
 const persona = ref<Persona | null>(null);
@@ -51,5 +52,7 @@ export const useNosaTools = () => {
     accountTools.value ? mcpToolSet(accountTools.value.client, accountTools.value.tools) : {},
   );
 
-  return { enabled: !!nosaUrl, status, error, load, system, tools };
+  const model = computed(() => persona.value?.model ?? "");
+
+  return { enabled: !!nosaUrl, status, error, load, system, tools, model };
 };
