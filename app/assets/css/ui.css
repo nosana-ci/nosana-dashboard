@@ -106,14 +106,10 @@
   --ui-border: hsl(220, 20%, 89%);
   --ui-border-muted: hsl(220, 20%, 92%);
   --ui-border-accented: hsl(220, 16%, 82%);
-  --pg-glass: rgba(255, 255, 255, 0.72);
   --pg-pane: #f5f6f8;
   --pg-pane-hover: #e9ecf1;
-  --pg-tile: #ffffff;
   --pg-toolbar: 52px;
   --pg-bubble: #eceef2;
-  --pg-chip-bg: rgba(16, 232, 12, 0.12);
-  --pg-chip-border: rgba(10, 138, 8, 0.3);
 }
 
 html.dark-mode .pg-shell {
@@ -130,11 +126,7 @@ html.dark-mode .pg-shell {
   --ui-border: rgba(255, 255, 255, 0.08);
   --ui-border-muted: rgba(255, 255, 255, 0.06);
   --ui-border-accented: rgba(255, 255, 255, 0.14);
-  --pg-glass: rgba(24, 24, 24, 0.72);
   --pg-pane: #121212;
   --pg-pane-hover: #1f1f1f;
-  --pg-tile: #0d0d0d;
   --pg-bubble: #262626;
-  --pg-chip-bg: rgba(16, 232, 12, 0.12);
-  --pg-chip-border: rgba(16, 232, 12, 0.28);
 }

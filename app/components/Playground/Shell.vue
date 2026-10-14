@@ -455,6 +455,7 @@ function toolBody(part: AnyToolPart): string {
   border-radius: 10px;
   background: var(--ui-bg-muted);
   color: var(--ui-text);
+  font-family: var(--pg-mono);
   white-space: pre-wrap;
 }
 
@@ -562,10 +563,6 @@ function toolBody(part: AnyToolPart): string {
 .pg-composer :deep(.pg-send:hover:not(:disabled)) {
   transform: translateY(-1px);
   box-shadow: 0 12px 28px -8px rgba(16, 232, 12, 0.75);
-}
-
-.pg-tool-body {
-  font-family: var(--pg-mono);
 }
 
 .pg-error {
