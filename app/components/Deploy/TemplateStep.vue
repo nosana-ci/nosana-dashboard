@@ -142,13 +142,14 @@
       </div>
     </section>
 
-    <!-- Deploying: the configurator, and the summary beside it -->
+    <!-- Deploying: the configurator, and the summary beside it, level with
+         the first step rather than with the heading above the steps -->
     <div class="template-body">
-      <div class="configurator">
-        <header class="configurator-head">
-          <h2>Customise your deployment</h2>
-        </header>
+      <header class="configurator-head">
+        <h2>Customise your deployment</h2>
+      </header>
 
+      <div class="configurator">
         <section v-if="!template" ref="inlineJob" class="deploy-step">
           <header class="deploy-step-head">
             <span class="deploy-step-num" aria-hidden="true"></span>
@@ -917,12 +918,14 @@ watch(
   view-transition-name: deploy-body;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 380px;
-  gap: 28px;
+  grid-template-rows: auto 1fr;
+  gap: 2rem 28px;
   align-items: start;
 }
 
 // Set in from the hero and the readme, headings and panels alike.
 .configurator {
+  grid-column: 1;
   display: flex;
   flex-direction: column;
   gap: 2rem;
@@ -931,6 +934,9 @@ watch(
 }
 
 .configurator-head {
+  grid-column: 1;
+  padding-left: 18px;
+
   h2 {
     margin: 0;
     font-family: $title-family;
@@ -953,6 +959,9 @@ html.dark-mode .configurator-head h2 {
 /* ---------- The summary: your deployment, on the same panel as the steps ---------- */
 .summary-card {
   @include soft-panel;
+  // Beside the steps, level with the first one.
+  grid-column: 2;
+  grid-row: 2;
   // Under the slim header, which pins at the top while the settings scroll.
   position: sticky;
   top: calc(var(--slim-top) + var(--slim-height) + 16px);
@@ -1304,6 +1313,8 @@ html.dark-mode {
   }
 
   .summary-card {
+    grid-column: 1;
+    grid-row: auto;
     position: static;
   }
 
