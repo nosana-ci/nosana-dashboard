@@ -3,15 +3,15 @@
     <h2 class="title is-5 mb-3">Deployment details</h2>
     <div class="dep-card details">
       <div class="stat-band" :class="{ 'has-vault': hasVault }">
-        <!-- GPU -->
+        <!-- Runs on: a pinned market, the GPUs, or any GPU -->
         <div class="stat">
-          <span class="k">GPU</span>
-          <span class="v sm" :title="gpuName">{{ gpuName }}</span>
-          <span
-            v-if="deployment.market && gpuName !== deployment.market"
-            class="gpu-addr"
-            >{{ truncateMiddle(deployment.market) }}</span
-          >
+          <span class="k">Runs on</span>
+          <span class="v sm" :title="runsOn.title ?? runsOn.main">{{
+            runsOn.main
+          }}</span>
+          <span class="gpu-addr" :title="deployment.market ?? undefined">{{
+            runsOn.sub
+          }}</span>
         </div>
 
         <!-- Strategy -->
@@ -57,6 +57,7 @@ import type { Deployment } from "@nosana/kit";
 import DeploymentVaultStat from "~/components/Deployment/DeploymentVaultStat.vue";
 import { parseCronExpression } from "~/utils/parseCronExpression";
 import { truncateMiddle } from "~/utils/solana";
+import { describeRunsOn } from "~/composables/useNodeRequirements";
 
 const props = defineProps<{
   deployment: Deployment;
@@ -74,12 +75,16 @@ const formatStrategy = (strategy: string | undefined | null): string => {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 };
 
-const gpuName = computed(() => {
-  const match = props.testgridMarkets?.find(
-    (tgm: any) => tgm.address === props.deployment?.market,
-  );
-  return match?.name || props.deployment?.market || "-";
-});
+// What the deployment runs on: its pinned market by name, its GPUs, or any
+// GPU, with its other requirements (or "No requirements") under it.
+const runsOn = computed(() =>
+  describeRunsOn(
+    props.deployment,
+    (address) =>
+      props.testgridMarkets?.find((tgm: any) => tgm.address === address)?.name ||
+      truncateMiddle(address),
+  ),
+);
 
 
 // Container timeout (stored in minutes) → "1h", "1h 30m", or "45m" — no trailing 0m.

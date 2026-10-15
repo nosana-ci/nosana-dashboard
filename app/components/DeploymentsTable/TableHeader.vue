@@ -1,8 +1,7 @@
 <template>
-  <div class="column is-12">
-    <div
-      class="is-flex is-align-items-center is-justify-content-space-between is-flex-wrap-nowrap mb-4"
-    >
+  <div>
+    <div class="list-toolbar">
+      <h1 class="list-title">Deployments</h1>
       <div class="th-search">
         <svg
           class="th-search-icon"
@@ -25,10 +24,10 @@
           v-model="searchText"
         />
       </div>
-      <div v-if="buttons.length > 1" class="deployment-tabs ml-4">
+      <div v-if="buttons.length > 1" class="dep-tabs list-tabs">
         <template v-for="button in buttons" :key="button.tab">
           <button
-            class="tab-button"
+            class="dep-tab"
             :class="{ 'is-active': currentTab === button.tab }"
             @click="push({ query: { tab: button.tab } })"
           >
@@ -111,16 +110,22 @@
           />
         </svg>
       </div>
-      <div v-if="showMarketFilter" class="th-select-control ml-2">
-        <select v-model="marketValue" class="th-select" aria-label="Market">
-          <option :value="null">All markets</option>
-          <option
-            v-for="market in marketOptions"
-            :key="market.value"
-            :value="market.value"
+      <div v-if="showRunsOnFilter" class="th-select-control ml-2">
+        <select v-model="runsOnValue" class="th-select" aria-label="Runs on">
+          <option :value="null">Runs on: all</option>
+          <optgroup
+            v-for="group in runsOnGroups"
+            :key="group.label"
+            :label="group.label"
           >
-            {{ market.label }}
-          </option>
+            <option
+              v-for="option in group.options"
+              :key="option.value"
+              :value="option.value"
+            >
+              {{ option.label }}
+            </option>
+          </optgroup>
         </select>
         <svg
           class="th-select-caret"
@@ -169,7 +174,7 @@
 import { useRouter } from "vue-router";
 import { useWallet } from "@nosana/solana-vue";
 import { filters } from "./filters";
-import { truncateMiddle } from "~/utils/solana";
+import type { DeploymentRequirements } from "~/composables/useNodeRequirements";
 import ChevronDownIcon from "@/assets/img/icons/chevron-down.svg?component";
 import PlayIcon from "@/assets/img/icons/play.svg?component";
 import SquareIcon from "@/assets/img/icons/square.svg?component";
@@ -201,58 +206,58 @@ watch(connected, (isConnected) => {
   }
 });
 
-// Build the market filter dropdown from the markets the user actually has
-// deployments in (the list endpoint can't filter by market server-side).
-const { data: marketsMeta } = useAPI("/markets", { default: () => [] });
-const deploymentMarkets = ref<string[]>([]);
+// The Runs on filter's options come from what the user's own deployments run
+// on: their GPUs, pinned markets, and "Any GPU" (the list endpoint can't
+// filter by it server-side, so a wider batch is read once).
+const { keysOf: runsOnKeysOf, options: runsOnOptions } = useRunsOn();
+const deploymentsTargeting = ref<
+  Array<{ market?: string | null; requirements?: DeploymentRequirements | null }>
+>([]);
 
-const loadDeploymentMarkets = async () => {
+const loadDeploymentsTargeting = async () => {
   try {
     const result = await nosana.value.api.deployments.list({ limit: 100 });
-    const seen = new Set<string>();
-    for (const d of result.deployments || []) {
-      if (d.market) seen.add(d.market);
-    }
-    deploymentMarkets.value = [...seen];
+    deploymentsTargeting.value = (result.deployments || []).map(
+      ({ market, requirements }) => ({ market, requirements }),
+    );
   } catch {
-    deploymentMarkets.value = [];
+    deploymentsTargeting.value = [];
   }
 };
 
 watch(
   [isAuthenticated, connected],
   ([auth, conn]) => {
-    if (auth || conn) loadDeploymentMarkets();
+    if (auth || conn) loadDeploymentsTargeting();
   },
   { immediate: true },
 );
 
-const marketOptions = computed(() =>
-  deploymentMarkets.value
-    .map((address) => {
-      const match = marketsMeta.value?.find((m: any) => m.address === address);
-      return {
-        label: match?.name || truncateMiddle(address, 6, 6),
-        value: address,
-      };
-    })
-    .sort((a, b) => a.label.localeCompare(b.label)),
+const runsOnGroups = computed(() =>
+  runsOnOptions(deploymentsTargeting.value.flatMap(runsOnKeysOf)),
 );
 
-const showMarketFilter = computed(
+// Worth showing once there is more than one thing to pick.
+const showRunsOnFilter = computed(
   () =>
-    currentTab.value === "deployments" && deploymentMarkets.value.length > 1,
+    currentTab.value === "deployments" &&
+    runsOnGroups.value.reduce((count, group) => count + group.options.length, 0) > 1,
 );
 
-const marketValue = computed({
+// `?runsOn=`; an old `?market=` link reads as its pinned market, and is
+// replaced by the new parameter when the filter changes.
+const runsOnValue = computed({
   get() {
-    return currentRoute.value.query.market?.toString() || null;
+    const query = currentRoute.value.query;
+    if (query.runsOn) return query.runsOn.toString();
+    return query.market ? `market:${query.market}` : null;
   },
-  set(newMarket: string | null) {
+  set(value: string | null) {
     replace({
       query: {
         ...currentRoute.value.query,
-        market: newMarket ?? undefined,
+        market: undefined,
+        runsOn: value ?? undefined,
       },
     });
   },
@@ -370,6 +375,39 @@ onUnmounted(() =>
 );
 </script>
 <style scoped lang="scss">
+/* The toolbar: the page title, then pill controls, as on the create page's GPU step. */
+.list-title {
+  margin: 0 8px 0 0;
+  font-family: $title-family;
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: $text;
+}
+
+.dark-mode .list-title {
+  color: $white;
+}
+
+.list-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 0.85rem;
+}
+
+// The shared tab track, without its page-level margins.
+.list-tabs {
+  margin: 0 0 0 8px;
+  padding: 4px;
+
+  .dep-tab {
+    padding: 0.45rem 1.1rem;
+  }
+}
+
 /* Search + dropdowns styled to match the Create Deployment "Select GPU" toolbar */
 .th-search {
   position: relative;
@@ -390,13 +428,14 @@ onUnmounted(() =>
 
 .th-search-input {
   width: 100%;
-  height: 40px;
+  height: 38px;
   padding: 0 0.9rem 0 2.35rem;
-  font-size: 0.875rem;
+  font-family: inherit;
+  font-size: 0.84rem;
   color: #1a1c1e;
   background: #ffffff;
   border: 1px solid $border-soft;
-  border-radius: 10px;
+  border-radius: 999px;
   outline: none;
   transition:
     border-color 0.15s ease,
@@ -416,10 +455,10 @@ onUnmounted(() =>
   position: relative;
   display: inline-flex;
   align-items: center;
-  height: 40px;
+  height: 38px;
   background: #ffffff;
   border: 1px solid $border-soft;
-  border-radius: 10px;
+  border-radius: 999px;
   transition:
     border-color 0.15s ease,
     box-shadow 0.15s ease;
@@ -434,13 +473,14 @@ onUnmounted(() =>
   appearance: none;
   -webkit-appearance: none;
   height: 100%;
-  padding: 0 2.1rem 0 0.85rem;
-  font-size: 0.875rem;
-  font-weight: 500;
+  padding: 0 2.1rem 0 0.95rem;
+  font-family: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
   color: #1a1c1e;
   background: transparent;
   border: none;
-  border-radius: 10px;
+  border-radius: 999px;
   cursor: pointer;
   outline: none;
 }
@@ -457,8 +497,8 @@ onUnmounted(() =>
 /* Dark mode */
 .dark-mode .th-search-input,
 .dark-mode .th-select-control {
-  background: #242526;
-  border-color: #3a3a3a;
+  background: rgba($white, 0.04);
+  border-color: rgba($white, 0.12);
 }
 
 .dark-mode .th-search-input {
@@ -492,14 +532,14 @@ onUnmounted(() =>
 }
 
 .th-actions-btn {
-  height: 40px;
+  height: 38px;
   padding: 0 0.85rem;
   font-size: 0.875rem;
   font-weight: 500;
   color: #1a1c1e;
   background: #ffffff;
   border: 1px solid $border-soft;
-  border-radius: 10px;
+  border-radius: 999px;
   box-shadow: none;
   transition:
     border-color 0.15s ease,

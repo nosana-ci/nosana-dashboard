@@ -2,11 +2,6 @@
   <div>
     <NuxtPage v-if="$route.params.jobaddress" />
     <template v-else>
-      <TopBar
-        title="Deployment Overview"
-        subtitle="Find information about and manage your deployment here."
-      />
-
       <Loader v-if="loading" />
       <div v-else-if="error" class="box">
         <div class="notification is-danger">
@@ -211,11 +206,12 @@
 
         <DeploymentRequirementsDrawer
           v-if="showRequirementsDrawer"
+          :requirements="deployment.requirements ?? {}"
           :market="deployment.market"
           :markets="testgridMarkets"
           :requiredVramGb="requiredVramGb"
           :actionLoading="actionLoading"
-          @save="updateMarket"
+          @save="updateRequirements"
           @close="showRequirementsDrawer = false"
         />
 
@@ -548,7 +544,7 @@ const {
   updateName,
   updateReplicas,
   updateJobTimeout,
-  updateMarket,
+  updateRequirements,
   duplicateDeployment,
   updateSchedule,
   switchToRevision,
@@ -572,7 +568,7 @@ const {
   makeRevision,
 } = jobDef;
 
-// The GPU memory the job asks for: the Change GPU drawer hides GPUs below it.
+// The GPU memory the job asks for: the requirements drawer hides GPUs below it.
 const requiredVramGb = computed(() => {
   const vramMb = requiredVramMb(jobDefinitionModel.value);
   return vramMb === null ? null : Math.ceil(vramMb / 1024);
@@ -609,7 +605,7 @@ const availableActions = [
   "update-replicas",
   "update-timeout",
   "update-schedule",
-  "update-market",
+  "update-requirements",
   "duplicate",
 ];
 
@@ -620,7 +616,7 @@ if (initialAction && availableActions.includes(initialAction)) {
   else if (initialAction === "update-replicas") showReplicasModal.value = true;
   else if (initialAction === "update-timeout") showTimeoutModal.value = true;
   else if (initialAction === "update-schedule") showScheduleModal.value = true;
-  else if (initialAction === "update-market")
+  else if (initialAction === "update-requirements")
     showRequirementsDrawer.value = true;
   else if (initialAction === "duplicate") showDuplicateModal.value = true;
 }
@@ -952,7 +948,8 @@ const switchAction = (action: string) => {
   if (action === "update-replicas") showReplicasModal.value = true;
   else if (action === "update-timeout") showTimeoutModal.value = true;
   else if (action === "update-schedule") showScheduleModal.value = true;
-  else if (action === "update-market") showRequirementsDrawer.value = true;
+  else if (action === "update-requirements")
+    showRequirementsDrawer.value = true;
   else if (action === "duplicate") showDuplicateModal.value = true;
 
   router.replace({
@@ -984,7 +981,7 @@ watch(showScheduleModal, (isOpen) => {
 });
 
 watch(showRequirementsDrawer, (isOpen) => {
-  if (!isOpen && route.query.action === "update-market") clearAction();
+  if (!isOpen && route.query.action === "update-requirements") clearAction();
 });
 
 watch(showDuplicateModal, (isOpen) => {

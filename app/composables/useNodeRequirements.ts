@@ -14,11 +14,21 @@ import {
 import countries from "i18n-iso-countries";
 import en from "i18n-iso-countries/langs/en.json";
 import { NETWORK_FEE_MULTIPLIER } from "./useMarketPricing";
+import {
+  isGpuMockOn,
+  MOCK_GPU_MARKETS,
+  MOCK_GPU_MODELS,
+  mockQualifyingHosts,
+} from "~/utils/gpuCatalogueMock";
+import { useLatestRequest } from "./useLatestRequest";
+import { truncateMiddle } from "~/utils/solana";
 
 countries.registerLocale(en);
 
 /**
- * Node requirements for picking a market by hardware rather than by name.
+ * Node requirements: the GPUs a deployment may run on, and the host specs
+ * beyond them. A deployment names no market: host-manager posts each job to
+ * the cheapest PREMIUM market with a host that meets them.
  *
  * The lookups go through the kit's `api.reservations` group (host-manager's
  * `/reservations` read routes, which the dashboard reaches via its API base),
@@ -29,6 +39,35 @@ export type RequirementValue = number | string | boolean;
 
 /** Metric key → required value: a number is a minimum, anything else exact. */
 export type Requirements = NosanaRequirements;
+
+/**
+ * Requirements as a deployment sends them: the GPUs as a list under
+ * `GPU_KEY` (any of them), every other spec one value.
+ */
+export type DeploymentRequirements = Record<
+  string,
+  RequirementValue | RequirementValue[]
+>;
+
+/** The GPU model metric: a deployment lists the models it accepts under it. */
+export const GPU_KEY = "name";
+
+/** The GPUs a deployment's requirements accept; one value reads as a list of one. */
+export function gpusOf(
+  requirements: DeploymentRequirements | null | undefined,
+): string[] {
+  const value = requirements?.[GPU_KEY];
+  if (value === undefined) return [];
+  return (Array.isArray(value) ? value : [value]).map(String);
+}
+
+/** The full requirements: the specs, plus the GPUs when any are chosen. */
+export function withGpus(
+  requirements: Requirements,
+  gpus: string[],
+): DeploymentRequirements {
+  return gpus.length ? { ...requirements, [GPU_KEY]: gpus } : requirements;
+}
 
 /**
  * One metric usable as a requirement. `values` are the distinct values hosts
@@ -60,30 +99,6 @@ export interface MarketRate {
   metadata?: Array<{ key: string; value: string }>;
 }
 
-/**
- * A market as the GPU list shows it: its VRAM, the hosts free and busy on
- * it right now, and its hourly price.
- */
-export interface MarketListing {
-  market: MarketRate;
-  /** From the market's metadata, else from the GPU model its hosts report. */
-  vramGb: number | null;
-  /** Hosts queued on the market now, which a new job starts on at once. */
-  available: number;
-  /** Hosts running a job on the market, back in its queue as they finish. */
-  working: number;
-  /** Hourly USD, network fee included; null when the market is unpriced. */
-  usd: number | null;
-}
-
-/** "24GB" → 24, "24576 MB" → 24; null when the text names no size. */
-export function parseVramGb(text: string | undefined): number | null {
-  const match = text?.match(/(\d+(?:\.\d+)?)\s*(GB|MB)?/i);
-  if (!match) return null;
-  const size = Number(match[1]);
-  return match[2]?.toUpperCase() === "MB" ? Math.round(size / 1024) : size;
-}
-
 /** The market types a deployment can be created on: every public type on devnet, premium on mainnet. */
 export function deployableMarketTypes(): string[] {
   return useRuntimeConfig().public.network === "devnet"
@@ -91,147 +106,179 @@ export function deployableMarketTypes(): string[] {
     : ["PREMIUM"];
 }
 
-/** How often a mounted GPU list refreshes its host counts. */
-const HOST_COUNT_REFRESH_MS = 10_000;
+/** The market type a deployment without a market posts to (host-manager's OPEN_MARKET_TYPE). */
+export const OPEN_MARKET_TYPE = "PREMIUM";
 
-/** Per market address: hosts queued now, and hosts running a job. */
-interface MarketHosts {
-  available: Record<string, number>;
-  working: Record<string, number>;
+/** Hourly USD, network fee included: the cheapest and dearest of some markets. */
+export interface PriceRange {
+  min: number;
+  max: number;
 }
 
 /**
- * The markets a deployment can be created on, with live host counts: the
- * public markets of the deployable types. Hosts come from host-manager's
- * queue (`available`) and the running-job counts (`working`); VRAM from the
- * market's metadata, else from the GPU model whose hosts serve it.
+ * A GPU model as the GPU list shows it, from host-manager's catalogue: the
+ * hosts that have it, and what an hour on it costs.
+ */
+export interface GpuListing {
+  /** The model as hosts report it, which is the `name` requirement's value. */
+  name: string;
+  /** In whole GB; the smallest when hosts report the model with several sizes. */
+  vramGb: number;
+  /** Hosts with it queued now, which a new job starts on at once. */
+  available: number;
+  /** Hosts with it running a job, back in the queue as they finish. */
+  working: number;
+  /** The PREMIUM markets it is in: where a deployment on it posts. */
+  markets: string[];
+  /** Across those markets; null when none is priced. */
+  usd: PriceRange | null;
+}
+
+/** How often a mounted GPU list refreshes its host counts. */
+const HOST_COUNT_REFRESH_MS = 10_000;
+
+/** Pure: the price range over some prices; null without any. */
+function rangeOf(prices: number[]): PriceRange | null {
+  return prices.length
+    ? { min: Math.min(...prices), max: Math.max(...prices) }
+    : null;
+}
+
+/**
+ * The GPUs a deployment can run on: the catalogue's models that a public
+ * PREMIUM market serves (the only markets a deployment without a market posts
+ * to), one per model, priced from those markets. The hosts counted are every
+ * host with the model, whatever its market.
  *
  * `live` keeps the counts fresh while the caller is mounted: they are fetched
  * again on mount and every few seconds after, while the tab is visible.
  * Callers that only read what a live list already keeps fresh (the deploy
  * summary) leave it off.
  */
-export function useMarketListings(
+export function useGpuListings(
   markets: MaybeRefOrGetter<MarketRate[] | null>,
   { live = false }: { live?: boolean } = {},
 ) {
-  const types = deployableMarketTypes();
-  const config = useRuntimeConfig();
-  const { nosana } = useKit();
-  const { gpus, error: gpuError, refresh: refreshGpus } = useGpuModels();
-  // Both counts in one fetch, so a refresh changes the listings once. The
-  // key is shared between the GPU list and the page around it: `defer` joins
-  // a request already in flight instead of restarting it.
-  const {
-    data: hosts,
-    pending,
-    error: hostsError,
-    refresh: refreshHosts,
-  } = useAsyncData<MarketHosts | null>(
-    "market-hosts",
-    async () => {
-      const [queued, running] = await Promise.all([
-        nosana.value.api.reservations.findAvailable({ requirements: {} }),
-        $fetch<Record<string, { running?: number }>>("/jobs/running", {
-          baseURL: config.public.apiBase as string,
-        }),
-      ]);
-      const available: Record<string, number> = {};
-      for (const node of queued.nodes) {
-        available[node.market] = (available[node.market] ?? 0) + 1;
-      }
-      const working = Object.fromEntries(
-        Object.entries(running).map(([market, count]) => [
-          market,
-          count.running ?? 0,
-        ]),
-      );
-      return { available, working };
-    },
-    { default: () => null, dedupe: "defer" },
-  );
+  const { gpus, pending, error, refresh } = useGpuModels();
+  const mocked = isGpuMockOn();
   if (live) {
     // Counts kept from an earlier visit are fetched again right away.
-    if (hosts.value !== null) void refreshHosts();
+    if (gpus.value.length) void refresh();
     const visibility = useDocumentVisibility();
     useIntervalFn(() => {
-      if (visibility.value === "visible") void refreshHosts();
+      if (visibility.value === "visible") void refresh();
     }, HOST_COUNT_REFRESH_MS);
   }
 
-  const listings = computed<MarketListing[]>(() =>
-    (toValue(markets) ?? [])
-      .filter((market) => !market.client && types.includes(market.type))
-      .map((market) => ({
-        market,
-        vramGb:
-          parseVramGb(
-            market.metadata?.find((entry) => entry.key === "vram")?.value,
-          ) ??
-          gpus.value.find((gpu) => gpu.markets.includes(market.address))
-            ?.vramGb ??
-          null,
-        available: hosts.value?.available[market.address] ?? 0,
-        working: hosts.value?.working[market.address] ?? 0,
-        usd:
-          market.usd_reward_per_hour > 0
-            ? market.usd_reward_per_hour * NETWORK_FEE_MULTIPLIER
-            : null,
-      })),
-  );
-
-  /**
-   * A market as listed; one not listed (a client's private market) gives a
-   * listed market of the same GPU, if the catalogue knows one.
-   */
-  const listingFor = (address: string): MarketListing | undefined => {
-    const listed = listings.value.find(
-      (listing) => listing.market.address === address,
+  const listings = computed<GpuListing[]>(() => {
+    const premium = new Map(
+      [...(toValue(markets) ?? []), ...(mocked ? MOCK_GPU_MARKETS : [])]
+        .filter((market) => market.type === OPEN_MARKET_TYPE && !market.client)
+        .map((market) => [market.address, market]),
     );
-    if (listed) return listed;
-    const gpu = gpus.value.find((model) => model.markets.includes(address));
-    return gpu
-      ? listings.value.find((listing) =>
-          gpu.markets.includes(listing.market.address),
-        )
-      : undefined;
-  };
+    const byName = new Map<string, GpuModel[]>();
+    for (const gpu of gpus.value) {
+      byName.set(gpu.name, [...(byName.get(gpu.name) ?? []), gpu]);
+    }
+    return [...byName].flatMap(([name, models]) => {
+      const served = [
+        ...new Set(models.flatMap((model) => model.markets)),
+      ].filter((address) => premium.has(address));
+      if (!served.length) return [];
+      const prices = served.flatMap((address) => {
+        const usd = premium.get(address)?.usd_reward_per_hour ?? 0;
+        return usd > 0 ? [usd * NETWORK_FEE_MULTIPLIER] : [];
+      });
+      return [
+        {
+          name,
+          vramGb: Math.min(...models.map((model) => model.vramGb)),
+          ...hostsOf(models),
+          markets: served,
+          usd: rangeOf(prices),
+        },
+      ];
+    });
+  });
 
   return {
     listings,
-    listingFor,
     pending,
-    /** Until the first host counts arrive, every listing reads 0 and 0. */
-    counting: computed(() => hosts.value === null && !hostsError.value),
-    error: computed(() => hostsError.value || gpuError.value),
-    refresh: () => Promise.all([refreshHosts(), refreshGpus()]),
+    error,
+    refresh,
   };
 }
 
-/** Whether a market is known to meet the job's VRAM; unknown VRAM never is. */
-export function marketFitsVram(
-  listing: MarketListing,
+/** Whether a GPU meets the job's VRAM. */
+export function gpuFitsVram(
+  listing: GpuListing,
   requiredGb: number | null,
 ): boolean {
-  return (
-    !requiredGb || (listing.vramGb !== null && listing.vramGb >= requiredGb)
+  return !requiredGb || listing.vramGb >= requiredGb;
+}
+
+/** Hosts free now and hosts busy, summed over some GPUs. */
+export function hostsOf(
+  gpus: Array<{ available: number; working: number }>,
+): { available: number; working: number } {
+  return {
+    available: gpus.reduce((sum, gpu) => sum + gpu.available, 0),
+    working: gpus.reduce((sum, gpu) => sum + gpu.working, 0),
+  };
+}
+
+/** The listings of the named GPUs, in list order. */
+export function listingsOf(listings: GpuListing[], names: string[]): GpuListing[] {
+  return listings.filter((listing) => names.includes(listing.name));
+}
+
+/** The GPUs a market serves: a deployment made when the GPU was a market gets these. */
+export function gpusInMarket(listings: GpuListing[], market: string): string[] {
+  return listings
+    .filter((listing) => listing.markets.includes(market))
+    .map((listing) => listing.name);
+}
+
+/** "RTX 4090" for "NVIDIA GeForce RTX 4090": the model without the vendor. */
+export function shortGpuName(name: string): string {
+  return name.replace(/^NVIDIA (GeForce )?/, "");
+}
+
+/** "24 GB", or "8–80 GB" across sizes. */
+export function formatVramRange(low: number, high: number): string {
+  return low === high ? `${low} GB` : `${low}–${high} GB`;
+}
+
+/** The price range a set of GPUs spans: jobs go to the cheapest host free, up to the dearest. */
+export function priceOfGpus(listings: GpuListing[]): PriceRange | null {
+  return rangeOf(
+    listings.flatMap((listing) =>
+      listing.usd ? [listing.usd.min, listing.usd.max] : [],
+    ),
   );
 }
 
+/** "$0.35" or "$0.35–$0.90", each bound times `count` (replicas). */
+export function formatPriceRange(range: PriceRange | null, count = 1): string {
+  if (!range) return "—";
+  const [min, max] = [range.min * count, range.max * count];
+  return min === max
+    ? `$${min.toFixed(2)}`
+    : `$${min.toFixed(2)}–$${max.toFixed(2)}`;
+}
+
 /**
- * The market a deployment gets by default: the cheapest that fits the job's
+ * The GPU a deployment gets by default: the cheapest that fits the job's
  * VRAM with a host free now, else the cheapest that fits at all. Only priced
- * markets qualify, since that price is what the deployment will pay.
+ * GPUs qualify, since that price is what the deployment will pay.
  */
-export function recommendMarket(
-  listings: MarketListing[],
+export function recommendGpu(
+  listings: GpuListing[],
   requiredGb: number | null,
-): MarketListing | null {
+): GpuListing | null {
   const priced = listings
-    .filter(
-      (listing) => listing.usd !== null && marketFitsVram(listing, requiredGb),
-    )
-    .sort((a, b) => (a.usd as number) - (b.usd as number));
+    .filter((listing) => listing.usd !== null && gpuFitsVram(listing, requiredGb))
+    .sort((a, b) => (a.usd?.min ?? 0) - (b.usd?.min ?? 0));
   return priced.find((listing) => listing.available > 0) ?? priced[0] ?? null;
 }
 
@@ -245,9 +292,12 @@ export type CategoryIconName =
   | "search"
   | "arrow";
 
-export type RequirementCategoryId = "gpu" | "compute" | "network" | "storage";
+export type RequirementCategoryId = "compute" | "network" | "storage";
 
-/** One panel of the requirements card: the metric keys it edits, in order. */
+/**
+ * One panel of the requirements card: the metric keys it edits, in order.
+ * The GPU is not among them: it has its own list.
+ */
 export interface RequirementCategory {
   id: RequirementCategoryId;
   label: string;
@@ -257,26 +307,20 @@ export interface RequirementCategory {
 }
 
 export const REQUIREMENT_CATEGORIES: RequirementCategory[] = [
-  { id: "gpu", label: "GPU", icon: "gpu", keys: ["name"] },
   {
     id: "compute",
     label: "Compute",
     icon: "compute",
-    keys: ["cuda_driver_version", "ram_gb", "logical_cores", "cpu_model"],
+    keys: ["cuda_driver_version", "ram_gb", "logical_cores"],
   },
   {
     id: "network",
     label: "Location & network",
     icon: "network",
-    keys: ["country", "download_mbps", "upload_mbps", "ping_ms"],
+    keys: ["country", "download_mbps", "upload_mbps"],
   },
   { id: "storage", label: "Storage", icon: "storage", keys: ["disk_gb"] },
 ];
-
-/** "NVIDIA GeForce RTX 4090" → "RTX 4090". */
-export function shortGpuName(name: string): string {
-  return name.replace(/\b(NVIDIA|GeForce)\b\s*/g, "");
-}
 
 /** The category a requirement is set under; null for a key no category edits. */
 export function categoryOfKey(key: string): RequirementCategoryId | null {
@@ -292,25 +336,20 @@ export function countryName(code: string): string {
 
 /**
  * The distinct values of each metric with host counts, for building controls,
- * scoped to the queued hosts that satisfy `scope` (the chosen GPU) so every
- * range and choice is one an available host meets. `keys` picks the metrics
- * (in that order); `null` asks for every usable metric. Refetches when the scope changes; the
- * previous options stay in place until the new ones arrive.
+ * over every host on the network: host-manager scopes these by requirement,
+ * not by market, and a market's hosts span several GPU models. `keys` picks
+ * the metrics (in that order); `null` asks for every usable metric.
  */
-export function useRequirementOptions(
-  keys: string[] | null,
-  scope: MaybeRefOrGetter<Requirements>,
-) {
+export function useRequirementOptions(keys: string[] | null) {
   const { nosana } = useKit();
   const { data, pending, error, refresh } =
     useAsyncData<RequirementOptions | null>(
       `requirement-options:${keys?.join(",") ?? "*"}`,
       () =>
-        nosana.value.api.reservations.getRequirementOptions({
-          ...(keys ? { metrics: keys } : {}),
-          requirements: toValue(scope),
-        }),
-      { default: () => null, watch: [() => toValue(scope)] },
+        nosana.value.api.reservations.getRequirementOptions(
+          keys ? { metrics: keys } : {},
+        ),
+      { default: () => null, dedupe: "defer" },
     );
 
   return { options: data, pending, error, refresh };
@@ -319,9 +358,13 @@ export function useRequirementOptions(
 /** The GPU catalogue, most common model first. */
 export function useGpuModels() {
   const { nosana } = useKit();
+  const mocked = isGpuMockOn();
   const { data, pending, error, refresh } = useAsyncData<GpuModels | null>(
-    "gpu-models",
-    () => nosana.value.api.reservations.listGpus(),
+    mocked ? "gpu-models:mock" : "gpu-models",
+    () =>
+      mocked
+        ? Promise.resolve(MOCK_GPU_MODELS)
+        : nosana.value.api.reservations.listGpus(),
     { default: () => null, dedupe: "defer" },
   );
 
@@ -330,33 +373,6 @@ export function useGpuModels() {
     pending,
     error,
     refresh,
-  };
-}
-
-/**
- * The two host lookups a requirement set needs, bound to the kit in setup so
- * they can run later from watchers and handlers.
- *
- * `countMatchingHosts`: how many queued or working hosts satisfy the full
- * `requirements` (the scoped options' `nodes`). A host busy now is back in the
- * queue later, so this is the pool a deployment can draw from. One cheap
- * metric is requested; only `nodes` is read.
- *
- * `findAvailableNodes`: which queued nodes match right now, what a
- * reservation would get; `{}` returns every queued node.
- */
-export function useReservationLookups() {
-  const { nosana } = useKit();
-  return {
-    countMatchingHosts: (requirements: Requirements) =>
-      nosana.value.api.reservations
-        .getRequirementOptions({
-          metrics: ["cuda_driver_version"],
-          requirements,
-        })
-        .then((options) => options.nodes),
-    findAvailableNodes: (requirements: Requirements) =>
-      nosana.value.api.reservations.findAvailable({ requirements }),
   };
 }
 
@@ -374,10 +390,10 @@ export function cudaVersions(option: RequirementOption): string[] {
 }
 
 /**
- * The requirements the hosts in `options` can meet. A spec set for another
- * scope can sit outside this one (a minimum above every host, a country no
- * host is in, a metric no host reports): those are dropped, so a set never
- * carries a boundary no host meets. The GPU is the scope, so it always stays.
+ * The requirements the hosts in `options` can meet. A spec from a draft can
+ * sit outside them (a minimum above every host, a country no host is in, a
+ * metric no host reports): those are dropped, so a set never carries a
+ * boundary no host meets.
  */
 export function keepSupportedRequirements(
   requirements: Requirements,
@@ -385,7 +401,6 @@ export function keepSupportedRequirements(
 ): Requirements {
   return Object.fromEntries(
     Object.entries(requirements).filter(([key, value]) => {
-      if (key === "name") return true;
       const option = options.metrics.find((metric) => metric.key === key);
       if (!option) return false;
       if (option.key === "cuda_driver_version") {
@@ -399,58 +414,72 @@ export function keepSupportedRequirements(
   );
 }
 
-/** The hosts a requirement set matches: every one, those free now, and those busy now. */
+/** The chosen GPUs' hosts: every one, those free now, and those busy now. */
 export interface MatchingHosts {
   hosts: number;
   available: number;
   working: number;
+  /**
+   * Hosts free now in the GPUs' premium markets that meet every requirement
+   * (the GPUs and the specs); null while unknown or after a failed lookup.
+   */
+  qualifying: number | null;
 }
 
 /**
- * The hosts `requirements` matches, looked up again on every change:
- * debounced, latest response wins. Null without a GPU (`name`), which scopes
- * the count, and while a lookup has failed.
+ * How many hosts free now in `markets` meet `requirements`, looked up again
+ * when either changes (not on every catalogue refresh): debounced, latest
+ * response wins. Null without requirements and while a lookup has failed.
  */
-export function useMatchingHosts(requirements: MaybeRefOrGetter<Requirements>) {
-  const { countMatchingHosts, findAvailableNodes } = useReservationLookups();
-  const matching = ref<MatchingHosts | null>(null);
+export function useQualifyingHosts(
+  requirements: MaybeRefOrGetter<DeploymentRequirements>,
+  markets: MaybeRefOrGetter<string[]>,
+) {
+  const { nosana } = useKit();
+  const mocked = isGpuMockOn();
+  const qualifying = ref<number | null>(null);
   const failed = ref(false);
   const searches = useLatestRequest();
 
   async function search() {
     const id = searches.begin();
     const current = toValue(requirements);
-    if (typeof current.name !== "string") {
-      matching.value = null;
+    const served = new Set(toValue(markets));
+    if (!Object.keys(current).length || !served.size) {
+      qualifying.value = null;
+      failed.value = false;
+      return;
+    }
+    if (mocked) {
+      qualifying.value = mockQualifyingHosts(current);
+      failed.value = false;
       return;
     }
     try {
-      const [result, hosts] = await Promise.all([
-        findAvailableNodes(current),
-        countMatchingHosts(current),
-      ]);
+      const result = await nosana.value.api.reservations.findAvailable({
+        requirements: current,
+      });
       if (!searches.isCurrent(id)) return;
-      matching.value = {
-        hosts,
-        available: result.total,
-        working: Math.max(hosts - result.total, 0),
-      };
+      qualifying.value = result.nodes.filter((node) =>
+        served.has(node.market),
+      ).length;
       failed.value = false;
     } catch (e) {
       console.error("Error finding available nodes:", e);
       if (!searches.isCurrent(id)) return;
       failed.value = true;
-      matching.value = null;
+      qualifying.value = null;
     }
   }
 
-  watchDebounced(() => toValue(requirements), search, {
-    debounce: 300,
-    deep: true,
-    immediate: true,
-  });
+  // A string key: the catalogue refresh rebuilds equal inputs as new objects,
+  // which must not trigger a lookup.
+  const inputs = computed(() =>
+    JSON.stringify([toValue(requirements), [...toValue(markets)].sort()]),
+  );
+  watchDebounced(inputs, search, { debounce: 300, immediate: true });
 
-  return { matching, failed, refresh: search };
+  return { qualifying, failed, refresh: search };
 }
 
 // --- Formatting a requirement for the summary ---
@@ -463,8 +492,6 @@ const NUMERIC_FIELDS: Record<
   upload_mbps: { label: "Upload", unit: "Mbps", bound: "≥" },
   download_mbps: { label: "Download", unit: "Mbps", bound: "≥" },
   logical_cores: { label: "CPU cores", unit: "", bound: "≥" },
-  // Shown as a maximum; host-manager still matches the number as a minimum.
-  ping_ms: { label: "Ping", unit: "ms", bound: "≤" },
 };
 
 function describeRequirement(
@@ -479,53 +506,165 @@ function describeRequirement(
     };
   }
   switch (key) {
-    case "name":
-      return {
-        label: "GPU",
-        value: shortGpuName(String(value)),
-      };
     case "cuda_driver_version":
       return { label: "CUDA", value: `≥ ${value}` };
+    // Measured in MB, required in whole GB.
+    case "vram_total_mb":
+      return { label: "VRAM", value: `≥ ${Math.round(Number(value) / 1024)} GB` };
     case "country":
       return { label: "Country", value: countryName(String(value)) };
-    case "cpu_model":
-      return { label: "CPU", value: String(value) };
     default:
       return { label: key.replace(/_/g, " "), value: String(value) };
   }
 }
 
-/** "RTX 4090", "CUDA ≥ 12.8", "Netherlands", "RAM ≥ 64 GB". */
+/** "CUDA ≥ 12.8", "Netherlands", "RAM ≥ 64 GB". */
 function requirementChipText(key: string, value: RequirementValue): string {
   const described = describeRequirement(key, value);
-  if (key === "name" || key === "country" || key === "cpu_model") {
-    return described.value;
-  }
+  if (key === "country") return described.value;
   return `${described.label} ${described.value}`;
 }
 
-/**
- * The set requirements as chips, in category then panel order, without the
- * GPU, which the deploy card shows on its own line.
- */
+/** The set requirements as chips, in category then panel order. */
 export function listRequirementChips(
   requirements: Requirements,
 ): Array<{ key: string; text: string }> {
-  return REQUIREMENT_CATEGORIES.flatMap((category) =>
-    category.id === "gpu" ? [] : category.keys,
-  ).flatMap((key) => {
-    const value = requirements[key];
-    return value === undefined
-      ? []
-      : [{ key, text: requirementChipText(key, value) }];
-  });
-}
-
-/** The requirements a category edits; anything else, e.g. from an old draft, is dropped. */
-export function keepCategorizedRequirements(
-  requirements: Requirements,
-): Requirements {
-  return Object.fromEntries(
-    Object.entries(requirements).filter(([key]) => categoryOfKey(key) !== null),
+  return REQUIREMENT_CATEGORIES.flatMap((category) => category.keys).flatMap(
+    (key) => {
+      const value = requirements[key];
+      return value === undefined
+        ? []
+        : [{ key, text: requirementChipText(key, value) }];
+    },
   );
 }
+
+/**
+ * The specs a category edits, one value each; anything else is dropped: a key
+ * from an old draft, or the GPU list, which `gpusOf` reads.
+ */
+export function keepCategorizedRequirements(
+  requirements: DeploymentRequirements,
+): Requirements {
+  return Object.fromEntries(
+    Object.entries(requirements).flatMap(([key, value]) =>
+      categoryOfKey(key) !== null && !Array.isArray(value) ? [[key, value]] : [],
+    ),
+  );
+}
+
+// --- What a deployment runs on, for the deployment lists ---
+
+/** A deployment's targeting: a pinned market, or requirements, or neither. */
+type Targeting = {
+  market?: string | null;
+  requirements?: DeploymentRequirements | null;
+};
+
+/**
+ * A deployment's "Runs on" cell: `main` names the pinned market, the GPUs, or
+ * "Any GPU"; `sub` lists its other requirements, or "No requirements".
+ */
+export interface RunsOn {
+  main: string;
+  /** "Market" on a pinned market. */
+  tag?: string;
+  /** Every GPU's full name, when `main` shortens them to "first +N". */
+  title?: string;
+  sub: string;
+}
+
+/** The requirements besides the GPUs: "RAM ≥ 64 GB · CUDA ≥ 12.8"; a list reads "NL / DE". */
+function otherRequirementsText(requirements: DeploymentRequirements | null | undefined): string {
+  return Object.entries(requirements ?? {})
+    .filter(([key]) => key !== GPU_KEY)
+    .map(([key, value]) =>
+      (Array.isArray(value) ? value : [value])
+        .map((entry) => requirementChipText(key, entry))
+        .join(" / "),
+    )
+    .join(" · ");
+}
+
+/**
+ * Pure: what a deployment runs on. A pinned market by name; else its GPUs
+ * (short names, three or more as "first +N"); else "Any GPU". A deployment
+ * need not name a GPU, so none of the cases assume one.
+ */
+export function describeRunsOn(
+  deployment: Targeting,
+  marketName: (address: string) => string,
+): RunsOn {
+  const sub = otherRequirementsText(deployment.requirements) || "No requirements";
+  if (deployment.market) {
+    return { main: marketName(deployment.market), tag: "Market", sub };
+  }
+  const gpus = gpusOf(deployment.requirements);
+  if (!gpus.length) return { main: "Any GPU", sub };
+  const names = gpus.map(shortGpuName);
+  return {
+    main: names.length <= 2 ? names.join(", ") : `${names[0]} +${names.length - 1}`,
+    title: names.length > 2 ? gpus.join("\n") : undefined,
+    sub,
+  };
+}
+
+/**
+ * Pure: a deployment's "Runs on" filter keys. `gpu:<name>` for each GPU it
+ * can land on (named in it, or served by its pinned market), `market:<address>`
+ * for a pinned market, and `any` when it names neither.
+ */
+export function runsOnKeys(
+  deployment: Targeting,
+  gpusOfMarket: (address: string) => string[],
+): string[] {
+  if (deployment.market) {
+    return [
+      `market:${deployment.market}`,
+      ...gpusOfMarket(deployment.market).map((gpu) => `gpu:${gpu}`),
+    ];
+  }
+  const gpus = gpusOf(deployment.requirements);
+  return gpus.length ? gpus.map((gpu) => `gpu:${gpu}`) : ["any"];
+}
+
+/** The "Runs on" filter's groups of options, from the keys the deployments have. */
+export function runsOnOptions(
+  keys: string[],
+  marketName: (address: string) => string,
+): Array<{ label: string; options: Array<{ value: string; label: string }> }> {
+  const unique = [...new Set(keys)];
+  const of = (prefix: string, label: (rest: string) => string) =>
+    unique
+      .filter((key) => key.startsWith(prefix))
+      .map((key) => ({ value: key, label: label(key.slice(prefix.length)) }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  return [
+    { label: "GPUs", options: of("gpu:", shortGpuName) },
+    { label: "Pinned markets", options: of("market:", marketName) },
+    {
+      label: "Other",
+      options: unique.includes("any") ? [{ value: "any", label: "Any GPU (no GPU set)" }] : [],
+    },
+  ].filter((group) => group.options.length);
+}
+
+/**
+ * `describeRunsOn`, `runsOnKeys` and `runsOnOptions` wired to the dashboard's
+ * market names and the GPU catalogue (which GPUs a pinned market serves).
+ */
+export function useRunsOn() {
+  const { data: markets } = useAPI("/markets", { default: () => [] });
+  const { gpus } = useGpuModels();
+  const marketName = (address: string): string =>
+    (markets.value ?? []).find((market: MarketRate) => market.address === address)?.name ??
+    truncateMiddle(address, 6, 6);
+  const gpusOfMarket = (address: string) =>
+    gpus.value.filter((model) => model.markets.includes(address)).map((model) => model.name);
+  return {
+    describe: (deployment: Targeting) => describeRunsOn(deployment, marketName),
+    keysOf: (deployment: Targeting) => runsOnKeys(deployment, gpusOfMarket),
+    options: (keys: string[]) => runsOnOptions(keys, marketName),
+  };
+}
+

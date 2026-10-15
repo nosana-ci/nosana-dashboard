@@ -19,7 +19,7 @@
                 :key="deployment.id"
                 type="button"
                 class="recent-pill"
-                :title="`${marketName(deployment.market, markets)} · ${statusLabel(deployment.status)}`"
+                :title="`${runsOnLabel(deployment)} · ${statusLabel(deployment.status)}`"
                 @click="emit('clone', deployment)"
               >
                 <span
@@ -155,6 +155,7 @@ import {
 } from "~/composables/useTemplates";
 import type { ListedDeployment } from "~/composables/useDeploymentSelection";
 import { marketName } from "~/utils/solana";
+import { describeRunsOn } from "~/composables/useNodeRequirements";
 import { canStopDeployment } from "~/utils/deploymentStatusActions";
 
 const props = defineProps<{
@@ -165,6 +166,11 @@ const props = defineProps<{
   loadingRecent: boolean;
   canClone: boolean;
 }>();
+
+// What a recent deployment runs on: its pinned market, its GPUs, or "Any GPU".
+function runsOnLabel(deployment: ListedDeployment): string {
+  return describeRunsOn(deployment, (address) => marketName(address, props.markets)).main;
+}
 
 const emit = defineEmits<{
   "select-template": [template: Template];

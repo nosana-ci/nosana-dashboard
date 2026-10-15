@@ -226,11 +226,9 @@
           <div>
             <dt>GPU</dt>
             <dd>
-              <template v-if="gpu">
-                <b>{{ gpu.market.name }}</b>
-                <template v-if="gpu.vramGb !== null">
-                  · {{ gpu.vramGb }} GB
-                </template>
+              <template v-if="gpus.length">
+                <b :title="gpuFullNames">{{ gpuNames }}</b>
+                <span class="summary-nowrap">· {{ gpuVram }}</span>
               </template>
               <template v-else>{{ runsOn }}</template>
               <span v-if="template && changes.gpu" class="summary-changed"
@@ -238,9 +236,28 @@
               >
             </dd>
           </div>
-          <div v-if="gpu">
+          <div v-if="requirements.length">
+            <dt>Requirements</dt>
+            <dd>
+              <span
+                v-for="item in requirements"
+                :key="item.key"
+                class="summary-chip"
+                >{{ item.text }}</span
+              >
+            </dd>
+          </div>
+          <div v-if="gpus.length">
             <dt>Matching</dt>
-            <dd>{{ gpu.available }} available · {{ gpu.working }} working</dd>
+            <dd>
+              <template v-if="qualifying !== null && requirements.length">
+                {{ qualifying }} of {{ hosts.available }} available meet your
+                requirements · {{ hosts.working }} working
+              </template>
+              <template v-else>
+                {{ hosts.available }} available · {{ hosts.working }} working
+              </template>
+            </dd>
           </div>
           <div>
             <dt>Strategy</dt>
@@ -316,8 +333,12 @@ import {
   type TemplateVariant,
 } from "~/composables/useTemplates";
 import {
-  marketFitsVram,
-  type MarketListing,
+  formatVramRange,
+  gpuFitsVram,
+  hostsOf,
+  priceOfGpus,
+  shortGpuName,
+  type GpuListing,
 } from "~/composables/useNodeRequirements";
 import { useIntersectionObserver, useResizeObserver } from "@vueuse/core";
 
@@ -325,16 +346,20 @@ const props = defineProps<{
   /** The selected template, flattened onto its variant; null for your own. */
   template: Template | null;
   jobDefinition: JobDefinition | null;
-  /** The deployable markets and the VRAM the job asks for, to price the fit. */
-  listings: MarketListing[];
+  /** The deployable GPUs and the VRAM the job asks for, to price the fit. */
+  listings: GpuListing[];
   requiredVramGb: number | null;
-  /** The market a deploy uses: its GPU, price and live host counts. */
-  gpu: MarketListing | null;
+  /** The GPUs a deploy may run on: their names, VRAM and live host counts. */
+  gpus: GpuListing[];
+  /** The requirements set beyond the GPUs, as chips. */
+  requirements: Array<{ key: string; text: string }>;
+  /** Of the GPUs' free hosts, those every requirement matches; null while unknown. */
+  qualifying: number | null;
   /** "1 replica · Stateless · 6-hour rotation": how it runs. */
   runs: string;
   /** What differs from the recommended setup, marked in the summary. */
   changes: { gpu: boolean; runs: boolean };
-  /** "$0.28": every replica's hourly price together. */
+  /** "$0.28", or "$0.28–$0.90" over several GPUs: every replica's hourly price together. */
   hourlyCost: string;
   deploymentName: string;
   /** The deploy button and the lines around it, decided by the page. */
@@ -356,7 +381,9 @@ const emit = defineEmits<{
   back: [];
 }>();
 
-const isRecommended = computed(() => !props.changes.gpu && !props.changes.runs);
+const isRecommended = computed(
+  () => !props.changes.gpu && !props.requirements.length && !props.changes.runs,
+);
 
 const nameInput = ref<HTMLInputElement | null>(null);
 
@@ -403,10 +430,26 @@ useIntersectionObserver(
   },
   { threshold: [0, 1] },
 );
+// "RTX 4090" for one GPU, "3 GPUs" for several: the summary column is narrow,
+// and the list beside it shows which. The full names are its tooltip.
+const gpuNames = computed(() =>
+  props.gpus.length === 1
+    ? shortGpuName(props.gpus[0]?.name ?? "")
+    : `${props.gpus.length} GPUs`,
+);
+const gpuFullNames = computed(() => props.gpus.map((gpu) => gpu.name).join("\n"));
+// "24 GB", or "24–80 GB" over several GPUs.
+const gpuVram = computed(() => {
+  const sizes = props.gpus.map((gpu) => gpu.vramGb);
+  return formatVramRange(Math.min(...sizes), Math.max(...sizes));
+});
+// The chosen GPUs' hosts together.
+const hosts = computed(() => hostsOf(props.gpus));
+
 const barSummary = computed(() =>
   [
-    props.gpu
-      ? `${props.gpu.market.name} · ${props.hourlyCost}/h`
+    props.gpus.length
+      ? `${gpuNames.value} · ${props.hourlyCost}/h`
       : "No GPU chosen yet",
     props.runs,
   ].join(" · "),
@@ -462,12 +505,14 @@ const selectedVariant = computed(
 );
 
 // Before a GPU resolves: "GPUs with 12 GB VRAM or more · from $0.14/h".
-const cheapestFit = computed(() => {
-  const prices = props.listings
-    .filter((listing) => marketFitsVram(listing, props.requiredVramGb))
-    .flatMap((listing) => (listing.usd === null ? [] : [listing.usd]));
-  return prices.length ? Math.min(...prices) : null;
-});
+const cheapestFit = computed(
+  () =>
+    priceOfGpus(
+      props.listings.filter((listing) =>
+        gpuFitsVram(listing, props.requiredVramGb),
+      ),
+    )?.min ?? null,
+);
 const runsOn = computed(() => {
   const fit = props.requiredVramGb
     ? `GPUs with ${props.requiredVramGb} GB VRAM or more`
@@ -1104,6 +1149,20 @@ html.dark-mode .configurator-head h2 {
   }
 }
 
+.summary-chip {
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 1px solid $border-soft;
+  background: $surface-sunken;
+  font-family: $family-monospace;
+  font-size: 11.5px;
+}
+
+// Keeps "· 8–24 GB" on one line when the row wraps.
+.summary-nowrap {
+  white-space: nowrap;
+}
+
 .summary-changed {
   padding: 1px 7px;
   border-radius: 999px;
@@ -1185,6 +1244,12 @@ html.dark-mode {
     dd {
       color: #fff;
     }
+  }
+
+  .summary-chip {
+    border-color: rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.06);
+    color: #fff;
   }
 
   .summary-changed {

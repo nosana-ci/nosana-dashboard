@@ -18,11 +18,11 @@
               </label>
             </th>
             <th>Deployment</th>
-            <th>Market</th>
+            <th>Runs on</th>
             <th>Status</th>
-            <th>Active Jobs</th>
+            <th>Active jobs</th>
             <th v-if="isWalletMode">Vault</th>
-            <th>Last Updated</th>
+            <th>Last updated</th>
             <th class="chev-col"></th>
           </tr>
         </thead>
@@ -87,9 +87,7 @@
                   :to="`/deployments/${deployment.id}`"
                   class="clickable-row-link clickable-row-cell-content"
                 >
-                  <span class="market-name" :title="deployment.market">{{
-                    marketLabel(deployment.market)
-                  }}</span>
+                  <DeploymentRunsOn :value="runsOn(deployment)" />
                 </NuxtLink>
               </td>
               <td>
@@ -193,16 +191,9 @@ import {
 const { isAuthenticated, isLoading } = useSuperTokens();
 const { connected } = useWallet();
 
-// Map market addresses to human-readable names (same source the create /
-// detail pages use). Keyed by URL, so this is deduped across components.
-const { data: testgridMarkets } = useAPI("/markets", { default: () => [] });
-const marketLabel = (address?: string | null) => {
-  if (!address) return "-";
-  const match = testgridMarkets.value?.find(
-    (m: any) => m.address === address,
-  );
-  return match?.name || truncateMiddle(address, 6, 6);
-};
+// What each deployment runs on (a pinned market, its GPUs, other
+// requirements, or anything), and its keys for the Runs on filter.
+const { describe: runsOn, keysOf: runsOnKeysOf } = useRunsOn();
 
 const isWalletMode = computed(() => {
   return connected.value && !isAuthenticated.value;
@@ -282,9 +273,13 @@ const statusQuery = computed(
   () => router.currentRoute.value.query.filter?.toString() || "",
 );
 
-const marketQuery = computed(
-  () => router.currentRoute.value.query.market?.toString() || "",
-);
+// The Runs on filter (`gpu:<name>`, `market:<address>` or `any`); an old
+// `?market=` link reads as its pinned market.
+const runsOnQuery = computed(() => {
+  const query = router.currentRoute.value.query;
+  if (query.runsOn) return query.runsOn.toString();
+  return query.market ? `market:${query.market}` : "";
+});
 
 // Archived deployments stay out of the default list; they only show when the
 // status filter explicitly asks for them. The list endpoint accepts a
@@ -306,24 +301,24 @@ const refreshDeployments = async (
       items = await nosana.value.api.deployments.list({
         search: searchQuery.value || undefined,
         status: statusQuery.value || UNARCHIVED_STATUSES,
-        // The list endpoint can't filter by market, so when one is selected we
-        // pull a larger batch and filter client-side below.
+        // The list endpoint can't filter by what a deployment runs on, so when
+        // the filter is set we pull a larger batch and filter client-side below.
         // @ts-ignore - API client types need to be updated to reflect new pagination params1
-        limit: marketQuery.value ? 100 : props.itemsPerPage,
+        limit: runsOnQuery.value ? 100 : props.itemsPerPage,
       });
     }
 
     deploymentsError.value = null;
     let list = items.deployments || [];
-    if (marketQuery.value) {
-      list = list.filter((d) => d.market === marketQuery.value);
+    if (runsOnQuery.value) {
+      list = list.filter((d) => runsOnKeysOf(d).includes(runsOnQuery.value));
     }
     deployments.value = list;
-    // Server pagination can't account for the client-side market filter, so
-    // hide it while a market is selected (the batch above covers realistic
+    // Server pagination can't account for the client-side Runs on filter, so
+    // hide it while the filter is set (the batch above covers realistic
     // per-user deployment counts).
-    nextPage.value = marketQuery.value ? null : items.nextPage || null;
-    prevPage.value = marketQuery.value ? null : items.previousPage || null;
+    nextPage.value = runsOnQuery.value ? null : items.nextPage || null;
+    prevPage.value = runsOnQuery.value ? null : items.previousPage || null;
   } catch (e: any) {
     deploymentsError.value = e?.message || "Failed to load deployments";
     deployments.value = [];
@@ -344,7 +339,7 @@ watch(
     props.itemsPerPage,
     searchQuery.value,
     statusQuery.value,
-    marketQuery.value,
+    runsOnQuery.value,
   ],
   () => {
     debouncedRefresh();
@@ -364,14 +359,16 @@ watch(
 }
 
 /* Clean rows matching the site's redesigned tables (no zebra striping):
-   subtle top separators + a soft hover, uppercase title-cased headers. */
+   subtle top separators + a soft hover, quiet sentence-case headers as on the
+   create page's GPU list. */
 .deployments-table {
+  // Explicit, so the app-wide uppercase table heading style does not apply.
   th {
-    font-family: $title-family;
-    font-size: 0.72rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    font-weight: 600;
+    font-family: inherit;
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: normal;
     color: $text-muted;
   }
 
@@ -527,11 +524,6 @@ html.dark-mode .deployments-table tbody tr.clickable-row.is-selected {
 .updated-cell {
   color: $text-muted;
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-.market-name {
-  color: inherit;
   white-space: nowrap;
 }
 
