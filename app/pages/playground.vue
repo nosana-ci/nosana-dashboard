@@ -1,7 +1,5 @@
 <template>
   <div>
-    <TopBar title="Playground" subtitle="Chat with models running on Nosana" />
-
     <div v-if="isAuthenticated" class="playground">
       <div class="playground-chat section-card">
         <PlaygroundModelsChat
@@ -113,10 +111,11 @@ const codeSettings = computed<ChatSettings>(() => ({
 </script>
 
 <style scoped lang="scss">
-// What the layout puts above and below the workspace: the top bar, the section's
-// padding and the footer. Taking it off the viewport fits the page to the window.
-$chrome: 190px;
-$chrome-touch: 150px;
+// What the layout puts around the workspace: the section's padding, plus the fixed
+// navbar on touch. Taking that off the viewport fills the window, so the footer sits
+// below the fold; a little slack keeps the workspace from pressing on the edges.
+$chrome: $section-padding * 2 + 2rem;
+$chrome-touch: $chrome + $navbar-height;
 
 .playground {
   display: grid;

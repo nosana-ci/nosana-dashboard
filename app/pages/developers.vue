@@ -1,11 +1,5 @@
 <template>
   <div class="dev-portal">
-    <TopBar
-      :title="'Developers'"
-      :subtitle="'Build on the Nosana network'"
-      ref="topBar"
-    />
-
     <!-- Hero banner -->
     <section class="hero-banner mb-6">
       <div class="hero-grid"></div>
