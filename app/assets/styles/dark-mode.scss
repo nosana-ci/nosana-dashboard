@@ -735,6 +735,24 @@
     }
   }
 
+  // The wallet picker paints its header and close button from these tokens.
+  // Only the body and title were themed before, which left a white header
+  // strip with a white title on it. The library derives these from shared
+  // tokens on :root, where they resolve to white, so they are set directly.
+  .wallet-modal {
+    --wallet-modal-bg: #{$black-ter};
+    --wallet-modal-header-border: #{$grey-dark};
+    --wallet-modal-title-color: #{$white};
+    --wallet-modal-close-color: #{$grey-light};
+    --wallet-modal-close-bg-hover: #{$grey-darker};
+    --wallet-modal-empty-text: #{$grey-light};
+    --wallet-item-bg: #{$grey-darker};
+    --wallet-item-border: #{$grey-dark};
+    --wallet-item-bg-hover: #{$grey-dark};
+    --wallet-item-icon-bg: #{$grey-dark};
+    --wallet-item-name-color: #{$white};
+  }
+
   .wallet-modal-content {
     background: $black-ter !important;
     color: $white !important;
