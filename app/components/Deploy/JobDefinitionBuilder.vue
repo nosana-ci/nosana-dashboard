@@ -4,14 +4,13 @@
     <div class="jdb-ops">
       <div v-for="(op, idx) in working.ops" :key="idx" class="op" :class="{ collapsed: !op._open }">
         <div class="op-head">
-          <span class="grip" aria-hidden="true">&#x283F;</span>
-          <span class="op-badge">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="12" rx="2" /><path d="M3 11h18M8 7V5h8v2" /></svg>
-            {{ op.type === 'container/run' ? 'Run container' : 'Create volume' }}
+          <span class="op-icon" aria-hidden="true">
+            <svg v-if="op.type === 'container/run'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="12" rx="2" /><path d="M3 11h18M8 7V5h8v2" /></svg>
+            <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="8" ry="3" /><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3" /></svg>
           </span>
           <div class="idfield">
-            <label>id</label>
-            <input v-model="op.id" class="idinput" spellcheck="false" placeholder="my-op" />
+            <label :for="`op-id-${idx}`">{{ op.type === 'container/run' ? 'Run container' : 'Create volume' }}</label>
+            <input :id="`op-id-${idx}`" v-model="op.id" class="idinput" spellcheck="false" placeholder="my-op" aria-label="Operation id" />
             <span v-if="op.id" class="chk" :class="idValid(op.id) ? 'ok' : 'warn'" :title="idValid(op.id) ? 'Unique, no spaces or dots' : 'No spaces or dots'">
               <svg v-if="idValid(op.id)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
               <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01" /><path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z" /></svg>
@@ -41,8 +40,8 @@
           <!-- Container run operation -->
           <template v-else>
             <!-- ESSENTIALS — always visible -->
-            <div class="essentials">
-              <div class="field">
+            <div class="essentials is-grid">
+              <div class="field stack">
                 <div class="lab"><span class="name">Image <span class="req">required</span></span><span class="desc">The container image to run.</span></div>
                 <div class="control">
                   <input v-model="op.args.image" class="jinput mono" placeholder="e.g. ubuntu:22.04" />
@@ -50,12 +49,12 @@
                 </div>
               </div>
 
-              <div class="field">
-                <div class="lab"><span class="name">Command</span><span class="desc">Runs inside the container. Leave empty to use the image default.</span></div>
+              <div class="field stack">
+                <div class="lab"><span class="name">Command</span><span class="desc">Leave empty to use the image default.</span></div>
                 <div class="control"><input v-model="op.args.cmd" class="jinput mono" placeholder="e.g. python app.py --port 9000" /></div>
               </div>
 
-              <div class="field">
+              <div class="field stack wide">
                 <div class="lab"><span class="name">Ports</span><span class="desc">Each port gets a public HTTPS URL.</span></div>
                 <div class="control">
                   <p v-if="op.args._exposePassthrough" class="passthrough-note">
@@ -688,60 +687,63 @@ defineExpose({ canSave });
 
 .jdb-ops { display: flex; flex-direction: column; gap: 14px; }
 
-/* op card */
+/* op card: the same floating panel as the GPU selector beside it */
 .op {
-  background: $box-background-color;
-  border: 1px solid $border;
-  border-radius: 12px;
-  overflow: hidden;
+  @include soft-panel;
 }
 .op-head {
   display: flex;
   align-items: center;
-  gap: 11px;
-  padding: 10px 12px;
-  background: rgba(0, 0, 0, 0.015);
+  gap: 14px;
+  padding: 16px 18px;
 }
-.grip { color: $text-muted; user-select: none; cursor: grab; font-size: 13px; }
-.op-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+/* the operation's mark, the same tile the GPU rows use */
+.op-icon {
   flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
   background: rgba($secondary, 0.1);
-  color: #0a9106;
-  border: 1px solid rgba($secondary, 0.4);
-  border-radius: 7px;
-  padding: 4px 9px;
-  font-family: $title-family;
-  font-weight: 600;
-  font-size: 0.72rem;
-  svg { width: 12px; height: 12px; }
+  border: 1px solid rgba($secondary, 0.25);
+  color: $secondary-text;
+  svg { width: 18px; height: 18px; }
 }
+/* the kind as an eyebrow, the id as the card's title */
 .idfield {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
   flex: 1;
   min-width: 0;
-  label { font-family: monospace; font-size: 0.68rem; color: $text-muted; flex: none; }
+  label {
+    font-family: $family-monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: $text-muted;
+  }
   .idinput {
-    flex: 1;
-    min-width: 0;
-    max-width: 240px;
+    width: 100%;
+    max-width: 280px;
     border: 0;
-    border-bottom: 1.5px dashed $border;
+    border-bottom: 1.5px dashed transparent;
     background: transparent;
     color: $text;
     font-family: $title-family;
     font-weight: 600;
-    font-size: 0.95rem;
-    padding: 2px;
+    font-size: 1.05rem;
+    letter-spacing: -0.01em;
+    padding: 1px 0;
+    transition: border-color 0.15s;
+    &:hover { border-bottom-color: $border; }
     &:focus { outline: 0; border-bottom-color: $secondary; border-bottom-style: solid; }
   }
-  .chk { display: inline-flex; svg { width: 14px; height: 14px; } }
-  .chk.ok { color: #0a9e06; }
-  .chk.warn { color: #b8830a; }
+  // Only a problem is worth a mark: an id with spaces or dots.
+  .chk { display: none; }
+  .chk.warn { display: inline-flex; color: #b8830a; svg { width: 14px; height: 14px; } }
 }
 .op-actions { display: flex; gap: 2px; flex: none; }
 .icon-btn {
@@ -758,10 +760,22 @@ defineExpose({ canSave });
   .chev { transition: transform 0.18s ease; }
 }
 .op.collapsed .chev { transform: rotate(-90deg); }
-.op-body { border-top: 1px solid $border; }
+.op-body { border-top: 1px solid $border-soft; }
 
-/* essentials block (always visible) */
-.essentials { padding: 15px 15px 6px; }
+/* essentials block (always visible): image and command side by side, the
+   ports under them */
+.essentials { padding: 18px 18px 10px; }
+.essentials.is-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 18px;
+  // Top-aligned, so the image's "required" hint never pushes the command down.
+  align-items: start;
+  .field.wide { grid-column: 1 / -1; }
+}
+@media screen and (max-width: 768px) {
+  .essentials.is-grid { grid-template-columns: minmax(0, 1fr); }
+}
 
 /* volume-op group header */
 .group-h { display: flex; align-items: baseline; gap: 9px; margin-bottom: 12px;
@@ -770,35 +784,39 @@ defineExpose({ canSave });
 
 /* fields */
 .field { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 14px; align-items: start; padding: 8px 0;
-  &.stack { grid-template-columns: 1fr; gap: 7px; }
+  &.stack { grid-template-columns: 1fr; gap: 8px; }
 }
 .lab { padding-top: 8px;
-  .name { display: block; font-size: 0.8rem; font-weight: 500; }
-  .desc { display: block; color: $text-muted; font-size: 0.72rem; margin-top: 2px; line-height: 1.35; }
+  .name { display: inline; font-size: 0.85rem; font-weight: 600; color: $text; }
+  .desc { display: block; color: $text-muted; font-size: 0.75rem; margin-top: 2px; line-height: 1.4; }
 }
 .field.stack .lab { padding-top: 0; }
 .req { color: #0a9106; font-size: 0.6rem; font-weight: 700; font-family: $title-family; text-transform: uppercase; letter-spacing: 0.03em; }
 code { font-family: monospace; font-size: 0.85em; color: #0a9e06; }
 
 .control { min-width: 0; }
+/* inputs: the site's field (the template search): a hairline, a green ring */
 .jinput {
   width: 100%;
-  border: 1px solid $border;
-  background: rgba(0, 0, 0, 0.015);
-  border-radius: 8px;
-  padding: 8px 11px;
-  font-size: 0.82rem;
+  min-height: 42px;
+  border: 1px solid $border-soft;
+  background: $white;
+  border-radius: 10px;
+  padding: 9px 13px;
+  font-size: 0.875rem;
   color: $text;
   transition: border-color 0.15s, box-shadow 0.15s;
+  &:hover { border-color: $border-strong; }
   &:focus { outline: 0; border-color: $secondary; box-shadow: 0 0 0 3px rgba($secondary, 0.15); }
-  &.mono { font-family: monospace; font-size: 0.78rem; }
+  &.mono { font-family: $family-monospace; font-size: 0.82rem; }
   &::placeholder { color: $text-muted; }
 }
 .jselect {
-  border: 1px solid $border;
-  background: rgba(0, 0, 0, 0.015);
-  border-radius: 8px;
-  padding: 8px 11px;
+  min-height: 42px;
+  border: 1px solid $border-soft;
+  background: $white;
+  border-radius: 10px;
+  padding: 9px 13px;
   font-size: 0.78rem;
   color: $text;
   cursor: pointer;
@@ -832,9 +850,9 @@ code { font-family: monospace; font-size: 0.85em; color: #0a9e06; }
 
 /* ports + health checks */
 .port-list { display: flex; flex-direction: column; gap: 9px; margin-bottom: 9px; }
-.port-card { border: 1px solid $border; border-radius: 10px; background: rgba(0, 0, 0, 0.015); padding: 10px 11px; }
+.port-card { border: 1px solid $border-soft; border-radius: 12px; background: $surface-sunken; padding: 12px 14px; }
 .port-top { display: flex; align-items: center; gap: 8px; }
-.port-input { display: flex; align-items: center; flex: none; border: 1px solid $border; border-radius: 8px; background: $box-background-color; overflow: hidden; transition: border-color 0.15s, box-shadow 0.15s;
+.port-input { display: flex; align-items: center; flex: none; min-height: 42px; border: 1px solid $border-soft; border-radius: 10px; background: $white; overflow: hidden; transition: border-color 0.15s, box-shadow 0.15s;
   .pfx { padding-left: 11px; color: $text-muted; font-family: monospace; font-size: 0.85rem; }
   input { border: 0; background: transparent; padding: 9px 12px 9px 3px; width: 84px; font-family: monospace; font-size: 0.82rem; color: $text; &:focus { outline: 0; } &::placeholder { color: $text-muted; } }
   &:focus-within { border-color: $secondary; box-shadow: 0 0 0 3px rgba($secondary, 0.15); }
@@ -855,7 +873,7 @@ code { font-family: monospace; font-size: 0.85em; color: #0a9e06; }
 }
 
 /* resources */
-.res { display: flex; flex-direction: column; gap: 10px; border: 1px solid $border; border-radius: 10px; padding: 11px 12px; background: rgba(0, 0, 0, 0.015); }
+.res { display: flex; flex-direction: column; gap: 10px; border: 1px solid $border-soft; border-radius: 12px; padding: 12px 14px; background: $surface-sunken; }
 .res-head { display: flex; align-items: center; justify-content: space-between; }
 .res-type { flex: none; font-family: $title-family; font-weight: 600; font-size: 0.72rem; padding: 5px 9px; border-radius: 6px; background: rgba($secondary, 0.1); color: #0a9106; border: 1px solid rgba($secondary, 0.35); }
 /* two-column grid so short inputs sit side by side instead of stacking */
@@ -870,20 +888,21 @@ code { font-family: monospace; font-size: 0.85em; color: #0a9e06; }
 .res-subhead { grid-column: 1 / -1; font-family: $title-family; font-weight: 600; font-size: 0.68rem; color: $text-muted; text-transform: uppercase; letter-spacing: 0.04em; margin-top: 3px; }
 
 /* collapsible sections */
-.fold { border-top: 1px solid $border; }
-.fold-head { width: 100%; display: flex; align-items: center; gap: 10px; padding: 13px 15px; background: transparent; border: 0; cursor: pointer; text-align: left; transition: background 0.15s;
+.fold { border-top: 1px solid $border-soft; }
+.fold-head { width: 100%; display: flex; align-items: center; gap: 10px; padding: 15px 18px; background: transparent; border: 0; color: $text; cursor: pointer; text-align: left; transition: background 0.15s;
   .chev { color: $text-muted; width: 15px; height: 15px; flex: none; transition: transform 0.18s; transform: rotate(-90deg); }
-  .ft { font-family: $title-family; font-weight: 600; font-size: 0.85rem; }
-  .fs { margin-left: auto; color: $text-muted; font-size: 0.74rem; }
-  &:hover { background: rgba(0, 0, 0, 0.02); }
+  .ft { font-family: $title-family; font-weight: 600; font-size: 0.9rem; }
+  .fs { margin-left: auto; padding: 2px 9px; border-radius: 999px; background: $surface-sunken; color: $text-muted; font-size: 0.72rem; font-weight: 600; }
+  &:hover { background: $surface-hover; }
 }
 .fold.open .chev { transform: rotate(0deg); }
-.fold-body { padding: 0 15px 16px; }
+.fold-body { padding: 2px 18px 18px; }
 
 /* add buttons + menu */
-.add-btn { display: inline-flex; align-items: center; gap: 6px; border: 1px dashed $border; background: transparent; color: $text-dark; border-radius: 8px; padding: 7px 12px; font-family: $title-family; font-weight: 500; font-size: 0.76rem; cursor: pointer; transition: all 0.15s; svg { width: 13px; height: 13px; }
-  &:hover { border-color: rgba($secondary, 0.5); color: #0a9e06; background: rgba($secondary, 0.06); }
-  &.big { font-size: 0.85rem; padding: 9px 14px; }
+/* add buttons: quiet pills that light green on hover */
+.add-btn { display: inline-flex; align-items: center; gap: 7px; border: 1px solid $border-soft; background: transparent; color: $text; border-radius: 999px; padding: 7px 14px; font-family: inherit; font-weight: 600; font-size: 0.8rem; cursor: pointer; transition: all 0.15s; svg { width: 13px; height: 13px; color: $secondary-text; }
+  &:hover { border-color: $secondary; background: rgba($secondary, 0.06); }
+  &.big { font-size: 0.85rem; padding: 9px 16px; }
 }
 .jdb-addop { margin-top: 14px; }
 /* In-flow (not absolute) so it can never be clipped by the modal's scroll overflow */
@@ -898,21 +917,24 @@ code { font-family: monospace; font-size: 0.85em; color: #0a9e06; }
 /* ---- dark mode ---- */
 html.dark-mode {
   .jdb { color-scheme: dark; } /* render native select popups & spinners dark/readable */
-  .op { background: $box-background-color-dark; border-color: #2c2c2c; }
-  .op-head { background: rgba(255, 255, 255, 0.025); }
-  .op-body, .fold { border-color: #2c2c2c; }
+  .op-body, .fold { border-color: rgba(255, 255, 255, 0.08); }
+  .op-icon { color: $secondary; background: rgba($secondary, 0.1); border-color: rgba($secondary, 0.2); }
+  .idfield label { color: #8a948a; }
+  .lab .name, .fold-head { color: $white; }
+  .lab .desc { color: #8a948a; }
+  .fold-head .fs { background: rgba(255, 255, 255, 0.06); color: #b5b5b5; }
   .icon-btn:hover { background: rgba(255, 255, 255, 0.07); }
   .fold-head:hover { background: rgba(255, 255, 255, 0.03); }
-  .jinput, .jselect { background: rgba(255, 255, 255, 0.03); border-color: #333; color: $white; &::placeholder { color: #777; } }
+  .jinput, .jselect { background: rgba(255, 255, 255, 0.04); border-color: rgba(255, 255, 255, 0.12); color: $white; &::placeholder { color: #6f7a6e; } &:hover { border-color: rgba(255, 255, 255, 0.22); } &:focus { border-color: $secondary; } }
   .jselect option { background: $box-background-color-dark; color: $white; }
-  .port-input { background: rgba(255, 255, 255, 0.03); border-color: #333; input { color: $white; } }
-  .res, .port-card { background: rgba(255, 255, 255, 0.03); border-color: #333; }
+  .port-input { background: rgba(255, 255, 255, 0.04); border-color: rgba(255, 255, 255, 0.12); input { color: $white; } }
+  .res, .port-card { background: rgba(0, 0, 0, 0.2); border-color: rgba(255, 255, 255, 0.08); }
   .res-adv { border-top-color: #333; }
   .hc-fields { border-top-color: #333; }
-  .add-btn { border-color: #333; }
+  .add-btn { border-color: rgba(255, 255, 255, 0.14); color: $white; svg { color: $secondary; } &:hover { border-color: $secondary; } }
   .add-menu { background: $box-background-color-dark; border-color: #2c2c2c; button:hover { background: rgba(255, 255, 255, 0.05); } }
-  .idfield .idinput { color: $white; border-bottom-color: #333; }
-  .req, .op-badge, .res-type { color: #3df23a; }
+  .idfield .idinput { color: $white; &:hover { border-bottom-color: rgba(255, 255, 255, 0.2); } &:focus { border-bottom-color: $secondary; } }
+  .req, .res-type { color: #3df23a; }
   code, .linkbtn { color: #3df23a; }
   .linkbtn.danger { color: $text-muted; }
 }

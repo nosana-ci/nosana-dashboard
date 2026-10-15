@@ -1,7 +1,6 @@
 <template>
   <div>
-    <TopBar :title="'Privacy Policy'" :subtitle="'How Nosana collects, uses, and protects your data'" ref="topBar"
-      v-model="showSettingsModal" />
+    <TopBar :title="'Privacy Policy'" :subtitle="'How Nosana collects, uses, and protects your data'" ref="topBar" />
 
     <div class="box has-background-white-ter">
       <div class="content">
@@ -115,7 +114,6 @@
 import { ref, computed } from 'vue'
 import TopBar from "~/components/TopBar.vue"
 
-const showSettingsModal = ref(false)
 const effectiveDate = computed(() => new Date().toISOString().slice(0, 10))
 </script>
 

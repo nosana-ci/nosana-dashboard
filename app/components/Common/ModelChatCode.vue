@@ -1,7 +1,7 @@
 <template>
   <div class="snippet">
     <header class="snippet-head">
-      <h3 class="title is-6 mb-0">Use it in code</h3>
+      <h3 class="title is-6 mb-0">{{ title }}</h3>
       <div class="seg-tabs" role="group" aria-label="Language">
         <button
           v-for="lang in languages"
@@ -19,11 +19,11 @@
       <pre class="snippet-body"><code v-html="highlighted"></code></pre>
       <CopyButton class="snippet-copy" :text="snippet.code" label="Copy code" />
     </div>
-    <footer v-if="$slots.footer || note || keyEnv" class="snippet-foot">
+    <footer v-if="$slots.footer || note || (keyEnv && keyHint)" class="snippet-foot">
       <slot name="footer">
         <p>
           {{ note }}
-          <template v-if="keyEnv">
+          <template v-if="keyEnv && keyHint">
             Set <span class="is-family-monospace">{{ keyEnv }}</span> to your key first.
           </template>
         </p>
@@ -34,24 +34,30 @@
 
 <script setup lang="ts">
 import CopyButton from "~/components/Common/CopyButton.vue";
-import { escapeHtml } from "~/utils/htmlSanitization";
+import { highlightSnippet } from "~/utils/highlightSnippet";
 import type { ChatSettings } from "~/utils/llmChat";
 
 /**
  * The call the chat is making, as code to copy: curl, Python and Node. ModelChat
  * shows it in the tray under its bar, or in a panel the page provides.
  */
-const props = defineProps<{
-  /** The endpoint's base URL; `/v1/chat/completions` is appended. */
-  url: string;
-  model: string;
-  /** Headers the endpoint needs, beyond content type and the key. */
-  headers?: Record<string, string>;
-  /** The environment variable the snippet reads the key from; none when no key is sent. */
-  keyEnv?: string | null;
-  settings: ChatSettings;
-  note?: string;
-}>();
+const props = withDefaults(
+  defineProps<{
+    /** The endpoint's base URL; `/v1/chat/completions` is appended. */
+    url: string;
+    model: string;
+    /** Headers the endpoint needs, beyond content type and the key. */
+    headers?: Record<string, string>;
+    /** The environment variable the snippet reads the key from; none when no key is sent. */
+    keyEnv?: string | null;
+    /** Whether the footer reminds the reader to set `keyEnv`. */
+    keyHint?: boolean;
+    title?: string;
+    settings: ChatSettings;
+    note?: string;
+  }>(),
+  { keyHint: true, title: "Use it in code" },
+);
 
 type Language = "curl" | "python" | "node";
 
@@ -167,37 +173,7 @@ console.log(completion.choices[0].message.content);`,
 // than the rest, so the code reads as code without competing.
 const highlighted = computed(() => {
   const { code, endpoint, message, model } = snippet.value;
-  const values = [props.keyEnv, endpoint, model, message]
-    .filter((value): value is string => !!value)
-    .map((value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
-    .join("|");
-
-  // Most of the values sit inside a string, so strings are painted a second time.
-  const paint = (
-    text: string,
-    pattern: RegExp,
-    wrap: (match: RegExpMatchArray) => string,
-  ) => {
-    let html = "";
-    let last = 0;
-    for (const match of text.matchAll(pattern)) {
-      html += escapeHtml(text.slice(last, match.index)) + wrap(match);
-      last = match.index + match[0].length;
-    }
-    return html + escapeHtml(text.slice(last));
-  };
-  const mark = (text: string) =>
-    paint(text, new RegExp(values, "g"), (m) => `<mark>${escapeHtml(m[0])}</mark>`);
-
-  return paint(
-    code,
-    new RegExp(`(${values})|("(?:[^"\\\\\\n]|\\\\.)*")|\\b\\d+(?:\\.\\d+)?\\b`, "g"),
-    (m) => {
-      if (m[1]) return mark(m[0]);
-      if (m[2]) return `<span class="tok-s">${mark(m[0])}</span>`;
-      return `<span class="tok-s">${m[0]}</span>`;
-    },
-  );
+  return highlightSnippet(code, [props.keyEnv, endpoint, model, message]);
 });
 </script>
 
@@ -271,6 +247,14 @@ const highlighted = computed(() => {
   :deep(.tok-s) {
     color: $grey-darker;
   }
+
+  :deep(.tok-k) {
+    color: #5b64c9;
+  }
+
+  :deep(.tok-f) {
+    color: #1a7f93;
+  }
 }
 
 .snippet-foot {
@@ -300,6 +284,14 @@ html.dark-mode {
 
     :deep(.tok-s) {
       color: $grey-lighter;
+    }
+
+    :deep(.tok-k) {
+      color: #9aa7f0;
+    }
+
+    :deep(.tok-f) {
+      color: #7fd7e6;
     }
   }
 }

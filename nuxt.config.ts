@@ -56,6 +56,8 @@ export default defineNuxtConfig({
     "~/assets/styles/global.scss",
     "bulma-o-steps/bulma-steps.css",
     "@creativebulma/bulma-tooltip/dist/bulma-tooltip.min.css",
+    // Tailwind and Nuxt UI, scoped to the playground; see the file.
+    "~/assets/css/ui.css",
   ],
   dir: {
     public: "static",
@@ -83,6 +85,13 @@ export default defineNuxtConfig({
     },
   },
   pwa: {
+    workbox: {
+      // A static site: there is no server page to fall back to offline, and "/" is
+      // not among the precached files, so the fallback only made installing fail.
+      navigateFallback: null,
+      // Nuxt's build metadata changes every deploy and is fetched when needed.
+      globIgnores: ["**/_nuxt/builds/**"],
+    },
     manifest: {
       name: "Nosana Deploy",
       short_name: "nosana",
@@ -105,7 +114,18 @@ export default defineNuxtConfig({
     "@nuxtjs/color-mode",
     "nuxt-gtag",
     "@vite-pwa/nuxt",
+    "@nuxt/ui",
   ],
+  // Nuxt UI drives the playground chat. The app already loads its fonts.
+  ui: {
+    fonts: false,
+  },
+  icon: {
+    // The site is static, so there is no icon server: bundle the icons the
+    // playground uses and fetch any other from Iconify.
+    provider: "iconify",
+    clientBundle: { scan: true, sizeLimitKb: 512 },
+  },
   googleFonts: {
     preload: true,
     families: {
@@ -130,6 +150,8 @@ export default defineNuxtConfig({
       rpcUrl: process.env.RPC_URL,
       apiBase: process.env.NUXT_PUBLIC_API_BASE,
       inferenceBase: process.env.NUXT_PUBLIC_INFERENCE_BASE,
+      // Nosa's backend; unset hides the Nosa tab.
+      nosaUrl: process.env.NUXT_PUBLIC_NOSA_URL,
       recaptcha_site_key: process.env.NUXT_PUBLIC_RECAPTCHA_SITE_KEY,
       network: process.env.NETWORK || "mainnet",
       nodeDomain: process.env.NODE_DOMAIN,

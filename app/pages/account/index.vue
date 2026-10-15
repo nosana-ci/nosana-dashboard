@@ -8,7 +8,6 @@
       "
       :subtitle="'Your personal overview'"
       ref="topBar"
-      v-model="showSettingsModal"
     >
       <template v-if="activeAddress" #extra>
         <div class="is-flex is-align-items-center">
@@ -408,7 +407,6 @@ const { isAuthenticated, isLoading, userData, signOut, checkSession } =
   useSuperTokens();
 const { $colorMode } = useNuxtApp();
 const route = useRoute();
-const showSettingsModal = ref(false);
 const toast = useToast();
 const { connected, account, wallet } = useWallet();
 

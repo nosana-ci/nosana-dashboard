@@ -24,14 +24,6 @@
       <span class="col-desc">Log</span>
     </div>
 
-    <!-- Top scroll status -->
-    <div v-if="loadingOlderLogs" class="scroll-status loading">
-      Loading older logs...
-    </div>
-    <div v-else-if="allLogsLoaded && entries.length > 0" class="scroll-status done">
-      All logs loaded
-    </div>
-
     <div
       v-show="entries.length > 0"
       :style="{ height: totalSize + 'px', width: '100%', position: 'relative' }"
@@ -93,17 +85,11 @@ const props = withDefaults(
     isConnecting: boolean;
     showJobBadges: boolean;
     jobs: { job: string }[];
-    loadingOlderLogs: boolean;
-    allLogsLoaded: boolean;
     /** Off where the level filter already scopes the view, e.g. the job panel. */
     showLevel?: boolean;
   }>(),
   { showLevel: true },
 );
-
-const emit = defineEmits<{
-  'scrolledNearTop': [];
-}>();
 
 const jobIndexMap = computed(() => {
   const map = new Map<string, number>();
@@ -140,9 +126,6 @@ const { handleScroll, scrollToBottom } = useLogScroll({
   entries: toRef(props, 'entries'),
   outerRef,
   virtualizer,
-  allLogsLoaded: toRef(props, 'allLogsLoaded'),
-  loadingOlderLogs: toRef(props, 'loadingOlderLogs'),
-  onScrolledNearTop: () => emit('scrolledNearTop'),
 });
 
 defineExpose({ scrollToBottom });
@@ -233,20 +216,6 @@ defineExpose({ scrollToBottom });
   white-space: pre-wrap;
   word-wrap: break-word;
   overflow-wrap: break-word;
-}
-
-.scroll-status {
-  text-align: center;
-  padding: 0.5rem;
-  font-size: 0.75rem;
-
-  &.loading {
-    color: #58a6ff;
-  }
-
-  &.done {
-    color: #5f695f;
-  }
 }
 
 .level-tag {

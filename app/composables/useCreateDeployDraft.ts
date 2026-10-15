@@ -11,11 +11,11 @@ export interface CreateDeployDraft {
   timeout: number;
   strategy: string;
   schedule: string;
-  gpuTypeCheckbox: string[];
-  activeFilter: string;
   sshPublicKeys: string[];
   timestamp: number;
 }
+
+const DRAFT_MAX_AGE_MS = 60 * 60 * 1000;
 
 export function useCreateDeployDraft() {
   const draft = useLocalStorage<CreateDeployDraft | null>(
@@ -43,7 +43,16 @@ export function useCreateDeployDraft() {
     }
   };
 
-  const load = (): CreateDeployDraft | null => draft.value;
+  // A draft is kept for one trip through signing in: reading it clears it,
+  // and one older than an hour is dropped, so a later visit to the create
+  // page starts fresh instead of reopening an old template.
+  const take = (): CreateDeployDraft | null => {
+    const saved = draft.value;
+    clear();
+    return saved && Date.now() - saved.timestamp < DRAFT_MAX_AGE_MS
+      ? saved
+      : null;
+  };
 
   const clear = () => {
     try {
@@ -53,5 +62,5 @@ export function useCreateDeployDraft() {
     }
   };
 
-  return { save, load, clear };
+  return { save, take, clear };
 }

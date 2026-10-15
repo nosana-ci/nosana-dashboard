@@ -198,7 +198,7 @@
             v-if="view(message).answer"
             class="chat-text content"
             :class="{ 'is-streaming': message.streaming }"
-            v-html="renderMarkdown(view(message).answer)"
+            v-html="renderChatMarkdown(view(message).answer)"
           ></div>
           <p
             v-else-if="message.streaming && !view(message).reasoning"
@@ -275,11 +275,10 @@
 </template>
 
 <script setup lang="ts">
-import { Marked } from "marked";
-import DOMPurify from "dompurify";
 import StatusMark from "~/components/Common/StatusMark.vue";
 import ModelChatSettings from "~/components/Common/ModelChatSettings.vue";
 import ModelChatCode from "~/components/Common/ModelChatCode.vue";
+import { renderChatMarkdown } from "~/utils/chatMarkdown";
 import type { StatusTone } from "~/composables/useStatus";
 import type { LlmChatStatus } from "~/composables/jobs/useLlmEndpoint";
 import {
@@ -436,15 +435,6 @@ const view = (message: Message) => {
   };
 };
 
-const markdown = new Marked({ gfm: true, breaks: true });
-const renderMarkdown = (text: string) =>
-  DOMPurify.sanitize(
-    (markdown.parse(text, { async: false }) as string).replace(
-      /<a /g,
-      '<a target="_blank" rel="noopener noreferrer" ',
-    ),
-    { ADD_ATTR: ["target"] },
-  );
 
 // Follow the reply as it streams, unless the reader scrolled up to read.
 const scroller = ref<HTMLElement | null>(null);

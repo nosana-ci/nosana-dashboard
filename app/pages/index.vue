@@ -1,8 +1,8 @@
 <template>
   <div class="login-page" :class="{ 'dark-mode': isDarkMode }">
-    <Loader v-if="autoLoginChecking" class="auth-checking-loader" />
+    <Loader v-if="!showLogin" class="auth-checking-loader" />
     <!-- Main Content -->
-    <div class="content-wrapper">
+    <div v-else class="content-wrapper">
       <!-- World Map Background -->
       <div class="world-map-background">
         <img
@@ -418,7 +418,6 @@ const {
   checkSession,
   isAuthenticated: superTokensAuth,
   isEmailVerified,
-  isLoading: autoLoginChecking,
   sendVerificationEmail,
 } = useSuperTokens();
 
@@ -451,6 +450,9 @@ const { prefetch: prefetchAuthUrl, start: startOAuthLogin } = useOAuthLogin();
 const showWalletModal = ref(false);
 const signingMessage = ref(false);
 const providerSwitchInProgress = ref(false);
+// Held back until the session check rules out a redirect, so a signed-in
+// visitor never sees the form on their way to /account.
+const showLogin = ref(false);
 const backgroundImageKey = ref(0);
 const currentWalletName = ref<string | null>(null);
 const freeCreditsEnabled = ref<boolean | null>(null);
@@ -706,7 +708,8 @@ const handleEmailSubmit = async () => {
         return;
       }
 
-      const redirect = (route.query.redirect as string) || "/account";
+      const redirect =
+        (route.query.redirect as string) || "/deployments/create";
       router.replace(redirect);
     } else if (response.status === "WRONG_CREDENTIALS_ERROR") {
       authError.value = "Invalid email or password";
@@ -739,24 +742,26 @@ const handleEmailSubmit = async () => {
 
 // Check authentication on mount
 onMounted(async () => {
-  // Check SuperTokens session
-  const hasSession = await checkSession();
+  // Check SuperTokens session; the destination page fetches the profile itself
+  const hasSession = await checkSession(false);
 
   // Check if user is already authenticated
   const walletAuthenticated = checkWalletAuth();
   const isAuthenticated =
     superTokensAuth.value || walletAuthenticated || hasSession;
 
-  // Only redirect to account if authenticated AND email is verified
+  // Only redirect to the create page if authenticated AND email is verified
   if (
     !providerSwitchInProgress.value &&
     isAuthenticated &&
     isEmailVerified.value !== false
   ) {
-    const redirect = (route.query.redirect as string) || "/account";
+    const redirect = (route.query.redirect as string) || "/deployments/create";
     router.replace(redirect);
     return;
   }
+
+  showLogin.value = true;
 
   // Handle OAuth popup callback
   const urlParams = new URLSearchParams(window.location.search);
@@ -1020,7 +1025,7 @@ const signAuthMessage = async (walletName: string) => {
       console.warn("Error tracking wallet authorized:", error);
     }
 
-    const redirect = (route.query.redirect as string) || "/account";
+    const redirect = (route.query.redirect as string) || "/deployments/create";
     await navigateTo(redirect);
   } catch (error: any) {
     const errorMessage = error?.message || String(error);
@@ -1042,6 +1047,7 @@ const signAuthMessage = async (walletName: string) => {
 
 .auth-checking-loader :deep(.spinner-bg) {
   z-index: 99999;
+  background-color: transparent;
 }
 
 .auth-checking-loader :deep(.half-circle-spinner) {

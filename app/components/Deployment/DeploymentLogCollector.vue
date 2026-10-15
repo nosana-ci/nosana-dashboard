@@ -37,9 +37,6 @@
         :showJobBadges="selectedJobIds.size !== 1"
         :show-level="!hideLevelColumn"
         :jobs="sortedJobs"
-        :loadingOlderLogs="loadingOlderLogs"
-        :allLogsLoaded="allLogsLoaded"
-        @scrolledNearTop="loadOlderLogs"
       />
     </div>
   </div>
@@ -82,9 +79,6 @@ const {
   anyConnecting,
   allOpIds,
   sortedJobs,
-  loadOlderLogs,
-  loadingOlderLogs,
-  allLogsLoaded,
 } = useLogSources({
   deploymentId: props.deploymentId,
   jobs: jobsRef,

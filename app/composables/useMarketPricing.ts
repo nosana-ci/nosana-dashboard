@@ -2,7 +2,7 @@ import { computed, ref, watch, type Ref, type ComputedRef } from 'vue';
 import type { Market } from '@nosana/kit';
 
 // Network fee constant (10% = 1.1 multiplier)
-const NETWORK_FEE_MULTIPLIER = 1.1;
+export const NETWORK_FEE_MULTIPLIER = 1.1;
 
 /**
  * Centralized pricing system that uses usd_reward_per_hour from markets table + 10%

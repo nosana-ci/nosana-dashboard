@@ -1,0 +1,132 @@
+/* Tailwind v4 and Nuxt UI, for the playground only.
+   Bulma owns the rest of the app, so Tailwind's preflight reset stays out, and
+   utilities are generated for the playground's own components and Nuxt UI's rather
+   than the whole app: a Bulma class such as `.table` never gets a Tailwind twin. */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities) source(none);
+@import "@nuxt/ui";
+
+@source "../../components/Playground";
+
+/* The app marks dark mode with `dark-mode` on <html>, not Nuxt UI's `dark`. */
+@custom-variant dark (&:where(.dark-mode, .dark-mode *));
+
+@theme {
+  --font-sans: "Outfit", sans-serif;
+}
+
+@layer theme {
+  .dark-mode {
+    --ui-text-dimmed: var(--ui-color-neutral-500);
+    --ui-text-muted: var(--ui-color-neutral-400);
+    --ui-text-toned: var(--ui-color-neutral-300);
+    --ui-text: var(--ui-color-neutral-200);
+    --ui-text-highlighted: #fff;
+    --ui-text-inverted: var(--ui-color-neutral-900);
+    --ui-bg: var(--ui-color-neutral-900);
+    --ui-bg-muted: var(--ui-color-neutral-800);
+    --ui-bg-elevated: var(--ui-color-neutral-800);
+    --ui-bg-accented: var(--ui-color-neutral-700);
+    --ui-bg-inverted: #fff;
+    --ui-border: var(--ui-color-neutral-800);
+    --ui-border-muted: var(--ui-color-neutral-700);
+    --ui-border-accented: var(--ui-color-neutral-700);
+    --ui-border-inverted: #fff;
+  }
+}
+
+/* Bulma resets every <button> (no background, border or padding) outside any layer,
+   which beats Nuxt UI's layered utilities such as `bg-primary`. Inside the playground,
+   those properties roll back to the layers, where the base rule below stands in for
+   the Tailwind preflight that Nuxt UI expects. */
+@layer base {
+  .pg-shell button:not(.button):not(.seg-tabs *):not(.pg-plain) {
+    appearance: button;
+    background-color: transparent;
+    background-image: none;
+    border: 0 solid;
+    padding: 0;
+    color: inherit;
+    font-size: inherit;
+  }
+}
+
+/* Bulma's unlayered reset also zeroes every <textarea>'s padding, which beats
+   Nuxt UI's layered `px-*` utilities; same trick. */
+@layer base {
+  .pg-shell textarea {
+    padding: 0;
+  }
+}
+
+.pg-shell textarea {
+  padding: revert-layer;
+}
+
+.pg-shell button:not(.button):not(.seg-tabs *):not(.pg-plain) {
+  appearance: revert-layer;
+  background: revert-layer;
+  border: revert-layer;
+  color: revert-layer;
+  font-size: revert-layer;
+  padding: revert-layer;
+}
+
+/* Code blocks in chat replies. Nuxt UI's prose <pre> styles sit in a layer, so Bulma's
+   `.content pre` wins over them; this unlayered rule restores the theme surface. */
+.pg-markdown pre {
+  background-color: var(--ui-bg-muted);
+  color: var(--ui-text);
+  border: 1px solid var(--ui-border);
+}
+
+
+/* The playground's own palette: system type and the neutral greys of a native app.
+   Unlayered, so it wins over the theme layer's tokens inside the workspace. */
+.pg-shell {
+  font-family: "Outfit", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  color: var(--ui-text);
+  --pg-title: "Space Grotesk", sans-serif;
+  --pg-mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", Menlo,
+    Consolas, monospace;
+  --pg-green: #10e80c;
+  --ui-primary: #0a8a08;
+  --ui-radius: 0.625rem;
+  --ui-text-dimmed: #8a8f98;
+  --ui-text-muted: #6b7280;
+  --ui-text-toned: #4b5563;
+  --ui-text: #1f2328;
+  --ui-text-highlighted: #000;
+  --ui-bg: #ffffff;
+  --ui-bg-muted: #f6f7f9;
+  --ui-bg-elevated: #f6f7f9;
+  --ui-bg-accented: #e9ecf1;
+  --ui-border: hsl(220, 20%, 89%);
+  --ui-border-muted: hsl(220, 20%, 92%);
+  --ui-border-accented: hsl(220, 16%, 82%);
+  --pg-pane: #f5f6f8;
+  --pg-pane-hover: #e9ecf1;
+  --pg-toolbar: 52px;
+  --pg-bubble: #eceef2;
+}
+
+html.dark-mode .pg-shell {
+  --ui-primary: #10e80c;
+  --ui-text-dimmed: #80868f;
+  --ui-text-muted: #a3a9b3;
+  --ui-text-toned: #c9ced6;
+  --ui-text: #e6e8eb;
+  --ui-text-highlighted: #fff;
+  --ui-bg: #181818;
+  --ui-bg-muted: #1f1f1f;
+  --ui-bg-elevated: #202020;
+  --ui-bg-accented: #2a2a2a;
+  --ui-border: rgba(255, 255, 255, 0.08);
+  --ui-border-muted: rgba(255, 255, 255, 0.06);
+  --ui-border-accented: rgba(255, 255, 255, 0.14);
+  --pg-pane: #121212;
+  --pg-pane-hover: #1f1f1f;
+  --pg-bubble: #262626;
+}

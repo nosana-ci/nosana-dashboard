@@ -192,7 +192,7 @@
               <span>Update Timeout</span>
             </a>
 
-            <!-- Change Market Action -->
+            <!-- Change GPU Action: the market the deployment runs on -->
             <a
               v-if="deployment.status !== 'ARCHIVED'"
               class="dropdown-item"
@@ -217,7 +217,7 @@
                   />
                 </svg>
               </span>
-              <span>Change Market</span>
+              <span>Change GPU</span>
             </a>
 
             <!-- Update Schedule Action (only for scheduled deployments) -->

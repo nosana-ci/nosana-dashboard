@@ -1,51 +1,21 @@
 <template>
   <div>
-    <TopBar
-      :title="'Playground'"
-      :subtitle="'Chat with models running on Nosana'"
-      ref="topBar"
-      v-model="showSettingsModal"
-    />
+    <TopBar title="Playground" subtitle="Chat with models running on Nosana" />
 
-    <div
-      v-if="isAuthenticated"
-      class="playground"
-      :class="{ 'has-details': docked }"
-    >
-      <div class="playground-chat">
-        <LlmPlayground
+    <div v-if="isAuthenticated" class="playground">
+      <div class="playground-chat section-card">
+        <PlaygroundModelsChat
+          v-model="playgroundModel"
+          variant="model"
           :models="models"
           :loading="loadingModels"
-          v-model="playgroundModel"
-          :code-url="inferenceBase"
-          :dock-to="docked ? DOCK : null"
-        >
-          <template v-if="isWide" #actions>
-            <button
-              type="button"
-              class="button is-small is-quiet"
-              :class="{ 'is-on': showDetails }"
-              :aria-pressed="showDetails"
-              :title="showDetails ? 'Hide model details and code' : 'Show model details and code'"
-              aria-label="Model details and code"
-              @click="showDetails = !showDetails"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <rect x="3" y="4" width="18" height="16" rx="2" />
-                <path d="M15 4v16" />
-              </svg>
-            </button>
-          </template>
-        </LlmPlayground>
+          :settings="settings"
+        />
       </div>
 
-      <!-- v-show, not v-if: the chat docks its settings and code in here, so the
-           panels have to exist before the chat looks for them. -->
-      <aside v-show="docked" class="playground-side">
+      <aside class="playground-side">
         <section v-if="selectedModel" class="section-card model-card">
-          <h3 class="title is-5 mb-0">
-            {{ modelName(selectedModel) }}
-          </h3>
+          <h3 class="title is-5 mb-0">{{ modelName(selectedModel) }}</h3>
           <dl class="model-facts mt-3">
             <div
               v-for="fact in modelFacts"
@@ -53,19 +23,26 @@
               class="is-flex is-justify-content-space-between is-align-items-baseline is-gap-2 py-2"
             >
               <dt class="model-muted">{{ fact.label }}</dt>
-              <dd class="is-family-monospace has-text-weight-semibold">
-                {{ fact.value }}
-              </dd>
+              <dd class="is-family-monospace has-text-weight-semibold">{{ fact.value }}</dd>
             </div>
           </dl>
         </section>
 
         <section class="section-card settings-card">
           <h3 class="title is-6 mb-0">Settings</h3>
-          <div id="playground-settings"></div>
+          <CommonModelChatSettings v-model="settings" stacked />
         </section>
 
-        <section id="playground-code" class="section-card playground-code"></section>
+        <section v-if="selectedModel" class="section-card playground-code">
+          <CommonModelChatCode
+            title="Use it in code"
+            :url="inferenceBase"
+            :model="selectedModel.id"
+            key-env="NOSANA_API_KEY"
+            :key-hint="false"
+            :settings="codeSettings"
+          />
+        </section>
       </aside>
     </div>
 
@@ -84,25 +61,28 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { useLocalStorage } from "@vueuse/core";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { faComments } from "@fortawesome/free-solid-svg-icons";
 import {
-  pricePerMillion,
-  formatUsd,
   formatTokenCount,
+  formatUsd,
   modelName,
+  pricePerMillion,
 } from "~/composables/useLlmGateway";
+import type { ChatSettings } from "~/utils/llmChat";
 
 const { isAuthenticated } = useSuperTokens();
-const showSettingsModal = ref(false);
 const route = useRoute();
 const router = useRouter();
-
 const { inferenceBase, models, loadingModels } = useLlmGateway();
 
+// The model is kept in the URL, so a playground link can be shared.
 const playgroundModel = ref((route.query.model as string) ?? "");
+watch(playgroundModel, (model) => {
+  if (model) router.replace({ query: { ...route.query, model } });
+});
 
 const selectedModel = computed(
   () => models.value.find((entry) => entry.id === playgroundModel.value) ?? null,
@@ -114,30 +94,22 @@ const modelFacts = computed(() => {
   return [
     { label: "Context window", value: formatTokenCount(model.context_length) },
     { label: "Max output", value: formatTokenCount(model.max_output_tokens) },
-    {
-      label: "Input, per 1M tokens",
-      value: formatUsd(pricePerMillion(model.pricing.prompt)),
-    },
-    {
-      label: "Output, per 1M tokens",
-      value: formatUsd(pricePerMillion(model.pricing.completion)),
-    },
+    { label: "Input, per 1M tokens", value: formatUsd(pricePerMillion(model.pricing.prompt)) },
+    { label: "Output, per 1M tokens", value: formatUsd(pricePerMillion(model.pricing.completion)) },
   ];
 });
 
-// With room for a side column, the chat's settings and code are docked there
-// beside the model's details. Without it — a narrow window, or the column closed,
-// a choice that is remembered — they are the trays under the chat's own bar, as
-// on a deployment's chat.
-const DOCK = { settings: "#playground-settings", code: "#playground-code" };
-const isWide = useMediaQuery("(min-width: 1216px)");
-const showDetails = useLocalStorage("playground-details", true);
-const docked = computed(() => isWide.value && showDetails.value);
-
-// Keep the model in the URL so a playground link can be shared.
-watch(playgroundModel, (model) => {
-  if (model) router.replace({ query: { ...route.query, model } });
+// The sponsored playground sets no output limit, so only the prompt and temperature
+// are settings; the code still shows a limit, as a caller paying per token sets one.
+const settings = useLocalStorage<ChatSettings>("playground-model-settings", {
+  systemPrompt: "",
+  temperature: 0.7,
+  maxTokens: 1024,
 });
+const codeSettings = computed<ChatSettings>(() => ({
+  ...settings.value,
+  maxTokens: Math.min(1024, selectedModel.value?.max_output_tokens ?? 1024),
+}));
 </script>
 
 <style scoped lang="scss">
@@ -151,10 +123,12 @@ $chrome-touch: 150px;
   gap: 1.25rem;
 }
 
-// On its own, the chat takes the window.
+// The chat is a card; the conversation scrolls inside it.
 .playground-chat {
   height: calc(100dvh - #{$chrome-touch});
   min-height: 420px;
+  padding: 0;
+  overflow: hidden;
 }
 
 .playground-side {
@@ -172,6 +146,8 @@ $chrome-touch: 150px;
   flex: 1 0 220px;
   display: flex;
   flex-direction: column;
+  padding: 0;
+  overflow: hidden;
 }
 
 .model-card {
@@ -210,14 +186,10 @@ html.dark-mode .model-facts div {
 }
 
 // Side by side, both columns share the window's height.
-// Keep the breakpoint in step with `isWide` above.
 @include from($widescreen) {
   .playground {
     height: calc(100dvh - #{$chrome});
     min-height: 480px;
-  }
-
-  .playground.has-details {
     grid-template-columns: minmax(0, 1fr) 400px;
   }
 

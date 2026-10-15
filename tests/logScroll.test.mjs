@@ -65,9 +65,6 @@ function harness(initial) {
       entries,
       outerRef: ref(container),
       virtualizer,
-      allLogsLoaded: ref(true),
-      loadingOlderLogs: ref(false),
-      onScrolledNearTop: () => {},
     });
   });
   console.warn = warn;

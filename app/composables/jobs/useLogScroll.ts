@@ -7,9 +7,6 @@ interface UseLogScrollDeps {
   entries: Ref<UnifiedLogEntry[]>;
   outerRef: Ref<HTMLElement | null>;
   virtualizer: Ref<Virtualizer<HTMLElement, Element>>;
-  allLogsLoaded: Ref<boolean>;
-  loadingOlderLogs: Ref<boolean>;
-  onScrolledNearTop: () => void;
 }
 
 /** Quiet needed after the last arrival before the first load counts as done. */
@@ -64,15 +61,6 @@ export function useLogScroll(deps: UseLogScrollDeps) {
     if (Math.abs(container.scrollTop - target) > 1) container.scrollTop = target;
   }
 
-  function checkNeedMoreLogs() {
-    if (deps.allLogsLoaded.value || deps.loadingOlderLogs.value) return;
-    const container = deps.outerRef.value;
-    if (!container) return;
-    if (container.scrollHeight <= container.clientHeight && deps.entries.value.length > 0) {
-      deps.onScrolledNearTop();
-    }
-  }
-
   function handleScroll() {
     if (!deps.outerRef.value) return;
     const { scrollTop, scrollHeight, clientHeight } = deps.outerRef.value;
@@ -82,11 +70,6 @@ export function useLogScroll(deps: UseLogScrollDeps) {
     // alone, the next batch would restore the row that was on top when the
     // previous one landed, undoing the scroll.
     captureAnchor();
-
-    if (scrollTop < 100 && deps.entries.value.length > 0
-      && !deps.allLogsLoaded.value && !deps.loadingOlderLogs.value) {
-      deps.onScrolledNearTop();
-    }
   }
 
   watch(
@@ -125,7 +108,6 @@ export function useLogScroll(deps: UseLogScrollDeps) {
         else restoreAnchor();
 
         captureAnchor();
-        checkNeedMoreLogs();
       });
     },
   );

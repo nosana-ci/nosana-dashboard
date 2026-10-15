@@ -58,10 +58,10 @@
                 </p>
                 <div class="form-actions">
                   <button
-                    @click="goToAccount"
+                    @click="continueAfterVerify"
                     class="login-button email-button"
                   >
-                    Continue to Account
+                    Continue
                   </button>
                 </div>
               </div>
@@ -200,8 +200,8 @@ const goToLogin = () => {
   router.push("/");
 };
 
-const goToAccount = () => {
-  router.push(takePostVerifyRedirect() ?? "/account");
+const continueAfterVerify = () => {
+  router.push(takePostVerifyRedirect() ?? "/deployments/create");
 };
 
 const handleSendVerification = async () => {

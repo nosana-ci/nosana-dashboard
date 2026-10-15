@@ -1,0 +1,174 @@
+@use "variables" as *;
+
+/* ---------- Deploy surface ----------
+   The always-dark hero surface shared by the deploy flow's workload and
+   template steps; it is dark in both themes. */
+.deploy-surface {
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", Menlo,
+    Consolas, monospace;
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px;
+  padding: 2rem 2.25rem;
+  background: radial-gradient(
+      circle at 90% 8%,
+      rgba($secondary, 0.16),
+      transparent 46%
+    ),
+    linear-gradient(135deg, #0a0c0a 0%, #0f130d 55%, #0b0d0b 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 24px 60px -30px rgba(0, 0, 0, 0.6);
+}
+
+.deploy-surface-grid {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(
+    rgba(255, 255, 255, 0.05) 1px,
+    transparent 1px
+  );
+  background-size: 22px 22px;
+  mask-image: linear-gradient(to bottom, black, transparent 92%);
+  pointer-events: none;
+}
+
+/* ---------- Step changes: one hero, two states ----------
+   The workload and template heroes share the name deploy-hero, and the
+   template grid and the GPU selector under them share deploy-body. The page
+   runs the step change inside a view transition, so the hero resizes in
+   place while its content cross-fades and the body below swaps. */
+::view-transition-group(deploy-hero) {
+  overflow: clip;
+  border-radius: 18px;
+  animation-duration: 0.55s;
+  animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+::view-transition-old(deploy-hero) {
+  animation: deploy-fade-out 0.22s ease both;
+}
+
+::view-transition-new(deploy-hero) {
+  animation: deploy-fade-in 0.35s 0.12s ease both;
+}
+
+::view-transition-old(deploy-body) {
+  animation: deploy-sink 0.22s ease both;
+}
+
+::view-transition-new(deploy-body) {
+  animation: deploy-rise 0.45s 0.18s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes deploy-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes deploy-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes deploy-sink {
+  to {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+@keyframes deploy-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
+
+/* ---------- Configurator steps ----------
+   The numbered headings of the deploy configurator: shared by the template
+   page (container, settings) and the requirements selector (GPU, hosts). */
+// The steps number themselves in page order, so adding or hiding one (your
+// own image adds Container first) renumbers the rest.
+.configurator {
+  counter-reset: deploy-step;
+}
+
+.deploy-step {
+  counter-increment: deploy-step;
+}
+
+.deploy-step-num::before {
+  content: counter(deploy-step, decimal-leading-zero);
+}
+
+.deploy-step-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin-bottom: 14px;
+
+  h3 {
+    margin: 0;
+    font-family: $title-family;
+    font-weight: 600;
+    font-size: 18px;
+    letter-spacing: -0.01em;
+    color: $text;
+  }
+}
+
+.deploy-step-num {
+  font-family: $family-monospace;
+  font-size: 13px;
+  color: $secondary-text;
+}
+
+.deploy-step-hint {
+  font-size: 13px;
+  color: $text-muted;
+}
+
+.deploy-step-tag {
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 1px solid $border-soft;
+  font-size: 11px;
+  font-weight: 600;
+  color: $text-muted;
+}
+
+// Pushed to the end of the heading, e.g. "Edit as JSON" or the GPU search.
+.deploy-step-action {
+  margin-left: auto;
+  align-self: center;
+}
+
+html.dark-mode {
+  .deploy-step-head h3 {
+    color: #fff;
+  }
+
+  .deploy-step-num {
+    color: $secondary;
+  }
+
+  .deploy-step-hint {
+    color: #8a948a;
+  }
+
+  .deploy-step-tag {
+    border-color: rgba(255, 255, 255, 0.14);
+    color: #b5b5b5;
+  }
+}

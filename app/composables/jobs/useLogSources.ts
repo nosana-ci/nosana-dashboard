@@ -89,11 +89,18 @@ export function useLogSources(deps: LogSourcesDeps) {
     { immediate: true },
   );
 
-  watch(deps.selectedJobIds, (ids) => {
-    if (ids.size > 0) {
-      historical.ensureJobsLoaded(Array.from(ids));
-    }
-  });
+  // Immediate: a view opened on one job is mounted with it already selected,
+  // and `autoFetchIfNoLiveJobs` only reaches for the newest completed job of
+  // the whole deployment — so without this, opening an older one shows nothing.
+  watch(
+    deps.selectedJobIds,
+    (ids) => {
+      if (ids.size > 0) {
+        historical.ensureJobsLoaded(Array.from(ids));
+      }
+    },
+    { immediate: true },
+  );
 
   onUnmounted(() => {
     live.dispose();
@@ -106,8 +113,5 @@ export function useLogSources(deps: LogSourcesDeps) {
     anyConnecting: live.anyConnecting,
     allOpIds,
     sortedJobs,
-    loadOlderLogs: historical.loadOlderLogs,
-    loadingOlderLogs: historical.loadingOlderLogs,
-    allLogsLoaded: historical.allLogsLoaded,
   };
 }

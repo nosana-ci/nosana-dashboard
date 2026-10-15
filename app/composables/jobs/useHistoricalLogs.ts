@@ -1,5 +1,5 @@
 import { getDeploymentJobData } from "~/utils/kitJobAccess";
-import { ref, computed, type Ref, type ShallowRef, type ComputedRef } from 'vue';
+import { ref, type Ref, type ShallowRef, type ComputedRef } from 'vue';
 import { JobState, type NosanaClient } from '@nosana/kit';
 import type { JobItem, UnifiedLogEntry } from './logCollectorTypes';
 import { resolveJobState, getJobTimeBounds } from './logCollectorUtils';
@@ -17,17 +17,9 @@ interface UseHistoricalLogsDeps {
 export function useHistoricalLogs(deps: UseHistoricalLogsDeps) {
   const opIds = ref<Set<string>>(new Set());
   const completedResults = ref<Record<string, boolean>>({});
-  const loadingOlderLogs = ref(false);
-
-  const allLogsLoaded = computed(() =>
-    !deps.jobsMap.value.values().some(
-      (job) => resolveJobState(job.state) >= JobState.COMPLETED && !completedResults.value[job.job],
-    ),
-  );
 
   async function fetchCompletedResult(jobId: string) {
     completedResults.value[jobId] = true;
-    loadingOlderLogs.value = true;
 
     try {
       const jobResponse = await getDeploymentJobData(deps.nosana.value.api, deps.deploymentId, jobId);
@@ -48,8 +40,6 @@ export function useHistoricalLogs(deps: UseHistoricalLogsDeps) {
       }
     } catch (error) {
       console.error(`Failed to fetch results for job ${jobId}:`, error);
-    } finally {
-      loadingOlderLogs.value = false;
     }
   }
 
@@ -79,17 +69,6 @@ export function useHistoricalLogs(deps: UseHistoricalLogsDeps) {
     }
   }
 
-  function loadOlderLogs() {
-    if (loadingOlderLogs.value || allLogsLoaded.value) return;
-    const timeline = getCompletedTimeline();
-    for (const entry of timeline) {
-      if (!completedResults.value[entry.jobId]) {
-        fetchCompletedResult(entry.jobId);
-        return;
-      }
-    }
-  }
-
   function ensureJobsLoaded(jobIds: string[]) {
     let fetched = 0;
     for (const id of jobIds) {
@@ -104,9 +83,6 @@ export function useHistoricalLogs(deps: UseHistoricalLogsDeps) {
 
   return {
     opIds,
-    loadOlderLogs,
-    loadingOlderLogs,
-    allLogsLoaded,
     ensureJobsLoaded,
     autoFetchIfNoLiveJobs,
   };

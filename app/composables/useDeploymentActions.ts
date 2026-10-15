@@ -1,4 +1,4 @@
-import type { Deployment, Market } from "@nosana/kit";
+import type { Deployment } from "@nosana/kit";
 import { useToast } from "vue-toastification";
 import { parseCronExpression } from "~/utils/parseCronExpression";
 import {
@@ -29,7 +29,7 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
   const showTimeoutModal = ref(false);
   const showScheduleModal = ref(false);
   const showRevisionDefinitionModal = ref(false);
-  const showMarketModal = ref(false);
+  const showRequirementsDrawer = ref(false);
   const showDuplicateModal = ref(false);
 
   // Form state
@@ -275,16 +275,11 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
     newTimeoutHours.value = null;
   };
 
-  const updateMarket = async (market: Market) => {
-    const address = market.address?.toString();
-    if (!address) {
-      toast.error("Please select a market");
-      return;
-    }
-    if (address === deps.deployment.value?.market) return;
-
+  // Moves the deployment to another market. Host requirements set against
+  // the old market's hosts go with it, so the new market's hosts all qualify.
+  const updateMarket = async (market: string) => {
     await executeDeploymentAction(
-      () => deps.deployment.value!.updateMarket(address),
+      () => deps.deployment.value!.updateRequirements(null, market),
       "Deployment market updated",
     );
   };
@@ -316,7 +311,9 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
     } catch (error: any) {
       console.error("Duplicate deployment error:", error);
       const errorMessage =
-        error.data?.message || error.message || "Failed to duplicate deployment";
+        error.data?.message || error.data?.error ||
+        error.message ||
+        "Failed to duplicate deployment";
       toast.error(`Error duplicating deployment: ${errorMessage}`);
     } finally {
       actionLoading.value = false;
@@ -349,7 +346,7 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
     } catch (error: any) {
       console.error("Update schedule error:", error);
       const errorMessage =
-        error.data?.message || error.message || "Failed to update schedule";
+        error.data?.message || error.data?.error || error.message || "Failed to update schedule";
       toast.error(`Error updating schedule: ${errorMessage}`);
     } finally {
       actionLoading.value = false;
@@ -372,7 +369,7 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
     } catch (error: any) {
       console.error("Switch revision error:", error);
       const errorMessage =
-        error.data?.message || error.message || "Failed to switch revision";
+        error.data?.message || error.data?.error || error.message || "Failed to switch revision";
       toast.error(`Error switching revision: ${errorMessage}`);
     } finally {
       switchingRevision.value = null;
@@ -439,7 +436,7 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
     showTimeoutModal,
     showScheduleModal,
     showRevisionDefinitionModal,
-    showMarketModal,
+    showRequirementsDrawer,
     showDuplicateModal,
 
     // Form state

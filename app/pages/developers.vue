@@ -4,7 +4,6 @@
       :title="'Developers'"
       :subtitle="'Build on the Nosana network'"
       ref="topBar"
-      v-model="showSettingsModal"
     />
 
     <!-- Hero banner -->
@@ -12,7 +11,6 @@
       <div class="hero-grid"></div>
       <div class="columns is-vcentered is-variable is-5">
         <div class="column">
-          <p class="eyebrow mb-4">// developer portal</p>
           <h1 class="hero-title mb-4">
             Build on the<br />Nosana&nbsp;network.
           </h1>
@@ -65,7 +63,7 @@
 
     <!-- Resources -->
     <section class="mb-6">
-      <p class="section-eyebrow mb-4">// resources</p>
+      <h2 class="title is-4 mb-4">Resources</h2>
       <div class="fixed-grid has-1-cols has-2-cols-tablet has-4-cols-desktop">
         <div class="grid is-gap-2">
           <a
@@ -94,10 +92,19 @@
 
     <!-- Credentials -->
     <section class="mb-6">
-      <p class="section-eyebrow mb-4">// manage</p>
-
       <template v-if="isAuthenticated">
         <ApiKeys class="mb-6" />
+        <!-- What an API key does from code; calling models has its own page. -->
+        <h3 class="title is-4 mb-2">Use your API key</h3>
+        <p class="mb-4">
+          Manage deployments from code with the Nosana Kit. To call Nosana's models, try one
+          in the <nuxt-link to="/playground">Playground</nuxt-link> and copy its code.
+        </p>
+        <div class="columns mb-5">
+          <div class="column is-half">
+            <LlmKitCode />
+          </div>
+        </div>
         <OAuthApps />
       </template>
 
@@ -135,7 +142,6 @@ import DiscordIcon from "@/assets/img/icons/discord.svg?component";
 import ArrowRightIcon from "@/assets/img/icons/arrow-right.svg?component";
 
 const { isAuthenticated } = useSuperTokens();
-const showSettingsModal = ref(false);
 
 const resources = [
   {
@@ -235,13 +241,6 @@ const resources = [
 /* keep the hero columns above the dotted texture */
 .columns {
   position: relative;
-}
-
-.eyebrow {
-  font-family: var(--mono);
-  font-size: 0.8rem;
-  letter-spacing: 0.05em;
-  color: $secondary;
 }
 
 .hero-title {
@@ -390,14 +389,6 @@ const resources = [
   50% {
     opacity: 0;
   }
-}
-
-/* ---------- Section labels ---------- */
-.section-eyebrow {
-  font-family: var(--mono);
-  font-size: 0.8rem;
-  letter-spacing: 0.05em;
-  color: $text-muted;
 }
 
 /* ---------- Resource cards ---------- */

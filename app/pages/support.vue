@@ -4,7 +4,6 @@
       :title="'Support'"
       :subtitle="'Your Hub for Solutions'"
       ref="topBar"
-      v-model="showSettingsModal"
     />
 
     <div class="box has-background-white-ter">
@@ -76,7 +75,6 @@
 import GithubIcon from "@/assets/img/icons/github.svg?component";
 import DiscordIcon from "@/assets/img/icons/discord.svg?component";
 import ExplorerIcon from "@/assets/img/icons/sidebar/explorer.svg?component";
-const showSettingsModal = ref(false);
 </script>
 
 <style lang="scss" scoped>

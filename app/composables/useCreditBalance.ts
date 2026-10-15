@@ -2,7 +2,7 @@ import { computed } from "vue";
 
 // Single source of truth for the user's credit balance.
 //
-// The header (TopBar), the account page (Account/CreditBalance) and the deploy
+// The sidebar account menu (AccountMenu), the account page (Account/CreditBalance) and the deploy
 // page (deployments/create) all display the same balance. Previously each held
 // its own copy of the state and fetched on different triggers, so they could
 // drift out of sync (e.g. the header cached the login-time value while the

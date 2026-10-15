@@ -2,8 +2,7 @@
   <div class="ssh-access">
     <p class="ssh-intro">
       Add a key to SSH straight into this deployment's jobs from your own
-      machine. Without one you can still open a terminal from the dashboard or
-      the Nosana CLI.
+      machine. Without one you can still open a terminal from the dashboard.
     </p>
 
     <div class="key-sources" role="group" aria-label="SSH key source">
@@ -201,11 +200,21 @@ watch(
 </script>
 
 <style scoped lang="scss">
+/* Light by default: this renders inline on the settings step's white panel.
+   The generated-key panel reads its text colours from these custom
+   properties; they are set on its root so they win over its own defaults. */
+.ssh-access :deep(.generated-key) {
+  --key-title: #{$text};
+  --key-muted: #{$text-muted};
+  --key-warn: #{$warning};
+  --key-ok: #{$secondary-text};
+}
+
 .ssh-intro {
   margin-bottom: 1rem;
   font-size: 0.85rem;
   line-height: 1.5;
-  color: #8a948a;
+  color: $text-muted;
 }
 
 .key-sources {
@@ -222,9 +231,9 @@ watch(
   padding: 0.9rem 1rem;
   text-align: left;
   font-family: inherit;
-  color: #e8f0e8;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: $text;
+  background: $white;
+  border: 1px solid $border-soft;
   border-radius: 12px;
   cursor: pointer;
   transition:
@@ -234,7 +243,7 @@ watch(
 
   &:hover:not(:disabled) {
     border-color: rgba($secondary, 0.6);
-    background: rgba(255, 255, 255, 0.06);
+    background: $surface-hover;
   }
 
   &:focus-visible {
@@ -248,7 +257,7 @@ watch(
 
   &.is-selected {
     border-color: $secondary;
-    background: rgba($secondary, 0.08);
+    background: rgba($secondary, 0.06);
     box-shadow: 0 0 0 3px rgba($secondary, 0.15);
   }
 }
@@ -261,8 +270,8 @@ watch(
   width: 38px;
   height: 38px;
   border-radius: 10px;
-  color: #9aa79a;
-  background: rgba(255, 255, 255, 0.06);
+  color: $text-muted;
+  background: $surface-sunken;
   transition: color 0.2s ease, background-color 0.2s ease;
 
   svg {
@@ -271,7 +280,7 @@ watch(
   }
 
   .is-selected & {
-    color: $secondary;
+    color: $secondary-text;
     background: rgba($secondary, 0.14);
   }
 
@@ -294,7 +303,7 @@ watch(
 
   span {
     font-size: 0.78rem;
-    color: #8a948a;
+    color: $text-muted;
   }
 }
 
@@ -306,7 +315,7 @@ watch(
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid $border-strong;
   color: transparent;
   transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 
@@ -319,6 +328,109 @@ watch(
     color: #0a0c0a;
     background: $secondary;
     border-color: $secondary;
+  }
+}
+
+/* The pasted-keys field keeps the Bulma look, on the panel's hairline. */
+.textarea {
+  border-color: $border-soft;
+  border-radius: $input-radius;
+
+  &.is-danger {
+    border-color: $danger;
+  }
+}
+
+.help {
+  color: $text-muted;
+}
+
+/* Key material sits on the deep code surface, as the detail page does: the
+   inline path hint as a chip, the generated public key in the full frame. */
+.help code {
+  padding: 0.1em 0.4em;
+  border: 1px solid $code-surface-border;
+  border-radius: 6px;
+  background: $code-surface;
+  color: #e6edf3;
+}
+
+.ssh-access :deep(.generated-key .textarea[readonly]) {
+  @include code-surface-frame;
+  overflow: auto;
+  color: #e6edf3;
+  box-shadow: none;
+}
+
+/* --- Dark theme: the values this surface had before it moved onto the card. */
+html.dark-mode .ssh-access :deep(.generated-key) {
+  --key-title: #f3f7f3;
+  --key-muted: #a3ada3;
+  --key-warn: #ffb547;
+  --key-ok: #{$secondary};
+}
+
+html.dark-mode .ssh-intro,
+html.dark-mode .key-source-text span,
+html.dark-mode .help {
+  color: #8a948a;
+}
+
+html.dark-mode .label {
+  color: $white;
+}
+
+html.dark-mode .key-source {
+  color: #e8f0e8;
+  background: rgba($white, 0.04);
+  border-color: rgba($white, 0.12);
+
+  &:hover:not(:disabled) {
+    border-color: rgba($secondary, 0.6);
+    background: rgba($white, 0.06);
+  }
+
+  &.is-selected {
+    border-color: $secondary;
+    background: rgba($secondary, 0.08);
+  }
+}
+
+html.dark-mode .key-source-icon {
+  color: #9aa79a;
+  background: rgba($white, 0.06);
+}
+
+html.dark-mode .is-selected .key-source-icon {
+  color: $secondary;
+  background: rgba($secondary, 0.14);
+}
+
+html.dark-mode .key-source-check {
+  border-color: rgba($white, 0.2);
+}
+
+html.dark-mode .is-selected .key-source-check {
+  border-color: $secondary;
+}
+
+html.dark-mode .textarea {
+  background: rgba($white, 0.05);
+  border-color: rgba($white, 0.12);
+  color: $white;
+  box-shadow: none;
+
+  &::placeholder {
+    color: #6f7a6e;
+  }
+
+  &.is-danger {
+    border-color: $danger;
+  }
+
+  &:focus {
+    border-color: $secondary;
+    box-shadow: 0 0 0 3px rgba($secondary, 0.18);
   }
 }
 

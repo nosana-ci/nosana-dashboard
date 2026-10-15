@@ -209,14 +209,14 @@
           @confirm="updateSchedule()"
         />
 
-        <DeploymentMarketModal
-          v-model="showMarketModal"
-          :currentMarket="deployment.market"
-          :deploymentStatus="deployment.status"
-          :testgridMarkets="testgridMarkets || []"
-          :jobDefinition="jobDefinitionModel"
+        <DeploymentRequirementsDrawer
+          v-if="showRequirementsDrawer"
+          :market="deployment.market"
+          :markets="testgridMarkets"
+          :requiredVramGb="requiredVramGb"
           :actionLoading="actionLoading"
-          @confirm="updateMarket($event)"
+          @save="updateMarket"
+          @close="showRequirementsDrawer = false"
         />
 
         <DeploymentDuplicateModal
@@ -249,6 +249,7 @@ import { useSuperTokens } from "~/composables/useSuperTokens";
 import { useDeploymentDetail } from "~/composables/useDeploymentDetail";
 import { useDeploymentJobs } from "~/composables/useDeploymentJobs";
 import { useDeploymentActions } from "~/composables/useDeploymentActions";
+import { requiredVramMb } from "~/composables/useTemplates";
 import {
   useDeploymentStream,
   type DeploymentStreamEvent,
@@ -258,6 +259,7 @@ import type { JobPanelView } from "~/components/Deployment/DeploymentJobPanel.vu
 import { useKit } from "~/composables/useKit";
 import { prefetchDeploymentJob } from "~/composables/jobs/useDeploymentJob";
 import { acquireJobFeeds } from "~/composables/jobs/useJobFeeds";
+import { warmJobHeaders } from "~/utils/kitJobAccess";
 import { NULL_ADDRESS, marketName } from "~/utils/solana";
 import { useLlmEndpoint } from "~/composables/jobs/useLlmEndpoint";
 import { chatKeyStorageKey } from "~/utils/llmChat";
@@ -524,7 +526,7 @@ const {
   showTimeoutModal,
   showScheduleModal,
   showRevisionDefinitionModal,
-  showMarketModal,
+  showRequirementsDrawer,
   showDuplicateModal,
   newReplicaCount,
   newTimeoutHours,
@@ -570,6 +572,12 @@ const {
   makeRevision,
 } = jobDef;
 
+// The GPU memory the job asks for: the Change GPU drawer hides GPUs below it.
+const requiredVramGb = computed(() => {
+  const vramMb = requiredVramMb(jobDefinitionModel.value);
+  return vramMb === null ? null : Math.ceil(vramMb / 1024);
+});
+
 // Wire up the circular dependency: loadDeployment needs loadJobDefinition
 detail.setLoadJobDefinition(loadJobDefinition);
 
@@ -612,7 +620,8 @@ if (initialAction && availableActions.includes(initialAction)) {
   else if (initialAction === "update-replicas") showReplicasModal.value = true;
   else if (initialAction === "update-timeout") showTimeoutModal.value = true;
   else if (initialAction === "update-schedule") showScheduleModal.value = true;
-  else if (initialAction === "update-market") showMarketModal.value = true;
+  else if (initialAction === "update-market")
+    showRequirementsDrawer.value = true;
   else if (initialAction === "duplicate") showDuplicateModal.value = true;
 }
 
@@ -864,17 +873,27 @@ watch(
 
 // Keep each running job's live feeds (usage stats, node info) open while the
 // page is, so the row strip and the panel share one connection. A job that
-// stops running leaves the set and its feeds close.
+// stops running leaves the set and its feeds close. Newly running jobs get
+// their node headers signed in one bulk request before their feeds connect,
+// and the headers are re-signed before they expire while the page is open.
+const HEADER_REFRESH_MS = 4 * 60_000;
+const runningJobIds = computed(() =>
+  activeJobs.value
+    .filter(
+      (job) =>
+        getJobStateNumber(job) === 1 && !!job.node && job.node !== NULL_ADDRESS,
+    )
+    .map((job) => job.job),
+);
 const heldFeeds = new Map<string, () => void>();
+let pageClosed = false;
+const warmHeaders = (id: string) =>
+  warmJobHeaders(nosana.value.api, id).catch(() => {
+    // Each job then signs its own header on first use.
+  });
 watch(
-  () =>
-    activeJobs.value
-      .filter(
-        (job) =>
-          getJobStateNumber(job) === 1 && !!job.node && job.node !== NULL_ADDRESS,
-      )
-      .map((job) => job.job),
-  (runningIds) => {
+  runningJobIds,
+  async (runningIds) => {
     const id = deployment.value?.id;
     for (const [jobId, release] of heldFeeds) {
       if (!runningIds.includes(jobId)) {
@@ -883,7 +902,12 @@ watch(
       }
     }
     if (!id) return;
-    for (const jobId of runningIds) {
+    if (!runningIds.some((jobId) => !heldFeeds.has(jobId))) return;
+
+    await warmHeaders(id);
+    // The page or the job set may have moved on while the headers were signed.
+    if (pageClosed) return;
+    for (const jobId of runningJobIds.value) {
       if (!heldFeeds.has(jobId)) {
         heldFeeds.set(jobId, acquireJobFeeds(nosana.value.api, jobId, id).release);
       }
@@ -891,7 +915,13 @@ watch(
   },
   { immediate: true },
 );
+const headerRefresh = setInterval(() => {
+  const id = deployment.value?.id;
+  if (id && runningJobIds.value.length > 0) void warmHeaders(id);
+}, HEADER_REFRESH_MS);
 onBeforeUnmount(() => {
+  pageClosed = true;
+  clearInterval(headerRefresh);
   for (const release of heldFeeds.values()) release();
   heldFeeds.clear();
 });
@@ -922,7 +952,7 @@ const switchAction = (action: string) => {
   if (action === "update-replicas") showReplicasModal.value = true;
   else if (action === "update-timeout") showTimeoutModal.value = true;
   else if (action === "update-schedule") showScheduleModal.value = true;
-  else if (action === "update-market") showMarketModal.value = true;
+  else if (action === "update-market") showRequirementsDrawer.value = true;
   else if (action === "duplicate") showDuplicateModal.value = true;
 
   router.replace({
@@ -953,7 +983,7 @@ watch(showScheduleModal, (isOpen) => {
   if (!isOpen && route.query.action === "update-schedule") clearAction();
 });
 
-watch(showMarketModal, (isOpen) => {
+watch(showRequirementsDrawer, (isOpen) => {
   if (!isOpen && route.query.action === "update-market") clearAction();
 });
 
