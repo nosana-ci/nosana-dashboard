@@ -290,36 +290,13 @@
                 </div>
               </div>
 
-              <!-- Token picker -->
-              <div class="mb-4">
-                <label class="label is-small">Token</label>
-                <div class="buttons">
-                  <button
-                    class="button is-small"
-                    :class="{ 'is-dark': cryptoToken === 'USDC' }"
-                    @click="cryptoToken = 'USDC'"
-                  >
-                    USDC
-                  </button>
-                  <button
-                    class="button is-small"
-                    :class="{ 'is-dark': cryptoToken === 'NOS' }"
-                    @click="cryptoToken = 'NOS'"
-                  >
-                    NOS
-                  </button>
-                </div>
-              </div>
-
-              <!-- Amount -->
+              <!-- Amount, with the token switch inside the field -->
               <div class="mb-4">
                 <label
                   class="label is-small is-flex is-justify-content-space-between"
+                  for="crypto-amount"
                 >
-                  <span
-                    >Amount
-                    <span class="has-text-grey">({{ cryptoToken }})</span></span
-                  >
+                  <span>Amount</span>
                   <span class="has-text-grey has-text-weight-normal">
                     <template v-if="loadingBalance">Loading...</template>
                     <template v-else-if="selectedTokenBalance !== null">
@@ -333,15 +310,33 @@
                     </template>
                   </span>
                 </label>
-                <div class="control">
+                <div class="crypto-amount input">
                   <input
-                    class="input"
+                    id="crypto-amount"
+                    class="crypto-amount-input"
                     type="number"
                     min="0.000001"
                     step="any"
-                    :placeholder="`Amount in ${cryptoToken}`"
+                    placeholder="0.00"
                     v-model.number="cryptoAmount"
                   />
+                  <div
+                    class="crypto-token-switch"
+                    role="radiogroup"
+                    aria-label="Token"
+                  >
+                    <button
+                      v-for="token in CRYPTO_TOKENS"
+                      :key="token"
+                      type="button"
+                      role="radio"
+                      :aria-checked="cryptoToken === token"
+                      :class="{ 'is-active': cryptoToken === token }"
+                      @click="cryptoToken = token"
+                    >
+                      {{ token }}
+                    </button>
+                  </div>
                 </div>
                 <p
                   v-if="!(cryptoAmount && cryptoAmount > 0)"
@@ -583,6 +578,7 @@ const nosPrice = computed(() => stats.value?.price || 0);
 
 const activeTab = ref<"card" | "crypto">("card");
 
+const CRYPTO_TOKENS: CryptoTopupToken[] = ["USDC", "NOS"];
 const cryptoToken = ref<CryptoTopupToken>("USDC");
 const cryptoAmount = ref<number | null>(null);
 const cryptoPurchasing = ref(false);
@@ -901,10 +897,12 @@ const formatMethodLabel = (method: SavedPaymentMethod | null) =>
 /* ---------- Crypto conversion blocks ----------
    Light theme is the default; the dark theme redefines the three surface
    tokens at the bottom, so the rules below never mention a theme. */
+.crypto-amount,
 .crypto-wallet,
 .crypto-notice,
 .crypto-receipt,
 .crypto-ack {
+  --surface-bg-solid: #{$white};
   --notice-bg: #{color.adjust($warning, $lightness: 44%)};
   --notice-fg: #7a5200;
   --surface-border: #{$grey-lighter};
@@ -962,6 +960,82 @@ const formatMethodLabel = (method: SavedPaymentMethod | null) =>
   &:hover {
     color: var(--surface-fg);
     text-decoration: underline;
+  }
+}
+
+/* The amount field: a Bulma .input shell holding a bare number input and
+   the token switch, so the switch sits inside the field's border. */
+.crypto-amount {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: auto;
+  padding: 0.25rem 0.25rem 0.25rem 0.75rem;
+
+  &:focus-within {
+    border-color: $link;
+    box-shadow: 0 0 0 0.125em rgba($link, 0.25);
+  }
+}
+
+.crypto-amount-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.25rem 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+
+  &::placeholder {
+    color: var(--surface-muted);
+  }
+
+  // The field shows the token, so the browser's spin buttons just add noise.
+  &::-webkit-outer-spin-button,
+  &::-webkit-inner-spin-button {
+    appearance: none;
+    margin: 0;
+  }
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.crypto-token-switch {
+  flex: none;
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 7px;
+  background: var(--surface-bg);
+  border: 1px solid var(--surface-border);
+
+  button {
+    padding: 0.2rem 0.6rem;
+    border: 0;
+    border-radius: 5px;
+    background: transparent;
+    color: var(--surface-muted);
+    font: inherit;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition:
+      background-color 0.15s ease,
+      color 0.15s ease;
+
+    &:hover {
+      color: var(--surface-fg);
+    }
+
+    &.is-active {
+      background: var(--surface-fg);
+      color: var(--surface-bg-solid);
+    }
   }
 }
 
@@ -1150,10 +1224,12 @@ const formatMethodLabel = (method: SavedPaymentMethod | null) =>
 
 html.dark-mode {
   .buy-credits-modal {
+    .crypto-amount,
     .crypto-wallet,
     .crypto-notice,
     .crypto-receipt,
     .crypto-ack {
+      --surface-bg-solid: #{$black-ter};
       --notice-bg: rgba(255, 184, 0, 0.12);
       --notice-fg: #{color.adjust($warning, $lightness: 22%)};
       --surface-border: #{$grey-darker};
