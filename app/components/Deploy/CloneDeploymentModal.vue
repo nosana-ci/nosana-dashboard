@@ -54,16 +54,22 @@
 
           <div class="is-flex-grow-1"></div>
 
-          <div v-if="marketOptions.length > 1" class="th-select-control">
-            <select v-model="marketFilter" class="th-select" aria-label="Market">
-              <option :value="null">All markets</option>
-              <option
-                v-for="market in marketOptions"
-                :key="market.value"
-                :value="market.value"
+          <div v-if="runsOnOptionCount > 1" class="th-select-control">
+            <select v-model="runsOnFilter" class="th-select" aria-label="Runs on">
+              <option :value="null">Runs on: all</option>
+              <optgroup
+                v-for="group in runsOnGroups"
+                :key="group.label"
+                :label="group.label"
               >
-                {{ market.label }}
-              </option>
+                <option
+                  v-for="option in group.options"
+                  :key="option.value"
+                  :value="option.value"
+                >
+                  {{ option.label }}
+                </option>
+              </optgroup>
             </select>
             <svg class="th-select-caret" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path
@@ -105,7 +111,7 @@
             <thead>
               <tr>
                 <th>Deployment</th>
-                <th>Market</th>
+                <th>Runs on</th>
                 <th>Status</th>
                 <th>Active Jobs</th>
                 <th>Last Updated</th>
@@ -145,9 +151,7 @@
                   </div>
                 </td>
                 <td>
-                  <span class="market-name" :title="deployment.market">{{
-                    marketLabel(deployment.market)
-                  }}</span>
+                  <DeploymentRunsOn :value="runsOn(deployment)" />
                 </td>
                 <td>
                   <DeploymentStatusPill :status="deployment.status" />
@@ -186,7 +190,7 @@
 
       <footer class="modal-card-foot">
         <p class="has-text-grey is-size-7 mb-0">
-          The clone copies the job definition, GPU market, replicas, timeout and
+          The clone copies the job definition, GPUs (or market), replicas, timeout and
           strategy into this form. Nothing is created until you deploy.
         </p>
         <div class="is-flex is-gap-2">
@@ -219,6 +223,7 @@ import type { ListedDeployment } from "~/composables/useDeploymentSelection";
 import { formatDate } from "~/utils/formatDate";
 import { formatTimeAgo } from "~/utils/relativeTime";
 import { truncateMiddle } from "~/utils/solana";
+import type { DeploymentRequirements } from "~/composables/useNodeRequirements";
 
 const props = defineProps<{
   showModal: boolean;
@@ -233,7 +238,8 @@ const { nosana } = useKit();
 
 const search = ref("");
 const statusFilter = ref<string | null>(null);
-const marketFilter = ref<string | null>(null);
+// `gpu:<name>`, `market:<address>` or `any`, as on the deployments list.
+const runsOnFilter = ref<string | null>(null);
 
 const statusOptions = filters.deployments || [];
 
@@ -258,35 +264,29 @@ const UNARCHIVED_STATUSES = Object.values(DeploymentStatus)
   .filter((status) => status !== DeploymentStatus.ARCHIVED)
   .join(",");
 
-const { data: testgridMarkets } = useAPI("/markets", { default: () => [] });
+// What each deployment runs on, and the Runs on filter's options from what
+// the user's deployments run on (a wider batch is read once to learn them).
+const { describe: runsOn, keysOf: runsOnKeysOf, options: runsOnOptions } = useRunsOn();
+const deploymentsTargeting = ref<
+  Array<{ market?: string | null; requirements?: DeploymentRequirements | null }>
+>([]);
 
-const marketLabel = (address?: string | null) => {
-  if (!address) return "-";
-  const match = testgridMarkets.value?.find((m: any) => m.address === address);
-  return match?.name || truncateMiddle(address, 6, 6);
-};
-
-// The market dropdown only lists markets the user actually deploys in; the
-// list endpoint can't filter by market, so it's collected from a wider batch.
-const deploymentMarkets = ref<string[]>([]);
-
-const loadDeploymentMarkets = async () => {
+const loadDeploymentsTargeting = async () => {
   try {
     const result = await nosana.value.api.deployments.list({ limit: 100 });
-    const seen = new Set<string>();
-    for (const deployment of result.deployments || []) {
-      if (deployment.market) seen.add(deployment.market);
-    }
-    deploymentMarkets.value = [...seen];
+    deploymentsTargeting.value = (result.deployments || []).map(
+      ({ market, requirements }) => ({ market, requirements }),
+    );
   } catch {
-    deploymentMarkets.value = [];
+    deploymentsTargeting.value = [];
   }
 };
 
-const marketOptions = computed(() =>
-  deploymentMarkets.value
-    .map((address) => ({ label: marketLabel(address), value: address }))
-    .sort((a, b) => a.label.localeCompare(b.label)),
+const runsOnGroups = computed(() =>
+  runsOnOptions(deploymentsTargeting.value.flatMap(runsOnKeysOf)),
+);
+const runsOnOptionCount = computed(() =>
+  runsOnGroups.value.reduce((count, group) => count + group.options.length, 0),
 );
 
 const refresh = async (
@@ -300,20 +300,16 @@ const refresh = async (
       : await nosana.value.api.deployments.list({
           search: search.value || undefined,
           status: statusFilter.value || UNARCHIVED_STATUSES,
-          // No server-side market filter, so pull a wider batch and filter below.
+          // The Runs on filter, as the endpoint's `gpu` and `market` parameters.
+          ...runsOnListParams(runsOnFilter.value ?? ""),
           // @ts-ignore - API client types don't cover the pagination params yet
-          limit: marketFilter.value ? 100 : 10,
+          limit: 10,
         });
 
     error.value = null;
-    let list = items.deployments || [];
-    if (marketFilter.value) {
-      list = list.filter((d) => d.market === marketFilter.value);
-    }
-    deployments.value = list;
-    // Server pagination can't account for the client-side market filter.
-    nextPage.value = marketFilter.value ? null : items.nextPage || null;
-    prevPage.value = marketFilter.value ? null : items.previousPage || null;
+    deployments.value = items.deployments || [];
+    nextPage.value = items.nextPage || null;
+    prevPage.value = items.previousPage || null;
   } catch (e: any) {
     error.value = e?.message || "Failed to load deployments";
     deployments.value = [];
@@ -327,7 +323,7 @@ const refresh = async (
 
 const debouncedRefresh = useDebounceFn(refresh, 500);
 
-watch([search, statusFilter, marketFilter], () => {
+watch([search, statusFilter, runsOnFilter], () => {
   if (props.showModal) debouncedRefresh();
 });
 
@@ -336,7 +332,7 @@ watch(
   (isOpen) => {
     if (!isOpen) return;
     refresh();
-    loadDeploymentMarkets();
+    loadDeploymentsTargeting();
   },
 );
 
@@ -509,10 +505,6 @@ html.dark-mode .deployments-table tbody tr.clickable-row:hover {
 .updated-cell {
   color: $text-muted;
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-.market-name {
   white-space: nowrap;
 }
 

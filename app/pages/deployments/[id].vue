@@ -2,11 +2,6 @@
   <div>
     <NuxtPage v-if="$route.params.jobaddress" />
     <template v-else>
-      <TopBar
-        title="Deployment Overview"
-        subtitle="Find information about and manage your deployment here."
-      />
-
       <Loader v-if="loading" />
       <div v-else-if="error" class="box">
         <div class="notification is-danger">
@@ -60,7 +55,6 @@
                 :hasVault="hasVault && isWalletMode"
                 :deploymentVault="deploymentVault"
                 :deploymentSchedule="deploymentSchedule"
-                :testgridMarkets="testgridMarkets || []"
               />
 
               <div class="overview-cols">
@@ -173,7 +167,6 @@
         :deployment-id="deployment.id"
         :deployment-jobs="deploymentJobs"
         :market="deployment.market"
-        :testgridMarkets="testgridMarkets || []"
         :endpoints="deploymentEndpoints"
         :job="panelJob"
         :view="panelView"
@@ -211,22 +204,18 @@
 
         <DeploymentRequirementsDrawer
           v-if="showRequirementsDrawer"
+          :requirements="deployment.requirements ?? {}"
           :market="deployment.market"
-          :markets="testgridMarkets"
           :requiredVramGb="requiredVramGb"
           :actionLoading="actionLoading"
-          @save="updateMarket"
+          @save="updateRequirements"
           @close="showRequirementsDrawer = false"
         />
 
         <DeploymentDuplicateModal
           v-model="showDuplicateModal"
           v-model:name="duplicateName"
-          v-model:market="duplicateMarket"
           :currentName="deployment.name || ''"
-          :currentMarket="deployment.market"
-          :testgridMarkets="testgridMarkets || []"
-          :jobDefinition="jobDefinitionModel"
           :actionLoading="actionLoading"
           @confirm="duplicateDeployment()"
           @configure="configureDuplicate"
@@ -260,7 +249,7 @@ import { useKit } from "~/composables/useKit";
 import { prefetchDeploymentJob } from "~/composables/jobs/useDeploymentJob";
 import { acquireJobFeeds } from "~/composables/jobs/useJobFeeds";
 import { warmJobHeaders } from "~/utils/kitJobAccess";
-import { NULL_ADDRESS, marketName } from "~/utils/solana";
+import { NULL_ADDRESS } from "~/utils/solana";
 import { useLlmEndpoint } from "~/composables/jobs/useLlmEndpoint";
 import { chatKeyStorageKey } from "~/utils/llmChat";
 import ModelChat from "~/components/Common/ModelChat.vue";
@@ -532,7 +521,6 @@ const {
   newTimeoutHours,
   newSchedule,
   duplicateName,
-  duplicateMarket,
   switchingRevision,
   viewingRevision,
   canStart,
@@ -548,7 +536,7 @@ const {
   updateName,
   updateReplicas,
   updateJobTimeout,
-  updateMarket,
+  updateRequirements,
   duplicateDeployment,
   updateSchedule,
   switchToRevision,
@@ -572,7 +560,7 @@ const {
   makeRevision,
 } = jobDef;
 
-// The GPU memory the job asks for: the Change GPU drawer hides GPUs below it.
+// The GPU memory the job asks for: the requirements drawer hides GPUs below it.
 const requiredVramGb = computed(() => {
   const vramMb = requiredVramMb(jobDefinitionModel.value);
   return vramMb === null ? null : Math.ceil(vramMb / 1024);
@@ -582,13 +570,11 @@ const requiredVramGb = computed(() => {
 detail.setLoadJobDefinition(loadJobDefinition);
 
 // --- Remaining page-level state ---
-const { data: testgridMarkets } = useAPI("/markets", { default: () => [] });
+const { marketLabel: labelMarket } = useMarketLabel();
 
-// Stands in for a job's GPU until its node reports one — a queued job has no
-// node to ask, and on mainnet the market is the GPU's name anyway.
-const marketLabel = computed(() =>
-  marketName(deployment.value?.market, testgridMarkets.value),
-);
+// Stands in for a job's GPU until its node reports one: the GPU the catalogue
+// lists the deployment's pinned market under.
+const marketLabel = computed(() => labelMarket(deployment.value?.market));
 
 // Component refs for editor validation wiring
 const jobDefEditorComponent = ref<any>(null);
@@ -609,7 +595,7 @@ const availableActions = [
   "update-replicas",
   "update-timeout",
   "update-schedule",
-  "update-market",
+  "update-requirements",
   "duplicate",
 ];
 
@@ -620,7 +606,7 @@ if (initialAction && availableActions.includes(initialAction)) {
   else if (initialAction === "update-replicas") showReplicasModal.value = true;
   else if (initialAction === "update-timeout") showTimeoutModal.value = true;
   else if (initialAction === "update-schedule") showScheduleModal.value = true;
-  else if (initialAction === "update-market")
+  else if (initialAction === "update-requirements")
     showRequirementsDrawer.value = true;
   else if (initialAction === "duplicate") showDuplicateModal.value = true;
 }
@@ -952,7 +938,8 @@ const switchAction = (action: string) => {
   if (action === "update-replicas") showReplicasModal.value = true;
   else if (action === "update-timeout") showTimeoutModal.value = true;
   else if (action === "update-schedule") showScheduleModal.value = true;
-  else if (action === "update-market") showRequirementsDrawer.value = true;
+  else if (action === "update-requirements")
+    showRequirementsDrawer.value = true;
   else if (action === "duplicate") showDuplicateModal.value = true;
 
   router.replace({
@@ -984,7 +971,7 @@ watch(showScheduleModal, (isOpen) => {
 });
 
 watch(showRequirementsDrawer, (isOpen) => {
-  if (!isOpen && route.query.action === "update-market") clearAction();
+  if (!isOpen && route.query.action === "update-requirements") clearAction();
 });
 
 watch(showDuplicateModal, (isOpen) => {
@@ -1002,7 +989,6 @@ const configureDuplicate = async () => {
     query: {
       clone: deployment.value.id,
       name: duplicateName.value.trim() || undefined,
-      market: duplicateMarket.value || undefined,
     },
   });
   if (failure) showDuplicateModal.value = false;

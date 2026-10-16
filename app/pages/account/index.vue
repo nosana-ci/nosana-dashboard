@@ -807,8 +807,8 @@ watch(loadingHistory, (val) => {
   }
 });
 
-// Get markets data for name mapping
-const { data: marketsData } = useAPI("/markets", { default: () => [] });
+// Markets are named by the GPU the catalogue lists them under.
+const { gpus: catalogueGpus } = useGpuModels();
 
 // Predefined colors for different GPU types with distinct color scheme
 const GPU_COLORS: Record<string, string> = {
@@ -836,27 +836,17 @@ const GPU_COLORS: Record<string, string> = {
   "NVIDIA H100": "#E3FCBF",
 };
 
-// Create a mapping of market addresses to names and group info
+// Market address → the GPU it serves, from the catalogue. Only open (premium)
+// markets are in it, so a market found here is never a community one; spend
+// in a market it does not know falls to the "custom" handling below.
 const marketAddressToInfo = computed(() => {
-  if (!marketsData.value) return {};
-  return marketsData.value.reduce(
-    (
-      acc: Record<string, { name: string; isCommunity: boolean }>,
-      market: any,
-    ) => {
-      // Include all markets, not just NVIDIA ones
-      if (market.address) {
-        acc[market.address] = {
-          name:
-            market.name?.replace(" Community", "") ||
-            market.address.slice(0, 8) + "...", // Remove Community suffix or use truncated address
-          isCommunity: market.name?.includes("Community") || false,
-        };
-      }
-      return acc;
-    },
-    {},
-  );
+  const info: Record<string, { name: string; isCommunity: boolean }> = {};
+  for (const gpu of catalogueGpus.value) {
+    for (const address of gpu.markets) {
+      info[address] ??= { name: shortGpuName(gpu.name), isCommunity: false };
+    }
+  }
+  return info;
 });
 
 // Remove duplicate watcher - already handled in main watcher above

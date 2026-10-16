@@ -8,7 +8,7 @@
       aria-labelledby="rq-title"
     >
       <header class="rq-head">
-        <h2 id="rq-title" class="rq-title">Change GPU</h2>
+        <h2 id="rq-title" class="rq-title">Change Requirements</h2>
         <button
           type="button"
           class="delete"
@@ -19,8 +19,8 @@
 
       <div class="rq-body">
         <DeployRequirementsSelection
-          v-model="draft"
-          :markets="markets"
+          v-model="draftGpus"
+          v-model:requirements="draftRequirements"
           :required-vram-gb="requiredVramGb"
           @matching="matching = $event"
         />
@@ -29,8 +29,13 @@
       <footer class="rq-foot">
         <div class="rq-status">
           <p v-if="matching" :class="{ 'is-none': matching.hosts === 0 }">
-            <strong>{{ hostsLabel(matching.hosts) }}</strong> on this GPU ·
-            {{ matching.available }} free now
+            <strong>{{ hostsLabel(matching.hosts) }}</strong> with
+            {{ draftGpus.length === 1 ? "this GPU" : "these GPUs" }} ·
+            <template v-if="matching.qualifying !== null">
+              {{ matching.qualifying }} of {{ matching.available }} free now
+              meet the requirements
+            </template>
+            <template v-else>{{ matching.available }} free now</template>
           </p>
           <p class="rq-note">{{ note }}</p>
         </div>
@@ -38,17 +43,17 @@
           v-if="changed"
           type="button"
           class="button is-text"
-          @click="draft = market"
+          @click="undo"
         >
           Undo
         </button>
         <button
           type="button"
           class="button is-success"
-          :disabled="!changed || actionLoading"
+          :disabled="!canSave || actionLoading"
           @click="save"
         >
-          Save GPU
+          Save requirements
         </button>
       </footer>
     </aside>
@@ -57,17 +62,24 @@
 
 <script setup lang="ts">
 import { useEventListener } from "@vueuse/core";
-import type {
-  MarketRate,
-  MatchingHosts,
+import {
+  gpusInMarket,
+  gpusOf,
+  keepCategorizedRequirements,
+  useGpuListings,
+  withGpus,
+  type DeploymentRequirements,
+  type MatchingHosts,
+  type Requirements,
 } from "~/composables/useNodeRequirements";
 
-// Mounted while open: the draft starts from the deployment's market each time.
+// Mounted while open: the draft starts from the saved GPUs and requirements
+// each time.
 const props = defineProps<{
-  /** The deployment's market: the draft starts here. */
-  market: string;
-  /** The testgrid `/markets` rows: the markets to choose from. */
-  markets: MarketRate[] | null;
+  /** The saved requirements: the GPUs under `name`, and the specs. */
+  requirements: DeploymentRequirements;
+  /** The deployment's market; set on one made when the GPU was picked as a market. */
+  market: string | null;
   /** The VRAM the job definition asks for; GPUs below it are hidden. */
   requiredVramGb: number | null;
   actionLoading: boolean;
@@ -75,24 +87,67 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   close: [];
-  /** The market to move the deployment to. */
-  save: [market: string];
+  /** The GPUs and the specs together, as on create: the market is dropped. */
+  save: [requirements: DeploymentRequirements];
 }>();
 
-const draft = ref(props.market);
+const saved = keepCategorizedRequirements(props.requirements);
+const draftRequirements = ref<Requirements>({ ...saved });
 const matching = ref<MatchingHosts | null>(null);
-const changed = computed(() => draft.value !== props.market);
+
+// The saved GPUs; a deployment made when the GPU was picked as a market
+// starts from the GPUs that market serves, once the catalogue resolves.
+const { listings } = useGpuListings();
+const savedGpus = ref(gpusOf(props.requirements));
+const draftGpus = ref([...savedGpus.value]);
+if (!savedGpus.value.length && props.market) {
+  const market = props.market;
+  const stop = watch(
+    listings,
+    (gpus) => {
+      const served = gpusInMarket(gpus, market);
+      if (!served.length) return;
+      savedGpus.value = served;
+      draftGpus.value = [...served];
+      stop();
+    },
+    { immediate: true },
+  );
+}
+
+// Key and GPU order are not a change: compare sorted entries.
+const entriesOf = (requirements: Requirements) =>
+  JSON.stringify(
+    Object.entries(requirements).sort(([a], [b]) => a.localeCompare(b)),
+  );
+const sameGpus = (a: string[], b: string[]) =>
+  JSON.stringify([...a].sort()) === JSON.stringify([...b].sort());
+const changed = computed(
+  () =>
+    !sameGpus(draftGpus.value, savedGpus.value) ||
+    entriesOf(draftRequirements.value) !== entriesOf(saved),
+);
+// A deployment made on one market can always be saved: that moves it to
+// every premium market serving its GPUs.
+const canSave = computed(
+  () => (changed.value || Boolean(props.market)) && draftGpus.value.length > 0,
+);
 
 const note = computed(() =>
-  changed.value
-    ? "A new GPU moves the deployment to its market: running jobs restart on the new GPU's hosts."
-    : "Pick another GPU to move the deployment to its market.",
+  props.market
+    ? "Saving lets new and replacement jobs run on these GPUs in any premium market, cheapest first. Running jobs keep their hosts."
+    : "Running jobs keep their hosts. New and replacement jobs use these GPUs and requirements.",
 );
 
 const hostsLabel = (hosts: number) => `${hosts} host${hosts === 1 ? "" : "s"}`;
 
+function undo() {
+  draftGpus.value = [...savedGpus.value];
+  draftRequirements.value = { ...saved };
+}
+
 function save() {
-  emit("save", draft.value);
+  emit("save", withGpus(draftRequirements.value, draftGpus.value));
   emit("close");
 }
 

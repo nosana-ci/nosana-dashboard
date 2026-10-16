@@ -1,4 +1,4 @@
-import type { Deployment } from "@nosana/kit";
+import type { Deployment, DeploymentRequirements } from "@nosana/kit";
 import { useToast } from "vue-toastification";
 import { parseCronExpression } from "~/utils/parseCronExpression";
 import {
@@ -37,8 +37,6 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
   const newTimeoutHours = ref<number | null>(null);
   const newSchedule = ref("");
   const duplicateName = ref("");
-  // Empty means "duplicate onto the source deployment's market".
-  const duplicateMarket = ref("");
 
   // Hands a freshly duplicated deployment to the detail page so it renders
   // without refetching (same hand-off the create page uses).
@@ -275,12 +273,12 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
     newTimeoutHours.value = null;
   };
 
-  // Moves the deployment to another market. Host requirements set against
-  // the old market's hosts go with it, so the new market's hosts all qualify.
-  const updateMarket = async (market: string) => {
+  // The GPUs and specs together, with no market, as on create: new and
+  // replacement jobs go to the cheapest premium market with a matching host.
+  const updateRequirements = async (requirements: DeploymentRequirements) => {
     await executeDeploymentAction(
-      () => deps.deployment.value!.updateRequirements(null, market),
-      "Deployment market updated",
+      () => deps.deployment.value!.updateRequirements(requirements),
+      "Deployment requirements updated",
     );
   };
 
@@ -296,15 +294,11 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
 
     try {
       actionLoading.value = true;
-      const market = duplicateMarket.value.trim();
-      const copy = await deps.deployment.value.duplicate({
-        name,
-        ...(market ? { market } : {}),
-      });
+      // The copy keeps the source's GPUs and requirements, or its pinned market.
+      const copy = await deps.deployment.value.duplicate({ name });
 
       toast.success(`Deployment duplicated as ${name}`);
       duplicateName.value = "";
-      duplicateMarket.value = "";
 
       preloadedDeployment.value = copy;
       await router.push(`/deployments/${copy.id}`);
@@ -444,7 +438,6 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
     newTimeoutHours,
     newSchedule,
     duplicateName,
-    duplicateMarket,
 
     // Revision state
     switchingRevision,
@@ -468,7 +461,7 @@ export function useDeploymentActions(deps: DeploymentActionsDeps) {
     updateName,
     updateReplicas,
     updateJobTimeout,
-    updateMarket,
+    updateRequirements,
     duplicateDeployment,
     updateSchedule,
     switchToRevision,

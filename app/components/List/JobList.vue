@@ -37,23 +37,7 @@
                     class="mr-2"
                     style="width: 20px; height: 20px"
                   />
-                  <span
-                    v-if="
-                      testgridMarkets &&
-                      testgridMarkets.find(
-                        (tgm: any) => tgm.address === job.market.toString(),
-                      )
-                    "
-                  >
-                    {{
-                      testgridMarkets.find(
-                        (tgm: any) => tgm.address === job.market.toString(),
-                      ).name
-                    }}
-                  </span>
-                  <span v-else class="is-family-monospace">{{
-                    job.market.toString()
-                  }}</span>
+                  <span>{{ marketLabel(job.market.toString()) }}</span>
                 </NuxtLink>
               </td>
               <td>
@@ -153,7 +137,6 @@
                       showPerHour:
                         job.state === 1 || (!job.timeStart && !job.timeEnd),
                     }"
-                    :marketsData="testgridMarkets"
                   />
                 </NuxtLink>
               </td>
@@ -322,16 +305,13 @@ const filteredJobs = computed(() => {
       const jobAddress = job.address.toLowerCase();
       const jobImage = getJobImage(job).toLowerCase();
       const templateName = getTemplateForJob(job)?.name?.toLowerCase() || "";
-      const marketName =
-        testgridMarkets.value
-          ?.find((m: any) => m.address === job.market.toString())
-          ?.name?.toLowerCase() || "";
+      const marketText = marketLabel(job.market.toString()).toLowerCase();
 
       return (
         jobAddress.includes(query) ||
         jobImage.includes(query) ||
         templateName.includes(query) ||
-        marketName.includes(query)
+        marketText.includes(query)
       );
     });
   }
@@ -386,12 +366,7 @@ const formatTimeAgo = (timestamp: number) => {
   return `${Math.floor(seconds / 86400)}d ago`;
 };
 
-const { data: testgridMarkets } = useAPI("/markets", { default: () => [] });
-
-const { markets, getMarkets } = useMarkets();
-if (!markets.value) {
-  getMarkets();
-}
+const { marketLabel } = useMarketLabel();
 
 const getStatusIconComponent = (state: number) => {
   switch (state) {
