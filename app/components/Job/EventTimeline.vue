@@ -78,22 +78,15 @@
 </template>
 
 <script setup lang="ts">
-import {
-  buildJobTimeline,
-  formatEventTimeAgo,
-  formatEventTimestamp,
-  solscanTxUrl,
-  type JobEvent,
-  type MarketRef,
-} from "~/utils/jobEvents";
+import { buildJobTimeline, formatEventTimeAgo, formatEventTimestamp, solscanTxUrl, type JobEvent } from "~/utils/jobEvents";
 import StatusMark from "~/components/Common/StatusMark.vue";
 
 const props = defineProps<{
   events: JobEvent[];
-  // Used to name the market a job was posted to instead of only showing its
-  // address; addresses are shown as-is when it isn't provided.
-  markets?: MarketRef[] | null;
 }>();
+
+// The market a job was posted to, named by the GPU the catalogue lists it under.
+const { marketLabel } = useMarketLabel();
 
 const config = useRuntimeConfig();
 const isDevnet = config.public.network === "devnet";
@@ -102,7 +95,7 @@ const isDevnet = config.public.network === "devnet";
 // builder keeps the indexer's chronological order, since that is what the
 // on-chain sequence means; reading direction is this component's decision.
 const items = computed(() =>
-  buildJobTimeline(props.events, props.markets).reverse(),
+  buildJobTimeline(props.events, marketLabel).reverse(),
 );
 </script>
 

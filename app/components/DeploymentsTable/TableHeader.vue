@@ -207,8 +207,8 @@ watch(connected, (isConnected) => {
 });
 
 // The Runs on filter's options come from what the user's own deployments run
-// on: their GPUs, pinned markets, and "Any GPU" (the list endpoint can't
-// filter by it server-side, so a wider batch is read once).
+// on: their GPUs, pinned markets, and "Any GPU" (a wider batch is read once
+// to learn them).
 const { keysOf: runsOnKeysOf, options: runsOnOptions } = useRunsOn();
 const deploymentsTargeting = ref<
   Array<{ market?: string | null; requirements?: DeploymentRequirements | null }>

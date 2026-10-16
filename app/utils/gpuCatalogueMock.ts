@@ -3,7 +3,6 @@ import {
   gpusOf,
   GPU_KEY,
   type DeploymentRequirements,
-  type MarketRate,
 } from "~/composables/useNodeRequirements";
 
 /**
@@ -18,19 +17,22 @@ export function isGpuMockOn(): boolean {
   return import.meta.dev && String(useCookie("mockGpus").value) === "1";
 }
 
-// Mock markets: `type` decides whether a deployment without a market may use
-// them (PREMIUM only), `usd_reward_per_hour` is before the network fee.
-function market(
-  slug: string,
-  name: string,
-  usd: number,
-  type = "PREMIUM",
-): MarketRate {
+// Mock markets, as host-manager's catalogue sees them: `open` is whether a
+// deployment without a market may use one (PREMIUM, not client-private), and
+// `usd` is the hourly base reward before the network fee (0: unpriced).
+interface MockMarket {
+  address: string;
+  name: string;
+  open: boolean;
+  usd: number;
+}
+
+function market(slug: string, name: string, usd: number, type = "PREMIUM"): MockMarket {
   return {
     address: `Mock${slug}`.padEnd(44, "1"),
     name,
-    type,
-    usd_reward_per_hour: usd,
+    open: type === "PREMIUM",
+    usd,
   };
 }
 
@@ -59,10 +61,8 @@ const M = {
   community: market("Community", "Community 3090", 0.11, "COMMUNITY"),
 };
 
-export const MOCK_GPU_MARKETS: MarketRate[] = Object.values(M);
-
 // [name, VRAM GB, hosts, queued now, running a job, markets]
-type Row = [string, number, number, number, number, MarketRate[]];
+type Row = [string, number, number, number, number, MockMarket[]];
 
 const ROWS: Row[] = [
   ["NVIDIA GeForce RTX 3060", 12, 41, 9, 22, [M.rtx3060]],
@@ -92,19 +92,30 @@ const ROWS: Row[] = [
   ["NVIDIA H100 80GB HBM3", 80, 16, 3, 12, [M.h100, M.h100Spot]],
   ["NVIDIA H200", 141, 6, 1, 5, [M.h200]],
   ["NVIDIA B200", 180, 2, 0, 2, [M.b200]],
-  // Only in a community market: not listed (deployments without a market are PREMIUM only).
+  // Only in a community market: the catalogue leaves it out, as host-manager does.
   ["NVIDIA GeForce GTX 1080 Ti", 11, 15, 7, 6, [M.community]],
 ];
 
+/** The catalogue as host-manager answers it: open markets only, priced from them. */
 export const MOCK_GPU_MODELS: NosanaGpuModels = {
-  gpus: ROWS.map(([name, vramGb, nodes, available, working, markets]) => ({
-    name,
-    vramGb,
-    nodes,
-    available,
-    working,
-    markets: markets.map((entry) => entry.address),
-  })),
+  gpus: ROWS.flatMap(([name, vramGb, nodes, available, working, markets]) => {
+    const open = markets.filter((entry) => entry.open);
+    if (!open.length) return [];
+    const priced = open.filter((entry) => entry.usd > 0).map((entry) => entry.usd);
+    return [
+      {
+        name,
+        vramGb,
+        nodes,
+        available,
+        working,
+        markets: open.map((entry) => entry.address),
+        price: priced.length
+          ? { minUsdPerHour: Math.min(...priced), maxUsdPerHour: Math.max(...priced) }
+          : null,
+      },
+    ];
+  }),
 };
 
 /**

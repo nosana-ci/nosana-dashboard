@@ -53,7 +53,7 @@ import LogCollectorViewer from "~/components/LogCollector/LogCollectorViewer.vue
 const props = defineProps<{
   deploymentId: string;
   jobs: JobItem[];
-  market?: string;
+  market?: string | null;
   /** Jobs the view opens filtered to, e.g. from a job row's Logs button. */
   jobFilter?: string[];
   /** Hide the job picker when the view is scoped to one job. */
@@ -83,7 +83,7 @@ const {
   deploymentId: props.deploymentId,
   jobs: jobsRef,
   selectedJobIds,
-  market: computed(() => props.market),
+  market: computed(() => props.market ?? undefined),
 });
 
 const {

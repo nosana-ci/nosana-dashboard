@@ -191,9 +191,9 @@ import {
 const { isAuthenticated, isLoading } = useSuperTokens();
 const { connected } = useWallet();
 
-// What each deployment runs on (a pinned market, its GPUs, other
-// requirements, or anything), and its keys for the Runs on filter.
-const { describe: runsOn, keysOf: runsOnKeysOf } = useRunsOn();
+// What each deployment runs on: a pinned market, its GPUs, other
+// requirements, or anything.
+const { describe: runsOn } = useRunsOn();
 
 const isWalletMode = computed(() => {
   return connected.value && !isAuthenticated.value;
@@ -301,24 +301,17 @@ const refreshDeployments = async (
       items = await nosana.value.api.deployments.list({
         search: searchQuery.value || undefined,
         status: statusQuery.value || UNARCHIVED_STATUSES,
-        // The list endpoint can't filter by what a deployment runs on, so when
-        // the filter is set we pull a larger batch and filter client-side below.
+        // The Runs on filter, as the endpoint's `gpu` and `market` parameters.
+        ...runsOnListParams(runsOnQuery.value),
         // @ts-ignore - API client types need to be updated to reflect new pagination params1
-        limit: runsOnQuery.value ? 100 : props.itemsPerPage,
+        limit: props.itemsPerPage,
       });
     }
 
     deploymentsError.value = null;
-    let list = items.deployments || [];
-    if (runsOnQuery.value) {
-      list = list.filter((d) => runsOnKeysOf(d).includes(runsOnQuery.value));
-    }
-    deployments.value = list;
-    // Server pagination can't account for the client-side Runs on filter, so
-    // hide it while the filter is set (the batch above covers realistic
-    // per-user deployment counts).
-    nextPage.value = runsOnQuery.value ? null : items.nextPage || null;
-    prevPage.value = runsOnQuery.value ? null : items.previousPage || null;
+    deployments.value = items.deployments || [];
+    nextPage.value = items.nextPage || null;
+    prevPage.value = items.previousPage || null;
   } catch (e: any) {
     deploymentsError.value = e?.message || "Failed to load deployments";
     deployments.value = [];

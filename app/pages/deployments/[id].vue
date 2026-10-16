@@ -55,7 +55,6 @@
                 :hasVault="hasVault && isWalletMode"
                 :deploymentVault="deploymentVault"
                 :deploymentSchedule="deploymentSchedule"
-                :testgridMarkets="testgridMarkets || []"
               />
 
               <div class="overview-cols">
@@ -168,7 +167,6 @@
         :deployment-id="deployment.id"
         :deployment-jobs="deploymentJobs"
         :market="deployment.market"
-        :testgridMarkets="testgridMarkets || []"
         :endpoints="deploymentEndpoints"
         :job="panelJob"
         :view="panelView"
@@ -208,7 +206,6 @@
           v-if="showRequirementsDrawer"
           :requirements="deployment.requirements ?? {}"
           :market="deployment.market"
-          :markets="testgridMarkets"
           :requiredVramGb="requiredVramGb"
           :actionLoading="actionLoading"
           @save="updateRequirements"
@@ -218,11 +215,7 @@
         <DeploymentDuplicateModal
           v-model="showDuplicateModal"
           v-model:name="duplicateName"
-          v-model:market="duplicateMarket"
           :currentName="deployment.name || ''"
-          :currentMarket="deployment.market"
-          :testgridMarkets="testgridMarkets || []"
-          :jobDefinition="jobDefinitionModel"
           :actionLoading="actionLoading"
           @confirm="duplicateDeployment()"
           @configure="configureDuplicate"
@@ -256,7 +249,7 @@ import { useKit } from "~/composables/useKit";
 import { prefetchDeploymentJob } from "~/composables/jobs/useDeploymentJob";
 import { acquireJobFeeds } from "~/composables/jobs/useJobFeeds";
 import { warmJobHeaders } from "~/utils/kitJobAccess";
-import { NULL_ADDRESS, marketName } from "~/utils/solana";
+import { NULL_ADDRESS } from "~/utils/solana";
 import { useLlmEndpoint } from "~/composables/jobs/useLlmEndpoint";
 import { chatKeyStorageKey } from "~/utils/llmChat";
 import ModelChat from "~/components/Common/ModelChat.vue";
@@ -528,7 +521,6 @@ const {
   newTimeoutHours,
   newSchedule,
   duplicateName,
-  duplicateMarket,
   switchingRevision,
   viewingRevision,
   canStart,
@@ -578,13 +570,11 @@ const requiredVramGb = computed(() => {
 detail.setLoadJobDefinition(loadJobDefinition);
 
 // --- Remaining page-level state ---
-const { data: testgridMarkets } = useAPI("/markets", { default: () => [] });
+const { marketLabel: labelMarket } = useMarketLabel();
 
-// Stands in for a job's GPU until its node reports one — a queued job has no
-// node to ask, and on mainnet the market is the GPU's name anyway.
-const marketLabel = computed(() =>
-  marketName(deployment.value?.market, testgridMarkets.value),
-);
+// Stands in for a job's GPU until its node reports one: the GPU the catalogue
+// lists the deployment's pinned market under.
+const marketLabel = computed(() => labelMarket(deployment.value?.market));
 
 // Component refs for editor validation wiring
 const jobDefEditorComponent = ref<any>(null);
@@ -999,7 +989,6 @@ const configureDuplicate = async () => {
     query: {
       clone: deployment.value.id,
       name: duplicateName.value.trim() || undefined,
-      market: duplicateMarket.value || undefined,
     },
   });
   if (failure) showDuplicateModal.value = false;

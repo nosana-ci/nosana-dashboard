@@ -9,7 +9,6 @@
       v-else-if="!onWorkloadPage"
       :templates="groupedTemplates || []"
       :recent-deployments="recentDeployments"
-      :markets="testgridMarkets"
       :loading-recent="loadingRecent"
       :can-clone="hasAnyAuth"
       @select-template="selectTemplateFromModal"
@@ -64,7 +63,6 @@
         <DeployRequirementsSelection
           v-model="selectedGpus"
           v-model:requirements="advancedRequirements"
-          :markets="testgridMarkets"
           :recommended-gpu="
             selectedTemplate ? (recommendedGpu?.name ?? null) : null
           "
@@ -437,9 +435,6 @@ const usdtPrice = ref(0);
 
 // API data
 const { data: stats } = await useAPI("/stats");
-const { data: testgridMarkets } = await useAPI("/markets", {
-  default: () => [],
-});
 
 const nosApiPrice = computed(() => stats.value?.price || 0);
 
@@ -463,7 +458,7 @@ const sshError = ref("");
 // One click: with nothing chosen yet the GPU defaults to the recommended one
 // (a clone keeps its own GPUs), and a default that stops fitting the
 // workload is replaced. GPUs the user picked stay.
-const { listings: gpuListings } = useGpuListings(() => testgridMarkets.value);
+const { listings: gpuListings } = useGpuListings();
 // The chosen GPUs as the GPU list shows them, so the template page, which
 // has no GPU list mounted, still knows the GPUs, their hosts and the price.
 const selectedGpuListings = computed(() =>
@@ -769,9 +764,8 @@ const createDeployment = async () => {
       autostart: true,
       ssh_public_keys: sshPublicKeys.value,
       job_definition: jobDefinition.value,
-    } as Parameters<
-      typeof nosana.value.api.deployments.create
-    >[0])) as Deployment;
+      // The client is a signer-or-API-key union; here it always has a signer.
+    })) as Deployment;
 
     toast.success(`Successfully created deployment ${deployment.id}`);
 

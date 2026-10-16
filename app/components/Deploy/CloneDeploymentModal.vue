@@ -265,8 +265,7 @@ const UNARCHIVED_STATUSES = Object.values(DeploymentStatus)
   .join(",");
 
 // What each deployment runs on, and the Runs on filter's options from what
-// the user's deployments run on (the list endpoint can't filter by it, so a
-// wider batch is read once).
+// the user's deployments run on (a wider batch is read once to learn them).
 const { describe: runsOn, keysOf: runsOnKeysOf, options: runsOnOptions } = useRunsOn();
 const deploymentsTargeting = ref<
   Array<{ market?: string | null; requirements?: DeploymentRequirements | null }>
@@ -301,21 +300,16 @@ const refresh = async (
       : await nosana.value.api.deployments.list({
           search: search.value || undefined,
           status: statusFilter.value || UNARCHIVED_STATUSES,
-          // No server-side Runs on filter, so pull a wider batch and filter below.
+          // The Runs on filter, as the endpoint's `gpu` and `market` parameters.
+          ...runsOnListParams(runsOnFilter.value ?? ""),
           // @ts-ignore - API client types don't cover the pagination params yet
-          limit: runsOnFilter.value ? 100 : 10,
+          limit: 10,
         });
 
     error.value = null;
-    let list = items.deployments || [];
-    if (runsOnFilter.value) {
-      const key = runsOnFilter.value;
-      list = list.filter((d) => runsOnKeysOf(d).includes(key));
-    }
-    deployments.value = list;
-    // Server pagination can't account for the client-side Runs on filter.
-    nextPage.value = runsOnFilter.value ? null : items.nextPage || null;
-    prevPage.value = runsOnFilter.value ? null : items.previousPage || null;
+    deployments.value = items.deployments || [];
+    nextPage.value = items.nextPage || null;
+    prevPage.value = items.previousPage || null;
   } catch (e: any) {
     error.value = e?.message || "Failed to load deployments";
     deployments.value = [];

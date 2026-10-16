@@ -38,10 +38,8 @@ export interface JobTimelineItem {
   detail: JobEventDetail | null;
 }
 
-export interface MarketRef {
-  address: string;
-  name?: string;
-}
+/** Names a market for display, e.g. by the GPU it serves; falls back to its short address. */
+export type MarketLabel = (address: string) => string;
 
 /**
  * Copy for every Nosana Jobs instruction the indexer can record against a job.
@@ -110,15 +108,12 @@ export const formatEventTimeAgo = (
 
 const marketDetail = (
   event: JobEvent,
-  markets?: MarketRef[] | null,
+  marketLabel?: MarketLabel,
 ): JobEventDetail | null => {
   if (!event.marketAddress) return null;
-  const name = markets?.find(
-    (m) => String(m.address).trim() === event.marketAddress,
-  )?.name;
   return {
     label: "Market",
-    text: name || shortAddress(event.marketAddress),
+    text: marketLabel?.(event.marketAddress) || shortAddress(event.marketAddress),
     value: event.marketAddress,
     href: `https://explore.nosana.com/markets/${event.marketAddress}`,
   };
@@ -136,18 +131,18 @@ const nodeDetail = (event: JobEvent): JobEventDetail | null =>
 
 const detailFor = (
   event: JobEvent,
-  markets?: MarketRef[] | null,
+  marketLabel?: MarketLabel,
 ): JobEventDetail | null => {
   switch (event.type) {
     case "List":
     case "Delist":
-      return marketDetail(event, markets);
+      return marketDetail(event, marketLabel);
     case "Assign":
     case "Work":
     case "Claim":
     case "Finish":
     case "Quit":
-      return nodeDetail(event) ?? marketDetail(event, markets);
+      return nodeDetail(event) ?? marketDetail(event, marketLabel);
     case "Extend": {
       // `timeout` is the job's new absolute timeout after extending.
       const timeout = Number(event.data?.timeout);
@@ -166,7 +161,7 @@ const detailFor = (
 /** Maps indexer events (oldest first) onto renderable timeline entries. */
 export const buildJobTimeline = (
   events: JobEvent[],
-  markets?: MarketRef[] | null,
+  marketLabel?: MarketLabel,
 ): JobTimelineItem[] =>
   events.map((event) => {
     // Unknown instruction: show the raw type rather than dropping the event.
@@ -179,6 +174,6 @@ export const buildJobTimeline = (
       event,
       title: copy.title,
       tone: copy.tone,
-      detail: detailFor(event, markets),
+      detail: detailFor(event, marketLabel),
     };
   });

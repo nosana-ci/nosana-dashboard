@@ -21,7 +21,6 @@
         <DeployRequirementsSelection
           v-model="draftGpus"
           v-model:requirements="draftRequirements"
-          :markets="markets"
           :required-vram-gb="requiredVramGb"
           @matching="matching = $event"
         />
@@ -70,7 +69,6 @@ import {
   useGpuListings,
   withGpus,
   type DeploymentRequirements,
-  type MarketRate,
   type MatchingHosts,
   type Requirements,
 } from "~/composables/useNodeRequirements";
@@ -82,8 +80,6 @@ const props = defineProps<{
   requirements: DeploymentRequirements;
   /** The deployment's market; set on one made when the GPU was picked as a market. */
   market: string | null;
-  /** The testgrid `/markets` rows: the markets the GPUs are priced from. */
-  markets: MarketRate[] | null;
   /** The VRAM the job definition asks for; GPUs below it are hidden. */
   requiredVramGb: number | null;
   actionLoading: boolean;
@@ -101,7 +97,7 @@ const matching = ref<MatchingHosts | null>(null);
 
 // The saved GPUs; a deployment made when the GPU was picked as a market
 // starts from the GPUs that market serves, once the catalogue resolves.
-const { listings } = useGpuListings(() => props.markets);
+const { listings } = useGpuListings();
 const savedGpus = ref(gpusOf(props.requirements));
 const draftGpus = ref([...savedGpus.value]);
 if (!savedGpus.value.length && props.market) {

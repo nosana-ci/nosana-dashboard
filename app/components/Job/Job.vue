@@ -235,7 +235,7 @@
         <!-- On-chain activity, hidden when the API has no events endpoint.
              The job panel shows it on its own Activity view instead. -->
         <div v-if="!isPanel && jobEventsSupported && !loadingJobEvents">
-          <JobEventTimeline :events="jobEvents" :markets="testgridMarkets" />
+          <JobEventTimeline :events="jobEvents" />
         </div>
       </div>
 
@@ -247,7 +247,6 @@
         <JobEventTimeline
           v-else-if="jobEventsSupported"
           :events="jobEvents"
-          :markets="testgridMarkets"
         />
         <p v-else class="section-empty">
           Activity is not available for this job.
@@ -469,12 +468,6 @@ import type { ProgressBar } from "~/composables/jobs/logTypes";
 import SystemUsageCharts from "./SystemUsageCharts.vue";
 
 // Type definitions
-interface TestgridMarket {
-  address: string;
-  name: string;
-  usd_reward_per_hour?: number;
-}
-
 interface GpuDevice {
   name: string;
   memory?: {
@@ -583,17 +576,6 @@ const { templates } = useTemplates();
 const { markets } = useMarkets();
 const { saveState } = useDeployPageState();
 
-// Fetch markets data needed for centralized pricing
-const { data: testgridMarkets, execute: executeMarkets } = useAPI<
-  TestgridMarket[]
->("/markets", { default: () => [] });
-
-// Execute the markets API call on mount
-onMounted(() => {
-  if (!testgridMarkets.value || testgridMarkets.value.length === 0) {
-    executeMarkets();
-  }
-});
 const toast = useToast();
 const router = useRouter();
 
@@ -793,12 +775,10 @@ const jobOptionsForPriceComponent = computed(() => {
   return { showPerHour: !props.job.isCompleted };
 });
 
-// Get accurate pricing using the same method as job list
-const marketsDataRef = computed(() => testgridMarkets.value);
+// Priced from the job's own hourly rate, as the job list is.
 const { totalNos, totalCostUsd, usdPricePerHour } = useJobPricing(
   jobDataForPriceComponent,
   { showPerHour: false },
-  marketsDataRef,
 );
 
 // Duration data for SecondsFormatter
@@ -1376,15 +1356,6 @@ watch(
 // Market address as a simple string
 const marketAddress = computed(() => String(props.job.market ?? "").trim());
 
-// Market name from API (match by address)
-const marketName = computed(() => {
-  const address = marketAddress.value;
-  if (!address || !testgridMarkets.value?.length) return null;
-  const market = testgridMarkets.value.find(
-    (m: TestgridMarket) => String(m.address).trim() === address,
-  );
-  return market?.name ?? null;
-});
 
 const showActionsDropdown = ref(false);
 const headerIconRef = ref<HTMLElement | null>(null);

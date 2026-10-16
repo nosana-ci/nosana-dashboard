@@ -1,12 +1,15 @@
 import { computed, ref, watch, type Ref, type ComputedRef } from 'vue';
-import type { Market } from '@nosana/kit';
 
 // Network fee constant (10% = 1.1 multiplier)
 export const NETWORK_FEE_MULTIPLIER = 1.1;
 
+/** A market's base USD rate as the deployment pays it: the network fee added. */
+export const withNetworkFee = (usd: number): number => usd * NETWORK_FEE_MULTIPLIER;
+
 /**
- * Centralized pricing system that uses usd_reward_per_hour from markets table + 10%
- * This should be used everywhere for consistent pricing across the entire application
+ * Centralized pricing: a job's `usdRewardPerHour` (its market's base rate when
+ * it was posted) plus the 10% network fee. Used everywhere a job is priced, so
+ * nothing needs the markets list.
  */
 
 export interface MarketPricingOptions {
@@ -26,71 +29,13 @@ export interface JobData {
 }
 
 /**
- * Get USD price per hour for a market (with 10% network fee included)
- * @param marketAddress - Market address or Market object
- * @param marketsData - Optional pre-fetched markets data
- * @returns USD price per hour including 10% network fee
- */
-export function useMarketUsdPrice(
-  marketAddress: Ref<string | Market | null | undefined>,
-  marketsData?: Ref<any[] | null | undefined>
-) {
-  const shouldFetchInternally = !marketsData;
-  const { data: internalMarketsData, pending: loadingMarkets } = useAPI('/markets', {
-    default: () => [],
-    lazy: !shouldFetchInternally,
-    immediate: shouldFetchInternally
-  });
-
-  const markets = computed(() => {
-    // Prioritize external markets data if provided
-    if (marketsData && marketsData.value && marketsData.value.length > 0) {
-      return marketsData.value;
-    }
-    // Fallback to internal data
-    return internalMarketsData.value || [];
-  });
-
-  const usdPricePerHour = computed(() => {
-    if (!marketAddress.value) return null;
-
-    const address = typeof marketAddress.value === 'string'
-      ? marketAddress.value
-      : marketAddress.value.address?.toString();
-
-    if (!address) return null;
-
-    const availableMarkets = markets.value;
-    if (!availableMarkets || availableMarkets.length === 0) {
-      return null;
-    }
-
-    // Only use USD pricing from markets API - no fallbacks to jobPrice
-    const marketInfo = availableMarkets.find((m: any) => m.address === address);
-    if (marketInfo?.usd_reward_per_hour) {
-      return marketInfo.usd_reward_per_hour * NETWORK_FEE_MULTIPLIER;
-    }
-
-    return null;
-  });
-
-  return {
-    usdPricePerHour,
-    isLoading: computed(() => !marketsData && loadingMarkets.value),
-    markets
-  };
-}
-
-/**
  * Calculate job pricing based on duration and market USD rate
- * @param jobData - Job information including market and timing
+ * @param jobData - Job information including its hourly rate and timing
  * @param options - Display options
- * @param marketsData - Optional pre-fetched markets data
  */
 export function useJobPricing(
   jobData: Ref<JobData>,
   options: MarketPricingOptions = {},
-  marketsData?: Ref<any[] | null | undefined>
 ) {
   const defaultOptions = {
     showPerHour: false,
@@ -100,9 +45,12 @@ export function useJobPricing(
 
   const opts = { ...defaultOptions, ...options };
 
-  // Get market USD price
-  const marketAddress = computed(() => jobData.value?.market || null);
-  const { usdPricePerHour, isLoading } = useMarketUsdPrice(marketAddress, marketsData);
+  // What an hour costs the job, network fee included.
+  const usdPricePerHour = computed(() => {
+    const rate = jobData.value?.usdRewardPerHour;
+    return rate ? withNetworkFee(rate) : null;
+  });
+  const isLoading = computed(() => false);
 
   // Calculate job duration in hours
   const durationHours = computed(() => {
@@ -116,19 +64,8 @@ export function useJobPricing(
     return duration / 3600; // Convert seconds to hours
   });
 
-  // Get base USD rate per hour (without network fee) - prefer job's usdRewardPerHour, fallback to market
-  const baseUsdPricePerHour = computed(() => {
-    const job = jobData.value;
-    // Use job's usdRewardPerHour if available (this is the base rate without network fee)
-    if (job?.usdRewardPerHour) {
-      return job.usdRewardPerHour;
-    }
-    // Fallback to market rate without network fee multiplier
-    if (usdPricePerHour.value) {
-      return usdPricePerHour.value / NETWORK_FEE_MULTIPLIER;
-    }
-    return null;
-  });
+  // The base USD rate per hour, without the network fee.
+  const baseUsdPricePerHour = computed(() => jobData.value?.usdRewardPerHour ?? null);
 
   // Calculate host fee NOS (base amount without network fee)
   const hostFeeNos = computed(() => {
@@ -206,77 +143,3 @@ export function useJobPricing(
   };
 }
 
-
-/**
- * Calculate estimated cost for a given duration and market
- * Used primarily on deploy page for cost estimation
- */
-export function useEstimatedCost(
-  marketAddress: Ref<string | Market | null | undefined>,
-  durationHours: Ref<number>,
-  marketsData?: Ref<any[] | null | undefined>
-) {
-  const { usdPricePerHour, isLoading } = useMarketUsdPrice(marketAddress, marketsData);
-
-  const estimatedCost = computed(() => {
-    const hourlyRate = usdPricePerHour.value;
-    const hours = durationHours.value;
-
-    if (!hourlyRate || hours <= 0) return 0;
-
-    return hourlyRate * hours;
-  });
-
-  const formattedCost = computed(() => {
-    const cost = estimatedCost.value;
-    if (cost <= 0) return '$0.000';
-    return `$${cost.toFixed(3)}`;
-  });
-
-  const formattedHourlyRate = computed(() => {
-    const rate = usdPricePerHour.value;
-    if (!rate) return '$0.000/h';
-    return `$${rate.toFixed(3)}/h`;
-  });
-
-  return {
-    usdPricePerHour,
-    estimatedCost,
-    formattedCost,
-    formattedHourlyRate,
-    isLoading
-  };
-}
-
-/**
- * Get the raw NOS rate per hour that hosts receive (without network fee)
- * Used for displaying host payment information
- */
-export function useHostNosRate(
-  marketAddress: Ref<string | Market | null | undefined>,
-  marketsData?: Ref<any[] | null | undefined>
-) {
-  const { nosana } = useKit();
-
-  const nosRatePerHour = computed(() => {
-    if (!marketAddress.value) return null;
-
-    const marketObject = typeof marketAddress.value === 'object'
-      ? marketAddress.value
-      : null;
-
-    if (marketObject?.jobPrice) {
-      const jobPriceLamports = parseInt(String(marketObject.jobPrice));
-      if (!isNaN(jobPriceLamports)) {
-        // Raw NOS rate per hour (what hosts receive, no network fee)
-        return (jobPriceLamports / 1e6) * 3600;
-      }
-    }
-
-    return null;
-  });
-
-  return {
-    nosRatePerHour
-  };
-}

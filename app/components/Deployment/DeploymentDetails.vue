@@ -57,14 +57,12 @@ import type { Deployment } from "@nosana/kit";
 import DeploymentVaultStat from "~/components/Deployment/DeploymentVaultStat.vue";
 import { parseCronExpression } from "~/utils/parseCronExpression";
 import { truncateMiddle } from "~/utils/solana";
-import { describeRunsOn } from "~/composables/useNodeRequirements";
 
 const props = defineProps<{
   deployment: Deployment;
   hasVault: boolean;
   deploymentVault: any;
   deploymentSchedule: string | null;
-  testgridMarkets: any[];
 }>();
 
 const formatStrategy = (strategy: string | undefined | null): string => {
@@ -75,16 +73,10 @@ const formatStrategy = (strategy: string | undefined | null): string => {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 };
 
-// What the deployment runs on: its pinned market by name, its GPUs, or any
+// What the deployment runs on: its pinned market by its GPU, its GPUs, or any
 // GPU, with its other requirements (or "No requirements") under it.
-const runsOn = computed(() =>
-  describeRunsOn(
-    props.deployment,
-    (address) =>
-      props.testgridMarkets?.find((tgm: any) => tgm.address === address)?.name ||
-      truncateMiddle(address),
-  ),
-);
+const { describe: describeTargeting } = useRunsOn();
+const runsOn = computed(() => describeTargeting(props.deployment));
 
 
 // Container timeout (stored in minutes) → "1h", "1h 30m", or "45m" — no trailing 0m.

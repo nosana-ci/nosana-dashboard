@@ -320,7 +320,6 @@ import {
   useRequirementOptions,
   withGpus,
   type GpuListing,
-  type MarketRate,
   type MatchingHosts,
   type RequirementCategoryId,
   type RequirementOption,
@@ -333,8 +332,6 @@ interface Props {
   modelValue: string[];
   /** The host requirements beyond the GPUs, which narrow their hosts. */
   requirements: Requirements;
-  /** The testgrid `/markets` rows: the markets the GPUs are priced from. */
-  markets: MarketRate[] | null;
   /** The VRAM the job definition asks for; GPUs below it are hidden. */
   requiredVramGb: number | null;
   /** The GPU the page defaults to, labelled and listed first. */
@@ -371,10 +368,7 @@ const activeCategory = computed<RequirementCategoryId | null>(() => {
 });
 
 // --- GPUs: one row per model in host-manager's catalogue, with live host counts ---
-const { listings, pending, error, refresh } = useGpuListings(
-  () => props.markets,
-  { live: true },
-);
+const { listings, pending, error, refresh } = useGpuListings({ live: true });
 const gpuQuery = ref("");
 // The VRAM sizes shown, from the filter next to the search; null shows all.
 const vramRange = ref<[number, number] | null>(null);
@@ -657,10 +651,6 @@ const CONTROL_TEXT: Record<string, ControlText> = {
   disk_gb: { label: "Minimum disk space", unit: "GB" },
 };
 
-// Set as minimums on a slider although host-manager reports them as exact
-// matches: a bandwidth is a floor, not a figure to hit.
-const MINIMUM_KEYS = new Set(["download_mbps", "upload_mbps"]);
-
 function controlText(key: string): ControlText {
   return CONTROL_TEXT[key] ?? { label: key.replace(/_/g, " ") };
 }
@@ -744,10 +734,7 @@ function buildControl(option: RequirementOption): Control | null {
     }));
     return segments.length ? { ...base, kind: "segments", segments } : null;
   }
-  if (
-    (option.match === "minimum" || MINIMUM_KEYS.has(option.key)) &&
-    option.type !== "text"
-  ) {
+  if (option.match === "minimum" && option.type !== "text") {
     const step = sliderStep(option.max ?? 0);
     const max = sliderMax(option, step);
     return max > 0
@@ -848,17 +835,14 @@ function onBox(control: SliderControl, event: Event) {
   );
 }
 
-// --- Availability: the chosen GPUs' hosts, and how many free ones meet
-// every requirement in the markets they post to, for the summary ---
+// --- Availability: the chosen GPUs' hosts, and how many free ones a
+// deployment with every requirement could get, for the summary ---
 const selectedListings = computed(() => listingsOf(listings.value, props.modelValue));
 const {
   qualifying,
   failed: searchFailed,
   refresh: refreshQualifying,
-} = useQualifyingHosts(
-  () => withGpus(props.requirements, props.modelValue),
-  () => [...new Set(selectedListings.value.flatMap((listing) => listing.markets))],
-);
+} = useQualifyingHosts(() => withGpus(props.requirements, props.modelValue));
 const matching = computed<MatchingHosts | null>(() => {
   if (!selectedListings.value.length) return null;
   const { available, working } = hostsOf(selectedListings.value);

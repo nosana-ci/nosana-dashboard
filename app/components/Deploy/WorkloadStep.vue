@@ -154,22 +154,19 @@ import {
   type TemplateVariant,
 } from "~/composables/useTemplates";
 import type { ListedDeployment } from "~/composables/useDeploymentSelection";
-import { marketName } from "~/utils/solana";
-import { describeRunsOn } from "~/composables/useNodeRequirements";
 import { canStopDeployment } from "~/utils/deploymentStatusActions";
 
 const props = defineProps<{
   templates: Template[];
   recentDeployments: ListedDeployment[];
-  /** The dashboard API's market list, to name each recent deployment's GPU. */
-  markets: Array<{ address?: string; name?: string }>;
   loadingRecent: boolean;
   canClone: boolean;
 }>();
 
 // What a recent deployment runs on: its pinned market, its GPUs, or "Any GPU".
+const { describe: describeTargeting } = useRunsOn();
 function runsOnLabel(deployment: ListedDeployment): string {
-  return describeRunsOn(deployment, (address) => marketName(address, props.markets)).main;
+  return describeTargeting(deployment).main;
 }
 
 const emit = defineEmits<{
