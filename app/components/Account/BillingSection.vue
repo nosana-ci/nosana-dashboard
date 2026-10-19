@@ -137,7 +137,7 @@
               <tr>
                 <th class="px-5 py-4">Date</th>
                 <th class="px-5 py-4">Amount</th>
-                <th class="px-5 py-4">Card</th>
+                <th class="px-5 py-4">Method</th>
               </tr>
             </thead>
             <tbody>
@@ -147,6 +147,12 @@
                 </td>
                 <td class="px-5 py-4">
                   <strong>${{ purchase.amountUsd.toFixed(2) }}</strong>
+                  <p v-if="purchase.feeUsd > 0" class="is-size-7 has-text-grey">
+                    + ${{ purchase.feeUsd.toFixed(2) }} fee &middot; ${{
+                      (purchase.amountUsd + purchase.feeUsd).toFixed(2)
+                    }}
+                    paid
+                  </p>
                 </td>
                 <td class="px-5 py-4">
                   <div
@@ -161,6 +167,12 @@
                       &bull;&bull;&bull;&bull; {{ purchase.cardLast4 }}
                     </span>
                   </div>
+                  <span
+                    v-else-if="purchase.method === 'usdc' || purchase.method === 'nos'"
+                    class="is-uppercase is-size-7"
+                  >
+                    {{ purchase.method }}
+                  </span>
                   <span v-else class="has-text-grey is-size-7">Unknown</span>
                 </td>
               </tr>
