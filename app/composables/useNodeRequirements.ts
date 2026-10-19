@@ -14,11 +14,6 @@ import {
 import countries from "i18n-iso-countries";
 import en from "i18n-iso-countries/langs/en.json";
 import { withNetworkFee } from "./useMarketPricing";
-import {
-  isGpuMockOn,
-  MOCK_GPU_MODELS,
-  mockQualifyingHosts,
-} from "~/utils/gpuCatalogueMock";
 import { useLatestRequest } from "./useLatestRequest";
 import { truncateMiddle } from "~/utils/solana";
 
@@ -321,13 +316,9 @@ export function useRequirementOptions(keys: string[] | null) {
 /** The GPU catalogue, most common model first. */
 export function useGpuModels() {
   const { nosana } = useKit();
-  const mocked = isGpuMockOn();
   const { data, pending, error, refresh } = useAsyncData<GpuModels | null>(
-    mocked ? "gpu-models:mock" : "gpu-models",
-    () =>
-      mocked
-        ? Promise.resolve(MOCK_GPU_MODELS)
-        : nosana.value.api.reservations.listGpus(),
+    "gpu-models",
+    () => nosana.value.api.reservations.listGpus(),
     { default: () => null, dedupe: "defer" },
   );
 
@@ -400,7 +391,6 @@ export function useQualifyingHosts(
   requirements: MaybeRefOrGetter<DeploymentRequirements>,
 ) {
   const { nosana } = useKit();
-  const mocked = isGpuMockOn();
   const qualifying = ref<number | null>(null);
   const failed = ref(false);
   const searches = useLatestRequest();
@@ -410,11 +400,6 @@ export function useQualifyingHosts(
     const current = toValue(requirements);
     if (!Object.keys(current).length) {
       qualifying.value = null;
-      failed.value = false;
-      return;
-    }
-    if (mocked) {
-      qualifying.value = mockQualifyingHosts(current);
       failed.value = false;
       return;
     }

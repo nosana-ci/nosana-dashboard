@@ -21,6 +21,24 @@
 
     <div class="su-card">
       <div class="columns is-multiline mb-0">
+        <div v-if="gpuData" class="column is-6">
+          <TimeSeriesChart
+            title="GPU"
+            :series="gpuData.series"
+            :loading="isLoading"
+            y-suffix="%"
+            :suggested-y-max="gpuData.max"
+          />
+        </div>
+        <div v-if="gpuData" class="column is-6">
+          <TimeSeriesChart
+            title="GPU Memory"
+            :series="gpuMemory"
+            :loading="isLoading"
+            y-suffix=" MB"
+            :legend-hint="['usage', 'limit']"
+          />
+        </div>
         <div class="column is-6">
           <TimeSeriesChart
             title="CPU"
@@ -101,6 +119,37 @@ const memory = computed(() =>
     windowedByOp.value,
     (s) => s.memory.memory_usage,
     (s) => s.memory.memory_limit,
+  ),
+);
+
+// Only nodes running the job runtime sidecar report a `gpu` block, and only
+// for GPU ops, so the GPU charts appear once a reading in the window has one.
+// Null hides both charts.
+const gpuData = computed(() => {
+  let seen = false;
+  let devices = 1;
+  const series: Series[] = props.opIds.map((id) => ({
+    label: id,
+    group: id,
+    points: (windowedByOp.value[id] ?? []).flatMap((s) => {
+      if (!s.gpu) return [];
+      seen = true;
+      devices = Math.max(devices, s.gpu.devices?.length ?? 0);
+      return [{ x: s.timestamp, y: s.gpu.gpu_percent }];
+    }),
+  }));
+  // The figure is summed over an op's devices, so the axis tops out at every
+  // device saturated.
+  return seen ? { series, max: 100 * devices } : null;
+});
+
+const gpuMemory = computed(() =>
+  pairedBin(
+    props.opIds,
+    windowedByOp.value,
+    (s) => s.gpu?.memory_usage ?? 0,
+    // The limit comes in GiB, the usage in MiB.
+    (s) => (s.gpu?.memory_limit ?? 0) * 1024,
   ),
 );
 

@@ -17,8 +17,9 @@
           </label>
           <DeployVramRange
             v-if="vramSizes.length > 1"
-            v-model="vramRange"
+            :model-value="vramRange"
             :sizes="vramSizes"
+            @update:model-value="onVramRange"
           />
           <label class="req-search req-sort">
             <span class="req-sort-prefix">Sort</span>
@@ -348,7 +349,7 @@ const emit = defineEmits<{
 
 // Temporary: the host requirements step shows as coming soon, with no
 // controls. Set to false to bring the controls back.
-const REQUIREMENTS_COMING_SOON = true;
+const REQUIREMENTS_COMING_SOON = false;
 
 const PANEL_SUBTITLES: Record<RequirementCategoryId, string> = {
   compute: "Set compute related requirements for hosts.",
@@ -505,15 +506,40 @@ const SORTERS: Record<GpuSort, (a: GpuRow, b: GpuRow) => number> = {
     b.listing.working - a.listing.working,
 };
 
-// The search and the VRAM filter only narrow what is shown: a chosen GPU
-// stays listed (and chosen) whatever they say.
+// Pure: whether a GPU's VRAM falls inside the filter (null is every size).
+function inVramRange(row: GpuRow, range: [number, number] | null) {
+  return (
+    !range || (row.listing.vramGb >= range[0] && row.listing.vramGb <= range[1])
+  );
+}
+
+function matchesQuery(row: GpuRow, query: string) {
+  return !query || row.listing.name.toLowerCase().includes(query);
+}
+
+// The search and the VRAM filter narrow what is shown: a chosen GPU stays
+// listed (and chosen) whatever they say.
 function isShown(row: GpuRow, query: string) {
-  if (row.selected) return true;
-  const range = vramRange.value;
-  const inRange =
-    !range ||
-    (row.listing.vramGb >= range[0] && row.listing.vramGb <= range[1]);
-  return inRange && (!query || row.listing.name.toLowerCase().includes(query));
+  return (
+    row.selected ||
+    (inVramRange(row, vramRange.value) && matchesQuery(row, query))
+  );
+}
+
+// The VRAM range also picks GPUs: dragging a thumb replaces the selection
+// with every selectable GPU the new range covers (narrowed by the search, as
+// Select all is), so GPUs outside the range drop out and those entering it
+// are picked up. Only a drag does this; the page opens on the full range with
+// just its default GPU selected.
+function onVramRange(range: [number, number] | null) {
+  vramRange.value = range;
+  const query = gpuQuery.value.trim().toLowerCase();
+  emit(
+    "update:modelValue",
+    compatibleGpus.value
+      .filter((row) => inVramRange(row, range) && matchesQuery(row, query))
+      .map((row) => row.listing.name),
+  );
 }
 
 // The compatible rows in the chosen order, then the hidden ones once

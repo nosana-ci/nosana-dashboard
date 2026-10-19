@@ -1,18 +1,8 @@
 import type { Job, JobDefinition } from "@nosana/kit";
-import type { DeploymentJob } from "@nosana/api";
+import type { DeploymentJob, NodeTaskStat } from "@nosana/api";
 
-export interface TaskStat {
-  opId: string;
-  timestamp: number;
-  cpu: { cpu_percent: number };
-  memory: {
-    memory_usage: number;
-    memory_limit: number;
-    memory_percent: number;
-  };
-  disk: { read: number; write: number };
-  network: { received: number; sent: number };
-}
+// A stats reading as the node and its job runtime sidecar report it.
+export type TaskStat = NodeTaskStat;
 
 export interface Point {
   x: number;
