@@ -1,6 +1,8 @@
 export interface Purchase {
   id: string;
   amountUsd: number;
+  feeUsd: number;
+  method: "card" | "usdc" | "nos" | null;
   createdAt: string;
   referenceId: string | null;
   cardBrand: string | null;

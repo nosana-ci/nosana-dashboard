@@ -118,6 +118,12 @@
                   <span class="icon is-left has-text-grey">$</span>
                 </div>
               </div>
+              <AccountPurchaseFeeBreakdown
+                v-if="feeBps && effectiveAmount >= 1"
+                class="mt-3"
+                :amount="effectiveAmount"
+                :fee-bps="feeBps"
+              />
             </div>
 
             <!-- Payment method -->
@@ -217,7 +223,7 @@
               {{
                 authenticating
                   ? "Confirming with your bank…"
-                  : `Pay $${effectiveAmount}`
+                  : `Pay $${cardTotal.toFixed(2)}`
               }}
             </button>
             <p
@@ -233,7 +239,7 @@
             <!-- Connect wallet prompt -->
             <template v-if="!walletConnected">
               <p class="is-size-7 has-text-grey mb-3">
-                Connect your Solana wallet to pay with USDC or NOS. The tokens
+                Connect your Solana wallet to pay with USDC. The tokens
                 you send are converted to credits and cannot be refunded.
               </p>
               <button
@@ -296,7 +302,9 @@
                   class="label is-small is-flex is-justify-content-space-between"
                   for="crypto-amount"
                 >
-                  <span>Amount</span>
+                  <span>{{
+                    cryptoToken === "USDC" ? "Credits ($)" : "Amount"
+                  }}</span>
                   <span class="has-text-grey has-text-weight-normal">
                     <template v-if="loadingBalance">Loading...</template>
                     <template v-else-if="selectedTokenBalance !== null">
@@ -364,13 +372,26 @@
                   <span class="crypto-receipt-label">You send</span>
                   <span class="crypto-receipt-cell">
                     <span class="crypto-receipt-value"
-                      >{{ cryptoAmount }} {{ cryptoToken }}</span
+                      >{{ cryptoSendAmount }} {{ cryptoToken }}</span
                     >
                     <span v-if="cryptoExceedsBalance" class="crypto-receipt-sub">
                       Exceeds wallet balance of
                       {{ formatTokenAmount(selectedTokenBalance ?? 0) }}
                       {{ cryptoToken }}
                     </span>
+                  </span>
+                </div>
+                <div
+                  v-if="cryptoToken === 'USDC' && feeBps"
+                  class="crypto-receipt-row"
+                >
+                  <span class="crypto-receipt-label"
+                    >Service fee ({{ feeBps / 100 }}%)</span
+                  >
+                  <span class="crypto-receipt-cell">
+                    <span class="crypto-receipt-value"
+                      >{{ formatTokenAmount(cryptoFeeAmount) }} USDC</span
+                    >
                   </span>
                 </div>
                 <div class="crypto-receipt-row">
@@ -428,7 +449,7 @@
                 :class="{ 'is-loading': cryptoPurchasing }"
                 @click="handleCryptoPurchase"
               >
-                Convert {{ cryptoAmount || "" }} {{ cryptoToken }} to credits
+                Convert {{ cryptoSendAmount || "" }} {{ cryptoToken }} to credits
               </button>
               <p
                 v-if="cryptoError"
@@ -481,6 +502,7 @@ import type { CryptoTopupToken } from "~/composables/useCryptoTopup";
 import { SPARE_CAPACITY_TOPUP_DISABLED } from "~/utils/spareCapacity";
 import { fetchPurchaseHistory } from "~/composables/usePurchaseHistory";
 import { trackEvent, trackPixelEvent } from "~/utils/analytics";
+import { purchaseTotalUsd, usdcToSend } from "~/utils/purchaseFee";
 
 const props = defineProps<{
   modelValue: boolean;
@@ -575,10 +597,17 @@ const { userData, isBanned, isSpareCapacityOnly } = useSuperTokens();
 const topupDisabled = computed(() => isBanned.value || isSpareCapacityOnly.value);
 const { data: stats } = useAPI("/stats");
 const nosPrice = computed(() => stats.value?.price || 0);
+// Fee on card and USDC purchases; buying stays disabled until it's known.
+const { data: purchaseFee } = useAPI("/payments/purchase-fee", {
+  credentials: true,
+});
+const feeBps = computed<number | null>(
+  () => purchaseFee.value?.feeBps ?? null,
+);
 
 const activeTab = ref<"card" | "crypto">("card");
 
-const CRYPTO_TOKENS: CryptoTopupToken[] = ["USDC", "NOS"];
+const CRYPTO_TOKENS: CryptoTopupToken[] = ["USDC"];
 const cryptoToken = ref<CryptoTopupToken>("USDC");
 const cryptoAmount = ref<number | null>(null);
 const cryptoPurchasing = ref(false);
@@ -591,9 +620,24 @@ const cryptoPurchasedCredits = ref("");
 const formatTokenAmount = (amount: number) =>
   amount.toLocaleString(undefined, { maximumFractionDigits: 4 });
 
+// USDC input is the credits wanted; the fee is sent on top. NOS has no fee.
+const cryptoSendAmount = computed(() => {
+  if (!cryptoAmount.value || cryptoAmount.value <= 0) return null;
+  if (cryptoToken.value !== "USDC") return cryptoAmount.value;
+  return feeBps.value === null
+    ? null
+    : usdcToSend(cryptoAmount.value, feeBps.value);
+});
+
+const cryptoFeeAmount = computed(() =>
+  cryptoSendAmount.value && cryptoAmount.value
+    ? Math.round((cryptoSendAmount.value - cryptoAmount.value) * 1e6) / 1e6
+    : 0,
+);
+
 const cryptoExceedsBalance = computed(() => {
   const balance = selectedTokenBalance.value;
-  const amount = cryptoAmount.value;
+  const amount = cryptoSendAmount.value;
   return balance !== null && !!amount && amount > balance;
 });
 
@@ -626,7 +670,7 @@ const cryptoCanSubmit = computed(
     !topupDisabled.value &&
     cryptoAcknowledged.value &&
     !cryptoExceedsBalance.value &&
-    !!(cryptoAmount.value && cryptoAmount.value > 0),
+    cryptoSendAmount.value !== null,
 );
 
 const purchasedLabel = computed(() => {
@@ -651,6 +695,9 @@ const effectiveAmount = computed(() => {
   if (isCustom.value) return customAmount.value ?? 0;
   return selectedAmount.value;
 });
+const cardTotal = computed(() =>
+  purchaseTotalUsd(effectiveAmount.value, feeBps.value ?? 0),
+);
 const selectedMethodId = ref<string | null>(null);
 const methodMenuOpen = ref(false);
 const methodPickerRef = ref<HTMLElement | null>(null);
@@ -726,7 +773,12 @@ watch(
 const canSubmit = computed(() => {
   if (topupDisabled.value) return false;
   const amount = effectiveAmount.value;
-  return !!(amount && amount >= 1 && selectedMethodId.value);
+  return !!(
+    amount &&
+    amount >= 1 &&
+    selectedMethodId.value &&
+    feeBps.value !== null
+  );
 });
 
 const selectPreset = (amount: number) => {
@@ -762,18 +814,20 @@ const closeModal = () => {
 };
 
 const handleCryptoPurchase = async () => {
-  if (!cryptoCanSubmit.value || !cryptoAmount.value) return;
+  if (!cryptoCanSubmit.value || !cryptoAmount.value || !cryptoSendAmount.value)
+    return;
+  const sendAmount = cryptoSendAmount.value;
   cryptoPurchasing.value = true;
   cryptoError.value = "";
   try {
-    const txSignature = await cryptoTopup(cryptoToken.value, cryptoAmount.value);
+    const txSignature = await cryptoTopup(cryptoToken.value, sendAmount);
     cryptoPurchasedCredits.value = cryptoCreditsLabel.value;
     cryptoPurchasedToken.value = cryptoToken.value;
-    purchasedAmount.value = cryptoAmount.value;
+    purchasedAmount.value = sendAmount;
     purchasedSuccessfully.value = true;
     triggerCreditRefresh();
     emit("purchased", cryptoAmount.value);
-    toast.success(`${cryptoAmount.value} ${cryptoToken.value} sent — it is being converted to credits in your account.`);
+    toast.success(`${sendAmount} ${cryptoToken.value} sent — it is being converted to credits in your account.`);
     trackEvent("purchase", {
       transaction_id: txSignature,
       value: cryptoAmount.value,
