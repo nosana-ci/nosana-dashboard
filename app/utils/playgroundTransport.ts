@@ -28,6 +28,19 @@ export type PlaygroundRequest = {
   tools?: ToolSet;
 };
 
+/**
+ * The models through client-manager's sponsored playground proxy, with the dashboard
+ * session: nobody needs an API key, and the proxy counts the requests.
+ */
+export function sponsoredProvider(apiBase: string) {
+  return createOpenAICompatible({
+    name: "nosana",
+    baseURL: `${apiBase}/playground/v1`,
+    includeUsage: true,
+    fetch: (input, init) => fetch(input, { ...init, credentials: "include" }),
+  });
+}
+
 /** A reply may call tools a few times over before it answers. */
 export const MAX_STEPS = 20;
 
@@ -60,12 +73,7 @@ export class PlaygroundTransport implements ChatTransport<UIMessage> {
     apiBase: string,
     private readonly request: () => PlaygroundRequest,
   ) {
-    this.provider = createOpenAICompatible({
-      name: "nosana",
-      baseURL: `${apiBase}/playground/v1`,
-      includeUsage: true,
-      fetch: (input, init) => fetch(input, { ...init, credentials: "include" }),
-    });
+    this.provider = sponsoredProvider(apiBase);
   }
 
   async sendMessages({

@@ -181,6 +181,7 @@ import {
 import { PlaygroundTransport } from "~/utils/playgroundTransport";
 import { STARTERS } from "~/utils/playgroundStarters";
 import { titleOf } from "~/composables/usePlaygroundChats";
+import { nosaRunModel } from "~/composables/useNosaTools";
 import type { ChatSettings } from "~/utils/llmChat";
 
 // The playground's empty chat: everyday asks rather than technical ones, so anyone
@@ -239,10 +240,7 @@ const selectedModel = computed(
 /** The model the request goes to; empty while it is not serving. */
 const runModel = computed(() => {
   if (!isNosa.value) return selectedModel.value?.id ?? "";
-  // Nosa runs on the model admins chose; while that one is not serving, on the first
-  // chat model that is, so Nosa stays available.
-  const chosen = upModels.value.find((entry) => entry.id === nosa.model.value);
-  return (chosen ?? upModels.value[0])?.id ?? "";
+  return nosaRunModel(props.models, nosa.model.value);
 });
 const modelLabel = computed(() =>
   selectedModel.value ? modelName(selectedModel.value) : "No model",

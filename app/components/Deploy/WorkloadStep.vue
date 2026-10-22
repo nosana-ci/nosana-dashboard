@@ -11,36 +11,83 @@
             Pick a template, bring your own image, or clone a deployment.
           </p>
 
-          <div v-if="canClone" class="recent-row">
-            <span class="recent-label">Clone a recent deployment</span>
-            <div class="recent-pills">
+          <!-- Describe it instead: a template, or a written and validated job. -->
+          <div v-if="canDescribe" class="describe">
+            <form class="describe-form" @submit.prevent="describe.propose(request)">
+              <input
+                ref="requestInput"
+                v-model="request"
+                class="describe-input"
+                type="text"
+                placeholder="Or describe it, e.g. a small chat model with an OpenAI API"
+                aria-label="Describe what you want to deploy"
+                :disabled="describe.phase.value !== 'idle'"
+              />
               <button
-                v-for="deployment in recentDeployments"
-                :key="deployment.id"
-                type="button"
-                class="recent-pill"
-                :title="`${runsOnLabel(deployment)} · ${statusLabel(deployment.status)}`"
-                @click="emit('clone', deployment)"
+                type="submit"
+                class="describe-submit"
+                :disabled="describe.phase.value !== 'idle' || !request.trim()"
               >
-                <span
-                  class="dot"
-                  :class="{ 'is-live': canStopDeployment(deployment.status) }"
-                ></span>
-                {{ deployment.name }}
+                {{ describeLabel }}
               </button>
-              <span v-if="!recentDeployments.length" class="recent-empty">
-                {{
-                  loadingRecent ? "Loading deployments…" : "No deployments yet"
-                }}
-              </span>
+            </form>
+            <div v-if="describe.phase.value !== 'idle'" class="describe-progress">
+              <ol class="describe-steps" aria-live="polite">
+                <li
+                  v-for="(step, i) in describe.progress.value.steps"
+                  :key="i"
+                  class="describe-step"
+                  :class="`is-${step.state}`"
+                >
+                  <span class="describe-mark" aria-hidden="true">
+                    <span v-if="step.state === 'active'" class="describe-pulse"></span>
+                    <template v-else>{{ step.state === "done" ? "✓" : "✗" }}</template>
+                  </span>
+                  <span class="describe-label">{{ step.label }}</span>
+                  <span v-if="step.state === 'active'" class="describe-meta">
+                    {{ activeMeta(step) }}
+                  </span>
+                  <span v-else-if="step.detail" class="describe-meta">{{ step.detail }}</span>
+                </li>
+              </ol>
+            </div>
+            <p v-else-if="describe.error.value" class="describe-error">{{ describe.error.value }}</p>
+            <div v-else-if="describe.proposal.value" class="describe-result">
+              <span class="describe-target">{{ proposalLabel }}</span>
+              <p class="describe-why">{{ describe.proposal.value.why }}</p>
+              <div class="describe-actions">
+                <button
+                  type="button"
+                  class="recent-pill is-all"
+                  @click="emit('apply-proposal', describe.proposal.value)"
+                >
+                  Set it up <DeployCategoryIcon icon="arrow" />
+                </button>
+                <button type="button" class="describe-dismiss" @click="describe.reset()">
+                  Dismiss
+                </button>
+              </div>
+            </div>
+            <div
+              v-if="describe.phase.value === 'idle' && !describe.proposal.value"
+              class="describe-examples"
+            >
               <button
+                v-for="example in DESCRIBE_EXAMPLES"
+                :key="example"
                 type="button"
-                class="recent-pill is-all"
-                @click="emit('browse-deployments')"
+                class="describe-example"
+                @click="tryExample(example)"
               >
-                All deployments <DeployCategoryIcon icon="arrow" />
+                “{{ example }}”
               </button>
             </div>
+          </div>
+
+          <div v-if="canClone" class="recent-row">
+            <button type="button" class="recent-pill is-all" @click="emit('browse-deployments')">
+              Clone a deployment <DeployCategoryIcon icon="arrow" />
+            </button>
           </div>
         </div>
 
@@ -153,28 +200,62 @@ import {
   type Template,
   type TemplateVariant,
 } from "~/composables/useTemplates";
-import type { ListedDeployment } from "~/composables/useDeploymentSelection";
-import { canStopDeployment } from "~/utils/deploymentStatusActions";
+import type { GpuListing } from "~/composables/useNodeRequirements";
+import { proposalTemplate, type DeployProposal } from "~/utils/deployProposal";
+import type { ProposalStep } from "~/composables/useDeployProposal";
 
 const props = defineProps<{
   templates: Template[];
-  recentDeployments: ListedDeployment[];
-  loadingRecent: boolean;
   canClone: boolean;
+  /** The GPUs, for a described deployment's VRAM and price. */
+  gpus: GpuListing[];
+  /** Describing a deployment runs on the sponsored models, which need a session. */
+  canDescribe: boolean;
 }>();
 
-// What a recent deployment runs on: its pinned market, its GPUs, or "Any GPU".
-const { describe: describeTargeting } = useRunsOn();
-function runsOnLabel(deployment: ListedDeployment): string {
-  return describeTargeting(deployment).main;
+const request = ref("");
+const describe = useDeployProposal(toRef(props, "templates"), toRef(props, "gpus"));
+/** Requests to start from: a template, a template at a size, and an adapted one. */
+const DESCRIBE_EXAMPLES = [
+  "Best LLM that can run on a 4090",
+  "Flux images",
+  "Qwen3.8 27B on vLLM",
+];
+// An example goes into the field rather than running, so it can be changed first.
+const requestInput = ref<HTMLInputElement | null>(null);
+function tryExample(example: string) {
+  request.value = example;
+  requestInput.value?.focus();
+}
+const describeLabel = computed(() => (describe.phase.value === "idle" ? "Generate" : "Working…"));
+/** The running step's own count: tokens while the model writes, otherwise just the time. */
+function activeMeta(step: ProposalStep) {
+  const { tokens, seconds } = describe.progress.value;
+  const time = `${seconds - step.startSeconds}s`;
+  return describe.phase.value === "checking"
+    ? time
+    : `${(tokens - step.startTokens).toLocaleString()} tokens · ${time}`;
 }
 
+/** What the proposal runs: the template and variant, or the job's image. */
+const proposalLabel = computed(() => {
+  const proposal = describe.proposal.value;
+  if (!proposal) return "";
+  const picked = proposalTemplate(proposal, props.templates);
+  if (picked) return picked.variant ? `${picked.template.name} · ${picked.variant.name}` : picked.template.name;
+  const ops = (proposal.jobDefinition?.ops ?? []) as { args?: { image?: string } }[];
+  const image = ops[0]?.args?.image ?? "Your own job";
+  const base = props.templates.find((t) => String(t.id) === proposal.templateId);
+  return base ? `${image} · adapted from ${base.name}` : image;
+});
+
 const emit = defineEmits<{
+  /** A described deployment, checked, for the form to take. */
+  "apply-proposal": [proposal: DeployProposal];
   "select-template": [template: Template];
   /** The featured card's Use template: skips the template page. */
   "deploy-template": [template: Template];
   "configure-own": [];
-  clone: [deployment: ListedDeployment];
   "browse-deployments": [];
 }>();
 
@@ -246,9 +327,6 @@ const filteredTemplates = computed(() => {
         templateTags(template).includes(selectedCategory.value)),
   );
 });
-
-const statusLabel = (status: ListedDeployment["status"]): string =>
-  status.toLowerCase().replace(/_/g, " ");
 </script>
 
 <style lang="scss" scoped>
@@ -307,29 +385,14 @@ const statusLabel = (status: ListedDeployment["status"]): string =>
   max-width: 30rem;
 }
 
-/* Clone a recent deployment: a label and a row of small pills under the lead */
+/* Clone a deployment: one button under the lead, opening the picker */
 .recent-row {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
   margin-top: auto;
   padding-top: 1.5rem;
 }
 
-.recent-label {
-  font-family: var(--mono);
-  font-size: 0.7rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #7c877b;
-}
 
-.recent-pills {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
 
 .recent-pill {
   display: inline-flex;
@@ -373,10 +436,208 @@ const statusLabel = (status: ListedDeployment["status"]): string =>
   }
 }
 
-.recent-empty {
-  font-family: var(--mono);
-  font-size: 11px;
+
+/* Describe it: one line under the lead, and what it comes back with */
+.describe {
+  margin-top: 1.25rem;
+  max-width: 40rem;
+}
+
+.describe-form {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.3rem 0.3rem 0.9rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  transition: border-color 0.2s ease;
+
+  &:focus-within {
+    border-color: rgba($secondary, 0.6);
+  }
+}
+
+.describe-input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: none;
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  outline: none;
+
+  &::placeholder {
+    color: #8a948a;
+  }
+}
+
+.describe-submit {
+  flex: none;
+  padding: 7px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: $secondary;
+  color: #05230a;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: default;
+  }
+}
+
+// The examples sit under the field in its own style: buttons that fill it in.
+// One row: where the column is too narrow, the examples that do not fit are left out.
+.describe-examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 6px;
+  height: 30px;
+  overflow: hidden;
+  margin-top: 0.6rem;
+}
+
+.describe-example {
+  height: 30px;
+  padding: 0 11px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #e8f0e8;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease;
+
+  &:hover {
+    border-color: rgba($secondary, 0.6);
+    background: rgba($secondary, 0.08);
+  }
+}
+
+.describe-progress {
+  margin: 0.75rem 0 0 0.9rem;
+  font-size: 13px;
+}
+
+.describe-steps {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.describe-step {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 0.6rem;
   color: #8a948a;
+
+  &.is-active {
+    color: #e8f0e8;
+    font-weight: 600;
+  }
+
+  &.is-failed .describe-mark {
+    color: #ff9b8a;
+  }
+
+  &.is-done .describe-mark {
+    color: $secondary;
+  }
+}
+
+.describe-mark {
+  display: inline-flex;
+  justify-content: center;
+  width: 1rem;
+}
+
+.describe-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: $secondary;
+  animation: describe-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes describe-pulse {
+  50% {
+    opacity: 0.25;
+    transform: scale(0.7);
+  }
+}
+
+.describe-meta {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 400;
+  color: #8a948a;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .describe-pulse {
+    animation: none;
+  }
+}
+
+.describe-error {
+  margin: 0.6rem 0 0 0.9rem;
+  font-size: 13px;
+  color: #ff9b8a;
+}
+
+.describe-result {
+  display: grid;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba($secondary, 0.35);
+  border-radius: 14px;
+  background: rgba($secondary, 0.06);
+}
+
+.describe-target {
+  font-weight: 700;
+  color: #fff;
+}
+
+.describe-why {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #b7c0b6;
+}
+
+.describe-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.describe-dismiss {
+  border: 0;
+  background: none;
+  color: #8a948a;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+
+  &:hover {
+    color: #e8f0e8;
+  }
 }
 
 /* Featured template: the showcase card on the right, like the dev page's */
@@ -529,18 +790,6 @@ const statusLabel = (status: ListedDeployment["status"]): string =>
     svg {
       transform: translateX(3px);
     }
-  }
-}
-
-.dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  background: #6b6b6b;
-
-  &.is-live {
-    background: $secondary;
   }
 }
 

@@ -8,13 +8,13 @@
     <DeployWorkloadStep
       v-else-if="!onWorkloadPage"
       :templates="groupedTemplates || []"
-      :recent-deployments="recentDeployments"
-      :loading-recent="loadingRecent"
       :can-clone="hasAnyAuth"
+      :gpus="gpuListings"
+      :can-describe="superTokensAuth"
+      @apply-proposal="applyProposal"
       @select-template="selectTemplateFromModal"
       @deploy-template="selectTemplateFromModal"
       @configure-own="configureOwnJob"
-      @clone="(deployment) => cloneDeployment(deployment)"
       @browse-deployments="showCloneModal = true"
     />
 
@@ -117,7 +117,7 @@ import {
   type Template,
   type TemplateVariant,
 } from "~/composables/useTemplates";
-import type { ListedDeployment } from "~/composables/useDeploymentSelection";
+import { proposalTemplate, type DeployProposal } from "~/utils/deployProposal";
 import Loader from "~/components/Loader.vue";
 import CloneDeploymentModal from "~/components/Deploy/CloneDeploymentModal.vue";
 import VaultModal from "~/components/Vault/Modal/VaultModal.vue";
@@ -1136,33 +1136,6 @@ watch(
   { immediate: true },
 );
 
-// The workload step offers the three most recent deployments to clone; the
-// list is the signed-in user's own, so it needs either auth mode.
-const recentDeployments = ref<ListedDeployment[]>([]);
-const loadingRecent = ref(false);
-const loadRecentDeployments = async () => {
-  if (!hasAnyAuth.value) {
-    recentDeployments.value = [];
-    return;
-  }
-  loadingRecent.value = true;
-  try {
-    // The workload step offers the latest two as clone shortcuts; the
-    // smallest page the API serves is 10.
-    const { deployments } = await nosana.value.api.deployments.list({
-      limit: 10,
-    });
-    recentDeployments.value = (deployments || []).slice(0, 2);
-  } catch (error) {
-    console.error("Error loading recent deployments:", error);
-    recentDeployments.value = [];
-  } finally {
-    loadingRecent.value = false;
-  }
-};
-onMounted(loadRecentDeployments);
-watch(hasAnyAuth, loadRecentDeployments);
-
 // Mounted hook
 onMounted(async () => {
   // A ?clone= link fills the form from an existing deployment and wins over
@@ -1258,6 +1231,25 @@ const configureOwnJob = async () => {
   selectedTemplate.value = null;
   jobDefinition.value = JSON.parse(JSON.stringify(emptyJobDefinition));
   await goToCustom();
+};
+// A described deployment: its template's page, or its own job's page with the job
+// definition the model wrote and the validator accepted. The name is set after the
+// template, which names the deployment otherwise; a named GPU replaces the default.
+const applyProposal = async (proposal: DeployProposal) => {
+  const picked = proposalTemplate(proposal, groupedTemplates.value || []);
+  if (picked) {
+    await applyTemplate(picked.variant ? withVariant(picked.template, picked.variant) : picked.template);
+  } else {
+    skipTemplateAutoSelection.value = true;
+    selectedTemplate.value = null;
+    jobDefinition.value = proposal.jobDefinition as unknown as JobDefinition;
+    await goToCustom();
+  }
+  await nextTick();
+  deploymentName.value = proposal.name;
+  if (proposal.gpuName && gpuListings.value.some((listing) => listing.name === proposal.gpuName)) {
+    selectedGpus.value = [proposal.gpuName];
+  }
 };
 // The builder on the page edits the job live; it only hands back a string
 // while JSON is invalid, which it never does itself.

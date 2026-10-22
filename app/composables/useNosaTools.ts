@@ -1,6 +1,16 @@
 import { computed, ref, shallowRef } from "vue";
 import type { ToolSet } from "ai";
 import { McpClient, mcpToolSet, type McpToolInfo } from "~/utils/mcpClient";
+import { isChatModel, type LlmModel } from "~/composables/useLlmGateway";
+
+/**
+ * The model Nosa runs on: the one admins chose while it is serving, else the first chat
+ * model that is, so Nosa stays available. Empty when no chat model is serving.
+ */
+export function nosaRunModel(models: LlmModel[], chosen: string): string {
+  const serving = models.filter((entry) => isChatModel(entry) && entry.available);
+  return (serving.find((entry) => entry.id === chosen) ?? serving[0])?.id ?? "";
+}
 
 /** Nosa's prompt, and the chat model admins chose to run it on. */
 type Persona = { systemPrompt: string; model?: string };
