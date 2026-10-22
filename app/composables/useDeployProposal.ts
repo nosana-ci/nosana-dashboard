@@ -240,6 +240,7 @@ export const useDeployProposal = (templates: Ref<Template[]>, gpus: Ref<GpuListi
   function reset() {
     proposal.value = null;
     error.value = null;
+    progress.value = { steps: [], tokens: 0, seconds: 0 };
   }
 
   return { model, loadingModels, phase, progress, proposal, error, propose, reset };

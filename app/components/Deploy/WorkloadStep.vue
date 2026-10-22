@@ -31,7 +31,7 @@
                 {{ describeLabel }}
               </button>
             </form>
-            <div v-if="describe.phase.value !== 'idle'" class="describe-progress">
+            <div v-if="describe.progress.value.steps.length" class="describe-progress">
               <ol class="describe-steps" aria-live="polite">
                 <li
                   v-for="(step, i) in describe.progress.value.steps"
@@ -51,7 +51,7 @@
                 </li>
               </ol>
             </div>
-            <p v-else-if="describe.error.value" class="describe-error">{{ describe.error.value }}</p>
+            <p v-if="describe.error.value" class="describe-error">{{ describe.error.value }}</p>
             <div
               v-if="describe.phase.value === 'idle' && !describe.proposal.value"
               class="describe-examples"
@@ -78,49 +78,59 @@
         <!-- The card on the right: the deployment being built for a description, the one
              built, or the featured template. -->
         <Transition name="featured-swap" mode="out-in">
-        <article v-if="describe.phase.value !== 'idle'" key="building" class="featured is-building">
-          <span class="featured-head">
-            <span class="featured-logo featured-logo-fallback">
-              <span class="describe-pulse" aria-hidden="true"></span>
-            </span>
-            <span class="featured-heading">
-              <small>Building your template</small>
-              <strong>{{ buildingStep }}</strong>
-            </span>
-          </span>
-          <span class="featured-skeleton" aria-hidden="true">
-            <span></span><span></span><span></span>
-          </span>
-          <div class="featured-foot">
-            <span class="featured-meta">“{{ request }}”</span>
-          </div>
-        </article>
-        <article v-else-if="describe.proposal.value" key="proposal" class="featured is-proposal">
-          <span class="featured-head">
-            <img v-if="proposalBase?.icon" class="featured-logo" :src="proposalBase.icon" alt="" />
-            <span v-else class="featured-logo featured-logo-fallback">
-              {{ describe.proposal.value.name.charAt(0).toUpperCase() }}
-            </span>
-            <span class="featured-heading">
-              <small>Made for you</small>
-              <strong>{{ describe.proposal.value.name }}</strong>
-            </span>
-          </span>
-          <p class="featured-desc">{{ describe.proposal.value.why }}</p>
-          <span class="featured-tags">
-            <span v-for="tag in proposalTags" :key="tag" class="featured-tag">{{ tag }}</span>
-          </span>
-          <div class="featured-foot">
-            <span class="featured-meta" :title="proposalLabel">{{ proposalLabel }}</span>
-            <button type="button" class="describe-dismiss" @click="describe.reset()">Dismiss</button>
-            <button
-              type="button"
-              class="featured-cta"
-              @click="emit('apply-proposal', describe.proposal.value)"
-            >
-              Set it up <DeployCategoryIcon icon="arrow" />
-            </button>
-          </div>
+        <article
+          v-if="describing"
+          key="described"
+          class="featured"
+          :class="describe.phase.value !== 'idle' ? 'is-building' : 'is-proposal'"
+        >
+          <!-- One frame from start to result; only its contents change. -->
+          <Transition name="featured-fill" mode="out-in">
+            <div v-if="describe.phase.value !== 'idle'" key="building" class="featured-body">
+              <span class="featured-head">
+                <span class="featured-logo featured-logo-fallback">
+                  <span class="describe-pulse" aria-hidden="true"></span>
+                </span>
+                <span class="featured-heading">
+                  <small>Building your template</small>
+                  <strong>{{ buildingStep }}</strong>
+                </span>
+              </span>
+              <span class="featured-skeleton" aria-hidden="true">
+                <span></span><span></span><span></span>
+              </span>
+              <div class="featured-foot">
+                <span class="featured-meta">“{{ request }}”</span>
+              </div>
+            </div>
+            <div v-else-if="describe.proposal.value" key="result" class="featured-body">
+              <span class="featured-head">
+                <img v-if="proposalBase?.icon" class="featured-logo" :src="proposalBase.icon" alt="" />
+                <span v-else class="featured-logo featured-logo-fallback">
+                  {{ describe.proposal.value.name.charAt(0).toUpperCase() }}
+                </span>
+                <span class="featured-heading">
+                  <small>Made for you</small>
+                  <strong>{{ describe.proposal.value.name }}</strong>
+                </span>
+              </span>
+              <p class="featured-desc">{{ describe.proposal.value.why }}</p>
+              <span class="featured-tags">
+                <span v-for="tag in proposalTags" :key="tag" class="featured-tag">{{ tag }}</span>
+              </span>
+              <div class="featured-foot">
+                <span class="featured-meta" :title="proposalLabel">{{ proposalLabel }}</span>
+                <button type="button" class="describe-dismiss" @click="describe.reset()">Dismiss</button>
+                <button
+                  type="button"
+                  class="featured-cta"
+                  @click="emit('apply-proposal', describe.proposal.value)"
+                >
+                  Set it up <DeployCategoryIcon icon="arrow" />
+                </button>
+              </div>
+            </div>
+          </Transition>
         </article>
         <article v-else-if="featuredTemplate" key="featured" class="featured">
           <span class="featured-head">
@@ -672,6 +682,23 @@ const filteredTemplates = computed(() => {
 
 /* Featured template: the showcase card on the right, like the dev page's. A described
    deployment takes its place, first while it is built and then as the result. */
+.featured-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.featured-fill-enter-active,
+.featured-fill-leave-active {
+  transition: opacity 0.15s ease;
+}
+
+.featured-fill-enter-from,
+.featured-fill-leave-to {
+  opacity: 0;
+}
+
 .featured-swap-enter-active,
 .featured-swap-leave-active {
   transition:
