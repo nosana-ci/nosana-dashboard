@@ -170,7 +170,7 @@
               class="mobile-avatar-trigger"
               @click="showMobileDropdown = !showMobileDropdown"
             >
-              <template v-if="connected && wallet">
+              <template v-if="!isAuthenticated && connected && wallet">
                 <img
                   v-if="wallet.icon"
                   :src="wallet.icon"
@@ -186,7 +186,13 @@
             <div class="dropdown-content">
               <div class="dropdown-item">
                 <p class="is-size-7 has-text-grey mb-0">
-                  {{ connected ? getWalletAddress() : userData?.email || "" }}
+                  {{
+                    isAuthenticated
+                      ? userData?.email || ""
+                      : connected
+                        ? getWalletAddress()
+                        : ""
+                  }}
                 </p>
               </div>
               <hr class="dropdown-divider" />

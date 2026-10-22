@@ -54,7 +54,7 @@
       >
         <span class="account-avatar">
           <img
-            v-if="connected && wallet?.icon"
+            v-if="!isGoogleAuthenticated && connected && wallet?.icon"
             :src="wallet.icon"
             :alt="`${wallet.name} icon`"
             class="wallet-icon"
