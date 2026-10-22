@@ -55,6 +55,7 @@
 <script setup lang="ts">
 import { useToast } from "vue-toastification";
 import type { UseJob } from "~/composables/jobs/useJob";
+import { withNetworkFee } from "~/composables/useMarketPricing";
 
 interface Props {
   job: UseJob;
@@ -77,9 +78,10 @@ const isCreditUser = computed(() => {
   return isAuthenticated.value && userData.value?.generatedAddress;
 });
 
-// Use centralized pricing system for extension costs
-const marketAddress = computed(() => job.market || null);
-const { usdPricePerHour: extensionUsdRate } = useMarketUsdPrice(marketAddress);
+// What an hour costs this job: its market's rate when it was posted, fee included.
+const extensionUsdRate = computed(() =>
+  job.usdRewardPerHour ? withNetworkFee(job.usdRewardPerHour) : null,
+);
 
 // Calculate extension cost in NOS for wallet users
 const extensionCost = computed(() => {

@@ -60,6 +60,12 @@ export function useJobUsageSnapshot(jobId: string, deploymentId: string) {
     let memLimit = 0;
     let rx = 0;
     let tx = 0;
+    let gpu: {
+      percent: number;
+      devices: number;
+      memUsage: number;
+      memLimit: number;
+    } | null = null;
 
     for (const s of ops) {
       cpu += s.cpu?.cpu_percent ?? 0;
@@ -67,6 +73,15 @@ export function useJobUsageSnapshot(jobId: string, deploymentId: string) {
       memLimit = Math.max(memLimit, s.memory?.memory_limit ?? 0);
       rx += s.network?.received ?? 0;
       tx += s.network?.sent ?? 0;
+      if (s.gpu) {
+        // Per-device figures summed across the job's ops; the limit comes in
+        // GiB and is kept in MiB here, like the usage.
+        gpu ??= { percent: 0, devices: 0, memUsage: 0, memLimit: 0 };
+        gpu.percent += s.gpu.gpu_percent ?? 0;
+        gpu.devices += s.gpu.devices?.length ?? 0;
+        gpu.memUsage += s.gpu.memory_usage ?? 0;
+        gpu.memLimit += (s.gpu.memory_limit ?? 0) * 1024;
+      }
     }
 
     return {
@@ -76,6 +91,8 @@ export function useJobUsageSnapshot(jobId: string, deploymentId: string) {
       memPercent: memLimit > 0 ? (memUsage / memLimit) * 100 : 0,
       rx,
       tx,
+      /** Null until a node that reports GPU figures is attached. */
+      gpu,
     };
   });
 

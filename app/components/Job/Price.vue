@@ -21,11 +21,6 @@ const props = defineProps({
   options: {
     type: Object as PropType<JobPriceOptions>,
     default: () => ({})
-  },
-  // Optional pre-fetched markets data for performance
-  marketsData: {
-    type: Array,
-    default: null
   }
 });
 
@@ -39,9 +34,7 @@ const jobData = computed((): JobData => ({
   usdRewardPerHour: props.job.usdRewardPerHour
 }));
 
-const marketsDataRef = computed(() => props.marketsData);
-
-const { formattedPrice } = useJobPricing(jobData, props.options, marketsDataRef);
+const { formattedPrice } = useJobPricing(jobData, props.options);
 
 </script>
 

@@ -11,6 +11,14 @@
   --swv-button-outline-color: white !important;
   --swv-button-hover-background-color: #cbcbcb !important;
   // --swv-button-text-color: black !important;
+  // @nosana/solana-vue wallet modal
+  --wallet-bg: #{$black-ter} !important;
+  --wallet-bg-gray: #{$grey-darker} !important;
+  --wallet-bg-accent: #{$grey-dark} !important;
+  --wallet-border: #{$grey-dark} !important;
+  --wallet-text-primary: #{$white} !important;
+  --wallet-text-secondary: #{$grey-light} !important;
+  --wallet-primary: #{$secondary} !important;
   --status-success-color: #{$success};
   --status-warning-color: #{$warning};
   --status-danger-color: #{$danger};

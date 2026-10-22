@@ -192,7 +192,7 @@ import DeploymentJobPanelBody from "~/components/Deployment/DeploymentJobPanelBo
 import DeploymentLogCollector from "~/components/Deployment/DeploymentLogCollector.vue";
 import DeploymentStatusPill from "~/components/Deployment/DeploymentStatusPill.vue";
 import JobGpuName from "~/components/Deployment/JobGpuName.vue";
-import { marketName, truncateMiddle } from "~/utils/solana";
+import { truncateMiddle } from "~/utils/solana";
 import { formatTimeAgo } from "~/utils/relativeTime";
 import type { LlmChatStatus } from "~/composables/jobs/useLlmEndpoint";
 
@@ -215,9 +215,7 @@ const props = defineProps<{
   deploymentId: string;
   /** Every job the page knows, for the header line and the log collector. */
   deploymentJobs: DeploymentJobItem[];
-  market?: string;
-  /** Testgrid market records, to turn the market address into a GPU name. */
-  testgridMarkets?: Array<{ address?: string; name?: string }>;
+  market?: string | null;
   /** The deployment's endpoint status, shown on the container cards. */
   endpoints: Array<{ opId: string; port: number | string; online: boolean }>;
   /** Job on screen, "" when closed. */
@@ -248,8 +246,9 @@ const selected = computed(
 
 // Stands in for the GPU until the job's node reports one; JobGpuName picks
 // between the two.
+const { marketLabel: labelMarket } = useMarketLabel();
 const marketLabel = computed(() =>
-  props.market ? marketName(props.market, props.testgridMarkets) : "Job",
+  props.market ? labelMarket(props.market) : "Job",
 );
 
 const jobState = computed(() =>

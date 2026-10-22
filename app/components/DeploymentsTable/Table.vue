@@ -1,23 +1,22 @@
 <template>
-  <div class="box mt-4 has-text-left">
-    <div class="columns is-multiline">
-      <div class="column is-12">
-        <TableHeader />
+  <!-- The toolbar sits above a soft card, as the deployment and create pages lay out their sections -->
+  <div class="has-text-left">
+    <TableHeader />
 
-        <DeploymentList
-          v-if="currentTab === 'deployments'"
-          :items-per-page="itemsPerPage"
-        />
-        <JobsList
-          v-if="currentTab === 'jobs'"
-          :items-per-page="itemsPerPage"
-          :status-filter="filterValue"
-        />
-        <VaultsList
-          v-if="currentTab === 'vaults'"
-          :items-per-page="itemsPerPage"
-        />
-      </div>
+    <div class="section-card list-card">
+      <DeploymentList
+        v-if="currentTab === 'deployments'"
+        :items-per-page="itemsPerPage"
+      />
+      <JobsList
+        v-if="currentTab === 'jobs'"
+        :items-per-page="itemsPerPage"
+        :status-filter="filterValue"
+      />
+      <VaultsList
+        v-if="currentTab === 'vaults'"
+        :items-per-page="itemsPerPage"
+      />
     </div>
   </div>
 </template>
@@ -48,3 +47,18 @@ const itemsPerPage = computed(() => {
   return parseInt(size) || 10;
 });
 </script>
+
+<style scoped lang="scss">
+// The lists keep their own row padding; the card only frames them.
+.list-card {
+  padding: 0.25rem 0.5rem;
+
+  :deep(.table-container) {
+    margin-bottom: 0;
+  }
+
+  :deep(.table) {
+    background: transparent;
+  }
+}
+</style>

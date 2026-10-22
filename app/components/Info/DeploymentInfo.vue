@@ -73,18 +73,7 @@
             :href="`https://explore.nosana.com/markets/${props.job.market}`"
             target="_blank"
           >
-            <span
-              v-if="
-                apiMarkets &&
-                apiMarkets.find((tgm: any) => tgm.address === props.job.market)
-              "
-            >
-              {{
-                apiMarkets.find((tgm: any) => tgm.address === props.job.market)
-                  ?.name || props.job.market
-              }}
-            </span>
-            <span v-else>{{ props.job.market }}</span>
+            <span>{{ marketLabel(props.job.market) }}</span>
           </a>
         </span>
       </div>
@@ -166,18 +155,7 @@
             :href="`https://explore.nosana.com/markets/${props.job.market}`"
             target="_blank"
           >
-            <span
-              v-if="
-                apiMarkets &&
-                apiMarkets.find((tgm: any) => tgm.address === props.job.market)
-              "
-            >
-              {{
-                apiMarkets.find((tgm: any) => tgm.address === props.job.market)
-                  ?.name || props.job.market
-              }}
-            </span>
-            <span v-else>{{ props.job.market }}</span>
+            <span>{{ marketLabel(props.job.market) }}</span>
           </a>
         </span>
       </div>
@@ -274,7 +252,7 @@ const timeAgo = computed(() => {
   }
 });
 
-const { data: apiMarkets } = useAPI("/markets", { default: () => [] });
+const { marketLabel } = useMarketLabel();
 
 const jobDataForPrice = computed(() => {
   return {

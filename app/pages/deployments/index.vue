@@ -2,11 +2,6 @@
   <div>
     <Loader v-if="checkingDeployments" />
     <template v-else>
-      <TopBar
-        title="Deployments"
-        subtitle="Find information about your deployments here"
-      />
-
       <!-- Creating a deployment lives in the sidebar now -->
       <DeploymentsTable :items-per-page="20" />
     </template>
