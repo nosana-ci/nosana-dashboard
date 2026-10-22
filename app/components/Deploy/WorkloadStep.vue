@@ -2,7 +2,7 @@
   <div class="workload-step">
     <section class="deploy-surface workload-hero">
       <span class="deploy-surface-grid" aria-hidden="true"></span>
-      <div class="hero-body" :class="{ 'is-single': !featuredTemplate }">
+      <div class="hero-body" :class="{ 'is-single': !featuredTemplate && !describing }">
         <div class="hero-text">
           <h2 class="hero-title">
             What would<br />you like to <span class="hero-accent">deploy</span>?
@@ -52,22 +52,6 @@
               </ol>
             </div>
             <p v-else-if="describe.error.value" class="describe-error">{{ describe.error.value }}</p>
-            <div v-else-if="describe.proposal.value" class="describe-result">
-              <span class="describe-target">{{ proposalLabel }}</span>
-              <p class="describe-why">{{ describe.proposal.value.why }}</p>
-              <div class="describe-actions">
-                <button
-                  type="button"
-                  class="recent-pill is-all"
-                  @click="emit('apply-proposal', describe.proposal.value)"
-                >
-                  Set it up <DeployCategoryIcon icon="arrow" />
-                </button>
-                <button type="button" class="describe-dismiss" @click="describe.reset()">
-                  Dismiss
-                </button>
-              </div>
-            </div>
             <div
               v-if="describe.phase.value === 'idle' && !describe.proposal.value"
               class="describe-examples"
@@ -91,7 +75,54 @@
           </div>
         </div>
 
-        <article v-if="featuredTemplate" class="featured">
+        <!-- The card on the right: the deployment being built for a description, the one
+             built, or the featured template. -->
+        <Transition name="featured-swap" mode="out-in">
+        <article v-if="describe.phase.value !== 'idle'" key="building" class="featured is-building">
+          <span class="featured-head">
+            <span class="featured-logo featured-logo-fallback">
+              <span class="describe-pulse" aria-hidden="true"></span>
+            </span>
+            <span class="featured-heading">
+              <small>Building your template</small>
+              <strong>{{ buildingStep }}</strong>
+            </span>
+          </span>
+          <span class="featured-skeleton" aria-hidden="true">
+            <span></span><span></span><span></span>
+          </span>
+          <div class="featured-foot">
+            <span class="featured-meta">“{{ request }}”</span>
+          </div>
+        </article>
+        <article v-else-if="describe.proposal.value" key="proposal" class="featured is-proposal">
+          <span class="featured-head">
+            <img v-if="proposalBase?.icon" class="featured-logo" :src="proposalBase.icon" alt="" />
+            <span v-else class="featured-logo featured-logo-fallback">
+              {{ describe.proposal.value.name.charAt(0).toUpperCase() }}
+            </span>
+            <span class="featured-heading">
+              <small>Made for you</small>
+              <strong>{{ describe.proposal.value.name }}</strong>
+            </span>
+          </span>
+          <p class="featured-desc">{{ describe.proposal.value.why }}</p>
+          <span class="featured-tags">
+            <span v-for="tag in proposalTags" :key="tag" class="featured-tag">{{ tag }}</span>
+          </span>
+          <div class="featured-foot">
+            <span class="featured-meta" :title="proposalLabel">{{ proposalLabel }}</span>
+            <button type="button" class="describe-dismiss" @click="describe.reset()">Dismiss</button>
+            <button
+              type="button"
+              class="featured-cta"
+              @click="emit('apply-proposal', describe.proposal.value)"
+            >
+              Set it up <DeployCategoryIcon icon="arrow" />
+            </button>
+          </div>
+        </article>
+        <article v-else-if="featuredTemplate" key="featured" class="featured">
           <span class="featured-head">
             <img
               v-if="featuredTemplate.icon"
@@ -137,6 +168,7 @@
             </button>
           </div>
         </article>
+        </Transition>
       </div>
     </section>
 
@@ -247,6 +279,29 @@ const proposalLabel = computed(() => {
   const image = ops[0]?.args?.image ?? "Your own job";
   const base = props.templates.find((t) => String(t.id) === proposal.templateId);
   return base ? `${image} · adapted from ${base.name}` : image;
+});
+
+/** Whether the right-hand card is showing a description being built or its result. */
+const describing = computed(
+  () => describe.phase.value !== "idle" || !!describe.proposal.value,
+);
+/** What the building card says it is doing: the step in progress. */
+const buildingStep = computed(
+  () => describe.progress.value.steps.at(-1)?.label ?? "Reading your description",
+);
+/** The template the proposal deploys or adapts, for its icon and tags. */
+const proposalBase = computed(() => {
+  const id = describe.proposal.value?.templateId;
+  return id ? props.templates.find((t) => String(t.id) === id) : undefined;
+});
+const proposalTags = computed(() => {
+  const proposal = describe.proposal.value;
+  if (!proposal) return [];
+  const base = proposalBase.value ? descriptiveTags(proposalBase.value) : [];
+  const gpu = proposal.gpuName ? [proposal.gpuName.replace(/^NVIDIA (GeForce )?/, "")] : [];
+  return proposal.kind === "template"
+    ? [...base.slice(0, 3), ...gpu]
+    : ["Custom job", ...base.slice(0, 2), ...gpu];
 });
 
 const emit = defineEmits<{
@@ -598,34 +653,9 @@ const filteredTemplates = computed(() => {
   color: #ff9b8a;
 }
 
-.describe-result {
-  display: grid;
-  gap: 0.4rem;
-  margin-top: 0.75rem;
-  padding: 0.85rem 1rem;
-  border: 1px solid rgba($secondary, 0.35);
-  border-radius: 14px;
-  background: rgba($secondary, 0.06);
-}
 
-.describe-target {
-  font-weight: 700;
-  color: #fff;
-}
 
-.describe-why {
-  margin: 0;
-  font-size: 14px;
-  line-height: 1.5;
-  color: #b7c0b6;
-}
 
-.describe-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-top: 0.25rem;
-}
 
 .describe-dismiss {
   border: 0;
@@ -640,7 +670,98 @@ const filteredTemplates = computed(() => {
   }
 }
 
-/* Featured template: the showcase card on the right, like the dev page's */
+/* Featured template: the showcase card on the right, like the dev page's. A described
+   deployment takes its place, first while it is built and then as the result. */
+.featured-swap-enter-active,
+.featured-swap-leave-active {
+  transition:
+    opacity 0.25s ease,
+    transform 0.3s ease;
+}
+
+.featured-swap-enter-from {
+  opacity: 0;
+  transform: translateY(10px) scale(0.98);
+}
+
+.featured-swap-leave-to {
+  opacity: 0;
+  transform: scale(0.98);
+}
+
+.featured.is-building {
+  border-color: rgba($secondary, 0.45);
+  animation: featured-glow 2s ease-in-out infinite;
+
+  .featured-heading strong {
+    font-size: 17px;
+  }
+}
+
+@keyframes featured-glow {
+  50% {
+    box-shadow:
+      0 18px 40px -24px rgba(0, 0, 0, 0.8),
+      0 0 0 4px rgba($secondary, 0.08);
+  }
+}
+
+.featured.is-proposal {
+  border-color: rgba($secondary, 0.55);
+}
+
+// Lines standing in for the description while it is written.
+.featured-skeleton {
+  display: grid;
+  gap: 9px;
+
+  span {
+    height: 11px;
+    border-radius: 6px;
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.05) 25%,
+      rgba(255, 255, 255, 0.13) 50%,
+      rgba(255, 255, 255, 0.05) 75%
+    );
+    background-size: 200% 100%;
+    animation: featured-shimmer 1.4s linear infinite;
+
+    &:nth-child(2) {
+      width: 85%;
+    }
+
+    &:nth-child(3) {
+      width: 60%;
+    }
+  }
+}
+
+@keyframes featured-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.featured-meta {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: #8a948a;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .featured.is-building,
+  .featured-skeleton span {
+    animation: none;
+  }
+}
+
+
 .featured {
   align-self: center;
   display: flex;
