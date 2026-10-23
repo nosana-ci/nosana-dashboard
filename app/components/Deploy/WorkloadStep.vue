@@ -118,15 +118,22 @@
               <span class="featured-tags">
                 <span v-for="tag in proposalTags" :key="tag" class="featured-tag">{{ tag }}</span>
               </span>
+              <span class="featured-meta" :title="proposalLabel">{{ proposalLabel }}</span>
               <div class="featured-foot">
-                <span class="featured-meta" :title="proposalLabel">{{ proposalLabel }}</span>
                 <button type="button" class="describe-dismiss" @click="describe.reset()">Dismiss</button>
                 <button
                   type="button"
-                  class="featured-cta"
+                  class="featured-secondary"
                   @click="emit('apply-proposal', describe.proposal.value)"
                 >
-                  Set it up <DeployCategoryIcon icon="arrow" />
+                  Set it up
+                </button>
+                <button
+                  type="button"
+                  class="featured-cta"
+                  @click="emit('deploy-proposal', describe.proposal.value)"
+                >
+                  Deploy <DeployCategoryIcon icon="arrow" />
                 </button>
               </div>
             </div>
@@ -317,6 +324,8 @@ const proposalTags = computed(() => {
 const emit = defineEmits<{
   /** A described deployment, checked, for the form to take. */
   "apply-proposal": [proposal: DeployProposal];
+  /** The same, deployed straight away with the page's choice of GPU. */
+  "deploy-proposal": [proposal: DeployProposal];
   "select-template": [template: Template];
   /** The featured card's Use template: skips the template page. */
   "deploy-template": [template: Template];
@@ -767,6 +776,30 @@ const filteredTemplates = computed(() => {
 @keyframes featured-shimmer {
   to {
     background-position: -200% 0;
+  }
+}
+
+// Set it up beside Deploy: the card's own surface, so Deploy stays the one to press.
+.featured-secondary {
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 0.6rem 1.1rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #e8f0e8;
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+
+  &:hover {
+    border-color: rgba($secondary, 0.6);
+  }
+
+  + .featured-cta {
+    margin-left: 0;
   }
 }
 

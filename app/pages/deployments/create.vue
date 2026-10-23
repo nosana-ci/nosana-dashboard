@@ -12,6 +12,7 @@
       :gpus="gpuListings"
       :can-describe="superTokensAuth"
       @apply-proposal="applyProposal"
+      @deploy-proposal="deployProposal"
       @select-template="selectTemplateFromModal"
       @deploy-template="selectTemplateFromModal"
       @configure-own="configureOwnJob"
@@ -109,6 +110,7 @@ import {
   withSshPublicKeys,
 } from "@nosana/kit";
 import { useToast } from "vue-toastification";
+import { until } from "@vueuse/core";
 import { useWallet } from "@nosana/solana-vue";
 import { useRouter, useRoute } from "vue-router";
 import {
@@ -1250,6 +1252,14 @@ const applyProposal = async (proposal: DeployProposal) => {
   if (proposal.gpuName && gpuListings.value.some((listing) => listing.name === proposal.gpuName)) {
     selectedGpus.value = [proposal.gpuName];
   }
+};
+// Deploy straight from the described card: the template page's one-click action,
+// once the GPU is chosen. Whatever stops it (no credits, no GPU) is left on the page.
+const deployProposal = async (proposal: DeployProposal) => {
+  await applyProposal(proposal);
+  await until(() => selectedGpus.value.length > 0).toBe(true, { timeout: 10000 });
+  const action = deployAction.value;
+  if (!action.disabled) await action.run();
 };
 // The builder on the page edits the job live; it only hands back a string
 // while JSON is invalid, which it never does itself.
