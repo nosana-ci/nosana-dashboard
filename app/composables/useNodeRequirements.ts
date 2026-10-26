@@ -46,6 +46,45 @@ export type { DeploymentRequirements };
 /** The GPU model metric: a deployment lists the models it accepts under it. */
 export const GPU_KEY = "name";
 
+/**
+ * Temporary: the compute step lists markets instead of GPU models, takes
+ * one, and the deployment pins it, as before GPUs were requirements. Set to
+ * false to bring the multi-GPU selection back.
+ */
+export const PIN_TO_MARKET = true;
+
+/** The market a listing pins: a market row's own address, else the first the catalogue lists the GPU in. */
+export function marketOf(listing: GpuListing | undefined): string | null {
+  return listing?.markets[0] ?? null;
+}
+
+/** A market as the dashboard API lists it, with its hourly rate. */
+interface MarketRate {
+  address: string;
+  name: string;
+  type: string;
+  usd_reward_per_hour: number;
+  /** A private market reserved for one client; public jobs cannot use it. */
+  client?: boolean;
+  /** Hardware notes on the market, e.g. `{ key: "vram", value: "24GB" }`. */
+  metadata?: Array<{ key: string; value: string }>;
+}
+
+/** "24GB" → 24, "24576 MB" → 24; null when the text names no size. */
+function parseVramGb(text: string | undefined): number | null {
+  const match = text?.match(/(\d+(?:\.\d+)?)\s*(GB|MB)?/i);
+  if (!match) return null;
+  const size = Number(match[1]);
+  return match[2]?.toUpperCase() === "MB" ? Math.round(size / 1024) : size;
+}
+
+/** The market types a deployment can be created on: every public type on devnet, premium on mainnet. */
+function deployableMarketTypes(): string[] {
+  return useRuntimeConfig().public.network === "devnet"
+    ? ["PREMIUM", "COMMUNITY"]
+    : ["PREMIUM"];
+}
+
 /** The GPUs a deployment's requirements accept; one value reads as a list of one. */
 export function gpusOf(
   requirements: DeploymentRequirements | null | undefined,
@@ -129,6 +168,7 @@ function rangeOf(prices: number[]): PriceRange | null {
  * summary) leave it off.
  */
 export function useGpuListings({ live = false }: { live?: boolean } = {}) {
+  if (PIN_TO_MARKET) return useMarketListings({ live });
   const { gpus, pending, error, refresh } = useGpuModels();
   if (live) {
     // Counts kept from an earlier visit are fetched again right away.
@@ -167,12 +207,68 @@ export function useGpuListings({ live = false }: { live?: boolean } = {}) {
   };
 }
 
-/** Whether a GPU meets the job's VRAM. */
+/**
+ * The markets a deployment can be created on, as GPU listings: one row per
+ * public market of the deployable types, named as the market is, with the
+ * market's own address, its hourly rate, VRAM from its metadata (0 when it
+ * has none) and live host counts from host-manager's queue and the
+ * running-job counts. `live` as on `useGpuListings`.
+ */
+function useMarketListings({ live = false }: { live?: boolean } = {}) {
+  const config = useRuntimeConfig();
+  const { nosana } = useKit();
+  const types = deployableMarketTypes();
+  const { data, pending, error, refresh } = useAsyncData<GpuListing[]>(
+    "market-listings",
+    async () => {
+      const baseURL = config.public.apiBase as string;
+      const [markets, queued, running] = await Promise.all([
+        $fetch<MarketRate[]>("/markets", { baseURL }),
+        nosana.value.api.reservations.findAvailable({ requirements: {} }),
+        $fetch<Record<string, { running?: number }>>("/jobs/running", {
+          baseURL,
+        }),
+      ]);
+      const available: Record<string, number> = {};
+      for (const node of queued.nodes) {
+        available[node.market] = (available[node.market] ?? 0) + 1;
+      }
+      return markets
+        .filter((market) => !market.client && types.includes(market.type))
+        .map((market) => {
+          const usd = market.usd_reward_per_hour;
+          return {
+            name: market.name,
+            vramGb:
+              parseVramGb(
+                market.metadata?.find((entry) => entry.key === "vram")?.value,
+              ) ?? 0,
+            available: available[market.address] ?? 0,
+            working: running[market.address]?.running ?? 0,
+            markets: [market.address],
+            usd: usd > 0 ? { min: withNetworkFee(usd), max: withNetworkFee(usd) } : null,
+          };
+        });
+    },
+    { default: () => [], dedupe: "defer" },
+  );
+  if (live) {
+    if (data.value?.length) void refresh();
+    const visibility = useDocumentVisibility();
+    useIntervalFn(() => {
+      if (visibility.value === "visible") void refresh();
+    }, HOST_COUNT_REFRESH_MS);
+  }
+
+  return { listings: computed(() => data.value ?? []), pending, error, refresh };
+}
+
+/** Whether a GPU meets the job's VRAM; a listing with no VRAM known (0) always does. */
 export function gpuFitsVram(
   listing: GpuListing,
   requiredGb: number | null,
 ): boolean {
-  return !requiredGb || listing.vramGb >= requiredGb;
+  return !requiredGb || !listing.vramGb || listing.vramGb >= requiredGb;
 }
 
 /** Hosts free now and hosts busy, summed over some GPUs. */
@@ -389,6 +485,8 @@ export interface MatchingHosts {
  */
 export function useQualifyingHosts(
   requirements: MaybeRefOrGetter<DeploymentRequirements>,
+  /** When given, only hosts queued on these markets count. */
+  markets: MaybeRefOrGetter<string[] | null> = null,
 ) {
   const { nosana } = useKit();
   const qualifying = ref<number | null>(null);
@@ -408,7 +506,10 @@ export function useQualifyingHosts(
         requirements: current,
       });
       if (!searches.isCurrent(id)) return;
-      qualifying.value = result.total;
+      const within = toValue(markets);
+      qualifying.value = within
+        ? result.nodes.filter((node) => within.includes(node.market)).length
+        : result.total;
       failed.value = false;
     } catch (e) {
       console.error("Error finding available nodes:", e);
@@ -420,7 +521,9 @@ export function useQualifyingHosts(
 
   // A string key: the catalogue refresh rebuilds equal inputs as new objects,
   // which must not trigger a lookup.
-  const inputs = computed(() => JSON.stringify(toValue(requirements)));
+  const inputs = computed(() =>
+    JSON.stringify([toValue(requirements), toValue(markets)]),
+  );
   watchDebounced(inputs, search, { debounce: 300, immediate: true });
 
   return { qualifying, failed, refresh: search };
