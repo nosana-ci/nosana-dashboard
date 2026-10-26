@@ -194,7 +194,7 @@
 
             <!-- Change Requirements Action: the GPUs and host requirements -->
             <a
-              v-if="deployment.status !== 'ARCHIVED'"
+              v-if="!PIN_TO_MARKET && deployment.status !== 'ARCHIVED'"
               class="dropdown-item"
               @click="emitAction('update-requirements')"
               :disabled="actionLoading"
@@ -327,6 +327,7 @@
 <script setup lang="ts">
 import type { Deployment } from "@nosana/kit";
 import { formatTimeAgo } from "~/utils/relativeTime";
+import { PIN_TO_MARKET } from "~/composables/useNodeRequirements";
 
 import ChevronDownIcon from "@/assets/img/icons/chevron-down.svg?component";
 import PlayIcon from "@/assets/img/icons/play.svg?component";

@@ -132,6 +132,8 @@ import {
   gpuFitsVram,
   gpusInMarket,
   gpusOf,
+  marketOf,
+  PIN_TO_MARKET,
   keepCategorizedRequirements,
   listingsOf,
   listRequirementChips,
@@ -489,7 +491,7 @@ watch(
     clonedMarketAddress.value = null;
     if (cloned.length) {
       defaultedGpu.value = null;
-      selectedGpus.value = cloned;
+      selectedGpus.value = PIN_TO_MARKET ? cloned.slice(0, 1) : cloned;
       return;
     }
     const chosen = selectedGpus.value;
@@ -749,8 +751,15 @@ const createDeployment = async () => {
     if (!selectedGpus.value.length) {
       throw new Error("Please select a GPU");
     }
-    // No market: host-manager posts each job to the cheapest premium market
+    // Pinned to the chosen GPU's market while PIN_TO_MARKET; otherwise no
+    // market: host-manager posts each job to the cheapest premium market
     // with a host that has one of the GPUs and meets the requirements.
+    const pinnedMarket = PIN_TO_MARKET
+      ? marketOf(selectedGpuListings.value[0])
+      : null;
+    if (PIN_TO_MARKET && !pinnedMarket) {
+      throw new Error("That GPU has no market to deploy to");
+    }
     const deployment = (await nosana.value.api.deployments.create({
       name: deploymentName.value.trim(),
       replicas: replicas.value,
@@ -759,7 +768,19 @@ const createDeployment = async () => {
       ...(strategy.value === DeploymentStrategy.SCHEDULED
         ? { schedule: schedule.value }
         : {}),
-      requirements: withGpus(advancedRequirements.value, selectedGpus.value),
+      ...(pinnedMarket
+        ? {
+            market: pinnedMarket,
+            ...(Object.keys(advancedRequirements.value).length
+              ? { requirements: advancedRequirements.value }
+              : {}),
+          }
+        : {
+            requirements: withGpus(
+              advancedRequirements.value,
+              selectedGpus.value,
+            ),
+          }),
       // Start immediately server-side instead of a separate start() call.
       autostart: true,
       ssh_public_keys: sshPublicKeys.value,

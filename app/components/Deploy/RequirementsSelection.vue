@@ -4,7 +4,7 @@
     <section class="deploy-step">
       <header class="deploy-step-head">
         <span class="deploy-step-num" aria-hidden="true"></span>
-        <h3>Choose GPUs</h3>
+        <h3>{{ PIN_TO_MARKET ? "Choose a market" : "Choose GPUs" }}</h3>
         <div class="req-toolbar deploy-step-action">
           <label class="req-search">
             <DeployCategoryIcon icon="search" />
@@ -50,10 +50,16 @@
 
         <!-- List header: the selection count, and the bulk actions on the right -->
         <div v-if="listedGpus.length" class="section-row gpu-list-head">
-          <span title="Each job goes to the cheapest selected GPU with a host free">
+          <span
+            :title="
+              PIN_TO_MARKET
+                ? 'Each job goes to the chosen GPU\'s market'
+                : 'Each job goes to the cheapest selected GPU with a host free'
+            "
+          >
             {{ selectionLabel }}
           </span>
-          <span class="gpu-list-actions">
+          <span v-if="!PIN_TO_MARKET" class="gpu-list-actions">
             <button
               v-if="!allShownSelected"
               type="button"
@@ -95,7 +101,8 @@
             @click="selectRange(row, $event)"
           >
             <input
-              type="checkbox"
+              :type="PIN_TO_MARKET ? 'radio' : 'checkbox'"
+              name="deploy-gpu"
               :value="row.listing.name"
               :checked="row.selected"
               :disabled="row.dim && !row.selected"
@@ -316,6 +323,7 @@ import {
   hostsOf,
   keepSupportedRequirements,
   listingsOf,
+  PIN_TO_MARKET,
   useGpuListings,
   useQualifyingHosts,
   useRequirementOptions,
@@ -423,7 +431,7 @@ const gpuRows = computed<GpuRow[]>(() =>
       listing,
       subline: dim
         ? `${listing.vramGb} GB · below ${props.requiredVramGb} GB VRAM`
-        : `${listing.vramGb} GB · ${listing.available} available · ${listing.working} working`,
+        : `${listing.vramGb ? `${listing.vramGb} GB` : "VRAM not listed"} · ${listing.available} available · ${listing.working} working`,
       dim,
       selected: props.modelValue.includes(listing.name),
     };
@@ -565,7 +573,9 @@ function onGpuChange(row: GpuRow) {
   const name = row.listing.name;
   emit(
     "update:modelValue",
-    props.modelValue.includes(name)
+    PIN_TO_MARKET
+      ? [name]
+      : props.modelValue.includes(name)
       ? props.modelValue.filter((selected) => selected !== name)
       : [...props.modelValue, name],
   );
@@ -577,7 +587,7 @@ function onGpuChange(row: GpuRow) {
 // workload's VRAM. Without an anchor in the list it is a plain click.
 function selectRange(row: GpuRow, event: MouseEvent) {
   // The click the label forwards to its checkbox arrives here too.
-  if (!event.shiftKey || event.target instanceof HTMLInputElement) return;
+  if (PIN_TO_MARKET || !event.shiftKey || event.target instanceof HTMLInputElement) return;
   const rows = listedGpus.value;
   const from = rows.findIndex((entry) => entry.listing.name === rangeAnchor.value);
   const to = rows.findIndex((entry) => entry.listing.name === row.listing.name);
@@ -620,7 +630,7 @@ const allShownSelected = computed(() =>
 // "6 of 23 selected", or "23 GPUs" with none selected.
 const selectionLabel = computed(() => {
   const shown = selectableShown.value.length;
-  return props.modelValue.length
+  return props.modelValue.length && !PIN_TO_MARKET
     ? `${props.modelValue.length} of ${shown} selected`
     : `${shown} GPU${shown === 1 ? "" : "s"}`;
 });
@@ -868,7 +878,18 @@ const {
   qualifying,
   failed: searchFailed,
   refresh: refreshQualifying,
-} = useQualifyingHosts(() => withGpus(props.requirements, props.modelValue));
+} = useQualifyingHosts(
+  // Market rows are not GPU names: the search runs on the specs alone and
+  // counts within the chosen markets.
+  () =>
+    PIN_TO_MARKET
+      ? props.requirements
+      : withGpus(props.requirements, props.modelValue),
+  () =>
+    PIN_TO_MARKET
+      ? selectedListings.value.flatMap((listing) => listing.markets)
+      : null,
+);
 const matching = computed<MatchingHosts | null>(() => {
   if (!selectedListings.value.length) return null;
   const { available, working } = hostsOf(selectedListings.value);

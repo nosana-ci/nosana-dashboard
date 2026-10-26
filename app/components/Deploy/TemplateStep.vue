@@ -228,7 +228,7 @@
             <dd>
               <template v-if="gpus.length">
                 <b :title="gpuFullNames">{{ gpuNames }}</b>
-                <span class="summary-nowrap">· {{ gpuVram }}</span>
+                <span v-if="gpuVram" class="summary-nowrap">· {{ gpuVram }}</span>
               </template>
               <template v-else>{{ runsOn }}</template>
               <span v-if="template && changes.gpu" class="summary-changed"
@@ -438,9 +438,10 @@ const gpuNames = computed(() =>
     : `${props.gpus.length} GPUs`,
 );
 const gpuFullNames = computed(() => props.gpus.map((gpu) => gpu.name).join("\n"));
-// "24 GB", or "24–80 GB" over several GPUs.
+// "24 GB", or "24–80 GB" over several GPUs; "" when none lists its VRAM.
 const gpuVram = computed(() => {
-  const sizes = props.gpus.map((gpu) => gpu.vramGb);
+  const sizes = props.gpus.map((gpu) => gpu.vramGb).filter(Boolean);
+  if (!sizes.length) return "";
   return formatVramRange(Math.min(...sizes), Math.max(...sizes));
 });
 // The chosen GPUs' hosts together.
