@@ -68,6 +68,12 @@
             </div>
           </div>
           <p v-if="lead" class="hero-lead">{{ lead }}</p>
+          <p v-if="vramUnknown" class="hero-warning mt-4" role="note">
+            <strong class="has-text-warning">GPU memory unknown.</strong>
+            This model's size could not be worked out, so no minimum is set.
+            Pick a GPU with enough memory for it, or set vram_total_mb in the
+            job definition.
+          </p>
         </div>
 
         <!-- The readme across the hero, folded until opened -->
@@ -322,6 +328,7 @@
 <script setup lang="ts">
 import type { JobDefinition } from "@nosana/kit";
 import { marked } from "marked";
+import DOMPurify from "dompurify";
 import {
   formatVram,
   requiredVramMb,
@@ -524,11 +531,12 @@ const runsOn = computed(() => {
 });
 
 // The readme as HTML: no title line, no opening paragraph repeating the lead.
+// Sanitised, as a quick start's readme is the model card from Hugging Face.
 const readmeHtml = computed(() => {
   const readme = props.template
     ? templateReadmeBody(props.template, lead.value)
     : "";
-  return readme.trim() ? String(marked(readme)) : "";
+  return readme.trim() ? DOMPurify.sanitize(String(marked(readme))) : "";
 });
 
 // "12 GB VRAM": what the chosen variant asks of the GPU.
@@ -536,6 +544,9 @@ const vram = computed(() => {
   const mb = requiredVramMb(props.jobDefinition);
   return mb ? formatVram(mb) : null;
 });
+
+// A quick-start model whose size its tag does not name asks nothing of the GPU.
+const vramUnknown = computed(() => !!props.template?.quickStart && !vram.value);
 
 // Folded, the readme shows only its start; the toggle appears once there is
 // more to show, and a new template starts folded again.
@@ -752,6 +763,18 @@ watch(
   line-height: 1.55;
 }
 
+.hero-warning {
+  max-width: 34rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid rgba($warning, 0.45);
+  border-left-width: 3px;
+  border-radius: 8px;
+  background: rgba($warning, 0.1);
+  color: #f3e3c4;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
 /* ---------- Spec bar: the variant, image, port and the editor ---------- */
 .hero-specs {
   position: relative;
@@ -909,6 +932,28 @@ watch(
     font-family: $family-monospace;
     font-size: 13px;
     color: #e8f0e8;
+  }
+
+  // Model cards carry badges, figures and tables.
+  :deep(img) {
+    max-width: 100%;
+    height: auto;
+    vertical-align: middle;
+  }
+
+  :deep(table) {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  :deep(th),
+  :deep(td) {
+    padding: 4px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    text-align: left;
   }
 
   :deep(pre) {

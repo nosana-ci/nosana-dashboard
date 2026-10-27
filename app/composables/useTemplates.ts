@@ -1,4 +1,5 @@
 import type { JobDefinition } from "@nosana/kit"
+import type { QuickStart } from "~/utils/quickStart"
 
 const emptyJobDefinition: JobDefinition = {
   "version": "0.1",
@@ -36,6 +37,8 @@ export type Template = {
   is_variant_template?: boolean;
   parent_template_id?: string;
   selectedVariant?: TemplateVariant; // For UI state tracking
+  /** Set on a quick-start workload: the registry model it was built from. */
+  quickStart?: QuickStart;
 }
 
 type GroupedTemplatesResponse = Record<string, any[]>

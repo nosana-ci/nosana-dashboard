@@ -15,6 +15,7 @@
       @deploy-proposal="deployProposal"
       @select-template="selectTemplateFromModal"
       @deploy-template="selectTemplateFromModal"
+      @quick-start="applyQuickStart"
       @configure-own="configureOwnJob"
       @browse-deployments="showCloneModal = true"
     />
@@ -23,8 +24,21 @@
     <Loader
       v-else-if="route.query.template && !selectedTemplate && loadingGroupedTemplates"
     />
-    <p v-else-if="route.query.template && !selectedTemplate" class="template-missing">
+    <p
+      v-else-if="route.query.template && !selectedTemplate && !templateEdited"
+      class="template-missing"
+    >
       That template could not be found.
+      <button type="button" @click="goToPicker()">Browse templates</button>
+    </p>
+
+    <!-- A quick-start link, while its model loads, or one that could not -->
+    <Loader v-else-if="route.query.quickstart && restoringQuickStart" />
+    <p
+      v-else-if="route.query.quickstart && quickStartError"
+      class="template-missing"
+    >
+      {{ quickStartError }}
       <button type="button" @click="goToPicker()">Browse templates</button>
     </p>
 
@@ -112,7 +126,7 @@ import {
 import { useToast } from "vue-toastification";
 import { until } from "@vueuse/core";
 import { useWallet } from "@nosana/solana-vue";
-import { useRouter, useRoute } from "vue-router";
+import { useRouter, useRoute, type LocationQuery } from "vue-router";
 import {
   requiredVramMb,
   withVariant,
@@ -120,6 +134,14 @@ import {
   type TemplateVariant,
 } from "~/composables/useTemplates";
 import { proposalTemplate, type DeployProposal } from "~/utils/deployProposal";
+import {
+  loadQuickStartTemplate,
+  parseQuickStartQuery,
+  quickStartId,
+  quickStartQuery,
+  quickStartWithVariant,
+  TOKEN_PLACEHOLDER,
+} from "~/utils/quickStart";
 import Loader from "~/components/Loader.vue";
 import CloneDeploymentModal from "~/components/Deploy/CloneDeploymentModal.vue";
 import VaultModal from "~/components/Vault/Modal/VaultModal.vue";
@@ -162,12 +184,19 @@ const toast = useToast();
 
 // Two pages share this route: the template picker, and a workload's page.
 // The address says which, so a reload and the browser's back button keep it:
-// a template (?template=, which marketing links use too), a clone (?clone=)
-// or your own image (?custom).
-const WORKLOAD_KEYS = ["template", "clone", "custom"];
+// a template (?template=, which marketing links use too), a clone (?clone=),
+// a registry model (?quickstart=) or your own image (?custom).
+const WORKLOAD_KEYS = ["template", "clone", "quickstart", "custom"];
 const onWorkloadPage = computed(() =>
   WORKLOAD_KEYS.some((key) => key in route.query),
 );
+// Everything a workload's page puts in the address: the workload itself, a
+// clone's name and market, a quick start's model and runtime.
+const WORKLOAD_QUERY = [...WORKLOAD_KEYS, "name", "market", "model", "app"];
+const withoutWorkload = (query: LocationQuery): LocationQuery =>
+  Object.fromEntries(
+    Object.entries(query).filter(([key]) => !WORKLOAD_QUERY.includes(key)),
+  );
 // The picker and a workload's page share one hero. Moving between them runs
 // the change inside a view transition, so the hero morphs in place and the
 // body under it swaps (deploy-surface.scss); without support it just switches.
@@ -185,19 +214,18 @@ const changePage = async (
   if (typeof document.startViewTransition !== "function") return apply();
   return document.startViewTransition(apply).updateCallbackDone;
 };
-// Back to the picker: the address drops the workload, and a clone's name
-// and market with it.
-const goToPicker = () => {
-  const { template, clone, custom, name, market, ...query } = route.query;
-  return changePage(false, () => router.replace({ query }));
-};
-// Your own image, or a clone made on this page: a workload without a template.
-const goToCustom = () => {
-  const { template, clone, name, market, ...query } = route.query;
-  return changePage(true, () =>
-    router.replace({ query: { ...query, custom: null } }),
+// Back to the picker: the address drops the workload and what came with it.
+const goToPicker = () =>
+  changePage(false, () =>
+    router.replace({ query: withoutWorkload(route.query) }),
   );
-};
+// Your own image, or a clone made on this page: a workload without a template.
+const goToCustom = () =>
+  changePage(true, () =>
+    router.replace({
+      query: { ...withoutWorkload(route.query), custom: null },
+    }),
+  );
 const {
   isAuthenticated: superTokensAuth,
   isEmailVerified,
@@ -267,6 +295,9 @@ const isCreatingDeployment = ref(false);
 const skipTemplateAutoSelection = ref(false);
 const isUpdatingFromJobDef = ref(false);
 const isRestoringState = ref(false);
+// Set once an edit to the job definition drops the template: the ?template=
+// link then still names it, but is not missing.
+const templateEdited = ref(false);
 
 // The timeout as hours, or minutes under an hour.
 const durationLabel = computed(() => {
@@ -453,7 +484,14 @@ const jobBlocker = computed(() => {
     (op) =>
       op.type === "container/run" && !("image" in op.args && op.args.image),
   );
-  return imageless ? "Add an image to deploy" : null;
+  if (imageless) return "Add an image to deploy";
+  // A gated Hugging Face repo whose token is still the placeholder fails to download.
+  const tokenless = ops.some(
+    (op) =>
+      "env" in op.args &&
+      Object.values(op.args.env ?? {}).includes(TOKEN_PLACEHOLDER),
+  );
+  return tokenless ? "Add your Hugging Face token to deploy" : null;
 });
 const sshPublicKeys = ref<string[]>([]);
 // Set by the SSH form while it cannot be used yet (e.g. private key not downloaded).
@@ -856,17 +894,29 @@ const restoreDraftIfNeeded = () => {
 
   // An explicit ?template= deep link always wins over a stale draft
   const hasTemplateQuery = Boolean(route.query.template);
+  // ...and so does a ?quickstart= link, unless the draft is that quick start
+  const linkedQuickStart = parseQuickStartQuery(route.query);
+  const draftQuickStart = draft.selectedTemplate?.quickStart;
+  const otherQuickStart =
+    "quickstart" in route.query &&
+    !(
+      linkedQuickStart &&
+      draftQuickStart &&
+      quickStartId(draftQuickStart) === quickStartId(linkedQuickStart)
+    );
 
   isRestoringState.value = true;
   try {
-    if (!hasTemplateQuery) {
+    if (!hasTemplateQuery && !otherQuickStart) {
       if (draft.selectedTemplate)
         selectedTemplate.value = draft.selectedTemplate;
       if (draft.jobDefinition) {
         jobDefinition.value = draft.jobDefinition;
         // Back from logging in: the workload's page, with the template in
         // the address so a reload lands back on it.
-        if (draft.selectedTemplate) applyTemplate(draft.selectedTemplate);
+        if (draft.selectedTemplate?.quickStart)
+          applyQuickStart(draft.selectedTemplate);
+        else if (draft.selectedTemplate) applyTemplate(draft.selectedTemplate);
         else goToCustom();
       }
     }
@@ -1055,6 +1105,7 @@ watch(
       ) {
         isUpdatingFromJobDef.value = true;
         selectedTemplate.value = null;
+        templateEdited.value = true;
         nextTick(() => {
           isUpdatingFromJobDef.value = false;
         });
@@ -1155,6 +1206,8 @@ onMounted(async () => {
     // Restore a persisted draft
     restoreDraftIfNeeded();
   }
+  // A quick start, reloaded without a draft: rebuild it from the address.
+  if ("quickstart" in route.query) await restoreQuickStart();
   // Your own image, reloaded without a draft: start from an empty job.
   if ("custom" in route.query && !jobDefinition.value) {
     skipTemplateAutoSelection.value = true;
@@ -1202,13 +1255,58 @@ watch(
 // A template's page. Picking a template abandons any clone or own image, so
 // their params go too.
 const applyTemplate = (template: Template) => {
-  const { clone, custom, name, market, ...query } = route.query;
   return changePage(true, () => {
     selectedTemplate.value = template;
     return router.replace({
-      query: { ...query, template: String(template.id) },
+      query: { ...withoutWorkload(route.query), template: String(template.id) },
     });
   });
+};
+
+// A quick start's page: a registry model as a template, named in the
+// address so a reload rebuilds it. The templates list never holds it, so the
+// address must not be looked up there.
+const quickStartError = ref("");
+// From page load until a ?quickstart= link is rebuilt; not tied to the
+// selected template, which an edited job definition clears.
+const restoringQuickStart = ref("quickstart" in route.query);
+const applyQuickStart = (template: Template) => {
+  if (!template.quickStart) return applyTemplate(template);
+  skipTemplateAutoSelection.value = true;
+  quickStartError.value = "";
+  return changePage(true, () => {
+    selectedTemplate.value = template;
+    return router.replace({
+      query: {
+        ...withoutWorkload(route.query),
+        ...quickStartQuery(template.quickStart!),
+      },
+    });
+  });
+};
+// A ?quickstart= link, reloaded: an Ollama model is rebuilt as is; a Hugging
+// Face one is fetched again for its weights and tags. A gated repo's token
+// is not in the address, so it is asked for in the job's HF_TOKEN.
+const restoreQuickStart = async () => {
+  try {
+    if (selectedTemplate.value) return;
+    skipTemplateAutoSelection.value = true;
+    const selection = parseQuickStartQuery(route.query);
+    if (!selection) {
+      quickStartError.value = "That quick start link is incomplete.";
+      return;
+    }
+    try {
+      selectedTemplate.value = await loadQuickStartTemplate(selection);
+    } catch (error) {
+      console.error("Quick start restore error:", error);
+      const registry =
+        selection.source === "ollama" ? "the Ollama library" : "Hugging Face";
+      quickStartError.value = `${selection.model} could not be loaded from ${registry}.`;
+    }
+  } finally {
+    restoringQuickStart.value = false;
+  }
 };
 // A gallery tile and the featured card's Use template both open it.
 const selectTemplateFromModal = (template: Template) =>
@@ -1216,7 +1314,12 @@ const selectTemplateFromModal = (template: Template) =>
 
 // A variant picked in the header: the selected template holds the parent
 // spread with the first variant flattened in, so rebuild from the parent.
-const selectVariant = (variant: TemplateVariant) => {
+const selectVariant = async (variant: TemplateVariant) => {
+  // A quick start's variant: another size or runtime of the same model.
+  const quick =
+    selectedTemplate.value &&
+    (await quickStartWithVariant(selectedTemplate.value, variant));
+  if (quick) return applyQuickStart(quick);
   const parent = (groupedTemplates.value || []).find((t: Template) =>
     t.variants?.some((candidate) => candidate.id === variant.id),
   );
@@ -1234,12 +1337,15 @@ const configureOwnJob = async () => {
   jobDefinition.value = JSON.parse(JSON.stringify(emptyJobDefinition));
   await goToCustom();
 };
-// A described deployment: its template's page, or its own job's page with the job
-// definition the model wrote and the validator accepted. The name is set after the
-// template, which names the deployment otherwise; a named GPU replaces the default.
+// A described deployment: its template's page, a registry model's quick-start page,
+// or its own job's page with the job definition the model wrote and the validator
+// accepted. The name is set after the template, which names the deployment otherwise;
+// a named GPU replaces the default.
 const applyProposal = async (proposal: DeployProposal) => {
   const picked = proposalTemplate(proposal, groupedTemplates.value || []);
-  if (picked) {
+  if (proposal.template?.quickStart) {
+    await applyQuickStart(proposal.template);
+  } else if (picked) {
     await applyTemplate(picked.variant ? withVariant(picked.template, picked.variant) : picked.template);
   } else {
     skipTemplateAutoSelection.value = true;
@@ -1258,6 +1364,10 @@ const applyProposal = async (proposal: DeployProposal) => {
 const deployProposal = async (proposal: DeployProposal) => {
   await applyProposal(proposal);
   await until(() => selectedGpus.value.length > 0).toBe(true, { timeout: 10000 });
+  if (!selectedGpus.value.length) {
+    toast.error("No GPU fits this deployment right now. Choose one to deploy.");
+    return;
+  }
   const action = deployAction.value;
   if (!action.disabled) await action.run();
 };

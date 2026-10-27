@@ -5,11 +5,26 @@ import type { GpuListing } from "~/composables/useNodeRequirements";
 import { nosaRunModel } from "~/composables/useNosaTools";
 import { sponsoredProvider } from "~/utils/playgroundTransport";
 import {
+  huggingFaceApps,
+  huggingFaceVramMb,
+  isGated,
+  loadOllamaLibrary,
+  ollamaVramMb,
+  searchHuggingFace,
+} from "~/utils/quickStart";
+import {
+  huggingFaceSearchTerm,
+  resolveModel,
   runProposal,
+  type CatalogueHuggingFaceModel,
   type CatalogueJobs,
+  type CatalogueOllamaModel,
   type CatalogueTemplate,
   type DeployProposal,
 } from "~/utils/deployProposal";
+
+/** How much of the Ollama library, most pulled first, the prompt lists. */
+const OLLAMA_CATALOGUE_SIZE = 100;
 
 /** Where a proposal is: the model writing an answer, or the validator checking a job. */
 export type ProposalPhase = "idle" | "writing" | "checking";
@@ -52,7 +67,7 @@ function logTrace(
   outcome: string,
   attempts: TraceAttempt[],
   ms: number,
-  catalogue: { templates: CatalogueTemplate[]; gpus: GpuListing[]; jobs: CatalogueJobs },
+  catalogue: { templates: CatalogueTemplate[]; gpus: GpuListing[]; jobs: CatalogueJobs; ollama: CatalogueOllamaModel[]; huggingFace: CatalogueHuggingFaceModel[] },
 ) {
   console.groupCollapsed(
     `[describe] ${outcome} · ${attempts.length} attempt(s) · ${Math.round(ms / 1000)}s · ${model} · "${request}"`,
@@ -80,8 +95,8 @@ export const useDeployProposal = (templates: Ref<Template[]>, gpus: Ref<GpuListi
   const config = useRuntimeConfig().public;
   const apiBase = config.apiBase as string;
   const { models, loadingModels } = useLlmGateway();
+  // Loaded on the first description, not with the page: only its persona's model is used.
   const nosa = useNosaTools();
-  if (nosa.enabled) void nosa.load();
 
   const model = computed(() => nosaRunModel(models.value, nosa.model.value));
   const catalogue = computed<CatalogueTemplate[]>(() =>
@@ -136,12 +151,16 @@ export const useDeployProposal = (templates: Ref<Template[]>, gpus: Ref<GpuListi
   async function propose(request: string) {
     const text = request.trim();
     if (!text || phase.value !== "idle") return;
+    proposal.value = null;
+    error.value = null;
+    // Busy while Nosa's persona loads, so the run uses the model admins chose.
+    phase.value = "checking";
+    if (nosa.enabled) await nosa.load();
     if (!model.value) {
+      phase.value = "idle";
       error.value = "No model is available right now. Try again later.";
       return;
     }
-    proposal.value = null;
-    error.value = null;
     progress.value = { steps: [], tokens: 0, seconds: 0 };
     const started = Date.now();
     const clock = setInterval(() => {
@@ -149,11 +168,25 @@ export const useDeployProposal = (templates: Ref<Template[]>, gpus: Ref<GpuListi
     }, 1000);
     const trace: TraceAttempt[] = [];
     let outcome = "failed";
+    let ollama: CatalogueOllamaModel[] = [];
+    let huggingFace: CatalogueHuggingFaceModel[] = [];
     try {
+      [ollama, huggingFace] = await Promise.all([ollamaCatalogue(), huggingFaceCatalogue(text)]);
       const result = await runProposal(text, {
         templates: catalogue.value,
         gpus: gpus.value,
         jobs: jobs.value,
+        ollama,
+        huggingFace,
+        async resolve(pick) {
+          phase.value = "checking";
+          const source = pick.kind === "ollama" ? "the Ollama library" : "Hugging Face";
+          begin(`Looking up ${pick.model} on ${source}`);
+          const resolved = await resolveModel(pick);
+          // Its problems follow in the rejected step.
+          end(resolved.template ? "done" : "failed");
+          return resolved;
+        },
         async ask(system, messages, step) {
           phase.value = "writing";
           begin(step);
@@ -193,6 +226,7 @@ export const useDeployProposal = (templates: Ref<Template[]>, gpus: Ref<GpuListi
         return;
       }
       if (result.kind === "template") note(`Picked ${result.templateId}`, "done");
+      else if (result.template) note(`Picked ${result.template.quickStart?.model ?? result.model}`, "done");
       proposal.value = result;
       outcome = trace.some((attempt) => attempt.problems.length) ? "accepted after a fix" : "accepted";
     } catch (cause) {
@@ -207,9 +241,33 @@ export const useDeployProposal = (templates: Ref<Template[]>, gpus: Ref<GpuListi
           templates: catalogue.value,
           gpus: gpus.value,
           jobs: jobs.value,
+          ollama,
+          huggingFace,
         });
       }
     }
+  }
+
+  /** The top of the Ollama library with each size's VRAM need, for the prompt. */
+  async function ollamaCatalogue(): Promise<CatalogueOllamaModel[]> {
+    const library = await loadOllamaLibrary();
+    return library.slice(0, OLLAMA_CATALOGUE_SIZE).map((m) => ({
+      name: m.name,
+      sizes: m.sizes.map((tag) => ({ tag, vramMb: ollamaVramMb(`${m.name}:${tag}`) })),
+      capabilities: m.capabilities,
+    }));
+  }
+
+  /** Hugging Face repos matching the request that the quick start can serve; none when the search fails. */
+  async function huggingFaceCatalogue(request: string): Promise<CatalogueHuggingFaceModel[]> {
+    const term = huggingFaceSearchTerm(request);
+    if (!term) return [];
+    const found = await searchHuggingFace(term).catch(() => []);
+    return found.flatMap((m) => {
+      const apps = huggingFaceApps(m);
+      if (!apps.length) return [];
+      return [{ id: m.id, apps, vramMb: huggingFaceVramMb(m, apps[0]!), gated: isGated(m) }];
+    });
   }
 
   /** One answer, streamed so the token count shows the wait is moving. */

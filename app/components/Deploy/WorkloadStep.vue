@@ -115,6 +115,9 @@
                 </span>
               </span>
               <p class="featured-desc">{{ describe.proposal.value.why }}</p>
+              <p v-if="proposalNeedsToken" class="featured-desc">
+                This repo is gated: set it up and put a Hugging Face token in the job's HF_TOKEN before deploying.
+              </p>
               <span class="featured-tags">
                 <span v-for="tag in proposalTags" :key="tag" class="featured-tag">{{ tag }}</span>
               </span>
@@ -131,6 +134,8 @@
                 <button
                   type="button"
                   class="featured-cta"
+                  :disabled="proposalNeedsToken"
+                  :title="proposalNeedsToken ? 'Add a Hugging Face token first: Set it up' : undefined"
                   @click="emit('deploy-proposal', describe.proposal.value)"
                 >
                   Deploy <DeployCategoryIcon icon="arrow" />
@@ -188,6 +193,9 @@
         </Transition>
       </div>
     </section>
+
+    <!-- Quick start: a model from a registry, served by a known runtime -->
+    <DeployQuickStart @select="emit('quick-start', $event)" />
 
     <!-- Templates: each tile is the action -->
     <section class="templates-section">
@@ -251,6 +259,7 @@ import {
 } from "~/composables/useTemplates";
 import type { GpuListing } from "~/composables/useNodeRequirements";
 import { proposalTemplate, type DeployProposal } from "~/utils/deployProposal";
+import { isGated, QUICK_START_APPS, takesToken } from "~/utils/quickStart";
 import type { ProposalStep } from "~/composables/useDeployProposal";
 
 const props = defineProps<{
@@ -264,11 +273,11 @@ const props = defineProps<{
 
 const request = ref("");
 const describe = useDeployProposal(toRef(props, "templates"), toRef(props, "gpus"));
-/** Requests to start from: a template, a template at a size, and an adapted one. */
+/** Requests to start from: a template at a size, a template, and a Hugging Face model. */
 const DESCRIBE_EXAMPLES = [
   "Best LLM that can run on a 4090",
   "Flux images",
-  "Qwen3.8 27B on vLLM",
+  "Qwen3 8B on vLLM",
 ];
 // An example goes into the field rather than running, so it can be changed first.
 const requestInput = ref<HTMLInputElement | null>(null);
@@ -286,10 +295,16 @@ function activeMeta(step: ProposalStep) {
     : `${(tokens - step.startTokens).toLocaleString()} tokens · ${time}`;
 }
 
-/** What the proposal runs: the template and variant, or the job's image. */
+/** What the proposal runs: the template and variant, the registry model, or the job's image. */
 const proposalLabel = computed(() => {
   const proposal = describe.proposal.value;
   if (!proposal) return "";
+  const quick = proposal.template?.quickStart;
+  if (quick) {
+    return quick.source === "ollama"
+      ? `Ollama · ${quick.model}`
+      : `Hugging Face · ${quick.model} · ${QUICK_START_APPS[quick.app!].name}`;
+  }
   const picked = proposalTemplate(proposal, props.templates);
   if (picked) return picked.variant ? `${picked.template.name} · ${picked.variant.name}` : picked.template.name;
   const ops = (proposal.jobDefinition?.ops ?? []) as { args?: { image?: string } }[];
@@ -308,15 +323,22 @@ const buildingStep = computed(
 );
 /** The template the proposal deploys or adapts, for its icon and tags. */
 const proposalBase = computed(() => {
-  const id = describe.proposal.value?.templateId;
+  const proposal = describe.proposal.value;
+  if (proposal?.template) return proposal.template;
+  const id = proposal?.templateId;
   return id ? props.templates.find((t) => String(t.id) === id) : undefined;
+});
+/** A gated Hugging Face repo served without a token: it cannot deploy as it is. */
+const proposalNeedsToken = computed(() => {
+  const quick = describe.proposal.value?.template?.quickStart;
+  return !!quick?.details && isGated(quick.details) && takesToken(quick.app!) && !quick.token;
 });
 const proposalTags = computed(() => {
   const proposal = describe.proposal.value;
   if (!proposal) return [];
   const base = proposalBase.value ? descriptiveTags(proposalBase.value) : [];
   const gpu = proposal.gpuName ? [proposal.gpuName.replace(/^NVIDIA (GeForce )?/, "")] : [];
-  return proposal.kind === "template"
+  return proposal.kind !== "job"
     ? [...base.slice(0, 3), ...gpu]
     : ["Custom job", ...base.slice(0, 2), ...gpu];
 });
@@ -329,6 +351,8 @@ const emit = defineEmits<{
   "select-template": [template: Template];
   /** The featured card's Use template: skips the template page. */
   "deploy-template": [template: Template];
+  /** A registry model from the quick start, as a template. */
+  "quick-start": [template: Template];
   "configure-own": [];
   "browse-deployments": [];
 }>();
@@ -964,13 +988,18 @@ const filteredTemplates = computed(() => {
     transition: transform 0.2s ease;
   }
 
-  &:hover {
+  &:hover:not(:disabled) {
     transform: translateY(-1px);
     box-shadow: 0 12px 28px -8px rgba($secondary, 0.75);
 
     svg {
       transform: translateX(3px);
     }
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: default;
   }
 }
 
