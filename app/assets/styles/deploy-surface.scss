@@ -172,3 +172,38 @@ html.dark-mode {
     color: #b5b5b5;
   }
 }
+
+/* ---------- Deploy tile ----------
+   The card of the workload step's grids: the template tiles and the quick
+   start's registries. Each caller owns its padding and layout inside. */
+.deploy-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  border-radius: 16px;
+  border: 1.5px solid $border-soft;
+  background: $white;
+  box-shadow: $panel-shadow;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
+
+  &:hover,
+  &:focus-within {
+    border-color: $secondary;
+  }
+}
+
+html.dark-mode .deploy-tile {
+  background: #1c1c1c;
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: none;
+
+  &:hover,
+  &:focus-within {
+    border-color: $secondary;
+  }
+}

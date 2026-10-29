@@ -357,6 +357,7 @@ useEventListener(window, "resize", () => close());
     display: block;
     font-size: 0.9rem;
     font-weight: 600;
+    color: inherit;
   }
 
   small {

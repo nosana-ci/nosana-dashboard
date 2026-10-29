@@ -4,7 +4,7 @@
     <button
       v-if="showConfigureOwn"
       type="button"
-      class="template-tile is-custom"
+      class="deploy-tile template-tile is-custom"
       @click="emit('configure-own')"
     >
       <span class="custom-plus" aria-hidden="true">
@@ -27,7 +27,7 @@
     <article
       v-for="template in orderedTemplates"
       :key="template.id"
-      class="template-tile"
+      class="deploy-tile template-tile"
     >
       <!-- The whole tile is the action; the variant select sits above it. -->
       <button
@@ -173,26 +173,10 @@ const pick = (template: Template) => {
 }
 
 .template-tile {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
   width: 100%;
   padding: 22px;
-  border-radius: 16px;
-  border: 1.5px solid $border-soft;
-  background: $white;
-  box-shadow: $panel-shadow;
   text-align: left;
   color: inherit;
-  transition:
-    border-color 0.2s ease,
-    background-color 0.2s ease;
-
-  &:hover,
-  &:focus-within {
-    border-color: $secondary;
-  }
 }
 
 // The custom card: a plus, a title and a line, on a soft green ground.
@@ -387,15 +371,8 @@ html.dark-mode {
     color: #b5b5b5;
   }
 
-  .template-tile {
-    background: #1c1c1c;
-    border-color: rgba(255, 255, 255, 0.08);
-    box-shadow: none;
-
-    &:hover {
-      border-color: $secondary;
-      background: #1f221f;
-    }
+  .template-tile:hover {
+    background: #1f221f;
   }
 
   .tile-logo {
