@@ -158,12 +158,12 @@ export function catalogueText(
 
 export const PICK_SYSTEM = `You set up deployments on Nosana, a GPU network. From the user's request and the catalogue below it, choose one:
 
-1. "template": a template that does what was asked as it is. For a template with variants, also choose the variant; for "small" or "cheap", the one with the least VRAM that does the job; for "best" or "strongest", the newest and largest model that fits. Templates whose category includes Ollama or vLLM are model servers with that model built in.
-2. "ollama": a language model no template has, from the Ollama library list, when the request does not ask for another server such as vLLM. Set "model" to "name:size" with a size from its list, or just "name" when it has one size; choose the size the way you would a variant.
-3. "huggingface": a model from Hugging Face, when the request names a repo, asks for vLLM or SGLang, or wants a model neither the templates nor the Ollama library have. Set "model" to a repo id from the Hugging Face search results when one is the model asked for, otherwise the exact repo id, such as "Qwen/Qwen3-8B"; and "app" to "vllm" (the default), "sglang", or "ollama" for a GGUF repo.
+1. "ollama": a language model from the Ollama library list, when the request does not ask for another server such as vLLM. Set "model" to "name:size" with a size from its list, or just "name" when it has one size; for "small" or "cheap", the size with the least VRAM that does the job; for "best" or "strongest", the newest and largest model that fits.
+2. "template": a template that does what was asked as it is, for what the Ollama library does not have, such as image generation or a model only a template serves. For a template with variants, also choose the variant, the way you would an Ollama size. Templates whose category includes Ollama or vLLM are model servers with that model built in.
+3. "huggingface": a model from Hugging Face, when the request names a repo, asks for vLLM or SGLang, or wants a model neither the Ollama library nor the templates have. Set "model" to a repo id from the Hugging Face search results when one is the model asked for, otherwise the exact repo id, such as "Qwen/Qwen3-8B"; and "app" to "vllm" (the default), "sglang", or "ollama" for a GGUF repo.
 4. "job": anything else no template does as it is, such as an image that is not a model server. Set templateId and variantId to the closest template to adapt: one running the same kind of software. Set templateId to null only when no template runs anything similar. The job definition is written in the next step.
 
-Prefer them in that order: a template, then the Ollama library, then Hugging Face, then a job. Always check the templates first: when a template serves the model asked for, even under another name or as one of its variants (such as a "Clef" template with a Clef Flash variant for "clef-flash"), choose that template, not the same model from the Ollama library or Hugging Face. Leave "model" and "app" null unless the kind uses them.
+Prefer them in that order: the Ollama library, then a template, then Hugging Face, then a job. Always check the Ollama library first: when it has the model asked for, even under a slightly different name (such as "clef-flash" for Clef Flash), choose it, not the same model from a template or Hugging Face. Leave "model" and "app" null unless the kind uses them.
 
 Set "gpuName" only when the request names a GPU, to a name from the GPU list; otherwise null, and the cheapest GPU that fits is chosen for the user. Give a short deployment "name". Write "why" for the person deploying, in one or two plain sentences: what will run, and anything they should know; not how you chose it. Leave out VRAM, GPUs and sizes: the page shows those.
 
@@ -271,7 +271,7 @@ export async function resolveModel(proposal: DeployProposal): Promise<ResolvedMo
     }
     if (!size && entry.sizes.length > 1) {
       return unresolved(
-        `"${name}" comes in sizes ${entry.sizes.join(", ")}; set model to "${name}:<size>", unless a template serves this model, then choose that template`,
+        `"${name}" comes in sizes ${entry.sizes.join(", ")}; set model to "${name}:<size>"`,
       );
     }
     return { template: await loadOllamaTemplate(size ? `${name}:${size}` : name), problems: [] };
@@ -362,7 +362,7 @@ async function pickStep(request: string, host: ProposalHost): Promise<DeployProp
     { role: "user", content: proposalRequest(catalogueText(host.templates, host.gpus, host.ollama, host.huggingFace), request) },
   ];
   for (let attempt = 0; attempt < 2; attempt++) {
-    const answer = await host.ask(PICK_SYSTEM, messages, attempt ? "Fixing the choice" : "Choosing from the catalogue");
+    const answer = await host.ask(PICK_SYSTEM, messages, attempt ? "Fixing the choice" : "Choosing a model");
     messages.push({ role: "assistant", content: answer });
     let problems: string[];
     let pick: DeployProposal | null = null;

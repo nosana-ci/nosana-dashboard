@@ -72,7 +72,7 @@ const stubFetch = (routes) => {
 
 test('the Ollama library search matches names first, then descriptions', () => {
   const top = searchOllamaLibrary(library, '');
-  assert.equal(top.length, 8);
+  assert.equal(top.length, 30);
   assert.equal(top[0].name, 'llama3.1');
 
   const [first] = searchOllamaLibrary(library, 'deepseek-r1');
