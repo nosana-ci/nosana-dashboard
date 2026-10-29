@@ -151,7 +151,7 @@ const estimateVramMb = (
 
 /* ---------- Ollama ---------- */
 
-const OLLAMA_LIMIT = 8;
+const OLLAMA_LIMIT = 30;
 // Ollama's weights are Q4_K_M by default: just under 5 bits a parameter.
 const OLLAMA_BYTES_PER_PARAM = 0.6;
 
@@ -277,7 +277,7 @@ const HF_FIELDS = [
   "pipeline_tag",
   "tags",
 ];
-const HF_LIMIT = 8;
+const HF_LIMIT = 30;
 // What the runtimes here serve: chat and vision-chat models.
 const LLM_PIPELINES = new Set(["text-generation", "image-text-to-text"]);
 

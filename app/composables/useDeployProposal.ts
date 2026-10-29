@@ -23,9 +23,6 @@ import {
   type DeployProposal,
 } from "~/utils/deployProposal";
 
-/** How much of the Ollama library, most pulled first, the prompt lists. */
-const OLLAMA_CATALOGUE_SIZE = 100;
-
 /** Where a proposal is: the model writing an answer, or the validator checking a job. */
 export type ProposalPhase = "idle" | "writing" | "checking";
 
@@ -248,10 +245,10 @@ export const useDeployProposal = (templates: Ref<Template[]>, gpus: Ref<GpuListi
     }
   }
 
-  /** The top of the Ollama library with each size's VRAM need, for the prompt. */
+  /** The whole Ollama library with each size's VRAM need, for the prompt. */
   async function ollamaCatalogue(): Promise<CatalogueOllamaModel[]> {
     const library = await loadOllamaLibrary();
-    return library.slice(0, OLLAMA_CATALOGUE_SIZE).map((m) => ({
+    return library.map((m) => ({
       name: m.name,
       sizes: m.sizes.map((tag) => ({ tag, vramMb: ollamaVramMb(`${m.name}:${tag}`) })),
       capabilities: m.capabilities,

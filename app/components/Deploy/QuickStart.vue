@@ -231,7 +231,8 @@ const pickHuggingFace = (
 }
 
 .dropdown-content {
-  max-height: 400px;
+  // global.scss lifts every dropdown's height cap with !important.
+  max-height: 400px !important;
   overflow-y: auto;
 
   /* The result rows, shared by both registries' lists */
