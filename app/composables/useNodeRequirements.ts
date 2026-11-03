@@ -1,6 +1,8 @@
 import type {
+  Address,
   DeploymentRequirements,
   NosanaAvailableNodes,
+  NosanaClient,
   NosanaGpuModel,
   NosanaGpuModels,
   NosanaRequirementOption,
@@ -207,16 +209,82 @@ export function useGpuListings({ live = false }: { live?: boolean } = {}) {
   };
 }
 
+/** Market address → its project access key collection; null when the market is open. */
+const marketAccessKeys = new Map<string, string | null>();
+/** `owner:collection` → whether the owner holds an access key of the collection. */
+const heldAccessKeys = new Map<string, boolean>();
+
+/**
+ * The markets `owner` may post to: the open ones, and the protected ones it
+ * holds an access key of. Lookups are cached for the session; a failed one
+ * hides its market and is retried on the next call.
+ */
+async function accessibleMarkets(
+  nosana: NosanaClient,
+  markets: string[],
+  owner: string | null,
+): Promise<Set<string>> {
+  await Promise.all(
+    markets
+      .filter((market) => !marketAccessKeys.has(market))
+      .map(async (market) => {
+        try {
+          const settings = await nosana.jobs.marketSettings(market as Address);
+          marketAccessKeys.set(market, settings?.projectAccessKey ?? null);
+        } catch (e) {
+          console.error(e);
+        }
+      }),
+  );
+  const keyOf = (collection: string) => `${owner}:${collection}`;
+  if (owner) {
+    const collections = new Set(
+      markets.map((market) => marketAccessKeys.get(market)).filter((key) => !!key) as string[],
+    );
+    await Promise.all(
+      [...collections]
+        .filter((collection) => !heldAccessKeys.has(keyOf(collection)))
+        .map(async (collection) => {
+          try {
+            const nft = await nosana.solana.getNftFromCollection(
+              owner as Address,
+              collection as Address,
+            );
+            heldAccessKeys.set(keyOf(collection), Boolean(nft));
+          } catch (e) {
+            console.error(e);
+          }
+        }),
+    );
+  }
+  return new Set(
+    markets.filter((market) => {
+      const collection = marketAccessKeys.get(market);
+      if (collection === null) return true;
+      return !!owner && !!collection && heldAccessKeys.get(keyOf(collection)) === true;
+    }),
+  );
+}
+
 /**
  * The markets a deployment can be created on, as GPU listings: one row per
- * public market of the deployable types, named as the market is, with the
- * market's own address, its hourly rate, VRAM from its metadata (0 when it
- * has none) and live host counts from host-manager's queue and the
- * running-job counts. `live` as on `useGpuListings`.
+ * public market of the deployable types the deployer may post to, named as
+ * the market is, with the market's own address, its hourly rate, VRAM from
+ * its metadata (0 when it has none) and live host counts from host-manager's
+ * queue and the running-job counts. `live` as on `useGpuListings`.
  */
 function useMarketListings({ live = false }: { live?: boolean } = {}) {
   const config = useRuntimeConfig();
   const { nosana } = useKit();
+  const { isAuthenticated, userData } = useSuperTokens();
+  const { sharedVaultAddress } = useSharedVault();
+  // Who a deployment posts as on-chain: the generated address with a credit
+  // login, else the wallet's shared vault, which signs its jobs.
+  const deployer = computed(() =>
+    isAuthenticated.value
+      ? (userData.value?.generatedAddress ?? null)
+      : sharedVaultAddress.value,
+  );
   const types = deployableMarketTypes();
   const { data, pending, error, refresh } = useAsyncData<GpuListing[]>(
     "market-listings",
@@ -233,8 +301,16 @@ function useMarketListings({ live = false }: { live?: boolean } = {}) {
       for (const node of queued.nodes) {
         available[node.market] = (available[node.market] ?? 0) + 1;
       }
-      return markets
-        .filter((market) => !market.client && types.includes(market.type))
+      const deployable = markets.filter(
+        (market) => !market.client && types.includes(market.type),
+      );
+      const accessible = await accessibleMarkets(
+        nosana.value,
+        deployable.map((market) => market.address),
+        deployer.value,
+      );
+      return deployable
+        .filter((market) => accessible.has(market.address))
         .map((market) => {
           const usd = market.usd_reward_per_hour;
           return {
@@ -252,6 +328,7 @@ function useMarketListings({ live = false }: { live?: boolean } = {}) {
     },
     { default: () => [], dedupe: "defer" },
   );
+  watch(deployer, () => refresh({ dedupe: "cancel" }));
   if (live) {
     if (data.value?.length) void refresh();
     const visibility = useDocumentVisibility();
