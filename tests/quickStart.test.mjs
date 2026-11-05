@@ -3,6 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { registerHooks } from 'node:module';
+import ollamaLibrary from './fixtures/ollamaLibrary.json' with { type: 'json' };
 
 // The app imports its own modules without an extension, as Nuxt resolves them.
 registerHooks({
@@ -37,6 +38,11 @@ const {
   searchOllamaLibrary,
 } = await import('../app/utils/quickStart.ts');
 
+// The library comes from client-manager, at the address in Nuxt's runtime config;
+// an excerpt of it stands in.
+const API = 'https://api.test';
+globalThis.useRuntimeConfig = () => ({ public: { apiBase: API } });
+globalThis.fetch = async () => Response.json(ollamaLibrary);
 const library = await loadOllamaLibrary();
 
 const qwen = {
@@ -298,8 +304,8 @@ test('a model card loses its front matter and title, and follows the serving not
   assert.ok(!huggingFaceTemplate(qwen, 'vllm').readme.endsWith('\n\n'));
 });
 
-test('loading an Ollama model brings its readme from the snapshot, and does without one', async () => {
-  stubFetch({ '/quickstart/ollama/qwen3.md': 'The readme.\n' });
+test('loading an Ollama model brings its readme from client-manager, and does without one', async () => {
+  stubFetch({ [`${API}/ollama/library/qwen3/readme`]: 'The readme.\n' });
   const template = await loadOllamaTemplate('qwen3:8b');
   assert.equal(template.quickStart.model, 'qwen3:8b');
   assert.equal(template.quickStart.card, 'The readme.');

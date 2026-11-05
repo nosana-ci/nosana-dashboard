@@ -3,6 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { registerHooks } from 'node:module';
+import ollamaLibrary from './fixtures/ollamaLibrary.json' with { type: 'json' };
 
 // The app imports its own modules without an extension, as Nuxt resolves them.
 registerHooks({
@@ -23,6 +24,13 @@ const {
   resolveModel,
   runProposal,
 } = await import('../app/utils/deployProposal.ts');
+const { loadOllamaLibrary } = await import('../app/utils/quickStart.ts');
+
+// The library comes from client-manager, at the address in Nuxt's runtime config;
+// an excerpt of it stands in. Loaded once here, it is kept for every test.
+globalThis.useRuntimeConfig = () => ({ public: { apiBase: 'https://api.test' } });
+globalThis.fetch = async () => Response.json(ollamaLibrary);
+await loadOllamaLibrary();
 
 /** Answers fetch from a map of URL prefixes to bodies; anything else is a 404. */
 const stubFetch = (routes) => {

@@ -4,10 +4,18 @@
 // Hugging Face) and turns the chosen model into a template-shaped workload, so
 // the rest of the create flow treats it like any template. The registries are
 // read from the browser: Hugging Face's API allows that, ollama.com's does
-// not, so its library is a snapshot (see scripts/fetch-ollama-library.mjs).
+// not, so its library and readmes come from client-manager, which mirrors them.
 import type { JobDefinition } from "@nosana/kit";
 import type { Template, TemplateVariant } from "~/composables/useTemplates";
-import type { OllamaLibraryModel } from "./ollamaLibrary";
+
+/** A model in the Ollama library. */
+export interface OllamaLibraryModel {
+  name: string;
+  description: string;
+  /** The parameter-size tags, as on ollama.com ("8b", "2x7b"); empty when the model has one size. */
+  sizes: string[];
+  capabilities: string[];
+}
 
 export type QuickStartSource = "ollama" | "huggingface";
 /** How a Hugging Face model is served; the Ollama library always runs on Ollama. */
@@ -159,17 +167,23 @@ const OLLAMA_BYTES_PER_PARAM = 0.6;
 export const isOllamaModelRef = (value: string): boolean =>
   /^[a-z0-9][\w.-]*(?::[\w.-]+)?$/i.test(value.trim());
 
-// The snapshot is about 60 KB, so it loads on first use rather than with the page.
+const ollamaApi = () =>
+  `${useRuntimeConfig().public.apiBase}/ollama/library`;
+
+// The library is about 50 KB, so it loads on first use rather than with the page.
 // A failed load is forgotten, so the next use tries again.
 let libraryRequest: Promise<OllamaLibraryModel[]> | null = null;
 export const loadOllamaLibrary = (): Promise<OllamaLibraryModel[]> =>
-  (libraryRequest ??= import("./ollamaLibrary").then(
-    (module) => module.OLLAMA_LIBRARY,
-    (error) => {
+  (libraryRequest ??= fetch(ollamaApi())
+    .then((response) => {
+      if (!response.ok)
+        throw new Error(`Loading the Ollama library failed: ${response.status}`);
+      return response.json() as Promise<OllamaLibraryModel[]>;
+    })
+    .catch((error) => {
       libraryRequest = null;
       throw error;
-    },
-  ));
+    }));
 
 /** The library models matching the term, most pulled first; the top of the library with no term. */
 export const searchOllamaLibrary = (
@@ -208,19 +222,17 @@ export const ollamaVramMb = (model: string): number | null => {
   return estimateVramMb(ollamaSizeParams(size), OLLAMA_BYTES_PER_PARAM);
 };
 
-/** The model's readme from the library snapshot (see scripts/fetch-ollama-library.mjs), or "". */
+/** The model's readme from ollama.com, or "" when it has none. */
 export const fetchOllamaReadme = async (
   model: string,
   signal?: AbortSignal,
 ): Promise<string> => {
   const name = model.split(":")[0] ?? model;
   const response = await fetch(
-    `/quickstart/ollama/${encodeURIComponent(name)}.md`,
+    `${ollamaApi()}/${encodeURIComponent(name)}/readme`,
     { signal },
   );
-  // A missing file comes back as the app's page on some hosts.
-  const isHtml = response.headers.get("content-type")?.includes("text/html");
-  if (!response.ok || isHtml) return "";
+  if (!response.ok) return "";
   return (await response.text()).trim();
 };
 
@@ -611,7 +623,7 @@ export const quickStartWithVariant = async (
 
 /* ---------- Loading a quick start ---------- */
 
-/** An Ollama model as a template, with its readme from the snapshot when there is one. */
+/** An Ollama model as a template, with its readme when there is one. */
 export const loadOllamaTemplate = async (model: string): Promise<Template> => {
   const [library, card] = await Promise.all([
     loadOllamaLibrary(),
