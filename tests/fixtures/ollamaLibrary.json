@@ -1,0 +1,388 @@
+[
+  {
+    "name": "llama3.1",
+    "description": "Llama 3.1 is a new state-of-the-art model from Meta available in 8B, 70B and 405B parameter sizes.",
+    "sizes": [
+      "8b",
+      "70b",
+      "405b"
+    ],
+    "capabilities": [
+      "tools"
+    ]
+  },
+  {
+    "name": "deepseek-r1",
+    "description": "DeepSeek-R1 is a family of open reasoning models with performance approaching that of leading models, such as O3 and Gemini 2.5 Pro.",
+    "sizes": [
+      "1.5b",
+      "7b",
+      "8b",
+      "14b",
+      "32b",
+      "70b",
+      "671b"
+    ],
+    "capabilities": [
+      "tools",
+      "thinking"
+    ]
+  },
+  {
+    "name": "nomic-embed-text",
+    "description": "A high-performing open embedding model with a large token context window.",
+    "sizes": [],
+    "capabilities": [
+      "embedding"
+    ]
+  },
+  {
+    "name": "llama3.2",
+    "description": "Meta's Llama 3.2 goes small with 1B and 3B models.",
+    "sizes": [
+      "1b",
+      "3b"
+    ],
+    "capabilities": [
+      "tools"
+    ]
+  },
+  {
+    "name": "qwen2.5",
+    "description": "Qwen2.5 models are pretrained on Alibaba's latest large-scale dataset, encompassing up to 18 trillion tokens. The model supports up to 128K tokens and has multilingual support.",
+    "sizes": [
+      "0.5b",
+      "1.5b",
+      "3b",
+      "7b",
+      "14b",
+      "32b",
+      "72b"
+    ],
+    "capabilities": [
+      "tools"
+    ]
+  },
+  {
+    "name": "qwen3",
+    "description": "Qwen3 is the latest generation of large language models in Qwen series, offering a comprehensive suite of dense and mixture-of-experts (MoE) models.",
+    "sizes": [
+      "0.6b",
+      "1.7b",
+      "4b",
+      "8b",
+      "14b",
+      "30b",
+      "32b",
+      "235b"
+    ],
+    "capabilities": [
+      "tools",
+      "thinking"
+    ]
+  },
+  {
+    "name": "gemma3",
+    "description": "The current, most capable model that runs on a single GPU.",
+    "sizes": [
+      "270m",
+      "1b",
+      "4b",
+      "12b",
+      "27b"
+    ],
+    "capabilities": [
+      "vision"
+    ]
+  },
+  {
+    "name": "gemma2",
+    "description": "Google Gemma 2 is a high-performing and efficient model available in three sizes: 2B, 9B, and 27B.",
+    "sizes": [
+      "2b",
+      "9b",
+      "27b"
+    ],
+    "capabilities": []
+  },
+  {
+    "name": "mistral",
+    "description": "The 7B model released by Mistral AI, updated to version 0.3.",
+    "sizes": [
+      "7b"
+    ],
+    "capabilities": [
+      "tools"
+    ]
+  },
+  {
+    "name": "gemma4",
+    "description": "Gemma 4 models are designed to deliver frontier-level performance at each size. They are well-suited for reasoning, agentic workflows, coding, and multimodal understanding.",
+    "sizes": [
+      "e2b",
+      "e4b",
+      "12b",
+      "26b",
+      "31b"
+    ],
+    "capabilities": [
+      "vision",
+      "tools",
+      "thinking",
+      "audio"
+    ]
+  },
+  {
+    "name": "llama3",
+    "description": "Meta Llama 3: The most capable openly available LLM to date",
+    "sizes": [
+      "8b",
+      "70b"
+    ],
+    "capabilities": []
+  },
+  {
+    "name": "qwen3.5",
+    "description": "Qwen 3.5 is a family of open-source multimodal models that delivers exceptional utility and performance.",
+    "sizes": [
+      "0.8b",
+      "2b",
+      "4b",
+      "9b",
+      "27b",
+      "35b",
+      "122b"
+    ],
+    "capabilities": [
+      "vision",
+      "tools",
+      "thinking"
+    ]
+  },
+  {
+    "name": "qwen2.5-coder",
+    "description": "The latest series of Code-Specific Qwen models, with significant improvements in code generation, code reasoning, and code fixing.",
+    "sizes": [
+      "0.5b",
+      "1.5b",
+      "3b",
+      "7b",
+      "14b",
+      "32b"
+    ],
+    "capabilities": [
+      "tools"
+    ]
+  },
+  {
+    "name": "phi3",
+    "description": "Phi-3 is a family of lightweight 3B (Mini) and 14B (Medium) state-of-the-art open models by Microsoft.",
+    "sizes": [
+      "3.8b",
+      "14b"
+    ],
+    "capabilities": []
+  },
+  {
+    "name": "mxbai-embed-large",
+    "description": "State-of-the-art large embedding model from mixedbread.ai",
+    "sizes": [
+      "335m"
+    ],
+    "capabilities": [
+      "embedding"
+    ]
+  },
+  {
+    "name": "llava",
+    "description": "🌋 LLaVA is a novel end-to-end trained large multimodal model that combines a vision encoder and Vicuna for general-purpose visual and language understanding. Updated to version 1.6.",
+    "sizes": [
+      "7b",
+      "13b",
+      "34b"
+    ],
+    "capabilities": [
+      "vision"
+    ]
+  },
+  {
+    "name": "gpt-oss",
+    "description": "OpenAI’s open-weight models designed for powerful reasoning, agentic tasks, and versatile developer use cases.",
+    "sizes": [
+      "20b",
+      "120b"
+    ],
+    "capabilities": [
+      "tools",
+      "thinking"
+    ]
+  },
+  {
+    "name": "qwen3-coder",
+    "description": "Alibaba's performant long context models for agentic and coding tasks.",
+    "sizes": [
+      "30b",
+      "480b"
+    ],
+    "capabilities": [
+      "tools"
+    ]
+  },
+  {
+    "name": "glm-ocr",
+    "description": "GLM-OCR is a multimodal OCR model for complex document understanding, built on the GLM-V encoder–decoder architecture.",
+    "sizes": [],
+    "capabilities": [
+      "vision",
+      "tools"
+    ]
+  },
+  {
+    "name": "gemma",
+    "description": "Gemma is a family of lightweight, state-of-the-art open models built by Google DeepMind. Updated to version 1.1",
+    "sizes": [
+      "2b",
+      "7b"
+    ],
+    "capabilities": []
+  },
+  {
+    "name": "qwen",
+    "description": "Qwen 1.5 is a series of large language models by Alibaba Cloud spanning from 0.5B to 110B parameters",
+    "sizes": [
+      "0.5b",
+      "1.8b",
+      "4b",
+      "7b",
+      "14b",
+      "32b",
+      "72b",
+      "110b"
+    ],
+    "capabilities": []
+  },
+  {
+    "name": "bge-m3",
+    "description": "BGE-M3 is a new model from BAAI distinguished for its versatility in Multi-Functionality, Multi-Linguality, and Multi-Granularity.",
+    "sizes": [
+      "567m"
+    ],
+    "capabilities": [
+      "embedding"
+    ]
+  },
+  {
+    "name": "phi4",
+    "description": "Phi-4 is a 14B parameter, state-of-the-art open model from Microsoft.",
+    "sizes": [
+      "14b"
+    ],
+    "capabilities": []
+  },
+  {
+    "name": "llama2",
+    "description": "Llama 2 is a collection of foundation language models ranging from 7B to 70B parameters.",
+    "sizes": [
+      "7b",
+      "13b",
+      "70b"
+    ],
+    "capabilities": []
+  },
+  {
+    "name": "codellama",
+    "description": "A large language model that can use text prompts to generate and discuss code.",
+    "sizes": [
+      "7b",
+      "13b",
+      "34b",
+      "70b"
+    ],
+    "capabilities": []
+  },
+  {
+    "name": "qwen3.6",
+    "description": "Qwen3.6 delivers substantial upgrades in agentic coding and thinking preservation than previous Qwen models.",
+    "sizes": [
+      "27b",
+      "35b"
+    ],
+    "capabilities": [
+      "vision",
+      "tools",
+      "thinking"
+    ]
+  },
+  {
+    "name": "qwen3-vl",
+    "description": "The most powerful vision-language model in the Qwen model family to date.",
+    "sizes": [
+      "2b",
+      "4b",
+      "8b",
+      "30b",
+      "32b",
+      "235b"
+    ],
+    "capabilities": [
+      "vision",
+      "tools",
+      "thinking"
+    ]
+  },
+  {
+    "name": "tinyllama",
+    "description": "The TinyLlama project is an open endeavor to train a compact 1.1B Llama model on 3 trillion tokens.",
+    "sizes": [
+      "1.1b"
+    ],
+    "capabilities": []
+  },
+  {
+    "name": "qwen2",
+    "description": "Qwen2 is a new series of large language models from Alibaba group",
+    "sizes": [
+      "0.5b",
+      "1.5b",
+      "7b",
+      "72b"
+    ],
+    "capabilities": [
+      "tools"
+    ]
+  },
+  {
+    "name": "mistral-nemo",
+    "description": "A state-of-the-art 12B model with 128k context length, built by Mistral AI in collaboration with NVIDIA.",
+    "sizes": [
+      "12b"
+    ],
+    "capabilities": [
+      "tools"
+    ]
+  },
+  {
+    "name": "qwen2.5vl",
+    "description": "Flagship vision-language model of Qwen and also a significant leap from the previous Qwen2-VL.",
+    "sizes": [
+      "3b",
+      "7b",
+      "32b",
+      "72b"
+    ],
+    "capabilities": [
+      "vision"
+    ]
+  },
+  {
+    "name": "clef-flash",
+    "description": "Clef-Flash is a 9B multimodal model that turns a state and a schema of typed questions into decisions.",
+    "sizes": [
+      "9b"
+    ],
+    "capabilities": [
+      "vision",
+      "decision"
+    ]
+  }
+]
