@@ -16,6 +16,14 @@
     </div>
 
     <template v-else-if="campaign && me">
+      <figure v-if="campaign.imageUrl" class="campaign-cover mb-5">
+        <img :src="campaign.imageUrl" :alt="campaign.name" />
+      </figure>
+      <div class="content mb-5">
+        <p class="has-text-grey">{{ dateRange }}</p>
+        <p v-for="(paragraph, i) in paragraphs" :key="i">{{ paragraph }}</p>
+      </div>
+
       <div v-if="me.registration" class="box">
         <template v-if="me.registration.status === 'granted'">
           <h2 class="title is-5">You're in</h2>
@@ -213,6 +221,22 @@ const form = reactive<Required<CampaignRegisterBody>>({
   linkedin: "",
 });
 
+const formatDate = (date: string) =>
+  new Date(date).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+const dateRange = computed(() =>
+  campaign.value
+    ? `${formatDate(campaign.value.startsAt)} – ${formatDate(campaign.value.endsAt)}`
+    : "",
+);
+const paragraphs = computed(
+  () =>
+    campaign.value?.description?.split(/\n\s*\n/).filter((p) => p.trim()) ?? [],
+);
+
 const notStarted = computed(
   () =>
     !!campaign.value &&
@@ -315,3 +339,13 @@ const submit = async () => {
   }
 };
 </script>
+
+<style scoped>
+.campaign-cover img {
+  display: block;
+  width: 100%;
+  max-height: 280px;
+  object-fit: cover;
+  border-radius: var(--bulma-radius-large);
+}
+</style>

@@ -6,6 +6,9 @@
 export interface Campaign {
   slug: string;
   name: string;
+  /** Plain text; blank lines separate paragraphs. */
+  description: string | null;
+  imageUrl: string | null;
   startsAt: string;
   endsAt: string;
   grantAmountUsd: number;
