@@ -155,6 +155,15 @@
                   <div v-if="check.detail" class="is-size-7 has-text-grey">
                     {{ check.detail }}
                   </div>
+                  <a
+                    v-if="githubAction(check)"
+                    :href="githubAction(check)!.href"
+                    target="_blank"
+                    rel="noopener"
+                    class="is-size-7"
+                  >
+                    {{ githubAction(check)!.label }}
+                  </a>
                   <div
                     v-if="!check.ok && !check.blocking"
                     class="is-size-7 has-text-warning"
@@ -183,6 +192,7 @@ import {
   useCampaignApi,
   useGithubConnect,
   type Campaign,
+  type CampaignCheck,
   type CampaignMe,
   type CampaignRegisterBody,
 } from "~/composables/useCampaign";
@@ -236,6 +246,24 @@ const paragraphs = computed(
   () =>
     campaign.value?.description?.split(/\n\s*\n/).filter((p) => p.trim()) ?? [],
 );
+
+// Forking and starring happen on GitHub; the focus re-check picks them up on return.
+const githubAction = (check: CampaignCheck) => {
+  if (check.ok || !campaign.value) return null;
+  if (check.id === "fork") {
+    return {
+      label: "Fork on GitHub",
+      href: `https://github.com/${campaign.value.upstreamRepo}/fork`,
+    };
+  }
+  if (check.id.startsWith("star:")) {
+    return {
+      label: "Star on GitHub",
+      href: `https://github.com/${check.id.slice(5)}`,
+    };
+  }
+  return null;
+};
 
 const notStarted = computed(
   () =>
