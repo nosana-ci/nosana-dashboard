@@ -2,10 +2,13 @@
   <div class="callback-page">
     <div class="callback-content">
       <Loader v-if="!error" />
-      <p v-if="!error">Completing sign in...</p>
+      <p v-if="!error">{{ connectReturnTo ? "Connecting GitHub..." : "Completing sign in..." }}</p>
       <div v-else class="error-message">
         <p class="error-text">{{ error }}</p>
-        <NuxtLink to="/" class="button is-primary">Back to home</NuxtLink>
+        <NuxtLink v-if="connectReturnTo" :to="connectReturnTo" class="button is-primary">
+          Back
+        </NuxtLink>
+        <NuxtLink v-else to="/" class="button is-primary">Back to home</NuxtLink>
       </div>
     </div>
   </div>
@@ -15,6 +18,7 @@
 import { useSuperTokens } from "~/composables/useSuperTokens";
 import { trackEvent, trackPixelEvent } from "~/utils/analytics";
 import Loader from "~/components/Loader.vue";
+import { apiErrorMessage, connectGithub, takePendingGithubConnect } from "~/composables/useCampaign";
 
 definePageMeta({
   layout: false,
@@ -22,9 +26,34 @@ definePageMeta({
 
 const { handleThirdPartyCallback } = useSuperTokens();
 const error = ref<string | null>(null);
+const connectReturnTo = ref<string | null>(null);
 const router = useRouter();
 
+const completeConnect = async (query: URLSearchParams) => {
+  const code = query.get("code");
+  if (!code) {
+    error.value =
+      query.get("error") === "access_denied"
+        ? "GitHub connection was cancelled."
+        : "GitHub did not return an authorization code. Please try again.";
+    return;
+  }
+  try {
+    await connectGithub(code, query.get("state")!);
+    router.replace(connectReturnTo.value!);
+  } catch (err: any) {
+    error.value = apiErrorMessage(err, "Could not connect GitHub. Please try again.");
+  }
+};
+
 onMounted(async () => {
+  const query = new URLSearchParams(window.location.search);
+  const pendingConnect = takePendingGithubConnect(query.get("state"));
+  if (pendingConnect) {
+    connectReturnTo.value = pendingConnect.returnTo;
+    return completeConnect(query);
+  }
+
   try {
     const response = await handleThirdPartyCallback();
 
