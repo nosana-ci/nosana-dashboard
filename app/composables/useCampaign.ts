@@ -19,6 +19,8 @@ export interface CampaignCheck {
   id: string;
   label: string;
   ok: boolean;
+  /** Failing a blocking check refuses the registration; failing any other sends it to review. */
+  blocking: boolean;
   detail?: string;
 }
 
@@ -60,10 +62,13 @@ export function useCampaignApi() {
       $fetch<Campaign>(`${apiBase}/campaigns/${encodeURIComponent(slug)}`),
 
     getMe: (slug: string, forkUrl?: string) =>
-      $fetch<CampaignMe>(`${apiBase}/campaigns/${encodeURIComponent(slug)}/me`, {
-        credentials: "include",
-        query: forkUrl ? { forkUrl } : undefined,
-      }),
+      $fetch<CampaignMe>(
+        `${apiBase}/campaigns/${encodeURIComponent(slug)}/me`,
+        {
+          credentials: "include",
+          query: forkUrl ? { forkUrl } : undefined,
+        },
+      ),
 
     register: (slug: string, body: CampaignRegisterBody) =>
       $fetch<CampaignRegistration>(
@@ -82,13 +87,16 @@ interface PendingGithubConnect {
   returnTo: string;
 }
 
-const githubCallbackUri = () => `${window.location.origin}/st-auth/callback/github`;
+const githubCallbackUri = () =>
+  `${window.location.origin}/st-auth/callback/github`;
 
 /**
  * Returns the pending connect when `state` belongs to it, and clears it either way.
  * A mismatch means this callback is an ordinary GitHub sign-in.
  */
-export function takePendingGithubConnect(state: string | null): PendingGithubConnect | null {
+export function takePendingGithubConnect(
+  state: string | null,
+): PendingGithubConnect | null {
   const raw = sessionStorage.getItem(GITHUB_CONNECT_KEY);
   sessionStorage.removeItem(GITHUB_CONNECT_KEY);
   if (!raw || !state) return null;
@@ -132,13 +140,20 @@ export function useGithubConnect() {
   };
 
   const prefetch = () =>
-    fetchUrl().catch((error) => console.error("Error fetching GitHub connect URL:", error));
+    fetchUrl().catch((error) =>
+      console.error("Error fetching GitHub connect URL:", error),
+    );
 
   const start = async (returnTo: string) => {
     const target =
-      url && Date.now() - fetchedAt < CONNECT_URL_MAX_AGE_MS ? url : await fetchUrl();
+      url && Date.now() - fetchedAt < CONNECT_URL_MAX_AGE_MS
+        ? url
+        : await fetchUrl();
     const state = new URL(target).searchParams.get("state") || "";
-    sessionStorage.setItem(GITHUB_CONNECT_KEY, JSON.stringify({ state, returnTo }));
+    sessionStorage.setItem(
+      GITHUB_CONNECT_KEY,
+      JSON.stringify({ state, returnTo }),
+    );
     window.location.href = target;
   };
 

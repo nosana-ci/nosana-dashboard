@@ -138,7 +138,7 @@
                 class="is-flex is-align-items-flex-start mb-3"
               >
                 <StatusMark
-                  :tone="check.ok ? 'ok' : 'danger'"
+                  :tone="check.ok ? 'ok' : check.blocking ? 'danger' : 'warn'"
                   :size="16"
                   class="mr-2 mt-1"
                 />
@@ -147,9 +147,17 @@
                   <div v-if="check.detail" class="is-size-7 has-text-grey">
                     {{ check.detail }}
                   </div>
+                  <div
+                    v-if="!check.ok && !check.blocking"
+                    class="is-size-7 has-text-warning"
+                  >
+                    You can still register; we'll review it before granting
+                    credits.
+                  </div>
                 </div>
               </li>
             </ul>
+            <p v-if="checkError" class="help is-danger">{{ checkError }}</p>
           </div>
         </div>
       </div>
@@ -193,6 +201,8 @@ const loadError = ref<string | null>(null);
 const connecting = ref(false);
 const submitting = ref(false);
 const submitError = ref<string | null>(null);
+// A failed re-check keeps the last checklist on screen, so say it is out of date.
+const checkError = ref<string | null>(null);
 
 const form = reactive<Required<CampaignRegisterBody>>({
   forkUrl: "",
@@ -228,11 +238,15 @@ const refreshMe = async () => {
     const result = await api.getMe(slug, form.forkUrl || undefined);
     if (!meRequests.isCurrent(request)) return;
     me.value = result;
+    checkError.value = null;
     if (!form.forkUrl && result.forkSuggestion)
       form.forkUrl = result.forkSuggestion;
   } catch (error) {
-    if (meRequests.isCurrent(request))
-      console.error("Error refreshing campaign checks:", error);
+    if (!meRequests.isCurrent(request)) return;
+    checkError.value = apiErrorMessage(
+      error,
+      "Could not re-check the requirements.",
+    );
   }
 };
 
