@@ -156,15 +156,15 @@ import {
   gpuFitsVram,
   gpusInMarket,
   gpusOf,
-  marketOf,
-  PIN_TO_MARKET,
+  LIST_MARKETS,
+  marketsServing,
+  placementOf,
   keepCategorizedRequirements,
   listingsOf,
   listRequirementChips,
   priceOfGpus,
   recommendGpu,
   useGpuListings,
-  withGpus,
   type MatchingHosts,
   type Requirements,
 } from "~/composables/useNodeRequirements";
@@ -519,19 +519,24 @@ watch(
     if (!gpuListings.value.length) return;
     // A clone's GPUs count as chosen: applied once the catalogue resolves,
     // then forgotten so a reset goes to the recommendation.
-    const cloned = (
-      clonedGpus.value ??
-      (clonedMarketAddress.value
+    // Market rows: a clone across markets gets the markets serving its GPUs.
+    const named = clonedGpus.value ?? [];
+    const cloned = [
+      ...named,
+      ...(LIST_MARKETS ? marketsServing(gpuListings.value, named) : []),
+      ...(clonedMarketAddress.value
         ? gpusInMarket(gpuListings.value, clonedMarketAddress.value)
-        : [])
-    ).filter((name) =>
-      gpuListings.value.some((listing) => listing.name === name),
+        : []),
+    ].filter(
+      (name, index, all) =>
+        all.indexOf(name) === index &&
+        gpuListings.value.some((listing) => listing.name === name),
     );
     clonedGpus.value = null;
     clonedMarketAddress.value = null;
     if (cloned.length) {
       defaultedGpu.value = null;
-      selectedGpus.value = PIN_TO_MARKET ? cloned.slice(0, 1) : cloned;
+      selectedGpus.value = cloned;
       return;
     }
     const chosen = selectedGpus.value;
@@ -791,15 +796,13 @@ const createDeployment = async () => {
     if (!selectedGpus.value.length) {
       throw new Error("Please select a GPU");
     }
-    // Pinned to the chosen GPU's market while PIN_TO_MARKET; otherwise no
-    // market: host-manager posts each job to the cheapest premium market
-    // with a host that has one of the GPUs and meets the requirements.
-    const pinnedMarket = PIN_TO_MARKET
-      ? marketOf(selectedGpuListings.value[0])
-      : null;
-    if (PIN_TO_MARKET && !pinnedMarket) {
-      throw new Error("That GPU has no market to deploy to");
-    }
+    // One market pins it; several (or GPUs) post across markets: host-manager
+    // posts each job to the cheapest premium market with a host that has one
+    // of the GPUs and meets the requirements.
+    const placement = placementOf(
+      selectedGpuListings.value,
+      advancedRequirements.value,
+    );
     const deployment = (await nosana.value.api.deployments.create({
       name: deploymentName.value.trim(),
       replicas: replicas.value,
@@ -808,19 +811,7 @@ const createDeployment = async () => {
       ...(strategy.value === DeploymentStrategy.SCHEDULED
         ? { schedule: schedule.value }
         : {}),
-      ...(pinnedMarket
-        ? {
-            market: pinnedMarket,
-            ...(Object.keys(advancedRequirements.value).length
-              ? { requirements: advancedRequirements.value }
-              : {}),
-          }
-        : {
-            requirements: withGpus(
-              advancedRequirements.value,
-              selectedGpus.value,
-            ),
-          }),
+      ...placement,
       // Start immediately server-side instead of a separate start() call.
       autostart: true,
       ssh_public_keys: sshPublicKeys.value,
