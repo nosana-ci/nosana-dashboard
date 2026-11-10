@@ -4,15 +4,15 @@
     <section class="deploy-step">
       <header class="deploy-step-head">
         <span class="deploy-step-num" aria-hidden="true"></span>
-        <h3>{{ PIN_TO_MARKET ? "Choose a market" : "Choose GPUs" }}</h3>
+        <h3>{{ LIST_MARKETS ? "Choose markets" : "Choose GPUs" }}</h3>
         <div class="req-toolbar deploy-step-action">
           <label class="req-search">
             <DeployCategoryIcon icon="search" />
             <input
               v-model="gpuQuery"
               type="search"
-              placeholder="Search GPUs"
-              aria-label="Search GPUs"
+              :placeholder="LIST_MARKETS ? 'Search markets' : 'Search GPUs'"
+              :aria-label="LIST_MARKETS ? 'Search markets' : 'Search GPUs'"
             />
           </label>
           <DeployVramRange
@@ -52,14 +52,14 @@
         <div v-if="listedGpus.length" class="section-row gpu-list-head">
           <span
             :title="
-              PIN_TO_MARKET
-                ? 'Each job goes to the chosen GPU\'s market'
+              LIST_MARKETS
+                ? 'One market pins the deployment to it. With several, each job goes to the cheapest premium market with a free host that has one of their GPUs'
                 : 'Each job goes to the cheapest selected GPU with a host free'
             "
           >
             {{ selectionLabel }}
           </span>
-          <span v-if="!PIN_TO_MARKET" class="gpu-list-actions">
+          <span class="gpu-list-actions">
             <button
               v-if="!allShownSelected"
               type="button"
@@ -101,8 +101,7 @@
             @click="selectRange(row, $event)"
           >
             <input
-              :type="PIN_TO_MARKET ? 'radio' : 'checkbox'"
-              name="deploy-gpu"
+              type="checkbox"
               :value="row.listing.name"
               :checked="row.selected"
               :disabled="row.dim && !row.selected"
@@ -323,7 +322,7 @@ import {
   hostsOf,
   keepSupportedRequirements,
   listingsOf,
-  PIN_TO_MARKET,
+  LIST_MARKETS,
   useGpuListings,
   useQualifyingHosts,
   useRequirementOptions,
@@ -573,9 +572,7 @@ function onGpuChange(row: GpuRow) {
   const name = row.listing.name;
   emit(
     "update:modelValue",
-    PIN_TO_MARKET
-      ? [name]
-      : props.modelValue.includes(name)
+    props.modelValue.includes(name)
       ? props.modelValue.filter((selected) => selected !== name)
       : [...props.modelValue, name],
   );
@@ -587,7 +584,7 @@ function onGpuChange(row: GpuRow) {
 // workload's VRAM. Without an anchor in the list it is a plain click.
 function selectRange(row: GpuRow, event: MouseEvent) {
   // The click the label forwards to its checkbox arrives here too.
-  if (PIN_TO_MARKET || !event.shiftKey || event.target instanceof HTMLInputElement) return;
+  if (!event.shiftKey || event.target instanceof HTMLInputElement) return;
   const rows = listedGpus.value;
   const from = rows.findIndex((entry) => entry.listing.name === rangeAnchor.value);
   const to = rows.findIndex((entry) => entry.listing.name === row.listing.name);
@@ -627,12 +624,13 @@ const allShownSelected = computed(() =>
   selectableShown.value.every((name) => props.modelValue.includes(name)),
 );
 
-// "6 of 23 selected", or "23 GPUs" with none selected.
+// "6 of 23 selected", or "23 GPUs" (or markets) with none selected.
 const selectionLabel = computed(() => {
   const shown = selectableShown.value.length;
-  return props.modelValue.length && !PIN_TO_MARKET
+  const noun = LIST_MARKETS ? "market" : "GPU";
+  return props.modelValue.length
     ? `${props.modelValue.length} of ${shown} selected`
-    : `${shown} GPU${shown === 1 ? "" : "s"}`;
+    : `${shown} ${noun}${shown === 1 ? "" : "s"}`;
 });
 
 // A shift-click would otherwise select the text between the two rows.
@@ -874,21 +872,33 @@ function onBox(control: SliderControl, event: Event) {
 // --- Availability: the chosen GPUs' hosts, and how many free ones a
 // deployment with every requirement could get, for the summary ---
 const selectedListings = computed(() => listingsOf(listings.value, props.modelValue));
+// The GPU models a deployment across markets asks for.
+const acrossGpus = computed(() =>
+  LIST_MARKETS
+    ? [...new Set(selectedListings.value.flatMap((row) => row.gpus ?? []))]
+    : props.modelValue,
+);
+// The markets hosts are counted in: the one market pinned, or the chosen
+// ones when they list no GPU models to post across; null for any market.
+const pinnedMarkets = computed(() =>
+  LIST_MARKETS &&
+  (selectedListings.value.length === 1 || !acrossGpus.value.length)
+    ? selectedListings.value.flatMap((row) => row.markets)
+    : null,
+);
 const {
   qualifying,
   failed: searchFailed,
   refresh: refreshQualifying,
 } = useQualifyingHosts(
-  // Market rows are not GPU names: the search runs on the specs alone and
-  // counts within the chosen markets.
+  // As the deployment will post (placementOf): one market row counts the
+  // hosts in that market meeting the specs; several, or GPU rows, count
+  // every host with one of their GPUs that meets them.
   () =>
-    PIN_TO_MARKET
+    pinnedMarkets.value
       ? props.requirements
-      : withGpus(props.requirements, props.modelValue),
-  () =>
-    PIN_TO_MARKET
-      ? selectedListings.value.flatMap((listing) => listing.markets)
-      : null,
+      : withGpus(props.requirements, acrossGpus.value),
+  () => pinnedMarkets.value,
 );
 const matching = computed<MatchingHosts | null>(() => {
   if (!selectedListings.value.length) return null;
