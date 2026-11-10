@@ -3,7 +3,9 @@
     <TopBar
       :title="campaign?.name || 'Campaign'"
       :subtitle="
-        campaign ? `Register to receive $${campaign.grantAmountUsd} in credits` : ''
+        campaign
+          ? `Register to receive $${campaign.grantAmountUsd} in credits`
+          : ''
       "
     />
 
@@ -18,8 +20,8 @@
         <template v-if="me.registration.status === 'granted'">
           <h2 class="title is-5">You're in</h2>
           <p>
-            <strong>${{ me.registration.grantedAmountUsd }}</strong> in credits has been added
-            to your account.
+            <strong>${{ me.registration.grantedAmountUsd }}</strong> in credits
+            has been added to your account.
           </p>
         </template>
         <template v-else-if="me.registration.status === 'pending'">
@@ -33,7 +35,11 @@
       </div>
 
       <div v-else-if="!isOpen" class="notification is-light">
-        Registration for this campaign is closed.
+        <template v-if="notStarted">
+          Registration opens on
+          {{ new Date(campaign.startsAt).toLocaleString() }}.
+        </template>
+        <template v-else>Registration for this campaign is closed.</template>
       </div>
 
       <div v-else class="columns">
@@ -41,7 +47,8 @@
           <div v-if="!githubConnected" class="box">
             <h2 class="title is-5">Connect GitHub</h2>
             <p class="mb-4">
-              We use your GitHub account to check your fork and starred repositories.
+              We use your GitHub account to check your fork and starred
+              repositories.
             </p>
             <button
               class="button is-dark"
@@ -67,7 +74,9 @@
             </div>
 
             <div class="field">
-              <label class="label" for="superteam">Superteam Earn username</label>
+              <label class="label" for="superteam"
+                >Superteam Earn username</label
+              >
               <div class="control">
                 <input
                   id="superteam"
@@ -80,11 +89,17 @@
             </div>
 
             <div class="columns is-multiline">
-              <div v-for="social in socials" :key="social.key" class="column is-6">
+              <div
+                v-for="social in socials"
+                :key="social.key"
+                class="column is-6"
+              >
                 <div class="field">
                   <label class="label" :for="social.key">
                     {{ social.label }}
-                    <span class="has-text-grey has-text-weight-normal">(optional)</span>
+                    <span class="has-text-grey has-text-weight-normal"
+                      >(optional)</span
+                    >
                   </label>
                   <div class="control">
                     <input
@@ -98,7 +113,9 @@
               </div>
             </div>
 
-            <p v-if="submitError" class="help is-danger mb-3">{{ submitError }}</p>
+            <p v-if="submitError" class="help is-danger mb-3">
+              {{ submitError }}
+            </p>
 
             <button
               type="submit"
@@ -120,7 +137,11 @@
                 :key="check.id"
                 class="is-flex is-align-items-flex-start mb-3"
               >
-                <StatusMark :tone="check.ok ? 'ok' : 'danger'" :size="16" class="mr-2 mt-1" />
+                <StatusMark
+                  :tone="check.ok ? 'ok' : 'danger'"
+                  :size="16"
+                  class="mr-2 mt-1"
+                />
                 <div>
                   <div>{{ check.label }}</div>
                   <div v-if="check.detail" class="is-size-7 has-text-grey">
@@ -182,17 +203,23 @@ const form = reactive<Required<CampaignRegisterBody>>({
   linkedin: "",
 });
 
-const isOpen = computed(() => {
-  if (!campaign.value) return false;
-  const now = Date.now();
-  return (
-    now >= new Date(campaign.value.startsAt).getTime() &&
-    now <= new Date(campaign.value.endsAt).getTime()
-  );
-});
-const upstreamName = computed(() => campaign.value?.upstreamRepo.split("/")[1] || "repo");
+const notStarted = computed(
+  () =>
+    !!campaign.value &&
+    Date.now() < new Date(campaign.value.startsAt).getTime(),
+);
+const isOpen = computed(
+  () =>
+    !!campaign.value &&
+    !notStarted.value &&
+    Date.now() <= new Date(campaign.value.endsAt).getTime(),
+);
+const upstreamName = computed(
+  () => campaign.value?.upstreamRepo.split("/")[1] || "repo",
+);
 const githubConnected = computed(
-  () => me.value?.checks.find((check) => check.id === GITHUB_CHECK_ID)?.ok ?? false,
+  () =>
+    me.value?.checks.find((check) => check.id === GITHUB_CHECK_ID)?.ok ?? false,
 );
 
 const refreshMe = async () => {
@@ -201,16 +228,21 @@ const refreshMe = async () => {
     const result = await api.getMe(slug, form.forkUrl || undefined);
     if (!meRequests.isCurrent(request)) return;
     me.value = result;
-    if (!form.forkUrl && result.forkSuggestion) form.forkUrl = result.forkSuggestion;
+    if (!form.forkUrl && result.forkSuggestion)
+      form.forkUrl = result.forkSuggestion;
   } catch (error) {
-    if (meRequests.isCurrent(request)) console.error("Error refreshing campaign checks:", error);
+    if (meRequests.isCurrent(request))
+      console.error("Error refreshing campaign checks:", error);
   }
 };
 
 const refreshMeSoon = useDebounceFn(refreshMe, 500);
 watch(() => form.forkUrl, refreshMeSoon);
-// Starring and forking happen on GitHub, so re-check whenever the user comes back.
-useEventListener(window, "focus", refreshMe);
+// Starring and forking happen on GitHub, so re-check when the user comes back while
+// something is still missing.
+useEventListener(window, "focus", () => {
+  if (me.value?.checks.some((check) => !check.ok)) refreshMe();
+});
 
 onMounted(async () => {
   try {
@@ -238,7 +270,10 @@ const connect = async () => {
     await github.start(route.fullPath);
   } catch (error) {
     connecting.value = false;
-    submitError.value = apiErrorMessage(error, "Could not start connecting GitHub.");
+    submitError.value = apiErrorMessage(
+      error,
+      "Could not start connecting GitHub.",
+    );
   }
 };
 
@@ -256,7 +291,10 @@ const submit = async () => {
     const registration = await api.register(slug, body);
     me.value = { ...me.value!, registration };
   } catch (error) {
-    submitError.value = apiErrorMessage(error, "Registration failed. Please try again.");
+    submitError.value = apiErrorMessage(
+      error,
+      "Registration failed. Please try again.",
+    );
     refreshMe();
   } finally {
     submitting.value = false;
