@@ -1,123 +1,120 @@
 <template>
-  <div>
-    <TopBar :title="campaign?.name || 'Campaign'" />
+  <div class="columns is-centered">
+    <div class="column is-8-desktop is-three-fifths-widescreen">
+      <Loader v-if="loading" />
 
-    <Loader v-if="loading" />
-
-    <div v-else-if="loadError" class="notification is-danger is-light">
-      {{ loadError }}
-    </div>
-
-    <template v-else-if="campaign && me">
-      <figure v-if="campaign.imageUrl" class="campaign-cover mb-5">
-        <img :src="campaign.imageUrl" :alt="campaign.name" />
-      </figure>
-
-      <div class="columns">
-        <div v-if="paragraphs.length" class="column is-7">
-          <div class="content">
-            <p v-for="(paragraph, i) in paragraphs" :key="i">{{ paragraph }}</p>
-          </div>
-        </div>
-        <div class="column is-5">
-          <div class="box">
-            <p
-              class="has-text-grey is-size-7 is-uppercase has-text-weight-semibold"
-            >
-              Grant
-            </p>
-            <p class="title is-2 mb-2">${{ campaign.grantAmountUsd }}</p>
-            <p class="has-text-grey mb-4">
-              in credits for every builder who registers
-            </p>
-            <span class="tag is-medium">{{ periodLabel }}</span>
-          </div>
-        </div>
+      <div v-else-if="loadError" class="notification is-danger is-light">
+        {{ loadError }}
       </div>
 
-      <div
-        v-if="me.registration"
-        class="notification is-light"
-        :class="registrationTone"
-      >
-        <template v-if="me.registration.status === 'granted'">
-          <p class="title is-5">You're in</p>
-          <p>
-            <strong>${{ me.registration.grantedAmountUsd }}</strong> in credits
-            has been added to your account.
-            <NuxtLink to="/deployments/create">Start deploying</NuxtLink>
-          </p>
-        </template>
-        <template v-else-if="me.registration.status === 'pending'">
-          <p class="title is-5">Registration received</p>
-          <p>We'll review your registration.</p>
-        </template>
-        <template v-else>
-          <p class="title is-5">Registration not accepted</p>
-          <p>{{ me.registration.rejectReason }}</p>
-        </template>
-      </div>
-
-      <div v-else-if="isOpen" class="columns">
-        <div class="column is-5">
-          <div class="box">
+      <template v-else-if="campaign && me">
+        <div class="card mb-5">
+          <div v-if="campaign.imageUrl" class="card-image">
+            <figure class="image campaign-cover">
+              <img :src="campaign.imageUrl" :alt="campaign.name" />
+            </figure>
+          </div>
+          <div class="card-content">
             <div
-              class="is-flex is-justify-content-space-between is-align-items-center mb-4"
+              class="is-flex is-justify-content-space-between is-align-items-flex-start is-flex-wrap-wrap mb-4"
             >
-              <h2 class="title is-5 mb-0">1. Requirements</h2>
-              <span class="tag">{{ checksDone }} / {{ me.checks.length }}</span>
+              <div class="mr-4 mb-3">
+                <h1 class="title is-3 mb-2">{{ campaign.name }}</h1>
+                <p class="has-text-grey">{{ periodLabel }}</p>
+              </div>
+              <div class="has-text-right-tablet">
+                <p class="title is-3 mb-1">${{ campaign.grantAmountUsd }}</p>
+                <p class="has-text-grey is-size-7">in credits per builder</p>
+              </div>
             </div>
-            <ul>
-              <li
-                v-for="check in me.checks"
-                :key="check.id"
-                class="is-flex is-align-items-flex-start mb-4"
-              >
-                <StatusMark
-                  :tone="check.ok ? 'ok' : check.blocking ? 'danger' : 'warn'"
-                  :size="16"
-                  class="mr-3 mt-1"
-                />
-                <div>
-                  <div class="has-text-weight-semibold">{{ check.label }}</div>
-                  <div v-if="check.detail" class="is-size-7 has-text-grey">
-                    {{ check.detail }}
-                  </div>
-                  <p
-                    v-if="!check.ok && !check.blocking"
-                    class="is-size-7 has-text-grey-dark mt-1"
-                  >
-                    You can still register; we'll review it before granting
-                    credits.
-                  </p>
-                  <button
-                    v-if="check.id === GITHUB_CHECK_ID && !check.ok"
-                    type="button"
-                    class="button is-dark is-small mt-2"
-                    :class="{ 'is-loading': connecting }"
-                    @click="connect"
-                  >
-                    Connect GitHub
-                  </button>
-                  <a
-                    v-else-if="githubAction(check)"
-                    :href="githubAction(check)!.href"
-                    target="_blank"
-                    rel="noopener"
-                    class="button is-small mt-2"
-                  >
-                    {{ githubAction(check)!.label }}
-                  </a>
-                </div>
-              </li>
-            </ul>
-            <p v-if="checkError" class="help is-danger">{{ checkError }}</p>
-            <p v-if="connectError" class="help is-danger">{{ connectError }}</p>
+            <div v-if="paragraphs.length" class="content">
+              <p v-for="(paragraph, i) in paragraphs" :key="i">
+                {{ paragraph }}
+              </p>
+            </div>
           </div>
         </div>
 
-        <div class="column is-7">
-          <form class="box" @submit.prevent="submit">
+        <div
+          v-if="me.registration"
+          class="notification is-light"
+          :class="registrationTone"
+        >
+          <template v-if="me.registration.status === 'granted'">
+            <p class="title is-5">You're in</p>
+            <p>
+              <strong>${{ me.registration.grantedAmountUsd }}</strong> in
+              credits has been added to your account.
+              <NuxtLink to="/deployments/create">Start deploying</NuxtLink>
+            </p>
+          </template>
+          <template v-else-if="me.registration.status === 'pending'">
+            <p class="title is-5">Registration received</p>
+            <p>We'll review your registration.</p>
+          </template>
+          <template v-else>
+            <p class="title is-5">Registration not accepted</p>
+            <p>{{ me.registration.rejectReason }}</p>
+          </template>
+        </div>
+
+        <div v-else-if="!isOpen" class="notification is-light">
+          <template v-if="notStarted">
+            Registration opens on
+            {{ new Date(campaign.startsAt).toLocaleString() }}.
+          </template>
+          <template v-else>Registration for this campaign is closed.</template>
+        </div>
+
+        <div v-else class="box">
+          <div
+            class="is-flex is-justify-content-space-between is-align-items-center mb-3"
+          >
+            <h2 class="title is-5 mb-0">1. Meet the requirements</h2>
+            <span class="tag is-rounded"
+              >{{ checksDone }} of {{ me.checks.length }}</span
+            >
+          </div>
+
+          <div
+            v-for="check in me.checks"
+            :key="check.id"
+            class="is-flex is-align-items-center py-3 requirement"
+          >
+            <StatusMark
+              :tone="check.ok ? 'ok' : check.blocking ? 'danger' : 'warn'"
+              :size="16"
+              class="mr-3"
+            />
+            <div class="is-flex-grow-1">
+              <p>{{ check.label }}</p>
+              <p v-if="requirementNote(check)" class="is-size-7 has-text-grey">
+                {{ requirementNote(check) }}
+              </p>
+            </div>
+            <button
+              v-if="check.id === GITHUB_CHECK_ID && !check.ok"
+              type="button"
+              class="button is-dark is-small ml-3"
+              :class="{ 'is-loading': connecting }"
+              @click="connect"
+            >
+              Connect GitHub
+            </button>
+            <a
+              v-else-if="githubAction(check)"
+              :href="githubAction(check)!.href"
+              target="_blank"
+              rel="noopener"
+              class="button is-small ml-3"
+            >
+              {{ githubAction(check)!.label }}
+            </a>
+          </div>
+          <p v-if="checkError" class="help is-danger">{{ checkError }}</p>
+          <p v-if="connectError" class="help is-danger">{{ connectError }}</p>
+
+          <form class="mt-6" @submit.prevent="submit">
             <h2 class="title is-5">2. Your details</h2>
 
             <div class="field">
@@ -131,9 +128,6 @@
                   :placeholder="`https://github.com/you/${upstreamName}`"
                 />
               </div>
-              <p class="help">
-                We found it automatically if it's under your GitHub account.
-              </p>
             </div>
 
             <div class="field">
@@ -151,13 +145,13 @@
               </div>
             </div>
 
-            <p class="label mt-5 mb-2">
+            <label class="label mt-5">
               Socials
               <span class="has-text-grey has-text-weight-normal"
                 >(optional)</span
               >
-            </p>
-            <div class="columns is-multiline is-variable is-2">
+            </label>
+            <div class="columns is-multiline is-variable is-2 mb-4">
               <div
                 v-for="social in socials"
                 :key="social.key"
@@ -186,21 +180,16 @@
             >
               Register
             </button>
-            <p v-if="!requirementsMet" class="help has-text-centered">
-              Complete the requirements to register.
+            <p
+              v-if="!requirementsMet"
+              class="help has-text-centered has-text-grey"
+            >
+              Meet the requirements above to register.
             </p>
           </form>
         </div>
-      </div>
-
-      <div v-else class="notification is-light">
-        <template v-if="notStarted">
-          Registration opens on
-          {{ new Date(campaign.startsAt).toLocaleString() }}.
-        </template>
-        <template v-else>Registration for this campaign is closed.</template>
-      </div>
-    </template>
+      </template>
+    </div>
   </div>
 </template>
 
@@ -264,6 +253,12 @@ const paragraphs = computed(
   () =>
     campaign.value?.description?.split(/\n\s*\n/).filter((p) => p.trim()) ?? [],
 );
+
+// A failing non-blocking check needs saying that it only sends the registration to review.
+const requirementNote = (check: CampaignCheck) =>
+  !check.ok && !check.blocking
+    ? `${check.detail ? check.detail + ". " : ""}You can still register; we'll review it first.`
+    : check.detail;
 
 // Forking and starring happen on GitHub; the focus re-check picks them up on return.
 const githubAction = (check: CampaignCheck) => {
@@ -410,10 +405,11 @@ const submit = async () => {
 
 <style scoped>
 .campaign-cover img {
-  display: block;
-  width: 100%;
-  aspect-ratio: 4 / 1;
+  aspect-ratio: 3 / 1;
   object-fit: cover;
-  border-radius: var(--bulma-radius-large);
+}
+
+.requirement + .requirement {
+  border-top: 1px solid var(--bulma-border-weak);
 }
 </style>
