@@ -10,22 +10,17 @@
       <template v-else-if="campaign && me">
         <div class="card mb-5">
           <div v-if="campaign.imageUrl" class="card-image">
-            <figure class="image campaign-cover">
+            <figure class="image">
               <img :src="campaign.imageUrl" :alt="campaign.name" />
             </figure>
           </div>
           <div class="card-content">
-            <div
-              class="is-flex is-justify-content-space-between is-align-items-flex-start is-flex-wrap-wrap mb-4"
-            >
-              <div class="mr-4 mb-3">
-                <h1 class="title is-3 mb-2">{{ campaign.name }}</h1>
-                <p class="has-text-grey">{{ periodLabel }}</p>
-              </div>
-              <div class="has-text-right-tablet">
-                <p class="title is-3 mb-1">${{ campaign.grantAmountUsd }}</p>
-                <p class="has-text-grey is-size-7">in credits per builder</p>
-              </div>
+            <h1 class="title is-3 mb-3">{{ campaign.name }}</h1>
+            <div class="tags mb-4">
+              <span class="tag is-medium has-text-weight-semibold">
+                ${{ campaign.grantAmountUsd }} in credits
+              </span>
+              <span class="tag is-medium">{{ periodLabel }}</span>
             </div>
             <div v-if="paragraphs.length" class="content">
               <p v-for="(paragraph, i) in paragraphs" :key="i">
@@ -404,11 +399,6 @@ const submit = async () => {
 </script>
 
 <style scoped>
-.campaign-cover img {
-  aspect-ratio: 3 / 1;
-  object-fit: cover;
-}
-
 .requirement + .requirement {
   border-top: 1px solid var(--bulma-border-weak);
 }
