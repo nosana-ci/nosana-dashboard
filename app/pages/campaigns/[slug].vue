@@ -1,13 +1,6 @@
 <template>
   <div>
-    <TopBar
-      :title="campaign?.name || 'Campaign'"
-      :subtitle="
-        campaign
-          ? `Register to receive $${campaign.grantAmountUsd} in credits`
-          : ''
-      "
-    />
+    <TopBar :title="campaign?.name || 'Campaign'" />
 
     <Loader v-if="loading" />
 
@@ -19,55 +12,114 @@
       <figure v-if="campaign.imageUrl" class="campaign-cover mb-5">
         <img :src="campaign.imageUrl" :alt="campaign.name" />
       </figure>
-      <div class="content mb-5">
-        <p class="has-text-grey">{{ dateRange }}</p>
-        <p v-for="(paragraph, i) in paragraphs" :key="i">{{ paragraph }}</p>
+
+      <div class="columns">
+        <div v-if="paragraphs.length" class="column is-7">
+          <div class="content">
+            <p v-for="(paragraph, i) in paragraphs" :key="i">{{ paragraph }}</p>
+          </div>
+        </div>
+        <div class="column is-5">
+          <div class="box">
+            <p
+              class="has-text-grey is-size-7 is-uppercase has-text-weight-semibold"
+            >
+              Grant
+            </p>
+            <p class="title is-2 mb-2">${{ campaign.grantAmountUsd }}</p>
+            <p class="has-text-grey mb-4">
+              in credits for every builder who registers
+            </p>
+            <span class="tag is-medium">{{ periodLabel }}</span>
+          </div>
+        </div>
       </div>
 
-      <div v-if="me.registration" class="box">
+      <div
+        v-if="me.registration"
+        class="notification is-light"
+        :class="registrationTone"
+      >
         <template v-if="me.registration.status === 'granted'">
-          <h2 class="title is-5">You're in</h2>
+          <p class="title is-5">You're in</p>
           <p>
             <strong>${{ me.registration.grantedAmountUsd }}</strong> in credits
             has been added to your account.
+            <NuxtLink to="/deployments/create">Start deploying</NuxtLink>
           </p>
         </template>
         <template v-else-if="me.registration.status === 'pending'">
-          <h2 class="title is-5">Registration received</h2>
+          <p class="title is-5">Registration received</p>
           <p>We'll review your registration.</p>
         </template>
         <template v-else>
-          <h2 class="title is-5">Registration rejected</h2>
+          <p class="title is-5">Registration not accepted</p>
           <p>{{ me.registration.rejectReason }}</p>
         </template>
       </div>
 
-      <div v-else-if="!isOpen" class="notification is-light">
-        <template v-if="notStarted">
-          Registration opens on
-          {{ new Date(campaign.startsAt).toLocaleString() }}.
-        </template>
-        <template v-else>Registration for this campaign is closed.</template>
-      </div>
-
-      <div v-else class="columns">
-        <div class="column is-7">
-          <div v-if="!githubConnected" class="box">
-            <h2 class="title is-5">Connect GitHub</h2>
-            <p class="mb-4">
-              We use your GitHub account to check your fork and starred
-              repositories.
-            </p>
-            <button
-              class="button is-dark"
-              :class="{ 'is-loading': connecting }"
-              @click="connect"
+      <div v-else-if="isOpen" class="columns">
+        <div class="column is-5">
+          <div class="box">
+            <div
+              class="is-flex is-justify-content-space-between is-align-items-center mb-4"
             >
-              Connect GitHub
-            </button>
+              <h2 class="title is-5 mb-0">1. Requirements</h2>
+              <span class="tag">{{ checksDone }} / {{ me.checks.length }}</span>
+            </div>
+            <ul>
+              <li
+                v-for="check in me.checks"
+                :key="check.id"
+                class="is-flex is-align-items-flex-start mb-4"
+              >
+                <StatusMark
+                  :tone="check.ok ? 'ok' : check.blocking ? 'danger' : 'warn'"
+                  :size="16"
+                  class="mr-3 mt-1"
+                />
+                <div>
+                  <div class="has-text-weight-semibold">{{ check.label }}</div>
+                  <div v-if="check.detail" class="is-size-7 has-text-grey">
+                    {{ check.detail }}
+                  </div>
+                  <p
+                    v-if="!check.ok && !check.blocking"
+                    class="is-size-7 has-text-grey-dark mt-1"
+                  >
+                    You can still register; we'll review it before granting
+                    credits.
+                  </p>
+                  <button
+                    v-if="check.id === GITHUB_CHECK_ID && !check.ok"
+                    type="button"
+                    class="button is-dark is-small mt-2"
+                    :class="{ 'is-loading': connecting }"
+                    @click="connect"
+                  >
+                    Connect GitHub
+                  </button>
+                  <a
+                    v-else-if="githubAction(check)"
+                    :href="githubAction(check)!.href"
+                    target="_blank"
+                    rel="noopener"
+                    class="button is-small mt-2"
+                  >
+                    {{ githubAction(check)!.label }}
+                  </a>
+                </div>
+              </li>
+            </ul>
+            <p v-if="checkError" class="help is-danger">{{ checkError }}</p>
+            <p v-if="connectError" class="help is-danger">{{ connectError }}</p>
           </div>
+        </div>
 
+        <div class="column is-7">
           <form class="box" @submit.prevent="submit">
+            <h2 class="title is-5">2. Your details</h2>
+
             <div class="field">
               <label class="label" for="fork-url">Fork URL</label>
               <div class="control">
@@ -79,6 +131,9 @@
                   :placeholder="`https://github.com/you/${upstreamName}`"
                 />
               </div>
+              <p class="help">
+                We found it automatically if it's under your GitHub account.
+              </p>
             </div>
 
             <div class="field">
@@ -96,28 +151,26 @@
               </div>
             </div>
 
-            <div class="columns is-multiline">
+            <p class="label mt-5 mb-2">
+              Socials
+              <span class="has-text-grey has-text-weight-normal"
+                >(optional)</span
+              >
+            </p>
+            <div class="columns is-multiline is-variable is-2">
               <div
                 v-for="social in socials"
                 :key="social.key"
                 class="column is-6"
               >
-                <div class="field">
-                  <label class="label" :for="social.key">
-                    {{ social.label }}
-                    <span class="has-text-grey has-text-weight-normal"
-                      >(optional)</span
-                    >
-                  </label>
-                  <div class="control">
-                    <input
-                      :id="social.key"
-                      v-model.trim="form[social.key]"
-                      class="input"
-                      type="text"
-                    />
-                  </div>
-                </div>
+                <input
+                  :id="social.key"
+                  v-model.trim="form[social.key]"
+                  class="input"
+                  type="text"
+                  :placeholder="social.label"
+                  :aria-label="social.label"
+                />
               </div>
             </div>
 
@@ -127,56 +180,25 @@
 
             <button
               type="submit"
-              class="button is-primary"
+              class="button is-primary is-fullwidth"
               :class="{ 'is-loading': submitting }"
-              :disabled="!githubConnected || !form.superteamEarnUsername"
+              :disabled="!canRegister"
             >
               Register
             </button>
+            <p v-if="!requirementsMet" class="help has-text-centered">
+              Complete the requirements to register.
+            </p>
           </form>
         </div>
+      </div>
 
-        <div class="column is-5">
-          <div class="box">
-            <h2 class="title is-6">Requirements</h2>
-            <ul>
-              <li
-                v-for="check in me.checks"
-                :key="check.id"
-                class="is-flex is-align-items-flex-start mb-3"
-              >
-                <StatusMark
-                  :tone="check.ok ? 'ok' : check.blocking ? 'danger' : 'warn'"
-                  :size="16"
-                  class="mr-2 mt-1"
-                />
-                <div>
-                  <div>{{ check.label }}</div>
-                  <div v-if="check.detail" class="is-size-7 has-text-grey">
-                    {{ check.detail }}
-                  </div>
-                  <a
-                    v-if="githubAction(check)"
-                    :href="githubAction(check)!.href"
-                    target="_blank"
-                    rel="noopener"
-                    class="is-size-7"
-                  >
-                    {{ githubAction(check)!.label }}
-                  </a>
-                  <div
-                    v-if="!check.ok && !check.blocking"
-                    class="is-size-7 has-text-warning"
-                  >
-                    You can still register; we'll review it before granting
-                    credits.
-                  </div>
-                </div>
-              </li>
-            </ul>
-            <p v-if="checkError" class="help is-danger">{{ checkError }}</p>
-          </div>
-        </div>
+      <div v-else class="notification is-light">
+        <template v-if="notStarted">
+          Registration opens on
+          {{ new Date(campaign.startsAt).toLocaleString() }}.
+        </template>
+        <template v-else>Registration for this campaign is closed.</template>
       </div>
     </template>
   </div>
@@ -217,6 +239,7 @@ const me = ref<CampaignMe | null>(null);
 const loading = ref(true);
 const loadError = ref<string | null>(null);
 const connecting = ref(false);
+const connectError = ref<string | null>(null);
 const submitting = ref(false);
 const submitError = ref<string | null>(null);
 // A failed re-check keeps the last checklist on screen, so say it is out of date.
@@ -237,11 +260,6 @@ const formatDate = (date: string) =>
     day: "numeric",
     year: "numeric",
   });
-const dateRange = computed(() =>
-  campaign.value
-    ? `${formatDate(campaign.value.startsAt)} – ${formatDate(campaign.value.endsAt)}`
-    : "",
-);
 const paragraphs = computed(
   () =>
     campaign.value?.description?.split(/\n\s*\n/).filter((p) => p.trim()) ?? [],
@@ -264,6 +282,28 @@ const githubAction = (check: CampaignCheck) => {
   }
   return null;
 };
+
+const checksDone = computed(
+  () => me.value?.checks.filter((check) => check.ok).length ?? 0,
+);
+const requirementsMet = computed(
+  () => !!me.value?.checks.every((check) => check.ok || !check.blocking),
+);
+const canRegister = computed(
+  () => requirementsMet.value && !!form.superteamEarnUsername,
+);
+const registrationTone = computed(
+  () =>
+    ({ granted: "is-success", pending: "is-warning", rejected: "is-danger" })[
+      me.value?.registration?.status ?? "pending"
+    ],
+);
+const periodLabel = computed(() => {
+  if (!campaign.value) return "";
+  if (notStarted.value) return `Opens ${formatDate(campaign.value.startsAt)}`;
+  if (isOpen.value) return `Open until ${formatDate(campaign.value.endsAt)}`;
+  return `Closed ${formatDate(campaign.value.endsAt)}`;
+});
 
 const notStarted = computed(
   () =>
@@ -336,7 +376,7 @@ const connect = async () => {
     await github.start(route.fullPath);
   } catch (error) {
     connecting.value = false;
-    submitError.value = apiErrorMessage(
+    connectError.value = apiErrorMessage(
       error,
       "Could not start connecting GitHub.",
     );
@@ -372,7 +412,7 @@ const submit = async () => {
 .campaign-cover img {
   display: block;
   width: 100%;
-  max-height: 280px;
+  aspect-ratio: 4 / 1;
   object-fit: cover;
   border-radius: var(--bulma-radius-large);
 }
