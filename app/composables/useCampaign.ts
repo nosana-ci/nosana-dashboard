@@ -15,6 +15,7 @@ export interface Campaign {
   upstreamRepo: string;
   requiredStars: string[];
   minGithubAccountAgeDays: number;
+  requireWalletVerification: boolean;
 }
 
 /** One line of the live checklist. The backend decides which checks exist. */
@@ -50,9 +51,20 @@ export interface CampaignRegisterBody {
   discord?: string;
   x?: string;
   linkedin?: string;
+  wallet?: CampaignWallet;
+}
+
+export interface CampaignWallet {
+  address: string;
+  message: string;
+  signature: string;
 }
 
 export const GITHUB_CHECK_ID = "github";
+
+/** Must match `walletMessage` in client-manager exactly. */
+export const campaignWalletMessage = (slug: string, issuedAt: string) =>
+  `Verify wallet for Nosana campaign "${slug}"\nIssued at: ${issuedAt}`;
 
 export const apiErrorMessage = (error: any, fallback: string): string =>
   error?.data?.message || fallback;

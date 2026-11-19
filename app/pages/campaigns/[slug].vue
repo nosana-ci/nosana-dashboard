@@ -140,6 +140,63 @@
               </div>
             </div>
 
+            <div v-if="campaign.requireWalletVerification" class="field">
+              <label class="label">Solana wallet</label>
+              <div
+                v-if="verifiedWallet"
+                class="is-flex is-align-items-center"
+              >
+                <StatusMark tone="ok" :size="16" class="mr-2" />
+                <span>{{ shortAddress(verifiedWallet.address) }}</span>
+                <a
+                  class="ml-3 is-size-7"
+                  href="#"
+                  @click.prevent="verifiedWallet = null"
+                  >Change</a
+                >
+              </div>
+              <template v-else>
+                <p class="help mt-0 mb-2">
+                  Connect a wallet and sign a message to prove you own it. This
+                  does not sign you in with it.
+                </p>
+                <div class="buttons">
+                  <button
+                    v-if="connected"
+                    type="button"
+                    class="button is-small"
+                    :class="{ 'is-loading': verifyingWallet }"
+                    @click="verifyWallet()"
+                  >
+                    Sign with {{ activeWallet?.name ?? "connected wallet" }}
+                  </button>
+                  <template v-else>
+                    <button
+                      v-for="option in wallets"
+                      :key="option.name"
+                      type="button"
+                      class="button is-small"
+                      :disabled="verifyingWallet"
+                      @click="verifyWallet(option)"
+                    >
+                      <img
+                        :src="option.icon"
+                        :alt="option.name"
+                        class="wallet-icon mr-2"
+                      />
+                      {{ option.name }}
+                    </button>
+                  </template>
+                </div>
+                <p v-if="!connected && !wallets.length" class="help">
+                  No Solana wallet found in this browser.
+                </p>
+                <p v-if="walletError" class="help is-danger">
+                  {{ walletError }}
+                </p>
+              </template>
+            </div>
+
             <label class="label mt-5">
               Socials
               <span class="has-text-grey has-text-weight-normal"
@@ -189,18 +246,26 @@
 </template>
 
 <script setup lang="ts">
-import { useDebounceFn, useEventListener } from "@vueuse/core";
+import { until, useDebounceFn, useEventListener } from "@vueuse/core";
+import { createNosanaAuthorization } from "@nosana/kit";
+import {
+  useSignMessage,
+  useSolanaWallets,
+  useWallet,
+} from "@nosana/solana-vue";
 import Loader from "~/components/Loader.vue";
 import StatusMark from "~/components/Common/StatusMark.vue";
 import {
   GITHUB_CHECK_ID,
   apiErrorMessage,
+  campaignWalletMessage,
   useCampaignApi,
   useGithubConnect,
   type Campaign,
   type CampaignCheck,
   type CampaignMe,
   type CampaignRegisterBody,
+  type CampaignWallet,
 } from "~/composables/useCampaign";
 
 type SocialKey = "telegram" | "discord" | "x" | "linkedin";
@@ -229,7 +294,20 @@ const submitError = ref<string | null>(null);
 // A failed re-check keeps the last checklist on screen, so say it is out of date.
 const checkError = ref<string | null>(null);
 
-const form = reactive<Required<CampaignRegisterBody>>({
+const { wallets } = useSolanaWallets();
+const {
+  connected,
+  account,
+  wallet: activeWallet,
+  connect: connectWallet,
+  disconnect: disconnectWallet,
+} = useWallet();
+const signMessage = useSignMessage(account);
+const verifiedWallet = ref<CampaignWallet | null>(null);
+const verifyingWallet = ref(false);
+const walletError = ref<string | null>(null);
+
+const form = reactive<Required<Omit<CampaignRegisterBody, "wallet">>>({
   forkUrl: "",
   superteamEarnUsername: "",
   telegram: "",
@@ -280,7 +358,10 @@ const requirementsMet = computed(
   () => !!me.value?.checks.every((check) => check.ok || !check.blocking),
 );
 const canRegister = computed(
-  () => requirementsMet.value && !!form.superteamEarnUsername,
+  () =>
+    requirementsMet.value &&
+    !!form.superteamEarnUsername &&
+    (!campaign.value?.requireWalletVerification || !!verifiedWallet.value),
 );
 const registrationTone = computed(
   () =>
@@ -351,10 +432,13 @@ onMounted(async () => {
     if (meResult.forkSuggestion) form.forkUrl = meResult.forkSuggestion;
     if (!githubConnected.value) github.prefetch();
   } catch (error: any) {
+    // Wallet sign-ins have no SuperTokens session, which the campaign API requires.
     loadError.value =
       error?.status === 404
         ? "This campaign does not exist."
-        : apiErrorMessage(error, "Could not load this campaign.");
+        : error?.status === 401
+          ? "Campaigns need an email, Google or GitHub account. Sign out of your wallet and sign in with one of those to register."
+          : apiErrorMessage(error, "Could not load this campaign.");
   } finally {
     loading.value = false;
   }
@@ -373,6 +457,51 @@ const connect = async () => {
   }
 };
 
+const shortAddress = (address: string) =>
+  `${address.slice(0, 4)}...${address.slice(-4)}`;
+
+// Connecting here is only for signing: nothing writes the wallet session cookie, and a
+// wallet this page connected is disconnected again, since the rest of the app treats a
+// connected wallet as wallet mode (and `WalletProvider` would auto-connect it next visit).
+const verifyWallet = async (choice?: (typeof wallets.value)[number]) => {
+  verifyingWallet.value = true;
+  walletError.value = null;
+  const connectedHere = !connected.value;
+  try {
+    if (connectedHere) {
+      if (!choice) return;
+      await connectWallet(choice);
+      await until(signMessage).toBeTruthy({ timeout: 10_000, throwOnTimeout: true });
+    }
+    if (!account.value || !signMessage.value) {
+      throw new Error("Wallet cannot sign messages");
+    }
+    const sign = signMessage.value;
+    // A store-less instance: `nosana.authorization` caches into the wallet login cookie.
+    const authorization = createNosanaAuthorization(
+      async (bytes) => (await sign({ message: bytes })).signature,
+    );
+    const message = campaignWalletMessage(slug, new Date().toISOString());
+    const signed = await authorization.generate(message);
+    verifiedWallet.value = {
+      address: account.value.address,
+      message,
+      // `generate` returns `<message>:<base58 signature>`.
+      signature: signed.slice(message.length + 1),
+    };
+  } catch (error) {
+    console.error("Wallet verification failed:", error);
+    walletError.value = "Could not verify your wallet. Please try again.";
+  } finally {
+    if (connectedHere && connected.value) {
+      await disconnectWallet().catch((error) =>
+        console.error("Error disconnecting wallet:", error),
+      );
+    }
+    verifyingWallet.value = false;
+  }
+};
+
 const submit = async () => {
   submitting.value = true;
   submitError.value = null;
@@ -384,6 +513,9 @@ const submit = async () => {
     for (const { key } of socials) {
       if (form[key]) body[key] = form[key];
     }
+    if (campaign.value?.requireWalletVerification && verifiedWallet.value) {
+      body.wallet = verifiedWallet.value;
+    }
     const registration = await api.register(slug, body);
     me.value = { ...me.value!, registration };
   } catch (error) {
@@ -391,6 +523,8 @@ const submit = async () => {
       error,
       "Registration failed. Please try again.",
     );
+    // An expired, invalid or already-used signature can only be fixed by signing again.
+    if (/wallet/i.test(submitError.value)) verifiedWallet.value = null;
     refreshMe();
   } finally {
     submitting.value = false;
@@ -401,5 +535,10 @@ const submit = async () => {
 <style scoped>
 .requirement + .requirement {
   border-top: 1px solid var(--bulma-border-weak);
+}
+
+.wallet-icon {
+  width: 16px;
+  height: 16px;
 }
 </style>
