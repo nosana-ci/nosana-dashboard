@@ -11,6 +11,7 @@ export type CreditTransactionType =
   | "token_topup"
   | "llm_debit"
   | "llm_refund"
+  | "campaign_grant"
   | string;
 
 const CREDIT_IN_TYPES = new Set([
@@ -23,6 +24,7 @@ const CREDIT_IN_TYPES = new Set([
   "token_topup",
   // The unused part of an inference hold, returned when the request settles.
   "llm_refund",
+  "campaign_grant",
 ]);
 
 const TYPE_LABELS: Record<string, string> = {
@@ -38,6 +40,7 @@ const TYPE_LABELS: Record<string, string> = {
   token_topup: "Token topup",
   llm_debit: "Inference",
   llm_refund: "Refund",
+  campaign_grant: "Campaign",
 };
 
 export const getCreditTransactionLabel = (type: CreditTransactionType): string =>

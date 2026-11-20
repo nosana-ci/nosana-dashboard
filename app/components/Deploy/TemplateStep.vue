@@ -230,7 +230,7 @@
             </dd>
           </div>
           <div>
-            <dt>GPU</dt>
+            <dt>{{ LIST_MARKETS ? "Markets" : "GPU" }}</dt>
             <dd>
               <template v-if="gpus.length">
                 <b :title="gpuFullNames">{{ gpuNames }}</b>
@@ -344,6 +344,7 @@ import {
   gpuFitsVram,
   hostsOf,
   priceOfGpus,
+  LIST_MARKETS,
   shortGpuName,
   type GpuListing,
 } from "~/composables/useNodeRequirements";
@@ -442,7 +443,7 @@ useIntersectionObserver(
 const gpuNames = computed(() =>
   props.gpus.length === 1
     ? shortGpuName(props.gpus[0]?.name ?? "")
-    : `${props.gpus.length} GPUs`,
+    : `${props.gpus.length} ${LIST_MARKETS ? "markets" : "GPUs"}`,
 );
 const gpuFullNames = computed(() => props.gpus.map((gpu) => gpu.name).join("\n"));
 // "24 GB", or "24–80 GB" over several GPUs; "" when none lists its VRAM.

@@ -49,15 +49,56 @@ export type { DeploymentRequirements };
 export const GPU_KEY = "name";
 
 /**
- * Temporary: the compute step lists markets instead of GPU models, takes
- * one, and the deployment pins it, as before GPUs were requirements. Set to
- * false to bring the multi-GPU selection back.
+ * The compute step lists markets instead of GPU models. One market chosen
+ * pins the deployment to it; several post across markets on the GPU models
+ * they serve (see `placementOf`). Set to false to list GPU models instead.
  */
-export const PIN_TO_MARKET = true;
+export const LIST_MARKETS = true;
 
-/** The market a listing pins: a market row's own address, else the first the catalogue lists the GPU in. */
-export function marketOf(listing: GpuListing | undefined): string | null {
-  return listing?.markets[0] ?? null;
+/** Where a deployment posts its jobs, as `deployments.create` takes it. */
+export type Placement =
+  | { market: string; requirements?: DeploymentRequirements }
+  | { requirements: DeploymentRequirements };
+
+/**
+ * Where a deployment on the chosen rows posts, with the specs on top. One
+ * market row pins that market. Several post across markets: the API takes
+ * no list of markets, so the deployment asks for the GPU models the chosen
+ * markets serve, and host-manager posts each job to the cheapest PREMIUM
+ * market with a free host that has one. GPU rows always post across markets.
+ * Throws when the rows give it nowhere to post.
+ */
+export function placementOf(
+  chosen: GpuListing[],
+  requirements: Requirements,
+): Placement {
+  if (!LIST_MARKETS) {
+    return { requirements: withGpus(requirements, chosen.map((row) => row.name)) };
+  }
+  if (chosen.length === 1) {
+    const market = chosen[0]?.markets[0];
+    if (!market) throw new Error("That market has no address to deploy to");
+    return Object.keys(requirements).length
+      ? { market, requirements }
+      : { market };
+  }
+  const gpus = [...new Set(chosen.flatMap((row) => row.gpus ?? []))];
+  if (!gpus.length) {
+    throw new Error(
+      "None of the chosen markets has hosts yet. Choose one market to pin it.",
+    );
+  }
+  return { requirements: withGpus(requirements, gpus) };
+}
+
+/**
+ * The market rows that serve any of the named GPU models: how a deployment
+ * that posts across markets on GPU models shows in the market list.
+ */
+export function marketsServing(listings: GpuListing[], gpus: string[]): string[] {
+  return listings
+    .filter((row) => row.gpus?.some((gpu) => gpus.includes(gpu)))
+    .map((row) => row.name);
 }
 
 /** A market as the dashboard API lists it, with its hourly rate. */
@@ -147,6 +188,12 @@ export interface GpuListing {
   markets: string[];
   /** Hourly USD across those markets, network fee included; null when none is priced. */
   usd: PriceRange | null;
+  /**
+   * On a market row: the GPU models its hosts have, from the catalogue,
+   * which a deployment across several markets asks for. Empty while the
+   * market has no hosts; absent on a GPU row, which is its own model.
+   */
+  gpus?: string[];
 }
 
 /** How often a mounted GPU list refreshes its host counts. */
@@ -170,7 +217,7 @@ function rangeOf(prices: number[]): PriceRange | null {
  * summary) leave it off.
  */
 export function useGpuListings({ live = false }: { live?: boolean } = {}) {
-  if (PIN_TO_MARKET) return useMarketListings({ live });
+  if (LIST_MARKETS) return useMarketListings({ live });
   const { gpus, pending, error, refresh } = useGpuModels();
   if (live) {
     // Counts kept from an earlier visit are fetched again right away.
@@ -270,8 +317,9 @@ async function accessibleMarkets(
  * The markets a deployment can be created on, as GPU listings: one row per
  * public market of the deployable types the deployer may post to, named as
  * the market is, with the market's own address, its hourly rate, VRAM from
- * its metadata (0 when it has none) and live host counts from host-manager's
- * queue and the running-job counts. `live` as on `useGpuListings`.
+ * its metadata (0 when it has none), live host counts from host-manager's
+ * queue and the running-job counts, and the GPU models the catalogue lists
+ * in it. `live` as on `useGpuListings`.
  */
 function useMarketListings({ live = false }: { live?: boolean } = {}) {
   const config = useRuntimeConfig();
@@ -290,16 +338,23 @@ function useMarketListings({ live = false }: { live?: boolean } = {}) {
     "market-listings",
     async () => {
       const baseURL = config.public.apiBase as string;
-      const [markets, queued, running] = await Promise.all([
+      const [markets, queued, running, catalogue] = await Promise.all([
         $fetch<MarketRate[]>("/markets", { baseURL }),
         nosana.value.api.reservations.findAvailable({ requirements: {} }),
         $fetch<Record<string, { running?: number }>>("/jobs/running", {
           baseURL,
         }),
+        nosana.value.api.reservations.listGpus(),
       ]);
       const available: Record<string, number> = {};
       for (const node of queued.nodes) {
         available[node.market] = (available[node.market] ?? 0) + 1;
+      }
+      const gpusIn: Record<string, Set<string>> = {};
+      for (const gpu of catalogue.gpus) {
+        for (const market of gpu.markets) {
+          (gpusIn[market] ??= new Set()).add(gpu.name);
+        }
       }
       const deployable = markets.filter(
         (market) => !market.client && types.includes(market.type),
@@ -323,6 +378,7 @@ function useMarketListings({ live = false }: { live?: boolean } = {}) {
             working: running[market.address]?.running ?? 0,
             markets: [market.address],
             usd: usd > 0 ? { min: withNetworkFee(usd), max: withNetworkFee(usd) } : null,
+            gpus: [...(gpusIn[market.address] ?? [])],
           };
         });
     },
